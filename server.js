@@ -22,6 +22,7 @@ const client = new Anthropic({
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const MEMORY_FILE = path.join(__dirname, "memory.json");
 const WORKSPACE_DIR = path.join(__dirname, "workspace");
+const HIDDEN_FILES = new Set(["memory.json"]);
 
 /* =========================
    SETUP
@@ -102,6 +103,7 @@ function listWorkspaceFiles() {
     return fs.readdirSync(WORKSPACE_DIR, { withFileTypes: true })
         .filter(entry => entry.isFile())
         .map(entry => entry.name)
+        .filter(name => !HIDDEN_FILES.has(name))
         .sort();
 }
 
@@ -132,6 +134,42 @@ function readWorkspaceFile(filename) {
     };
 }
 
+function deleteWorkspaceFile(filename) {
+    ensureSetup();
+
+    const filePath = safeFilePath(filename);
+
+    if (!fs.existsSync(filePath)) {
+        return false;
+    }
+
+    fs.unlinkSync(filePath);
+    return true;
+}
+
+function renameWorkspaceFile(oldName, newName) {
+    ensureSetup();
+
+    const oldPath = safeFilePath(oldName);
+    const newPath = safeFilePath(newName);
+
+    if (!fs.existsSync(oldPath)) {
+        return { ok: false, reason: "old_missing" };
+    }
+
+    if (fs.existsSync(newPath)) {
+        return { ok: false, reason: "new_exists" };
+    }
+
+    fs.renameSync(oldPath, newPath);
+
+    return {
+        ok: true,
+        oldName: path.basename(oldPath),
+        newName: path.basename(newPath)
+    };
+}
+
 /* =========================
    DATABASE
 ========================= */
@@ -150,6 +188,35 @@ function saveDocumentToDatabase(filename, content, classification = "personal", 
         return true;
     } catch (error) {
         console.error("DB SAVE ERROR:", error.message);
+        return false;
+    }
+}
+
+function deleteDocumentFromDatabase(filename) {
+    try {
+        db.prepare(`
+            DELETE FROM documents
+            WHERE filename = ?
+        `).run(filename);
+
+        return true;
+    } catch (error) {
+        console.error("DB DELETE ERROR:", error.message);
+        return false;
+    }
+}
+
+function renameDocumentInDatabase(oldName, newName) {
+    try {
+        db.prepare(`
+            UPDATE documents
+            SET filename = ?
+            WHERE filename = ?
+        `).run(newName, oldName);
+
+        return true;
+    } catch (error) {
+        console.error("DB RENAME ERROR:", error.message);
         return false;
     }
 }
@@ -198,6 +265,30 @@ function listRecentDocuments() {
     }
 }
 
+function searchDocuments(keyword) {
+    try {
+        return db.prepare(`
+            SELECT id, filename, classification, summary, created_at
+            FROM documents
+            WHERE
+                LOWER(filename) LIKE ?
+                OR LOWER(classification) LIKE ?
+                OR LOWER(summary) LIKE ?
+                OR LOWER(content) LIKE ?
+            ORDER BY created_at DESC
+            LIMIT 20
+        `).all(
+            `%${keyword.toLowerCase()}%`,
+            `%${keyword.toLowerCase()}%`,
+            `%${keyword.toLowerCase()}%`,
+            `%${keyword.toLowerCase()}%`
+        );
+    } catch (error) {
+        console.error("DOCUMENT SEARCH ERROR:", error.message);
+        return [];
+    }
+}
+
 function formatDocuments(docs) {
     if (!docs.length) {
         return "No relevant saved documents found.";
@@ -218,12 +309,27 @@ ${preview}
 }
 
 /* =========================
+   HELPERS
+========================= */
+
+function ensureTxtExtension(filename) {
+    let result = filename.trim();
+    if (!result.toLowerCase().endsWith(".txt")) {
+        result += ".txt";
+    }
+    return result;
+}
+
+function makeTimestampedFilename(prefix) {
+    return `${prefix}_${Date.now()}.txt`;
+}
+
+/* =========================
    COMMANDS
 ========================= */
 
 function detectCommand(message) {
     const text = message.trim();
-
     let match;
 
     match = text.match(/^create file\s+(.+?)\s+with\s+([\s\S]+)$/i);
@@ -243,11 +349,20 @@ function detectCommand(message) {
         };
     }
 
-    match = text.match(/^save note\s+(.+)$/i);
+    match = text.match(/^delete file\s+(.+)$/i);
     if (match) {
         return {
-            type: "save_note",
-            content: match[1].trim()
+            type: "delete_file",
+            filename: match[1].trim()
+        };
+    }
+
+    match = text.match(/^rename file\s+(.+?)\s+to\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "rename_file",
+            oldName: match[1].trim(),
+            newName: match[2].trim()
         };
     }
 
@@ -256,7 +371,52 @@ function detectCommand(message) {
         return {
             type: "save_named_note",
             filename: match[1].trim(),
-            content: match[2].trim()
+            content: match[2].trim(),
+            classification: "personal"
+        };
+    }
+
+    match = text.match(/^save uni note\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "save_note",
+            classification: "uni",
+            content: match[1].trim()
+        };
+    }
+
+    match = text.match(/^save business note\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "save_note",
+            classification: "business",
+            content: match[1].trim()
+        };
+    }
+
+    match = text.match(/^save personal note\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "save_note",
+            classification: "personal",
+            content: match[1].trim()
+        };
+    }
+
+    match = text.match(/^save note\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "save_note",
+            classification: "personal",
+            content: match[1].trim()
+        };
+    }
+
+    match = text.match(/^search documents\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "search_documents",
+            keyword: match[1].trim()
         };
     }
 
@@ -274,16 +434,30 @@ function detectCommand(message) {
 function handleCommand(command) {
     switch (command.type) {
         case "create_file": {
-            const created = createWorkspaceFile(command.filename, command.content);
-            saveDocumentToDatabase(created.filename, created.content, "personal", `Saved file: ${created.filename}`);
-            return { ok: true, reply: `File created: ${created.filename}` };
+            const filename = ensureTxtExtension(command.filename);
+            const created = createWorkspaceFile(filename, command.content);
+            saveDocumentToDatabase(
+                created.filename,
+                created.content,
+                "personal",
+                `Saved file: ${created.filename}`
+            );
+
+            return {
+                ok: true,
+                reply: `File created: ${created.filename}`
+            };
         }
 
         case "read_file": {
-            const file = readWorkspaceFile(command.filename);
+            const filename = ensureTxtExtension(command.filename);
+            const file = readWorkspaceFile(filename);
 
             if (!file) {
-                return { ok: false, reply: `Could not find file: ${command.filename}` };
+                return {
+                    ok: false,
+                    reply: `Could not find file: ${filename}`
+                };
             }
 
             return {
@@ -292,30 +466,98 @@ function handleCommand(command) {
             };
         }
 
+        case "delete_file": {
+            const filename = ensureTxtExtension(command.filename);
+            const deleted = deleteWorkspaceFile(filename);
+
+            if (!deleted) {
+                return {
+                    ok: false,
+                    reply: `Could not find file: ${filename}`
+                };
+            }
+
+            deleteDocumentFromDatabase(filename);
+
+            return {
+                ok: true,
+                reply: `File deleted: ${filename}`
+            };
+        }
+
+        case "rename_file": {
+            const oldName = ensureTxtExtension(command.oldName);
+            const newName = ensureTxtExtension(command.newName);
+
+            const result = renameWorkspaceFile(oldName, newName);
+
+            if (!result.ok) {
+                if (result.reason === "old_missing") {
+                    return {
+                        ok: false,
+                        reply: `Could not find file: ${oldName}`
+                    };
+                }
+
+                if (result.reason === "new_exists") {
+                    return {
+                        ok: false,
+                        reply: `A file already exists called: ${newName}`
+                    };
+                }
+            }
+
+            renameDocumentInDatabase(oldName, newName);
+
+            return {
+                ok: true,
+                reply: `File renamed from ${oldName} to ${newName}`
+            };
+        }
+
         case "save_note": {
-            const filename = `note_${Date.now()}.txt`;
+            const prefix = command.classification || "personal";
+            const filename = makeTimestampedFilename(prefix);
+
             createWorkspaceFile(filename, command.content);
-            saveDocumentToDatabase(filename, command.content, "personal", "Saved note");
-            return { ok: true, reply: `Note saved as ${filename}` };
+            saveDocumentToDatabase(
+                filename,
+                command.content,
+                command.classification,
+                `Saved ${command.classification} note`
+            );
+
+            return {
+                ok: true,
+                reply: `Note saved as ${filename}`
+            };
         }
 
         case "save_named_note": {
-            let filename = command.filename.trim();
-
-            if (!filename.toLowerCase().endsWith(".txt")) {
-                filename += ".txt";
-            }
+            const filename = ensureTxtExtension(command.filename);
 
             createWorkspaceFile(filename, command.content);
-            saveDocumentToDatabase(filename, command.content, "personal", `Saved named note: ${filename}`);
-            return { ok: true, reply: `Note saved as ${filename}` };
+            saveDocumentToDatabase(
+                filename,
+                command.content,
+                command.classification || "personal",
+                `Saved named note: ${filename}`
+            );
+
+            return {
+                ok: true,
+                reply: `Note saved as ${filename}`
+            };
         }
 
         case "list_files": {
             const files = listWorkspaceFiles();
 
             if (!files.length) {
-                return { ok: true, reply: "No files in workspace." };
+                return {
+                    ok: true,
+                    reply: "No files in workspace."
+                };
             }
 
             return {
@@ -328,13 +570,39 @@ function handleCommand(command) {
             const docs = listRecentDocuments();
 
             if (!docs.length) {
-                return { ok: true, reply: "No documents saved in database." };
+                return {
+                    ok: true,
+                    reply: "No documents saved in database."
+                };
             }
 
-            const lines = docs.map(doc => `- ${doc.filename} (${doc.classification})`);
+            const lines = docs.map(doc => {
+                return `- ${doc.filename} (${doc.classification})`;
+            });
+
             return {
                 ok: true,
                 reply: `Saved documents:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "search_documents": {
+            const docs = searchDocuments(command.keyword);
+
+            if (!docs.length) {
+                return {
+                    ok: true,
+                    reply: `No documents found for: ${command.keyword}`
+                };
+            }
+
+            const lines = docs.map(doc => {
+                return `- ${doc.filename} (${doc.classification})`;
+            });
+
+            return {
+                ok: true,
+                reply: `Search results for "${command.keyword}":\n\n${lines.join("\n")}`
             };
         }
 
@@ -387,7 +655,7 @@ app.get("/test", (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "file-commands-enabled"
+        version: "file-commands-enabled-v2"
     });
 });
 
