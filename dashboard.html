@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>AI OS</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0f0f0f;
+    color: white;
+    display: flex;
+}
+
+.sidebar {
+    width: 220px;
+    background: #1a1a1a;
+    height: 100vh;
+    padding: 15px;
+}
+
+.btn {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    background: #2b6fff;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.main {
+    flex: 1;
+    padding: 20px;
+}
+
+input {
+    width: 70%;
+    padding: 10px;
+}
+
+.send {
+    padding: 10px;
+    background: #2b6fff;
+    border: none;
+    color: white;
+}
+
+.box {
+    background: #222;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+    height: 200px;
+    overflow: auto;
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+<h3>AI OS</h3>
+
+<button class="btn" onclick="load('tasks')">Tasks</button>
+<button class="btn" onclick="load('goals')">Goals</button>
+<button class="btn" onclick="load('files')">Files</button>
+</div>
+
+<div class="main">
+
+<h2>Dashboard</h2>
+
+<input id="input" placeholder="Ask AI..." />
+<button class="send" onclick="send()">Send</button>
+
+<div class="box" id="output">Ready...</div>
+
+<div class="box" id="tasks">Tasks...</div>
+<div class="box" id="goals">Goals...</div>
+
+</div>
+
+<script>
+
+async function send() {
+    const message = document.getElementById("input").value;
+
+    const res = await fetch("/chat", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ message })
+    });
+
+    const data = await res.json();
+    document.getElementById("output").innerText = data.reply;
+}
+
+async function load(type) {
+
+    let message = "";
+
+    if (type === "tasks") message = "list tasks";
+    if (type === "goals") message = "list goals";
+    if (type === "files") message = "list files";
+
+    const res = await fetch("/chat", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ message })
+    });
+
+    const data = await res.json();
+
+    if (type === "tasks") {
+        document.getElementById("tasks").innerText = data.reply;
+    }
+
+    if (type === "goals") {
+        document.getElementById("goals").innerText = data.reply;
+    }
+}
+
+window.onload = () => {
+    load("tasks");
+    load("goals");
+};
+
+</script>
+
+</body>
+</html>
