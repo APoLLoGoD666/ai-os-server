@@ -1,132 +1,208 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>AI OS</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Chat</title>
 
-<style>
-body {
-    margin: 0;
-    font-family: Arial;
-    background: #0f0f0f;
-    color: white;
-    display: flex;
-}
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-.sidebar {
-    width: 220px;
-    background: #1a1a1a;
-    height: 100vh;
-    padding: 15px;
-}
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: white;
+        }
 
-.btn {
-    width: 100%;
-    padding: 10px;
-    margin: 5px 0;
-    background: #2b6fff;
-    border: none;
-    color: white;
-    cursor: pointer;
-}
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
 
-.main {
-    flex: 1;
-    padding: 20px;
-}
+        h2 {
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
 
-input {
-    width: 70%;
-    padding: 10px;
-}
+        #chat {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 15px;
+            height: 420px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            border: 1px solid #2f2f2f;
+        }
 
-.send {
-    padding: 10px;
-    background: #2b6fff;
-    border: none;
-    color: white;
-}
+        .message {
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
 
-.box {
-    background: #222;
-    padding: 10px;
-    margin-top: 10px;
-    border-radius: 8px;
-    height: 200px;
-    overflow: auto;
-}
-</style>
+        .user {
+            background: #2b6fff;
+        }
+
+        .ai {
+            background: #2a2a2a;
+        }
+
+        .system {
+            background: #181818;
+            color: #bdbdbd;
+            font-style: italic;
+        }
+
+        .label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        button {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            background: #2b6fff;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            min-width: 100px;
+        }
+
+        button:hover {
+            opacity: 0.92;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #bdbdbd;
+        }
+    </style>
 </head>
 
 <body>
+    <div class="container">
+        <h2>AI Chat (Render Connected)</h2>
 
-<div class="sidebar">
-<h3>AI OS</h3>
+        <div class="status" id="status">Connected to Render</div>
 
-<button class="btn" onclick="load('tasks')">Tasks</button>
-<button class="btn" onclick="load('goals')">Goals</button>
-<button class="btn" onclick="load('files')">Files</button>
-</div>
+        <div id="chat">
+            <div class="message system">
+                <span class="label">System</span>
+                Ready...
+            </div>
+        </div>
 
-<div class="main">
+        <div class="row">
+            <input id="input" type="text" placeholder="Type here..." />
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
 
-<h2>Dashboard</h2>
+    <script>
+        const API_BASE = "https://ai-os-server-jx20.onrender.com";
 
-<input id="input" placeholder="Ask AI..." />
-<button class="send" onclick="send()">Send</button>
+        const chatBox = document.getElementById("chat");
+        const input = document.getElementById("input");
+        const sendBtn = document.getElementById("sendBtn");
+        const statusText = document.getElementById("status");
 
-<div class="box" id="output">Ready...</div>
+        function escapeHtml(text) {
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
-<div class="box" id="tasks">Tasks...</div>
-<div class="box" id="goals">Goals...</div>
+        function addMessage(role, text) {
+            const msg = document.createElement("div");
+            msg.className = `message ${role}`;
 
-</div>
+            let label = "System";
+            if (role === "user") label = "You";
+            if (role === "ai") label = "AI";
 
-<script>
+            msg.innerHTML = `
+                <span class="label">${label}</span>
+                ${escapeHtml(text)}
+            `;
 
-async function send() {
-    const message = document.getElementById("input").value;
+            chatBox.appendChild(msg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
 
-    const res = await fetch("/chat", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ message })
-    });
+        async function sendMessage() {
+            const message = input.value.trim();
+            if (!message) return;
 
-    const data = await res.json();
-    document.getElementById("output").innerText = data.reply;
-}
+            addMessage("user", message);
+            input.value = "";
+            input.focus();
 
-async function load(type) {
+            sendBtn.disabled = true;
+            sendBtn.textContent = "Sending...";
+            statusText.textContent = "Thinking...";
 
-    let message = "";
+            try {
+                const res = await fetch(`${API_BASE}/chat`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ message })
+                });
 
-    if (type === "tasks") message = "list tasks";
-    if (type === "goals") message = "list goals";
-    if (type === "files") message = "list files";
+                const data = await res.json();
 
-    const res = await fetch("/chat", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ message })
-    });
+                if (!res.ok) {
+                    addMessage("ai", data.reply || "Server error.");
+                } else {
+                    addMessage("ai", data.reply || "No reply.");
+                }
 
-    const data = await res.json();
+            } catch (error) {
+                console.error("Connection error:", error);
+                addMessage("ai", "Cannot connect to Render server.");
+            }
 
-    if (type === "tasks") {
-        document.getElementById("tasks").innerText = data.reply;
-    }
+            sendBtn.disabled = false;
+            sendBtn.textContent = "Send";
+            statusText.textContent = "Connected";
+        }
 
-    if (type === "goals") {
-        document.getElementById("goals").innerText = data.reply;
-    }
-}
-
-window.onload = () => {
-    load("tasks");
-    load("goals");
-};
-
-</script>
-
+        input.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+                sendMessage();
+            }
+        });
+    </script>
 </body>
 </html>
