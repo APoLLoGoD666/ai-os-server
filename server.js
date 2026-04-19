@@ -21,19 +21,28 @@ const client = new Anthropic({
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const MEMORY_FILE = path.join(__dirname, "memory.json");
+const WORKSPACE_DIR = path.join(__dirname, "workspace");
 
 /* =========================
-   MEMORY
+   SETUP
 ========================= */
 
-function ensureMemoryFile() {
+function ensureSetup() {
+    if (!fs.existsSync(WORKSPACE_DIR)) {
+        fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+    }
+
     if (!fs.existsSync(MEMORY_FILE)) {
         fs.writeFileSync(MEMORY_FILE, "[]", "utf8");
     }
 }
 
+/* =========================
+   MEMORY
+========================= */
+
 function loadMemory() {
-    ensureMemoryFile();
+    ensureSetup();
 
     try {
         const raw = fs.readFileSync(MEMORY_FILE, "utf8");
@@ -62,82 +71,145 @@ function addToMemory(role, message) {
         time: new Date().toISOString()
     });
 
-    // keep only last 20 messages
-    const trimmed = memory.slice(-20);
-    saveMemory(trimmed);
-
-    return trimmed;
+    saveMemory(memory.slice(-20));
 }
 
-function formatRecentMemory(memory) {
-    if (!memory.length) return "No recent memory.";
+function formatRecentMemory() {
+    const memory = loadMemory();
+
+    if (!memory.length) {
+        return "No recent memory.";
+    }
 
     return memory
         .slice(-8)
-        .map(entry => {
-            return `[${entry.role.toUpperCase()}] ${entry.message}`;
-        })
+        .map(item => `[${item.role.toUpperCase()}] ${item.message}`)
         .join("\n");
 }
 
 /* =========================
-   DATABASE SEARCH
+   WORKSPACE FILES
 ========================= */
+
+function safeFilePath(filename) {
+    const cleanName = path.basename(filename.trim());
+    return path.join(WORKSPACE_DIR, cleanName);
+}
+
+function listWorkspaceFiles() {
+    ensureSetup();
+
+    return fs.readdirSync(WORKSPACE_DIR, { withFileTypes: true })
+        .filter(entry => entry.isFile())
+        .map(entry => entry.name)
+        .sort();
+}
+
+function createWorkspaceFile(filename, content) {
+    ensureSetup();
+
+    const filePath = safeFilePath(filename);
+    fs.writeFileSync(filePath, content, "utf8");
+
+    return {
+        filename: path.basename(filePath),
+        content
+    };
+}
+
+function readWorkspaceFile(filename) {
+    ensureSetup();
+
+    const filePath = safeFilePath(filename);
+
+    if (!fs.existsSync(filePath)) {
+        return null;
+    }
+
+    return {
+        filename: path.basename(filePath),
+        content: fs.readFileSync(filePath, "utf8")
+    };
+}
+
+/* =========================
+   DATABASE
+========================= */
+
+function saveDocumentToDatabase(filename, content, classification = "personal", summary = "") {
+    try {
+        db.prepare(`
+            INSERT INTO documents (filename, content, classification, summary)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(filename) DO UPDATE SET
+                content = excluded.content,
+                classification = excluded.classification,
+                summary = excluded.summary
+        `).run(filename, content, classification, summary);
+
+        return true;
+    } catch (error) {
+        console.error("DB SAVE ERROR:", error.message);
+        return false;
+    }
+}
 
 function getRelevantDocuments(question) {
     const q = (question || "").trim().toLowerCase();
 
     try {
-        let rows = [];
-
         if (!q) {
-            rows = db.prepare(`
+            return db.prepare(`
                 SELECT filename, classification, summary, content, created_at
                 FROM documents
                 ORDER BY created_at DESC
                 LIMIT 5
             `).all();
-        } else {
-            rows = db.prepare(`
-                SELECT filename, classification, summary, content, created_at
-                FROM documents
-                WHERE
-                    LOWER(filename) LIKE ?
-                    OR LOWER(classification) LIKE ?
-                    OR LOWER(summary) LIKE ?
-                    OR LOWER(content) LIKE ?
-                ORDER BY created_at DESC
-                LIMIT 5
-            `).all(
-                `%${q}%`,
-                `%${q}%`,
-                `%${q}%`,
-                `%${q}%`
-            );
         }
 
-        return rows;
+        return db.prepare(`
+            SELECT filename, classification, summary, content, created_at
+            FROM documents
+            WHERE
+                LOWER(filename) LIKE ?
+                OR LOWER(classification) LIKE ?
+                OR LOWER(summary) LIKE ?
+                OR LOWER(content) LIKE ?
+            ORDER BY created_at DESC
+            LIMIT 5
+        `).all(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
     } catch (error) {
         console.error("DB SEARCH ERROR:", error.message);
         return [];
     }
 }
 
+function listRecentDocuments() {
+    try {
+        return db.prepare(`
+            SELECT id, filename, classification, summary, created_at
+            FROM documents
+            ORDER BY created_at DESC
+            LIMIT 20
+        `).all();
+    } catch (error) {
+        console.error("DOCUMENT LIST ERROR:", error.message);
+        return [];
+    }
+}
+
 function formatDocuments(docs) {
-    if (!docs.length) return "No relevant saved documents found.";
+    if (!docs.length) {
+        return "No relevant saved documents found.";
+    }
 
     return docs.map((doc, index) => {
-        const safeSummary = doc.summary || "No summary available.";
-        const preview =
-            (doc.content || "").length > 600
-                ? `${doc.content.slice(0, 600)}...`
-                : (doc.content || "No content available.");
-
+        const preview = (doc.content || "").slice(0, 500);
         return `
 DOCUMENT ${index + 1}
 Filename: ${doc.filename}
 Type: ${doc.classification}
-Summary: ${safeSummary}
+Summary: ${doc.summary || "No summary"}
 Content Preview:
 ${preview}
 ----------------------
@@ -146,19 +218,141 @@ ${preview}
 }
 
 /* =========================
-   AI PROMPT BUILDER
+   COMMANDS
+========================= */
+
+function detectCommand(message) {
+    const text = message.trim();
+
+    let match;
+
+    match = text.match(/^create file\s+(.+?)\s+with\s+([\s\S]+)$/i);
+    if (match) {
+        return {
+            type: "create_file",
+            filename: match[1].trim(),
+            content: match[2].trim()
+        };
+    }
+
+    match = text.match(/^read file\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "read_file",
+            filename: match[1].trim()
+        };
+    }
+
+    match = text.match(/^save note\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "save_note",
+            content: match[1].trim()
+        };
+    }
+
+    match = text.match(/^save note called\s+(.+?)\s+with\s+([\s\S]+)$/i);
+    if (match) {
+        return {
+            type: "save_named_note",
+            filename: match[1].trim(),
+            content: match[2].trim()
+        };
+    }
+
+    if (/^list files$/i.test(text) || /^list all files$/i.test(text)) {
+        return { type: "list_files" };
+    }
+
+    if (/^list documents$/i.test(text) || /^what documents do i have$/i.test(text)) {
+        return { type: "list_documents" };
+    }
+
+    return null;
+}
+
+function handleCommand(command) {
+    switch (command.type) {
+        case "create_file": {
+            const created = createWorkspaceFile(command.filename, command.content);
+            saveDocumentToDatabase(created.filename, created.content, "personal", `Saved file: ${created.filename}`);
+            return { ok: true, reply: `File created: ${created.filename}` };
+        }
+
+        case "read_file": {
+            const file = readWorkspaceFile(command.filename);
+
+            if (!file) {
+                return { ok: false, reply: `Could not find file: ${command.filename}` };
+            }
+
+            return {
+                ok: true,
+                reply: `File content of ${file.filename}:\n\n${file.content}`
+            };
+        }
+
+        case "save_note": {
+            const filename = `note_${Date.now()}.txt`;
+            createWorkspaceFile(filename, command.content);
+            saveDocumentToDatabase(filename, command.content, "personal", "Saved note");
+            return { ok: true, reply: `Note saved as ${filename}` };
+        }
+
+        case "save_named_note": {
+            let filename = command.filename.trim();
+
+            if (!filename.toLowerCase().endsWith(".txt")) {
+                filename += ".txt";
+            }
+
+            createWorkspaceFile(filename, command.content);
+            saveDocumentToDatabase(filename, command.content, "personal", `Saved named note: ${filename}`);
+            return { ok: true, reply: `Note saved as ${filename}` };
+        }
+
+        case "list_files": {
+            const files = listWorkspaceFiles();
+
+            if (!files.length) {
+                return { ok: true, reply: "No files in workspace." };
+            }
+
+            return {
+                ok: true,
+                reply: `Workspace files:\n\n- ${files.join("\n- ")}`
+            };
+        }
+
+        case "list_documents": {
+            const docs = listRecentDocuments();
+
+            if (!docs.length) {
+                return { ok: true, reply: "No documents saved in database." };
+            }
+
+            const lines = docs.map(doc => `- ${doc.filename} (${doc.classification})`);
+            return {
+                ok: true,
+                reply: `Saved documents:\n\n${lines.join("\n")}`
+            };
+        }
+
+        default:
+            return null;
+    }
+}
+
+/* =========================
+   AI
 ========================= */
 
 function buildPrompt(userMessage, memoryText, docsText) {
     return `
 You are an AI assistant inside a personal workflow system.
 
-Your job:
-- answer the user's question clearly
-- use saved memory when useful
-- use saved documents when useful
-- if the database contains relevant notes, mention them naturally
-- if nothing relevant is found, still answer helpfully
+Use the user's recent memory and saved documents when relevant.
+Be practical, clear, and concise.
 
 RECENT MEMORY:
 ${memoryText}
@@ -169,7 +363,7 @@ ${docsText}
 USER MESSAGE:
 ${userMessage}
 
-Give a clear, practical answer.
+Answer helpfully.
 `.trim();
 }
 
@@ -190,8 +384,16 @@ app.get("/test", (req, res) => {
     });
 });
 
+app.get("/version", (req, res) => {
+    res.status(200).json({
+        ok: true,
+        version: "file-commands-enabled"
+    });
+});
+
 app.get("/memory", (req, res) => {
     const memory = loadMemory();
+
     res.status(200).json({
         ok: true,
         count: memory.length,
@@ -200,26 +402,23 @@ app.get("/memory", (req, res) => {
 });
 
 app.get("/documents", (req, res) => {
-    try {
-        const rows = db.prepare(`
-            SELECT id, filename, classification, summary, created_at
-            FROM documents
-            ORDER BY created_at DESC
-            LIMIT 20
-        `).all();
+    const docs = listRecentDocuments();
 
-        res.status(200).json({
-            ok: true,
-            count: rows.length,
-            documents: rows
-        });
-    } catch (error) {
-        console.error("DOCUMENT LIST ERROR:", error.message);
-        res.status(500).json({
-            ok: false,
-            reply: "Could not load documents."
-        });
-    }
+    res.status(200).json({
+        ok: true,
+        count: docs.length,
+        documents: docs
+    });
+});
+
+app.get("/files", (req, res) => {
+    const files = listWorkspaceFiles();
+
+    res.status(200).json({
+        ok: true,
+        count: files.length,
+        files
+    });
 });
 
 app.post("/chat", async (req, res) => {
@@ -241,18 +440,19 @@ app.post("/chat", async (req, res) => {
         }
 
         const userMessage = rawMessage.trim();
-
-        // save user message
         addToMemory("user", userMessage);
 
-        // load memory after saving
-        const memory = loadMemory();
-        const memoryText = formatRecentMemory(memory);
+        const command = detectCommand(userMessage);
 
-        // fetch relevant docs
+        if (command) {
+            const result = handleCommand(command);
+            addToMemory("ai", result.reply);
+            return res.status(result.ok ? 200 : 404).json(result);
+        }
+
+        const memoryText = formatRecentMemory();
         const relevantDocs = getRelevantDocuments(userMessage);
         const docsText = formatDocuments(relevantDocs);
-
         const prompt = buildPrompt(userMessage, memoryText, docsText);
 
         const response = await client.messages.create({
@@ -272,7 +472,6 @@ app.post("/chat", async (req, res) => {
             .join("\n")
             .trim() || "No response from AI";
 
-        // save AI reply
         addToMemory("ai", reply);
 
         return res.status(200).json({
@@ -286,10 +485,7 @@ app.post("/chat", async (req, res) => {
 
         return res.status(error?.status || 500).json({
             ok: false,
-            reply:
-                error?.error?.message ||
-                error?.message ||
-                "Server error"
+            reply: error?.error?.message || error?.message || "Server error"
         });
     }
 });
@@ -302,10 +498,10 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-    ensureMemoryFile();
+    ensureSetup();
 
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🤖 Model: ${MODEL}`);
     console.log(`🔑 API KEY LOADED: ${!!process.env.ANTHROPIC_API_KEY}`);
-    console.log(`🧠 Memory file: ${MEMORY_FILE}`);
+    console.log(`📁 Workspace: ${WORKSPACE_DIR}`);
 });
