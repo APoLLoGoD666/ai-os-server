@@ -221,6 +221,41 @@ function renameDocumentInDatabase(oldName, newName) {
     }
 }
 
+function listRecentDocuments() {
+    try {
+        return db.prepare(`
+            SELECT id, filename, classification, summary, created_at
+            FROM documents
+            ORDER BY created_at DESC
+            LIMIT 20
+        `).all();
+    } catch (error) {
+        console.error("DOCUMENT LIST ERROR:", error.message);
+        return [];
+    }
+}
+
+function searchDocuments(keyword) {
+    const k = keyword.toLowerCase();
+
+    try {
+        return db.prepare(`
+            SELECT id, filename, classification, summary, created_at
+            FROM documents
+            WHERE
+                LOWER(filename) LIKE ?
+                OR LOWER(classification) LIKE ?
+                OR LOWER(summary) LIKE ?
+                OR LOWER(content) LIKE ?
+            ORDER BY created_at DESC
+            LIMIT 20
+        `).all(`%${k}%`, `%${k}%`, `%${k}%`, `%${k}%`);
+    } catch (error) {
+        console.error("DOCUMENT SEARCH ERROR:", error.message);
+        return [];
+    }
+}
+
 function getRelevantDocuments(question) {
     const q = (question || "").trim().toLowerCase();
 
@@ -251,61 +286,28 @@ function getRelevantDocuments(question) {
     }
 }
 
-function listRecentDocuments() {
-    try {
-        return db.prepare(`
-            SELECT id, filename, classification, summary, created_at
-            FROM documents
-            ORDER BY created_at DESC
-            LIMIT 20
-        `).all();
-    } catch (error) {
-        console.error("DOCUMENT LIST ERROR:", error.message);
-        return [];
-    }
-}
+function syncWorkspaceToDatabase() {
+    const files = listWorkspaceFiles();
+    let synced = 0;
 
-function searchDocuments(keyword) {
-    try {
-        return db.prepare(`
-            SELECT id, filename, classification, summary, created_at
-            FROM documents
-            WHERE
-                LOWER(filename) LIKE ?
-                OR LOWER(classification) LIKE ?
-                OR LOWER(summary) LIKE ?
-                OR LOWER(content) LIKE ?
-            ORDER BY created_at DESC
-            LIMIT 20
-        `).all(
-            `%${keyword.toLowerCase()}%`,
-            `%${keyword.toLowerCase()}%`,
-            `%${keyword.toLowerCase()}%`,
-            `%${keyword.toLowerCase()}%`
-        );
-    } catch (error) {
-        console.error("DOCUMENT SEARCH ERROR:", error.message);
-        return [];
-    }
-}
+    for (const filename of files) {
+        const file = readWorkspaceFile(filename);
+        if (!file) continue;
 
-function formatDocuments(docs) {
-    if (!docs.length) {
-        return "No relevant saved documents found.";
+        let classification = "personal";
+        const lower = filename.toLowerCase();
+
+        if (lower.startsWith("uni_")) classification = "uni";
+        else if (lower.startsWith("business_")) classification = "business";
+        else if (lower.startsWith("personal_")) classification = "personal";
+
+        const summary = `Synced from workspace: ${filename}`;
+        const ok = saveDocumentToDatabase(filename, file.content, classification, summary);
+
+        if (ok) synced++;
     }
 
-    return docs.map((doc, index) => {
-        const preview = (doc.content || "").slice(0, 500);
-        return `
-DOCUMENT ${index + 1}
-Filename: ${doc.filename}
-Type: ${doc.classification}
-Summary: ${doc.summary || "No summary"}
-Content Preview:
-${preview}
-----------------------
-`.trim();
-    }).join("\n\n");
+    return { synced, total: files.length };
 }
 
 /* =========================
@@ -322,6 +324,24 @@ function ensureTxtExtension(filename) {
 
 function makeTimestampedFilename(prefix) {
     return `${prefix}_${Date.now()}.txt`;
+}
+
+function searchWorkspaceFiles(keyword) {
+    const files = listWorkspaceFiles();
+    const k = keyword.toLowerCase();
+    const matches = [];
+
+    for (const filename of files) {
+        const file = readWorkspaceFile(filename);
+        if (!file) continue;
+
+        const combined = `${filename}\n${file.content}`.toLowerCase();
+        if (combined.includes(k)) {
+            matches.push(filename);
+        }
+    }
+
+    return matches;
 }
 
 /* =========================
@@ -420,6 +440,10 @@ function detectCommand(message) {
         };
     }
 
+    if (/^sync files$/i.test(text)) {
+        return { type: "sync_files" };
+    }
+
     if (/^list files$/i.test(text) || /^list all files$/i.test(text)) {
         return { type: "list_files" };
     }
@@ -436,17 +460,8 @@ function handleCommand(command) {
         case "create_file": {
             const filename = ensureTxtExtension(command.filename);
             const created = createWorkspaceFile(filename, command.content);
-            saveDocumentToDatabase(
-                created.filename,
-                created.content,
-                "personal",
-                `Saved file: ${created.filename}`
-            );
-
-            return {
-                ok: true,
-                reply: `File created: ${created.filename}`
-            };
+            saveDocumentToDatabase(created.filename, created.content, "personal", `Saved file: ${created.filename}`);
+            return { ok: true, reply: `File created: ${created.filename}` };
         }
 
         case "read_file": {
@@ -454,16 +469,10 @@ function handleCommand(command) {
             const file = readWorkspaceFile(filename);
 
             if (!file) {
-                return {
-                    ok: false,
-                    reply: `Could not find file: ${filename}`
-                };
+                return { ok: false, reply: `Could not find file: ${filename}` };
             }
 
-            return {
-                ok: true,
-                reply: `File content of ${file.filename}:\n\n${file.content}`
-            };
+            return { ok: true, reply: `File content of ${file.filename}:\n\n${file.content}` };
         }
 
         case "delete_file": {
@@ -471,48 +480,29 @@ function handleCommand(command) {
             const deleted = deleteWorkspaceFile(filename);
 
             if (!deleted) {
-                return {
-                    ok: false,
-                    reply: `Could not find file: ${filename}`
-                };
+                return { ok: false, reply: `Could not find file: ${filename}` };
             }
 
             deleteDocumentFromDatabase(filename);
-
-            return {
-                ok: true,
-                reply: `File deleted: ${filename}`
-            };
+            return { ok: true, reply: `File deleted: ${filename}` };
         }
 
         case "rename_file": {
             const oldName = ensureTxtExtension(command.oldName);
             const newName = ensureTxtExtension(command.newName);
-
             const result = renameWorkspaceFile(oldName, newName);
 
             if (!result.ok) {
                 if (result.reason === "old_missing") {
-                    return {
-                        ok: false,
-                        reply: `Could not find file: ${oldName}`
-                    };
+                    return { ok: false, reply: `Could not find file: ${oldName}` };
                 }
-
                 if (result.reason === "new_exists") {
-                    return {
-                        ok: false,
-                        reply: `A file already exists called: ${newName}`
-                    };
+                    return { ok: false, reply: `A file already exists called: ${newName}` };
                 }
             }
 
             renameDocumentInDatabase(oldName, newName);
-
-            return {
-                ok: true,
-                reply: `File renamed from ${oldName} to ${newName}`
-            };
+            return { ok: true, reply: `File renamed from ${oldName} to ${newName}` };
         }
 
         case "save_note": {
@@ -520,89 +510,70 @@ function handleCommand(command) {
             const filename = makeTimestampedFilename(prefix);
 
             createWorkspaceFile(filename, command.content);
-            saveDocumentToDatabase(
-                filename,
-                command.content,
-                command.classification,
-                `Saved ${command.classification} note`
-            );
+            saveDocumentToDatabase(filename, command.content, command.classification, `Saved ${command.classification} note`);
 
-            return {
-                ok: true,
-                reply: `Note saved as ${filename}`
-            };
+            return { ok: true, reply: `Note saved as ${filename}` };
         }
 
         case "save_named_note": {
             const filename = ensureTxtExtension(command.filename);
-
             createWorkspaceFile(filename, command.content);
-            saveDocumentToDatabase(
-                filename,
-                command.content,
-                command.classification || "personal",
-                `Saved named note: ${filename}`
-            );
+            saveDocumentToDatabase(filename, command.content, command.classification || "personal", `Saved named note: ${filename}`);
 
-            return {
-                ok: true,
-                reply: `Note saved as ${filename}`
-            };
+            return { ok: true, reply: `Note saved as ${filename}` };
         }
 
         case "list_files": {
             const files = listWorkspaceFiles();
 
             if (!files.length) {
-                return {
-                    ok: true,
-                    reply: "No files in workspace."
-                };
+                return { ok: true, reply: "No files in workspace." };
             }
 
-            return {
-                ok: true,
-                reply: `Workspace files:\n\n- ${files.join("\n- ")}`
-            };
+            return { ok: true, reply: `Workspace files:\n\n- ${files.join("\n- ")}` };
         }
 
         case "list_documents": {
             const docs = listRecentDocuments();
 
             if (!docs.length) {
-                return {
-                    ok: true,
-                    reply: "No documents saved in database."
-                };
+                return { ok: true, reply: "No documents saved in database." };
             }
 
-            const lines = docs.map(doc => {
-                return `- ${doc.filename} (${doc.classification})`;
-            });
-
-            return {
-                ok: true,
-                reply: `Saved documents:\n\n${lines.join("\n")}`
-            };
+            const lines = docs.map(doc => `- ${doc.filename} (${doc.classification})`);
+            return { ok: true, reply: `Saved documents:\n\n${lines.join("\n")}` };
         }
 
         case "search_documents": {
-            const docs = searchDocuments(command.keyword);
+            const dbDocs = searchDocuments(command.keyword);
+            const workspaceMatches = searchWorkspaceFiles(command.keyword);
 
-            if (!docs.length) {
-                return {
-                    ok: true,
-                    reply: `No documents found for: ${command.keyword}`
-                };
+            const dbLines = dbDocs.map(doc => `- ${doc.filename} (${doc.classification})`);
+            const workspaceOnly = workspaceMatches.filter(name => !dbDocs.some(doc => doc.filename === name));
+
+            if (!dbLines.length && !workspaceOnly.length) {
+                return { ok: true, reply: `No documents found for: ${command.keyword}` };
             }
 
-            const lines = docs.map(doc => {
-                return `- ${doc.filename} (${doc.classification})`;
-            });
+            let reply = `Search results for "${command.keyword}":\n\n`;
 
+            if (dbLines.length) {
+                reply += `Database:\n${dbLines.join("\n")}`;
+            }
+
+            if (workspaceOnly.length) {
+                if (dbLines.length) reply += `\n\n`;
+                reply += `Workspace only:\n- ${workspaceOnly.join("\n- ")}`;
+            }
+
+            return { ok: true, reply };
+        }
+
+        case "sync_files": {
+            const result = syncWorkspaceToDatabase();
             return {
                 ok: true,
-                reply: `Search results for "${command.keyword}":\n\n${lines.join("\n")}`
+                reply: `Synced ${result.synced} file(s) into the database from ${result.total} workspace file(s).`
             };
         }
 
@@ -655,38 +626,23 @@ app.get("/test", (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "file-commands-enabled-v2"
+        version: "file-commands-enabled-v3"
     });
 });
 
 app.get("/memory", (req, res) => {
     const memory = loadMemory();
-
-    res.status(200).json({
-        ok: true,
-        count: memory.length,
-        memory
-    });
+    res.status(200).json({ ok: true, count: memory.length, memory });
 });
 
 app.get("/documents", (req, res) => {
     const docs = listRecentDocuments();
-
-    res.status(200).json({
-        ok: true,
-        count: docs.length,
-        documents: docs
-    });
+    res.status(200).json({ ok: true, count: docs.length, documents: docs });
 });
 
 app.get("/files", (req, res) => {
     const files = listWorkspaceFiles();
-
-    res.status(200).json({
-        ok: true,
-        count: files.length,
-        files
-    });
+    res.status(200).json({ ok: true, count: files.length, files });
 });
 
 app.post("/chat", async (req, res) => {
@@ -720,7 +676,21 @@ app.post("/chat", async (req, res) => {
 
         const memoryText = formatRecentMemory();
         const relevantDocs = getRelevantDocuments(userMessage);
-        const docsText = formatDocuments(relevantDocs);
+        const docsText = relevantDocs.length
+            ? relevantDocs.map((doc, index) => {
+                const preview = (doc.content || "").slice(0, 500);
+                return `
+DOCUMENT ${index + 1}
+Filename: ${doc.filename}
+Type: ${doc.classification}
+Summary: ${doc.summary || "No summary"}
+Content Preview:
+${preview}
+----------------------
+`.trim();
+            }).join("\n\n")
+            : "No relevant saved documents found.";
+
         const prompt = buildPrompt(userMessage, memoryText, docsText);
 
         const response = await client.messages.create({
