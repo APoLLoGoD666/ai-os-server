@@ -221,21 +221,6 @@ function renameDocumentInDatabase(oldName, newName) {
     }
 }
 
-function updateDocumentClassification(filename, classification) {
-    try {
-        db.prepare(`
-            UPDATE documents
-            SET classification = ?
-            WHERE filename = ?
-        `).run(classification, filename);
-
-        return true;
-    } catch (error) {
-        console.error("DB CLASSIFICATION ERROR:", error.message);
-        return false;
-    }
-}
-
 function updateDocumentSummary(filename, summary) {
     try {
         db.prepare(`
@@ -461,6 +446,22 @@ function detectCommand(message) {
     }
 
     match = text.match(/^delete file\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "delete_file",
+            filename: match[1].trim()
+        };
+    }
+
+    match = text.match(/^delete document\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "delete_file",
+            filename: match[1].trim()
+        };
+    }
+
+    match = text.match(/^delete\s+(.+)$/i);
     if (match) {
         return {
             type: "delete_file",
@@ -786,7 +787,7 @@ app.get("/test", (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "file-commands-enabled-v4"
+        version: "file-commands-enabled-v4-delete"
     });
 });
 
