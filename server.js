@@ -221,6 +221,36 @@ function renameDocumentInDatabase(oldName, newName) {
     }
 }
 
+function updateDocumentClassification(filename, classification) {
+    try {
+        db.prepare(`
+            UPDATE documents
+            SET classification = ?
+            WHERE filename = ?
+        `).run(classification, filename);
+
+        return true;
+    } catch (error) {
+        console.error("DB CLASSIFICATION ERROR:", error.message);
+        return false;
+    }
+}
+
+function updateDocumentSummary(filename, summary) {
+    try {
+        db.prepare(`
+            UPDATE documents
+            SET summary = ?
+            WHERE filename = ?
+        `).run(summary, filename);
+
+        return true;
+    } catch (error) {
+        console.error("DB SUMMARY ERROR:", error.message);
+        return false;
+    }
+}
+
 function listRecentDocuments() {
     try {
         return db.prepare(`
@@ -286,6 +316,20 @@ function getRelevantDocuments(question) {
     }
 }
 
+function getDocumentByFilename(filename) {
+    try {
+        return db.prepare(`
+            SELECT id, filename, classification, summary, content, created_at
+            FROM documents
+            WHERE filename = ?
+            LIMIT 1
+        `).get(filename);
+    } catch (error) {
+        console.error("DOCUMENT GET ERROR:", error.message);
+        return null;
+    }
+}
+
 function syncWorkspaceToDatabase() {
     const files = listWorkspaceFiles();
     let synced = 0;
@@ -344,6 +388,53 @@ function searchWorkspaceFiles(keyword) {
     return matches;
 }
 
+function moveFileToCategory(filename, category) {
+    const sourceName = ensureTxtExtension(filename);
+    const file = readWorkspaceFile(sourceName);
+
+    if (!file) {
+        return { ok: false, reason: "missing" };
+    }
+
+    const targetName = `${category}_${Date.now()}.txt`;
+    createWorkspaceFile(targetName, file.content);
+    deleteWorkspaceFile(sourceName);
+
+    deleteDocumentFromDatabase(sourceName);
+    saveDocumentToDatabase(
+        targetName,
+        file.content,
+        category,
+        `Moved to ${category}`
+    );
+
+    return {
+        ok: true,
+        oldName: sourceName,
+        newName: targetName,
+        category
+    };
+}
+
+async function summariseText(text) {
+    const response = await client.messages.create({
+        model: MODEL,
+        max_tokens: 200,
+        messages: [
+            {
+                role: "user",
+                content: `Summarise this file clearly in 3-5 bullet points:\n\n${text}`
+            }
+        ]
+    });
+
+    return (response.content || [])
+        .filter(part => part.type === "text")
+        .map(part => part.text || "")
+        .join("\n")
+        .trim();
+}
+
 /* =========================
    COMMANDS
 ========================= */
@@ -383,6 +474,31 @@ function detectCommand(message) {
             type: "rename_file",
             oldName: match[1].trim(),
             newName: match[2].trim()
+        };
+    }
+
+    match = text.match(/^show document\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "show_document",
+            filename: match[1].trim()
+        };
+    }
+
+    match = text.match(/^summarise file\s+(.+)$/i);
+    if (match) {
+        return {
+            type: "summarise_file",
+            filename: match[1].trim()
+        };
+    }
+
+    match = text.match(/^move file\s+(.+?)\s+to\s+(uni|business|personal)$/i);
+    if (match) {
+        return {
+            type: "move_file",
+            filename: match[1].trim(),
+            category: match[2].trim().toLowerCase()
         };
     }
 
@@ -455,7 +571,7 @@ function detectCommand(message) {
     return null;
 }
 
-function handleCommand(command) {
+async function handleCommand(command) {
     switch (command.type) {
         case "create_file": {
             const filename = ensureTxtExtension(command.filename);
@@ -503,6 +619,50 @@ function handleCommand(command) {
 
             renameDocumentInDatabase(oldName, newName);
             return { ok: true, reply: `File renamed from ${oldName} to ${newName}` };
+        }
+
+        case "show_document": {
+            const filename = ensureTxtExtension(command.filename);
+            const doc = getDocumentByFilename(filename);
+
+            if (!doc) {
+                return { ok: false, reply: `Could not find document: ${filename}` };
+            }
+
+            return {
+                ok: true,
+                reply: `Document: ${doc.filename}\nType: ${doc.classification}\nSummary: ${doc.summary || "No summary"}\n\nContent:\n${doc.content || ""}`
+            };
+        }
+
+        case "summarise_file": {
+            const filename = ensureTxtExtension(command.filename);
+            const file = readWorkspaceFile(filename);
+
+            if (!file) {
+                return { ok: false, reply: `Could not find file: ${filename}` };
+            }
+
+            const summary = await summariseText(file.content);
+            updateDocumentSummary(filename, summary);
+
+            return {
+                ok: true,
+                reply: `Summary of ${filename}:\n\n${summary}`
+            };
+        }
+
+        case "move_file": {
+            const result = moveFileToCategory(command.filename, command.category);
+
+            if (!result.ok) {
+                return { ok: false, reply: `Could not find file: ${ensureTxtExtension(command.filename)}` };
+            }
+
+            return {
+                ok: true,
+                reply: `File moved from ${result.oldName} to ${result.newName} as ${result.category}.`
+            };
         }
 
         case "save_note": {
@@ -626,7 +786,7 @@ app.get("/test", (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "file-commands-enabled-v3"
+        version: "file-commands-enabled-v4"
     });
 });
 
@@ -669,7 +829,7 @@ app.post("/chat", async (req, res) => {
         const command = detectCommand(userMessage);
 
         if (command) {
-            const result = handleCommand(command);
+            const result = await handleCommand(command);
             addToMemory("ai", result.reply);
             return res.status(result.ok ? 200 : 404).json(result);
         }
