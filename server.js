@@ -6,6 +6,7 @@ const fs = require("fs");
 const cors = require("cors");
 const Anthropic = require("@anthropic-ai/sdk");
 const db = require("./database");
+const { runAutoCoder } = require("./auto_coder");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -815,7 +816,7 @@ app.get("/test", (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "database-first-v1"
+        version: "database-first-v1-devpanel"
     });
 });
 
@@ -913,6 +914,42 @@ ${preview}
         return res.status(error?.status || 500).json({
             ok: false,
             reply: error?.error?.message || error?.message || "Server error"
+        });
+    }
+});
+
+app.post("/autocode", async (req, res) => {
+    try {
+        const requirements = req.body?.requirements;
+        const autoPush = !!req.body?.autoPush;
+        const commitMessage = req.body?.commitMessage || "AI dev panel update";
+
+        if (!requirements || typeof requirements !== "string" || !requirements.trim()) {
+            return res.status(400).json({
+                ok: false,
+                reply: "Please enter coding requirements."
+            });
+        }
+
+        const result = await runAutoCoder(requirements.trim(), {
+            autoPush,
+            commitMessage
+        });
+
+        return res.status(200).json({
+            ok: true,
+            reply: "Auto-code completed.",
+            summary: result.summary,
+            changedFiles: result.changedFiles || result.files || [],
+            backupFolder: result.backupFolder,
+            pushed: result.pushed
+        });
+    } catch (error) {
+        console.error("AUTOCODE ERROR:", error);
+
+        return res.status(500).json({
+            ok: false,
+            reply: error.message || "Auto-code failed."
         });
     }
 });
