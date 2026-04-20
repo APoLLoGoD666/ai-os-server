@@ -65,7 +65,8 @@
 
         .quick-grid button,
         .button-row button,
-        .send-row button {
+        .send-row button,
+        .dev-row button {
             border: none;
             border-radius: 8px;
             background: #2b6fff;
@@ -77,12 +78,14 @@
 
         .quick-grid button:hover,
         .button-row button:hover,
-        .send-row button:hover {
+        .send-row button:hover,
+        .dev-row button:hover {
             opacity: 0.92;
         }
 
         .quick-grid button.secondary,
-        .button-row button.secondary {
+        .button-row button.secondary,
+        .dev-row button.secondary {
             background: #2f2f2f;
         }
 
@@ -187,6 +190,35 @@
             letter-spacing: 0.4px;
         }
 
+        .dev-textarea,
+        .dev-input {
+            width: 100%;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            outline: none;
+            margin-bottom: 10px;
+        }
+
+        .dev-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .dev-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        #devOutput {
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
         @media (max-width: 900px) {
             .app {
                 grid-template-columns: 1fr;
@@ -216,9 +248,35 @@
                     <button onclick="runQuickCommand('what documents do i have')">List Documents</button>
                     <button onclick="runQuickCommand('save personal note ')">Save Note</button>
                     <button onclick="runQuickCommand('search documents ')">Search Docs</button>
-                    <button onclick="loadAllPanels()" class="secondary">Sync Files</button>
                     <button onclick="loadAllPanels()" class="secondary">Refresh Panels</button>
                 </div>
+            </div>
+
+            <div class="panel">
+                <h3>Developer Mode</h3>
+                <div class="small" style="margin-bottom:10px;">
+                    Claude can edit approved files only. Start with small changes.
+                </div>
+
+                <textarea
+                    id="devRequirements"
+                    class="dev-textarea"
+                    placeholder="Example: Improve the documents panel spacing but keep chat, files, memory, and current commands working."
+                ></textarea>
+
+                <input
+                    id="devCommitMessage"
+                    class="dev-input"
+                    type="text"
+                    placeholder="Commit message (optional)"
+                />
+
+                <div class="dev-row">
+                    <button onclick="runDevMode(false)">Apply Only</button>
+                    <button class="secondary" onclick="runDevMode(true)">Apply + Push</button>
+                </div>
+
+                <div id="devOutput" class="small"></div>
             </div>
 
             <div class="panel">
@@ -430,6 +488,49 @@
                 `).join("");
             } catch (error) {
                 panel.innerHTML = `<div class="empty">Could not load memory.</div>`;
+            }
+        }
+
+        async function runDevMode(autoPush) {
+            const requirements = document.getElementById("devRequirements").value.trim();
+            const commitMessage = document.getElementById("devCommitMessage").value.trim();
+            const resultBox = document.getElementById("devOutput");
+
+            if (!requirements) {
+                resultBox.textContent = "Please enter coding requirements.";
+                return;
+            }
+
+            resultBox.textContent = "Running Claude...";
+
+            try {
+                const res = await fetch(`${API_BASE}/autocode`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        requirements,
+                        autoPush,
+                        commitMessage
+                    })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok || !data.ok) {
+                    resultBox.textContent = data.reply || "Auto-code failed.";
+                    return;
+                }
+
+                const changed = Array.isArray(data.changedFiles) ? data.changedFiles.join(", ") : "";
+                resultBox.textContent =
+                    `Done. ${data.summary || ""}` +
+                    (changed ? ` | Changed: ${changed}` : "") +
+                    (data.pushed ? " | Pushed live." : " | Not pushed yet.");
+            } catch (error) {
+                console.error("Developer panel error:", error);
+                resultBox.textContent = "Developer mode failed.";
             }
         }
 
