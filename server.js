@@ -315,30 +315,6 @@ function getDocumentByFilename(filename) {
     }
 }
 
-function syncWorkspaceToDatabase() {
-    const files = listWorkspaceFiles();
-    let synced = 0;
-
-    for (const filename of files) {
-        const file = readWorkspaceFile(filename);
-        if (!file) continue;
-
-        let classification = "personal";
-        const lower = filename.toLowerCase();
-
-        if (lower.startsWith("uni_")) classification = "uni";
-        else if (lower.startsWith("business_")) classification = "business";
-        else if (lower.startsWith("personal_")) classification = "personal";
-
-        const summary = `Synced from workspace: ${filename}`;
-        const ok = saveDocumentToDatabase(filename, file.content, classification, summary);
-
-        if (ok) synced++;
-    }
-
-    return { synced, total: files.length };
-}
-
 /* =========================
    HELPERS
 ========================= */
@@ -557,10 +533,6 @@ function detectCommand(message) {
         };
     }
 
-    if (/^sync files$/i.test(text)) {
-        return { type: "sync_files" };
-    }
-
     if (/^list files$/i.test(text) || /^list all files$/i.test(text)) {
         return { type: "list_files" };
     }
@@ -577,7 +549,14 @@ async function handleCommand(command) {
         case "create_file": {
             const filename = ensureTxtExtension(command.filename);
             const created = createWorkspaceFile(filename, command.content);
-            saveDocumentToDatabase(created.filename, created.content, "personal", `Saved file: ${created.filename}`);
+
+            saveDocumentToDatabase(
+                created.filename,
+                created.content,
+                "personal",
+                `Saved file: ${created.filename}`
+            );
+
             return { ok: true, reply: `File created: ${created.filename}` };
         }
 
@@ -671,17 +650,49 @@ async function handleCommand(command) {
             const filename = makeTimestampedFilename(prefix);
 
             createWorkspaceFile(filename, command.content);
-            saveDocumentToDatabase(filename, command.content, command.classification, `Saved ${command.classification} note`);
 
-            return { ok: true, reply: `Note saved as ${filename}` };
+            const dbSaved = saveDocumentToDatabase(
+                filename,
+                command.content,
+                command.classification,
+                `Saved ${command.classification} note`
+            );
+
+            if (!dbSaved) {
+                return {
+                    ok: false,
+                    reply: `Note file was created as ${filename}, but database save failed.`
+                };
+            }
+
+            return {
+                ok: true,
+                reply: `Note saved as ${filename} and stored in database.`
+            };
         }
 
         case "save_named_note": {
             const filename = ensureTxtExtension(command.filename);
             createWorkspaceFile(filename, command.content);
-            saveDocumentToDatabase(filename, command.content, command.classification || "personal", `Saved named note: ${filename}`);
 
-            return { ok: true, reply: `Note saved as ${filename}` };
+            const dbSaved = saveDocumentToDatabase(
+                filename,
+                command.content,
+                command.classification || "personal",
+                `Saved named note: ${filename}`
+            );
+
+            if (!dbSaved) {
+                return {
+                    ok: false,
+                    reply: `Note file was created as ${filename}, but database save failed.`
+                };
+            }
+
+            return {
+                ok: true,
+                reply: `Note saved as ${filename} and stored in database.`
+            };
         }
 
         case "list_files": {
@@ -728,14 +739,6 @@ async function handleCommand(command) {
             }
 
             return { ok: true, reply };
-        }
-
-        case "sync_files": {
-            const result = syncWorkspaceToDatabase();
-            return {
-                ok: true,
-                reply: `Synced ${result.synced} file(s) into the database from ${result.total} workspace file(s).`
-            };
         }
 
         default:
@@ -787,7 +790,7 @@ app.get("/test", (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "file-commands-enabled-v4-delete"
+        version: "database-first-v1"
     });
 });
 
