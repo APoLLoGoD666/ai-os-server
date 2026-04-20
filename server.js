@@ -20,9 +20,9 @@ const client = new Anthropic({
 });
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
-const MEMORY_FILE = path.join(__dirname, "memory.json");
+const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 const WORKSPACE_DIR = path.join(__dirname, "workspace");
-const HIDDEN_FILES = new Set(["memory.json"]);
+const HIDDEN_FILES = new Set([]);
 
 /* =========================
    SETUP
@@ -32,10 +32,6 @@ function ensureSetup() {
     if (!fs.existsSync(WORKSPACE_DIR)) {
         fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
     }
-
-    if (!fs.existsSync(MEMORY_FILE)) {
-        fs.writeFileSync(MEMORY_FILE, "[]", "utf8");
-    }
 }
 
 /* =========================
@@ -43,36 +39,25 @@ function ensureSetup() {
 ========================= */
 
 function loadMemory() {
-    ensureSetup();
-
     try {
-        const raw = fs.readFileSync(MEMORY_FILE, "utf8");
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
+        return db.prepare(
+            "SELECT role, message, created_at AS time FROM memory ORDER BY id DESC LIMIT 20"
+        ).all().reverse();
     } catch (error) {
         console.error("MEMORY LOAD ERROR:", error.message);
         return [];
     }
 }
 
-function saveMemory(memory) {
+function addToMemory(role, message) {
     try {
-        fs.writeFileSync(MEMORY_FILE, JSON.stringify(memory, null, 2), "utf8");
+        db.prepare("INSERT INTO memory (role, message) VALUES (?, ?)").run(role, message);
+        db.prepare(
+            "DELETE FROM memory WHERE id NOT IN (SELECT id FROM memory ORDER BY id DESC LIMIT 20)"
+        ).run();
     } catch (error) {
         console.error("MEMORY SAVE ERROR:", error.message);
     }
-}
-
-function addToMemory(role, message) {
-    const memory = loadMemory();
-
-    memory.push({
-        role,
-        message,
-        time: new Date().toISOString()
-    });
-
-    saveMemory(memory.slice(-20));
 }
 
 function formatRecentMemory() {
@@ -665,6 +650,8 @@ async function handleCommand(command) {
                 };
             }
 
+            setImmediate(() => backgroundClassifyAndSummarise(filename, command.content));
+
             return {
                 ok: true,
                 reply: `Note saved as ${filename} and stored in database.`
@@ -688,6 +675,8 @@ async function handleCommand(command) {
                     reply: `Note file was created as ${filename}, but database save failed.`
                 };
             }
+
+            setImmediate(() => backgroundClassifyAndSummarise(filename, command.content));
 
             return {
                 ok: true,
@@ -754,6 +743,8 @@ function buildPrompt(userMessage, memoryText, docsText) {
     return `
 You are an AI assistant inside a personal workflow system.
 
+You have direct access to the user's workspace files and saved documents. The relevant files are provided below — reference and work with them directly. Never say you cannot access files.
+
 Use the user's recent memory and saved documents when relevant.
 Be practical, clear, and concise.
 
@@ -768,6 +759,40 @@ ${userMessage}
 
 Answer helpfully.
 `.trim();
+}
+
+async function backgroundClassifyAndSummarise(filename, content) {
+    try {
+        const [classRes, sumRes] = await Promise.all([
+            client.messages.create({
+                model: HAIKU_MODEL,
+                max_tokens: 20,
+                messages: [{
+                    role: "user",
+                    content: `Classify into ONE word: uni, business, personal, summary\n\nTEXT:\n${content}`
+                }]
+            }),
+            client.messages.create({
+                model: HAIKU_MODEL,
+                max_tokens: 150,
+                messages: [{
+                    role: "user",
+                    content: `Summarise this in 2-3 sentences:\n\n${content}`
+                }]
+            })
+        ]);
+
+        const classification = (classRes.content[0]?.text || "personal").trim().toLowerCase();
+        const summary = (sumRes.content[0]?.text || "").trim();
+
+        db.prepare(
+            "UPDATE documents SET classification = ?, summary = ? WHERE filename = ?"
+        ).run(classification, summary, filename);
+
+        console.log(`Background: updated ${filename} → ${classification}`);
+    } catch (err) {
+        console.error("Background classify/summarise error:", err.message);
+    }
 }
 
 /* =========================

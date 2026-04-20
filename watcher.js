@@ -5,7 +5,7 @@ const axios = require("axios");
 const db = require("./database");
 
 const API_KEY = process.env.ANTHROPIC_API_KEY;
-const watchFolder = path.join(__dirname, "../projects");
+const watchFolder = path.join(__dirname, "./workspace");
 
 if (!API_KEY) {
     throw new Error("Missing ANTHROPIC_API_KEY");
@@ -48,7 +48,7 @@ async function summarise(text) {
     const res = await axios.post(
         "https://api.anthropic.com/v1/messages",
         {
-            model: "claude-sonnet-4-6",
+            model: "claude-haiku-4-5-20251001",
             max_tokens: 150,
             messages: [
                 {
@@ -129,4 +129,4 @@ chokidar.watch(watchFolder, {
 .on("add", processFile)
 .on("change", processFile);
 
-console.log("🚀 System running... Drop or edit files in /projects");
+console.log("🚀 System running... Drop or edit files in /workspace");
