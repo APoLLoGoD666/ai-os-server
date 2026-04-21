@@ -14,7 +14,7 @@ const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const ROOT = __dirname;
 const BACKUP_DIR = path.join(ROOT, "ai_backups");
 
-// 🔒 SAFE FILES ONLY
+// Only allow these files to be edited
 const ALLOWED_FILES = [
     "dashboard.html",
     "server.js"
@@ -56,8 +56,8 @@ function extractJSON(text) {
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");
 
-    if (start === -1 || end === -1) {
-        throw new Error("Invalid JSON from Claude.");
+    if (start === -1 || end === -1 || end <= start) {
+        throw new Error("Claude did not return valid JSON.");
     }
 
     return JSON.parse(text.slice(start, end + 1));
@@ -72,9 +72,11 @@ You are editing a Node.js + HTML app.
 STRICT RULES:
 - Do NOT break existing features
 - Make SMALL safe changes only
-- Do NOT rewrite full systems unnecessarily
-- Only edit: ${ALLOWED_FILES.join(", ")}
+- Do NOT rewrite working systems unless clearly necessary
+- Only edit these files: ${ALLOWED_FILES.join(", ")}
 - Return ONLY JSON
+- No markdown
+- No explanation outside JSON
 
 FILES:
 ${Object.entries(files).map(([f, c]) => `
@@ -87,7 +89,7 @@ ${requirements}
 
 RETURN:
 {
-  "summary": "what changed",
+  "summary": "short summary",
   "files": [
     {
       "path": "dashboard.html",
@@ -95,7 +97,7 @@ RETURN:
     }
   ]
 }
-`;
+`.trim();
 
     const res = await client.messages.create({
         model: MODEL,
@@ -104,8 +106,8 @@ RETURN:
     });
 
     const text = (res.content || [])
-        .filter(p => p.type === "text")
-        .map(p => p.text)
+        .filter(part => part.type === "text")
+        .map(part => part.text || "")
         .join("\n");
 
     const parsed = extractJSON(text);
@@ -119,7 +121,7 @@ RETURN:
             throw new Error(`Blocked file edit: ${file.path}`);
         }
 
-        if (!file.content || typeof file.content !== "string") {
+        if (typeof file.content !== "string" || !file.content.trim()) {
             throw new Error(`Invalid content for ${file.path}`);
         }
     }
@@ -133,7 +135,6 @@ function apply(files) {
     }
 }
 
-// ✅ FIXED PUSH (NO ERROR IF NO CHANGES)
 function pushGit(message) {
     try {
         execSync("git add .", { stdio: "pipe" });
@@ -146,20 +147,29 @@ function pushGit(message) {
             return {
                 pushed: false,
                 skipped: true,
-                reason: "No changes to commit"
+                reason: "No changes to commit."
             };
         }
 
-        execSync(`git commit -m "${message.replace(/"/g, "'")}"`);
-        execSync("git push");
+        execSync(`git commit -m "${message.replace(/"/g, "'")}"`, {
+            stdio: "pipe"
+        });
+
+        execSync("git push", {
+            stdio: "pipe"
+        });
 
         return {
             pushed: true,
             skipped: false,
             reason: ""
         };
-    } catch (err) {
-        throw new Error("Git push failed");
+    } catch (error) {
+        return {
+            pushed: false,
+            skipped: false,
+            reason: "Git push failed. Most likely the live server does not have GitHub push credentials. Use Apply Only, then run git add ., git commit -m \"your message\", and git push from your VS Code terminal."
+        };
     }
 }
 
@@ -183,7 +193,7 @@ async function runAutoCoder(requirements, opts = {}) {
 
     return {
         ok: true,
-        summary: parsed.summary,
+        summary: parsed.summary || "No summary provided.",
         files: parsed.files.map(f => f.path),
         backupFolder,
         pushed: pushResult.pushed,

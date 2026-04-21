@@ -197,9 +197,9 @@
             border-radius: 8px;
             padding: 12px;
             font-size: 14px;
-            font-family: Arial, sans-serif;
             outline: none;
             margin-bottom: 10px;
+            font-family: Arial, sans-serif;
         }
 
         .dev-textarea {
@@ -207,14 +207,10 @@
             resize: vertical;
         }
 
-        .dev-row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        #devOutput {
+        .dev-result {
             margin-top: 10px;
+            font-size: 13px;
+            color: #bdbdbd;
             white-space: pre-wrap;
             word-wrap: break-word;
         }
@@ -259,24 +255,24 @@
                 </div>
 
                 <textarea
-                    id="devRequirements"
+                    id="devInput"
                     class="dev-textarea"
-                    placeholder="Example: Improve the documents panel spacing but keep chat, files, memory, and current commands working."
+                    placeholder="Example: Increase the Documents panel title slightly. Do not break functionality. Make the smallest possible change."
                 ></textarea>
 
                 <input
-                    id="devCommitMessage"
+                    id="devCommit"
                     class="dev-input"
                     type="text"
                     placeholder="Commit message (optional)"
                 />
 
-                <div class="dev-row">
-                    <button onclick="runDevMode(false)">Apply Only</button>
-                    <button class="secondary" onclick="runDevMode(true)">Apply + Push</button>
+                <div class="button-row dev-row">
+                    <button onclick="runDev(false)">Apply Only</button>
+                    <button class="secondary" onclick="runDev(true)">Apply + Push</button>
                 </div>
 
-                <div id="devOutput" class="small"></div>
+                <div id="devOutput" class="dev-result"></div>
             </div>
 
             <div class="panel">
@@ -491,46 +487,54 @@
             }
         }
 
-        async function runDevMode(autoPush) {
-            const requirements = document.getElementById("devRequirements").value.trim();
-            const commitMessage = document.getElementById("devCommitMessage").value.trim();
-            const resultBox = document.getElementById("devOutput");
+        async function runDev(push) {
+            const text = document.getElementById("devInput").value.trim();
+            const commit = document.getElementById("devCommit").value.trim();
+            const out = document.getElementById("devOutput");
 
-            if (!requirements) {
-                resultBox.textContent = "Please enter coding requirements.";
+            if (!text) {
+                out.textContent = "Enter instructions";
                 return;
             }
 
-            resultBox.textContent = "Running Claude...";
+            out.textContent = "Running...";
 
             try {
                 const res = await fetch(`${API_BASE}/autocode`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        requirements,
-                        autoPush,
-                        commitMessage
+                        requirements: text,
+                        autoPush: push,
+                        commitMessage: commit
                     })
                 });
 
                 const data = await res.json();
 
-                if (!res.ok || !data.ok) {
-                    resultBox.textContent = data.reply || "Auto-code failed.";
+                if (!data.ok) {
+                    out.textContent = `Error: ${data.reply || "Auto-code failed."}`;
                     return;
                 }
 
-                const changed = Array.isArray(data.changedFiles) ? data.changedFiles.join(", ") : "";
-                resultBox.textContent =
-                    `Done. ${data.summary || ""}` +
-                    (changed ? ` | Changed: ${changed}` : "") +
-                    (data.pushed ? " | Pushed live." : " | Not pushed yet.");
+                const changed = Array.isArray(data.changedFiles)
+                    ? data.changedFiles.join(", ")
+                    : "";
+
+                if (data.skipped) {
+                    out.textContent = `No push needed: ${data.reason || "No changes detected."}`;
+                    return;
+                }
+
+                if (!data.pushed && data.reason) {
+                    out.textContent = `${data.reason}${changed ? ` | Changed: ${changed}` : ""}`;
+                    return;
+                }
+
+                out.textContent = `Done: ${data.summary || "Completed"}${changed ? ` | Changed: ${changed}` : ""}${data.pushed ? " | Pushed live." : ""}`;
             } catch (error) {
                 console.error("Developer panel error:", error);
-                resultBox.textContent = "Developer mode failed.";
+                out.textContent = "Developer mode failed.";
             }
         }
 

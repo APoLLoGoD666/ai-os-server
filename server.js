@@ -938,11 +938,15 @@ app.post("/autocode", async (req, res) => {
 
         return res.status(200).json({
             ok: true,
-            reply: "Auto-code completed.",
+            reply: result.skipped
+                ? "No changes detected, so nothing was pushed."
+                : result.reason || "Auto-code completed.",
             summary: result.summary,
             changedFiles: result.changedFiles || result.files || [],
             backupFolder: result.backupFolder,
-            pushed: result.pushed
+            pushed: result.pushed,
+            skipped: result.skipped,
+            reason: result.reason
         });
     } catch (error) {
         console.error("AUTOCODE ERROR:", error);
