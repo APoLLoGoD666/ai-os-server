@@ -66,7 +66,8 @@
         .quick-grid button,
         .button-row button,
         .send-row button,
-        .dev-row button {
+        .dev-row button,
+        .widget-button {
             border: none;
             border-radius: 8px;
             background: #2b6fff;
@@ -74,13 +75,6 @@
             padding: 10px 12px;
             cursor: pointer;
             font-size: 14px;
-        }
-
-        .quick-grid button:hover,
-        .button-row button:hover,
-        .send-row button:hover,
-        .dev-row button:hover {
-            opacity: 0.92;
         }
 
         .quick-grid button.secondary,
@@ -95,7 +89,7 @@
             font-size: 14px;
         }
 
-        #chat {
+        #mainChat {
             background: #1a1a1a;
             border: 1px solid #2d2d2d;
             border-radius: 12px;
@@ -225,16 +219,6 @@
             margin-bottom: 10px;
         }
 
-        .custom-layout-toolbar button {
-            border: none;
-            border-radius: 8px;
-            background: #2f2f2f;
-            color: white;
-            padding: 10px 12px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
         #customLayout {
             min-height: 160px;
             background: #121212;
@@ -250,6 +234,37 @@
             color: #8e8e8e;
         }
 
+        .widget-chat-box {
+            background: #121212;
+            border: 1px solid #2d2d2d;
+            border-radius: 12px;
+            padding: 12px;
+            min-height: 180px;
+            max-height: 280px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .widget-chat-input-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .widget-chat-input-row input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .widget-list {
+            margin: 0;
+            padding-left: 18px;
+            color: #fff;
+        }
+
         @media (max-width: 900px) {
             .app {
                 grid-template-columns: 1fr;
@@ -260,7 +275,7 @@
                 border-bottom: 1px solid #2b2b2b;
             }
 
-            #chat {
+            #mainChat {
                 height: 360px;
             }
         }
@@ -348,7 +363,7 @@
                 <div id="customLayout" class="empty-layout">No custom layout saved yet.</div>
             </div>
 
-            <div id="chat">
+            <div id="mainChat">
                 <div class="message system">
                     <span class="label">System</span>
                     Ready...
@@ -356,23 +371,11 @@
             </div>
 
             <div class="panel">
-                <h3>Chat</h3>
+                <h3>Main Chat</h3>
                 <div class="send-row">
                     <input id="input" type="text" placeholder="Type a message or command..." />
-                    <button id="sendBtn" onclick="sendMessage()">Send</button>
+                    <button id="sendBtn" onclick="sendMainMessage()">Send</button>
                 </div>
-            </div>
-
-            <div class="panel">
-                <h3>Useful Commands</h3>
-                <ul class="list">
-                    <li><code>save personal note finance is the management of money</code></li>
-                    <li><code>search documents finance</code></li>
-                    <li><code>list files</code></li>
-                    <li><code>what documents do i have</code></li>
-                    <li><code>read file finance_notes</code></li>
-                    <li><code>delete test</code></li>
-                </ul>
             </div>
         </main>
     </div>
@@ -380,7 +383,7 @@
     <script>
         const API_BASE = "";
 
-        const chatBox = document.getElementById("chat");
+        const mainChatBox = document.getElementById("mainChat");
         const input = document.getElementById("input");
         const sendBtn = document.getElementById("sendBtn");
         const statusText = document.getElementById("status");
@@ -391,7 +394,7 @@
             return div.innerHTML;
         }
 
-        function addMessage(role, text) {
+        function addMessageToBox(box, role, text) {
             const msg = document.createElement("div");
             msg.className = `message ${role}`;
 
@@ -404,15 +407,33 @@
                 ${escapeHtml(text)}
             `;
 
-            chatBox.appendChild(msg);
-            chatBox.scrollTop = chatBox.scrollHeight;
+            box.appendChild(msg);
+            box.scrollTop = box.scrollHeight;
         }
 
-        async function sendMessage(customMessage = null) {
+        async function sendChatMessage(message, targetBox) {
+            const res = await fetch(`${API_BASE}/chat`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                addMessageToBox(targetBox, "ai", data.reply || "Server returned an error.");
+            } else {
+                addMessageToBox(targetBox, "ai", data.reply || "No reply.");
+            }
+        }
+
+        async function sendMainMessage(customMessage = null) {
             const message = customMessage !== null ? customMessage : input.value.trim();
             if (!message) return;
 
-            addMessage("user", message);
+            addMessageToBox(mainChatBox, "user", message);
 
             if (customMessage === null) {
                 input.value = "";
@@ -424,24 +445,10 @@
             statusText.textContent = "Thinking...";
 
             try {
-                const res = await fetch(`${API_BASE}/chat`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ message })
-                });
-
-                const data = await res.json();
-
-                if (!res.ok) {
-                    addMessage("ai", data.reply || "Server returned an error.");
-                } else {
-                    addMessage("ai", data.reply || "No reply.");
-                }
+                await sendChatMessage(message, mainChatBox);
             } catch (error) {
                 console.error("Chat error:", error);
-                addMessage("ai", "Cannot connect to Render server.");
+                addMessageToBox(mainChatBox, "ai", "Cannot connect to server.");
             } finally {
                 sendBtn.disabled = false;
                 sendBtn.textContent = "Send";
@@ -531,6 +538,141 @@
             }
         }
 
+        async function populateFilesWidgets(root) {
+            const widgets = root.querySelectorAll('[data-widget="files"]');
+            if (!widgets.length) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/files`);
+                const data = await res.json();
+
+                widgets.forEach(widget => {
+                    const items = Array.isArray(data.files) ? data.files : [];
+                    widget.innerHTML = `
+                        <h3 style="margin-top:0;">Files</h3>
+                        ${items.length
+                            ? `<ul class="widget-list">${items.map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ul>`
+                            : `<div class="empty">No files found.</div>`}
+                    `;
+                });
+            } catch {
+                widgets.forEach(widget => {
+                    widget.innerHTML = `<h3 style="margin-top:0;">Files</h3><div class="empty">Could not load files.</div>`;
+                });
+            }
+        }
+
+        async function populateDocumentsWidgets(root) {
+            const widgets = root.querySelectorAll('[data-widget="documents"]');
+            if (!widgets.length) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/documents`);
+                const data = await res.json();
+
+                widgets.forEach(widget => {
+                    const docs = Array.isArray(data.documents) ? data.documents : [];
+                    widget.innerHTML = `
+                        <h3 style="margin-top:0;">Documents</h3>
+                        ${docs.length
+                            ? docs.map(doc => `
+                                <div class="doc-item">
+                                    <div class="doc-name">${escapeHtml(doc.filename)}</div>
+                                    <div class="doc-meta">${escapeHtml(doc.classification || "unknown")}</div>
+                                </div>
+                              `).join("")
+                            : `<div class="empty">No documents found.</div>`}
+                    `;
+                });
+            } catch {
+                widgets.forEach(widget => {
+                    widget.innerHTML = `<h3 style="margin-top:0;">Documents</h3><div class="empty">Could not load documents.</div>`;
+                });
+            }
+        }
+
+        async function populateMemoryWidgets(root) {
+            const widgets = root.querySelectorAll('[data-widget="memory"]');
+            if (!widgets.length) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/memory`);
+                const data = await res.json();
+
+                widgets.forEach(widget => {
+                    const mem = Array.isArray(data.memory) ? data.memory.slice(-6).reverse() : [];
+                    widget.innerHTML = `
+                        <h3 style="margin-top:0;">Memory</h3>
+                        ${mem.length
+                            ? mem.map(item => `
+                                <div class="doc-item">
+                                    <div class="doc-name">${escapeHtml(item.role)}</div>
+                                    <div class="doc-meta">${escapeHtml(item.message || "")}</div>
+                                </div>
+                              `).join("")
+                            : `<div class="empty">No memory found.</div>`}
+                    `;
+                });
+            } catch {
+                widgets.forEach(widget => {
+                    widget.innerHTML = `<h3 style="margin-top:0;">Memory</h3><div class="empty">Could not load memory.</div>`;
+                });
+            }
+        }
+
+        function attachChatWidgetHandlers(root) {
+            const widgets = root.querySelectorAll('[data-widget="chat"]');
+
+            widgets.forEach((widget, index) => {
+                widget.innerHTML = `
+                    <h3 style="margin-top:0;">Chat</h3>
+                    <div class="widget-chat-box" id="widget-chat-box-${index}">
+                        <div class="message system">
+                            <span class="label">System</span>
+                            Ready...
+                        </div>
+                    </div>
+                    <div class="widget-chat-input-row">
+                        <input id="widget-chat-input-${index}" type="text" placeholder="Type here..." />
+                        <button class="widget-button" id="widget-chat-send-${index}">Send</button>
+                    </div>
+                `;
+
+                const box = widget.querySelector(`#widget-chat-box-${index}`);
+                const inputEl = widget.querySelector(`#widget-chat-input-${index}`);
+                const buttonEl = widget.querySelector(`#widget-chat-send-${index}`);
+
+                async function sendWidgetMessage() {
+                    const message = inputEl.value.trim();
+                    if (!message) return;
+
+                    addMessageToBox(box, "user", message);
+                    inputEl.value = "";
+
+                    try {
+                        await sendChatMessage(message, box);
+                    } catch (error) {
+                        addMessageToBox(box, "ai", "Cannot connect to server.");
+                    }
+                }
+
+                buttonEl.addEventListener("click", sendWidgetMessage);
+                inputEl.addEventListener("keydown", function (e) {
+                    if (e.key === "Enter") {
+                        sendWidgetMessage();
+                    }
+                });
+            });
+        }
+
+        async function hydrateCustomLayout() {
+            const box = document.getElementById("customLayout");
+            await populateFilesWidgets(box);
+            await populateDocumentsWidgets(box);
+            await populateMemoryWidgets(box);
+            attachChatWidgetHandlers(box);
+        }
+
         async function loadCustomLayout() {
             const box = document.getElementById("customLayout");
 
@@ -554,6 +696,8 @@
 
                 box.className = "";
                 box.innerHTML = data.html;
+
+                await hydrateCustomLayout();
             } catch (error) {
                 box.className = "empty-layout";
                 box.innerHTML = "Could not load custom layout.";
@@ -620,7 +764,7 @@
 
         input.addEventListener("keydown", function (e) {
             if (e.key === "Enter") {
-                sendMessage();
+                sendMainMessage();
             }
         });
 
