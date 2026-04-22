@@ -184,8 +184,25 @@ function applyChanges(files) {
     }
 }
 
-function runGitPush(commitMessage) {
-    execSync("git add .", { cwd: ROOT, stdio: "inherit" });
+function runGitPush(commitMessage, changedFiles) {
+    if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
+        return {
+            pushed: false,
+            skipped: true,
+            reason: "No changed files supplied for commit."
+        };
+    }
+
+    for (const file of changedFiles) {
+        if (!ALLOWED_FILES.includes(file)) {
+            throw new Error(`Refusing to git add non-approved file: ${file}`);
+        }
+
+        execSync(`git add "${file}"`, {
+            cwd: ROOT,
+            stdio: "inherit"
+        });
+    }
 
     const status = execSync("git status --porcelain", {
         cwd: ROOT,
@@ -261,12 +278,13 @@ async function applyLastProposal(autoPush = false, commitMessage = "AI local aut
     console.log("Changes applied locally.");
 
     if (!autoPush) {
-        console.log('Now review them, then run: git add . && git commit -m "your message" && git push');
+        console.log('Now review them, then run: git add dashboard.html && git commit -m "your message" && git push');
         return;
     }
 
     console.log("Committing and pushing...");
-    const pushResult = runGitPush(commitMessage);
+    const changedPaths = proposal.files.map(f => f.path);
+    const pushResult = runGitPush(commitMessage, changedPaths);
 
     if (pushResult.skipped) {
         console.log(pushResult.reason);
