@@ -275,29 +275,66 @@ async function applyLastProposal(autoPush = false, commitMessage = "AI local aut
     }
 }
 
+function rollbackLastBackup() {
+    ensureBackupDir();
+
+    const folders = fs.readdirSync(BACKUP_DIR)
+        .map(name => ({
+            name,
+            time: fs.statSync(path.join(BACKUP_DIR, name)).mtime.getTime()
+        }))
+        .sort((a, b) => b.time - a.time);
+
+    if (!folders.length) {
+        throw new Error("No backups found.");
+    }
+
+    const latest = folders[0].name;
+    const backupPath = path.join(BACKUP_DIR, latest);
+
+    console.log("Restoring from backup:", backupPath);
+
+    const files = fs.readdirSync(backupPath);
+
+    for (const file of files) {
+        const backupFile = path.join(backupPath, file);
+        const targetFile = path.join(ROOT, file);
+
+        const content = fs.readFileSync(backupFile, "utf8");
+        fs.writeFileSync(targetFile, content, "utf8");
+    }
+
+    console.log("Rollback complete.");
+}
+
 async function main() {
     const args = process.argv.slice(2);
 
     const isPreview = args.includes("--preview");
     const isApplyLast = args.includes("--apply-last");
+    const isRollback = args.includes("--rollback");
     const autoPush = args.includes("--push");
 
-    const requirementParts = args.filter(arg =>
-        !arg.startsWith("--")
-    );
+    const requirementParts = args.filter(arg => !arg.startsWith("--"));
     const requirements = requirementParts.join(" ").trim();
 
-    if (isPreview && isApplyLast) {
-        console.log("Use either --preview or --apply-last, not both.");
+    if ([isPreview, isApplyLast, isRollback].filter(Boolean).length > 1) {
+        console.log("Use only one of: --preview, --apply-last, --rollback");
         process.exit(1);
     }
 
-    if (!isPreview && !isApplyLast) {
-        console.log('Usage:');
+    if (!isPreview && !isApplyLast && !isRollback) {
+        console.log("Usage:");
         console.log('  node local_autopilot.js "your requirement here" --preview');
-        console.log('  node local_autopilot.js --apply-last');
-        console.log('  node local_autopilot.js --apply-last --push');
+        console.log("  node local_autopilot.js --apply-last");
+        console.log("  node local_autopilot.js --apply-last --push");
+        console.log("  node local_autopilot.js --rollback");
         process.exit(1);
+    }
+
+    if (isRollback) {
+        rollbackLastBackup();
+        return;
     }
 
     if (isPreview) {
@@ -312,6 +349,7 @@ async function main() {
 
     if (isApplyLast) {
         await applyLastProposal(autoPush, "AI local autopilot update");
+        return;
     }
 }
 
