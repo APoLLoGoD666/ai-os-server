@@ -23,6 +23,7 @@ const client = new Anthropic({
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 const WORKSPACE_DIR = path.join(__dirname, "workspace");
+const LAYOUT_FILE = path.join(__dirname, "layout.json");
 const HIDDEN_FILES = new Set([]);
 
 /* =========================
@@ -804,6 +805,10 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "dashboard.html"));
 });
 
+app.get("/editor", (req, res) => {
+    res.sendFile(path.join(__dirname, "editor.html"));
+});
+
 app.get("/test", (req, res) => {
     res.status(200).json({
         ok: true,
@@ -816,7 +821,7 @@ app.get("/test", (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "database-first-v1-devpanel"
+        version: "database-first-v1-devpanel-editor"
     });
 });
 
@@ -833,6 +838,49 @@ app.get("/documents", (req, res) => {
 app.get("/files", (req, res) => {
     const files = listWorkspaceFiles();
     res.status(200).json({ ok: true, count: files.length, files });
+});
+
+app.get("/load-layout", (req, res) => {
+    try {
+        if (!fs.existsSync(LAYOUT_FILE)) {
+            return res.json({ html: "", css: "" });
+        }
+
+        const raw = fs.readFileSync(LAYOUT_FILE, "utf8");
+        const data = JSON.parse(raw);
+
+        return res.json({
+            html: data.html || "",
+            css: data.css || ""
+        });
+    } catch (error) {
+        console.error("LOAD LAYOUT ERROR:", error.message);
+        return res.status(500).json({
+            ok: false,
+            reply: "Could not load layout."
+        });
+    }
+});
+
+app.post("/save-layout", (req, res) => {
+    try {
+        const html = req.body?.html || "";
+        const css = req.body?.css || "";
+
+        fs.writeFileSync(
+            LAYOUT_FILE,
+            JSON.stringify({ html, css }, null, 2),
+            "utf8"
+        );
+
+        return res.json({ ok: true, reply: "Layout saved." });
+    } catch (error) {
+        console.error("SAVE LAYOUT ERROR:", error.message);
+        return res.status(500).json({
+            ok: false,
+            reply: "Could not save layout."
+        });
+    }
 });
 
 app.post("/chat", async (req, res) => {
