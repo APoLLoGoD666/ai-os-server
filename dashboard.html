@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Workflow Dashboard</title>
+    <title>AI Workspace</title>
     <style>
         * {
             box-sizing: border-box;
@@ -18,7 +18,7 @@
 
         .app {
             display: grid;
-            grid-template-columns: 320px 1fr;
+            grid-template-columns: 300px 1fr;
             min-height: 100vh;
         }
 
@@ -34,10 +34,6 @@
             overflow-y: auto;
         }
 
-        h1, h2, h3 {
-            margin-top: 0;
-        }
-
         .panel {
             background: #1b1b1b;
             border: 1px solid #2d2d2d;
@@ -47,6 +43,7 @@
         }
 
         .panel h3 {
+            margin-top: 0;
             margin-bottom: 10px;
             font-size: 16px;
         }
@@ -63,10 +60,8 @@
             gap: 8px;
         }
 
-        .quick-grid button,
         .button-row button,
-        .send-row button,
-        .dev-row button,
+        .quick-grid button,
         .widget-button {
             border: none;
             border-radius: 8px;
@@ -77,69 +72,43 @@
             font-size: 14px;
         }
 
-        .quick-grid button.secondary,
         .button-row button.secondary,
-        .dev-row button.secondary {
+        .quick-grid button.secondary {
             background: #2f2f2f;
         }
 
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .topbar h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
         .status {
-            margin-bottom: 12px;
             color: #bdbdbd;
             font-size: 14px;
         }
 
-        #mainChat {
-            background: #1a1a1a;
-            border: 1px solid #2d2d2d;
+        #customLayout {
+            min-height: 70vh;
+            background: #121212;
+            border: 1px dashed #333;
             border-radius: 12px;
-            padding: 15px;
-            height: 460px;
-            overflow-y: auto;
-            margin-bottom: 12px;
-        }
-
-        .message {
-            margin-bottom: 12px;
-            padding: 10px 12px;
-            border-radius: 10px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .user {
-            background: #2b6fff;
-        }
-
-        .ai {
-            background: #2a2a2a;
-        }
-
-        .system {
-            background: #181818;
-            color: #bdbdbd;
-            font-style: italic;
-        }
-
-        .label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-
-        .send-row {
-            display: flex;
-            gap: 10px;
-        }
-
-        .send-row input {
-            flex: 1;
             padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            outline: none;
+        }
+
+        #customLayout.empty-layout {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8e8e8e;
         }
 
         .list {
@@ -149,12 +118,6 @@
 
         .list li {
             margin-bottom: 6px;
-            line-height: 1.4;
-        }
-
-        .empty {
-            color: #9b9b9b;
-            font-size: 14px;
         }
 
         .doc-item {
@@ -174,64 +137,6 @@
             font-size: 13px;
             color: #bdbdbd;
             margin-top: 2px;
-        }
-
-        .section-title {
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: #cfcfcf;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-        }
-
-        .dev-textarea,
-        .dev-input {
-            width: 100%;
-            border: none;
-            border-radius: 8px;
-            padding: 12px;
-            font-size: 14px;
-            outline: none;
-            margin-bottom: 10px;
-            font-family: Arial, sans-serif;
-        }
-
-        .dev-textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .dev-result {
-            margin-top: 10px;
-            font-size: 13px;
-            color: #bdbdbd;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .custom-layout-wrap {
-            margin-bottom: 16px;
-        }
-
-        .custom-layout-toolbar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-
-        #customLayout {
-            min-height: 160px;
-            background: #121212;
-            border: 1px dashed #333;
-            border-radius: 12px;
-            padding: 12px;
-        }
-
-        #customLayout.empty-layout {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #8e8e8e;
         }
 
         .widget-chat-box {
@@ -259,10 +164,9 @@
             outline: none;
         }
 
-        .widget-list {
-            margin: 0;
-            padding-left: 18px;
-            color: #fff;
+        .empty {
+            color: #9b9b9b;
+            font-size: 14px;
         }
 
         @media (max-width: 900px) {
@@ -274,119 +178,52 @@
                 border-right: none;
                 border-bottom: 1px solid #2b2b2b;
             }
-
-            #mainChat {
-                height: 360px;
-            }
         }
     </style>
 </head>
 <body>
     <div class="app">
         <aside class="sidebar">
-            <h2>AI Workflow</h2>
-            <div class="small">Connected to Render</div>
+            <h2>AI Workspace</h2>
+            <div class="small">Connected</div>
 
             <div class="panel">
                 <h3>Quick Actions</h3>
                 <div class="quick-grid">
-                    <button onclick="runQuickCommand('list files')">List Files</button>
-                    <button onclick="runQuickCommand('what documents do i have')">List Documents</button>
-                    <button onclick="runQuickCommand('save personal note ')">Save Note</button>
-                    <button onclick="runQuickCommand('search documents ')">Search Docs</button>
-                    <button onclick="loadAllPanels()" class="secondary">Refresh Panels</button>
+                    <button onclick="loadCustomLayout()">Refresh Layout</button>
+                    <button onclick="window.open('/editor', '_blank')">Open Editor</button>
+                    <button class="secondary" onclick="loadSidebarData()">Refresh Data</button>
                 </div>
             </div>
 
             <div class="panel">
-                <h3>Developer Mode</h3>
-                <div class="small" style="margin-bottom:10px;">
-                    Claude can edit approved files only. Start with small changes.
-                </div>
-
-                <textarea
-                    id="devInput"
-                    class="dev-textarea"
-                    placeholder="Example: Increase the Documents panel title slightly. Do not break functionality. Make the smallest possible change."
-                ></textarea>
-
-                <input
-                    id="devCommit"
-                    class="dev-input"
-                    type="text"
-                    placeholder="Commit message (optional)"
-                />
-
-                <div class="button-row dev-row">
-                    <button onclick="runDev(false)">Apply Only</button>
-                    <button class="secondary" onclick="runDev(true)">Apply + Push</button>
-                </div>
-
-                <div id="devOutput" class="dev-result"></div>
+                <h3>Files</h3>
+                <div id="filesPanel" class="small">Loading...</div>
             </div>
 
             <div class="panel">
-                <div class="section-title">Files</div>
-                <div class="button-row" style="margin-bottom:10px;">
-                    <button class="secondary" onclick="loadFiles()">Refresh Files</button>
-                </div>
-                <div id="filesPanel" class="empty">Loading files...</div>
+                <h3>Documents</h3>
+                <div id="documentsPanel" class="small">Loading...</div>
             </div>
 
             <div class="panel">
-                <div class="section-title">Documents</div>
-                <div class="button-row" style="margin-bottom:10px;">
-                    <button class="secondary" onclick="loadDocuments()">Refresh Documents</button>
-                </div>
-                <div id="documentsPanel" class="empty">Loading documents...</div>
-            </div>
-
-            <div class="panel">
-                <div class="section-title">Memory</div>
-                <div class="button-row" style="margin-bottom:10px;">
-                    <button class="secondary" onclick="loadMemory()">Refresh Memory</button>
-                </div>
-                <div id="memoryPanel" class="empty">Loading memory...</div>
+                <h3>Memory</h3>
+                <div id="memoryPanel" class="small">Loading...</div>
             </div>
         </aside>
 
         <main class="main">
-            <h1>AI Chat Dashboard</h1>
-            <div class="status" id="status">Ready</div>
-
-            <div class="panel custom-layout-wrap">
-                <h3>Custom Dashboard Layout</h3>
-                <div class="custom-layout-toolbar">
-                    <button onclick="window.open('/editor', '_blank')">Open Editor</button>
-                    <button onclick="loadCustomLayout()">Refresh Layout</button>
-                </div>
-                <div id="customLayout" class="empty-layout">No custom layout saved yet.</div>
+            <div class="topbar">
+                <h1>Dashboard</h1>
+                <div class="status" id="status">Ready</div>
             </div>
 
-            <div id="mainChat">
-                <div class="message system">
-                    <span class="label">System</span>
-                    Ready...
-                </div>
-            </div>
-
-            <div class="panel">
-                <h3>Main Chat</h3>
-                <div class="send-row">
-                    <input id="input" type="text" placeholder="Type a message or command..." />
-                    <button id="sendBtn" onclick="sendMainMessage()">Send</button>
-                </div>
-            </div>
+            <div id="customLayout" class="empty-layout">No custom layout saved yet.</div>
         </main>
     </div>
 
     <script>
         const API_BASE = "";
-
-        const mainChatBox = document.getElementById("mainChat");
-        const input = document.getElementById("input");
-        const sendBtn = document.getElementById("sendBtn");
-        const statusText = document.getElementById("status");
 
         function escapeHtml(text) {
             const div = document.createElement("div");
@@ -394,75 +231,7 @@
             return div.innerHTML;
         }
 
-        function addMessageToBox(box, role, text) {
-            const msg = document.createElement("div");
-            msg.className = `message ${role}`;
-
-            let label = "System";
-            if (role === "user") label = "You";
-            if (role === "ai") label = "AI";
-
-            msg.innerHTML = `
-                <span class="label">${label}</span>
-                ${escapeHtml(text)}
-            `;
-
-            box.appendChild(msg);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        async function sendChatMessage(message, targetBox) {
-            const res = await fetch(`${API_BASE}/chat`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ message })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                addMessageToBox(targetBox, "ai", data.reply || "Server returned an error.");
-            } else {
-                addMessageToBox(targetBox, "ai", data.reply || "No reply.");
-            }
-        }
-
-        async function sendMainMessage(customMessage = null) {
-            const message = customMessage !== null ? customMessage : input.value.trim();
-            if (!message) return;
-
-            addMessageToBox(mainChatBox, "user", message);
-
-            if (customMessage === null) {
-                input.value = "";
-                input.focus();
-            }
-
-            sendBtn.disabled = true;
-            sendBtn.textContent = "Sending...";
-            statusText.textContent = "Thinking...";
-
-            try {
-                await sendChatMessage(message, mainChatBox);
-            } catch (error) {
-                console.error("Chat error:", error);
-                addMessageToBox(mainChatBox, "ai", "Cannot connect to server.");
-            } finally {
-                sendBtn.disabled = false;
-                sendBtn.textContent = "Send";
-                statusText.textContent = "Ready";
-                loadAllPanels();
-            }
-        }
-
-        function runQuickCommand(command) {
-            input.value = command;
-            input.focus();
-        }
-
-        async function loadFiles() {
+        async function loadFilesSidebar() {
             const panel = document.getElementById("filesPanel");
             panel.innerHTML = "Loading...";
 
@@ -475,17 +244,13 @@
                     return;
                 }
 
-                panel.innerHTML = `
-                    <ul class="list">
-                        ${data.files.map(file => `<li>${escapeHtml(file)}</li>`).join("")}
-                    </ul>
-                `;
+                panel.innerHTML = `<ul class="list">${data.files.map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ul>`;
             } catch (error) {
                 panel.innerHTML = `<div class="empty">Could not load files.</div>`;
             }
         }
 
-        async function loadDocuments() {
+        async function loadDocumentsSidebar() {
             const panel = document.getElementById("documentsPanel");
             panel.innerHTML = "Loading...";
 
@@ -501,10 +266,7 @@
                 panel.innerHTML = data.documents.map(doc => `
                     <div class="doc-item">
                         <div class="doc-name">${escapeHtml(doc.filename)}</div>
-                        <div class="doc-meta">
-                            ${escapeHtml(doc.classification || "unknown")}
-                            ${doc.summary ? `• ${escapeHtml(doc.summary)}` : ""}
-                        </div>
+                        <div class="doc-meta">${escapeHtml(doc.classification || "unknown")}</div>
                     </div>
                 `).join("");
             } catch (error) {
@@ -512,7 +274,7 @@
             }
         }
 
-        async function loadMemory() {
+        async function loadMemorySidebar() {
             const panel = document.getElementById("memoryPanel");
             panel.innerHTML = "Loading...";
 
@@ -538,20 +300,42 @@
             }
         }
 
+        async function loadSidebarData() {
+            await Promise.all([
+                loadFilesSidebar(),
+                loadDocumentsSidebar(),
+                loadMemorySidebar()
+            ]);
+        }
+
+        async function fetchFilesData() {
+            const res = await fetch(`${API_BASE}/files`);
+            return res.json();
+        }
+
+        async function fetchDocumentsData() {
+            const res = await fetch(`${API_BASE}/documents`);
+            return res.json();
+        }
+
+        async function fetchMemoryData() {
+            const res = await fetch(`${API_BASE}/memory`);
+            return res.json();
+        }
+
         async function populateFilesWidgets(root) {
             const widgets = root.querySelectorAll('[data-widget="files"]');
             if (!widgets.length) return;
 
             try {
-                const res = await fetch(`${API_BASE}/files`);
-                const data = await res.json();
+                const data = await fetchFilesData();
+                const items = Array.isArray(data.files) ? data.files : [];
 
                 widgets.forEach(widget => {
-                    const items = Array.isArray(data.files) ? data.files : [];
                     widget.innerHTML = `
                         <h3 style="margin-top:0;">Files</h3>
                         ${items.length
-                            ? `<ul class="widget-list">${items.map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ul>`
+                            ? `<ul class="list">${items.map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ul>`
                             : `<div class="empty">No files found.</div>`}
                     `;
                 });
@@ -567,11 +351,10 @@
             if (!widgets.length) return;
 
             try {
-                const res = await fetch(`${API_BASE}/documents`);
-                const data = await res.json();
+                const data = await fetchDocumentsData();
+                const docs = Array.isArray(data.documents) ? data.documents : [];
 
                 widgets.forEach(widget => {
-                    const docs = Array.isArray(data.documents) ? data.documents : [];
                     widget.innerHTML = `
                         <h3 style="margin-top:0;">Documents</h3>
                         ${docs.length
@@ -580,7 +363,7 @@
                                     <div class="doc-name">${escapeHtml(doc.filename)}</div>
                                     <div class="doc-meta">${escapeHtml(doc.classification || "unknown")}</div>
                                 </div>
-                              `).join("")
+                            `).join("")
                             : `<div class="empty">No documents found.</div>`}
                     `;
                 });
@@ -596,11 +379,10 @@
             if (!widgets.length) return;
 
             try {
-                const res = await fetch(`${API_BASE}/memory`);
-                const data = await res.json();
+                const data = await fetchMemoryData();
+                const mem = Array.isArray(data.memory) ? data.memory.slice(-6).reverse() : [];
 
                 widgets.forEach(widget => {
-                    const mem = Array.isArray(data.memory) ? data.memory.slice(-6).reverse() : [];
                     widget.innerHTML = `
                         <h3 style="margin-top:0;">Memory</h3>
                         ${mem.length
@@ -609,7 +391,7 @@
                                     <div class="doc-name">${escapeHtml(item.role)}</div>
                                     <div class="doc-meta">${escapeHtml(item.message || "")}</div>
                                 </div>
-                              `).join("")
+                            `).join("")
                             : `<div class="empty">No memory found.</div>`}
                     `;
                 });
@@ -617,6 +399,39 @@
                 widgets.forEach(widget => {
                     widget.innerHTML = `<h3 style="margin-top:0;">Memory</h3><div class="empty">Could not load memory.</div>`;
                 });
+            }
+        }
+
+        function addMessageToBox(box, role, text) {
+            const msg = document.createElement("div");
+            msg.className = `message ${role}`;
+
+            let label = "System";
+            if (role === "user") label = "You";
+            if (role === "ai") label = "AI";
+
+            msg.innerHTML = `
+                <span class="label">${label}</span>
+                ${escapeHtml(text)}
+            `;
+
+            box.appendChild(msg);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function sendChatMessage(message, targetBox) {
+            const res = await fetch(`${API_BASE}/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                addMessageToBox(targetBox, "ai", data.reply || "Server returned an error.");
+            } else {
+                addMessageToBox(targetBox, "ai", data.reply || "No reply.");
             }
         }
 
@@ -667,14 +482,20 @@
 
         async function hydrateCustomLayout() {
             const box = document.getElementById("customLayout");
-            await populateFilesWidgets(box);
-            await populateDocumentsWidgets(box);
-            await populateMemoryWidgets(box);
+
+            await Promise.all([
+                populateFilesWidgets(box),
+                populateDocumentsWidgets(box),
+                populateMemoryWidgets(box)
+            ]);
+
             attachChatWidgetHandlers(box);
         }
 
         async function loadCustomLayout() {
             const box = document.getElementById("customLayout");
+            const status = document.getElementById("status");
+            status.textContent = "Loading layout...";
 
             try {
                 const res = await fetch(`${API_BASE}/load-layout`);
@@ -682,7 +503,8 @@
 
                 if (!data.html || !data.html.trim()) {
                     box.className = "empty-layout";
-                    box.innerHTML = "No custom layout saved yet.";
+                    box.innerHTML = "No custom layout saved yet. Open the editor and add blocks.";
+                    status.textContent = "Ready";
                     return;
                 }
 
@@ -698,77 +520,17 @@
                 box.innerHTML = data.html;
 
                 await hydrateCustomLayout();
+                status.textContent = "Ready";
             } catch (error) {
+                console.error("Layout load error:", error);
                 box.className = "empty-layout";
                 box.innerHTML = "Could not load custom layout.";
+                status.textContent = "Could not load layout";
             }
         }
 
-        async function runDev(push) {
-            const text = document.getElementById("devInput").value.trim();
-            const commit = document.getElementById("devCommit").value.trim();
-            const out = document.getElementById("devOutput");
-
-            if (!text) {
-                out.textContent = "Enter instructions";
-                return;
-            }
-
-            out.textContent = "Running...";
-
-            try {
-                const res = await fetch(`${API_BASE}/autocode`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        requirements: text,
-                        autoPush: push,
-                        commitMessage: commit
-                    })
-                });
-
-                const data = await res.json();
-
-                if (!data.ok) {
-                    out.textContent = `Error: ${data.reply || "Auto-code failed."}`;
-                    return;
-                }
-
-                const changed = Array.isArray(data.changedFiles)
-                    ? data.changedFiles.join(", ")
-                    : "";
-
-                if (data.skipped) {
-                    out.textContent = `No push needed: ${data.reason || "No changes detected."}`;
-                    return;
-                }
-
-                if (!data.pushed && data.reason) {
-                    out.textContent = `${data.reason}${changed ? ` | Changed: ${changed}` : ""}`;
-                    return;
-                }
-
-                out.textContent = `Done: ${data.summary || "Completed"}${changed ? ` | Changed: ${changed}` : ""}${data.pushed ? " | Pushed live." : ""}`;
-            } catch (error) {
-                console.error("Developer panel error:", error);
-                out.textContent = "Developer mode failed.";
-            }
-        }
-
-        function loadAllPanels() {
-            loadFiles();
-            loadDocuments();
-            loadMemory();
-            loadCustomLayout();
-        }
-
-        input.addEventListener("keydown", function (e) {
-            if (e.key === "Enter") {
-                sendMainMessage();
-            }
-        });
-
-        loadAllPanels();
+        loadSidebarData();
+        loadCustomLayout();
     </script>
 </body>
 </html>
