@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>AI Visual Editor</title>
+  <link rel="stylesheet" href="https://unpkg.com/grapesjs/dist/css/grapes.min.css">
+  <script src="https://unpkg.com/grapesjs"></script>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    #editor {
+      height: 100vh;
+      display: flex;
+    }
+
+    #blocks {
+      width: 260px;
+      background: #1e1e1e;
+      padding: 10px;
+      overflow-y: auto;
+      border-right: 1px solid #333;
+    }
+
+    #canvas {
+      flex: 1;
+    }
+
+    h3 {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+<div id="editor">
+  <div id="blocks">
+    <h3>Blocks</h3>
+  </div>
+  <div id="canvas"></div>
+</div>
+
+<script>
+  const editor = grapesjs.init({
+    container: '#canvas',
+    height: '100%',
+    fromElement: false,
+    storageManager: false,
+    blockManager: {
+      appendTo: '#blocks',
+      blocks: [
+        {
+          id: 'section',
+          label: 'Section',
+          content: `
+            <section style="padding:20px; background:#1b1b1b; border:1px solid #2d2d2d; border-radius:12px; margin:10px;">
+              <h2 style="color:white;">New Section</h2>
+              <p style="color:#bdbdbd;">Section content...</p>
+            </section>
+          `
+        },
+        {
+          id: 'text',
+          label: 'Text',
+          content: '<p style="color:white;">Start typing...</p>'
+        },
+        {
+          id: 'button',
+          label: 'Button',
+          content: '<button style="padding:10px 20px; background:#2b6fff; color:white; border:none; border-radius:8px;">Click</button>'
+        },
+        {
+          id: 'card',
+          label: 'Card',
+          content: `
+            <div style="padding:20px; background:#1b1b1b; border:1px solid #2d2d2d; border-radius:12px; margin:10px;">
+              <h3 style="color:white;">Card Title</h3>
+              <p style="color:#bdbdbd;">Card content...</p>
+            </div>
+          `
+        }
+      ]
+    }
+  });
+
+  fetch('/load-layout')
+    .then(res => res.json())
+    .then(data => {
+      if (data.html) {
+        editor.setComponents(data.html);
+      }
+      if (data.css) {
+        editor.setStyle(data.css);
+      }
+    });
+
+  function saveLayout() {
+    const html = editor.getHtml();
+    const css = editor.getCss();
+
+    fetch('/save-layout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ html, css })
+    })
+    .then(() => alert('Layout saved'));
+  }
+
+  editor.Panels.addButton('options', {
+    id: 'save-layout',
+    className: 'fa fa-save',
+    command: saveLayout,
+    attributes: { title: 'Save Layout' }
+  });
+</script>
+</body>
+</html>

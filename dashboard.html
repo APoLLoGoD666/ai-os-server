@@ -215,6 +215,41 @@
             word-wrap: break-word;
         }
 
+        .custom-layout-wrap {
+            margin-bottom: 16px;
+        }
+
+        .custom-layout-toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .custom-layout-toolbar button {
+            border: none;
+            border-radius: 8px;
+            background: #2f2f2f;
+            color: white;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        #customLayout {
+            min-height: 160px;
+            background: #121212;
+            border: 1px dashed #333;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        #customLayout.empty-layout {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8e8e8e;
+        }
+
         @media (max-width: 900px) {
             .app {
                 grid-template-columns: 1fr;
@@ -284,7 +319,7 @@
             </div>
 
             <div class="panel">
-                <div class="section-title" style="font-size:24px;">Documents</div>
+                <div class="section-title">Documents</div>
                 <div class="button-row" style="margin-bottom:10px;">
                     <button class="secondary" onclick="loadDocuments()">Refresh Documents</button>
                 </div>
@@ -303,6 +338,15 @@
         <main class="main">
             <h1>AI Chat Dashboard</h1>
             <div class="status" id="status">Ready</div>
+
+            <div class="panel custom-layout-wrap">
+                <h3>Custom Dashboard Layout</h3>
+                <div class="custom-layout-toolbar">
+                    <button onclick="window.open('/editor', '_blank')">Open Editor</button>
+                    <button onclick="loadCustomLayout()">Refresh Layout</button>
+                </div>
+                <div id="customLayout" class="empty-layout">No custom layout saved yet.</div>
+            </div>
 
             <div id="chat">
                 <div class="message system">
@@ -334,7 +378,7 @@
     </div>
 
     <script>
-        const API_BASE = "https://ai-os-server-jx20.onrender.com";
+        const API_BASE = "";
 
         const chatBox = document.getElementById("chat");
         const input = document.getElementById("input");
@@ -487,6 +531,35 @@
             }
         }
 
+        async function loadCustomLayout() {
+            const box = document.getElementById("customLayout");
+
+            try {
+                const res = await fetch(`${API_BASE}/load-layout`);
+                const data = await res.json();
+
+                if (!data.html || !data.html.trim()) {
+                    box.className = "empty-layout";
+                    box.innerHTML = "No custom layout saved yet.";
+                    return;
+                }
+
+                const existingStyle = document.getElementById("saved-layout-style");
+                if (existingStyle) existingStyle.remove();
+
+                const style = document.createElement("style");
+                style.id = "saved-layout-style";
+                style.textContent = data.css || "";
+                document.head.appendChild(style);
+
+                box.className = "";
+                box.innerHTML = data.html;
+            } catch (error) {
+                box.className = "empty-layout";
+                box.innerHTML = "Could not load custom layout.";
+            }
+        }
+
         async function runDev(push) {
             const text = document.getElementById("devInput").value.trim();
             const commit = document.getElementById("devCommit").value.trim();
@@ -542,6 +615,7 @@
             loadFiles();
             loadDocuments();
             loadMemory();
+            loadCustomLayout();
         }
 
         input.addEventListener("keydown", function (e) {
