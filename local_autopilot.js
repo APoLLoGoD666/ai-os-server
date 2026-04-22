@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const fs = require("fs");
 const path = require("path");
+const readline = require("readline");
 const { execSync } = require("child_process");
 const Anthropic = require("@anthropic-ai/sdk");
 
@@ -325,27 +326,85 @@ function rollbackLastBackup() {
     console.log("Rollback complete.");
 }
 
+function askQuestion(question) {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    return new Promise(resolve => {
+        rl.question(question, answer => {
+            rl.close();
+            resolve(answer.trim().toLowerCase());
+        });
+    });
+}
+
+async function previewApplyPush(requirements) {
+    console.log("Reading current files...");
+    const result = await generateChanges(requirements);
+
+    const proposalPath = saveProposal({
+        requirements: result.requirements,
+        summary: result.summary,
+        files: result.files,
+        currentFiles: result.currentFiles
+    });
+
+    console.log("Preview created.");
+    console.log("Summary:", result.summary);
+    console.log("Files Claude wants to change:", result.files.map(f => f.path).join(", "));
+    console.log("Saved proposal:", proposalPath);
+
+    const answer = await askQuestion("Apply and push this change? (y/n): ");
+
+    if (answer !== "y" && answer !== "yes") {
+        console.log("Cancelled. No files changed.");
+        return;
+    }
+
+    console.log("Backing up current files...");
+    const backupFolder = backupFiles(readAllowedFiles());
+    console.log("Backup saved to:", backupFolder);
+
+    console.log("Applying changes locally...");
+    applyChanges(result.files);
+    console.log("Changes applied locally.");
+
+    console.log("Committing and pushing...");
+    const changedPaths = result.files.map(f => f.path);
+    const pushResult = runGitPush("AI local autopilot update", changedPaths);
+
+    if (pushResult.skipped) {
+        console.log(pushResult.reason);
+    } else {
+        console.log("Pushed successfully.");
+    }
+}
+
 async function main() {
     const args = process.argv.slice(2);
 
     const isPreview = args.includes("--preview");
     const isApplyLast = args.includes("--apply-last");
     const isRollback = args.includes("--rollback");
+    const isPreviewApplyPush = args.includes("--preview-apply-push");
     const autoPush = args.includes("--push");
 
     const requirementParts = args.filter(arg => !arg.startsWith("--"));
     const requirements = requirementParts.join(" ").trim();
 
-    if ([isPreview, isApplyLast, isRollback].filter(Boolean).length > 1) {
-        console.log("Use only one of: --preview, --apply-last, --rollback");
+    if ([isPreview, isApplyLast, isRollback, isPreviewApplyPush].filter(Boolean).length > 1) {
+        console.log("Use only one of: --preview, --apply-last, --rollback, --preview-apply-push");
         process.exit(1);
     }
 
-    if (!isPreview && !isApplyLast && !isRollback) {
+    if (!isPreview && !isApplyLast && !isRollback && !isPreviewApplyPush) {
         console.log("Usage:");
         console.log('  node local_autopilot.js "your requirement here" --preview');
         console.log("  node local_autopilot.js --apply-last");
         console.log("  node local_autopilot.js --apply-last --push");
+        console.log('  node local_autopilot.js "your requirement here" --preview-apply-push');
         console.log("  node local_autopilot.js --rollback");
         process.exit(1);
     }
@@ -362,6 +421,16 @@ async function main() {
         }
 
         await previewChanges(requirements);
+        return;
+    }
+
+    if (isPreviewApplyPush) {
+        if (!requirements) {
+            console.log("Please provide requirements for preview-apply-push mode.");
+            process.exit(1);
+        }
+
+        await previewApplyPush(requirements);
         return;
     }
 
