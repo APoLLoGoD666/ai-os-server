@@ -109,6 +109,8 @@
             align-items: center;
             justify-content: center;
             color: #8e8e8e;
+            text-align: center;
+            padding: 30px;
         }
 
         .list {
@@ -179,6 +181,14 @@
             line-height: 1.5;
         }
 
+        .preview-box-block {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: white;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
         @media (max-width: 900px) {
             .app {
                 grid-template-columns: 1fr;
@@ -222,6 +232,11 @@
             </div>
 
             <div class="panel">
+                <h3>Document Preview</h3>
+                <div id="documentPreview" class="small">Click a document to preview it.</div>
+            </div>
+
+            <div class="panel">
                 <h3>Memory</h3>
                 <div id="memoryPanel" class="small">Loading...</div>
             </div>
@@ -233,7 +248,7 @@
                 <div class="status" id="status">Ready</div>
             </div>
 
-            <div id="customLayout" class="empty-layout">No custom layout saved yet.</div>
+            <div id="customLayout" class="empty-layout">No custom layout saved yet. Open the editor and add blocks.</div>
         </main>
     </div>
 
@@ -272,6 +287,35 @@
             } catch (error) {
                 console.error("Preview file error:", error);
                 panel.innerHTML = `<div class="empty">Could not preview file.</div>`;
+            }
+        }
+
+        async function previewDocument(filename) {
+            const panel = document.getElementById("documentPreview");
+            panel.innerHTML = "Loading document...";
+
+            try {
+                const decoded = decodeURIComponent(filename);
+
+                const res = await fetch(`${API_BASE}/chat`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        message: `show document ${decoded}`
+                    })
+                });
+
+                const data = await res.json();
+
+                if (!data.ok) {
+                    panel.innerHTML = `<div class="empty">${escapeHtml(data.reply || "Could not load document.")}</div>`;
+                    return;
+                }
+
+                panel.innerHTML = `<pre class="preview-box">${escapeHtml(data.reply || "")}</pre>`;
+            } catch (error) {
+                console.error("Preview document error:", error);
+                panel.innerHTML = `<div class="empty">Could not preview document.</div>`;
             }
         }
 
@@ -317,8 +361,10 @@
 
                 panel.innerHTML = data.documents.map(doc => `
                     <div class="doc-item">
-                        <div class="doc-name">${escapeHtml(doc.filename)}</div>
-                        <div class="doc-meta">${escapeHtml(doc.classification || "unknown")}</div>
+                        <button class="widget-button" style="width:100%; text-align:left;" onclick="previewDocument('${encodeURIComponent(doc.filename)}')">
+                            <div class="doc-name">${escapeHtml(doc.filename)}</div>
+                            <div class="doc-meta">${escapeHtml(doc.classification || "unknown")}</div>
+                        </button>
                     </div>
                 `).join("");
             } catch (error) {
@@ -420,8 +466,10 @@
                         ${docs.length
                             ? docs.map(doc => `
                                 <div class="doc-item">
-                                    <div class="doc-name">${escapeHtml(doc.filename)}</div>
-                                    <div class="doc-meta">${escapeHtml(doc.classification || "unknown")}</div>
+                                    <button class="widget-button" style="width:100%; text-align:left;" onclick="previewDocument('${encodeURIComponent(doc.filename)}')">
+                                        <div class="doc-name">${escapeHtml(doc.filename)}</div>
+                                        <div class="doc-meta">${escapeHtml(doc.classification || "unknown")}</div>
+                                    </button>
                                 </div>
                             `).join("")
                             : `<div class="empty">No documents found.</div>`}
