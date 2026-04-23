@@ -163,7 +163,7 @@ function applyChanges(files) {
 
 function pushToGitHub(changedFiles) {
     if (!GITHUB_TOKEN || !GITHUB_REPO) {
-        throw new Error("Missing GITHUB_TOKEN or GITHUB_REPO in environment variables.");
+        throw new Error("Missing GITHUB_TOKEN or GITHUB_REPO.");
     }
 
     if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
@@ -172,8 +172,20 @@ function pushToGitHub(changedFiles) {
 
     const remoteUrl = `https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
 
-    console.log("Setting git remote...");
+    console.log("Setting remote...");
     execSync(`git remote set-url origin "${remoteUrl}"`, {
+        cwd: ROOT,
+        stdio: "inherit"
+    });
+
+    console.log("Checking out branch...");
+    execSync(`git checkout ${GITHUB_BRANCH}`, {
+        cwd: ROOT,
+        stdio: "inherit"
+    });
+
+    console.log("Pulling latest...");
+    execSync(`git pull origin ${GITHUB_BRANCH}`, {
         cwd: ROOT,
         stdio: "inherit"
     });
@@ -183,7 +195,7 @@ function pushToGitHub(changedFiles) {
             throw new Error(`Refusing to git add non-approved file: ${file}`);
         }
 
-        console.log(`Staging file: ${file}`);
+        console.log(`Adding ${file}`);
         execSync(`git add "${file}"`, {
             cwd: ROOT,
             stdio: "inherit"
@@ -199,42 +211,21 @@ function pushToGitHub(changedFiles) {
         return {
             pushed: false,
             skipped: true,
-            reason: "No changes to commit."
+            reason: "No changes."
         };
     }
 
-    console.log("Creating commit...");
-    try {
-        execSync(`git commit -m "AI cloud autopilot update"`, {
-            cwd: ROOT,
-            stdio: "inherit"
-        });
-    } catch (error) {
-        const statusAfter = execSync("git status --porcelain", {
-            cwd: ROOT,
-            encoding: "utf8"
-        }).trim();
+    console.log("Committing...");
+    execSync(`git commit -m "AI cloud autopilot update"`, {
+        cwd: ROOT,
+        stdio: "inherit"
+    });
 
-        if (!statusAfter) {
-            return {
-                pushed: false,
-                skipped: true,
-                reason: "No changes to commit."
-            };
-        }
-
-        throw new Error("Git commit failed on hosted server.");
-    }
-
-    console.log(`Pushing to GitHub branch: ${GITHUB_BRANCH}`);
-    try {
-        execSync(`git push origin ${GITHUB_BRANCH}`, {
-            cwd: ROOT,
-            stdio: "inherit"
-        });
-    } catch (error) {
-        throw new Error("Git push failed on hosted server. Check Render logs for the exact error.");
-    }
+    console.log("Pushing...");
+    execSync(`git push origin ${GITHUB_BRANCH}`, {
+        cwd: ROOT,
+        stdio: "inherit"
+    });
 
     return {
         pushed: true,
