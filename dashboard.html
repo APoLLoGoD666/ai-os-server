@@ -169,6 +169,16 @@
             font-size: 14px;
         }
 
+        .preview-box {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
         @media (max-width: 900px) {
             .app {
                 grid-template-columns: 1fr;
@@ -202,6 +212,11 @@
             </div>
 
             <div class="panel">
+                <h3>File Preview</h3>
+                <div id="filePreview" class="small">Click a file to preview it.</div>
+            </div>
+
+            <div class="panel">
                 <h3>Documents</h3>
                 <div id="documentsPanel" class="small">Loading...</div>
             </div>
@@ -231,6 +246,35 @@
             return div.innerHTML;
         }
 
+        async function previewFile(filename) {
+            const panel = document.getElementById("filePreview");
+            panel.innerHTML = "Loading file...";
+
+            try {
+                const decoded = decodeURIComponent(filename);
+
+                const res = await fetch(`${API_BASE}/chat`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        message: `read file ${decoded}`
+                    })
+                });
+
+                const data = await res.json();
+
+                if (!data.ok) {
+                    panel.innerHTML = `<div class="empty">${escapeHtml(data.reply || "Could not read file.")}</div>`;
+                    return;
+                }
+
+                panel.innerHTML = `<pre class="preview-box">${escapeHtml(data.reply || "")}</pre>`;
+            } catch (error) {
+                console.error("Preview file error:", error);
+                panel.innerHTML = `<div class="empty">Could not preview file.</div>`;
+            }
+        }
+
         async function loadFilesSidebar() {
             const panel = document.getElementById("filesPanel");
             panel.innerHTML = "Loading...";
@@ -244,7 +288,15 @@
                     return;
                 }
 
-                panel.innerHTML = `<ul class="list">${data.files.map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ul>`;
+                panel.innerHTML = `<ul class="list">${
+                    data.files.map(f => `
+                        <li>
+                            <button class="widget-button" style="width:100%; text-align:left;" onclick="previewFile('${encodeURIComponent(f)}')">
+                                ${escapeHtml(f)}
+                            </button>
+                        </li>
+                    `).join("")
+                }</ul>`;
             } catch (error) {
                 panel.innerHTML = `<div class="empty">Could not load files.</div>`;
             }
@@ -335,7 +387,15 @@
                     widget.innerHTML = `
                         <h3 style="margin-top:0;">Files</h3>
                         ${items.length
-                            ? `<ul class="list">${items.map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ul>`
+                            ? `<ul class="list">${
+                                items.map(f => `
+                                    <li>
+                                        <button class="widget-button" style="width:100%; text-align:left;" onclick="previewFile('${encodeURIComponent(f)}')">
+                                            ${escapeHtml(f)}
+                                        </button>
+                                    </li>
+                                `).join("")
+                              }</ul>`
                             : `<div class="empty">No files found.</div>`}
                     `;
                 });
