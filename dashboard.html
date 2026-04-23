@@ -18,7 +18,7 @@
 
         .app {
             display: grid;
-            grid-template-columns: 300px 1fr;
+            grid-template-columns: 320px 1fr;
             min-height: 100vh;
         }
 
@@ -181,12 +181,39 @@
             line-height: 1.5;
         }
 
-        .preview-box-block {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            color: white;
-            font-size: 13px;
-            line-height: 1.5;
+        .search-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-row input {
+            flex: 1;
+            padding: 10px 12px;
+            border: none;
+            border-radius: 8px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .search-result-section {
+            margin-top: 10px;
+        }
+
+        .search-result-heading {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #bdbdbd;
+            margin-bottom: 8px;
+            letter-spacing: 0.4px;
+        }
+
+        .search-result-item {
+            margin-bottom: 8px;
+        }
+
+        .search-result-item button {
+            width: 100%;
+            text-align: left;
         }
 
         @media (max-width: 900px) {
@@ -214,6 +241,31 @@
                     <button onclick="window.open('/editor', '_blank')">Open Editor</button>
                     <button class="secondary" onclick="loadSidebarData()">Refresh Data</button>
                 </div>
+            </div>
+
+            <div class="panel">
+    <h3>Cloud Autopilot</h3>
+
+    <textarea id="autopilotInput" placeholder="Describe what you want to change..." 
+    style="width:100%; height:80px; border-radius:8px; padding:10px; border:none; margin-bottom:8px;"></textarea>
+
+    <div style="display:flex; gap:8px;">
+        <button onclick="runCloudAutopilot()">Run</button>
+        <button class="secondary" onclick="clearAutopilot()">Clear</button>
+    </div>
+
+    <div id="autopilotResult" class="small" style="margin-top:10px;">
+        Ready.
+    </div>
+</div>
+            
+            <div class="panel">
+                <h3>Global Search</h3>
+                <div class="search-row">
+                    <input id="globalSearchInput" type="text" placeholder="Search files and documents..." />
+                    <button onclick="runGlobalSearch()">Search</button>
+                </div>
+                <div id="searchResults" class="small" style="margin-top:10px;">Type a search and press Search.</div>
             </div>
 
             <div class="panel">
@@ -255,11 +307,59 @@
     <script>
         const API_BASE = "";
 
+        let cachedFiles = [];
+        let cachedDocuments = [];
+
         function escapeHtml(text) {
             const div = document.createElement("div");
             div.textContent = text;
             return div.innerHTML;
         }
+
+        async function runCloudAutopilot() {
+    const input = document.getElementById("autopilotInput");
+    const resultBox = document.getElementById("autopilotResult");
+
+    const requirements = input.value.trim();
+
+    if (!requirements) {
+        resultBox.innerHTML = "Please enter instructions.";
+        return;
+    }
+
+    resultBox.innerHTML = "Running...";
+
+    try {
+        const res = await fetch("/cloud-autopilot", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ requirements })
+        });
+
+        const data = await res.json();
+
+        if (!data.ok) {
+            resultBox.innerHTML = `<span style="color:red;">${data.reply || "Cloud autopilot failed."}</span>`;
+            return;
+        }
+
+        resultBox.innerHTML = `
+            <b>Done</b><br>
+            ${escapeHtml(data.summary || "No summary")}<br><br>
+            Files changed:<br>
+            ${(data.changedFiles || []).map(f => escapeHtml(f)).join("<br>")}
+        `;
+
+    } catch (err) {
+        console.error("Cloud autopilot error:", err);
+        resultBox.innerHTML = `<span style="color:red;">Error running autopilot.</span>`;
+    }
+}
+
+function clearAutopilot() {
+    document.getElementById("autopilotInput").value = "";
+    document.getElementById("autopilotResult").innerHTML = "Cleared.";
+}
 
         async function previewFile(filename) {
             const panel = document.getElementById("filePreview");
@@ -327,13 +427,15 @@
                 const res = await fetch(`${API_BASE}/files`);
                 const data = await res.json();
 
-                if (!data.ok || !Array.isArray(data.files) || data.files.length === 0) {
+                cachedFiles = Array.isArray(data.files) ? data.files : [];
+
+                if (!data.ok || cachedFiles.length === 0) {
                     panel.innerHTML = `<div class="empty">No files found.</div>`;
                     return;
                 }
 
                 panel.innerHTML = `<ul class="list">${
-                    data.files.map(f => `
+                    cachedFiles.map(f => `
                         <li>
                             <button class="widget-button" style="width:100%; text-align:left;" onclick="previewFile('${encodeURIComponent(f)}')">
                                 ${escapeHtml(f)}
@@ -354,12 +456,14 @@
                 const res = await fetch(`${API_BASE}/documents`);
                 const data = await res.json();
 
-                if (!data.ok || !Array.isArray(data.documents) || data.documents.length === 0) {
+                cachedDocuments = Array.isArray(data.documents) ? data.documents : [];
+
+                if (!data.ok || cachedDocuments.length === 0) {
                     panel.innerHTML = `<div class="empty">No documents found.</div>`;
                     return;
                 }
 
-                panel.innerHTML = data.documents.map(doc => `
+                panel.innerHTML = cachedDocuments.map(doc => `
                     <div class="doc-item">
                         <button class="widget-button" style="width:100%; text-align:left;" onclick="previewDocument('${encodeURIComponent(doc.filename)}')">
                             <div class="doc-name">${escapeHtml(doc.filename)}</div>
@@ -404,6 +508,67 @@
                 loadDocumentsSidebar(),
                 loadMemorySidebar()
             ]);
+        }
+
+        async function runGlobalSearch() {
+            const input = document.getElementById("globalSearchInput");
+            const results = document.getElementById("searchResults");
+            const term = input.value.trim().toLowerCase();
+
+            if (!term) {
+                results.innerHTML = "Type a search and press Search.";
+                return;
+            }
+
+            const matchedFiles = cachedFiles.filter(file =>
+                file.toLowerCase().includes(term)
+            );
+
+            const matchedDocs = cachedDocuments.filter(doc => {
+                const filename = (doc.filename || "").toLowerCase();
+                const classification = (doc.classification || "").toLowerCase();
+                const summary = (doc.summary || "").toLowerCase();
+                return filename.includes(term) || classification.includes(term) || summary.includes(term);
+            });
+
+            if (!matchedFiles.length && !matchedDocs.length) {
+                results.innerHTML = `<div class="empty">No results for "${escapeHtml(term)}".</div>`;
+                return;
+            }
+
+            let html = "";
+
+            if (matchedFiles.length) {
+                html += `
+                    <div class="search-result-section">
+                        <div class="search-result-heading">Files</div>
+                        ${matchedFiles.map(file => `
+                            <div class="search-result-item">
+                                <button class="widget-button" onclick="previewFile('${encodeURIComponent(file)}')">
+                                    ${escapeHtml(file)}
+                                </button>
+                            </div>
+                        `).join("")}
+                    </div>
+                `;
+            }
+
+            if (matchedDocs.length) {
+                html += `
+                    <div class="search-result-section">
+                        <div class="search-result-heading">Documents</div>
+                        ${matchedDocs.map(doc => `
+                            <div class="search-result-item">
+                                <button class="widget-button" onclick="previewDocument('${encodeURIComponent(doc.filename)}')">
+                                    ${escapeHtml(doc.filename)}
+                                </button>
+                            </div>
+                        `).join("")}
+                    </div>
+                `;
+            }
+
+            results.innerHTML = html;
         }
 
         async function fetchFilesData() {
@@ -636,6 +801,12 @@
                 status.textContent = "Could not load layout";
             }
         }
+
+        document.getElementById("globalSearchInput").addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+                runGlobalSearch();
+            }
+        });
 
         loadSidebarData();
         loadCustomLayout();
