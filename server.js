@@ -8,7 +8,17 @@ const Anthropic = require("@anthropic-ai/sdk");
 
 const db = require("./database");
 const pool = require("./pg_database");
-const { pgListDocuments, pgSaveDocument, pgGetDocument, pgSearchDocuments, pgAddMemory, pgLoadMemory } = require("./pg_helpers");
+const {
+    pgListDocuments,
+    pgSaveDocument,
+    pgGetDocument,
+    pgSearchDocuments,
+    pgDeleteDocument,
+    pgRenameDocument,
+    pgUpdateDocumentSummary,
+    pgAddMemory,
+    pgLoadMemory
+} = require("./pg_helpers");
 
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
@@ -567,6 +577,12 @@ async function handleCommand(command) {
                 return { ok: false, reply: `Could not find file: ${filename}` };
             }
 
+            try {
+                await pgDeleteDocument(filename);
+            } catch (error) {
+                console.error("POSTGRES DOCUMENT DELETE ERROR:", error.message);
+            }
+
             deleteDocumentFromDatabase(filename);
             return { ok: true, reply: `File deleted: ${filename}` };
         }
@@ -583,6 +599,12 @@ async function handleCommand(command) {
                 if (result.reason === "new_exists") {
                     return { ok: false, reply: `A file already exists called: ${newName}` };
                 }
+            }
+
+            try {
+                await pgRenameDocument(oldName, newName);
+            } catch (error) {
+                console.error("POSTGRES DOCUMENT RENAME ERROR:", error.message);
             }
 
             renameDocumentInDatabase(oldName, newName);
@@ -622,6 +644,12 @@ async function handleCommand(command) {
             }
 
             const summary = await summariseText(file.content);
+            try {
+                await pgUpdateDocumentSummary(filename, summary);
+            } catch (error) {
+                console.error("POSTGRES DOCUMENT SUMMARY ERROR:", error.message);
+            }
+
             updateDocumentSummary(filename, summary);
 
             await pgSaveDocument(

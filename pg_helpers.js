@@ -92,6 +92,38 @@ async function pgSearchDocuments(keyword) {
     return result.rows;
 }
 
+async function pgDeleteDocument(filename) {
+    await pool.query(
+        `
+        DELETE FROM documents
+        WHERE filename = $1
+        `,
+        [filename]
+    );
+}
+
+async function pgRenameDocument(oldName, newName) {
+    await pool.query(
+        `
+        UPDATE documents
+        SET filename = $1
+        WHERE filename = $2
+        `,
+        [newName, oldName]
+    );
+}
+
+async function pgUpdateDocumentSummary(filename, summary) {
+    await pool.query(
+        `
+        UPDATE documents
+        SET summary = $1
+        WHERE filename = $2
+        `,
+        [summary, filename]
+    );
+}
+
 async function pgAddMemory(role, message) {
     await ensureMemoryTable();
 
@@ -132,6 +164,9 @@ module.exports = {
     pgListDocuments,
     pgGetDocument,
     pgSearchDocuments,
+    pgDeleteDocument,
+    pgRenameDocument,
+    pgUpdateDocumentSummary,
     pgAddMemory,
     pgLoadMemory
 };
