@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Workspace</title>
+
     <style>
         * {
             box-sizing: border-box;
@@ -62,7 +63,8 @@
 
         .button-row button,
         .quick-grid button,
-        .widget-button {
+        .widget-button,
+        .chat-button {
             border: none;
             border-radius: 8px;
             background: #2b6fff;
@@ -102,16 +104,52 @@
             background: #121212;
             border: 1px dashed #333;
             border-radius: 12px;
-            padding: 12px;
+            padding: 20px;
         }
 
         #customLayout.empty-layout {
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #8e8e8e;
-            text-align: center;
-            padding: 30px;
+            color: #e5e5e5;
+            text-align: left;
+        }
+
+        .chat-shell {
+            width: 100%;
+            max-width: 760px;
+        }
+
+        .chat-shell h2 {
+            margin-top: 0;
+            margin-bottom: 12px;
+        }
+
+        #chatBox {
+            background: #1b1b1b;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 12px;
+            min-height: 260px;
+            max-height: 420px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .chat-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-row input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+            font-size: 15px;
         }
 
         .list {
@@ -249,6 +287,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="app">
         <aside class="sidebar">
@@ -290,7 +329,9 @@
                     <input id="globalSearchInput" type="text" placeholder="Search files and documents..." />
                     <button onclick="runGlobalSearch()">Search</button>
                 </div>
-                <div id="searchResults" class="small" style="margin-top:10px;">Type a search and press Search.</div>
+                <div id="searchResults" class="small" style="margin-top:10px;">
+                    Type a search and press Search.
+                </div>
             </div>
 
             <div class="panel">
@@ -326,49 +367,19 @@
             </div>
 
             <div id="customLayout" class="empty-layout">
-    <div style="width:100%; max-width:700px;">
-        <h2>AI Chat</h2>
-        <div id="chatBox" style="background:#1b1b1b; border:1px solid #333; border-radius:10px; padding:12px; min-height:220px; margin-bottom:10px; white-space:pre-wrap;">
-            Ready.
-        </div>
+                <div class="chat-shell">
+                    <h2>AI Chat</h2>
+                    <div id="chatBox">Ready.</div>
 
-        <div style="display:flex; gap:8px;">
-            <input id="chatInput" type="text" placeholder="Type a command..." style="flex:1; padding:12px; border-radius:8px; border:none;">
-            <button onclick="sendChatCommand()">Send</button>
-        </div>
-    </div>
-</div>
+                    <div class="chat-row">
+                        <input id="chatInput" type="text" placeholder="Type a command..." />
+                        <button class="chat-button" onclick="sendChatCommand()">Send</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
-async function sendChatCommand() {
-    const input = document.getElementById("chatInput");
-    const box = document.getElementById("chatBox");
 
-    const message = input.value.trim();
-    if (!message) return;
-
-    box.innerHTML += `\n\nYou: ${escapeHtml(message)}`;
-    input.value = "";
-
-    try {
-        const res = await fetch("/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message })
-        });
-
-        const data = await res.json();
-        box.innerHTML += `\n\nAI: ${escapeHtml(data.reply || "No reply")}`;
-    } catch (err) {
-        box.innerHTML += `\n\nAI: Error connecting to server.`;
-    }
-}
-
-document.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" && document.activeElement?.id === "chatInput") {
-        sendChatCommand();
-    }
-});
     <script>
         const API_BASE = "";
 
@@ -380,6 +391,58 @@ document.addEventListener("keydown", function (e) {
             div.textContent = text;
             return div.innerHTML;
         }
+
+        function defaultChatHtml() {
+            return `
+                <div class="chat-shell">
+                    <h2>AI Chat</h2>
+                    <div id="chatBox">Ready.</div>
+                    <div class="chat-row">
+                        <input id="chatInput" type="text" placeholder="Type a command..." />
+                        <button class="chat-button" onclick="sendChatCommand()">Send</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function sendChatCommand() {
+            const input = document.getElementById("chatInput");
+            const box = document.getElementById("chatBox");
+
+            if (!input || !box) {
+                console.error("Chat input or chat box not found.");
+                return;
+            }
+
+            const message = input.value.trim();
+            if (!message) return;
+
+            box.innerHTML += `\n\nYou: ${escapeHtml(message)}`;
+            input.value = "";
+
+            try {
+                const res = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await res.json();
+                box.innerHTML += `\n\nAI: ${escapeHtml(data.reply || "No reply")}`;
+                box.scrollTop = box.scrollHeight;
+
+                await loadSidebarData();
+            } catch (err) {
+                console.error("Chat command error:", err);
+                box.innerHTML += `\n\nAI: Error connecting to server.`;
+            }
+        }
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && document.activeElement?.id === "chatInput") {
+                sendChatCommand();
+            }
+        });
 
         function clearAutopilot() {
             document.getElementById("autopilotInput").value = "";
@@ -862,6 +925,7 @@ document.addEventListener("keydown", function (e) {
         async function loadCustomLayout() {
             const box = document.getElementById("customLayout");
             const status = document.getElementById("status");
+
             status.textContent = "Loading layout...";
 
             try {
@@ -870,7 +934,7 @@ document.addEventListener("keydown", function (e) {
 
                 if (!data.html || !data.html.trim()) {
                     box.className = "empty-layout";
-                    box.innerHTML = "No custom layout saved yet. Open the editor and add blocks.";
+                    box.innerHTML = defaultChatHtml();
                     status.textContent = "Ready";
                     return;
                 }
@@ -891,7 +955,7 @@ document.addEventListener("keydown", function (e) {
             } catch (error) {
                 console.error("Layout load error:", error);
                 box.className = "empty-layout";
-                box.innerHTML = "Could not load custom layout.";
+                box.innerHTML = defaultChatHtml();
                 status.textContent = "Could not load layout";
             }
         }
