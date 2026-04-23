@@ -7,7 +7,7 @@ const cors = require("cors");
 const Anthropic = require("@anthropic-ai/sdk");
 const db = require("./database");
 const pool = require("./pg_database");
-const { pgListDocuments } = require("./pg_helpers");
+const { pgListDocuments, pgSaveDocument } = require("./pg_helpers");
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
 
@@ -539,7 +539,12 @@ async function handleCommand(command) {
         case "create_file": {
             const filename = ensureTxtExtension(command.filename);
             const created = createWorkspaceFile(filename, command.content);
-
+await pgSaveDocument(
+    filename,
+    command.content,
+    command.classification,
+    `Saved ${command.classification} note`
+);
             saveDocumentToDatabase(
                 created.filename,
                 created.content,
