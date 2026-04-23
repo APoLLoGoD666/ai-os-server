@@ -325,10 +325,50 @@
                 <div class="status" id="status">Ready</div>
             </div>
 
-            <div id="customLayout" class="empty-layout">No custom layout saved yet. Open the editor and add blocks.</div>
+            <div id="customLayout" class="empty-layout">
+    <div style="width:100%; max-width:700px;">
+        <h2>AI Chat</h2>
+        <div id="chatBox" style="background:#1b1b1b; border:1px solid #333; border-radius:10px; padding:12px; min-height:220px; margin-bottom:10px; white-space:pre-wrap;">
+            Ready.
+        </div>
+
+        <div style="display:flex; gap:8px;">
+            <input id="chatInput" type="text" placeholder="Type a command..." style="flex:1; padding:12px; border-radius:8px; border:none;">
+            <button onclick="sendChatCommand()">Send</button>
+        </div>
+    </div>
+</div>
         </main>
     </div>
+async function sendChatCommand() {
+    const input = document.getElementById("chatInput");
+    const box = document.getElementById("chatBox");
 
+    const message = input.value.trim();
+    if (!message) return;
+
+    box.innerHTML += `\n\nYou: ${escapeHtml(message)}`;
+    input.value = "";
+
+    try {
+        const res = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message })
+        });
+
+        const data = await res.json();
+        box.innerHTML += `\n\nAI: ${escapeHtml(data.reply || "No reply")}`;
+    } catch (err) {
+        box.innerHTML += `\n\nAI: Error connecting to server.`;
+    }
+}
+
+document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && document.activeElement?.id === "chatInput") {
+        sendChatCommand();
+    }
+});
     <script>
         const API_BASE = "";
 
