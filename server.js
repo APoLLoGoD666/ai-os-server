@@ -8,7 +8,7 @@ const Anthropic = require("@anthropic-ai/sdk");
 
 const db = require("./database");
 const pool = require("./pg_database");
-const { pgListDocuments, pgSaveDocument, pgAddMemory, pgLoadMemory } = require("./pg_helpers");
+const { pgListDocuments, pgSaveDocument, pgGetDocument, pgAddMemory, pgLoadMemory } = require("./pg_helpers");
 
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
@@ -585,7 +585,17 @@ async function handleCommand(command) {
 
         case "show_document": {
             const filename = ensureTxtExtension(command.filename);
-            const doc = getDocumentByFilename(filename);
+            let doc = null;
+
+            try {
+                doc = await pgGetDocument(filename);
+            } catch (error) {
+                console.error("POSTGRES DOCUMENT GET ERROR:", error.message);
+            }
+
+            if (!doc) {
+                doc = getDocumentByFilename(filename);
+            }
 
             if (!doc) {
                 return { ok: false, reply: `Could not find document: ${filename}` };
