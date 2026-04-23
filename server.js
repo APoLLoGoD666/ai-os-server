@@ -419,7 +419,7 @@ function detectCommand(message) {
     match = text.match(/^delete document\s+(.+)$/i);
     if (match) {
         return {
-            type: "delete_file",
+            type: "delete_document",
             filename: match[1].trim()
         };
     }
@@ -585,6 +585,17 @@ async function handleCommand(command) {
 
             deleteDocumentFromDatabase(filename);
             return { ok: true, reply: `File deleted: ${filename}` };
+        }
+
+        case "delete_document": {
+            const filename = ensureTxtExtension(command.filename);
+
+            await pgDeleteDocument(filename);
+
+            deleteDocumentFromDatabase(filename);
+            deleteWorkspaceFile(filename);
+
+            return { ok: true, reply: `Document deleted: ${filename}` };
         }
 
         case "rename_file": {
