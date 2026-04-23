@@ -5,9 +5,11 @@ const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
 const Anthropic = require("@anthropic-ai/sdk");
+
 const db = require("./database");
 const pool = require("./pg_database");
 const { pgListDocuments, pgSaveDocument } = require("./pg_helpers");
+
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
 
@@ -25,13 +27,10 @@ const client = new Anthropic({
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+
 const WORKSPACE_DIR = path.join(__dirname, "workspace");
 const LAYOUT_FILE = path.join(__dirname, "layout.json");
 const HIDDEN_FILES = new Set([]);
-
-/* =========================
-   SETUP
-========================= */
 
 function ensureSetup() {
     if (!fs.existsSync(WORKSPACE_DIR)) {
@@ -40,7 +39,7 @@ function ensureSetup() {
 }
 
 /* =========================
-   MEMORY
+   MEMORY — still SQLite for now
 ========================= */
 
 function loadMemory() {
@@ -161,7 +160,8 @@ function renameWorkspaceFile(oldName, newName) {
 }
 
 /* =========================
-   DATABASE
+   OLD SQLITE DOCUMENT HELPERS
+   Keep for now until fully migrated.
 ========================= */
 
 function saveDocumentToDatabase(filename, content, classification = "personal", summary = "") {
@@ -184,11 +184,7 @@ function saveDocumentToDatabase(filename, content, classification = "personal", 
 
 function deleteDocumentFromDatabase(filename) {
     try {
-        db.prepare(`
-            DELETE FROM documents
-            WHERE filename = ?
-        `).run(filename);
-
+        db.prepare("DELETE FROM documents WHERE filename = ?").run(filename);
         return true;
     } catch (error) {
         console.error("DB DELETE ERROR:", error.message);
@@ -198,12 +194,7 @@ function deleteDocumentFromDatabase(filename) {
 
 function renameDocumentInDatabase(oldName, newName) {
     try {
-        db.prepare(`
-            UPDATE documents
-            SET filename = ?
-            WHERE filename = ?
-        `).run(newName, oldName);
-
+        db.prepare("UPDATE documents SET filename = ? WHERE filename = ?").run(newName, oldName);
         return true;
     } catch (error) {
         console.error("DB RENAME ERROR:", error.message);
@@ -213,12 +204,7 @@ function renameDocumentInDatabase(oldName, newName) {
 
 function updateDocumentSummary(filename, summary) {
     try {
-        db.prepare(`
-            UPDATE documents
-            SET summary = ?
-            WHERE filename = ?
-        `).run(summary, filename);
-
+        db.prepare("UPDATE documents SET summary = ? WHERE filename = ?").run(summary, filename);
         return true;
     } catch (error) {
         console.error("DB SUMMARY ERROR:", error.message);
@@ -387,7 +373,7 @@ async function summariseText(text) {
 }
 
 /* =========================
-   COMMANDS
+   COMMAND DETECTION
 ========================= */
 
 function detectCommand(message) {
@@ -534,17 +520,23 @@ function detectCommand(message) {
     return null;
 }
 
+/* =========================
+   COMMAND HANDLER
+========================= */
+
 async function handleCommand(command) {
     switch (command.type) {
         case "create_file": {
             const filename = ensureTxtExtension(command.filename);
             const created = createWorkspaceFile(filename, command.content);
-await pgSaveDocument(
-    filename,
-    command.content,
-    command.classification,
-    `Saved ${command.classification} note`
-);
+
+            await pgSaveDocument(
+                created.filename,
+                created.content,
+                "personal",
+                `Saved file: ${created.filename}`
+            );
+
             saveDocumentToDatabase(
                 created.filename,
                 created.content,
@@ -621,6 +613,13 @@ await pgSaveDocument(
             const summary = await summariseText(file.content);
             updateDocumentSummary(filename, summary);
 
+            await pgSaveDocument(
+                filename,
+                file.content,
+                "summary",
+                summary
+            );
+
             return {
                 ok: true,
                 reply: `Summary of ${filename}:\n\n${summary}`
@@ -646,51 +645,52 @@ await pgSaveDocument(
 
             createWorkspaceFile(filename, command.content);
 
-            const dbSaved = saveDocumentToDatabase(
+            await pgSaveDocument(
                 filename,
                 command.content,
                 command.classification,
                 `Saved ${command.classification} note`
             );
 
-            if (!dbSaved) {
-                return {
-                    ok: false,
-                    reply: `Note file was created as ${filename}, but database save failed.`
-                };
-            }
+            saveDocumentToDatabase(
+                filename,
+                command.content,
+                command.classification,
+                `Saved ${command.classification} note`
+            );
 
             setImmediate(() => backgroundClassifyAndSummarise(filename, command.content));
 
             return {
                 ok: true,
-                reply: `Note saved as ${filename} and stored in database.`
+                reply: `Note saved as ${filename} and stored in Postgres.`
             };
         }
 
         case "save_named_note": {
             const filename = ensureTxtExtension(command.filename);
+
             createWorkspaceFile(filename, command.content);
 
-            const dbSaved = saveDocumentToDatabase(
+            await pgSaveDocument(
                 filename,
                 command.content,
                 command.classification || "personal",
                 `Saved named note: ${filename}`
             );
 
-            if (!dbSaved) {
-                return {
-                    ok: false,
-                    reply: `Note file was created as ${filename}, but database save failed.`
-                };
-            }
+            saveDocumentToDatabase(
+                filename,
+                command.content,
+                command.classification || "personal",
+                `Saved named note: ${filename}`
+            );
 
             setImmediate(() => backgroundClassifyAndSummarise(filename, command.content));
 
             return {
                 ok: true,
-                reply: `Note saved as ${filename} and stored in database.`
+                reply: `Note saved as ${filename} and stored in Postgres.`
             };
         }
 
@@ -705,10 +705,10 @@ await pgSaveDocument(
         }
 
         case "list_documents": {
-            const docs = listRecentDocuments();
+            const docs = await pgListDocuments();
 
             if (!docs.length) {
-                return { ok: true, reply: "No documents saved in database." };
+                return { ok: true, reply: "No documents saved in Postgres." };
             }
 
             const lines = docs.map(doc => `- ${doc.filename} (${doc.classification})`);
@@ -799,6 +799,13 @@ async function backgroundClassifyAndSummarise(filename, content) {
             "UPDATE documents SET classification = ?, summary = ? WHERE filename = ?"
         ).run(classification, summary, filename);
 
+        await pgSaveDocument(
+            filename,
+            content,
+            classification,
+            summary
+        );
+
         console.log(`Background: updated ${filename} → ${classification}`);
     } catch (err) {
         console.error("Background classify/summarise error:", err.message);
@@ -828,7 +835,7 @@ app.get("/test", (req, res) => {
 
 app.get("/test-db", async (req, res) => {
     try {
-        const result = await pool.query("SELECT NOW()");
+        const result = await pool.query("SELECT NOW() AS now");
         res.json({
             ok: true,
             time: result.rows[0]
@@ -845,7 +852,7 @@ app.get("/test-db", async (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "database-first-v1-cloud-preview-approve-postgres-test"
+        version: "postgres-documents-v1"
     });
 });
 
