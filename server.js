@@ -8,7 +8,7 @@ const Anthropic = require("@anthropic-ai/sdk");
 
 const db = require("./database");
 const pool = require("./pg_database");
-const { pgListDocuments, pgSaveDocument } = require("./pg_helpers");
+const { pgListDocuments, pgSaveDocument, pgAddMemory, pgLoadMemory } = require("./pg_helpers");
 
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
@@ -42,30 +42,25 @@ function ensureSetup() {
    MEMORY — still SQLite for now
 ========================= */
 
-function loadMemory() {
+async function loadMemory() {
     try {
-        return db.prepare(
-            "SELECT role, message, created_at AS time FROM memory ORDER BY id DESC LIMIT 20"
-        ).all().reverse();
+        return await pgLoadMemory();
     } catch (error) {
         console.error("MEMORY LOAD ERROR:", error.message);
         return [];
     }
 }
 
-function addToMemory(role, message) {
+async function addToMemory(role, message) {
     try {
-        db.prepare("INSERT INTO memory (role, message) VALUES (?, ?)").run(role, message);
-        db.prepare(
-            "DELETE FROM memory WHERE id NOT IN (SELECT id FROM memory ORDER BY id DESC LIMIT 20)"
-        ).run();
+        await pgAddMemory(role, message);
     } catch (error) {
         console.error("MEMORY SAVE ERROR:", error.message);
     }
 }
 
-function formatRecentMemory() {
-    const memory = loadMemory();
+async function formatRecentMemory() {
+    const memory = await loadMemory();
 
     if (!memory.length) {
         return "No recent memory.";
@@ -856,8 +851,8 @@ app.get("/version", (req, res) => {
     });
 });
 
-app.get("/memory", (req, res) => {
-    const memory = loadMemory();
+app.get("/memory", async (req, res) => {
+    const memory = await loadMemory();
     res.status(200).json({ ok: true, count: memory.length, memory });
 });
 
@@ -947,17 +942,17 @@ app.post("/chat", async (req, res) => {
         }
 
         const userMessage = rawMessage.trim();
-        addToMemory("user", userMessage);
+        await addToMemory("user", userMessage);
 
         const command = detectCommand(userMessage);
 
         if (command) {
             const result = await handleCommand(command);
-            addToMemory("ai", result.reply);
+            await addToMemory("ai", result.reply);
             return res.status(result.ok ? 200 : 404).json(result);
         }
 
-        const memoryText = formatRecentMemory();
+        const memoryText = await formatRecentMemory();
         const relevantDocs = getRelevantDocuments(userMessage);
         const docsText = relevantDocs.length
             ? relevantDocs.map((doc, index) => {
@@ -993,7 +988,7 @@ ${preview}
             .join("\n")
             .trim() || "No response from AI";
 
-        addToMemory("ai", reply);
+        await addToMemory("ai", reply);
 
         return res.status(200).json({
             ok: true,
