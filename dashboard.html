@@ -73,7 +73,8 @@
         }
 
         .button-row button.secondary,
-        .quick-grid button.secondary {
+        .quick-grid button.secondary,
+        .widget-button.secondary {
             background: #2f2f2f;
         }
 
@@ -216,6 +217,26 @@
             text-align: left;
         }
 
+        .autopilot-textarea {
+            width: 100%;
+            min-height: 90px;
+            border-radius: 8px;
+            padding: 10px;
+            border: none;
+            margin-bottom: 8px;
+            resize: vertical;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        .result-good {
+            color: #b7ffb7;
+        }
+
+        .result-bad {
+            color: #ff8d8d;
+        }
+
         @media (max-width: 900px) {
             .app {
                 grid-template-columns: 1fr;
@@ -244,21 +265,25 @@
             </div>
 
             <div class="panel">
-    <h3>Cloud Autopilot</h3>
+                <h3>Cloud Autopilot</h3>
 
-    <textarea id="autopilotInput" placeholder="Describe what you want to change..." 
-    style="width:100%; height:80px; border-radius:8px; padding:10px; border:none; margin-bottom:8px;"></textarea>
+                <textarea
+                    id="autopilotInput"
+                    class="autopilot-textarea"
+                    placeholder="Describe what you want to change..."
+                ></textarea>
 
-    <div style="display:flex; gap:8px;">
-        <button onclick="runCloudAutopilot()">Run</button>
-        <button class="secondary" onclick="clearAutopilot()">Clear</button>
-    </div>
+                <div class="button-row">
+                    <button onclick="previewCloudAutopilot()">Preview</button>
+                    <button onclick="applyCloudAutopilot()">Approve & Apply</button>
+                    <button class="secondary" onclick="clearAutopilot()">Clear</button>
+                </div>
 
-    <div id="autopilotResult" class="small" style="margin-top:10px;">
-        Ready.
-    </div>
-</div>
-            
+                <div id="autopilotResult" class="small" style="margin-top:10px;">
+                    Ready.
+                </div>
+            </div>
+
             <div class="panel">
                 <h3>Global Search</h3>
                 <div class="search-row">
@@ -316,50 +341,79 @@
             return div.innerHTML;
         }
 
-        async function runCloudAutopilot() {
-    const input = document.getElementById("autopilotInput");
-    const resultBox = document.getElementById("autopilotResult");
-
-    const requirements = input.value.trim();
-
-    if (!requirements) {
-        resultBox.innerHTML = "Please enter instructions.";
-        return;
-    }
-
-    resultBox.innerHTML = "Running...";
-
-    try {
-        const res = await fetch("/cloud-autopilot", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ requirements })
-        });
-
-        const data = await res.json();
-
-        if (!data.ok) {
-            resultBox.innerHTML = `<span style="color:red;">${data.reply || "Cloud autopilot failed."}</span>`;
-            return;
+        function clearAutopilot() {
+            document.getElementById("autopilotInput").value = "";
+            document.getElementById("autopilotResult").innerHTML = "Cleared.";
         }
 
-        resultBox.innerHTML = `
-            <b>Done</b><br>
-            ${escapeHtml(data.summary || "No summary")}<br><br>
-            Files changed:<br>
-            ${(data.changedFiles || []).map(f => escapeHtml(f)).join("<br>")}
-        `;
+        async function previewCloudAutopilot() {
+            const input = document.getElementById("autopilotInput");
+            const resultBox = document.getElementById("autopilotResult");
 
-    } catch (err) {
-        console.error("Cloud autopilot error:", err);
-        resultBox.innerHTML = `<span style="color:red;">Error running autopilot.</span>`;
-    }
-}
+            const requirements = input.value.trim();
 
-function clearAutopilot() {
-    document.getElementById("autopilotInput").value = "";
-    document.getElementById("autopilotResult").innerHTML = "Cleared.";
-}
+            if (!requirements) {
+                resultBox.innerHTML = "Please enter instructions.";
+                return;
+            }
+
+            resultBox.innerHTML = "Creating preview...";
+
+            try {
+                const res = await fetch("/cloud-autopilot/preview", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ requirements })
+                });
+
+                const data = await res.json();
+
+                if (!data.ok) {
+                    resultBox.innerHTML = `<span class="result-bad">${escapeHtml(data.reply || "Preview failed.")}</span>`;
+                    return;
+                }
+
+                resultBox.innerHTML = `
+                    <span class="result-good"><b>Preview ready</b></span><br>
+                    ${escapeHtml(data.summary || "No summary")}<br><br>
+                    Files to change:<br>
+                    ${(data.changedFiles || []).map(f => escapeHtml(f)).join("<br>")}
+                `;
+            } catch (err) {
+                console.error("Cloud autopilot preview error:", err);
+                resultBox.innerHTML = `<span class="result-bad">Error creating preview.</span>`;
+            }
+        }
+
+        async function applyCloudAutopilot() {
+            const resultBox = document.getElementById("autopilotResult");
+
+            resultBox.innerHTML = "Applying preview...";
+
+            try {
+                const res = await fetch("/cloud-autopilot/apply", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                });
+
+                const data = await res.json();
+
+                if (!data.ok) {
+                    resultBox.innerHTML = `<span class="result-bad">${escapeHtml(data.reply || "Apply failed.")}</span>`;
+                    return;
+                }
+
+                resultBox.innerHTML = `
+                    <span class="result-good"><b>Applied</b></span><br>
+                    ${escapeHtml(data.summary || "No summary")}<br><br>
+                    Files changed:<br>
+                    ${(data.changedFiles || []).map(f => escapeHtml(f)).join("<br>")}
+                `;
+            } catch (err) {
+                console.error("Cloud autopilot apply error:", err);
+                resultBox.innerHTML = `<span class="result-bad">Error applying preview.</span>`;
+            }
+        }
 
         async function previewFile(filename) {
             const panel = document.getElementById("filePreview");
