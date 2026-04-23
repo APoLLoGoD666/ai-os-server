@@ -7,6 +7,7 @@ const cors = require("cors");
 const Anthropic = require("@anthropic-ai/sdk");
 const db = require("./database");
 const { runAutoCoder } = require("./auto_coder");
+const { runCloudAutopilot } = require("./cloud_autopilot");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1002,6 +1003,36 @@ app.post("/autocode", async (req, res) => {
         return res.status(500).json({
             ok: false,
             reply: error.message || "Auto-code failed."
+        });
+    }
+});
+
+app.post("/cloud-autopilot", async (req, res) => {
+    try {
+        const requirements = req.body?.requirements;
+
+        if (!requirements || typeof requirements !== "string" || !requirements.trim()) {
+            return res.status(400).json({
+                ok: false,
+                reply: "Please enter automation requirements."
+            });
+        }
+
+        const result = await runCloudAutopilot(requirements);
+
+        return res.status(200).json({
+            ok: true,
+            reply: "Cloud autopilot completed.",
+            summary: result.summary,
+            changedFiles: result.changedFiles,
+            backupFolder: result.backupFolder
+        });
+    } catch (error) {
+        console.error("CLOUD AUTOPILOT ERROR:", error);
+
+        return res.status(500).json({
+            ok: false,
+            reply: error.message || "Cloud autopilot failed."
         });
     }
 });
