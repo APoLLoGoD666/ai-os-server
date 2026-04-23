@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const fs = require("fs");
 const path = require("path");
+const { execSync } = require("child_process");
 const Anthropic = require("@anthropic-ai/sdk");
 
 const client = new Anthropic({
@@ -11,6 +12,10 @@ const client = new Anthropic({
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const ROOT = __dirname;
 const CLOUD_BACKUP_DIR = path.join(ROOT, "cloud_ai_backups");
+
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_REPO = process.env.GITHUB_REPO;
+const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "main";
 
 const ALLOWED_FILES = [
     "dashboard.html",
@@ -156,6 +161,88 @@ function applyChanges(files) {
     }
 }
 
+function pushToGitHub(changedFiles) {
+    if (!GITHUB_TOKEN || !GITHUB_REPO) {
+        throw new Error("Missing GITHUB_TOKEN or GITHUB_REPO in environment variables.");
+    }
+
+    if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
+        throw new Error("No changed files provided for GitHub push.");
+    }
+
+    const remoteUrl = `https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
+
+    console.log("Setting git remote...");
+    execSync(`git remote set-url origin "${remoteUrl}"`, {
+        cwd: ROOT,
+        stdio: "inherit"
+    });
+
+    for (const file of changedFiles) {
+        if (!ALLOWED_FILES.includes(file)) {
+            throw new Error(`Refusing to git add non-approved file: ${file}`);
+        }
+
+        console.log(`Staging file: ${file}`);
+        execSync(`git add "${file}"`, {
+            cwd: ROOT,
+            stdio: "inherit"
+        });
+    }
+
+    const status = execSync("git status --porcelain", {
+        cwd: ROOT,
+        encoding: "utf8"
+    }).trim();
+
+    if (!status) {
+        return {
+            pushed: false,
+            skipped: true,
+            reason: "No changes to commit."
+        };
+    }
+
+    console.log("Creating commit...");
+    try {
+        execSync(`git commit -m "AI cloud autopilot update"`, {
+            cwd: ROOT,
+            stdio: "inherit"
+        });
+    } catch (error) {
+        const statusAfter = execSync("git status --porcelain", {
+            cwd: ROOT,
+            encoding: "utf8"
+        }).trim();
+
+        if (!statusAfter) {
+            return {
+                pushed: false,
+                skipped: true,
+                reason: "No changes to commit."
+            };
+        }
+
+        throw new Error("Git commit failed on hosted server.");
+    }
+
+    console.log(`Pushing to GitHub branch: ${GITHUB_BRANCH}`);
+    try {
+        execSync(`git push origin ${GITHUB_BRANCH}`, {
+            cwd: ROOT,
+            stdio: "inherit"
+        });
+    } catch (error) {
+        throw new Error("Git push failed on hosted server. Check Render logs for the exact error.");
+    }
+
+    return {
+        pushed: true,
+        skipped: false,
+        reason: ""
+    };
+}
+
 async function runCloudAutopilot(requirements) {
     if (!requirements || !requirements.trim()) {
         throw new Error("No requirements provided.");
@@ -166,11 +253,17 @@ async function runCloudAutopilot(requirements) {
 
     applyChanges(result.files);
 
+    const changedFiles = result.files.map(f => f.path);
+    const pushResult = pushToGitHub(changedFiles);
+
     return {
         ok: true,
         summary: result.summary,
-        changedFiles: result.files.map(f => f.path),
-        backupFolder
+        changedFiles,
+        backupFolder,
+        pushed: pushResult.pushed,
+        skipped: pushResult.skipped,
+        reason: pushResult.reason
     };
 }
 
