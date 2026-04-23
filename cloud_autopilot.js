@@ -170,10 +170,21 @@ function pushToGitHub(changedFiles) {
         throw new Error("No changed files provided for GitHub push.");
     }
 
-    const remoteUrl = `https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
+    const cleanRemoteUrl = `https://github.com/${GITHUB_REPO}.git`;
+    const pushUrl = `https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
 
-    console.log("Setting remote...");
-    execSync(`git remote set-url origin "${remoteUrl}"`, {
+    console.log("Setting git identity...");
+    execSync(`git config --global user.email "ai@bot.com"`, {
+        cwd: ROOT,
+        stdio: "inherit"
+    });
+    execSync(`git config --global user.name "AI Bot"`, {
+        cwd: ROOT,
+        stdio: "inherit"
+    });
+
+    console.log("Setting clean remote...");
+    execSync(`git remote set-url origin "${cleanRemoteUrl}"`, {
         cwd: ROOT,
         stdio: "inherit"
     });
@@ -216,16 +227,37 @@ function pushToGitHub(changedFiles) {
     }
 
     console.log("Committing...");
-    execSync(`git commit -m "AI cloud autopilot update"`, {
-        cwd: ROOT,
-        stdio: "inherit"
-    });
+    try {
+        execSync(`git commit -m "AI cloud autopilot update"`, {
+            cwd: ROOT,
+            stdio: "inherit"
+        });
+    } catch (error) {
+        const statusAfter = execSync("git status --porcelain", {
+            cwd: ROOT,
+            encoding: "utf8"
+        }).trim();
+
+        if (!statusAfter) {
+            return {
+                pushed: false,
+                skipped: true,
+                reason: "No changes."
+            };
+        }
+
+        throw new Error("Git commit failed on hosted server.");
+    }
 
     console.log("Pushing...");
-    execSync(`git push origin ${GITHUB_BRANCH}`, {
-        cwd: ROOT,
-        stdio: "inherit"
-    });
+    try {
+        execSync(`git push "${pushUrl}" ${GITHUB_BRANCH}`, {
+            cwd: ROOT,
+            stdio: "inherit"
+        });
+    } catch (error) {
+        throw new Error("Git push failed on hosted server. Check Render logs for the exact error.");
+    }
 
     return {
         pushed: true,
