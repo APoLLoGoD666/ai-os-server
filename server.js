@@ -7,6 +7,7 @@ const cors = require("cors");
 const Anthropic = require("@anthropic-ai/sdk");
 const db = require("./database");
 const pool = require("./pg_database");
+const { pgListDocuments } = require("./pg_helpers");
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
 
@@ -848,9 +849,23 @@ app.get("/memory", (req, res) => {
     res.status(200).json({ ok: true, count: memory.length, memory });
 });
 
-app.get("/documents", (req, res) => {
-    const docs = listRecentDocuments();
-    res.status(200).json({ ok: true, count: docs.length, documents: docs });
+app.get("/documents", async (req, res) => {
+    try {
+        const docs = await pgListDocuments();
+
+        res.status(200).json({
+            ok: true,
+            count: docs.length,
+            documents: docs
+        });
+    } catch (err) {
+        console.error("POSTGRES DOCUMENT ERROR:", err);
+
+        res.status(500).json({
+            ok: false,
+            error: err.message
+        });
+    }
 });
 
 app.get("/files", (req, res) => {
