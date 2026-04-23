@@ -60,6 +60,38 @@ async function pgGetDocument(filename) {
     return result.rows[0] || null;
 }
 
+async function pgSearchDocuments(keyword) {
+    const k = (keyword || "").trim().toLowerCase();
+
+    if (!k) {
+        const result = await pool.query(`
+            SELECT filename, classification, summary, content, created_at
+            FROM documents
+            ORDER BY created_at DESC
+            LIMIT 5
+        `);
+
+        return result.rows;
+    }
+
+    const result = await pool.query(
+        `
+        SELECT filename, classification, summary, content, created_at
+        FROM documents
+        WHERE
+            LOWER(filename) LIKE $1
+            OR LOWER(classification) LIKE $1
+            OR LOWER(summary) LIKE $1
+            OR LOWER(content) LIKE $1
+        ORDER BY created_at DESC
+        LIMIT 5
+        `,
+        [`%${k}%`]
+    );
+
+    return result.rows;
+}
+
 async function pgAddMemory(role, message) {
     await ensureMemoryTable();
 
@@ -99,6 +131,7 @@ module.exports = {
     pgSaveDocument,
     pgListDocuments,
     pgGetDocument,
+    pgSearchDocuments,
     pgAddMemory,
     pgLoadMemory
 };

@@ -8,7 +8,7 @@ const Anthropic = require("@anthropic-ai/sdk");
 
 const db = require("./database");
 const pool = require("./pg_database");
-const { pgListDocuments, pgSaveDocument, pgGetDocument, pgAddMemory, pgLoadMemory } = require("./pg_helpers");
+const { pgListDocuments, pgSaveDocument, pgGetDocument, pgSearchDocuments, pgAddMemory, pgLoadMemory } = require("./pg_helpers");
 
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
@@ -242,8 +242,14 @@ function searchDocuments(keyword) {
     }
 }
 
-function getRelevantDocuments(question) {
+async function getRelevantDocuments(question) {
     const q = (question || "").trim().toLowerCase();
+
+    try {
+        return await pgSearchDocuments(q);
+    } catch (error) {
+        console.error("POSTGRES DOCUMENT SEARCH ERROR:", error.message);
+    }
 
     try {
         if (!q) {
@@ -963,7 +969,7 @@ app.post("/chat", async (req, res) => {
         }
 
         const memoryText = await formatRecentMemory();
-        const relevantDocs = getRelevantDocuments(userMessage);
+        const relevantDocs = await getRelevantDocuments(userMessage);
         const docsText = relevantDocs.length
             ? relevantDocs.map((doc, index) => {
                 const preview = (doc.content || "").slice(0, 500);
