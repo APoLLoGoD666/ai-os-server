@@ -89,7 +89,7 @@
 
         .topbar h1 {
             margin: 0;
-            font-size: 29px;
+            font-size: 30px;
         }
 
         .status {
@@ -865,72 +865,5 @@
         loadSidebarData();
         loadCustomLayout();
     </script>
-
-    async function previewCloudAutopilot() {
-    const input = document.getElementById("autopilotInput");
-    const resultBox = document.getElementById("autopilotResult");
-
-    const requirements = input.value.trim();
-
-    if (!requirements) {
-        resultBox.innerHTML = "Please enter instructions.";
-        return;
-    }
-
-    resultBox.innerHTML = "Creating preview...";
-
-    try {
-        const res = await fetch("/cloud-autopilot/preview", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ requirements })
-        });
-
-        const data = await res.json();
-
-        if (!data.ok) {
-            resultBox.innerHTML = `<span style="color:red;">${data.reply || "Preview failed."}</span>`;
-            return;
-        }
-
-        resultBox.innerHTML = `
-            <b>Preview ready</b><br>
-            ${data.summary || "No summary"}<br><br>
-            Files:<br>
-            ${(data.changedFiles || []).join("<br>")}
-        `;
-    } catch (err) {
-        console.error(err);
-        resultBox.innerHTML = `<span style="color:red;">Error running preview.</span>`;
-    }
-}
-
-async function applyCloudAutopilot() {
-    const resultBox = document.getElementById("autopilotResult");
-
-    resultBox.innerHTML = "Applying...";
-
-    try {
-        const res = await fetch("/cloud-autopilot/apply", {
-            method: "POST"
-        });
-
-        const data = await res.json();
-
-        if (!data.ok) {
-            resultBox.innerHTML = `<span style="color:red;">${data.reply || "Apply failed."}</span>`;
-            return;
-        }
-
-        resultBox.innerHTML = `
-            <b>Applied</b><br>
-            ${data.summary || ""}
-        `;
-    } catch (err) {
-        console.error(err);
-        resultBox.innerHTML = `<span style="color:red;">Error applying.</span>`;
-    }
-}
-
 </body>
 </html>
