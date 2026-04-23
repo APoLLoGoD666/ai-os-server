@@ -2,7 +2,6 @@ require("dotenv").config();
 
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
 const Anthropic = require("@anthropic-ai/sdk");
 
 const client = new Anthropic({
@@ -75,7 +74,7 @@ async function generateChanges(requirements) {
     const currentFiles = readAllowedFiles();
 
     const prompt = `
-You are editing a small Node.js + HTML app running on a hosted server.
+You are editing a small Node.js + HTML app.
 
 STRICT RULES:
 - Do NOT remove working features.
@@ -161,108 +160,94 @@ function applyChanges(files) {
     }
 }
 
-function pushToGitHub(changedFiles) {
+function toBase64Utf8(str) {
+    return Buffer.from(str, "utf8").toString("base64");
+}
+
+async function githubRequest(url, options = {}) {
+    const res = await fetch(url, {
+        ...options,
+        headers: {
+            "Authorization": `Bearer ${GITHUB_TOKEN}`,
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json",
+            ...(options.headers || {})
+        }
+    });
+
+    const text = await res.text();
+    let data = null;
+
+    try {
+        data = text ? JSON.parse(text) : null;
+    } catch {
+        data = text;
+    }
+
+    if (!res.ok) {
+        const message =
+            (data && data.message) ||
+            (typeof data === "string" && data) ||
+            `GitHub API error ${res.status}`;
+        throw new Error(message);
+    }
+
+    return data;
+}
+
+async function getGithubFileSha(filePath) {
+    const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${encodeURIComponent(filePath)}?ref=${encodeURIComponent(GITHUB_BRANCH)}`;
+    const data = await githubRequest(url, { method: "GET" });
+    return data.sha;
+}
+
+async function updateGithubFile(filePath, content, summary) {
+    const sha = await getGithubFileSha(filePath);
+
+    const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${encodeURIComponent(filePath)}`;
+
+    const body = {
+        message: `AI cloud autopilot update: ${filePath}`,
+        content: toBase64Utf8(content),
+        sha,
+        branch: GITHUB_BRANCH
+    };
+
+    return githubRequest(url, {
+        method: "PUT",
+        body: JSON.stringify(body)
+    });
+}
+
+async function pushToGitHubApi(files, summary) {
     if (!GITHUB_TOKEN || !GITHUB_REPO) {
         throw new Error("Missing GITHUB_TOKEN or GITHUB_REPO.");
     }
 
-    if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
-        throw new Error("No changed files provided for GitHub push.");
-    }
-
-    const cleanRemoteUrl = `https://github.com/${GITHUB_REPO}.git`;
-    const pushUrl = `https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git`;
-
-    console.log("Setting git identity...");
-    execSync(`git config --global user.email "ai@bot.com"`, {
-        cwd: ROOT,
-        stdio: "inherit"
-    });
-    execSync(`git config --global user.name "AI Bot"`, {
-        cwd: ROOT,
-        stdio: "inherit"
-    });
-
-    console.log("Setting clean remote...");
-    execSync(`git remote set-url origin "${cleanRemoteUrl}"`, {
-        cwd: ROOT,
-        stdio: "inherit"
-    });
-
-    console.log("Checking out branch...");
-    execSync(`git checkout ${GITHUB_BRANCH}`, {
-        cwd: ROOT,
-        stdio: "inherit"
-    });
-
-    console.log("Pulling latest...");
-    execSync(`git pull origin ${GITHUB_BRANCH}`, {
-        cwd: ROOT,
-        stdio: "inherit"
-    });
-
-    for (const file of changedFiles) {
-        if (!ALLOWED_FILES.includes(file)) {
-            throw new Error(`Refusing to git add non-approved file: ${file}`);
-        }
-
-        console.log(`Adding ${file}`);
-        execSync(`git add "${file}"`, {
-            cwd: ROOT,
-            stdio: "inherit"
-        });
-    }
-
-    const status = execSync("git status --porcelain", {
-        cwd: ROOT,
-        encoding: "utf8"
-    }).trim();
-
-    if (!status) {
+    if (!Array.isArray(files) || files.length === 0) {
         return {
             pushed: false,
             skipped: true,
-            reason: "No changes."
+            reason: "No files to update."
         };
     }
 
-    console.log("Committing...");
-    try {
-        execSync(`git commit -m "AI cloud autopilot update"`, {
-            cwd: ROOT,
-            stdio: "inherit"
-        });
-    } catch (error) {
-        const statusAfter = execSync("git status --porcelain", {
-            cwd: ROOT,
-            encoding: "utf8"
-        }).trim();
+    const changedFiles = [];
 
-        if (!statusAfter) {
-            return {
-                pushed: false,
-                skipped: true,
-                reason: "No changes."
-            };
+    for (const file of files) {
+        if (!ALLOWED_FILES.includes(file.path)) {
+            throw new Error(`Refusing to update non-approved file: ${file.path}`);
         }
 
-        throw new Error("Git commit failed on hosted server.");
-    }
-
-    console.log("Pushing...");
-    try {
-        execSync(`git push "${pushUrl}" ${GITHUB_BRANCH}`, {
-            cwd: ROOT,
-            stdio: "inherit"
-        });
-    } catch (error) {
-        throw new Error("Git push failed on hosted server. Check Render logs for the exact error.");
+        await updateGithubFile(file.path, file.content, summary);
+        changedFiles.push(file.path);
     }
 
     return {
         pushed: true,
         skipped: false,
-        reason: ""
+        reason: "",
+        changedFiles
     };
 }
 
@@ -276,13 +261,12 @@ async function runCloudAutopilot(requirements) {
 
     applyChanges(result.files);
 
-    const changedFiles = result.files.map(f => f.path);
-    const pushResult = pushToGitHub(changedFiles);
+    const pushResult = await pushToGitHubApi(result.files, result.summary);
 
     return {
         ok: true,
         summary: result.summary,
-        changedFiles,
+        changedFiles: pushResult.changedFiles || result.files.map(f => f.path),
         backupFolder,
         pushed: pushResult.pushed,
         skipped: pushResult.skipped,

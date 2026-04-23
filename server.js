@@ -822,7 +822,7 @@ app.get("/test", (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "database-first-v1-devpanel-editor"
+        version: "database-first-v1-cloud-autopilot-github-api"
     });
 });
 
@@ -1022,10 +1022,15 @@ app.post("/cloud-autopilot", async (req, res) => {
 
         return res.status(200).json({
             ok: true,
-            reply: "Cloud autopilot completed.",
+            reply: result.skipped
+                ? result.reason || "No changes detected."
+                : "Cloud autopilot completed and pushed to GitHub.",
             summary: result.summary,
             changedFiles: result.changedFiles,
-            backupFolder: result.backupFolder
+            backupFolder: result.backupFolder,
+            pushed: result.pushed,
+            skipped: result.skipped,
+            reason: result.reason
         });
     } catch (error) {
         console.error("CLOUD AUTOPILOT ERROR:", error);
