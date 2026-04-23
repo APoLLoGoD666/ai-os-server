@@ -7,7 +7,7 @@ const cors = require("cors");
 const Anthropic = require("@anthropic-ai/sdk");
 const db = require("./database");
 const { runAutoCoder } = require("./auto_coder");
-const { runCloudAutopilot } = require("./cloud_autopilot");
+const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -822,7 +822,7 @@ app.get("/test", (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "database-first-v1-cloud-autopilot-github-api"
+        version: "database-first-v1-cloud-preview-approve"
     });
 });
 
@@ -1007,7 +1007,7 @@ app.post("/autocode", async (req, res) => {
     }
 });
 
-app.post("/cloud-autopilot", async (req, res) => {
+app.post("/cloud-autopilot/preview", async (req, res) => {
     try {
         const requirements = req.body?.requirements;
 
@@ -1018,13 +1018,33 @@ app.post("/cloud-autopilot", async (req, res) => {
             });
         }
 
-        const result = await runCloudAutopilot(requirements);
+        const result = await previewCloudAutopilot(requirements);
+
+        return res.status(200).json({
+            ok: true,
+            reply: "Preview created.",
+            summary: result.summary,
+            changedFiles: result.changedFiles
+        });
+    } catch (error) {
+        console.error("CLOUD AUTOPILOT PREVIEW ERROR:", error);
+
+        return res.status(500).json({
+            ok: false,
+            reply: error.message || "Cloud autopilot preview failed."
+        });
+    }
+});
+
+app.post("/cloud-autopilot/apply", async (req, res) => {
+    try {
+        const result = await applyLatestCloudProposal();
 
         return res.status(200).json({
             ok: true,
             reply: result.skipped
                 ? result.reason || "No changes detected."
-                : "Cloud autopilot completed and pushed to GitHub.",
+                : "Cloud autopilot applied and pushed to GitHub.",
             summary: result.summary,
             changedFiles: result.changedFiles,
             backupFolder: result.backupFolder,
@@ -1033,11 +1053,11 @@ app.post("/cloud-autopilot", async (req, res) => {
             reason: result.reason
         });
     } catch (error) {
-        console.error("CLOUD AUTOPILOT ERROR:", error);
+        console.error("CLOUD AUTOPILOT APPLY ERROR:", error);
 
         return res.status(500).json({
             ok: false,
-            reply: error.message || "Cloud autopilot failed."
+            reply: error.message || "Cloud autopilot apply failed."
         });
     }
 });
