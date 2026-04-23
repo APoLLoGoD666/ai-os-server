@@ -6,6 +6,7 @@ const fs = require("fs");
 const cors = require("cors");
 const Anthropic = require("@anthropic-ai/sdk");
 const db = require("./database");
+const pool = require("./pg_database");
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
 
@@ -819,10 +820,26 @@ app.get("/test", (req, res) => {
     });
 });
 
+app.get("/test-db", async (req, res) => {
+    try {
+        const result = await pool.query("SELECT NOW()");
+        res.json({
+            ok: true,
+            time: result.rows[0]
+        });
+    } catch (err) {
+        console.error("POSTGRES TEST ERROR:", err);
+        res.status(500).json({
+            ok: false,
+            error: err.message
+        });
+    }
+});
+
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "database-first-v1-cloud-preview-approve"
+        version: "database-first-v1-cloud-preview-approve-postgres-test"
     });
 });
 
