@@ -22,6 +22,8 @@ const ALLOWED_FILES = [
     "server.js"
 ];
 
+let latestProposal = null;
+
 function ensureDir(dirPath) {
     if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true });
@@ -201,7 +203,7 @@ async function getGithubFileSha(filePath) {
     return data.sha;
 }
 
-async function updateGithubFile(filePath, content, summary) {
+async function updateGithubFile(filePath, content) {
     const sha = await getGithubFileSha(filePath);
 
     const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${encodeURIComponent(filePath)}`;
@@ -219,7 +221,7 @@ async function updateGithubFile(filePath, content, summary) {
     });
 }
 
-async function pushToGitHubApi(files, summary) {
+async function pushToGitHubApi(files) {
     if (!GITHUB_TOKEN || !GITHUB_REPO) {
         throw new Error("Missing GITHUB_TOKEN or GITHUB_REPO.");
     }
@@ -239,7 +241,7 @@ async function pushToGitHubApi(files, summary) {
             throw new Error(`Refusing to update non-approved file: ${file.path}`);
         }
 
-        await updateGithubFile(file.path, file.content, summary);
+        await updateGithubFile(file.path, file.content);
         changedFiles.push(file.path);
     }
 
@@ -251,27 +253,49 @@ async function pushToGitHubApi(files, summary) {
     };
 }
 
-async function runCloudAutopilot(requirements) {
+async function previewCloudAutopilot(requirements) {
     if (!requirements || !requirements.trim()) {
         throw new Error("No requirements provided.");
     }
 
     const result = await generateChanges(requirements.trim());
-    const backupFolder = backupFiles(result.currentFiles);
 
-    applyChanges(result.files);
-
-    const pushResult = await pushToGitHubApi(result.files, result.summary);
+    latestProposal = result;
 
     return {
         ok: true,
         summary: result.summary,
-        changedFiles: pushResult.changedFiles || result.files.map(f => f.path),
+        changedFiles: result.files.map(f => f.path)
+    };
+}
+
+async function applyLatestCloudProposal() {
+    if (!latestProposal) {
+        throw new Error("No preview available to apply.");
+    }
+
+    const backupFolder = backupFiles(latestProposal.currentFiles);
+
+    applyChanges(latestProposal.files);
+
+    const pushResult = await pushToGitHubApi(latestProposal.files);
+
+    const result = {
+        ok: true,
+        summary: latestProposal.summary,
+        changedFiles: pushResult.changedFiles || latestProposal.files.map(f => f.path),
         backupFolder,
         pushed: pushResult.pushed,
         skipped: pushResult.skipped,
         reason: pushResult.reason
     };
+
+    latestProposal = null;
+
+    return result;
 }
 
-module.exports = { runCloudAutopilot };
+module.exports = {
+    previewCloudAutopilot,
+    applyLatestCloudProposal
+};
