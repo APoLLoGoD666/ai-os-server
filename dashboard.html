@@ -48,6 +48,14 @@
             cursor: pointer;
         }
 
+        button:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible,
+        details summary:focus-visible {
+            outline: 2px solid rgba(111, 140, 255, 0.95);
+            outline-offset: 2px;
+        }
+
         .shell {
             max-width: 1480px;
             margin: 0 auto;
@@ -104,8 +112,14 @@
         .card {
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01)), var(--panel);
             border: 1px solid var(--border);
-            border-radius: 20px;
+            border-radius: 22px;
             box-shadow: var(--shadow);
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-1px);
+            border-color: rgba(111, 140, 255, 0.22);
         }
 
         .card-header {
@@ -256,6 +270,14 @@
             box-shadow: none;
         }
 
+        .button:disabled,
+        .quick-action:disabled {
+            opacity: 0.58;
+            cursor: default;
+            transform: none;
+            box-shadow: none;
+        }
+
         .button-row {
             display: flex;
             gap: 10px;
@@ -325,6 +347,20 @@
             outline: none;
         }
 
+        .chat-input-row textarea {
+            flex: 1;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            padding: 14px 16px;
+            outline: none;
+            min-height: 56px;
+            max-height: 160px;
+            resize: vertical;
+            line-height: 1.45;
+        }
+
         .section-stack {
             display: flex;
             flex-direction: column;
@@ -359,9 +395,17 @@
 
         .list-item {
             padding: 12px;
-            border-radius: 14px;
+            border-radius: 16px;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.16s ease, border-color 0.16s ease;
+        }
+
+        .list-item:hover,
+        .simple-item:hover,
+        .memory-entry:hover {
+            background: rgba(255, 255, 255, 0.045);
+            border-color: rgba(255, 255, 255, 0.09);
         }
 
         .item-row {
@@ -474,9 +518,10 @@
             justify-content: space-between;
             gap: 12px;
             padding: 12px;
-            border-radius: 14px;
+            border-radius: 16px;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.16s ease, border-color 0.16s ease;
         }
 
         .simple-item-copy {
@@ -503,9 +548,10 @@
 
         .memory-entry {
             padding: 12px;
-            border-radius: 14px;
+            border-radius: 16px;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.16s ease, border-color 0.16s ease;
         }
 
         .memory-role {
@@ -622,6 +668,31 @@
             font-size: 11px;
         }
 
+        .item-detail-toggle {
+            margin-top: 8px;
+        }
+
+        .item-detail-toggle summary {
+            cursor: pointer;
+            color: var(--muted);
+            font-size: 12px;
+            user-select: none;
+        }
+
+        .item-detail-body {
+            margin-top: 8px;
+            color: var(--text);
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .unread-highlight {
+            border-color: rgba(246, 196, 83, 0.26);
+            background: rgba(246, 196, 83, 0.06);
+        }
+
         @media (max-width: 1120px) {
             .main-grid {
                 grid-template-columns: 1fr;
@@ -681,38 +752,38 @@
 
             <div class="header-actions">
                 <span class="status-pill">Connected</span>
-                <button class="button secondary" onclick="refreshAllData()">Refresh</button>
-                <button class="button secondary" onclick="runSchedulesNowFromDashboard()">Run Schedules</button>
-                <button class="button" onclick="openEditor()">Open Editor</button>
+                <button class="button secondary" aria-label="Refresh dashboard data" onclick="debouncedRefreshAllData(this)">Refresh</button>
+                <button class="button secondary" aria-label="Run due schedules now" onclick="runSchedulesNowFromDashboard(this)">Run Schedules</button>
+                <button class="button" aria-label="Open editor" onclick="openEditor()">Open Editor</button>
             </div>
         </header>
 
         <section class="main-grid">
-            <article class="card chat-card">
+            <article class="card chat-card" aria-label="Chat panel">
                 <div class="card-header">
                     <div>
                         <h2 class="card-title">Chat</h2>
                         <div class="card-subtitle">Talk to your AI OS, run commands, and review responses clearly.</div>
                     </div>
-                    <button class="button ghost" onclick="clearChat()">Clear</button>
+                    <button class="button ghost" aria-label="Clear chat messages" onclick="clearChat()">Clear</button>
                 </div>
 
                 <div class="chat-shell">
-                    <div id="chatBox" class="chat-box"></div>
+                    <div id="chatBox" class="chat-box" aria-live="polite" aria-label="Chat messages"></div>
                     <div class="chat-input-row">
-                        <input id="chatInput" type="text" placeholder="Type a command or ask a question..." />
-                        <button class="button" onclick="sendChatCommand()">Send</button>
+                        <textarea id="chatInput" placeholder="Type a command or ask a question..." aria-label="Chat input"></textarea>
+                        <button id="chatSendButton" class="button" aria-label="Send chat message" onclick="sendChatCommand(this)">Send</button>
                     </div>
                 </div>
             </article>
 
-            <aside class="card agent-card">
+            <aside class="card agent-card" aria-label="Agent control panel">
                 <div class="card-header">
                     <div>
                         <h2 class="card-title">Agent Control</h2>
                         <div class="card-subtitle">Tasks, schedules, notifications, and approvals in one place.</div>
                     </div>
-                    <button class="button ghost" onclick="refreshAgentPanels()">Refresh</button>
+                    <button class="button ghost" aria-label="Refresh agent panels" onclick="refreshAgentPanels({ force: true })">Refresh</button>
                 </div>
 
                 <div class="section-stack">
@@ -739,7 +810,7 @@
                     <section>
                         <div class="section-head">
                             <h3 class="section-title">Notifications</h3>
-                            <span id="notificationBadge" class="badge unread">0 unread</span>
+                        <span id="notificationBadge" class="badge unread" aria-label="Unread notifications">0 unread</span>
                         </div>
                         <div id="notificationsPanel" class="compact-list">
                             <div class="loading">Loading notifications...</div>
@@ -769,27 +840,27 @@
                 </div>
 
                 <div class="quick-grid">
-                    <button class="quick-action" onclick="sendChatCommandFromText('run schedules now')">
+                    <button class="quick-action" aria-label="Run schedules now" onclick="runSchedulesNowFromDashboard(this)">
                         <strong>Run Schedules Now</strong>
                         <span>Trigger due schedule checks once.</span>
                     </button>
-                    <button class="quick-action" onclick="sendChatCommandFromText('analyse documents')">
+                    <button class="quick-action" aria-label="Analyse documents" onclick="sendChatCommandFromText('analyse documents', { refresh: { notifications: true, documents: true, memory: true } })">
                         <strong>Analyse Documents</strong>
                         <span>Summarise themes and insights.</span>
                     </button>
-                    <button class="quick-action" onclick="sendChatCommandFromText('agent organise my workspace and suggest cleanup')">
+                    <button class="quick-action" aria-label="Create agent cleanup plan" onclick="sendChatCommandFromText('agent organise my workspace and suggest cleanup', { refresh: { tasks: true, notifications: true } })">
                         <strong>Agent Cleanup Plan</strong>
                         <span>Create a safe workspace cleanup proposal.</span>
                     </button>
-                    <button class="quick-action" onclick="refreshAllData()">
+                    <button class="quick-action" aria-label="Refresh dashboard data" onclick="debouncedRefreshAllData(this)">
                         <strong>Refresh Data</strong>
                         <span>Reload tasks, files, docs, memory, and notifications.</span>
                     </button>
                 </div>
 
                 <div class="search-box">
-                    <input id="globalSearchInput" type="text" placeholder="Search files and documents..." />
-                    <button class="button secondary" onclick="runGlobalSearch()">Search</button>
+                    <input id="globalSearchInput" type="text" placeholder="Search files and documents..." aria-label="Search files and documents" />
+                    <button class="button secondary" aria-label="Search files and documents" onclick="runGlobalSearch()">Search</button>
                 </div>
                 <div id="searchResults" class="card-subtitle" style="margin-top: 12px;">Type a query to search recent files and documents.</div>
             </article>
@@ -800,7 +871,7 @@
                         <h2 class="card-title">Documents</h2>
                         <div class="card-subtitle">Latest 5 saved documents.</div>
                     </div>
-                    <button class="button ghost" onclick="loadDocumentsPanel()">Refresh</button>
+                    <button class="button ghost" aria-label="Refresh documents" onclick="loadDocumentsPanel({ force: true })">Refresh</button>
                 </div>
                 <div id="documentsPanel" class="simple-list">
                     <div class="loading">Loading documents...</div>
@@ -813,7 +884,7 @@
                         <h2 class="card-title">Files</h2>
                         <div class="card-subtitle">Latest 5 workspace files.</div>
                     </div>
-                    <button class="button ghost" onclick="loadFilesPanel()">Refresh</button>
+                    <button class="button ghost" aria-label="Refresh files" onclick="loadFilesPanel({ force: true })">Refresh</button>
                 </div>
                 <div id="filesPanel" class="simple-list">
                     <div class="loading">Loading files...</div>
@@ -826,7 +897,7 @@
                         <h2 class="card-title">Memory</h2>
                         <div class="card-subtitle">Latest 5 conversation memories.</div>
                     </div>
-                    <button class="button ghost" onclick="loadMemoryPanel()">Refresh</button>
+                    <button class="button ghost" aria-label="Refresh memory" onclick="loadMemoryPanel({ force: true })">Refresh</button>
                 </div>
                 <div id="memoryPanel" class="simple-list">
                     <div class="loading">Loading memory...</div>
@@ -842,11 +913,11 @@
                 </div>
 
                 <div class="autopilot-shell">
-                    <textarea id="autopilotInput" placeholder="Describe what you want to change..."></textarea>
+                    <textarea id="autopilotInput" placeholder="Describe what you want to change..." aria-label="Cloud Autopilot instructions"></textarea>
                     <div class="autopilot-actions">
-                        <button class="button" onclick="previewCloudAutopilot()">Preview</button>
-                        <button class="button secondary" onclick="applyCloudAutopilot()">Approve & Apply</button>
-                        <button class="button ghost" onclick="clearAutopilot()">Clear</button>
+                        <button class="button" aria-label="Preview cloud autopilot changes" onclick="previewCloudAutopilot(this)">Preview</button>
+                        <button class="button secondary" aria-label="Approve and apply cloud autopilot changes" onclick="applyCloudAutopilot(this)">Approve & Apply</button>
+                        <button class="button ghost" aria-label="Clear cloud autopilot prompt" onclick="clearAutopilot()">Clear</button>
                     </div>
                 </div>
 
@@ -862,7 +933,7 @@
                         <h2 class="card-title">Workspace Canvas</h2>
                         <div class="card-subtitle">Saved layout content stays available here without crowding the main dashboard.</div>
                     </div>
-                    <button class="button ghost" onclick="loadCustomLayout()">Refresh Layout</button>
+                    <button class="button ghost" aria-label="Refresh workspace layout" onclick="loadCustomLayout()">Refresh Layout</button>
                 </div>
                 <div id="customLayout" class="workspace-canvas">
                     <div class="empty-state">Loading saved layout...</div>
@@ -876,24 +947,26 @@
         const APP_KEY = new URLSearchParams(window.location.search).get("app_key") || "";
         const MAX_LIST_ITEMS = 5;
         const REFRESH_INTERVAL_MS = 12000;
+        const LAZY_PANEL_DELAY_MS = 700;
+        const REFRESH_DEBOUNCE_MS = 500;
 
         let cachedFiles = [];
         let cachedDocuments = [];
         let chatInitialized = false;
+        let refreshDebounceTimer = null;
+        let lazyPanelsLoaded = false;
+        const panelSignatures = {};
 
         function buildApiUrl(path) {
             if (!APP_KEY) {
                 return `${API_BASE}${path}`;
             }
-
             const separator = path.includes("?") ? "&" : "?";
             return `${API_BASE}${path}${separator}app_key=${encodeURIComponent(APP_KEY)}`;
         }
 
         function buildApiHeaders(extraHeaders = {}) {
-            return APP_KEY
-                ? { ...extraHeaders, "x-app-key": APP_KEY }
-                : extraHeaders;
+            return APP_KEY ? { ...extraHeaders, "x-app-key": APP_KEY } : extraHeaders;
         }
 
         function escapeHtml(text) {
@@ -905,7 +978,7 @@
         function shortenText(text, max = 56) {
             const value = String(text || "").trim();
             if (!value) return "Untitled";
-            return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+            return value.length > max ? `${value.slice(0, max - 1)}...` : value;
         }
 
         function formatTimestamp(value) {
@@ -915,16 +988,183 @@
             return date.toLocaleString();
         }
 
-        function getStatusBadge(status) {
+        function renderBadge(status, labelOverride = "") {
             const normalized = String(status || "unknown").replace(/\s+/g, "_").toLowerCase();
-            const label = normalized.replace(/_/g, " ");
+            const labels = {
+                completed: "✔ Completed",
+                enabled: "✔ Enabled",
+                waiting_approval: "⚠ Waiting Approval",
+                waiting: "⚠ Waiting Approval",
+                unread: "⚠ Unread",
+                running: "⏳ Running",
+                failed: "✖ Failed",
+                disabled: "✖ Disabled"
+            };
+            const label = labelOverride || labels[normalized] || normalized.replace(/_/g, " ");
             return `<span class="badge ${normalized}">${escapeHtml(label)}</span>`;
+        }
+
+        function getStatusBadge(status) {
+            return renderBadge(status);
+        }
+
+        function renderCardState(type, text) {
+            return `<div class="${type}">${escapeHtml(text)}</div>`;
+        }
+
+        function setPanelIfChanged(panelId, html, signature) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+            if (panelSignatures[panelId] === signature) return;
+            panel.innerHTML = html;
+            panelSignatures[panelId] = signature;
         }
 
         function setStatus(text) {
             const status = document.querySelector(".status-pill");
             if (status) {
                 status.textContent = text;
+            }
+        }
+
+        function setButtonBusy(button, isBusy, busyText = "Working...") {
+            if (!button) return;
+            if (isBusy) {
+                if (!button.dataset.originalLabel) {
+                    button.dataset.originalLabel = button.textContent;
+                }
+                button.disabled = true;
+                button.textContent = busyText;
+                return;
+            }
+            button.disabled = false;
+            if (button.dataset.originalLabel) {
+                button.textContent = button.dataset.originalLabel;
+            }
+        }
+
+        async function withButtonBusy(button, action, busyText = "Working...") {
+            if (button?.disabled) return null;
+            setButtonBusy(button, true, busyText);
+            try {
+                return await action();
+            } finally {
+                setButtonBusy(button, false);
+            }
+        }
+
+        function renderListItem({ title, subtitle = "", badge = "", actions = "", timestamp = "", detail = "", classes = "" }) {
+            return `
+                <div class="list-item ${classes}">
+                    <div class="item-row">
+                        <p class="item-title">${title}</p>
+                        ${badge}
+                    </div>
+                    ${subtitle ? `<div class="item-subtitle">${subtitle}</div>` : ""}
+                    ${timestamp ? `<div class="timestamp">${timestamp}</div>` : ""}
+                    ${detail ? `
+                        <details class="item-detail-toggle">
+                            <summary>View Details</summary>
+                            <div class="item-detail-body">${detail}</div>
+                        </details>
+                    ` : ""}
+                    ${actions ? `<div class="item-actions">${actions}</div>` : ""}
+                </div>
+            `;
+        }
+
+        function renderSimpleItem({ title, subtitle = "", actions = "" }) {
+            return `
+                <div class="simple-item">
+                    <div class="simple-item-copy">
+                        <strong title="${escapeHtml(title)}">${escapeHtml(shortenText(title, 34))}</strong>
+                        <span>${subtitle}</span>
+                    </div>
+                    ${actions ? `<div class="item-actions">${actions}</div>` : ""}
+                </div>
+            `;
+        }
+
+        async function fetchJson(path, options = {}) {
+            const response = await fetch(buildApiUrl(path), {
+                ...options,
+                headers: buildApiHeaders(options.headers || {})
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.reply || data.error || "Request failed.");
+            }
+            return data;
+        }
+
+        async function fetchTasks() {
+            const data = await fetchJson("/agent-tasks");
+            return Array.isArray(data.tasks) ? data.tasks.slice(0, MAX_LIST_ITEMS) : [];
+        }
+
+        async function fetchSchedules() {
+            const data = await fetchJson("/agent-schedules");
+            return Array.isArray(data.schedules) ? data.schedules.slice(0, MAX_LIST_ITEMS) : [];
+        }
+
+        async function fetchNotifications() {
+            const data = await fetchJson("/notifications");
+            return {
+                notifications: Array.isArray(data.notifications) ? data.notifications.slice(0, MAX_LIST_ITEMS) : [],
+                unreadCount: Array.isArray(data.notifications) ? data.notifications.filter(item => !item.read).length : 0
+            };
+        }
+
+        function inferRefreshTargets(command = "") {
+            const value = String(command || "").toLowerCase();
+            const refresh = {};
+
+            if (value.startsWith("agent ") || value.startsWith("run agent") || value.includes("approve task") || value.includes("continue agent")) {
+                refresh.tasks = true;
+                refresh.notifications = true;
+            }
+            if (value.includes("run schedule") || value.includes("run schedules now") || value.includes("disable schedule") || value.includes("schedule agent")) {
+                refresh.tasks = true;
+                refresh.schedules = true;
+                refresh.notifications = true;
+            }
+            if (value.includes("delete document") || value.includes("summarise file")) {
+                refresh.documents = true;
+                refresh.notifications = true;
+            }
+            if (value.includes("delete file")) {
+                refresh.files = true;
+                refresh.notifications = true;
+            }
+            if (value.includes("analyse documents")) {
+                refresh.documents = true;
+                refresh.memory = true;
+                refresh.notifications = true;
+            }
+
+            return refresh;
+        }
+
+        async function refreshSelectedPanels(targets = {}, options = {}) {
+            const { force = false, silent = false } = options;
+            const jobs = [];
+
+            if (targets.tasks) jobs.push(loadTasksPanel({ force }));
+            if (targets.schedules) jobs.push(loadSchedulesPanel({ force }));
+            if (targets.notifications) jobs.push(loadNotificationsPanel({ force }));
+            if (targets.documents) jobs.push(loadDocumentsPanel({ force }));
+            if (targets.files) jobs.push(loadFilesPanel({ force }));
+            if (targets.memory) jobs.push(loadMemoryPanel({ force }));
+            if (targets.layout) jobs.push(loadCustomLayout());
+
+            if (!jobs.length) return;
+
+            if (!silent) {
+                setStatus("Refreshing...");
+            }
+            await Promise.all(jobs);
+            if (!silent) {
+                setStatus("Connected");
             }
         }
 
@@ -965,30 +1205,14 @@
         function showDetail(title, body) {
             const detailBox = document.getElementById("detailBox");
             if (!detailBox) return;
-
             detailBox.innerHTML = `
                 <strong>${escapeHtml(title)}</strong>
                 <div style="margin-top:10px;">${escapeHtml(body || "No details available.")}</div>
             `;
         }
 
-        async function fetchJson(path, options = {}) {
-            const response = await fetch(buildApiUrl(path), {
-                ...options,
-                headers: buildApiHeaders(options.headers || {})
-            });
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.reply || data.error || "Request failed.");
-            }
-
-            return data;
-        }
-
         async function sendChatCommandFromText(command, options = {}) {
-            const { silent = false, showDetailTitle = null } = options;
-
+            const { silent = false, showDetailTitle = null, refresh = null } = options;
             initializeChat();
 
             if (!silent) {
@@ -1010,7 +1234,7 @@
                     showDetail(showDetailTitle, data.reply || "No reply");
                 }
 
-                await refreshAllData(true);
+                await refreshSelectedPanels(refresh || inferRefreshTargets(command), { silent: true });
                 return data;
             } catch (error) {
                 if (!silent) {
@@ -1020,13 +1244,14 @@
             }
         }
 
-        async function sendChatCommand() {
+        async function sendChatCommand(button = null) {
             const input = document.getElementById("chatInput");
             if (!input) return;
             const message = input.value.trim();
             if (!message) return;
             input.value = "";
-            await sendChatCommandFromText(message);
+            input.style.height = "";
+            await withButtonBusy(button || document.getElementById("chatSendButton"), () => sendChatCommandFromText(message), "Sending...");
         }
 
         function openEditor() {
@@ -1040,7 +1265,7 @@
             document.getElementById("autopilotResultCard").open = true;
         }
 
-        async function previewCloudAutopilot() {
+        async function previewCloudAutopilot(button = null) {
             const input = document.getElementById("autopilotInput");
             const resultBox = document.getElementById("autopilotResult");
             const requirements = input.value.trim();
@@ -1054,11 +1279,11 @@
             document.getElementById("autopilotResultCard").open = true;
 
             try {
-                const data = await fetchJson("/cloud-autopilot/preview", {
+                const data = await withButtonBusy(button, () => fetchJson("/cloud-autopilot/preview", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ requirements })
-                });
+                }), "Previewing...");
 
                 resultBox.textContent = `${data.summary || "Preview ready."}${Array.isArray(data.changedFiles) && data.changedFiles.length ? `\n\nFiles:\n- ${data.changedFiles.join("\n- ")}` : ""}`;
                 showDetail("Cloud Autopilot Preview", resultBox.textContent);
@@ -1067,20 +1292,20 @@
             }
         }
 
-        async function applyCloudAutopilot() {
+        async function applyCloudAutopilot(button = null) {
             const resultBox = document.getElementById("autopilotResult");
             resultBox.textContent = "Applying preview...";
             document.getElementById("autopilotResultCard").open = true;
 
             try {
-                const data = await fetchJson("/cloud-autopilot/apply", {
+                const data = await withButtonBusy(button, () => fetchJson("/cloud-autopilot/apply", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" }
-                });
+                }), "Applying...");
 
                 resultBox.textContent = `${data.summary || "Applied."}${Array.isArray(data.changedFiles) && data.changedFiles.length ? `\n\nFiles:\n- ${data.changedFiles.join("\n- ")}` : ""}`;
                 showDetail("Cloud Autopilot Apply", resultBox.textContent);
-                await refreshAllData(true);
+                await refreshSelectedPanels({ notifications: true, files: true, documents: true, layout: true }, { silent: true });
             } catch (error) {
                 resultBox.textContent = error.message || "Apply failed.";
             }
@@ -1099,63 +1324,69 @@
             }
         }
 
-        async function approveAgentTask(id) {
-            await sendChatCommandFromText(`approve task ${id}`, {
+        async function approveAgentTask(id, button = null) {
+            const taskBadge = button?.closest(".list-item")?.querySelector(".badge");
+            if (taskBadge) {
+                taskBadge.outerHTML = renderBadge("running");
+            }
+            await withButtonBusy(button, () => sendChatCommandFromText(`approve task ${id}`, {
                 showDetailTitle: `Approve Task ${id}`
-            });
+            }), "Approving...");
         }
 
-        async function runScheduleFromDashboard(id) {
-            await sendChatCommandFromText(`run schedule ${id}`, {
+        async function runScheduleFromDashboard(id, button = null) {
+            await withButtonBusy(button, () => sendChatCommandFromText(`run schedule ${id}`, {
                 showDetailTitle: `Run Schedule ${id}`
-            });
+            }), "Running...");
         }
 
-        async function disableScheduleFromDashboard(id) {
-            await sendChatCommandFromText(`disable schedule ${id}`, {
+        async function disableScheduleFromDashboard(id, button = null) {
+            await withButtonBusy(button, () => sendChatCommandFromText(`disable schedule ${id}`, {
                 showDetailTitle: `Disable Schedule ${id}`
-            });
+            }), "Disabling...");
         }
 
-        async function markNotificationReadFromDashboard(id) {
+        async function markNotificationReadFromDashboard(id, button = null) {
             try {
-                await fetchJson(`/notifications/${id}/read`, {
+                await withButtonBusy(button, () => fetchJson(`/notifications/${id}/read`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" }
-                });
-                await refreshAgentPanels();
+                }), "Saving...");
+                await refreshSelectedPanels({ notifications: true }, { silent: true });
             } catch (error) {
                 showDetail("Notification", error.message || "Could not mark notification as read.");
             }
         }
 
-        async function viewNotification(encodedTitle, encodedMessage) {
+        async function viewNotification(id, encodedTitle, encodedMessage, isRead) {
             showDetail(
                 decodeURIComponent(encodedTitle || "Notification"),
                 decodeURIComponent(encodedMessage || "No details available.")
             );
+            if (!isRead) {
+                await markNotificationReadFromDashboard(id);
+            }
         }
 
         async function viewDocument(encodedFilename) {
             const filename = decodeURIComponent(encodedFilename);
-            const data = await sendChatCommandFromText(`show document ${filename}`, {
+            return sendChatCommandFromText(`show document ${filename}`, {
                 showDetailTitle: `Document ${filename}`
             });
-            return data;
         }
 
-        async function summariseDocument(encodedFilename) {
+        async function summariseDocument(encodedFilename, button = null) {
             const filename = decodeURIComponent(encodedFilename);
-            await sendChatCommandFromText(`summarise file ${filename}`, {
+            await withButtonBusy(button, () => sendChatCommandFromText(`summarise file ${filename}`, {
                 showDetailTitle: `Summary ${filename}`
-            });
+            }), "Summarising...");
         }
 
-        async function deleteDocumentAction(encodedFilename) {
+        async function deleteDocumentAction(encodedFilename, button = null) {
             const filename = decodeURIComponent(encodedFilename);
-            await sendChatCommandFromText(`delete document ${filename}`, {
+            await withButtonBusy(button, () => sendChatCommandFromText(`delete document ${filename}`, {
                 showDetailTitle: `Delete Document ${filename}`
-            });
+            }), "Deleting...");
         }
 
         async function readFileAction(encodedFilename) {
@@ -1165,247 +1396,266 @@
             });
         }
 
-        async function deleteFileAction(encodedFilename) {
+        async function deleteFileAction(encodedFilename, button = null) {
             const filename = decodeURIComponent(encodedFilename);
-            await sendChatCommandFromText(`delete file ${filename}`, {
+            await withButtonBusy(button, () => sendChatCommandFromText(`delete file ${filename}`, {
                 showDetailTitle: `Delete File ${filename}`
-            });
+            }), "Deleting...");
         }
 
-        async function runSchedulesNowFromDashboard() {
+        async function runSchedulesNowFromDashboard(button = null) {
             initializeChat();
             renderChatMessage("user", "run schedules now");
 
             try {
-                const data = await fetchJson("/run-schedules-now", {
+                const data = await withButtonBusy(button, () => fetchJson("/run-schedules-now", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" }
-                });
+                }), "Running...");
                 const summary = Array.isArray(data.summary) && data.summary.length
                     ? data.summary.join("\n")
                     : "No enabled schedules are due right now.";
                 renderChatMessage("ai", summary);
                 showDetail("Run Schedules", summary);
-                await refreshAllData(true);
+                await refreshSelectedPanels({ tasks: true, schedules: true, notifications: true }, { silent: true });
             } catch (error) {
                 renderChatMessage("ai", error.message || "Could not run schedules.");
             }
+        }
+
+        function debouncedRefreshAllData(button = null) {
+            if (refreshDebounceTimer) {
+                window.clearTimeout(refreshDebounceTimer);
+            }
+            setButtonBusy(button, true, "Refreshing...");
+            refreshDebounceTimer = window.setTimeout(async () => {
+                try {
+                    await refreshAllData(false);
+                } finally {
+                    setButtonBusy(button, false);
+                }
+            }, REFRESH_DEBOUNCE_MS);
         }
 
         async function refreshAllData(silent = false) {
             if (!silent) {
                 setStatus("Refreshing...");
             }
-
             await Promise.all([
-                refreshAgentPanels(),
-                loadDocumentsPanel(),
-                loadFilesPanel(),
-                loadMemoryPanel(),
+                refreshAgentPanels({ force: true }),
+                loadDocumentsPanel({ force: true }),
+                loadFilesPanel({ force: true }),
+                loadMemoryPanel({ force: true }),
                 loadCustomLayout()
             ]);
-
             if (!silent) {
                 setStatus("Connected");
             }
         }
 
-        async function refreshAgentPanels() {
+        async function refreshAgentPanels(options = {}) {
             await Promise.all([
-                loadTasksPanel(),
-                loadSchedulesPanel(),
-                loadNotificationsPanel()
+                loadTasksPanel(options),
+                loadSchedulesPanel(options),
+                loadNotificationsPanel(options)
             ]);
         }
 
-        async function loadTasksPanel() {
+        async function loadTasksPanel(options = {}) {
             const panel = document.getElementById("tasksPanel");
-            panel.innerHTML = `<div class="loading">Loading tasks...</div>`;
+            if (!options.preserveState) {
+                panel.innerHTML = renderCardState("loading", "Loading tasks...");
+            }
 
             try {
-                const data = await fetchJson("/agent-tasks");
-                const tasks = Array.isArray(data.tasks) ? data.tasks.slice(0, MAX_LIST_ITEMS) : [];
+                const tasks = await fetchTasks();
+                const signature = JSON.stringify(tasks.map(task => [task.id, task.goal, task.status, task.result || ""]));
 
                 if (!tasks.length) {
-                    panel.innerHTML = `<div class="empty-state">No tasks found.</div>`;
+                    setPanelIfChanged("tasksPanel", renderCardState("empty-state", "No tasks yet"), "empty");
                     return;
                 }
 
-                panel.innerHTML = tasks.map(task => `
-                    <div class="list-item">
-                        <div class="item-row">
-                            <p class="item-title">Task ${task.id}</p>
-                            ${getStatusBadge(task.status)}
-                        </div>
-                        <div class="item-subtitle">Goal: ${escapeHtml(shortenText(task.goal, 56))}</div>
-                        <div class="item-actions">
-                            <button class="mini-button" onclick="viewAgentTask(${task.id})">View</button>
-                            ${task.status === "waiting_approval" ? `<button class="mini-button primary" onclick="approveAgentTask(${task.id})">Approve</button>` : ""}
-                        </div>
-                    </div>
-                `).join("");
+                const html = tasks.map(task => renderListItem({
+                    title: `${escapeHtml("Task")} · ${escapeHtml(shortenText(task.goal || `#${task.id}`, 34))}`,
+                    subtitle: `<span class="muted">#${escapeHtml(task.id)}</span>`,
+                    badge: getStatusBadge(task.status),
+                    detail: escapeHtml(`Goal: ${task.goal || "No goal"}\nStatus: ${task.status || "unknown"}\nResult: ${task.result || "No result yet"}`),
+                    actions: `
+                        <button class="mini-button" aria-label="View details for task ${task.id}" onclick="viewAgentTask(${task.id})">View Details</button>
+                        ${task.status === "waiting_approval" ? `<button class="mini-button primary" aria-label="Approve task ${task.id}" onclick="approveAgentTask(${task.id}, this)">Approve</button>` : ""}
+                    `
+                })).join("");
+
+                setPanelIfChanged("tasksPanel", html, signature);
             } catch (error) {
-                panel.innerHTML = `<div class="error">${escapeHtml(error.message || "Could not load tasks.")}</div>`;
+                setPanelIfChanged("tasksPanel", renderCardState("error", error.message || "Could not load tasks."), `error:${error.message}`);
             }
         }
 
-        async function loadSchedulesPanel() {
+        async function loadSchedulesPanel(options = {}) {
             const panel = document.getElementById("schedulesPanel");
-            panel.innerHTML = `<div class="loading">Loading schedules...</div>`;
+            if (!options.preserveState) {
+                panel.innerHTML = renderCardState("loading", "Loading schedules...");
+            }
 
             try {
-                const data = await fetchJson("/agent-schedules");
-                const schedules = Array.isArray(data.schedules) ? data.schedules.slice(0, MAX_LIST_ITEMS) : [];
+                const schedules = await fetchSchedules();
+                const signature = JSON.stringify(schedules.map(schedule => [schedule.id, schedule.goal, schedule.frequency, schedule.enabled]));
 
                 if (!schedules.length) {
-                    panel.innerHTML = `<div class="empty-state">No schedules found.</div>`;
+                    setPanelIfChanged("schedulesPanel", renderCardState("empty-state", "No schedules yet"), "empty");
                     return;
                 }
 
-                panel.innerHTML = schedules.map(schedule => `
-                    <div class="list-item">
-                        <div class="item-row">
-                            <p class="item-title">${escapeHtml(shortenText(`${schedule.frequency} — ${schedule.goal}`, 56))}</p>
-                            ${getStatusBadge(schedule.enabled ? "enabled" : "disabled")}
-                        </div>
-                        <div class="item-subtitle">Schedule ${schedule.id}</div>
-                        <div class="item-actions">
-                            <button class="mini-button" onclick="runScheduleFromDashboard(${schedule.id})">Run</button>
-                            ${schedule.enabled ? `<button class="mini-button danger" onclick="disableScheduleFromDashboard(${schedule.id})">Disable</button>` : ""}
-                        </div>
-                    </div>
-                `).join("");
+                const html = schedules.map(schedule => renderListItem({
+                    title: escapeHtml(shortenText(`${schedule.frequency || "schedule"} - ${schedule.goal || ""}`, 46)),
+                    subtitle: `<span class="muted">#${escapeHtml(schedule.id)}</span>`,
+                    badge: getStatusBadge(schedule.enabled ? "enabled" : "disabled"),
+                    actions: `
+                        <button class="mini-button" aria-label="Run schedule ${schedule.id} now" onclick="runScheduleFromDashboard(${schedule.id}, this)">Run Now</button>
+                        ${schedule.enabled ? `<button class="mini-button danger" aria-label="Disable schedule ${schedule.id}" onclick="disableScheduleFromDashboard(${schedule.id}, this)">Disable</button>` : ""}
+                    `
+                })).join("");
+
+                setPanelIfChanged("schedulesPanel", html, signature);
             } catch (error) {
-                panel.innerHTML = `<div class="error">${escapeHtml(error.message || "Could not load schedules.")}</div>`;
+                setPanelIfChanged("schedulesPanel", renderCardState("error", error.message || "Could not load schedules."), `error:${error.message}`);
             }
         }
 
-        async function loadNotificationsPanel() {
+        async function loadNotificationsPanel(options = {}) {
             const panel = document.getElementById("notificationsPanel");
             const badge = document.getElementById("notificationBadge");
-            panel.innerHTML = `<div class="loading">Loading notifications...</div>`;
+            if (!options.preserveState) {
+                panel.innerHTML = renderCardState("loading", "Loading notifications...");
+            }
 
             try {
-                const data = await fetchJson("/notifications");
-                const notifications = Array.isArray(data.notifications) ? data.notifications.slice(0, MAX_LIST_ITEMS) : [];
-                const unreadCount = Array.isArray(data.notifications) ? data.notifications.filter(item => !item.read).length : 0;
+                const { notifications, unreadCount } = await fetchNotifications();
+                const signature = JSON.stringify([unreadCount, notifications.map(item => [item.id, item.title, item.read, item.created_at])]);
 
                 badge.textContent = `${unreadCount} unread`;
                 badge.className = `badge ${unreadCount ? "unread" : "completed"}`;
 
                 if (!notifications.length) {
-                    panel.innerHTML = `<div class="empty-state">No notifications found.</div>`;
+                    setPanelIfChanged("notificationsPanel", renderCardState("empty-state", "No notifications"), "empty");
                     return;
                 }
 
-                panel.innerHTML = notifications.map(item => `
-                    <div class="list-item">
-                        <div class="item-row">
-                            <p class="item-title">${escapeHtml(shortenText(item.title || "Notification", 48))}</p>
-                            ${getStatusBadge(item.read ? "completed" : "unread")}
-                        </div>
-                        <div class="item-subtitle">${escapeHtml(shortenText(item.message || "", 84))}</div>
-                        <div class="timestamp">${escapeHtml(formatTimestamp(item.created_at))}</div>
-                        <div class="item-actions">
-                            <button class="mini-button" onclick="viewNotification(${JSON.stringify("").replace(/"/g, "&quot;")})" style="display:none;"></button>
-                            <button class="mini-button" onclick='viewNotification(${JSON.stringify("Notification")}, ${JSON.stringify("")})' style="display:none;"></button>
-                            <button class="mini-button" onclick="viewNotification('${encodeURIComponent(item.title || "Notification")}', '${encodeURIComponent(item.message || "")}')">View</button>
-                            ${!item.read ? `<button class="mini-button primary" onclick="markNotificationReadFromDashboard(${item.id})">Mark Read</button>` : ""}
-                        </div>
-                    </div>
-                `).join("");
+                const html = notifications.map(item => renderListItem({
+                    title: escapeHtml(shortenText(item.title || "Notification", 42)),
+                    subtitle: escapeHtml(shortenText(item.message || "", 78)),
+                    badge: getStatusBadge(item.read ? "completed" : "unread"),
+                    timestamp: escapeHtml(formatTimestamp(item.created_at)),
+                    detail: escapeHtml(item.message || "No details available."),
+                    classes: item.read ? "" : "unread-highlight",
+                    actions: `
+                        <button class="mini-button" aria-label="View details for notification ${item.id}" onclick="viewNotification(${item.id}, '${encodeURIComponent(item.title || "Notification")}', '${encodeURIComponent(item.message || "")}', ${item.read ? "true" : "false"})">View Details</button>
+                        ${!item.read ? `<button class="mini-button primary" aria-label="Mark notification ${item.id} as read" onclick="markNotificationReadFromDashboard(${item.id}, this)">Mark Read</button>` : ""}
+                    `
+                })).join("");
+
+                setPanelIfChanged("notificationsPanel", html, signature);
             } catch (error) {
                 badge.textContent = "0 unread";
                 badge.className = "badge";
-                panel.innerHTML = `<div class="error">${escapeHtml(error.message || "Could not load notifications.")}</div>`;
+                setPanelIfChanged("notificationsPanel", renderCardState("error", error.message || "Could not load notifications."), `error:${error.message}`);
             }
         }
 
-        async function loadDocumentsPanel() {
+        async function loadDocumentsPanel(options = {}) {
             const panel = document.getElementById("documentsPanel");
-            panel.innerHTML = `<div class="loading">Loading documents...</div>`;
+            if (!options.preserveState) {
+                panel.innerHTML = renderCardState("loading", "Loading documents...");
+            }
 
             try {
                 const data = await fetchJson("/documents");
                 const documents = Array.isArray(data.documents) ? data.documents.slice(0, MAX_LIST_ITEMS) : [];
                 cachedDocuments = Array.isArray(data.documents) ? data.documents : [];
+                const signature = JSON.stringify(documents.map(doc => [doc.filename, doc.classification, doc.created_at, doc.summary || ""]));
 
                 if (!documents.length) {
-                    panel.innerHTML = `<div class="empty-state">No documents found.</div>`;
+                    setPanelIfChanged("documentsPanel", renderCardState("empty-state", "No documents"), "empty");
                     return;
                 }
 
-                panel.innerHTML = documents.map(doc => `
-                    <div class="simple-item">
-                        <div class="simple-item-copy">
-                            <strong title="${escapeHtml(doc.filename)}">${escapeHtml(shortenText(doc.filename, 34))}</strong>
-                            <span>${getStatusBadge(doc.classification || "unknown")} ${doc.created_at ? `<span class="timestamp">${escapeHtml(formatTimestamp(doc.created_at))}</span>` : ""}</span>
-                        </div>
-                        <div class="item-actions">
-                            <button class="mini-button" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">View</button>
-                            <button class="mini-button" onclick="summariseDocument('${encodeURIComponent(doc.filename)}')">Summarise</button>
-                            <button class="mini-button danger" onclick="deleteDocumentAction('${encodeURIComponent(doc.filename)}')">Delete</button>
-                        </div>
-                    </div>
-                `).join("");
+                const html = documents.map(doc => renderSimpleItem({
+                    title: doc.filename,
+                    subtitle: `${getStatusBadge(doc.classification || "unknown")} ${doc.created_at ? `<span class="timestamp">${escapeHtml(formatTimestamp(doc.created_at))}</span>` : ""}`,
+                    actions: `
+                        <button class="mini-button" aria-label="View details for document ${escapeHtml(doc.filename)}" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">View Details</button>
+                        <button class="mini-button" aria-label="Summarise document ${escapeHtml(doc.filename)}" onclick="summariseDocument('${encodeURIComponent(doc.filename)}', this)">Summarise</button>
+                        <button class="mini-button danger" aria-label="Delete document ${escapeHtml(doc.filename)}" onclick="deleteDocumentAction('${encodeURIComponent(doc.filename)}', this)">Delete</button>
+                    `
+                })).join("");
+
+                setPanelIfChanged("documentsPanel", html, signature);
             } catch (error) {
-                panel.innerHTML = `<div class="error">${escapeHtml(error.message || "Could not load documents.")}</div>`;
+                setPanelIfChanged("documentsPanel", renderCardState("error", error.message || "Could not load documents."), `error:${error.message}`);
             }
         }
 
-        async function loadFilesPanel() {
+        async function loadFilesPanel(options = {}) {
             const panel = document.getElementById("filesPanel");
-            panel.innerHTML = `<div class="loading">Loading files...</div>`;
+            if (!options.preserveState) {
+                panel.innerHTML = renderCardState("loading", "Loading files...");
+            }
 
             try {
                 const data = await fetchJson("/files");
                 const files = Array.isArray(data.files) ? data.files.slice(0, MAX_LIST_ITEMS) : [];
                 cachedFiles = Array.isArray(data.files) ? data.files : [];
+                const signature = JSON.stringify(files);
 
                 if (!files.length) {
-                    panel.innerHTML = `<div class="empty-state">No files found.</div>`;
+                    setPanelIfChanged("filesPanel", renderCardState("empty-state", "No files"), "empty");
                     return;
                 }
 
-                panel.innerHTML = files.map(file => `
-                    <div class="simple-item">
-                        <div class="simple-item-copy">
-                            <strong title="${escapeHtml(file)}">${escapeHtml(shortenText(file, 34))}</strong>
-                            <span>Workspace file</span>
-                        </div>
-                        <div class="item-actions">
-                            <button class="mini-button" onclick="readFileAction('${encodeURIComponent(file)}')">Read</button>
-                            <button class="mini-button danger" onclick="deleteFileAction('${encodeURIComponent(file)}')">Delete</button>
-                        </div>
-                    </div>
-                `).join("");
+                const html = files.map(file => renderSimpleItem({
+                    title: file,
+                    subtitle: "Workspace file",
+                    actions: `
+                        <button class="mini-button" aria-label="Read file ${escapeHtml(file)}" onclick="readFileAction('${encodeURIComponent(file)}')">Read</button>
+                        <button class="mini-button danger" aria-label="Delete file ${escapeHtml(file)}" onclick="deleteFileAction('${encodeURIComponent(file)}', this)">Delete</button>
+                    `
+                })).join("");
+
+                setPanelIfChanged("filesPanel", html, signature);
             } catch (error) {
-                panel.innerHTML = `<div class="error">${escapeHtml(error.message || "Could not load files.")}</div>`;
+                setPanelIfChanged("filesPanel", renderCardState("error", error.message || "Could not load files."), `error:${error.message}`);
             }
         }
 
-        async function loadMemoryPanel() {
+        async function loadMemoryPanel(options = {}) {
             const panel = document.getElementById("memoryPanel");
-            panel.innerHTML = `<div class="loading">Loading memory...</div>`;
+            if (!options.preserveState) {
+                panel.innerHTML = renderCardState("loading", "Loading memory...");
+            }
 
             try {
                 const data = await fetchJson("/memory");
                 const memory = Array.isArray(data.memory) ? data.memory.slice(-MAX_LIST_ITEMS).reverse() : [];
+                const signature = JSON.stringify(memory.map(item => [item.role, item.message, item.time || item.created_at]));
 
                 if (!memory.length) {
-                    panel.innerHTML = `<div class="empty-state">No memory found.</div>`;
+                    setPanelIfChanged("memoryPanel", renderCardState("empty-state", "No memory yet"), "empty");
                     return;
                 }
 
-                panel.innerHTML = memory.map(item => `
+                const html = memory.map(item => `
                     <div class="memory-entry">
                         <div class="memory-role">${escapeHtml(item.role || "memory")}</div>
                         <div class="memory-text">${escapeHtml(shortenText(item.message || "", 140))}</div>
                         <div class="memory-time">${escapeHtml(formatTimestamp(item.time || item.created_at))}</div>
                     </div>
                 `).join("");
+
+                setPanelIfChanged("memoryPanel", html, signature);
             } catch (error) {
-                panel.innerHTML = `<div class="error">${escapeHtml(error.message || "Could not load memory.")}</div>`;
+                setPanelIfChanged("memoryPanel", renderCardState("error", error.message || "Could not load memory."), `error:${error.message}`);
             }
         }
 
@@ -1418,26 +1668,22 @@
 
         function renderSearchResults(files, docs, term) {
             const results = document.getElementById("searchResults");
-
             if (!files.length && !docs.length) {
                 results.innerHTML = `<span class="empty-state">No results for "${escapeHtml(term)}".</span>`;
                 return;
             }
 
             const parts = [];
-
             if (files.length) {
                 parts.push(`
                     <div><strong>Files</strong><br>${files.map(file => `<button class="mini-button" onclick="readFileAction('${encodeURIComponent(file)}')">${escapeHtml(shortenText(file, 30))}</button>`).join(" ")}</div>
                 `);
             }
-
             if (docs.length) {
                 parts.push(`
                     <div style="margin-top:8px;"><strong>Documents</strong><br>${docs.map(doc => `<button class="mini-button" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">${escapeHtml(shortenText(doc.filename, 30))}</button>`).join(" ")}</div>
                 `);
             }
-
             results.innerHTML = parts.join("");
         }
 
@@ -1505,7 +1751,7 @@
                                     <span>${escapeHtml(doc.classification || "unknown")}</span>
                                 </div>
                                 <div class="item-actions">
-                                    <button class="mini-button" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">View</button>
+                                    <button class="mini-button" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">View Details</button>
                                 </div>
                             </div>
                         `).join("")
@@ -1547,6 +1793,8 @@
             const widgets = root.querySelectorAll('[data-widget="chat"]');
 
             widgets.forEach((widget, index) => {
+                if (widget.dataset.bound === "true") return;
+                widget.dataset.bound = "true";
                 widget.innerHTML = `
                     <div class="card-header">
                         <div>
@@ -1581,6 +1829,7 @@
                 button.addEventListener("click", sendWidgetMessage);
                 input.addEventListener("keydown", event => {
                     if (event.key === "Enter") {
+                        event.preventDefault();
                         sendWidgetMessage();
                     }
                 });
@@ -1604,13 +1853,13 @@
             const box = document.getElementById("customLayout");
             if (!box) return;
 
-            box.innerHTML = `<div class="loading">Loading saved layout...</div>`;
+            box.innerHTML = renderCardState("loading", "Loading saved layout...");
 
             try {
                 const data = await fetchJson("/load-layout");
 
                 if (!data.html || !data.html.trim()) {
-                    box.innerHTML = `<div class="empty-state">No saved layout yet.</div>`;
+                    box.innerHTML = renderCardState("empty-state", "No saved layout yet.");
                     return;
                 }
 
@@ -1625,14 +1874,20 @@
                 box.innerHTML = data.html;
                 await hydrateCustomLayout();
             } catch (error) {
-                box.innerHTML = `<div class="error">${escapeHtml(error.message || "Could not load saved layout.")}</div>`;
+                box.innerHTML = renderCardState("error", error.message || "Could not load saved layout.");
             }
         }
 
-        document.addEventListener("keydown", event => {
-            if (event.key === "Enter" && document.activeElement?.id === "chatInput") {
-                sendChatCommand();
+        document.getElementById("chatInput").addEventListener("keydown", event => {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                sendChatCommand(document.getElementById("chatSendButton"));
             }
+        });
+
+        document.getElementById("chatInput").addEventListener("input", event => {
+            event.target.style.height = "";
+            event.target.style.height = `${Math.min(event.target.scrollHeight, 160)}px`;
         });
 
         document.getElementById("globalSearchInput").addEventListener("keydown", event => {
@@ -1642,8 +1897,14 @@
         });
 
         initializeChat();
-        refreshAllData(true);
-        setInterval(refreshAgentPanels, REFRESH_INTERVAL_MS);
+        loadTasksPanel();
+        loadSchedulesPanel();
+        window.setTimeout(() => {
+            if (lazyPanelsLoaded) return;
+            lazyPanelsLoaded = true;
+            refreshSelectedPanels({ notifications: true, documents: true, files: true, memory: true, layout: true }, { silent: true });
+        }, LAZY_PANEL_DELAY_MS);
+        setInterval(() => refreshAgentPanels({ preserveState: true }), REFRESH_INTERVAL_MS);
     </script>
 </body>
 </html>
