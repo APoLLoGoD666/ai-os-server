@@ -851,39 +851,83 @@ async function findPendingDuplicateForSteps(steps) {
     return null;
 }
 
-function validateAgentSteps(steps) {
+function validateAgentSteps(steps, originalRequest = "") {
     if (!Array.isArray(steps) || !steps.length) {
-        return "The saved agent plan did not contain any safe actions to apply. Please create a clearer agent plan.";
+        return {
+            fatalError: "The saved agent plan did not contain any safe actions to apply. Please create a clearer agent plan.",
+            validSteps: [],
+            skipped: []
+        };
     }
+
+    const validSteps = [];
+    const skipped = [];
 
     for (const step of steps) {
         if (!step || typeof step !== "object" || !ALLOWED_AGENT_STEP_TYPES.has(step.type)) {
-            return "The saved agent plan included an unsafe or unsupported step type.";
+            return {
+                fatalError: "The saved agent plan included an unsafe or unsupported step type.",
+                validSteps: [],
+                skipped
+            };
         }
 
-        if ((step.type === "create_document" || step.type === "create_workspace_file") &&
-            typeof step.content !== "string"
+        const normalizedStep = { ...step };
+
+        if ((normalizedStep.type === "create_document" || normalizedStep.type === "create_workspace_file") &&
+            typeof normalizedStep.content !== "string"
         ) {
-            return `The step "${step.type}" is missing content.`;
+            skipped.push({
+                type: normalizedStep.type,
+                reason: `Missing content for ${normalizedStep.type}.`
+            });
+            continue;
         }
 
-        if ((step.type === "rename_document" || step.type === "delete_document" || step.type === "summarize_document") &&
-            !step.filename &&
-            !(step.oldName && step.newName)
-        ) {
-            return `The step "${step.type}" is missing required document names.`;
+        if (normalizedStep.type === "rename_document" && (!normalizedStep.oldName || !normalizedStep.newName)) {
+            skipped.push({
+                type: normalizedStep.type,
+                reason: "Missing oldName or newName for rename_document."
+            });
+            continue;
         }
 
-        if (step.type === "rename_document" && (!step.oldName || !step.newName)) {
-            return "The step \"rename_document\" needs both oldName and newName.";
+        if (normalizedStep.type === "delete_document" && !normalizedStep.filename) {
+            skipped.push({
+                type: normalizedStep.type,
+                reason: "Missing filename for delete_document."
+            });
+            continue;
         }
 
-        if (step.type === "search_documents" && !step.keyword) {
-            return "The step \"search_documents\" needs a keyword.";
+        if (normalizedStep.type === "summarize_document" && !normalizedStep.filename) {
+            skipped.push({
+                type: normalizedStep.type,
+                reason: "Missing filename for summarize_document."
+            });
+            continue;
         }
+
+        if (normalizedStep.type === "search_documents" && !normalizedStep.keyword) {
+            if (originalRequest && originalRequest.trim()) {
+                normalizedStep.keyword = originalRequest.trim();
+            } else {
+                skipped.push({
+                    type: normalizedStep.type,
+                    reason: "Missing keyword for search_documents."
+                });
+                continue;
+            }
+        }
+
+        validSteps.push(normalizedStep);
     }
 
-    return null;
+    return {
+        fatalError: null,
+        validSteps,
+        skipped
+    };
 }
 
 async function getApprovedAgentActions(latestPlan) {
@@ -971,6 +1015,7 @@ async function executeApprovedAgentActions(steps, options = {}) {
     const results = [];
     const undoEntries = [];
     const duplicateDecision = options.duplicateDecision || null;
+    const skipped = Array.isArray(options.skipped) ? [...options.skipped] : [];
 
     for (let index = 0; index < steps.length; index += 1) {
         const step = steps[index];
@@ -986,7 +1031,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     ok: false,
                     message: "Agent plan needs clearer content before a document can be created.",
                     results,
-                    undoEntries
+                    undoEntries,
+                    skipped
                 };
             }
 
@@ -1034,7 +1080,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     ok: false,
                     message: "Agent plan needs clearer content before a workspace file can be created.",
                     results,
-                    undoEntries
+                    undoEntries,
+                    skipped
                 };
             }
 
@@ -1055,7 +1102,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     ok: false,
                     message: "Agent plan needs a clearer document name before it can be summarised.",
                     results,
-                    undoEntries
+                    undoEntries,
+                    skipped
                 };
             }
 
@@ -1066,7 +1114,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     ok: false,
                     message: `Agent plan references a document that could not be loaded safely: ${filename}.`,
                     results,
-                    undoEntries
+                    undoEntries,
+                    skipped
                 };
             }
 
@@ -1099,7 +1148,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     ok: false,
                     message: "Agent plan needs clearer document names before a rename can be applied.",
                     results,
-                    undoEntries
+                    undoEntries,
+                    skipped
                 };
             }
 
@@ -1122,7 +1172,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     ok: false,
                     message: "Agent plan needs a clearer document name before deletion can be applied.",
                     results,
-                    undoEntries
+                    undoEntries,
+                    skipped
                 };
             }
 
@@ -1133,7 +1184,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     ok: false,
                     message: `The document could not be found for safe deletion: ${filename}.`,
                     results,
-                    undoEntries
+                    undoEntries,
+                    skipped
                 };
             }
 
@@ -1168,7 +1220,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
     return {
         ok: true,
         results,
-        undoEntries
+        undoEntries,
+        skipped
     };
 }
 
@@ -1797,9 +1850,9 @@ async function handleCommand(command) {
                 };
             }
 
-            const validationError = validateAgentSteps(parsed.steps);
+            const validation = validateAgentSteps(parsed.steps, latestAgentPlan.request);
 
-            if (validationError) {
+            if (validation.fatalError) {
                 await pgLogAgentAction(
                     "agent_apply",
                     "blocked",
@@ -1807,22 +1860,40 @@ async function handleCommand(command) {
                     latestAgentPlan.plan,
                     parsed.steps,
                     null,
-                    validationError
+                    validation.fatalError
                 );
 
                 return {
                     ok: false,
-                    reply: validationError
+                    reply: validation.fatalError
                 };
             }
 
-            const duplicateMatch = await findPendingDuplicateForSteps(parsed.steps);
+            if (!validation.validSteps.length) {
+                await pgLogAgentAction(
+                    "agent_apply",
+                    "skipped",
+                    latestAgentPlan.request,
+                    latestAgentPlan.plan,
+                    parsed.steps,
+                    null,
+                    validation.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")
+                );
+
+                return {
+                    ok: false,
+                    reply: `No valid safe steps were available to execute.\n\nSkipped steps:\n- ${validation.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}`
+                };
+            }
+
+            const duplicateMatch = await findPendingDuplicateForSteps(validation.validSteps);
 
             if (duplicateMatch) {
                 pendingDuplicateDecision = {
                     request: latestAgentPlan.request,
                     plan: latestAgentPlan.plan,
-                    steps: parsed.steps,
+                    steps: validation.validSteps,
+                    skipped: validation.skipped,
                     duplicateIndex: duplicateMatch.index,
                     duplicate: duplicateMatch.duplicate
                 };
@@ -1832,7 +1903,7 @@ async function handleCommand(command) {
                     "duplicate_pending",
                     latestAgentPlan.request,
                     latestAgentPlan.plan,
-                    parsed.steps,
+                    validation.validSteps,
                     null,
                     `Duplicate detected for ${duplicateMatch.duplicate.filename}`
                 );
@@ -1849,7 +1920,9 @@ Choose one:
                 };
             }
 
-            const execution = await executeApprovedAgentActions(parsed.steps);
+            const execution = await executeApprovedAgentActions(validation.validSteps, {
+                skipped: validation.skipped
+            });
 
             if (!execution.ok) {
                 await pgLogAgentAction(
@@ -1873,9 +1946,9 @@ Choose one:
                 "applied",
                 latestAgentPlan.request,
                 latestAgentPlan.plan,
-                parsed.steps,
+                validation.validSteps,
                 execution.undoEntries,
-                execution.results.join(" | ")
+                `Executed: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`
             );
 
             latestAgentPlan = null;
@@ -1883,8 +1956,9 @@ Choose one:
 
             return {
                 ok: true,
-                reply: `Approved agent actions applied:\n\n- ${execution.results.join("\n- ")}`,
-                appliedActions: execution.results.length
+                reply: `Approved agent actions applied:\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}`,
+                appliedActions: execution.results.length,
+                skipped: execution.skipped
             };
         }
 
@@ -1897,6 +1971,7 @@ Choose one:
             const execution = await executeApprovedAgentActions(
                 pendingDuplicateDecision.steps,
                 {
+                    skipped: pendingDuplicateDecision.skipped,
                     duplicateDecision: {
                         index: pendingDuplicateDecision.duplicateIndex,
                         duplicate: pendingDuplicateDecision.duplicate,
@@ -1929,7 +2004,7 @@ Choose one:
                 pendingDuplicateDecision.plan,
                 pendingDuplicateDecision.steps,
                 execution.undoEntries,
-                execution.results.join(" | ")
+                `Executed: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`
             );
 
             latestAgentPlan = null;
@@ -1937,8 +2012,9 @@ Choose one:
 
             return {
                 ok: true,
-                reply: `Approved duplicate decision applied:\n\n- ${execution.results.join("\n- ")}`,
-                appliedActions: execution.results.length
+                reply: `Approved duplicate decision applied:\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}`,
+                appliedActions: execution.results.length,
+                skipped: execution.skipped
             };
         }
 
