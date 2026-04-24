@@ -463,6 +463,59 @@ async function summariseText(text) {
         .trim();
 }
 
+async function analyseDocumentsWithAI(documents) {
+    const limitedDocs = [];
+    let combinedLength = 0;
+    const maxCombinedLength = 12000;
+
+    for (const doc of documents) {
+        const content = doc.content || "";
+        const remaining = maxCombinedLength - combinedLength;
+
+        if (remaining <= 0) {
+            break;
+        }
+
+        const trimmedContent = content.slice(0, remaining);
+        const block = [
+            `Filename: ${doc.filename}`,
+            `Type: ${doc.classification || "unknown"}`,
+            `Summary: ${doc.summary || "No summary"}`,
+            "Content:",
+            trimmedContent
+        ].join("\n");
+
+        limitedDocs.push(block);
+        combinedLength += trimmedContent.length;
+    }
+
+    const response = await client.messages.create({
+        model: MODEL,
+        max_tokens: 700,
+        messages: [
+            {
+                role: "user",
+                content: `Analyse these documents and summarise key insights, themes, and important points.
+
+Return a structured response with these exact sections:
+1. Key Insights
+2. Main Themes
+3. Important Points
+4. Suggested Next Steps
+
+DOCUMENTS:
+${limitedDocs.join("\n\n----------------------\n\n")}`
+            }
+        ]
+    });
+
+    return (response.content || [])
+        .filter(part => part.type === "text")
+        .map(part => part.text || "")
+        .join("\n")
+        .trim();
+}
+
 /* =========================
    COMMAND DETECTION
 ========================= */
@@ -598,6 +651,10 @@ function detectCommand(message) {
             type: "search_documents",
             keyword: match[1].trim()
         };
+    }
+
+    if (/^analyse documents$/i.test(text)) {
+        return { type: "analyse_documents" };
     }
 
     if (/^list files$/i.test(text) || /^list all files$/i.test(text)) {
@@ -868,6 +925,22 @@ async function handleCommand(command) {
             }
 
             return { ok: true, reply };
+        }
+
+        case "analyse_documents": {
+            const docs = await pgSearchDocuments("");
+
+            if (!docs.length) {
+                return { ok: true, reply: "No documents available to analyse." };
+            }
+
+            const analysis = await analyseDocumentsWithAI(docs);
+
+            return {
+                ok: true,
+                reply: `Document analysis:\n\n${analysis}`,
+                documentsAnalysed: docs.length
+            };
         }
 
         default:
