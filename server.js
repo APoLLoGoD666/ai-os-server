@@ -858,7 +858,10 @@ function getTaskExecutionState(task) {
         duplicateFoundInThisRun: Boolean(agentExecution.duplicateFoundInThisRun),
         lastListDocumentsCount: Number.isInteger(agentExecution.lastListDocumentsCount)
             ? agentExecution.lastListDocumentsCount
-            : null
+            : null,
+        unavailableDocuments: Array.isArray(agentExecution.unavailableDocuments)
+            ? [...agentExecution.unavailableDocuments]
+            : []
     };
 }
 
@@ -1434,7 +1437,8 @@ async function executeApprovedAgentTask(taskId) {
         originalRequest: task.goal,
         latestSearchResult: executionState.latestSearchResult,
         duplicateFoundInThisRun: executionState.duplicateFoundInThisRun,
-        lastListDocumentsCount: executionState.lastListDocumentsCount
+        lastListDocumentsCount: executionState.lastListDocumentsCount,
+        unavailableDocuments: executionState.unavailableDocuments
     });
 
     if (!execution.ok) {
@@ -1527,6 +1531,7 @@ async function executeApprovedAgentTask(taskId) {
             latestSearchResult: execution.latestSearchResult,
             duplicateFoundInThisRun: execution.duplicateFoundInThisRun,
             lastListDocumentsCount: execution.lastListDocumentsCount,
+            unavailableDocuments: execution.unavailableDocuments,
             lastCycle: historyEntry,
             planSkipped: plannedSkipped,
             discovery: {
@@ -2048,12 +2053,38 @@ function requestAllowsDuplicateCreation(request = "") {
     return allowedPhrases.some(phrase => text.includes(phrase));
 }
 
+function getStepDocumentTargets(step) {
+    const targets = new Set();
+
+    if (step?.filename && typeof step.filename === "string") {
+        const normalized = normalizeAgentFilename(step.filename);
+        if (normalized) {
+            targets.add(normalized);
+        }
+
+        const dated = makeAgentDatedFilename(step.filename);
+        if (dated) {
+            targets.add(dated);
+        }
+    }
+
+    if (step?.oldName && typeof step.oldName === "string") {
+        const normalizedOldName = normalizeAgentFilename(step.oldName);
+        if (normalizedOldName) {
+            targets.add(normalizedOldName);
+        }
+    }
+
+    return Array.from(targets);
+}
+
 async function executeApprovedAgentActions(steps, options = {}) {
     const results = [];
     const undoEntries = [];
     const duplicateDecision = options.duplicateDecision || null;
     const skipped = Array.isArray(options.skipped) ? [...options.skipped] : [];
     const stepOutputs = [];
+    const unavailableDocuments = new Set(Array.isArray(options.unavailableDocuments) ? options.unavailableDocuments : []);
     let latestSearchResult = options.latestSearchResult || null;
     let duplicateFoundInThisRun = Boolean(options.duplicateFoundInThisRun);
     let lastListDocumentsCount = Number.isInteger(options.lastListDocumentsCount) ? options.lastListDocumentsCount : null;
@@ -2083,6 +2114,9 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     type: step.type,
                     reason: "Skipped create_document because duplicates were found and no explicit create-anyway instruction was given."
                 });
+                for (const target of getStepDocumentTargets(step)) {
+                    unavailableDocuments.add(target);
+                }
                 continue;
             }
 
@@ -2091,6 +2125,9 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     type: step.type,
                     reason: `Skipped because search_documents for "${latestSearchResult.keyword}" found ${latestSearchResult.count} matches.`
                 });
+                for (const target of getStepDocumentTargets(step)) {
+                    unavailableDocuments.add(target);
+                }
                 continue;
             }
 
@@ -2099,6 +2136,9 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     type: step.type,
                     reason: "Skipped create_document because workspace/documents are not empty."
                 });
+                for (const target of getStepDocumentTargets(step)) {
+                    unavailableDocuments.add(target);
+                }
                 continue;
             }
 
@@ -2173,16 +2213,23 @@ async function executeApprovedAgentActions(steps, options = {}) {
                 };
             }
 
+            if (unavailableDocuments.has(filename)) {
+                skipped.push({
+                    type: step.type,
+                    reason: "Skipped summarize_document because source document was not created or does not exist."
+                });
+                continue;
+            }
+
             const doc = await getDocumentSnapshotForUndo(filename);
 
             if (!doc || !doc.content) {
-                return {
-                    ok: false,
-                    message: `Agent plan references a document that could not be loaded safely: ${filename}.`,
-                    results,
-                    undoEntries,
-                    skipped
-                };
+                unavailableDocuments.add(filename);
+                skipped.push({
+                    type: step.type,
+                    reason: "Skipped summarize_document because source document was not created or does not exist."
+                });
+                continue;
             }
 
             const summary = await summariseText(doc.content);
@@ -2322,7 +2369,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
         stepOutputs,
         latestSearchResult,
         duplicateFoundInThisRun,
-        lastListDocumentsCount
+        lastListDocumentsCount,
+        unavailableDocuments: Array.from(unavailableDocuments)
     };
 }
 
