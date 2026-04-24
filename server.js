@@ -612,6 +612,18 @@ function normalizeAgentFilename(filename) {
     return ensureTxtExtension(path.basename(filename.trim()));
 }
 
+function makeAgentDatedFilename(description = "note") {
+    const currentDate = new Date().toISOString().slice(0, 10);
+    const safeDescription = String(description || "note")
+        .trim()
+        .toLowerCase()
+        .replace(/\.txt$/i, "")
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "note";
+
+    return `${currentDate}_${safeDescription}.txt`;
+}
+
 async function getApprovedAgentActions(latestPlan) {
     const response = await client.messages.create({
         model: MODEL,
@@ -709,8 +721,8 @@ async function executeApprovedAgentActions(actions) {
 
         if (action.type === "create_note") {
             const filename = action.filename
-                ? normalizeAgentFilename(action.filename)
-                : makeTimestampedFilename(action.classification || "personal");
+                ? makeAgentDatedFilename(action.filename)
+                : makeAgentDatedFilename(action.classification || "note");
             const content = typeof action.content === "string" ? action.content.trim() : "";
 
             if (!filename || !content) {
@@ -739,7 +751,7 @@ async function executeApprovedAgentActions(actions) {
         }
 
         if (action.type === "create_workspace_file") {
-            const filename = normalizeAgentFilename(action.filename);
+            const filename = action.filename ? makeAgentDatedFilename(action.filename) : null;
             const content = typeof action.content === "string" ? action.content.trim() : "";
 
             if (!filename || !content) {
