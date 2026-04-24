@@ -855,8 +855,15 @@ function getTaskExecutionState(task) {
         agentExecution,
         history: Array.isArray(agentExecution.history) ? [...agentExecution.history] : [],
         latestSearchResult: agentExecution.latestSearchResult || null,
-        duplicateFoundInThisRun: Boolean(agentExecution.duplicateFoundInThisRun)
+        duplicateFoundInThisRun: Boolean(agentExecution.duplicateFoundInThisRun),
+        lastListDocumentsCount: Number.isInteger(agentExecution.lastListDocumentsCount)
+            ? agentExecution.lastListDocumentsCount
+            : null
     };
+}
+
+function getLatestActiveAgentTask(tasks = []) {
+    return tasks.find(item => item.status === "running" || item.status === "waiting_approval") || null;
 }
 
 function shouldGenerateFollowUpCleanupPlan(task) {
@@ -866,6 +873,25 @@ function shouldGenerateFollowUpCleanupPlan(task) {
     return Boolean(steps.length) &&
         phase !== "cleanup_proposal" &&
         steps.every(step => isDiscoveryAgentStepType(step.type));
+}
+
+function stepRequiresEmptyDocuments(step) {
+    const phrases = [
+        "if empty",
+        "only if empty",
+        "confirm empty",
+        "workspace empty",
+        "documents empty",
+        "only if the workspace is empty",
+        "only if no documents exist",
+        "if no documents exist"
+    ];
+    const searchableText = Object.values(step || {})
+        .filter(value => typeof value === "string")
+        .join(" ")
+        .toLowerCase();
+
+    return phrases.some(phrase => searchableText.includes(phrase));
 }
 
 async function collectDocumentsForCleanupProposal(discoveryState) {
@@ -1318,7 +1344,8 @@ async function executeApprovedAgentTask(taskId) {
         skipped: [],
         originalRequest: task.goal,
         latestSearchResult: executionState.latestSearchResult,
-        duplicateFoundInThisRun: executionState.duplicateFoundInThisRun
+        duplicateFoundInThisRun: executionState.duplicateFoundInThisRun,
+        lastListDocumentsCount: executionState.lastListDocumentsCount
     });
 
     if (!execution.ok) {
@@ -1410,6 +1437,7 @@ async function executeApprovedAgentTask(taskId) {
             history: [...executionState.history, historyEntry],
             latestSearchResult: execution.latestSearchResult,
             duplicateFoundInThisRun: execution.duplicateFoundInThisRun,
+            lastListDocumentsCount: execution.lastListDocumentsCount,
             lastCycle: historyEntry,
             planSkipped: plannedSkipped,
             discovery: {
@@ -1937,6 +1965,7 @@ async function executeApprovedAgentActions(steps, options = {}) {
     const stepOutputs = [];
     let latestSearchResult = options.latestSearchResult || null;
     let duplicateFoundInThisRun = Boolean(options.duplicateFoundInThisRun);
+    let lastListDocumentsCount = Number.isInteger(options.lastListDocumentsCount) ? options.lastListDocumentsCount : null;
     const allowDuplicateCreation = requestAllowsDuplicateCreation(options.originalRequest || "");
 
     for (let index = 0; index < steps.length; index += 1) {
@@ -1970,6 +1999,14 @@ async function executeApprovedAgentActions(steps, options = {}) {
                 skipped.push({
                     type: step.type,
                     reason: `Skipped because search_documents for "${latestSearchResult.keyword}" found ${latestSearchResult.count} matches.`
+                });
+                continue;
+            }
+
+            if (stepRequiresEmptyDocuments(step) && lastListDocumentsCount !== null && lastListDocumentsCount > 0) {
+                skipped.push({
+                    type: step.type,
+                    reason: "Skipped create_document because workspace/documents are not empty."
                 });
                 continue;
             }
@@ -2139,6 +2176,7 @@ async function executeApprovedAgentActions(steps, options = {}) {
 
         if (step.type === "list_documents") {
             const docs = await pgListDocuments();
+            lastListDocumentsCount = docs.length;
             const fullDocs = [];
 
             for (const doc of docs) {
@@ -2150,6 +2188,7 @@ async function executeApprovedAgentActions(steps, options = {}) {
 
             stepOutputs.push({
                 type: step.type,
+                count: docs.length,
                 documents: fullDocs
             });
             results.push(`Listed ${docs.length} documents.`);
@@ -2191,7 +2230,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
         skipped,
         stepOutputs,
         latestSearchResult,
-        duplicateFoundInThisRun
+        duplicateFoundInThisRun,
+        lastListDocumentsCount
     };
 }
 
@@ -2930,16 +2970,10 @@ ${task.plan || "No plan saved."}`
 
         case "continue_agent": {
             const recentTasks = await pgGetRecentAgentTasks(10);
-            const task = recentTasks.find(item => item.status === "running" || item.status === "waiting_approval");
+            const task = getLatestActiveAgentTask(recentTasks);
 
             if (!task) {
-                const latestTask = recentTasks[0];
-
-                if (latestTask && latestTask.status === "completed") {
-                    return { ok: false, reply: "Task already completed" };
-                }
-
-                return { ok: false, reply: "No recent agent task is available to continue." };
+                return { ok: false, reply: "No active agent task is available to continue." };
             }
 
             if (task.status === "waiting_approval") {
