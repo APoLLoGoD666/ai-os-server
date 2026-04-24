@@ -358,6 +358,18 @@
                 <h3>Memory</h3>
                 <div id="memoryPanel" class="small">Loading...</div>
             </div>
+
+            <div class="panel">
+                <h3>Agent Control</h3>
+                <div class="button-row">
+                    <button onclick="refreshAgentData()">Refresh Agent Data</button>
+                    <button onclick="runSchedulesNowFromDashboard()">Run Schedules Now</button>
+                    <button class="secondary" onclick="openNotificationsPanel()">Open Notifications</button>
+                </div>
+                <div id="agentTasksPanel" class="small" style="margin-top:10px;">Loading tasks...</div>
+                <div id="agentSchedulesPanel" class="small" style="margin-top:10px;">Loading schedules...</div>
+                <div id="notificationsPanel" class="small" style="margin-top:10px;">Loading notifications...</div>
+            </div>
         </aside>
 
         <main class="main">
@@ -382,9 +394,25 @@
 
     <script>
         const API_BASE = "";
+        const APP_KEY = new URLSearchParams(window.location.search).get("app_key") || "";
 
         let cachedFiles = [];
         let cachedDocuments = [];
+
+        function buildApiUrl(path) {
+            if (!APP_KEY) {
+                return `${API_BASE}${path}`;
+            }
+
+            const separator = path.includes("?") ? "&" : "?";
+            return `${API_BASE}${path}${separator}app_key=${encodeURIComponent(APP_KEY)}`;
+        }
+
+        function buildApiHeaders(extraHeaders = {}) {
+            return APP_KEY
+                ? { ...extraHeaders, "x-app-key": APP_KEY }
+                : extraHeaders;
+        }
 
         function escapeHtml(text) {
             const div = document.createElement("div");
@@ -423,7 +451,7 @@
             try {
                 const res = await fetch("/chat", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: buildApiHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({ message })
                 });
 
@@ -465,7 +493,7 @@
             try {
                 const res = await fetch("/cloud-autopilot/preview", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: buildApiHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({ requirements })
                 });
 
@@ -494,9 +522,9 @@
             resultBox.innerHTML = "Applying preview...";
 
             try {
-                const res = await fetch("/cloud-autopilot/apply", {
+                const res = await fetch(buildApiUrl("/cloud-autopilot/apply"), {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" }
+                    headers: buildApiHeaders({ "Content-Type": "application/json" })
                 });
 
                 const data = await res.json();
@@ -525,9 +553,9 @@
             try {
                 const decoded = decodeURIComponent(filename);
 
-                const res = await fetch(`${API_BASE}/chat`, {
+                const res = await fetch(buildApiUrl("/chat"), {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: buildApiHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({
                         message: `read file ${decoded}`
                     })
@@ -554,9 +582,9 @@
             try {
                 const decoded = decodeURIComponent(filename);
 
-                const res = await fetch(`${API_BASE}/chat`, {
+                const res = await fetch(buildApiUrl("/chat"), {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: buildApiHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({
                         message: `show document ${decoded}`
                     })
@@ -663,8 +691,83 @@
             await Promise.all([
                 loadFilesSidebar(),
                 loadDocumentsSidebar(),
-                loadMemorySidebar()
+                loadMemorySidebar(),
+                loadAgentControlPanel()
             ]);
+        }
+
+        async function loadAgentControlPanel() {
+            const tasksPanel = document.getElementById("agentTasksPanel");
+            const schedulesPanel = document.getElementById("agentSchedulesPanel");
+            const notificationsPanel = document.getElementById("notificationsPanel");
+
+            if (!tasksPanel || !schedulesPanel || !notificationsPanel) {
+                return;
+            }
+
+            try {
+                const [tasksRes, schedulesRes, notificationsRes] = await Promise.all([
+                    fetch(buildApiUrl("/agent-tasks"), { headers: buildApiHeaders() }),
+                    fetch(buildApiUrl("/agent-schedules"), { headers: buildApiHeaders() }),
+                    fetch(buildApiUrl("/notifications"), { headers: buildApiHeaders() })
+                ]);
+
+                const [tasksData, schedulesData, notificationsData] = await Promise.all([
+                    tasksRes.json(),
+                    schedulesRes.json(),
+                    notificationsRes.json()
+                ]);
+
+                const tasks = Array.isArray(tasksData.tasks) ? tasksData.tasks.slice(0, 5) : [];
+                const schedules = Array.isArray(schedulesData.schedules) ? schedulesData.schedules.slice(0, 5) : [];
+                const notifications = Array.isArray(notificationsData.notifications) ? notificationsData.notifications.slice(0, 5) : [];
+
+                tasksPanel.innerHTML = `<b>Recent Agent Tasks</b><br>${tasks.length ? tasks.map(task => `#${task.id} [${escapeHtml(task.status)}] ${escapeHtml(task.goal)}`).join("<br>") : "<span class=\"empty\">No tasks found.</span>"}`;
+                schedulesPanel.innerHTML = `<b>Schedules</b><br>${schedules.length ? schedules.map(schedule => `#${schedule.id} [${schedule.enabled ? "enabled" : "disabled"}] ${escapeHtml(schedule.frequency)}: ${escapeHtml(schedule.goal)}`).join("<br>") : "<span class=\"empty\">No schedules found.</span>"}`;
+                notificationsPanel.innerHTML = `<b>Notifications</b><br>${notifications.length ? notifications.map(item => `#${item.id} [${item.read ? "read" : "unread"}] ${escapeHtml(item.title)}`).join("<br>") : "<span class=\"empty\">No notifications found.</span>"}`;
+            } catch (error) {
+                console.error("Agent control load error:", error);
+                tasksPanel.innerHTML = `<span class="empty">Could not load tasks.</span>`;
+                schedulesPanel.innerHTML = `<span class="empty">Could not load schedules.</span>`;
+                notificationsPanel.innerHTML = `<span class="empty">Could not load notifications.</span>`;
+            }
+        }
+
+        async function refreshAgentData() {
+            await loadAgentControlPanel();
+        }
+
+        async function runSchedulesNowFromDashboard() {
+            const chatBox = document.getElementById("chatBox");
+
+            if (chatBox) {
+                chatBox.innerHTML += `\n\nYou: run schedules now`;
+            }
+
+            try {
+                const res = await fetch(buildApiUrl("/chat"), {
+                    method: "POST",
+                    headers: buildApiHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ message: "run schedules now" })
+                });
+                const data = await res.json();
+
+                if (chatBox) {
+                    chatBox.innerHTML += `\n\nAI: ${escapeHtml(data.reply || "No reply")}`;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+
+                await loadAgentControlPanel();
+            } catch (error) {
+                console.error("Run schedules now error:", error);
+            }
+        }
+
+        function openNotificationsPanel() {
+            const panel = document.getElementById("notificationsPanel");
+            if (panel) {
+                panel.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
         }
 
         async function runGlobalSearch() {
@@ -850,9 +953,9 @@
         }
 
         async function sendChatMessage(message, targetBox) {
-            const res = await fetch(`${API_BASE}/chat`, {
+            const res = await fetch(buildApiUrl("/chat"), {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: buildApiHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify({ message })
             });
 

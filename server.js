@@ -28,8 +28,14 @@ const {
     pgGetRecentAgentTasks,
     pgGetLatestWaitingAgentTask,
     pgCreateAgentSchedule,
+    pgGetAgentSchedule,
     pgListAgentSchedules,
-    pgDisableAgentSchedule
+    pgDisableAgentSchedule,
+    pgUpdateAgentScheduleLastRun,
+    pgGetDueAgentSchedules,
+    pgCreateNotification,
+    pgListNotifications,
+    pgMarkNotificationRead
 } = require("./pg_helpers");
 const {
     uploadWorkspaceFile,
@@ -61,6 +67,7 @@ const WORKSPACE_DIR = path.join(__dirname, "workspace");
 const LAYOUT_FILE = path.join(__dirname, "layout.json");
 const HIDDEN_FILES = new Set([]);
 const AGENT_SECRET = process.env.AGENT_SECRET || "";
+const APP_ACCESS_KEY = process.env.APP_ACCESS_KEY || "";
 const ALLOWED_AGENT_STEP_TYPES = new Set([
     "create_document",
     "create_workspace_file",
@@ -83,9 +90,44 @@ if (!AGENT_SECRET) {
     console.warn("AGENT_SECRET not set. Agent approval is unprotected.");
 }
 
+if (!APP_ACCESS_KEY) {
+    console.warn("APP_ACCESS_KEY not set. App access is unprotected.");
+}
+
 function ensureSetup() {
     if (!fs.existsSync(WORKSPACE_DIR)) {
         fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+    }
+}
+
+function hasAppAccess(req) {
+    if (!APP_ACCESS_KEY) {
+        return true;
+    }
+
+    const headerKey = req.get("x-app-key");
+    const queryKey = req.query?.app_key;
+
+    return headerKey === APP_ACCESS_KEY || queryKey === APP_ACCESS_KEY;
+}
+
+function requireAppAccess(req, res, next) {
+    if (hasAppAccess(req)) {
+        return next();
+    }
+
+    return res.status(401).json({
+        ok: false,
+        reply: "Access key required."
+    });
+}
+
+async function createAgentNotification(type, title, message, relatedType = null, relatedId = null) {
+    try {
+        return await pgCreateNotification(type, title, message, relatedType, relatedId);
+    } catch (error) {
+        console.error("NOTIFICATION ERROR:", error.message);
+        return null;
     }
 }
 
@@ -813,10 +855,6 @@ Be practical and concise.`
 }
 
 function getAutonomyLevelMessage() {
-    if (AUTONOMY_LEVEL === "3") {
-        return "Autonomy Level 3 is not enabled yet.";
-    }
-
     if (AUTONOMY_LEVEL === "4") {
         return "Autonomy Level 4 is disabled.";
     }
@@ -895,6 +933,26 @@ function isReadOnlyAgentAction(action) {
     return false;
 }
 
+function isSafeLevel3WriteAction(action) {
+    if (!action || typeof action !== "object") {
+        return false;
+    }
+
+    const safeAuto = action.safe_auto === true || action.low_risk === true || /low[-_\s]?risk/i.test(JSON.stringify(action));
+    const contentLength = typeof action.content === "string" ? action.content.trim().length : 0;
+    const classification = String(action.classification || "").toLowerCase();
+
+    if (action.type === "create_document") {
+        return safeAuto && contentLength > 0 && contentLength < 2000 && classification !== "sensitive";
+    }
+
+    if (action.type === "create_workspace_file") {
+        return safeAuto && contentLength > 0 && contentLength < 2000;
+    }
+
+    return false;
+}
+
 function isWriteAgentAction(action) {
     if (!action || typeof action !== "object") {
         return false;
@@ -905,6 +963,18 @@ function isWriteAgentAction(action) {
     }
 
     return ALLOWED_AGENT_STEP_TYPES.has(action.type) && !isReadOnlyAgentAction(action);
+}
+
+function shouldAutoRunTaskAction(action) {
+    if (AUTONOMY_LEVEL === "2") {
+        return isReadOnlyAgentAction(action);
+    }
+
+    if (AUTONOMY_LEVEL === "3") {
+        return isReadOnlyAgentAction(action) || isSafeLevel3WriteAction(action);
+    }
+
+    return false;
 }
 
 function extractDeferredFallbackActions(plan = "") {
@@ -1270,7 +1340,7 @@ async function autoRunReadOnlyTaskSteps(taskId) {
 
         const nextStep = remainingSteps[0];
 
-        if (!isReadOnlyAgentAction(nextStep)) {
+        if (!shouldAutoRunTaskAction(nextStep)) {
             await pgUpdateAgentTask(taskId, {
                 status: "waiting_approval",
                 result: `Task is waiting for approval before ${nextStep.type}.`
@@ -1281,6 +1351,23 @@ async function autoRunReadOnlyTaskSteps(taskId) {
             aggregate.remainingActions = getRemainingTaskSteps(task);
             aggregate.deferredActions = Array.isArray(task.actions_json?.deferredActions) ? task.actions_json.deferredActions : [];
             return aggregate;
+        }
+
+        if (AUTONOMY_LEVEL === "3" && isSafeLevel3WriteAction(nextStep)) {
+            const level3Check = await canAutoRunLevel3Action(nextStep);
+
+            if (!level3Check.ok) {
+                await pgUpdateAgentTask(taskId, {
+                    status: "waiting_approval",
+                    result: level3Check.reason
+                });
+
+                task = await pgGetAgentTask(taskId);
+                aggregate.status = "waiting_approval";
+                aggregate.remainingActions = getRemainingTaskSteps(task);
+                aggregate.deferredActions = Array.isArray(task.actions_json?.deferredActions) ? task.actions_json.deferredActions : [];
+                return aggregate;
+            }
         }
 
         const execution = await executeApprovedAgentTask(taskId);
@@ -1308,6 +1395,154 @@ async function autoRunReadOnlyTaskSteps(taskId) {
             return aggregate;
         }
     }
+}
+
+async function notifyTaskStatus(task, status, detail = "") {
+    if (!task) {
+        return;
+    }
+
+    if (status === "waiting_approval") {
+        await createAgentNotification(
+            "task_waiting_approval",
+            `Agent task #${task.id} needs approval`,
+            detail || `Task "${task.goal}" is waiting for approval.`,
+            "agent_task",
+            task.id
+        );
+        return;
+    }
+
+    if (status === "completed") {
+        await createAgentNotification(
+            "task_completed",
+            `Agent task #${task.id} completed`,
+            detail || `Task "${task.goal}" completed successfully.`,
+            "agent_task",
+            task.id
+        );
+        return;
+    }
+
+    if (status === "failed") {
+        await createAgentNotification(
+            "task_failed",
+            `Agent task #${task.id} failed`,
+            detail || `Task "${task.goal}" failed.`,
+            "agent_task",
+            task.id
+        );
+    }
+}
+
+async function notifyUnsafeActionBlocked(request, message) {
+    await createAgentNotification(
+        "unsafe_action_blocked",
+        "Unsafe agent action blocked",
+        message || `A blocked action was rejected for request: ${request}`,
+        "agent_request",
+        null
+    );
+}
+
+async function runSingleScheduleOnce(schedule) {
+    const task = await pgCreateAgentTask(
+        schedule.goal,
+        "planned",
+        "",
+        {
+            scheduleId: schedule.id,
+            scheduleName: schedule.name,
+            frequency: schedule.frequency,
+            triggeredAt: new Date().toISOString()
+        },
+        null
+    );
+
+    if (!task) {
+        return {
+            ok: false,
+            schedule,
+            message: "Could not create agent task from schedule."
+        };
+    }
+
+    await pgUpdateAgentScheduleLastRun(schedule.id);
+    await createAgentNotification(
+        "schedule_task_created",
+        `Schedule #${schedule.id} created task #${task.id}`,
+        `Scheduled goal "${schedule.goal}" created agent task #${task.id}.`,
+        "agent_task",
+        task.id
+    );
+
+    const planning = await runAgentPlanningCycle(task.id);
+
+    if (!planning.ok) {
+        await notifyTaskStatus({ ...task, goal: schedule.goal }, "failed", planning.message);
+        return {
+            ok: false,
+            schedule,
+            taskId: task.id,
+            message: planning.message
+        };
+    }
+
+    if (planning.status === "waiting_approval") {
+        await notifyTaskStatus({ ...task, goal: schedule.goal, id: task.id }, "waiting_approval", `Scheduled task #${task.id} is waiting for approval.`);
+    }
+
+    if (planning.status === "completed") {
+        await notifyTaskStatus({ ...task, goal: schedule.goal, id: task.id }, "completed", `Scheduled task #${task.id} completed without further action.`);
+    }
+
+    let autoRun = null;
+
+    if (AUTONOMY_LEVEL === "2" || AUTONOMY_LEVEL === "3") {
+        autoRun = await autoRunReadOnlyTaskSteps(task.id);
+
+        if (!autoRun.ok) {
+            await notifyTaskStatus({ ...task, goal: schedule.goal, id: task.id }, "failed", autoRun.message);
+            return {
+                ok: false,
+                schedule,
+                taskId: task.id,
+                message: autoRun.message
+            };
+        }
+
+        if (autoRun.status === "waiting_approval") {
+            await notifyTaskStatus({ ...task, goal: schedule.goal, id: task.id }, "waiting_approval", `Scheduled task #${task.id} is waiting for approval.`);
+        }
+
+        if (autoRun.status === "completed") {
+            await notifyTaskStatus({ ...task, goal: schedule.goal, id: task.id }, "completed", `Scheduled task #${task.id} completed without approval.`);
+        }
+    }
+
+    return {
+        ok: true,
+        schedule,
+        taskId: task.id,
+        planning,
+        autoRun
+    };
+}
+
+// TODO: wire runDueSchedules() to Render Cron Job or a background worker.
+async function runDueSchedules() {
+    const dueSchedules = await pgGetDueAgentSchedules();
+    const results = [];
+
+    for (const schedule of dueSchedules) {
+        results.push(await runSingleScheduleOnce(schedule));
+    }
+
+    return {
+        ok: true,
+        dueSchedules,
+        results
+    };
 }
 
 async function runAgentPlanningCycle(taskId) {
@@ -1441,6 +1676,9 @@ async function runAgentPlanningCycle(taskId) {
             validation.fatalError
         );
 
+        await notifyUnsafeActionBlocked(task.goal, validation.fatalError);
+        await notifyTaskStatus(task, "failed", validation.fatalError);
+
         return {
             ok: false,
             message: validation.fatalError
@@ -1479,6 +1717,12 @@ async function runAgentPlanningCycle(taskId) {
         null,
         result
     );
+
+    if (status === "waiting_approval") {
+        await notifyTaskStatus(task, "waiting_approval", result);
+    } else if (status === "completed") {
+        await notifyTaskStatus(task, "completed", result);
+    }
 
     return {
         ok: true,
@@ -1557,6 +1801,8 @@ async function executeApprovedAgentTask(taskId) {
             result: `Duplicate detected for ${duplicateMatch.duplicate.filename}. Create a clearer task goal or variant request.`
         });
 
+        await notifyTaskStatus(task, "waiting_approval", `Duplicate detected for ${duplicateMatch.duplicate.filename}.`);
+
         return {
             ok: false,
             message: `Duplicate detected for ${duplicateMatch.duplicate.filename}. Create a clearer task goal or variant request.`
@@ -1602,6 +1848,8 @@ async function executeApprovedAgentTask(taskId) {
             execution.undoEntries || null,
             execution.message
         );
+
+        await notifyTaskStatus(task, "failed", execution.message);
 
         return {
             ok: false,
@@ -1736,6 +1984,22 @@ async function executeApprovedAgentTask(taskId) {
         finalResult
     );
 
+    if (AUTONOMY_LEVEL === "3" && isSafeLevel3WriteAction(currentStep) && execution.results.length) {
+        await createAgentNotification(
+            "autonomy_level_3_auto_action",
+            "Autonomy Level 3 executed safe auto action",
+            execution.results.join(" | "),
+            "agent_task",
+            task.id
+        );
+    }
+
+    if (finalStatus === "waiting_approval") {
+        await notifyTaskStatus(task, "waiting_approval", finalResult);
+    } else if (finalStatus === "completed") {
+        await notifyTaskStatus(task, "completed", finalResult);
+    }
+
     return {
         ok: true,
         status: finalStatus,
@@ -1818,6 +2082,18 @@ function getProtectedAgentCommandLabel(type) {
         return "cancel agent";
     }
 
+    if (type === "run_schedules_now") {
+        return "run schedules now";
+    }
+
+    if (type === "run_schedule") {
+        return "run schedule <id>";
+    }
+
+    if (type === "disable_schedule") {
+        return "disable schedule <id>";
+    }
+
     return type;
 }
 
@@ -1828,7 +2104,10 @@ function getAgentAccessError(command) {
         "duplicate_create_approval",
         "duplicate_replace_approval",
         "approve_task",
-        "cancel_agent"
+        "cancel_agent",
+        "run_schedules_now",
+        "run_schedule",
+        "disable_schedule"
     ]);
 
     if (!protectedTypes.has(command.type) || !AGENT_SECRET) {
@@ -2121,10 +2400,17 @@ Otherwise return strict JSON only in this format:
       "filename": "short description",
       "content": "text content",
       "classification": "personal",
-      "summary": "optional summary"
+      "summary": "optional summary",
+      "safe_auto": false
     }
   ]
 }
+
+Only set "safe_auto": true for very low-risk new create_document or create_workspace_file actions when:
+- the filename should be unique
+- the content is short and low-risk
+- the action does not overwrite existing data
+- the action is not sensitive
 
 Plan request:
 ${latestPlan.request}
@@ -2216,6 +2502,49 @@ function getStepDocumentTargets(step) {
     }
 
     return Array.from(targets);
+}
+
+async function canAutoRunLevel3Action(step) {
+    if (!isSafeLevel3WriteAction(step)) {
+        return {
+            ok: false,
+            reason: `Task is waiting for approval before ${step?.type || "unknown action"}.`
+        };
+    }
+
+    if (step.type === "create_document") {
+        const filename = step.filename ? makeAgentDatedFilename(step.filename) : await makeUniqueAgentFilename(step.classification || "note", "note");
+        const existing = await pgGetDocument(filename);
+
+        if (existing) {
+            return {
+                ok: false,
+                reason: `Task is waiting for approval before ${step.type}.`
+            };
+        }
+
+        const duplicate = await findLikelyDuplicateDocument(step);
+        if (duplicate) {
+            return {
+                ok: false,
+                reason: `Task is waiting for approval before ${step.type}.`
+            };
+        }
+    }
+
+    if (step.type === "create_workspace_file") {
+        const candidate = step.filename ? makeAgentDatedFilename(step.filename) : makeAgentDatedFilename("workspace_file");
+        const existingFiles = new Set(await listWorkspaceFiles());
+
+        if (existingFiles.has(candidate)) {
+            return {
+                ok: false,
+                reason: `Task is waiting for approval before ${step.type}.`
+            };
+        }
+    }
+
+    return { ok: true };
 }
 
 async function executeApprovedAgentActions(steps, options = {}) {
@@ -2797,6 +3126,18 @@ function detectCommand(message) {
         return attachSecret({ type: "cancel_agent" });
     }
 
+    if (/^run schedules now$/i.test(text)) {
+        return attachSecret({ type: "run_schedules_now" });
+    }
+
+    match = text.match(/^run schedule\s+(\d+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "run_schedule",
+            id: Number(match[1])
+        });
+    }
+
     if (/^approve duplicate create$/i.test(text)) {
         return attachSecret({ type: "duplicate_create_approval" });
     }
@@ -2839,6 +3180,18 @@ function detectCommand(message) {
         });
     }
 
+    if (/^notifications$/i.test(text)) {
+        return attachSecret({ type: "notifications" });
+    }
+
+    match = text.match(/^mark notification\s+(\d+)\s+read$/i);
+    if (match) {
+        return attachSecret({
+            type: "mark_notification_read",
+            id: Number(match[1])
+        });
+    }
+
     if (/^list files$/i.test(text) || /^list all files$/i.test(text)) {
         return attachSecret({ type: "list_files" });
     }
@@ -2858,6 +3211,7 @@ async function handleCommand(command) {
     const accessError = getAgentAccessError(command);
 
     if (accessError) {
+        await notifyUnsafeActionBlocked(command.type, accessError);
         return {
             ok: false,
             reply: accessError
@@ -3248,7 +3602,7 @@ ${task.plan || "No plan saved."}`
                 };
             }
 
-            if (AUTONOMY_LEVEL === "2") {
+            if (AUTONOMY_LEVEL === "2" || AUTONOMY_LEVEL === "3") {
                 const autoRun = await autoRunReadOnlyTaskSteps(task.id);
 
                 if (!autoRun.ok) {
@@ -3316,7 +3670,7 @@ ${task.plan || "No plan saved."}`
                 };
             }
 
-            if (AUTONOMY_LEVEL === "2") {
+            if (AUTONOMY_LEVEL === "2" || AUTONOMY_LEVEL === "3") {
                 const autoRun = await autoRunReadOnlyTaskSteps(task.id);
 
                 if (!autoRun.ok) {
@@ -3400,6 +3754,8 @@ ${task.plan || "No plan saved."}`
                     null,
                     validation.fatalError
                 );
+
+                await notifyUnsafeActionBlocked(latestAgentPlan.request, validation.fatalError);
 
                 return {
                     ok: false,
@@ -3516,7 +3872,7 @@ Choose one:
 
             const execution = await executeApprovedAgentTask(task.id);
 
-            if (execution.ok && AUTONOMY_LEVEL === "2" && execution.status === "running") {
+            if (execution.ok && (AUTONOMY_LEVEL === "2" || AUTONOMY_LEVEL === "3") && execution.status === "running") {
                 const autoRun = await autoRunReadOnlyTaskSteps(task.id);
 
                 if (!autoRun.ok) {
@@ -3694,9 +4050,53 @@ Choose one:
             };
         }
 
+        case "run_schedules_now": {
+            const scheduleRun = await runDueSchedules();
+
+            if (!scheduleRun.dueSchedules.length) {
+                return {
+                    ok: true,
+                    reply: "No enabled schedules are due right now."
+                };
+            }
+
+            const lines = scheduleRun.results.map(result => result.ok
+                ? `- Schedule #${result.schedule.id} created task #${result.taskId}`
+                : `- Schedule #${result.schedule.id} failed: ${result.message}`);
+
+            return {
+                ok: true,
+                reply: `Schedule run summary:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "run_schedule": {
+            const schedule = await pgGetAgentSchedule(command.id);
+
+            if (!schedule) {
+                return { ok: false, reply: `Could not find schedule: ${command.id}` };
+            }
+
+            const result = await runSingleScheduleOnce(schedule);
+
+            if (!result.ok) {
+                return { ok: false, reply: result.message };
+            }
+
+            return {
+                ok: true,
+                reply: `Schedule #${schedule.id} ran once and created task #${result.taskId}.`
+            };
+        }
+
         case "schedule_agent": {
+            const safeName = command.goal
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "_")
+                .replace(/^_+|_+$/g, "")
+                .slice(0, 40) || `schedule_${Date.now()}`;
             const schedule = await pgCreateAgentSchedule(
-                `schedule_${Date.now()}`,
+                safeName,
                 command.goal,
                 command.frequency
             );
@@ -3719,6 +4119,33 @@ Choose one:
             return {
                 ok: true,
                 reply: `Agent schedules:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "notifications": {
+            const notifications = await pgListNotifications(20);
+
+            if (!notifications.length) {
+                return { ok: true, reply: "No notifications found." };
+            }
+
+            const lines = notifications.map(item => `- #${item.id} [${item.read ? "read" : "unread"}] ${item.title}: ${item.message}`);
+            return {
+                ok: true,
+                reply: `Notifications:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "mark_notification_read": {
+            const notification = await pgMarkNotificationRead(command.id);
+
+            if (!notification) {
+                return { ok: false, reply: `Could not find notification: ${command.id}` };
+            }
+
+            return {
+                ok: true,
+                reply: `Marked notification #${notification.id} as read.`
             };
         }
 
@@ -3875,7 +4302,7 @@ app.get("/documents", async (req, res) => {
     }
 });
 
-app.get("/agent-history", async (req, res) => {
+app.get("/agent-history", requireAppAccess, async (req, res) => {
     try {
         const actions = await pgGetRecentAgentActions(20);
 
@@ -3893,7 +4320,7 @@ app.get("/agent-history", async (req, res) => {
     }
 });
 
-app.get("/agent-tasks", async (req, res) => {
+app.get("/agent-tasks", requireAppAccess, async (req, res) => {
     try {
         const tasks = await pgGetRecentAgentTasks(20);
 
@@ -3911,7 +4338,7 @@ app.get("/agent-tasks", async (req, res) => {
     }
 });
 
-app.get("/agent-task/:id", async (req, res) => {
+app.get("/agent-task/:id", requireAppAccess, async (req, res) => {
     try {
         const task = await pgGetAgentTask(Number(req.params.id));
 
@@ -3935,7 +4362,7 @@ app.get("/agent-task/:id", async (req, res) => {
     }
 });
 
-app.get("/agent-schedules", async (req, res) => {
+app.get("/agent-schedules", requireAppAccess, async (req, res) => {
     try {
         const schedules = await pgListAgentSchedules(50);
 
@@ -3949,6 +4376,48 @@ app.get("/agent-schedules", async (req, res) => {
         res.status(500).json({
             ok: false,
             error: error.message
+        });
+    }
+});
+
+app.get("/notifications", requireAppAccess, async (req, res) => {
+    try {
+        const notifications = await pgListNotifications(50);
+
+        res.status(200).json({
+            ok: true,
+            count: notifications.length,
+            notifications
+        });
+    } catch (error) {
+        console.error("NOTIFICATIONS ERROR:", error);
+        res.status(500).json({
+            ok: false,
+            error: error.message
+        });
+    }
+});
+
+app.post("/notifications/:id/read", requireAppAccess, async (req, res) => {
+    try {
+        const notification = await pgMarkNotificationRead(Number(req.params.id));
+
+        if (!notification) {
+            return res.status(404).json({
+                ok: false,
+                reply: "Notification not found."
+            });
+        }
+
+        return res.status(200).json({
+            ok: true,
+            notification
+        });
+    } catch (error) {
+        console.error("NOTIFICATION READ ERROR:", error);
+        return res.status(500).json({
+            ok: false,
+            reply: error.message
         });
     }
 });
@@ -4001,7 +4470,7 @@ app.post("/save-layout", (req, res) => {
     }
 });
 
-app.post("/chat", async (req, res) => {
+app.post("/chat", requireAppAccess, async (req, res) => {
     try {
         const rawMessage = req.body?.message;
 
@@ -4084,7 +4553,7 @@ ${preview}
     }
 });
 
-app.post("/autocode", async (req, res) => {
+app.post("/autocode", requireAppAccess, async (req, res) => {
     try {
         const requirements = req.body?.requirements;
         const autoPush = !!req.body?.autoPush;
@@ -4124,7 +4593,7 @@ app.post("/autocode", async (req, res) => {
     }
 });
 
-app.post("/cloud-autopilot/preview", async (req, res) => {
+app.post("/cloud-autopilot/preview", requireAppAccess, async (req, res) => {
     try {
         const requirements = req.body?.requirements;
 
@@ -4153,7 +4622,7 @@ app.post("/cloud-autopilot/preview", async (req, res) => {
     }
 });
 
-app.post("/cloud-autopilot/apply", async (req, res) => {
+app.post("/cloud-autopilot/apply", requireAppAccess, async (req, res) => {
     try {
         const result = await applyLatestCloudProposal();
 

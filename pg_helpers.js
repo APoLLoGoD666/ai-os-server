@@ -3,6 +3,7 @@ const pool = require("./pg_database");
 let agentActionsTableReadyPromise = null;
 let agentTasksTableReadyPromise = null;
 let agentSchedulesTableReadyPromise = null;
+let notificationsTableReadyPromise = null;
 
 function ensureAgentActionsTable() {
     if (!agentActionsTableReadyPromise) {
@@ -71,6 +72,28 @@ function ensureAgentSchedulesTable() {
     }
 
     return agentSchedulesTableReadyPromise;
+}
+
+function ensureNotificationsTable() {
+    if (!notificationsTableReadyPromise) {
+        notificationsTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                type TEXT,
+                title TEXT,
+                message TEXT,
+                read BOOLEAN DEFAULT false,
+                related_type TEXT,
+                related_id INTEGER,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `).catch(error => {
+            notificationsTableReadyPromise = null;
+            throw error;
+        });
+    }
+
+    return notificationsTableReadyPromise;
 }
 
 /* =========================
@@ -430,6 +453,22 @@ async function pgCreateAgentSchedule(name, goal, frequency) {
     return queryResult.rows[0] || null;
 }
 
+async function pgGetAgentSchedule(id) {
+    await ensureAgentSchedulesTable();
+
+    const queryResult = await pool.query(
+        `
+        SELECT id, name, goal, frequency, enabled, last_run_at, created_at
+        FROM agent_schedules
+        WHERE id = $1
+        LIMIT 1
+        `,
+        [id]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
 async function pgListAgentSchedules(limit = 50) {
     await ensureAgentSchedulesTable();
 
@@ -466,6 +505,95 @@ async function pgDisableAgentSchedule(id) {
     return queryResult.rows[0] || null;
 }
 
+async function pgUpdateAgentScheduleLastRun(id) {
+    await ensureAgentSchedulesTable();
+
+    const queryResult = await pool.query(
+        `
+        UPDATE agent_schedules
+        SET last_run_at = NOW()
+        WHERE id = $1
+        RETURNING id, name, goal, frequency, enabled, last_run_at, created_at
+        `,
+        [id]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgGetDueAgentSchedules() {
+    await ensureAgentSchedulesTable();
+
+    const queryResult = await pool.query(
+        `
+        SELECT id, name, goal, frequency, enabled, last_run_at, created_at
+        FROM agent_schedules
+        WHERE enabled = true
+          AND (
+            last_run_at IS NULL
+            OR (frequency = 'daily' AND last_run_at < NOW() - INTERVAL '24 hours')
+            OR (frequency = 'weekly' AND last_run_at < NOW() - INTERVAL '7 days')
+          )
+        ORDER BY id ASC
+        `
+    );
+
+    return queryResult.rows;
+}
+
+async function pgCreateNotification(type, title, message, relatedType = null, relatedId = null) {
+    await ensureNotificationsTable();
+
+    const queryResult = await pool.query(
+        `
+        INSERT INTO notifications (
+            type,
+            title,
+            message,
+            related_type,
+            related_id
+        )
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, type, title, message, read, related_type, related_id, created_at
+        `,
+        [type, title, message, relatedType, relatedId]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgListNotifications(limit = 20) {
+    await ensureNotificationsTable();
+
+    const queryResult = await pool.query(
+        `
+        SELECT id, type, title, message, read, related_type, related_id, created_at
+        FROM notifications
+        ORDER BY id DESC
+        LIMIT $1
+        `,
+        [limit]
+    );
+
+    return queryResult.rows;
+}
+
+async function pgMarkNotificationRead(id) {
+    await ensureNotificationsTable();
+
+    const queryResult = await pool.query(
+        `
+        UPDATE notifications
+        SET read = true
+        WHERE id = $1
+        RETURNING id, type, title, message, read, related_type, related_id, created_at
+        `,
+        [id]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
 module.exports = {
     pgSaveDocument,
     pgListDocuments,
@@ -486,7 +614,13 @@ module.exports = {
     pgGetRecentAgentTasks,
     pgGetLatestWaitingAgentTask,
     pgCreateAgentSchedule,
+    pgGetAgentSchedule,
     pgListAgentSchedules,
     pgGetAgentSchedules,
-    pgDisableAgentSchedule
+    pgDisableAgentSchedule,
+    pgUpdateAgentScheduleLastRun,
+    pgGetDueAgentSchedules,
+    pgCreateNotification,
+    pgListNotifications,
+    pgMarkNotificationRead
 };
