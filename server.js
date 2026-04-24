@@ -19,6 +19,12 @@ const {
     pgAddMemory,
     pgLoadMemory
 } = require("./pg_helpers");
+const {
+    uploadWorkspaceFile,
+    readWorkspaceFileFromStorage,
+    deleteWorkspaceFileFromStorage,
+    listWorkspaceFilesFromStorage
+} = require("./storage");
 
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
@@ -91,7 +97,17 @@ function safeFilePath(filename) {
     return path.join(WORKSPACE_DIR, cleanName);
 }
 
-function listWorkspaceFiles() {
+async function listWorkspaceFiles() {
+    try {
+        const files = await listWorkspaceFilesFromStorage();
+
+        return files
+            .filter(name => !HIDDEN_FILES.has(name))
+            .sort();
+    } catch (error) {
+        console.error("STORAGE LIST ERROR:", error.message);
+    }
+
     ensureSetup();
 
     return fs.readdirSync(WORKSPACE_DIR, { withFileTypes: true })
@@ -101,10 +117,18 @@ function listWorkspaceFiles() {
         .sort();
 }
 
-function createWorkspaceFile(filename, content) {
+async function createWorkspaceFile(filename, content) {
+    const cleanName = path.basename(filename.trim());
+
+    try {
+        return await uploadWorkspaceFile(cleanName, content);
+    } catch (error) {
+        console.error("STORAGE SAVE ERROR:", error.message);
+    }
+
     ensureSetup();
 
-    const filePath = safeFilePath(filename);
+    const filePath = safeFilePath(cleanName);
     fs.writeFileSync(filePath, content, "utf8");
 
     return {
@@ -113,10 +137,22 @@ function createWorkspaceFile(filename, content) {
     };
 }
 
-function readWorkspaceFile(filename) {
+async function readWorkspaceFile(filename) {
+    const cleanName = path.basename(filename.trim());
+
+    try {
+        const file = await readWorkspaceFileFromStorage(cleanName);
+
+        if (file) {
+            return file;
+        }
+    } catch (error) {
+        console.error("STORAGE READ ERROR:", error.message);
+    }
+
     ensureSetup();
 
-    const filePath = safeFilePath(filename);
+    const filePath = safeFilePath(cleanName);
 
     if (!fs.existsSync(filePath)) {
         return null;
@@ -128,10 +164,28 @@ function readWorkspaceFile(filename) {
     };
 }
 
-function deleteWorkspaceFile(filename) {
+async function deleteWorkspaceFile(filename) {
+    const cleanName = path.basename(filename.trim());
+    let storageFile = null;
+
+    try {
+        storageFile = await readWorkspaceFileFromStorage(cleanName);
+    } catch (error) {
+        console.error("STORAGE READ BEFORE DELETE ERROR:", error.message);
+    }
+
+    if (storageFile) {
+        try {
+            await deleteWorkspaceFileFromStorage(cleanName);
+            return true;
+        } catch (error) {
+            console.error("STORAGE DELETE ERROR:", error.message);
+        }
+    }
+
     ensureSetup();
 
-    const filePath = safeFilePath(filename);
+    const filePath = safeFilePath(cleanName);
 
     if (!fs.existsSync(filePath)) {
         return false;
@@ -141,11 +195,37 @@ function deleteWorkspaceFile(filename) {
     return true;
 }
 
-function renameWorkspaceFile(oldName, newName) {
+async function renameWorkspaceFile(oldName, newName) {
+    const cleanOldName = path.basename(oldName.trim());
+    const cleanNewName = path.basename(newName.trim());
+
+    try {
+        const oldFile = await readWorkspaceFileFromStorage(cleanOldName);
+
+        if (oldFile) {
+            const newFile = await readWorkspaceFileFromStorage(cleanNewName);
+
+            if (newFile) {
+                return { ok: false, reason: "new_exists" };
+            }
+
+            await uploadWorkspaceFile(cleanNewName, oldFile.content);
+            await deleteWorkspaceFileFromStorage(cleanOldName);
+
+            return {
+                ok: true,
+                oldName: cleanOldName,
+                newName: cleanNewName
+            };
+        }
+    } catch (error) {
+        console.error("STORAGE RENAME ERROR:", error.message);
+    }
+
     ensureSetup();
 
-    const oldPath = safeFilePath(oldName);
-    const newPath = safeFilePath(newName);
+    const oldPath = safeFilePath(cleanOldName);
+    const newPath = safeFilePath(cleanNewName);
 
     if (!fs.existsSync(oldPath)) {
         return { ok: false, reason: "old_missing" };
@@ -318,13 +398,13 @@ function makeTimestampedFilename(prefix) {
     return `${prefix}_${Date.now()}.txt`;
 }
 
-function searchWorkspaceFiles(keyword) {
-    const files = listWorkspaceFiles();
+async function searchWorkspaceFiles(keyword) {
+    const files = await listWorkspaceFiles();
     const k = keyword.toLowerCase();
     const matches = [];
 
     for (const filename of files) {
-        const file = readWorkspaceFile(filename);
+        const file = await readWorkspaceFile(filename);
         if (!file) continue;
 
         const combined = `${filename}\n${file.content}`.toLowerCase();
@@ -336,17 +416,17 @@ function searchWorkspaceFiles(keyword) {
     return matches;
 }
 
-function moveFileToCategory(filename, category) {
+async function moveFileToCategory(filename, category) {
     const sourceName = ensureTxtExtension(filename);
-    const file = readWorkspaceFile(sourceName);
+    const file = await readWorkspaceFile(sourceName);
 
     if (!file) {
         return { ok: false, reason: "missing" };
     }
 
     const targetName = `${category}_${Date.now()}.txt`;
-    createWorkspaceFile(targetName, file.content);
-    deleteWorkspaceFile(sourceName);
+    await createWorkspaceFile(targetName, file.content);
+    await deleteWorkspaceFile(sourceName);
 
     deleteDocumentFromDatabase(sourceName);
     saveDocumentToDatabase(
@@ -539,7 +619,7 @@ async function handleCommand(command) {
     switch (command.type) {
         case "create_file": {
             const filename = ensureTxtExtension(command.filename);
-            const created = createWorkspaceFile(filename, command.content);
+            const created = await createWorkspaceFile(filename, command.content);
 
             await pgSaveDocument(
                 created.filename,
@@ -560,7 +640,7 @@ async function handleCommand(command) {
 
         case "read_file": {
             const filename = ensureTxtExtension(command.filename);
-            const file = readWorkspaceFile(filename);
+            const file = await readWorkspaceFile(filename);
 
             if (!file) {
                 return { ok: false, reply: `Could not find file: ${filename}` };
@@ -571,7 +651,7 @@ async function handleCommand(command) {
 
         case "delete_file": {
             const filename = ensureTxtExtension(command.filename);
-            const deleted = deleteWorkspaceFile(filename);
+            const deleted = await deleteWorkspaceFile(filename);
 
             if (!deleted) {
                 return { ok: false, reply: `Could not find file: ${filename}` };
@@ -593,7 +673,7 @@ async function handleCommand(command) {
             await pgDeleteDocument(filename);
 
             deleteDocumentFromDatabase(filename);
-            deleteWorkspaceFile(filename);
+            await deleteWorkspaceFile(filename);
 
             return { ok: true, reply: `Document deleted: ${filename}` };
         }
@@ -601,7 +681,7 @@ async function handleCommand(command) {
         case "rename_file": {
             const oldName = ensureTxtExtension(command.oldName);
             const newName = ensureTxtExtension(command.newName);
-            const result = renameWorkspaceFile(oldName, newName);
+            const result = await renameWorkspaceFile(oldName, newName);
 
             if (!result.ok) {
                 if (result.reason === "old_missing") {
@@ -648,7 +728,7 @@ async function handleCommand(command) {
 
         case "summarise_file": {
             const filename = ensureTxtExtension(command.filename);
-            const file = readWorkspaceFile(filename);
+            const file = await readWorkspaceFile(filename);
 
             if (!file) {
                 return { ok: false, reply: `Could not find file: ${filename}` };
@@ -677,7 +757,7 @@ async function handleCommand(command) {
         }
 
         case "move_file": {
-            const result = moveFileToCategory(command.filename, command.category);
+            const result = await moveFileToCategory(command.filename, command.category);
 
             if (!result.ok) {
                 return { ok: false, reply: `Could not find file: ${ensureTxtExtension(command.filename)}` };
@@ -693,7 +773,7 @@ async function handleCommand(command) {
             const prefix = command.classification || "personal";
             const filename = makeTimestampedFilename(prefix);
 
-            createWorkspaceFile(filename, command.content);
+            await createWorkspaceFile(filename, command.content);
 
             await pgSaveDocument(
                 filename,
@@ -720,7 +800,7 @@ async function handleCommand(command) {
         case "save_named_note": {
             const filename = ensureTxtExtension(command.filename);
 
-            createWorkspaceFile(filename, command.content);
+            await createWorkspaceFile(filename, command.content);
 
             await pgSaveDocument(
                 filename,
@@ -745,7 +825,7 @@ async function handleCommand(command) {
         }
 
         case "list_files": {
-            const files = listWorkspaceFiles();
+            const files = await listWorkspaceFiles();
 
             if (!files.length) {
                 return { ok: true, reply: "No files in workspace." };
@@ -767,7 +847,7 @@ async function handleCommand(command) {
 
         case "search_documents": {
             const dbDocs = searchDocuments(command.keyword);
-            const workspaceMatches = searchWorkspaceFiles(command.keyword);
+            const workspaceMatches = await searchWorkspaceFiles(command.keyword);
 
             const dbLines = dbDocs.map(doc => `- ${doc.filename} (${doc.classification})`);
             const workspaceOnly = workspaceMatches.filter(name => !dbDocs.some(doc => doc.filename === name));
@@ -930,8 +1010,8 @@ app.get("/documents", async (req, res) => {
     }
 });
 
-app.get("/files", (req, res) => {
-    const files = listWorkspaceFiles();
+app.get("/files", async (req, res) => {
+    const files = await listWorkspaceFiles();
     res.status(200).json({ ok: true, count: files.length, files });
 });
 
