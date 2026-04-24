@@ -866,6 +866,16 @@ function getLatestActiveAgentTask(tasks = []) {
     return tasks.find(item => item.status === "running" || item.status === "waiting_approval") || null;
 }
 
+function buildSafeDefaultDiscoverySteps() {
+    return [
+        { type: "list_documents" },
+        { type: "list_files" },
+        { type: "search_documents", keyword: "test" },
+        { type: "search_documents", keyword: "duplicate detection" },
+        { type: "search_documents", keyword: "draft" }
+    ];
+}
+
 function shouldGenerateFollowUpCleanupPlan(task) {
     const steps = Array.isArray(task?.actions_json?.steps) ? task.actions_json.steps : [];
     const phase = task?.actions_json?.phase || "";
@@ -1154,15 +1164,48 @@ async function runAgentPlanningCycle(taskId) {
     });
 
     if (!parsed) {
+        const fallbackSteps = buildSafeDefaultDiscoverySteps();
+        const validation = validateAgentSteps(fallbackSteps, task.goal);
+        const fallbackMessage = "Using safe default discovery steps because the plan could not be converted.";
+
         await pgUpdateAgentTask(taskId, {
-            status: "failed",
+            status: "waiting_approval",
+            current_step: 0,
             plan,
-            error: "The agent task plan could not be converted into safe steps."
+            context_json: buildTaskContext(memory, documents, files, today),
+            actions_json: {
+                phase: "discovery",
+                steps: validation.validSteps,
+                skipped: validation.skipped,
+                fallback: true
+            },
+            result: fallbackMessage,
+            error: null
         });
 
+        await pgLogAgentAction(
+            "agent_task_plan",
+            "planned",
+            task.goal,
+            plan,
+            {
+                taskId,
+                steps: validation.validSteps,
+                skipped: validation.skipped,
+                fallback: true
+            },
+            null,
+            fallbackMessage
+        );
+
         return {
-            ok: false,
-            message: "The agent task plan could not be converted into safe steps."
+            ok: true,
+            status: "waiting_approval",
+            plan,
+            validSteps: validation.validSteps,
+            skipped: validation.skipped,
+            result: fallbackMessage,
+            fallbackMessage
         };
     }
 
@@ -2962,7 +3005,7 @@ ${task.plan || "No plan saved."}`
 
             return {
                 ok: true,
-                reply: `Agent task #${task.id} planned.\n\nStatus: ${planning.status}\n${planning.plan}${planning.validSteps.length ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
+                reply: `Agent task #${task.id} planned.\n\nStatus: ${planning.status}${planning.fallbackMessage ? `\n${planning.fallbackMessage}` : ""}\n${planning.plan}${planning.validSteps.length ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
                 taskId: task.id,
                 status: planning.status
             };
