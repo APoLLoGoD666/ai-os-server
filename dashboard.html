@@ -8,33 +8,47 @@
         :root {
             color-scheme: dark;
             --bg: #0f1115;
-            --panel: #171a21;
-            --panel-2: #11141b;
-            --border: #2a2f3a;
-            --text: #f5f7fb;
-            --muted: #97a0b3;
-            --accent: #6f8cff;
-            --accent-2: #8a63ff;
-            --green: #21c17a;
-            --yellow: #f6c453;
-            --blue: #57a6ff;
+            --bg-2: #0b0d12;
+            --card: #171a21;
+            --card-2: #1d2130;
+            --card-3: #11141b;
+            --border: #2a3140;
+            --border-soft: rgba(255, 255, 255, 0.08);
+            --text: #f6f8fc;
+            --muted: #9aa4b8;
+            --muted-2: #79839a;
+            --accent: #6d8dff;
+            --accent-2: #8d63ff;
+            --accent-soft: rgba(109, 141, 255, 0.16);
+            --green: #28c485;
+            --yellow: #f0be53;
+            --blue: #5ba8ff;
             --red: #f26d6d;
-            --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+            --shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+            --radius-xl: 24px;
+            --radius-lg: 18px;
+            --radius-md: 14px;
+            --transition: 160ms ease;
         }
 
         * {
             box-sizing: border-box;
         }
 
+        html,
         body {
             margin: 0;
-            min-height: 100vh;
+            min-height: 100%;
             font-family: "Segoe UI", Inter, Arial, sans-serif;
             background:
-                radial-gradient(circle at top left, rgba(111, 140, 255, 0.14), transparent 28%),
-                radial-gradient(circle at top right, rgba(138, 99, 255, 0.12), transparent 24%),
-                var(--bg);
+                radial-gradient(circle at top left, rgba(109, 141, 255, 0.18), transparent 22%),
+                radial-gradient(circle at top right, rgba(141, 99, 255, 0.14), transparent 24%),
+                linear-gradient(180deg, #11141c 0%, var(--bg) 100%);
             color: var(--text);
+        }
+
+        body {
+            min-height: 100vh;
         }
 
         button,
@@ -51,49 +65,57 @@
         button:focus-visible,
         input:focus-visible,
         textarea:focus-visible,
+        [role="tab"]:focus-visible,
         details summary:focus-visible {
-            outline: 2px solid rgba(111, 140, 255, 0.95);
+            outline: 2px solid var(--accent);
             outline-offset: 2px;
         }
 
-        .shell {
-            max-width: 1480px;
+        .app-shell {
+            max-width: 1520px;
             margin: 0 auto;
-            padding: 24px;
+            padding: 28px;
         }
 
-        .header {
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 16px;
-            margin-bottom: 22px;
-            flex-wrap: wrap;
+            gap: 18px;
+            margin-bottom: 24px;
+            padding: 18px 22px;
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-xl);
+            background: rgba(15, 17, 21, 0.84);
+            backdrop-filter: blur(14px);
+            box-shadow: var(--shadow);
         }
 
         .brand {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
         }
 
         .brand-mark {
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
+            width: 48px;
+            height: 48px;
             display: grid;
             place-items: center;
+            border-radius: 16px;
             background: linear-gradient(135deg, var(--accent), var(--accent-2));
-            box-shadow: var(--shadow);
+            box-shadow: 0 14px 28px rgba(109, 141, 255, 0.25);
             font-weight: 700;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.08em;
         }
 
         .brand-copy h1 {
             margin: 0;
             font-size: 28px;
-            font-weight: 700;
-            letter-spacing: -0.03em;
+            letter-spacing: -0.04em;
         }
 
         .brand-copy p {
@@ -102,367 +124,305 @@
             font-size: 14px;
         }
 
-        .header-actions {
+        .topbar-actions {
             display: flex;
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
-        }
-
-        .card {
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01)), var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 22px;
-            box-shadow: var(--shadow);
-            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-1px);
-            border-color: rgba(111, 140, 255, 0.22);
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .card-title {
-            margin: 0;
-            font-size: 17px;
-            font-weight: 600;
-            letter-spacing: -0.02em;
-        }
-
-        .card-subtitle {
-            color: var(--muted);
-            font-size: 13px;
-            margin-top: 4px;
-        }
-
-        .main-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.6fr) minmax(360px, 0.95fr);
-            gap: 18px;
-            margin-bottom: 18px;
-        }
-
-        .secondary-grid {
-            display: grid;
-            grid-template-columns: repeat(12, minmax(0, 1fr));
-            gap: 18px;
-        }
-
-        .span-12 {
-            grid-column: span 12;
-        }
-
-        .span-6 {
-            grid-column: span 6;
-        }
-
-        .span-4 {
-            grid-column: span 4;
-        }
-
-        .chat-card,
-        .agent-card,
-        .detail-card,
-        .quick-card,
-        .doc-card,
-        .file-card,
-        .memory-card,
-        .autopilot-card,
-        .workspace-card {
-            padding: 18px;
         }
 
         .status-pill,
         .badge {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
+            gap: 8px;
+            padding: 8px 12px;
             border-radius: 999px;
-            padding: 7px 12px;
+            border: 1px solid transparent;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
             white-space: nowrap;
         }
 
         .status-pill {
-            border: 1px solid rgba(33, 193, 122, 0.35);
-            background: rgba(33, 193, 122, 0.14);
-            color: #c7ffe6;
+            color: #cffce7;
+            background: rgba(40, 196, 133, 0.14);
+            border-color: rgba(40, 196, 133, 0.22);
+        }
+
+        .status-pill::before,
+        .badge::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.9;
         }
 
         .badge {
-            background: rgba(87, 166, 255, 0.12);
-            color: #cae3ff;
-            border: 1px solid rgba(87, 166, 255, 0.24);
-            padding: 5px 10px;
+            color: #dce7ff;
+            background: rgba(91, 168, 255, 0.12);
+            border-color: rgba(91, 168, 255, 0.2);
         }
 
         .badge.completed,
         .badge.enabled {
-            background: rgba(33, 193, 122, 0.16);
-            color: #c8ffe6;
-            border-color: rgba(33, 193, 122, 0.25);
+            color: #cffce7;
+            background: rgba(40, 196, 133, 0.14);
+            border-color: rgba(40, 196, 133, 0.22);
         }
 
         .badge.waiting_approval,
         .badge.waiting,
         .badge.unread {
-            background: rgba(246, 196, 83, 0.16);
-            color: #ffe6a6;
-            border-color: rgba(246, 196, 83, 0.26);
+            color: #ffe5a8;
+            background: rgba(240, 190, 83, 0.14);
+            border-color: rgba(240, 190, 83, 0.24);
         }
 
         .badge.running {
-            background: rgba(87, 166, 255, 0.16);
-            color: #cae3ff;
-            border-color: rgba(87, 166, 255, 0.26);
+            color: #dce7ff;
+            background: rgba(91, 168, 255, 0.14);
+            border-color: rgba(91, 168, 255, 0.24);
         }
 
         .badge.failed,
         .badge.disabled {
-            background: rgba(242, 109, 109, 0.16);
-            color: #ffc4c4;
-            border-color: rgba(242, 109, 109, 0.26);
+            color: #ffd0d0;
+            background: rgba(242, 109, 109, 0.14);
+            border-color: rgba(242, 109, 109, 0.22);
         }
 
-        .button {
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 0 16px;
             border-radius: 12px;
-            padding: 10px 14px;
-            font-size: 14px;
-            font-weight: 600;
-            color: white;
-            background: linear-gradient(135deg, var(--accent), var(--accent-2));
-            transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
-            box-shadow: 0 10px 25px rgba(97, 106, 255, 0.22);
-        }
-
-        .button:hover {
-            transform: translateY(-1px);
-        }
-
-        .button.secondary {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: none;
             color: var(--text);
-        }
-
-        .button.ghost {
-            background: transparent;
+            background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: none;
-            color: var(--muted);
+            transition: transform var(--transition), background var(--transition), border-color var(--transition), opacity var(--transition);
         }
 
-        .button.danger {
-            background: rgba(242, 109, 109, 0.16);
-            border: 1px solid rgba(242, 109, 109, 0.28);
-            color: #ffd4d4;
-            box-shadow: none;
+        .btn:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        .button:disabled,
-        .quick-action:disabled {
+        .btn.primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border-color: transparent;
+            box-shadow: 0 14px 28px rgba(109, 141, 255, 0.24);
+        }
+
+        .btn.ghost {
+            background: transparent;
+        }
+
+        .btn.danger {
+            color: #ffd7d7;
+            background: rgba(242, 109, 109, 0.12);
+            border-color: rgba(242, 109, 109, 0.2);
+        }
+
+        .btn.small {
+            min-height: 34px;
+            padding: 0 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .btn:disabled {
             opacity: 0.58;
             cursor: default;
             transform: none;
-            box-shadow: none;
         }
 
-        .button-row {
+        .page-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.5fr) minmax(360px, 0.95fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 22px;
+            margin-top: 22px;
+        }
+
+        .span-3 {
+            grid-column: span 3;
+        }
+
+        .span-4 {
+            grid-column: span 4;
+        }
+
+        .span-6 {
+            grid-column: span 6;
+        }
+
+        .span-8 {
+            grid-column: span 8;
+        }
+
+        .span-12 {
+            grid-column: span 12;
+        }
+
+        .card {
+            position: relative;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
+                var(--card);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            border-radius: inherit;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        .card-inner {
+            padding: 20px;
+        }
+
+        .card-head {
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
         }
 
-        .chat-shell {
+        .card-title {
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: -0.02em;
+        }
+
+        .card-subtitle {
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .chat-card {
+            min-height: 720px;
             display: flex;
             flex-direction: column;
-            min-height: 560px;
         }
 
-        .chat-box {
+        .chat-card .card-inner {
+            display: flex;
+            flex-direction: column;
+            min-height: 720px;
+        }
+
+        .chat-log {
             flex: 1;
-            min-height: 360px;
+            min-height: 420px;
             max-height: 620px;
             overflow-y: auto;
-            padding: 8px 2px 8px 0;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 14px;
+            padding-right: 4px;
         }
 
-        .chat-message {
-            max-width: 88%;
+        .chat-row {
+            display: flex;
+        }
+
+        .chat-row.user {
+            justify-content: flex-end;
+        }
+
+        .chat-row.ai,
+        .chat-row.system {
+            justify-content: flex-start;
+        }
+
+        .chat-bubble {
+            width: min(100%, 780px);
+            max-width: 86%;
             padding: 14px 16px;
-            border-radius: 16px;
+            border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.06);
-            line-height: 1.55;
-            white-space: pre-wrap;
-            word-break: break-word;
+            background: var(--card-3);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }
 
-        .chat-message.user {
-            align-self: flex-end;
-            background: linear-gradient(135deg, rgba(111, 140, 255, 0.22), rgba(138, 99, 255, 0.18));
-        }
-
-        .chat-message.ai,
-        .chat-message.system {
-            align-self: flex-start;
-            background: var(--panel-2);
+        .chat-row.user .chat-bubble {
+            background: linear-gradient(135deg, rgba(109, 141, 255, 0.26), rgba(141, 99, 255, 0.2));
         }
 
         .chat-meta {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 6px;
-            font-size: 12px;
+            margin-bottom: 8px;
             color: var(--muted);
+            font-size: 12px;
         }
 
-        .chat-input-row {
+        .chat-text {
+            color: var(--text);
+            line-height: 1.58;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .chat-details {
+            margin-top: 10px;
+        }
+
+        .chat-details summary {
+            cursor: pointer;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .chat-input-wrap {
+            margin-top: 16px;
             display: flex;
-            gap: 10px;
-            margin-top: 12px;
+            gap: 12px;
+            align-items: flex-end;
         }
 
-        .chat-input-row input {
+        .chat-input-wrap textarea {
             flex: 1;
-            border-radius: 14px;
-            border: 1px solid var(--border);
-            background: rgba(255, 255, 255, 0.03);
-            color: var(--text);
-            padding: 14px 16px;
-            outline: none;
-        }
-
-        .chat-input-row textarea {
-            flex: 1;
-            border-radius: 14px;
-            border: 1px solid var(--border);
-            background: rgba(255, 255, 255, 0.03);
-            color: var(--text);
-            padding: 14px 16px;
-            outline: none;
-            min-height: 56px;
-            max-height: 160px;
+            min-height: 60px;
+            max-height: 180px;
             resize: vertical;
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
             line-height: 1.45;
         }
 
-        .section-stack {
+        .agent-layout {
             display: flex;
             flex-direction: column;
             gap: 18px;
         }
 
-        .section-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .section-title {
-            margin: 0;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text);
-        }
-
-        .section-note {
-            color: var(--muted);
-            font-size: 12px;
-        }
-
-        .compact-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .list-item {
-            padding: 12px;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: background 0.16s ease, border-color 0.16s ease;
-        }
-
-        .list-item:hover,
-        .simple-item:hover,
-        .memory-entry:hover {
-            background: rgba(255, 255, 255, 0.045);
-            border-color: rgba(255, 255, 255, 0.09);
-        }
-
-        .item-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 6px;
-        }
-
-        .item-title {
-            margin: 0;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .item-subtitle,
-        .muted {
-            color: var(--muted);
-            font-size: 12px;
-            line-height: 1.45;
-        }
-
-        .item-actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-
-        .mini-button {
-            border-radius: 10px;
-            padding: 8px 10px;
-            font-size: 12px;
-            font-weight: 600;
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--text);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .mini-button.primary {
-            background: rgba(111, 140, 255, 0.18);
-            border-color: rgba(111, 140, 255, 0.28);
-        }
-
-        .mini-button.danger {
-            background: rgba(242, 109, 109, 0.12);
-            border-color: rgba(242, 109, 109, 0.24);
-            color: #ffd2d2;
-        }
-
-        .mini-button:disabled {
-            opacity: 0.45;
-            cursor: default;
-        }
-
-        .quick-grid {
+        .quick-actions {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 10px;
@@ -470,492 +430,611 @@
 
         .quick-action {
             min-height: 92px;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(180deg, rgba(111, 140, 255, 0.12), rgba(255, 255, 255, 0.02));
-            color: var(--text);
             padding: 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            background: linear-gradient(180deg, rgba(109, 141, 255, 0.16), rgba(255, 255, 255, 0.02));
             text-align: left;
+            color: var(--text);
+            transition: transform var(--transition), border-color var(--transition), background var(--transition);
+        }
+
+        .quick-action:hover {
+            transform: translateY(-1px);
+            border-color: rgba(109, 141, 255, 0.24);
         }
 
         .quick-action strong {
             display: block;
-            margin-bottom: 6px;
             font-size: 14px;
+            margin-bottom: 6px;
         }
 
         .quick-action span {
             display: block;
             color: var(--muted);
             font-size: 12px;
-            line-height: 1.4;
-        }
-
-        .search-box {
-            margin-top: 12px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .search-box input {
-            flex: 1;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            background: rgba(255, 255, 255, 0.03);
-            color: var(--text);
-            padding: 10px 12px;
-        }
-
-        .simple-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .simple-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 12px;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: background 0.16s ease, border-color 0.16s ease;
-        }
-
-        .simple-item-copy {
-            min-width: 0;
-        }
-
-        .simple-item-copy strong,
-        .simple-item-copy span {
-            display: block;
-        }
-
-        .simple-item-copy strong {
-            font-size: 14px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .simple-item-copy span {
-            color: var(--muted);
-            font-size: 12px;
-            margin-top: 4px;
-        }
-
-        .memory-entry {
-            padding: 12px;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: background 0.16s ease, border-color 0.16s ease;
-        }
-
-        .memory-role {
-            display: inline-flex;
-            margin-bottom: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            color: #d6ddff;
-            text-transform: uppercase;
-        }
-
-        .memory-text {
-            color: var(--text);
-            font-size: 13px;
             line-height: 1.45;
         }
 
-        .memory-time {
-            margin-top: 6px;
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 6px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .tab {
+            flex: 1;
+            min-height: 40px;
+            border-radius: 12px;
             color: var(--muted);
+            background: transparent;
+            transition: background var(--transition), color var(--transition);
+        }
+
+        .tab.active {
+            color: var(--text);
+            background: rgba(109, 141, 255, 0.18);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .list-item {
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .item-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .item-copy {
+            min-width: 0;
+        }
+
+        .item-title {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .item-subtitle {
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .item-meta {
+            margin-top: 8px;
+            color: var(--muted-2);
             font-size: 11px;
         }
 
-        .detail-box {
-            min-height: 140px;
-            border-radius: 16px;
-            border: 1px dashed rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.02);
-            padding: 16px;
-            white-space: pre-wrap;
-            word-break: break-word;
+        .item-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .mini-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             color: var(--text);
-            line-height: 1.55;
+            font-size: 12px;
+            font-weight: 700;
+            transition: background var(--transition), transform var(--transition), opacity var(--transition);
         }
 
-        .autopilot-shell {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+        .mini-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .mini-btn.primary {
+            background: var(--accent-soft);
+            border-color: rgba(109, 141, 255, 0.22);
+        }
+
+        .mini-btn.danger {
+            color: #ffd7d7;
+            background: rgba(242, 109, 109, 0.12);
+            border-color: rgba(242, 109, 109, 0.2);
+        }
+
+        .mini-btn:disabled {
+            opacity: 0.58;
+            cursor: default;
+            transform: none;
+        }
+
+        .memory-list {
+            display: flex;
+            flex-direction: column;
             gap: 12px;
-            align-items: start;
         }
 
-        .autopilot-shell textarea {
+        .memory-item {
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 9px;
+            border-radius: 999px;
+            color: #dce7ff;
+            background: rgba(109, 141, 255, 0.14);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .role-badge.user {
+            color: #cfe3ff;
+            background: rgba(91, 168, 255, 0.15);
+        }
+
+        .role-badge.ai,
+        .role-badge.assistant {
+            color: #e5d9ff;
+            background: rgba(141, 99, 255, 0.14);
+        }
+
+        .role-badge.system {
+            color: #ffe7b3;
+            background: rgba(240, 190, 83, 0.14);
+        }
+
+        .memory-text {
+            margin-top: 10px;
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .memory-time {
+            margin-top: 8px;
+            color: var(--muted-2);
+            font-size: 11px;
+        }
+
+        .field-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .autopilot-input {
             width: 100%;
-            min-height: 110px;
+            min-height: 120px;
             resize: vertical;
-            border-radius: 14px;
+            padding: 16px;
+            border-radius: 16px;
             border: 1px solid var(--border);
             background: rgba(255, 255, 255, 0.03);
             color: var(--text);
-            padding: 14px;
-            outline: none;
+            line-height: 1.5;
         }
 
         .autopilot-actions {
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
             gap: 10px;
-            width: 160px;
+            margin-top: 14px;
         }
 
-        .result-card {
+        .result-panel {
             margin-top: 14px;
-            border-radius: 14px;
+            border-radius: 16px;
             border: 1px solid rgba(255, 255, 255, 0.06);
             background: rgba(255, 255, 255, 0.03);
             overflow: hidden;
         }
 
-        .result-card summary {
+        .result-panel summary {
             cursor: pointer;
-            padding: 12px 14px;
+            padding: 14px 16px;
             list-style: none;
-            font-weight: 600;
+            font-weight: 700;
         }
 
-        .result-card summary::-webkit-details-marker {
+        .result-panel summary::-webkit-details-marker {
             display: none;
         }
 
         .result-body {
-            padding: 0 14px 14px;
+            padding: 0 16px 16px;
             color: var(--muted);
-            white-space: pre-wrap;
             line-height: 1.55;
-        }
-
-        .workspace-canvas {
-            min-height: 220px;
-            border-radius: 16px;
-            border: 1px dashed rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.02);
-            padding: 18px;
-        }
-
-        .empty-state {
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .loading {
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .error {
-            color: #ffb4b4;
-            font-size: 13px;
-        }
-
-        .timestamp {
-            color: var(--muted);
-            font-size: 11px;
-        }
-
-        .item-detail-toggle {
-            margin-top: 8px;
-        }
-
-        .item-detail-toggle summary {
-            cursor: pointer;
-            color: var(--muted);
-            font-size: 12px;
-            user-select: none;
-        }
-
-        .item-detail-body {
-            margin-top: 8px;
-            color: var(--text);
-            font-size: 12px;
-            line-height: 1.5;
             white-space: pre-wrap;
             word-break: break-word;
         }
 
-        .unread-highlight {
-            border-color: rgba(246, 196, 83, 0.26);
-            background: rgba(246, 196, 83, 0.06);
+        .workspace-box {
+            min-height: 180px;
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
         }
 
-        @media (max-width: 1120px) {
-            .main-grid {
+        .empty-state,
+        .loading-state,
+        .error-state {
+            padding: 22px 16px;
+            border-radius: 16px;
+            border: 1px dashed rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .empty-state,
+        .loading-state {
+            color: var(--muted);
+        }
+
+        .error-state {
+            color: #ffcbcb;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(5, 7, 11, 0.68);
+            backdrop-filter: blur(10px);
+        }
+
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-panel {
+            width: min(860px, 100%);
+            max-height: min(84vh, 920px);
+            display: flex;
+            flex-direction: column;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)), var(--card);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow: auto;
+            color: var(--text);
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        @media (max-width: 1220px) {
+            .page-grid {
                 grid-template-columns: 1fr;
             }
 
+            .chat-card,
+            .chat-card .card-inner {
+                min-height: 620px;
+            }
+
+            .span-3,
+            .span-4,
             .span-6,
-            .span-4 {
+            .span-8 {
                 grid-column: span 12;
             }
-
-            .autopilot-shell {
-                grid-template-columns: 1fr;
-            }
-
-            .autopilot-actions {
-                width: 100%;
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
         }
 
-        @media (max-width: 720px) {
-            .shell {
+        @media (max-width: 820px) {
+            .app-shell {
                 padding: 16px;
             }
 
-            .quick-grid {
-                grid-template-columns: 1fr;
+            .topbar {
+                position: static;
+                padding: 16px;
             }
 
-            .header-actions,
-            .button-row,
-            .item-actions,
-            .chat-input-row {
+            .topbar,
+            .topbar-actions,
+            .card-head,
+            .chat-input-wrap,
+            .autopilot-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .topbar-actions .btn,
+            .chat-input-wrap .btn,
+            .autopilot-actions .btn {
                 width: 100%;
             }
 
-            .header-actions .button,
-            .button-row .button,
-            .chat-input-row .button,
-            .autopilot-actions .button {
-                flex: 1 1 auto;
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .chat-bubble {
+                max-width: 100%;
+            }
+
+            .modal {
+                padding: 12px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="shell">
-        <header class="header">
+    <div class="app-shell">
+        <header class="topbar">
             <div class="brand">
                 <div class="brand-mark">AI</div>
                 <div class="brand-copy">
                     <h1>AI OS</h1>
-                    <p>Clean control surface for chat, tasks, schedules, and automation.</p>
+                    <p>Autonomous workspace</p>
                 </div>
             </div>
 
-            <div class="header-actions">
-                <span class="status-pill">Connected</span>
-                <button class="button secondary" aria-label="Refresh dashboard data" onclick="debouncedRefreshAllData(this)">Refresh</button>
-                <button class="button secondary" aria-label="Run due schedules now" onclick="runSchedulesNowFromDashboard(this)">Run Schedules</button>
-                <button class="button" aria-label="Open editor" onclick="openEditor()">Open Editor</button>
+            <div class="topbar-actions">
+                <span id="connectionStatus" class="status-pill">Connected</span>
+                <button class="btn" aria-label="Refresh dashboard" onclick="debouncedRefreshDashboard(this)">Refresh</button>
+                <button class="btn" aria-label="Run schedules now" onclick="runSchedulesNowFromDashboard(this)">Run Schedules</button>
+                <button class="btn primary" aria-label="Open editor" onclick="openEditor()">Open Editor</button>
             </div>
         </header>
 
-        <section class="main-grid">
-            <article class="card chat-card" aria-label="Chat panel">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Chat</h2>
-                        <div class="card-subtitle">Talk to your AI OS, run commands, and review responses clearly.</div>
-                    </div>
-                    <button class="button ghost" aria-label="Clear chat messages" onclick="clearChat()">Clear</button>
-                </div>
-
-                <div class="chat-shell">
-                    <div id="chatBox" class="chat-box" aria-live="polite" aria-label="Chat messages"></div>
-                    <div class="chat-input-row">
-                        <textarea id="chatInput" placeholder="Type a command or ask a question..." aria-label="Chat input"></textarea>
-                        <button id="chatSendButton" class="button" aria-label="Send chat message" onclick="sendChatCommand(this)">Send</button>
-                    </div>
-                </div>
-            </article>
-
-            <aside class="card agent-card" aria-label="Agent control panel">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Agent Control</h2>
-                        <div class="card-subtitle">Tasks, schedules, notifications, and approvals in one place.</div>
-                    </div>
-                    <button class="button ghost" aria-label="Refresh agent panels" onclick="refreshAgentPanels({ force: true })">Refresh</button>
-                </div>
-
-                <div class="section-stack">
-                    <section>
-                        <div class="section-head">
-                            <h3 class="section-title">Tasks</h3>
-                            <span class="section-note">Latest 5</span>
+        <main>
+            <section class="page-grid">
+                <article class="card chat-card" aria-label="Chat">
+                    <div class="card-inner">
+                        <div class="card-head">
+                            <div>
+                                <h2 class="card-title">Chat</h2>
+                                <div class="card-subtitle">Ask questions, run commands, and review output clearly.</div>
+                            </div>
+                            <button class="btn ghost" aria-label="Clear chat" onclick="clearChat()">Clear</button>
                         </div>
-                        <div id="tasksPanel" class="compact-list">
-                            <div class="loading">Loading tasks...</div>
+
+                        <div id="chatLog" class="chat-log" aria-live="polite"></div>
+
+                        <div class="chat-input-wrap">
+                            <label class="visually-hidden" for="chatInput">Chat input</label>
+                            <textarea id="chatInput" placeholder="Type a command or ask a question..." aria-label="Chat input"></textarea>
+                            <button id="chatSendButton" class="btn primary" aria-label="Send chat message" onclick="sendChatCommand(this)">Send</button>
                         </div>
-                    </section>
+                    </div>
+                </article>
 
-                    <section>
-                        <div class="section-head">
-                            <h3 class="section-title">Schedules</h3>
-                            <span class="section-note">Latest 5</span>
+                <aside class="card" aria-label="Agent control">
+                    <div class="card-inner agent-layout">
+                        <div class="card-head" style="margin-bottom: 0;">
+                            <div>
+                                <h2 class="card-title">Agent Control</h2>
+                                <div class="card-subtitle">Tasks, schedules, notifications, and quick actions.</div>
+                            </div>
+                            <span id="notificationSummaryBadge" class="badge unread">0 unread</span>
                         </div>
-                        <div id="schedulesPanel" class="compact-list">
-                            <div class="loading">Loading schedules...</div>
+
+                        <section>
+                            <div class="quick-actions">
+                                <button class="quick-action" aria-label="Analyse documents" onclick="sendChatCommandFromText('analyse documents', { refresh: { documents: true, memory: true, notifications: true } })">
+                                    <strong>Analyse Documents</strong>
+                                    <span>Summarise recent document themes.</span>
+                                </button>
+                                <button class="quick-action" aria-label="Organise workspace" onclick="sendChatCommandFromText('agent organise my workspace and suggest cleanup', { refresh: { tasks: true, notifications: true } })">
+                                    <strong>Organise Workspace</strong>
+                                    <span>Generate a safe cleanup plan.</span>
+                                </button>
+                                <button class="quick-action" aria-label="Run schedules now" onclick="runSchedulesNowFromDashboard(this)">
+                                    <strong>Run Schedules</strong>
+                                    <span>Trigger due schedule checks once.</span>
+                                </button>
+                                <button class="quick-action" aria-label="Open agent history" onclick="sendChatCommandFromText('agent history', { refresh: { tasks: true, notifications: true } })">
+                                    <strong>Agent History</strong>
+                                    <span>Review recent task activity.</span>
+                                </button>
+                            </div>
+                        </section>
+
+                        <section>
+                            <div class="tabs" role="tablist" aria-label="Agent control tabs">
+                                <button id="tabTasks" class="tab active" role="tab" aria-selected="true" aria-controls="panelTasks" onclick="switchTab('tasks')">Tasks</button>
+                                <button id="tabSchedules" class="tab" role="tab" aria-selected="false" aria-controls="panelSchedules" onclick="switchTab('schedules')">Schedules</button>
+                                <button id="tabNotifications" class="tab" role="tab" aria-selected="false" aria-controls="panelNotifications" onclick="switchTab('notifications')">Notifications</button>
+                            </div>
+
+                            <div id="panelTasks" class="tab-panel active" role="tabpanel" aria-labelledby="tabTasks">
+                                <div id="tasksList" class="list"></div>
+                            </div>
+                            <div id="panelSchedules" class="tab-panel" role="tabpanel" aria-labelledby="tabSchedules">
+                                <div id="schedulesList" class="list"></div>
+                            </div>
+                            <div id="panelNotifications" class="tab-panel" role="tabpanel" aria-labelledby="tabNotifications">
+                                <div id="notificationsList" class="list"></div>
+                            </div>
+                        </section>
+                    </div>
+                </aside>
+            </section>
+
+            <section class="bottom-grid">
+                <article class="card span-3" aria-label="Documents">
+                    <div class="card-inner">
+                        <div class="card-head">
+                            <div>
+                                <h2 class="card-title">Documents</h2>
+                                <div class="card-subtitle">Latest 5</div>
+                            </div>
+                            <button class="btn ghost" aria-label="Refresh documents" onclick="refreshDocuments()">Refresh</button>
                         </div>
-                    </section>
+                        <div id="documentsList" class="list"></div>
+                    </div>
+                </article>
 
-                    <section>
-                        <div class="section-head">
-                            <h3 class="section-title">Notifications</h3>
-                        <span id="notificationBadge" class="badge unread" aria-label="Unread notifications">0 unread</span>
+                <article class="card span-3" aria-label="Files">
+                    <div class="card-inner">
+                        <div class="card-head">
+                            <div>
+                                <h2 class="card-title">Files</h2>
+                                <div class="card-subtitle">Latest 5</div>
+                            </div>
+                            <button class="btn ghost" aria-label="Refresh files" onclick="refreshFiles()">Refresh</button>
                         </div>
-                        <div id="notificationsPanel" class="compact-list">
-                            <div class="loading">Loading notifications...</div>
+                        <div id="filesList" class="list"></div>
+                    </div>
+                </article>
+
+                <article class="card span-3" aria-label="Memory">
+                    <div class="card-inner">
+                        <div class="card-head">
+                            <div>
+                                <h2 class="card-title">Memory</h2>
+                                <div class="card-subtitle">Latest 5</div>
+                            </div>
+                            <button class="btn ghost" aria-label="Refresh memory" onclick="refreshMemory()">Refresh</button>
                         </div>
-                    </section>
-                </div>
-            </aside>
-        </section>
-
-        <section class="secondary-grid">
-            <article class="card detail-card span-12">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Details</h2>
-                        <div class="card-subtitle">Expanded content appears here when you click View or run an action.</div>
+                        <div id="memoryList" class="memory-list"></div>
                     </div>
-                </div>
-                <div id="detailBox" class="detail-box">Select an item to view details.</div>
-            </article>
+                </article>
 
-            <article class="card quick-card span-4">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Quick Actions</h2>
-                        <div class="card-subtitle">Common AI OS actions without typing full commands.</div>
+                <article class="card span-3" aria-label="Cloud Autopilot">
+                    <div class="card-inner">
+                        <div class="card-head">
+                            <div>
+                                <h2 class="card-title">Cloud Autopilot</h2>
+                                <div class="card-subtitle">Preview and apply cloud changes.</div>
+                            </div>
+                        </div>
+
+                        <label class="field-label" for="autopilotInput">Instructions</label>
+                        <textarea id="autopilotInput" class="autopilot-input" placeholder="Describe what you want to change..." aria-label="Cloud Autopilot instructions"></textarea>
+
+                        <div class="autopilot-actions">
+                            <button class="btn primary" aria-label="Preview cloud autopilot changes" onclick="previewCloudAutopilot(this)">Preview</button>
+                            <button class="btn" aria-label="Approve and apply cloud autopilot changes" onclick="applyCloudAutopilot(this)">Apply</button>
+                            <button class="btn ghost" aria-label="Clear cloud autopilot prompt" onclick="clearAutopilot()">Clear</button>
+                        </div>
+
+                        <details id="autopilotResultPanel" class="result-panel">
+                            <summary>Autopilot Result</summary>
+                            <div id="autopilotResult" class="result-body">Ready.</div>
+                        </details>
                     </div>
-                </div>
+                </article>
 
-                <div class="quick-grid">
-                    <button class="quick-action" aria-label="Run schedules now" onclick="runSchedulesNowFromDashboard(this)">
-                        <strong>Run Schedules Now</strong>
-                        <span>Trigger due schedule checks once.</span>
-                    </button>
-                    <button class="quick-action" aria-label="Analyse documents" onclick="sendChatCommandFromText('analyse documents', { refresh: { notifications: true, documents: true, memory: true } })">
-                        <strong>Analyse Documents</strong>
-                        <span>Summarise themes and insights.</span>
-                    </button>
-                    <button class="quick-action" aria-label="Create agent cleanup plan" onclick="sendChatCommandFromText('agent organise my workspace and suggest cleanup', { refresh: { tasks: true, notifications: true } })">
-                        <strong>Agent Cleanup Plan</strong>
-                        <span>Create a safe workspace cleanup proposal.</span>
-                    </button>
-                    <button class="quick-action" aria-label="Refresh dashboard data" onclick="debouncedRefreshAllData(this)">
-                        <strong>Refresh Data</strong>
-                        <span>Reload tasks, files, docs, memory, and notifications.</span>
-                    </button>
-                </div>
-
-                <div class="search-box">
-                    <input id="globalSearchInput" type="text" placeholder="Search files and documents..." aria-label="Search files and documents" />
-                    <button class="button secondary" aria-label="Search files and documents" onclick="runGlobalSearch()">Search</button>
-                </div>
-                <div id="searchResults" class="card-subtitle" style="margin-top: 12px;">Type a query to search recent files and documents.</div>
-            </article>
-
-            <article class="card doc-card span-4">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Documents</h2>
-                        <div class="card-subtitle">Latest 5 saved documents.</div>
+                <article class="card span-12" aria-label="Workspace canvas">
+                    <div class="card-inner">
+                        <div class="card-head">
+                            <div>
+                                <h2 class="card-title">Workspace Canvas</h2>
+                                <div class="card-subtitle">Saved layout content remains available here.</div>
+                            </div>
+                            <button class="btn ghost" aria-label="Refresh workspace canvas" onclick="loadCustomLayout()">Refresh Layout</button>
+                        </div>
+                        <div id="customLayout" class="workspace-box">
+                            <div class="loading-state">Loading saved layout...</div>
+                        </div>
                     </div>
-                    <button class="button ghost" aria-label="Refresh documents" onclick="loadDocumentsPanel({ force: true })">Refresh</button>
-                </div>
-                <div id="documentsPanel" class="simple-list">
-                    <div class="loading">Loading documents...</div>
-                </div>
-            </article>
+                </article>
+            </section>
+        </main>
+    </div>
 
-            <article class="card file-card span-4">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Files</h2>
-                        <div class="card-subtitle">Latest 5 workspace files.</div>
-                    </div>
-                    <button class="button ghost" aria-label="Refresh files" onclick="loadFilesPanel({ force: true })">Refresh</button>
-                </div>
-                <div id="filesPanel" class="simple-list">
-                    <div class="loading">Loading files...</div>
-                </div>
-            </article>
-
-            <article class="card memory-card span-4">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Memory</h2>
-                        <div class="card-subtitle">Latest 5 conversation memories.</div>
-                    </div>
-                    <button class="button ghost" aria-label="Refresh memory" onclick="loadMemoryPanel({ force: true })">Refresh</button>
-                </div>
-                <div id="memoryPanel" class="simple-list">
-                    <div class="loading">Loading memory...</div>
-                </div>
-            </article>
-
-            <article class="card autopilot-card span-8">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Cloud Autopilot</h2>
-                        <div class="card-subtitle">Preview and apply proposed cloud changes without leaving the dashboard.</div>
-                    </div>
-                </div>
-
-                <div class="autopilot-shell">
-                    <textarea id="autopilotInput" placeholder="Describe what you want to change..." aria-label="Cloud Autopilot instructions"></textarea>
-                    <div class="autopilot-actions">
-                        <button class="button" aria-label="Preview cloud autopilot changes" onclick="previewCloudAutopilot(this)">Preview</button>
-                        <button class="button secondary" aria-label="Approve and apply cloud autopilot changes" onclick="applyCloudAutopilot(this)">Approve & Apply</button>
-                        <button class="button ghost" aria-label="Clear cloud autopilot prompt" onclick="clearAutopilot()">Clear</button>
-                    </div>
-                </div>
-
-                <details id="autopilotResultCard" class="result-card" open>
-                    <summary>Autopilot Result</summary>
-                    <div id="autopilotResult" class="result-body">Ready.</div>
-                </details>
-            </article>
-
-            <article class="card workspace-card span-12">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Workspace Canvas</h2>
-                        <div class="card-subtitle">Saved layout content stays available here without crowding the main dashboard.</div>
-                    </div>
-                    <button class="button ghost" aria-label="Refresh workspace layout" onclick="loadCustomLayout()">Refresh Layout</button>
-                </div>
-                <div id="customLayout" class="workspace-canvas">
-                    <div class="empty-state">Loading saved layout...</div>
-                </div>
-            </article>
-        </section>
+    <div id="modalRoot" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-panel">
+            <div class="modal-head">
+                <h3 id="modalTitle" class="modal-title">Details</h3>
+                <button class="btn ghost small" aria-label="Close details modal" onclick="closeModal()">Close</button>
+            </div>
+            <div id="modalBody" class="modal-body"></div>
+        </div>
     </div>
 
     <script>
         const API_BASE = "";
         const APP_KEY = new URLSearchParams(window.location.search).get("app_key") || "";
-        const MAX_LIST_ITEMS = 5;
-        const REFRESH_INTERVAL_MS = 12000;
-        const LAZY_PANEL_DELAY_MS = 700;
+        const MAX_ITEMS = 5;
         const REFRESH_DEBOUNCE_MS = 500;
+        const AGENT_REFRESH_INTERVAL_MS = 15000;
 
         let cachedFiles = [];
         let cachedDocuments = [];
-        let chatInitialized = false;
+        let cachedTasks = [];
+        let cachedSchedules = [];
+        let cachedNotifications = [];
+        let chatInitialised = false;
         let refreshDebounceTimer = null;
-        let lazyPanelsLoaded = false;
-        const panelSignatures = {};
 
         function buildApiUrl(path) {
             if (!APP_KEY) {
@@ -969,16 +1048,16 @@
             return APP_KEY ? { ...extraHeaders, "x-app-key": APP_KEY } : extraHeaders;
         }
 
-        function escapeHtml(text) {
+        function escapeHtml(value) {
             const div = document.createElement("div");
-            div.textContent = text == null ? "" : String(text);
+            div.textContent = value == null ? "" : String(value);
             return div.innerHTML;
         }
 
-        function shortenText(text, max = 56) {
-            const value = String(text || "").trim();
-            if (!value) return "Untitled";
-            return value.length > max ? `${value.slice(0, max - 1)}...` : value;
+        function shortenText(value, max = 64) {
+            const text = String(value || "").trim();
+            if (!text) return "Untitled";
+            return text.length > max ? `${text.slice(0, max - 1)}...` : text;
         }
 
         function formatTimestamp(value) {
@@ -988,42 +1067,33 @@
             return date.toLocaleString();
         }
 
-        function renderBadge(status, labelOverride = "") {
+        function getStatusLabel(status) {
             const normalized = String(status || "unknown").replace(/\s+/g, "_").toLowerCase();
             const labels = {
-                completed: "✔ Completed",
-                enabled: "✔ Enabled",
-                waiting_approval: "⚠ Waiting Approval",
-                waiting: "⚠ Waiting Approval",
-                unread: "⚠ Unread",
-                running: "⏳ Running",
-                failed: "✖ Failed",
-                disabled: "✖ Disabled"
+                completed: "Completed",
+                waiting_approval: "Waiting Approval",
+                waiting: "Waiting Approval",
+                running: "Running",
+                failed: "Failed",
+                enabled: "Enabled",
+                disabled: "Disabled",
+                unread: "Unread"
             };
-            const label = labelOverride || labels[normalized] || normalized.replace(/_/g, " ");
-            return `<span class="badge ${normalized}">${escapeHtml(label)}</span>`;
+            return {
+                normalized,
+                label: labels[normalized] || normalized.replace(/_/g, " ")
+            };
         }
 
-        function getStatusBadge(status) {
-            return renderBadge(status);
+        function renderBadge(status) {
+            const info = getStatusLabel(status);
+            return `<span class="badge ${info.normalized}">${escapeHtml(info.label)}</span>`;
         }
 
-        function renderCardState(type, text) {
-            return `<div class="${type}">${escapeHtml(text)}</div>`;
-        }
-
-        function setPanelIfChanged(panelId, html, signature) {
-            const panel = document.getElementById(panelId);
-            if (!panel) return;
-            if (panelSignatures[panelId] === signature) return;
-            panel.innerHTML = html;
-            panelSignatures[panelId] = signature;
-        }
-
-        function setStatus(text) {
-            const status = document.querySelector(".status-pill");
-            if (status) {
-                status.textContent = text;
+        function setConnectionStatus(text) {
+            const pill = document.getElementById("connectionStatus");
+            if (pill) {
+                pill.textContent = text;
             }
         }
 
@@ -1053,36 +1123,16 @@
             }
         }
 
-        function renderListItem({ title, subtitle = "", badge = "", actions = "", timestamp = "", detail = "", classes = "" }) {
-            return `
-                <div class="list-item ${classes}">
-                    <div class="item-row">
-                        <p class="item-title">${title}</p>
-                        ${badge}
-                    </div>
-                    ${subtitle ? `<div class="item-subtitle">${subtitle}</div>` : ""}
-                    ${timestamp ? `<div class="timestamp">${timestamp}</div>` : ""}
-                    ${detail ? `
-                        <details class="item-detail-toggle">
-                            <summary>View Details</summary>
-                            <div class="item-detail-body">${detail}</div>
-                        </details>
-                    ` : ""}
-                    ${actions ? `<div class="item-actions">${actions}</div>` : ""}
-                </div>
-            `;
+        function renderEmptyState(message) {
+            return `<div class="empty-state">${escapeHtml(message)}</div>`;
         }
 
-        function renderSimpleItem({ title, subtitle = "", actions = "" }) {
-            return `
-                <div class="simple-item">
-                    <div class="simple-item-copy">
-                        <strong title="${escapeHtml(title)}">${escapeHtml(shortenText(title, 34))}</strong>
-                        <span>${subtitle}</span>
-                    </div>
-                    ${actions ? `<div class="item-actions">${actions}</div>` : ""}
-                </div>
-            `;
+        function renderLoadingState(message) {
+            return `<div class="loading-state">${escapeHtml(message)}</div>`;
+        }
+
+        function renderErrorState(message) {
+            return `<div class="error-state">${escapeHtml(message)}</div>`;
         }
 
         async function fetchJson(path, options = {}) {
@@ -1097,123 +1147,116 @@
             return data;
         }
 
-        async function fetchTasks() {
-            const data = await fetchJson("/agent-tasks");
-            return Array.isArray(data.tasks) ? data.tasks.slice(0, MAX_LIST_ITEMS) : [];
+        function initialiseChat() {
+            if (chatInitialised) return;
+            renderChatMessage("system", "Ready.");
+            chatInitialised = true;
         }
 
-        async function fetchSchedules() {
-            const data = await fetchJson("/agent-schedules");
-            return Array.isArray(data.schedules) ? data.schedules.slice(0, MAX_LIST_ITEMS) : [];
+        function clearChat() {
+            const chatLog = document.getElementById("chatLog");
+            if (!chatLog) return;
+            chatLog.innerHTML = "";
+            chatInitialised = false;
+            initialiseChat();
         }
 
-        async function fetchNotifications() {
-            const data = await fetchJson("/notifications");
-            return {
-                notifications: Array.isArray(data.notifications) ? data.notifications.slice(0, MAX_LIST_ITEMS) : [],
-                unreadCount: Array.isArray(data.notifications) ? data.notifications.filter(item => !item.read).length : 0
-            };
+        function renderChatMessage(role, message) {
+            const chatLog = document.getElementById("chatLog");
+            if (!chatLog) return;
+
+            const row = document.createElement("div");
+            row.className = `chat-row ${role}`;
+
+            const bubble = document.createElement("div");
+            bubble.className = "chat-bubble";
+
+            const label = role === "user" ? "You" : role === "ai" ? "AI" : "System";
+            const timeLabel = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            const text = String(message || "");
+
+            let contentHtml = "";
+            if (text.length > 900) {
+                contentHtml = `
+                    <div class="chat-text">${escapeHtml(text.slice(0, 900))}</div>
+                    <details class="chat-details">
+                        <summary>View full response</summary>
+                        <div class="chat-text" style="margin-top:10px; max-height: 360px; overflow:auto;">${escapeHtml(text)}</div>
+                    </details>
+                `;
+            } else {
+                contentHtml = `<div class="chat-text">${escapeHtml(text)}</div>`;
+            }
+
+            bubble.innerHTML = `
+                <div class="chat-meta">
+                    <strong>${escapeHtml(label)}</strong>
+                    <span>${escapeHtml(timeLabel)}</span>
+                </div>
+                ${contentHtml}
+            `;
+
+            row.appendChild(bubble);
+            chatLog.appendChild(row);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        function openModal(title, content) {
+            const modal = document.getElementById("modalRoot");
+            const modalTitle = document.getElementById("modalTitle");
+            const modalBody = document.getElementById("modalBody");
+            modalTitle.textContent = title || "Details";
+            modalBody.innerHTML = content || "<p>No details available.</p>";
+            modal.classList.add("open");
+            modal.setAttribute("aria-hidden", "false");
+        }
+
+        function closeModal() {
+            const modal = document.getElementById("modalRoot");
+            modal.classList.remove("open");
+            modal.setAttribute("aria-hidden", "true");
+        }
+
+        function switchTab(tabName) {
+            const tabs = ["tasks", "schedules", "notifications"];
+            tabs.forEach(name => {
+                const button = document.getElementById(`tab${name.charAt(0).toUpperCase()}${name.slice(1)}`);
+                const panel = document.getElementById(`panel${name.charAt(0).toUpperCase()}${name.slice(1)}`);
+                const isActive = name === tabName;
+                button.classList.toggle("active", isActive);
+                button.setAttribute("aria-selected", isActive ? "true" : "false");
+                panel.classList.toggle("active", isActive);
+            });
         }
 
         function inferRefreshTargets(command = "") {
             const value = String(command || "").toLowerCase();
-            const refresh = {};
+            const targets = {};
 
-            if (value.startsWith("agent ") || value.startsWith("run agent") || value.includes("approve task") || value.includes("continue agent")) {
-                refresh.tasks = true;
-                refresh.notifications = true;
+            if (value.startsWith("agent ") || value.startsWith("run agent") || value.includes("approve task") || value.includes("agent history")) {
+                targets.agent = true;
             }
-            if (value.includes("run schedule") || value.includes("run schedules now") || value.includes("disable schedule") || value.includes("schedule agent")) {
-                refresh.tasks = true;
-                refresh.schedules = true;
-                refresh.notifications = true;
+            if (value.includes("run schedule") || value.includes("run schedules now") || value.includes("disable schedule")) {
+                targets.agent = true;
             }
-            if (value.includes("delete document") || value.includes("summarise file")) {
-                refresh.documents = true;
-                refresh.notifications = true;
+            if (value.includes("show document") || value.includes("summarise file") || value.includes("delete document")) {
+                targets.documents = true;
             }
-            if (value.includes("delete file")) {
-                refresh.files = true;
-                refresh.notifications = true;
+            if (value.includes("read file") || value.includes("delete file")) {
+                targets.files = true;
             }
             if (value.includes("analyse documents")) {
-                refresh.documents = true;
-                refresh.memory = true;
-                refresh.notifications = true;
+                targets.documents = true;
+                targets.memory = true;
+                targets.agent = true;
             }
 
-            return refresh;
-        }
-
-        async function refreshSelectedPanels(targets = {}, options = {}) {
-            const { force = false, silent = false } = options;
-            const jobs = [];
-
-            if (targets.tasks) jobs.push(loadTasksPanel({ force }));
-            if (targets.schedules) jobs.push(loadSchedulesPanel({ force }));
-            if (targets.notifications) jobs.push(loadNotificationsPanel({ force }));
-            if (targets.documents) jobs.push(loadDocumentsPanel({ force }));
-            if (targets.files) jobs.push(loadFilesPanel({ force }));
-            if (targets.memory) jobs.push(loadMemoryPanel({ force }));
-            if (targets.layout) jobs.push(loadCustomLayout());
-
-            if (!jobs.length) return;
-
-            if (!silent) {
-                setStatus("Refreshing...");
-            }
-            await Promise.all(jobs);
-            if (!silent) {
-                setStatus("Connected");
-            }
-        }
-
-        function renderChatMessage(role, text) {
-            const box = document.getElementById("chatBox");
-            if (!box) return;
-
-            const wrapper = document.createElement("div");
-            wrapper.className = `chat-message ${role}`;
-            const label = role === "user" ? "You" : role === "ai" ? "AI" : "System";
-
-            wrapper.innerHTML = `
-                <div class="chat-meta">
-                    <strong>${escapeHtml(label)}</strong>
-                    <span>${escapeHtml(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}</span>
-                </div>
-                <div>${escapeHtml(text)}</div>
-            `;
-
-            box.appendChild(wrapper);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function initializeChat() {
-            if (chatInitialized) return;
-            renderChatMessage("system", "Ready.");
-            chatInitialized = true;
-        }
-
-        function clearChat() {
-            const box = document.getElementById("chatBox");
-            if (!box) return;
-            box.innerHTML = "";
-            chatInitialized = false;
-            initializeChat();
-        }
-
-        function showDetail(title, body) {
-            const detailBox = document.getElementById("detailBox");
-            if (!detailBox) return;
-            detailBox.innerHTML = `
-                <strong>${escapeHtml(title)}</strong>
-                <div style="margin-top:10px;">${escapeHtml(body || "No details available.")}</div>
-            `;
+            return targets;
         }
 
         async function sendChatCommandFromText(command, options = {}) {
-            const { silent = false, showDetailTitle = null, refresh = null } = options;
-            initializeChat();
+            const { silent = false, refresh = null, openReplyInModal = false, modalTitle = "Details" } = options;
+            initialiseChat();
 
             if (!silent) {
                 renderChatMessage("user", command);
@@ -1226,15 +1269,17 @@
                     body: JSON.stringify({ message: command })
                 });
 
+                const reply = data.reply || "No reply";
+
                 if (!silent) {
-                    renderChatMessage("ai", data.reply || "No reply");
+                    renderChatMessage("ai", reply);
                 }
 
-                if (showDetailTitle) {
-                    showDetail(showDetailTitle, data.reply || "No reply");
+                if (openReplyInModal) {
+                    openModal(modalTitle, `<div style="white-space: pre-wrap; line-height: 1.6;">${escapeHtml(reply)}</div>`);
                 }
 
-                await refreshSelectedPanels(refresh || inferRefreshTargets(command), { silent: true });
+                await refreshSections(refresh || inferRefreshTargets(command), true);
                 return data;
             } catch (error) {
                 if (!silent) {
@@ -1246,12 +1291,396 @@
 
         async function sendChatCommand(button = null) {
             const input = document.getElementById("chatInput");
-            if (!input) return;
             const message = input.value.trim();
             if (!message) return;
             input.value = "";
             input.style.height = "";
             await withButtonBusy(button || document.getElementById("chatSendButton"), () => sendChatCommandFromText(message), "Sending...");
+        }
+
+        async function refreshSections(targets = {}, silent = false) {
+            const jobs = [];
+
+            if (targets.agent) jobs.push(refreshAgentData());
+            if (targets.documents) jobs.push(refreshDocuments());
+            if (targets.files) jobs.push(refreshFiles());
+            if (targets.memory) jobs.push(refreshMemory());
+            if (targets.layout) jobs.push(loadCustomLayout());
+
+            if (!jobs.length) return;
+
+            if (!silent) {
+                setConnectionStatus("Refreshing...");
+            }
+            await Promise.all(jobs);
+            if (!silent) {
+                setConnectionStatus("Connected");
+            }
+        }
+
+        function debouncedRefreshDashboard(button = null) {
+            if (refreshDebounceTimer) {
+                clearTimeout(refreshDebounceTimer);
+            }
+            setButtonBusy(button, true, "Refreshing...");
+            refreshDebounceTimer = setTimeout(async () => {
+                try {
+                    await Promise.all([
+                        refreshAgentData(),
+                        refreshDocuments(),
+                        refreshFiles(),
+                        refreshMemory(),
+                        loadCustomLayout()
+                    ]);
+                } finally {
+                    setButtonBusy(button, false);
+                }
+            }, REFRESH_DEBOUNCE_MS);
+        }
+
+        async function refreshAgentData() {
+            await Promise.all([
+                loadTasks(),
+                loadSchedules(),
+                loadNotifications()
+            ]);
+        }
+
+        async function refreshDocuments() {
+            const container = document.getElementById("documentsList");
+            container.innerHTML = renderLoadingState("Loading documents...");
+
+            try {
+                const data = await fetchJson("/documents");
+                const documents = Array.isArray(data.documents) ? data.documents.slice(0, MAX_ITEMS) : [];
+                cachedDocuments = Array.isArray(data.documents) ? data.documents : [];
+
+                if (!documents.length) {
+                    container.innerHTML = renderEmptyState("No documents yet");
+                    return;
+                }
+
+                container.innerHTML = documents.map(doc => `
+                    <div class="list-item">
+                        <div class="item-top">
+                            <div class="item-copy">
+                                <p class="item-title">${escapeHtml(shortenText(doc.filename, 32))}</p>
+                                <div class="item-subtitle">${renderBadge(doc.classification || "unknown")}</div>
+                                <div class="item-meta">${doc.created_at ? escapeHtml(formatTimestamp(doc.created_at)) : ""}</div>
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <button class="mini-btn" aria-label="View document ${escapeHtml(doc.filename)}" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">View</button>
+                            <button class="mini-btn primary" aria-label="Summarise document ${escapeHtml(doc.filename)}" onclick="summariseDocument('${encodeURIComponent(doc.filename)}', this)">Summarise</button>
+                            <button class="mini-btn danger" aria-label="Delete document ${escapeHtml(doc.filename)}" onclick="deleteDocumentAction('${encodeURIComponent(doc.filename)}', this)">Delete</button>
+                        </div>
+                    </div>
+                `).join("");
+            } catch (error) {
+                container.innerHTML = renderErrorState(error.message || "Could not load documents.");
+            }
+        }
+
+        async function refreshFiles() {
+            const container = document.getElementById("filesList");
+            container.innerHTML = renderLoadingState("Loading files...");
+
+            try {
+                const data = await fetchJson("/files");
+                const files = Array.isArray(data.files) ? data.files.slice(0, MAX_ITEMS) : [];
+                cachedFiles = Array.isArray(data.files) ? data.files : [];
+
+                if (!files.length) {
+                    container.innerHTML = renderEmptyState("No files yet");
+                    return;
+                }
+
+                container.innerHTML = files.map(file => `
+                    <div class="list-item">
+                        <div class="item-top">
+                            <div class="item-copy">
+                                <p class="item-title">${escapeHtml(shortenText(file, 32))}</p>
+                                <div class="item-subtitle">Workspace file</div>
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <button class="mini-btn" aria-label="Read file ${escapeHtml(file)}" onclick="readFileAction('${encodeURIComponent(file)}')">Read</button>
+                            <button class="mini-btn danger" aria-label="Delete file ${escapeHtml(file)}" onclick="deleteFileAction('${encodeURIComponent(file)}', this)">Delete</button>
+                        </div>
+                    </div>
+                `).join("");
+            } catch (error) {
+                container.innerHTML = renderErrorState(error.message || "Could not load files.");
+            }
+        }
+
+        async function refreshMemory() {
+            const container = document.getElementById("memoryList");
+            container.innerHTML = renderLoadingState("Loading memory...");
+
+            try {
+                const data = await fetchJson("/memory");
+                const memory = Array.isArray(data.memory) ? data.memory.slice(-MAX_ITEMS).reverse() : [];
+
+                if (!memory.length) {
+                    container.innerHTML = renderEmptyState("No memory yet");
+                    return;
+                }
+
+                container.innerHTML = memory.map(item => {
+                    const role = String(item.role || "memory").toLowerCase();
+                    const roleClass = role === "assistant" ? "ai" : role;
+                    const roleLabel = role === "assistant" ? "AI" : role === "user" ? "User" : role === "system" ? "System" : "AI";
+                    return `
+                        <div class="memory-item">
+                            <span class="role-badge ${escapeHtml(roleClass)}">${escapeHtml(roleLabel)}</span>
+                            <div class="memory-text">${escapeHtml(shortenText(item.message || "", 120))}</div>
+                            <div class="memory-time">${escapeHtml(formatTimestamp(item.time || item.created_at))}</div>
+                        </div>
+                    `;
+                }).join("");
+            } catch (error) {
+                container.innerHTML = renderErrorState(error.message || "Could not load memory.");
+            }
+        }
+
+        async function loadTasks() {
+            const container = document.getElementById("tasksList");
+            container.innerHTML = renderLoadingState("Loading tasks...");
+
+            try {
+                const data = await fetchJson("/agent-tasks");
+                const tasks = Array.isArray(data.tasks) ? data.tasks.slice(0, MAX_ITEMS) : [];
+                cachedTasks = tasks;
+
+                if (!tasks.length) {
+                    container.innerHTML = renderEmptyState("No tasks yet");
+                    return;
+                }
+
+                container.innerHTML = tasks.map(task => {
+                    const status = getStatusLabel(task.status);
+                    const shortGoal = shortenText(task.goal || "Untitled task", 40);
+                    const displayTitle = status.normalized === "waiting_approval"
+                        ? `Task waiting approval - ${shortGoal}`
+                        : `Task - ${shortGoal}`;
+
+                    return `
+                        <div class="list-item">
+                            <div class="item-top">
+                                <div class="item-copy">
+                                    <p class="item-title">${escapeHtml(displayTitle)}</p>
+                                    <div class="item-subtitle">${renderBadge(task.status)}</div>
+                                    <div class="item-meta">Task ${escapeHtml(task.id)}</div>
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="mini-btn" aria-label="View task ${escapeHtml(task.id)} details" onclick="viewTaskDetails(${task.id})">View</button>
+                                ${status.normalized === "waiting_approval" ? `<button class="mini-btn primary" aria-label="Approve task ${escapeHtml(task.id)}" onclick="approveAgentTask(${task.id}, this)">Approve</button>` : ""}
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            } catch (error) {
+                container.innerHTML = renderErrorState(error.message || "Could not load tasks.");
+            }
+        }
+
+        async function loadSchedules() {
+            const container = document.getElementById("schedulesList");
+            container.innerHTML = renderLoadingState("Loading schedules...");
+
+            try {
+                const data = await fetchJson("/agent-schedules");
+                const schedules = Array.isArray(data.schedules) ? data.schedules.slice(0, MAX_ITEMS) : [];
+                cachedSchedules = schedules;
+
+                if (!schedules.length) {
+                    container.innerHTML = renderEmptyState("No schedules yet");
+                    return;
+                }
+
+                container.innerHTML = schedules.map(schedule => `
+                    <div class="list-item">
+                        <div class="item-top">
+                            <div class="item-copy">
+                                <p class="item-title">${escapeHtml(shortenText(`${schedule.frequency || "schedule"} - ${schedule.goal || ""}`, 40))}</p>
+                                <div class="item-subtitle">${renderBadge(schedule.enabled ? "enabled" : "disabled")}</div>
+                                <div class="item-meta">Schedule ${escapeHtml(schedule.id)}</div>
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <button class="mini-btn" aria-label="Run schedule ${escapeHtml(schedule.id)} now" onclick="runScheduleFromDashboard(${schedule.id}, this)">Run Now</button>
+                            ${schedule.enabled ? `<button class="mini-btn danger" aria-label="Disable schedule ${escapeHtml(schedule.id)}" onclick="disableScheduleFromDashboard(${schedule.id}, this)">Disable</button>` : ""}
+                        </div>
+                    </div>
+                `).join("");
+            } catch (error) {
+                container.innerHTML = renderErrorState(error.message || "Could not load schedules.");
+            }
+        }
+
+        async function loadNotifications() {
+            const container = document.getElementById("notificationsList");
+            container.innerHTML = renderLoadingState("Loading notifications...");
+
+            try {
+                const data = await fetchJson("/notifications");
+                const notifications = Array.isArray(data.notifications) ? data.notifications.slice(0, MAX_ITEMS) : [];
+                cachedNotifications = Array.isArray(data.notifications) ? data.notifications : [];
+
+                const unreadCount = cachedNotifications.filter(item => !item.read).length;
+                document.getElementById("notificationSummaryBadge").textContent = `${unreadCount} unread`;
+                document.getElementById("notificationSummaryBadge").className = `badge ${unreadCount ? "unread" : "completed"}`;
+
+                if (!notifications.length) {
+                    container.innerHTML = renderEmptyState("No notifications");
+                    return;
+                }
+
+                container.innerHTML = notifications.map(item => `
+                    <div class="list-item">
+                        <div class="item-top">
+                            <div class="item-copy">
+                                <p class="item-title">${escapeHtml(shortenText(item.title || "Notification", 38))}</p>
+                                <div class="item-subtitle">${renderBadge(item.read ? "completed" : "unread")}</div>
+                                <div class="item-meta">${escapeHtml(formatTimestamp(item.created_at))}</div>
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <button class="mini-btn" aria-label="View notification ${escapeHtml(item.id)}" onclick="viewNotification(${item.id}, '${encodeURIComponent(item.title || "Notification")}', '${encodeURIComponent(item.message || "")}', ${item.read ? "true" : "false"})">View</button>
+                            ${!item.read ? `<button class="mini-btn primary" aria-label="Mark notification ${escapeHtml(item.id)} as read" onclick="markNotificationReadFromDashboard(${item.id}, this)">Mark Read</button>` : ""}
+                        </div>
+                    </div>
+                `).join("");
+            } catch (error) {
+                document.getElementById("notificationSummaryBadge").textContent = "0 unread";
+                document.getElementById("notificationSummaryBadge").className = "badge";
+                container.innerHTML = renderErrorState(error.message || "Could not load notifications.");
+            }
+        }
+
+        async function viewTaskDetails(id) {
+            try {
+                const data = await fetchJson(`/agent-task/${id}`);
+                const task = data.task;
+                openModal(
+                    "Task Details",
+                    `
+                        <div style="display:grid; gap:14px;">
+                            <div><strong>Goal</strong><div style="margin-top:6px; color: var(--muted);">${escapeHtml(task.goal || "No goal")}</div></div>
+                            <div><strong>Status</strong><div style="margin-top:6px;">${renderBadge(task.status)}</div></div>
+                            <div><strong>Task ID</strong><div style="margin-top:6px; color: var(--muted);">Task ${escapeHtml(task.id)}</div></div>
+                            <div><strong>Result</strong><div style="margin-top:6px; color: var(--muted); white-space: pre-wrap;">${escapeHtml(task.result || "No result yet")}</div></div>
+                            <div><strong>Plan</strong><div style="margin-top:6px; color: var(--muted); white-space: pre-wrap;">${escapeHtml(task.plan || "No plan saved.")}</div></div>
+                        </div>
+                    `
+                );
+            } catch (error) {
+                openModal("Task Details", `<div class="error-state">${escapeHtml(error.message || "Could not load task.")}</div>`);
+            }
+        }
+
+        async function approveAgentTask(id, button = null) {
+            const badge = button?.closest(".list-item")?.querySelector(".badge");
+            if (badge) {
+                badge.outerHTML = renderBadge("running");
+            }
+            await withButtonBusy(button, () => sendChatCommandFromText(`approve task ${id}`, { refresh: { agent: true } }), "Approving...");
+        }
+
+        async function runScheduleFromDashboard(id, button = null) {
+            await withButtonBusy(button, () => sendChatCommandFromText(`run schedule ${id}`, { refresh: { agent: true } }), "Running...");
+        }
+
+        async function disableScheduleFromDashboard(id, button = null) {
+            await withButtonBusy(button, () => sendChatCommandFromText(`disable schedule ${id}`, { refresh: { agent: true } }), "Disabling...");
+        }
+
+        async function markNotificationReadFromDashboard(id, button = null) {
+            await withButtonBusy(button, async () => {
+                await fetchJson(`/notifications/${id}/read`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                });
+                await refreshAgentData();
+            }, "Saving...");
+        }
+
+        async function viewNotification(id, encodedTitle, encodedMessage, isRead) {
+            openModal(
+                decodeURIComponent(encodedTitle || "Notification"),
+                `<div style="white-space: pre-wrap; line-height: 1.6;">${escapeHtml(decodeURIComponent(encodedMessage || "No details available."))}</div>`
+            );
+
+            if (!isRead) {
+                try {
+                    await fetchJson(`/notifications/${id}/read`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" }
+                    });
+                    await loadNotifications();
+                } catch (error) {
+                    renderChatMessage("system", error.message || "Could not mark notification as read.");
+                }
+            }
+        }
+
+        async function viewDocument(encodedFilename) {
+            const filename = decodeURIComponent(encodedFilename);
+            const data = await sendChatCommandFromText(`show document ${filename}`, {
+                silent: true,
+                openReplyInModal: true,
+                modalTitle: `Document - ${filename}`
+            });
+            return data;
+        }
+
+        async function summariseDocument(encodedFilename, button = null) {
+            const filename = decodeURIComponent(encodedFilename);
+            await withButtonBusy(button, () => sendChatCommandFromText(`summarise file ${filename}`, { refresh: { documents: true, agent: true } }), "Summarising...");
+        }
+
+        async function deleteDocumentAction(encodedFilename, button = null) {
+            const filename = decodeURIComponent(encodedFilename);
+            if (!window.confirm(`Delete document "${filename}"?`)) {
+                return;
+            }
+            await withButtonBusy(button, () => sendChatCommandFromText(`delete document ${filename}`, { refresh: { documents: true, agent: true } }), "Deleting...");
+        }
+
+        async function readFileAction(encodedFilename) {
+            const filename = decodeURIComponent(encodedFilename);
+            await sendChatCommandFromText(`read file ${filename}`, {
+                silent: true,
+                openReplyInModal: true,
+                modalTitle: `File - ${filename}`
+            });
+        }
+
+        async function deleteFileAction(encodedFilename, button = null) {
+            const filename = decodeURIComponent(encodedFilename);
+            if (!window.confirm(`Delete file "${filename}"?`)) {
+                return;
+            }
+            await withButtonBusy(button, () => sendChatCommandFromText(`delete file ${filename}`, { refresh: { files: true, agent: true } }), "Deleting...");
+        }
+
+        async function runSchedulesNowFromDashboard(button = null) {
+            initialiseChat();
+            renderChatMessage("user", "run schedules now");
+
+            await withButtonBusy(button, async () => {
+                const data = await fetchJson("/run-schedules-now", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                });
+                const summary = Array.isArray(data.summary) && data.summary.length
+                    ? data.summary.join("\n")
+                    : "No enabled schedules are due right now.";
+                renderChatMessage("ai", summary);
+                await refreshAgentData();
+            }, "Running...");
         }
 
         function openEditor() {
@@ -1262,449 +1691,56 @@
         function clearAutopilot() {
             document.getElementById("autopilotInput").value = "";
             document.getElementById("autopilotResult").textContent = "Ready.";
-            document.getElementById("autopilotResultCard").open = true;
+            document.getElementById("autopilotResultPanel").open = false;
         }
 
         async function previewCloudAutopilot(button = null) {
             const input = document.getElementById("autopilotInput");
-            const resultBox = document.getElementById("autopilotResult");
+            const result = document.getElementById("autopilotResult");
+            const panel = document.getElementById("autopilotResultPanel");
             const requirements = input.value.trim();
 
             if (!requirements) {
-                resultBox.textContent = "Please enter instructions.";
+                result.textContent = "Please enter instructions.";
+                panel.open = true;
                 return;
             }
 
-            resultBox.textContent = "Creating preview...";
-            document.getElementById("autopilotResultCard").open = true;
+            result.textContent = "Creating preview...";
+            panel.open = true;
 
-            try {
-                const data = await withButtonBusy(button, () => fetchJson("/cloud-autopilot/preview", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ requirements })
-                }), "Previewing...");
-
-                resultBox.textContent = `${data.summary || "Preview ready."}${Array.isArray(data.changedFiles) && data.changedFiles.length ? `\n\nFiles:\n- ${data.changedFiles.join("\n- ")}` : ""}`;
-                showDetail("Cloud Autopilot Preview", resultBox.textContent);
-            } catch (error) {
-                resultBox.textContent = error.message || "Preview failed.";
-            }
+            await withButtonBusy(button, async () => {
+                try {
+                    const data = await fetchJson("/cloud-autopilot/preview", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ requirements })
+                    });
+                    result.textContent = `${data.summary || "Preview ready."}${Array.isArray(data.changedFiles) && data.changedFiles.length ? `\n\nFiles:\n- ${data.changedFiles.join("\n- ")}` : ""}`;
+                } catch (error) {
+                    result.textContent = error.message || "Preview failed.";
+                }
+            }, "Previewing...");
         }
 
         async function applyCloudAutopilot(button = null) {
-            const resultBox = document.getElementById("autopilotResult");
-            resultBox.textContent = "Applying preview...";
-            document.getElementById("autopilotResultCard").open = true;
+            const result = document.getElementById("autopilotResult");
+            const panel = document.getElementById("autopilotResultPanel");
+            result.textContent = "Applying preview...";
+            panel.open = true;
 
-            try {
-                const data = await withButtonBusy(button, () => fetchJson("/cloud-autopilot/apply", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" }
-                }), "Applying...");
-
-                resultBox.textContent = `${data.summary || "Applied."}${Array.isArray(data.changedFiles) && data.changedFiles.length ? `\n\nFiles:\n- ${data.changedFiles.join("\n- ")}` : ""}`;
-                showDetail("Cloud Autopilot Apply", resultBox.textContent);
-                await refreshSelectedPanels({ notifications: true, files: true, documents: true, layout: true }, { silent: true });
-            } catch (error) {
-                resultBox.textContent = error.message || "Apply failed.";
-            }
-        }
-
-        async function viewAgentTask(id) {
-            try {
-                const data = await fetchJson(`/agent-task/${id}`);
-                const task = data.task;
-                showDetail(
-                    `Task ${task.id}`,
-                    `Goal: ${task.goal}\nStatus: ${task.status}\nResult: ${task.result || "No result yet"}\n\nPlan:\n${task.plan || "No plan saved."}`
-                );
-            } catch (error) {
-                showDetail("Task", error.message || "Could not load task.");
-            }
-        }
-
-        async function approveAgentTask(id, button = null) {
-            const taskBadge = button?.closest(".list-item")?.querySelector(".badge");
-            if (taskBadge) {
-                taskBadge.outerHTML = renderBadge("running");
-            }
-            await withButtonBusy(button, () => sendChatCommandFromText(`approve task ${id}`, {
-                showDetailTitle: `Approve Task ${id}`
-            }), "Approving...");
-        }
-
-        async function runScheduleFromDashboard(id, button = null) {
-            await withButtonBusy(button, () => sendChatCommandFromText(`run schedule ${id}`, {
-                showDetailTitle: `Run Schedule ${id}`
-            }), "Running...");
-        }
-
-        async function disableScheduleFromDashboard(id, button = null) {
-            await withButtonBusy(button, () => sendChatCommandFromText(`disable schedule ${id}`, {
-                showDetailTitle: `Disable Schedule ${id}`
-            }), "Disabling...");
-        }
-
-        async function markNotificationReadFromDashboard(id, button = null) {
-            try {
-                await withButtonBusy(button, () => fetchJson(`/notifications/${id}/read`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" }
-                }), "Saving...");
-                await refreshSelectedPanels({ notifications: true }, { silent: true });
-            } catch (error) {
-                showDetail("Notification", error.message || "Could not mark notification as read.");
-            }
-        }
-
-        async function viewNotification(id, encodedTitle, encodedMessage, isRead) {
-            showDetail(
-                decodeURIComponent(encodedTitle || "Notification"),
-                decodeURIComponent(encodedMessage || "No details available.")
-            );
-            if (!isRead) {
-                await markNotificationReadFromDashboard(id);
-            }
-        }
-
-        async function viewDocument(encodedFilename) {
-            const filename = decodeURIComponent(encodedFilename);
-            return sendChatCommandFromText(`show document ${filename}`, {
-                showDetailTitle: `Document ${filename}`
-            });
-        }
-
-        async function summariseDocument(encodedFilename, button = null) {
-            const filename = decodeURIComponent(encodedFilename);
-            await withButtonBusy(button, () => sendChatCommandFromText(`summarise file ${filename}`, {
-                showDetailTitle: `Summary ${filename}`
-            }), "Summarising...");
-        }
-
-        async function deleteDocumentAction(encodedFilename, button = null) {
-            const filename = decodeURIComponent(encodedFilename);
-            await withButtonBusy(button, () => sendChatCommandFromText(`delete document ${filename}`, {
-                showDetailTitle: `Delete Document ${filename}`
-            }), "Deleting...");
-        }
-
-        async function readFileAction(encodedFilename) {
-            const filename = decodeURIComponent(encodedFilename);
-            await sendChatCommandFromText(`read file ${filename}`, {
-                showDetailTitle: `File ${filename}`
-            });
-        }
-
-        async function deleteFileAction(encodedFilename, button = null) {
-            const filename = decodeURIComponent(encodedFilename);
-            await withButtonBusy(button, () => sendChatCommandFromText(`delete file ${filename}`, {
-                showDetailTitle: `Delete File ${filename}`
-            }), "Deleting...");
-        }
-
-        async function runSchedulesNowFromDashboard(button = null) {
-            initializeChat();
-            renderChatMessage("user", "run schedules now");
-
-            try {
-                const data = await withButtonBusy(button, () => fetchJson("/run-schedules-now", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" }
-                }), "Running...");
-                const summary = Array.isArray(data.summary) && data.summary.length
-                    ? data.summary.join("\n")
-                    : "No enabled schedules are due right now.";
-                renderChatMessage("ai", summary);
-                showDetail("Run Schedules", summary);
-                await refreshSelectedPanels({ tasks: true, schedules: true, notifications: true }, { silent: true });
-            } catch (error) {
-                renderChatMessage("ai", error.message || "Could not run schedules.");
-            }
-        }
-
-        function debouncedRefreshAllData(button = null) {
-            if (refreshDebounceTimer) {
-                window.clearTimeout(refreshDebounceTimer);
-            }
-            setButtonBusy(button, true, "Refreshing...");
-            refreshDebounceTimer = window.setTimeout(async () => {
+            await withButtonBusy(button, async () => {
                 try {
-                    await refreshAllData(false);
-                } finally {
-                    setButtonBusy(button, false);
+                    const data = await fetchJson("/cloud-autopilot/apply", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" }
+                    });
+                    result.textContent = `${data.summary || "Applied."}${Array.isArray(data.changedFiles) && data.changedFiles.length ? `\n\nFiles:\n- ${data.changedFiles.join("\n- ")}` : ""}`;
+                    await refreshSections({ documents: true, files: true, agent: true, layout: true }, true);
+                } catch (error) {
+                    result.textContent = error.message || "Apply failed.";
                 }
-            }, REFRESH_DEBOUNCE_MS);
-        }
-
-        async function refreshAllData(silent = false) {
-            if (!silent) {
-                setStatus("Refreshing...");
-            }
-            await Promise.all([
-                refreshAgentPanels({ force: true }),
-                loadDocumentsPanel({ force: true }),
-                loadFilesPanel({ force: true }),
-                loadMemoryPanel({ force: true }),
-                loadCustomLayout()
-            ]);
-            if (!silent) {
-                setStatus("Connected");
-            }
-        }
-
-        async function refreshAgentPanels(options = {}) {
-            await Promise.all([
-                loadTasksPanel(options),
-                loadSchedulesPanel(options),
-                loadNotificationsPanel(options)
-            ]);
-        }
-
-        async function loadTasksPanel(options = {}) {
-            const panel = document.getElementById("tasksPanel");
-            if (!options.preserveState) {
-                panel.innerHTML = renderCardState("loading", "Loading tasks...");
-            }
-
-            try {
-                const tasks = await fetchTasks();
-                const signature = JSON.stringify(tasks.map(task => [task.id, task.goal, task.status, task.result || ""]));
-
-                if (!tasks.length) {
-                    setPanelIfChanged("tasksPanel", renderCardState("empty-state", "No tasks yet"), "empty");
-                    return;
-                }
-
-                const html = tasks.map(task => renderListItem({
-                    title: `${escapeHtml("Task")} · ${escapeHtml(shortenText(task.goal || `#${task.id}`, 34))}`,
-                    subtitle: `<span class="muted">#${escapeHtml(task.id)}</span>`,
-                    badge: getStatusBadge(task.status),
-                    detail: escapeHtml(`Goal: ${task.goal || "No goal"}\nStatus: ${task.status || "unknown"}\nResult: ${task.result || "No result yet"}`),
-                    actions: `
-                        <button class="mini-button" aria-label="View details for task ${task.id}" onclick="viewAgentTask(${task.id})">View Details</button>
-                        ${task.status === "waiting_approval" ? `<button class="mini-button primary" aria-label="Approve task ${task.id}" onclick="approveAgentTask(${task.id}, this)">Approve</button>` : ""}
-                    `
-                })).join("");
-
-                setPanelIfChanged("tasksPanel", html, signature);
-            } catch (error) {
-                setPanelIfChanged("tasksPanel", renderCardState("error", error.message || "Could not load tasks."), `error:${error.message}`);
-            }
-        }
-
-        async function loadSchedulesPanel(options = {}) {
-            const panel = document.getElementById("schedulesPanel");
-            if (!options.preserveState) {
-                panel.innerHTML = renderCardState("loading", "Loading schedules...");
-            }
-
-            try {
-                const schedules = await fetchSchedules();
-                const signature = JSON.stringify(schedules.map(schedule => [schedule.id, schedule.goal, schedule.frequency, schedule.enabled]));
-
-                if (!schedules.length) {
-                    setPanelIfChanged("schedulesPanel", renderCardState("empty-state", "No schedules yet"), "empty");
-                    return;
-                }
-
-                const html = schedules.map(schedule => renderListItem({
-                    title: escapeHtml(shortenText(`${schedule.frequency || "schedule"} - ${schedule.goal || ""}`, 46)),
-                    subtitle: `<span class="muted">#${escapeHtml(schedule.id)}</span>`,
-                    badge: getStatusBadge(schedule.enabled ? "enabled" : "disabled"),
-                    actions: `
-                        <button class="mini-button" aria-label="Run schedule ${schedule.id} now" onclick="runScheduleFromDashboard(${schedule.id}, this)">Run Now</button>
-                        ${schedule.enabled ? `<button class="mini-button danger" aria-label="Disable schedule ${schedule.id}" onclick="disableScheduleFromDashboard(${schedule.id}, this)">Disable</button>` : ""}
-                    `
-                })).join("");
-
-                setPanelIfChanged("schedulesPanel", html, signature);
-            } catch (error) {
-                setPanelIfChanged("schedulesPanel", renderCardState("error", error.message || "Could not load schedules."), `error:${error.message}`);
-            }
-        }
-
-        async function loadNotificationsPanel(options = {}) {
-            const panel = document.getElementById("notificationsPanel");
-            const badge = document.getElementById("notificationBadge");
-            if (!options.preserveState) {
-                panel.innerHTML = renderCardState("loading", "Loading notifications...");
-            }
-
-            try {
-                const { notifications, unreadCount } = await fetchNotifications();
-                const signature = JSON.stringify([unreadCount, notifications.map(item => [item.id, item.title, item.read, item.created_at])]);
-
-                badge.textContent = `${unreadCount} unread`;
-                badge.className = `badge ${unreadCount ? "unread" : "completed"}`;
-
-                if (!notifications.length) {
-                    setPanelIfChanged("notificationsPanel", renderCardState("empty-state", "No notifications"), "empty");
-                    return;
-                }
-
-                const html = notifications.map(item => renderListItem({
-                    title: escapeHtml(shortenText(item.title || "Notification", 42)),
-                    subtitle: escapeHtml(shortenText(item.message || "", 78)),
-                    badge: getStatusBadge(item.read ? "completed" : "unread"),
-                    timestamp: escapeHtml(formatTimestamp(item.created_at)),
-                    detail: escapeHtml(item.message || "No details available."),
-                    classes: item.read ? "" : "unread-highlight",
-                    actions: `
-                        <button class="mini-button" aria-label="View details for notification ${item.id}" onclick="viewNotification(${item.id}, '${encodeURIComponent(item.title || "Notification")}', '${encodeURIComponent(item.message || "")}', ${item.read ? "true" : "false"})">View Details</button>
-                        ${!item.read ? `<button class="mini-button primary" aria-label="Mark notification ${item.id} as read" onclick="markNotificationReadFromDashboard(${item.id}, this)">Mark Read</button>` : ""}
-                    `
-                })).join("");
-
-                setPanelIfChanged("notificationsPanel", html, signature);
-            } catch (error) {
-                badge.textContent = "0 unread";
-                badge.className = "badge";
-                setPanelIfChanged("notificationsPanel", renderCardState("error", error.message || "Could not load notifications."), `error:${error.message}`);
-            }
-        }
-
-        async function loadDocumentsPanel(options = {}) {
-            const panel = document.getElementById("documentsPanel");
-            if (!options.preserveState) {
-                panel.innerHTML = renderCardState("loading", "Loading documents...");
-            }
-
-            try {
-                const data = await fetchJson("/documents");
-                const documents = Array.isArray(data.documents) ? data.documents.slice(0, MAX_LIST_ITEMS) : [];
-                cachedDocuments = Array.isArray(data.documents) ? data.documents : [];
-                const signature = JSON.stringify(documents.map(doc => [doc.filename, doc.classification, doc.created_at, doc.summary || ""]));
-
-                if (!documents.length) {
-                    setPanelIfChanged("documentsPanel", renderCardState("empty-state", "No documents"), "empty");
-                    return;
-                }
-
-                const html = documents.map(doc => renderSimpleItem({
-                    title: doc.filename,
-                    subtitle: `${getStatusBadge(doc.classification || "unknown")} ${doc.created_at ? `<span class="timestamp">${escapeHtml(formatTimestamp(doc.created_at))}</span>` : ""}`,
-                    actions: `
-                        <button class="mini-button" aria-label="View details for document ${escapeHtml(doc.filename)}" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">View Details</button>
-                        <button class="mini-button" aria-label="Summarise document ${escapeHtml(doc.filename)}" onclick="summariseDocument('${encodeURIComponent(doc.filename)}', this)">Summarise</button>
-                        <button class="mini-button danger" aria-label="Delete document ${escapeHtml(doc.filename)}" onclick="deleteDocumentAction('${encodeURIComponent(doc.filename)}', this)">Delete</button>
-                    `
-                })).join("");
-
-                setPanelIfChanged("documentsPanel", html, signature);
-            } catch (error) {
-                setPanelIfChanged("documentsPanel", renderCardState("error", error.message || "Could not load documents."), `error:${error.message}`);
-            }
-        }
-
-        async function loadFilesPanel(options = {}) {
-            const panel = document.getElementById("filesPanel");
-            if (!options.preserveState) {
-                panel.innerHTML = renderCardState("loading", "Loading files...");
-            }
-
-            try {
-                const data = await fetchJson("/files");
-                const files = Array.isArray(data.files) ? data.files.slice(0, MAX_LIST_ITEMS) : [];
-                cachedFiles = Array.isArray(data.files) ? data.files : [];
-                const signature = JSON.stringify(files);
-
-                if (!files.length) {
-                    setPanelIfChanged("filesPanel", renderCardState("empty-state", "No files"), "empty");
-                    return;
-                }
-
-                const html = files.map(file => renderSimpleItem({
-                    title: file,
-                    subtitle: "Workspace file",
-                    actions: `
-                        <button class="mini-button" aria-label="Read file ${escapeHtml(file)}" onclick="readFileAction('${encodeURIComponent(file)}')">Read</button>
-                        <button class="mini-button danger" aria-label="Delete file ${escapeHtml(file)}" onclick="deleteFileAction('${encodeURIComponent(file)}', this)">Delete</button>
-                    `
-                })).join("");
-
-                setPanelIfChanged("filesPanel", html, signature);
-            } catch (error) {
-                setPanelIfChanged("filesPanel", renderCardState("error", error.message || "Could not load files."), `error:${error.message}`);
-            }
-        }
-
-        async function loadMemoryPanel(options = {}) {
-            const panel = document.getElementById("memoryPanel");
-            if (!options.preserveState) {
-                panel.innerHTML = renderCardState("loading", "Loading memory...");
-            }
-
-            try {
-                const data = await fetchJson("/memory");
-                const memory = Array.isArray(data.memory) ? data.memory.slice(-MAX_LIST_ITEMS).reverse() : [];
-                const signature = JSON.stringify(memory.map(item => [item.role, item.message, item.time || item.created_at]));
-
-                if (!memory.length) {
-                    setPanelIfChanged("memoryPanel", renderCardState("empty-state", "No memory yet"), "empty");
-                    return;
-                }
-
-                const html = memory.map(item => `
-                    <div class="memory-entry">
-                        <div class="memory-role">${escapeHtml(item.role || "memory")}</div>
-                        <div class="memory-text">${escapeHtml(shortenText(item.message || "", 140))}</div>
-                        <div class="memory-time">${escapeHtml(formatTimestamp(item.time || item.created_at))}</div>
-                    </div>
-                `).join("");
-
-                setPanelIfChanged("memoryPanel", html, signature);
-            } catch (error) {
-                setPanelIfChanged("memoryPanel", renderCardState("error", error.message || "Could not load memory."), `error:${error.message}`);
-            }
-        }
-
-        function openNotificationsPanel() {
-            const panel = document.getElementById("notificationsPanel");
-            if (panel) {
-                panel.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-        }
-
-        function renderSearchResults(files, docs, term) {
-            const results = document.getElementById("searchResults");
-            if (!files.length && !docs.length) {
-                results.innerHTML = `<span class="empty-state">No results for "${escapeHtml(term)}".</span>`;
-                return;
-            }
-
-            const parts = [];
-            if (files.length) {
-                parts.push(`
-                    <div><strong>Files</strong><br>${files.map(file => `<button class="mini-button" onclick="readFileAction('${encodeURIComponent(file)}')">${escapeHtml(shortenText(file, 30))}</button>`).join(" ")}</div>
-                `);
-            }
-            if (docs.length) {
-                parts.push(`
-                    <div style="margin-top:8px;"><strong>Documents</strong><br>${docs.map(doc => `<button class="mini-button" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">${escapeHtml(shortenText(doc.filename, 30))}</button>`).join(" ")}</div>
-                `);
-            }
-            results.innerHTML = parts.join("");
-        }
-
-        function runGlobalSearch() {
-            const input = document.getElementById("globalSearchInput");
-            const term = input.value.trim().toLowerCase();
-
-            if (!term) {
-                document.getElementById("searchResults").textContent = "Type a query to search recent files and documents.";
-                return;
-            }
-
-            const matchedFiles = cachedFiles.filter(file => file.toLowerCase().includes(term));
-            const matchedDocs = cachedDocuments.filter(doc => {
-                const filename = String(doc.filename || "").toLowerCase();
-                const classification = String(doc.classification || "").toLowerCase();
-                const summary = String(doc.summary || "").toLowerCase();
-                return filename.includes(term) || classification.includes(term) || summary.includes(term);
-            });
-
-            renderSearchResults(matchedFiles.slice(0, 5), matchedDocs.slice(0, 5), term);
+            }, "Applying...");
         }
 
         async function populateFilesWidgets(root) {
@@ -1713,23 +1749,20 @@
 
             try {
                 const data = await fetchJson("/files");
-                const items = Array.isArray(data.files) ? data.files : [];
-
+                const files = Array.isArray(data.files) ? data.files.slice(0, 4) : [];
                 widgets.forEach(widget => {
-                    widget.innerHTML = items.length
-                        ? items.map(file => `
-                            <div class="simple-item">
-                                <div class="simple-item-copy"><strong>${escapeHtml(shortenText(file, 26))}</strong></div>
-                                <div class="item-actions">
-                                    <button class="mini-button" onclick="readFileAction('${encodeURIComponent(file)}')">Read</button>
-                                </div>
+                    widget.innerHTML = files.length ? files.map(file => `
+                        <div class="list-item" style="margin-bottom:10px;">
+                            <div class="item-title">${escapeHtml(shortenText(file, 26))}</div>
+                            <div class="item-actions" style="margin-top:10px;">
+                                <button class="mini-btn" onclick="readFileAction('${encodeURIComponent(file)}')">Read</button>
                             </div>
-                        `).join("")
-                        : `<div class="empty-state">No files found.</div>`;
+                        </div>
+                    `).join("") : renderEmptyState("No files yet");
                 });
             } catch (error) {
                 widgets.forEach(widget => {
-                    widget.innerHTML = `<div class="error">${escapeHtml(error.message || "Could not load files.")}</div>`;
+                    widget.innerHTML = renderErrorState(error.message || "Could not load files.");
                 });
             }
         }
@@ -1740,26 +1773,21 @@
 
             try {
                 const data = await fetchJson("/documents");
-                const documents = Array.isArray(data.documents) ? data.documents : [];
-
+                const documents = Array.isArray(data.documents) ? data.documents.slice(0, 4) : [];
                 widgets.forEach(widget => {
-                    widget.innerHTML = documents.length
-                        ? documents.map(doc => `
-                            <div class="simple-item">
-                                <div class="simple-item-copy">
-                                    <strong>${escapeHtml(shortenText(doc.filename, 26))}</strong>
-                                    <span>${escapeHtml(doc.classification || "unknown")}</span>
-                                </div>
-                                <div class="item-actions">
-                                    <button class="mini-button" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">View Details</button>
-                                </div>
+                    widget.innerHTML = documents.length ? documents.map(doc => `
+                        <div class="list-item" style="margin-bottom:10px;">
+                            <div class="item-title">${escapeHtml(shortenText(doc.filename, 26))}</div>
+                            <div class="item-subtitle">${escapeHtml(doc.classification || "unknown")}</div>
+                            <div class="item-actions" style="margin-top:10px;">
+                                <button class="mini-btn" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">View</button>
                             </div>
-                        `).join("")
-                        : `<div class="empty-state">No documents found.</div>`;
+                        </div>
+                    `).join("") : renderEmptyState("No documents yet");
                 });
             } catch (error) {
                 widgets.forEach(widget => {
-                    widget.innerHTML = `<div class="error">${escapeHtml(error.message || "Could not load documents.")}</div>`;
+                    widget.innerHTML = renderErrorState(error.message || "Could not load documents.");
                 });
             }
         }
@@ -1771,40 +1799,36 @@
             try {
                 const data = await fetchJson("/memory");
                 const memory = Array.isArray(data.memory) ? data.memory.slice(-4).reverse() : [];
-
                 widgets.forEach(widget => {
-                    widget.innerHTML = memory.length
-                        ? memory.map(item => `
-                            <div class="memory-entry">
-                                <div class="memory-role">${escapeHtml(item.role || "memory")}</div>
-                                <div class="memory-text">${escapeHtml(shortenText(item.message || "", 100))}</div>
-                            </div>
-                        `).join("")
-                        : `<div class="empty-state">No memory found.</div>`;
+                    widget.innerHTML = memory.length ? memory.map(item => `
+                        <div class="memory-item" style="margin-bottom:10px;">
+                            <span class="role-badge ${escapeHtml((item.role || "assistant").toLowerCase())}">${escapeHtml(item.role || "AI")}</span>
+                            <div class="memory-text">${escapeHtml(shortenText(item.message || "", 90))}</div>
+                        </div>
+                    `).join("") : renderEmptyState("No memory yet");
                 });
             } catch (error) {
                 widgets.forEach(widget => {
-                    widget.innerHTML = `<div class="error">${escapeHtml(error.message || "Could not load memory.")}</div>`;
+                    widget.innerHTML = renderErrorState(error.message || "Could not load memory.");
                 });
             }
         }
 
         async function attachChatWidgetHandlers(root) {
             const widgets = root.querySelectorAll('[data-widget="chat"]');
-
             widgets.forEach((widget, index) => {
                 if (widget.dataset.bound === "true") return;
                 widget.dataset.bound = "true";
                 widget.innerHTML = `
-                    <div class="card-header">
+                    <div class="card-head" style="margin-bottom:12px;">
                         <div>
                             <h3 class="card-title" style="font-size:16px;">Chat Widget</h3>
                         </div>
                     </div>
-                    <div id="widgetChatBox${index}" class="detail-box" style="min-height:120px;">Ready.</div>
-                    <div class="chat-input-row" style="margin-top:12px;">
-                        <input id="widgetChatInput${index}" type="text" placeholder="Type here..." />
-                        <button class="button secondary" id="widgetChatButton${index}">Send</button>
+                    <div id="widgetChatBox${index}" class="workspace-box" style="min-height:120px; white-space:pre-wrap;">Ready.</div>
+                    <div class="chat-input-wrap" style="margin-top:12px;">
+                        <textarea id="widgetChatInput${index}" style="min-height:56px;" placeholder="Type here..."></textarea>
+                        <button class="btn" id="widgetChatButton${index}">Send</button>
                     </div>
                 `;
 
@@ -1828,7 +1852,7 @@
 
                 button.addEventListener("click", sendWidgetMessage);
                 input.addEventListener("keydown", event => {
-                    if (event.key === "Enter") {
+                    if (event.key === "Enter" && !event.shiftKey) {
                         event.preventDefault();
                         sendWidgetMessage();
                     }
@@ -1839,27 +1863,23 @@
         async function hydrateCustomLayout() {
             const root = document.getElementById("customLayout");
             if (!root) return;
-
             await Promise.all([
                 populateFilesWidgets(root),
                 populateDocumentsWidgets(root),
-                populateMemoryWidgets(root)
+                populateMemoryWidgets(root),
+                attachChatWidgetHandlers(root)
             ]);
-
-            await attachChatWidgetHandlers(root);
         }
 
         async function loadCustomLayout() {
-            const box = document.getElementById("customLayout");
-            if (!box) return;
-
-            box.innerHTML = renderCardState("loading", "Loading saved layout...");
+            const container = document.getElementById("customLayout");
+            container.innerHTML = renderLoadingState("Loading saved layout...");
 
             try {
                 const data = await fetchJson("/load-layout");
 
                 if (!data.html || !data.html.trim()) {
-                    box.innerHTML = renderCardState("empty-state", "No saved layout yet.");
+                    container.innerHTML = renderEmptyState("No saved layout yet");
                     return;
                 }
 
@@ -1871,10 +1891,10 @@
                 style.textContent = data.css || "";
                 document.head.appendChild(style);
 
-                box.innerHTML = data.html;
+                container.innerHTML = data.html;
                 await hydrateCustomLayout();
             } catch (error) {
-                box.innerHTML = renderCardState("error", error.message || "Could not load saved layout.");
+                container.innerHTML = renderErrorState(error.message || "Could not load saved layout.");
             }
         }
 
@@ -1887,24 +1907,30 @@
 
         document.getElementById("chatInput").addEventListener("input", event => {
             event.target.style.height = "";
-            event.target.style.height = `${Math.min(event.target.scrollHeight, 160)}px`;
+            event.target.style.height = `${Math.min(event.target.scrollHeight, 180)}px`;
         });
 
-        document.getElementById("globalSearchInput").addEventListener("keydown", event => {
-            if (event.key === "Enter") {
-                runGlobalSearch();
+        document.getElementById("modalRoot").addEventListener("click", event => {
+            if (event.target.id === "modalRoot") {
+                closeModal();
             }
         });
 
-        initializeChat();
-        loadTasksPanel();
-        loadSchedulesPanel();
-        window.setTimeout(() => {
-            if (lazyPanelsLoaded) return;
-            lazyPanelsLoaded = true;
-            refreshSelectedPanels({ notifications: true, documents: true, files: true, memory: true, layout: true }, { silent: true });
-        }, LAZY_PANEL_DELAY_MS);
-        setInterval(() => refreshAgentPanels({ preserveState: true }), REFRESH_INTERVAL_MS);
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape") {
+                closeModal();
+            }
+        });
+
+        initialiseChat();
+        Promise.all([
+            refreshAgentData(),
+            refreshDocuments(),
+            refreshFiles(),
+            refreshMemory(),
+            loadCustomLayout()
+        ]);
+        setInterval(() => refreshAgentData(), AGENT_REFRESH_INTERVAL_MS);
     </script>
 </body>
 </html>
