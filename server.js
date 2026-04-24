@@ -71,6 +71,11 @@ const ALLOWED_AGENT_STEP_TYPES = new Set([
     "list_files",
     "search_documents"
 ]);
+const DISCOVERY_AGENT_STEP_TYPES = new Set([
+    "list_documents",
+    "list_files",
+    "search_documents"
+]);
 let latestAgentPlan = null;
 let pendingDuplicateDecision = null;
 
@@ -578,7 +583,11 @@ function getFilenameClarityScore(filename) {
     return score;
 }
 
-function buildDuplicatePlanningInsights(documents) {
+function isDiscoveryAgentStepType(type) {
+    return DISCOVERY_AGENT_STEP_TYPES.has(type);
+}
+
+function buildDuplicatePlanningGroups(documents) {
     const groups = [];
     const seen = new Set();
 
@@ -632,8 +641,20 @@ function buildDuplicatePlanningInsights(documents) {
                     const summaryRichness = normalizeDuplicateComparisonText(doc.summary).length;
                     const filenameClarity = getFilenameClarityScore(doc.filename);
                     const createdAt = doc.created_at ? new Date(doc.created_at).getTime() : 0;
+                    const contentFingerprint = normalizeDuplicateComparisonText(doc.content).slice(0, 400);
+                    const uniqueContentBonus = group.filter(item => {
+                        const otherFingerprint = normalizeDuplicateComparisonText(item.content).slice(0, 400);
+                        return otherFingerprint === contentFingerprint;
+                    }).length <= 1 ? 1 : 0;
+                    const canonicalFilenameBonus = /^[a-z0-9_-]+\.txt$/i.test(doc.filename || "") &&
+                        !/copy|duplicate|final_final/i.test(doc.filename || "") ? 1 : 0;
                     const newestBonus = createdAt ? Math.min(createdAt / 1e12, 10) : 0;
-                    const score = newestBonus + Math.min(contentLength / 500, 6) + Math.min(summaryRichness / 60, 4) + filenameClarity;
+                    const score = newestBonus +
+                        Math.min(contentLength / 500, 6) +
+                        Math.min(summaryRichness / 60, 4) +
+                        filenameClarity +
+                        uniqueContentBonus +
+                        canonicalFilenameBonus;
 
                     return {
                         doc,
@@ -641,7 +662,9 @@ function buildDuplicatePlanningInsights(documents) {
                         contentLength,
                         summaryRichness,
                         filenameClarity,
-                        createdAt
+                        createdAt,
+                        uniqueContentBonus,
+                        canonicalFilenameBonus
                     };
                 })
                 .sort((a, b) => b.score - a.score);
@@ -661,16 +684,31 @@ function buildDuplicatePlanningInsights(documents) {
             if (keep.createdAt >= (ranked[1]?.createdAt || 0)) {
                 explanationParts.push("it is the newest copy");
             }
+            if (keep.canonicalFilenameBonus > 0) {
+                explanationParts.push("its filename already looks canonical");
+            }
 
             groups.push({
                 filenames: ranked.map(item => item.doc.filename),
                 keepFilename: keep.doc.filename,
-                explanation: `Keeping ${keep.doc.filename} because ${explanationParts[0] || "it scores best overall"}${explanationParts[1] ? ` and ${explanationParts[1]}` : ""}.`
+                ranked,
+                explanation: `Keeping ${keep.doc.filename} because ${explanationParts[0] || "it scores best overall"}${explanationParts[1] ? ` and ${explanationParts[1]}` : ""}.`,
+                proposedActions: ranked.slice(1).map(item => ({
+                    type: "delete_document",
+                    filename: item.doc.filename,
+                    reason: `${item.doc.filename} scored lower than ${keep.doc.filename} for created_at, content length, summary richness, or filename clarity.`
+                }))
             });
         }
 
         seen.add(index);
     }
+
+    return groups;
+}
+
+function buildDuplicatePlanningInsights(documents) {
+    const groups = buildDuplicatePlanningGroups(documents);
 
     if (!groups.length) {
         return "No clear duplicate groups detected in the current planning documents.";
@@ -821,6 +859,214 @@ function getTaskExecutionState(task) {
     };
 }
 
+function shouldGenerateFollowUpCleanupPlan(task) {
+    const steps = Array.isArray(task?.actions_json?.steps) ? task.actions_json.steps : [];
+    const phase = task?.actions_json?.phase || "";
+
+    return Boolean(steps.length) &&
+        phase !== "cleanup_proposal" &&
+        steps.every(step => isDiscoveryAgentStepType(step.type));
+}
+
+async function collectDocumentsForCleanupProposal(discoveryState) {
+    const collected = new Map();
+    const discovery = discoveryState?.agentExecution?.discovery || {};
+    const listedDocuments = Array.isArray(discovery.documents) ? discovery.documents : [];
+    const searchedDocuments = Array.isArray(discovery.searchMatches) ? discovery.searchMatches : [];
+
+    for (const doc of [...listedDocuments, ...searchedDocuments]) {
+        if (!doc || !doc.filename) {
+            continue;
+        }
+
+        if (doc.content) {
+            collected.set(doc.filename, doc);
+            continue;
+        }
+
+        const fullDoc = await getDocumentSnapshotForUndo(doc.filename);
+        if (fullDoc) {
+            collected.set(fullDoc.filename, fullDoc);
+        }
+    }
+
+    if (!collected.size) {
+        const docs = await pgListDocuments();
+
+        for (const doc of docs) {
+            const fullDoc = await getDocumentSnapshotForUndo(doc.filename);
+            if (fullDoc) {
+                collected.set(fullDoc.filename, fullDoc);
+            }
+        }
+    }
+
+    return Array.from(collected.values());
+}
+
+function buildCleanupProposalPlan(goal, duplicateGroups, files = []) {
+    const currentContextLines = [
+        `Workspace files reviewed: ${files.length}`,
+        `Duplicate groups detected: ${duplicateGroups.length}`
+    ];
+
+    if (!duplicateGroups.length) {
+        return [
+            "Objective",
+            `Review cleanup options for: ${goal}`,
+            "",
+            "Current Context",
+            ...currentContextLines,
+            "- No duplicate groups were found in the current discovery data.",
+            "",
+            "Recommended Actions",
+            "- Keep the current documents as they are. No delete or rename action is recommended yet.",
+            "",
+            "Risks",
+            "- A broader document scan may still reveal duplicates outside the recent discovery set.",
+            "",
+            "Approval Question",
+            "No cleanup actions are recommended right now. Do you want to keep the task open for another discovery cycle?"
+        ].join("\n");
+    }
+
+    const groupLines = duplicateGroups.map((group, index) => {
+        const rankedLines = group.ranked.map(item => {
+            const createdAt = item.doc.created_at
+                ? new Date(item.doc.created_at).toISOString().slice(0, 10)
+                : "unknown";
+            return `- ${item.doc.filename}: score ${item.score.toFixed(2)} | created_at ${createdAt} | content length ${item.contentLength} | summary richness ${item.summaryRichness} | filename clarity ${item.filenameClarity}`;
+        }).join("\n");
+        const actionLines = [
+            `- Keep ${group.keepFilename} because ${group.explanation.replace(/^Keeping\s+[^ ]+\s+because\s+/i, "").replace(/\.$/, "")}.`,
+            ...group.proposedActions.map(action => `- Delete ${action.filename} because ${action.reason}`)
+        ].join("\n");
+
+        return [
+            `Group ${index + 1}: ${group.filenames.join(", ")}`,
+            rankedLines,
+            `Reasoning: ${group.explanation}`,
+            "Recommended actions:",
+            actionLines
+        ].join("\n");
+    }).join("\n\n");
+
+    const proposedActionLines = duplicateGroups.flatMap(group => [
+        `- Keep ${group.keepFilename}`,
+        ...group.proposedActions.map(action => `- Delete ${action.filename}`)
+    ]).join("\n");
+
+    return [
+        "Objective",
+        `Generate a safe duplicate cleanup proposal for: ${goal}`,
+        "",
+        "Current Context",
+        ...currentContextLines,
+        groupLines,
+        "",
+        "Recommended Actions",
+        proposedActionLines,
+        "",
+        "Risks",
+        "- Cleanup actions are proposals only until approved.",
+        "- Documents with similar themes but different intent should be reviewed before deletion.",
+        "",
+        "Approval Question",
+        "Generated cleanup plan. Do you want to approve these proposed cleanup actions?"
+    ].join("\n");
+}
+
+async function generateTaskCleanupProposal(task) {
+    const executionState = getTaskExecutionState(task);
+    const files = Array.isArray(executionState.agentExecution?.discovery?.files)
+        ? executionState.agentExecution.discovery.files
+        : await listWorkspaceFiles();
+    const documents = await collectDocumentsForCleanupProposal(executionState);
+    const duplicateGroups = buildDuplicatePlanningGroups(documents);
+    const plan = buildCleanupProposalPlan(task.goal, duplicateGroups, files);
+    const parsed = await getApprovedAgentActions({
+        request: task.goal,
+        plan,
+        today: new Date().toISOString().slice(0, 10),
+        memory: [],
+        documents,
+        files
+    });
+    const validation = parsed && Array.isArray(parsed.steps)
+        ? validateAgentSteps(parsed.steps, task.goal)
+        : { fatalError: null, validSteps: [], skipped: [] };
+    const actionsJson = {
+        phase: "cleanup_proposal",
+        discoverySummary: duplicateGroups.map(group => ({
+            filenames: group.filenames,
+            keepFilename: group.keepFilename,
+            explanation: group.explanation
+        })),
+        steps: validation.fatalError ? [] : validation.validSteps,
+        skipped: validation.skipped || []
+    };
+    const contextJson = {
+        ...executionState.context,
+        agentExecution: {
+            ...executionState.agentExecution,
+            discovery: {
+                ...(executionState.agentExecution.discovery || {}),
+                files,
+                documents
+            },
+            cleanupProposal: {
+                duplicateGroups: duplicateGroups.map(group => ({
+                    filenames: group.filenames,
+                    keepFilename: group.keepFilename,
+                    explanation: group.explanation,
+                    proposedActions: group.proposedActions
+                })),
+                generatedAt: new Date().toISOString()
+            }
+        }
+    };
+    const hasActions = actionsJson.steps.length > 0;
+    const status = hasActions ? "waiting_approval" : "completed";
+    const result = hasActions
+        ? `Generated cleanup plan with ${actionsJson.steps.length} proposed action(s).`
+        : "Generated cleanup plan but no safe cleanup actions were recommended.";
+
+    await pgUpdateAgentTask(task.id, {
+        status,
+        current_step: 0,
+        plan,
+        actions_json: actionsJson,
+        context_json: contextJson,
+        result,
+        error: validation.fatalError || null
+    });
+
+    await pgLogAgentAction(
+        "agent_task_cleanup_plan",
+        status,
+        task.goal,
+        plan,
+        {
+            taskId: task.id,
+            duplicateGroups: actionsJson.discoverySummary,
+            steps: actionsJson.steps,
+            skipped: actionsJson.skipped
+        },
+        null,
+        result
+    );
+
+    return {
+        ok: true,
+        status,
+        plan,
+        validSteps: actionsJson.steps,
+        skipped: actionsJson.skipped,
+        duplicateGroups,
+        result
+    };
+}
+
 function getNextTaskStatus(steps, nextIndex) {
     if (nextIndex >= steps.length) {
         return "completed";
@@ -954,6 +1200,7 @@ async function runAgentPlanningCycle(taskId) {
         plan,
         context_json: buildTaskContext(memory, documents, files, today),
         actions_json: {
+            phase: validation.validSteps.every(step => isDiscoveryAgentStepType(step.type)) ? "discovery" : "planned_actions",
             steps: validation.validSteps,
             skipped: validation.skipped
         },
@@ -1023,6 +1270,10 @@ async function executeApprovedAgentTask(taskId) {
     }
 
     if (startIndex >= steps.length) {
+        if (shouldGenerateFollowUpCleanupPlan(task)) {
+            return generateTaskCleanupProposal(task);
+        }
+
         await pgUpdateAgentTask(taskId, {
             status: "completed",
             result: task.result || "Task already completed.",
@@ -1118,6 +1369,40 @@ async function executeApprovedAgentTask(taskId) {
         lastSearchResult: execution.latestSearchResult,
         completedAt: new Date().toISOString()
     };
+    const discoveryOutputs = execution.stepOutputs || [];
+    const priorDiscovery = executionState.agentExecution.discovery || {};
+    const discoveredDocuments = new Map();
+
+    for (const doc of [...(priorDiscovery.documents || []), ...(priorDiscovery.searchMatches || [])]) {
+        if (doc && doc.filename) {
+            discoveredDocuments.set(doc.filename, doc);
+        }
+    }
+
+    let discoveredFiles = Array.isArray(priorDiscovery.files) ? [...priorDiscovery.files] : [];
+    const searchHistory = Array.isArray(priorDiscovery.searchHistory) ? [...priorDiscovery.searchHistory] : [];
+
+    for (const output of discoveryOutputs) {
+        if (Array.isArray(output.documents)) {
+            for (const doc of output.documents) {
+                if (doc && doc.filename) {
+                    discoveredDocuments.set(doc.filename, doc);
+                }
+            }
+        }
+
+        if (Array.isArray(output.files)) {
+            discoveredFiles = output.files;
+        }
+
+        if (output.type === "search_documents") {
+            searchHistory.push({
+                keyword: output.keyword,
+                count: Array.isArray(output.documents) ? output.documents.length : 0
+            });
+        }
+    }
+
     const updatedContextJson = {
         ...executionState.context,
         agentExecution: {
@@ -1126,9 +1411,21 @@ async function executeApprovedAgentTask(taskId) {
             latestSearchResult: execution.latestSearchResult,
             duplicateFoundInThisRun: execution.duplicateFoundInThisRun,
             lastCycle: historyEntry,
-            planSkipped: plannedSkipped
+            planSkipped: plannedSkipped,
+            discovery: {
+                ...priorDiscovery,
+                documents: Array.from(discoveredDocuments.values()),
+                searchMatches: Array.from(discoveredDocuments.values()),
+                files: discoveredFiles,
+                searchHistory
+            }
         }
     };
+    let finalStatus = nextStatus;
+    let finalResult = result;
+    let finalPlan = task.plan || "";
+    let finalSteps = [currentStep];
+    let finalSkipped = execution.skipped;
 
     await pgUpdateAgentTask(taskId, {
         status: nextStatus,
@@ -1138,32 +1435,51 @@ async function executeApprovedAgentTask(taskId) {
         error: null
     });
 
+    if (nextIndex >= steps.length && shouldGenerateFollowUpCleanupPlan(task)) {
+        const refreshedTask = await pgGetAgentTask(taskId);
+        const followUp = await generateTaskCleanupProposal(refreshedTask);
+
+        if (!followUp.ok) {
+            return {
+                ok: false,
+                message: followUp.message || "Could not generate cleanup plan."
+            };
+        }
+
+        finalStatus = followUp.status;
+        finalResult = `Generated cleanup plan.\n\n${followUp.plan}`;
+        finalPlan = followUp.plan;
+        finalSteps = followUp.validSteps;
+        finalSkipped = followUp.skipped;
+    }
+
     await pgLogAgentAction(
         "agent_task_execute",
-        nextStatus,
+        finalStatus,
         task.goal,
-        task.plan || "",
+        finalPlan,
         {
             taskId,
             stepIndex: startIndex,
-            steps: [currentStep],
-            skipped: execution.skipped,
-            nextStatus,
+            steps: finalSteps,
+            skipped: finalSkipped,
+            nextStatus: finalStatus,
             nextIndex
         },
         execution.undoEntries,
-        result
+        finalResult
     );
 
     return {
         ok: true,
-        status: nextStatus,
+        status: finalStatus,
         currentStep: startIndex,
         nextStep: nextIndex < steps.length ? steps[nextIndex].type : null,
         results: execution.results,
-        skipped: execution.skipped,
+        skipped: finalSkipped,
         planSkipped: plannedSkipped,
-        result
+        result: finalResult,
+        plan: finalPlan
     };
 }
 
@@ -1615,6 +1931,7 @@ async function executeApprovedAgentActions(steps, options = {}) {
     const undoEntries = [];
     const duplicateDecision = options.duplicateDecision || null;
     const skipped = Array.isArray(options.skipped) ? [...options.skipped] : [];
+    const stepOutputs = [];
     let latestSearchResult = options.latestSearchResult || null;
     let duplicateFoundInThisRun = Boolean(options.duplicateFoundInThisRun);
     const allowDuplicateCreation = requestAllowsDuplicateCreation(options.originalRequest || "");
@@ -1819,12 +2136,29 @@ async function executeApprovedAgentActions(steps, options = {}) {
 
         if (step.type === "list_documents") {
             const docs = await pgListDocuments();
+            const fullDocs = [];
+
+            for (const doc of docs) {
+                const fullDoc = await getDocumentSnapshotForUndo(doc.filename);
+                if (fullDoc) {
+                    fullDocs.push(fullDoc);
+                }
+            }
+
+            stepOutputs.push({
+                type: step.type,
+                documents: fullDocs
+            });
             results.push(`Listed ${docs.length} documents.`);
             continue;
         }
 
         if (step.type === "list_files") {
             const files = await listWorkspaceFiles();
+            stepOutputs.push({
+                type: step.type,
+                files
+            });
             results.push(`Listed ${files.length} workspace files.`);
             continue;
         }
@@ -1838,6 +2172,11 @@ async function executeApprovedAgentActions(steps, options = {}) {
             if (docs.length > 0) {
                 duplicateFoundInThisRun = true;
             }
+            stepOutputs.push({
+                type: step.type,
+                keyword: step.keyword,
+                documents: docs
+            });
             results.push(`Searched documents for "${step.keyword}" and found ${docs.length} matches.`);
         }
     }
@@ -1847,6 +2186,7 @@ async function executeApprovedAgentActions(steps, options = {}) {
         results,
         undoEntries,
         skipped,
+        stepOutputs,
         latestSearchResult,
         duplicateFoundInThisRun
     };
@@ -2611,7 +2951,7 @@ ${task.plan || "No plan saved."}`
             return execution.ok
                 ? {
                     ok: true,
-                    reply: `Agent task #${task.id} continued.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
+                    reply: `Agent task #${task.id} continued.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.plan ? `\n\nGenerated cleanup plan:\n\n${execution.plan}` : ""}${execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
                     taskId: task.id,
                     status: execution.status
                 }
@@ -2775,7 +3115,7 @@ Choose one:
             return execution.ok
                 ? {
                     ok: true,
-                    reply: `Agent task #${task.id} executed.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : execution.status === "running" ? `\n\nContinue with: continue agent` : ""}`,
+                    reply: `Agent task #${task.id} executed.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.plan ? `\n\nGenerated cleanup plan:\n\n${execution.plan}` : ""}${execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : execution.status === "running" ? `\n\nContinue with: continue agent` : ""}`,
                     taskId: task.id,
                     status: execution.status
                 }
