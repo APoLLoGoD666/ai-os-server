@@ -949,6 +949,12 @@ Only include safe steps from this allowlist:
 - list_files
 - search_documents
 
+For search_documents:
+- Always include a "keyword" field.
+- Use the shortest meaningful keyword phrase from the plan.
+- Do not use the full original request unless no better keyword exists.
+- If the plan already shows an explicit keyword, preserve that exact keyword in the JSON.
+
 Forbidden actions:
 - editing server.js
 - editing dashboard.html
