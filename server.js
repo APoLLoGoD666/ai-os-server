@@ -537,6 +537,144 @@ ${limitedDocs.join("\n\n----------------------\n\n")}`
         .trim();
 }
 
+function normalizeDuplicateComparisonText(value) {
+    return String(value || "")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function getFilenameClarityScore(filename) {
+    const clean = String(filename || "").replace(/\.txt$/i, "");
+    let score = 0;
+
+    if (!/^\d{4}-\d{2}-\d{2}_/.test(clean)) {
+        score += 2;
+    }
+
+    if (!/_v\d+$/i.test(clean)) {
+        score += 2;
+    }
+
+    if (clean.length <= 40) {
+        score += 2;
+    } else if (clean.length <= 60) {
+        score += 1;
+    }
+
+    if (!/copy|duplicate|final_final/i.test(clean)) {
+        score += 1;
+    }
+
+    return score;
+}
+
+function buildDuplicatePlanningInsights(documents) {
+    const groups = [];
+    const seen = new Set();
+
+    for (let index = 0; index < documents.length; index += 1) {
+        if (seen.has(index)) {
+            continue;
+        }
+
+        const baseDoc = documents[index];
+        const baseFilename = normalizeDuplicateComparisonText(baseDoc.filename).replace(/_v\d+\.txt$/i, ".txt");
+        const baseSummary = normalizeDuplicateComparisonText(baseDoc.summary);
+        const baseContent = normalizeDuplicateComparisonText(baseDoc.content).slice(0, 400);
+        const group = [baseDoc];
+
+        for (let compareIndex = index + 1; compareIndex < documents.length; compareIndex += 1) {
+            if (seen.has(compareIndex)) {
+                continue;
+            }
+
+            const compareDoc = documents[compareIndex];
+            const compareFilename = normalizeDuplicateComparisonText(compareDoc.filename).replace(/_v\d+\.txt$/i, ".txt");
+            const compareSummary = normalizeDuplicateComparisonText(compareDoc.summary);
+            const compareContent = normalizeDuplicateComparisonText(compareDoc.content).slice(0, 400);
+
+            const sameFilenameStem = baseFilename && compareFilename && (
+                baseFilename === compareFilename ||
+                baseFilename.includes(compareFilename) ||
+                compareFilename.includes(baseFilename)
+            );
+            const sameSummary = baseSummary && compareSummary && (
+                baseSummary === compareSummary ||
+                baseSummary.includes(compareSummary) ||
+                compareSummary.includes(baseSummary)
+            );
+            const sameContent = baseContent && compareContent && (
+                baseContent === compareContent ||
+                baseContent.includes(compareContent) ||
+                compareContent.includes(baseContent)
+            );
+
+            if (sameFilenameStem || sameSummary || sameContent) {
+                group.push(compareDoc);
+                seen.add(compareIndex);
+            }
+        }
+
+        if (group.length > 1) {
+            const ranked = group
+                .map(doc => {
+                    const contentLength = (doc.content || "").length;
+                    const summaryRichness = normalizeDuplicateComparisonText(doc.summary).length;
+                    const filenameClarity = getFilenameClarityScore(doc.filename);
+                    const createdAt = doc.created_at ? new Date(doc.created_at).getTime() : 0;
+                    const newestBonus = createdAt ? Math.min(createdAt / 1e12, 10) : 0;
+                    const score = newestBonus + Math.min(contentLength / 500, 6) + Math.min(summaryRichness / 60, 4) + filenameClarity;
+
+                    return {
+                        doc,
+                        score,
+                        contentLength,
+                        summaryRichness,
+                        filenameClarity,
+                        createdAt
+                    };
+                })
+                .sort((a, b) => b.score - a.score);
+
+            const keep = ranked[0];
+            const explanationParts = [];
+
+            if (keep.filenameClarity >= 4) {
+                explanationParts.push("it has the clearest filename");
+            }
+            if (keep.contentLength >= (ranked[1]?.contentLength || 0)) {
+                explanationParts.push("it has the strongest content length");
+            }
+            if (keep.summaryRichness >= (ranked[1]?.summaryRichness || 0)) {
+                explanationParts.push("it has the richest summary");
+            }
+            if (keep.createdAt >= (ranked[1]?.createdAt || 0)) {
+                explanationParts.push("it is the newest copy");
+            }
+
+            groups.push({
+                filenames: ranked.map(item => item.doc.filename),
+                keepFilename: keep.doc.filename,
+                explanation: `Keeping ${keep.doc.filename} because ${explanationParts[0] || "it scores best overall"}${explanationParts[1] ? ` and ${explanationParts[1]}` : ""}.`
+            });
+        }
+
+        seen.add(index);
+    }
+
+    if (!groups.length) {
+        return "No clear duplicate groups detected in the current planning documents.";
+    }
+
+    return groups.map((group, index) => [
+        `DUPLICATE GROUP ${index + 1}`,
+        `Files: ${group.filenames.join(", ")}`,
+        `Recommended keep: ${group.keepFilename}`,
+        `Reasoning: ${group.explanation}`
+    ].join("\n")).join("\n\n");
+}
+
 async function buildAgentPlan(request, memory, documents, files, today) {
     const memoryText = memory.length
         ? memory
@@ -562,6 +700,7 @@ async function buildAgentPlan(request, memory, documents, files, today) {
     const filesText = files.length
         ? files.map(name => `- ${name}`).join("\n")
         : "No workspace files found.";
+    const duplicateInsightsText = buildDuplicatePlanningInsights(documents);
 
     const response = await client.messages.create({
         model: MODEL,
@@ -583,6 +722,9 @@ ${docsText}
 Workspace files from storage:
 ${filesText}
 
+Duplicate cleanup analysis:
+${duplicateInsightsText}
+
 Today's real server date is: ${today}. Use this date for dated filenames.
 
 You may propose a multi-step workflow, but only with safe ordered steps that map to:
@@ -601,6 +743,15 @@ Return a plan only using these exact sections:
 - Recommended Actions
 - Risks
 - Approval Question
+
+When proposing cleanup of duplicate documents, justify which document to keep by comparing:
+- created_at (newest vs oldest)
+- content length
+- summary richness
+- filename clarity
+
+Include a short scoring explanation before approval, for example:
+"Keeping v1 because it has the cleanest filename and same content as others"
 
 Be practical and concise.`
             }
