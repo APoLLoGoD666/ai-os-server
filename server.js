@@ -814,11 +814,11 @@ Be practical and concise.`
 
 function getAutonomyLevelMessage() {
     if (AUTONOMY_LEVEL === "3") {
-        return "AUTONOMY_LEVEL 3 is not enabled yet.";
+        return "Autonomy Level 3 is not enabled yet.";
     }
 
     if (AUTONOMY_LEVEL === "4") {
-        return "AUTONOMY_LEVEL 4 is disabled.";
+        return "Autonomy Level 4 is disabled.";
     }
 
     return null;
@@ -879,6 +879,34 @@ function buildSafeDefaultDiscoverySteps() {
     ];
 }
 
+function isReadOnlyAgentAction(action) {
+    if (!action || typeof action !== "object") {
+        return false;
+    }
+
+    if (action.type === "list_documents" || action.type === "list_files" || action.type === "search_documents") {
+        return true;
+    }
+
+    if (action.type === "summarize_document" && action.readOnly === true) {
+        return true;
+    }
+
+    return false;
+}
+
+function isWriteAgentAction(action) {
+    if (!action || typeof action !== "object") {
+        return false;
+    }
+
+    if (action.type === "delete_file" || action.type === "update_document" || action.type === "overwrite_document") {
+        return true;
+    }
+
+    return ALLOWED_AGENT_STEP_TYPES.has(action.type) && !isReadOnlyAgentAction(action);
+}
+
 function extractDeferredFallbackActions(plan = "") {
     const readOnlyPrefixes = ["list ", "search ", "summar", "review ", "inspect ", "analyse ", "analyze "];
     const writeHints = ["create ", "rename ", "delete ", "remove ", "overwrite ", "edit ", "push ", "update "];
@@ -919,6 +947,30 @@ function formatExecutableFallbackSteps(steps = []) {
 
         return `- ${step.type}`;
     }).join("\n");
+}
+
+function formatAgentStepForDisplay(step) {
+    if (!step || typeof step !== "object") {
+        return "- unknown_step";
+    }
+
+    if (step.type === "search_documents") {
+        return `- ${step.type} (${step.keyword || "no keyword"})`;
+    }
+
+    if (step.type === "summarize_document") {
+        return `- ${step.type} (${step.filename || "no filename"})`;
+    }
+
+    if (step.type === "rename_document") {
+        return `- ${step.type} (${step.oldName || "unknown"} -> ${step.newName || "unknown"})`;
+    }
+
+    if (step.filename) {
+        return `- ${step.type} (${step.filename})`;
+    }
+
+    return `- ${step.type}`;
 }
 
 function shouldGenerateFollowUpCleanupPlan(task) {
@@ -1154,7 +1206,7 @@ function getNextTaskStatus(steps, nextIndex) {
     }
 
     const nextStep = steps[nextIndex];
-    return nextStep && isDestructiveAgentStepType(nextStep.type) ? "waiting_approval" : "running";
+    return nextStep && isWriteAgentAction(nextStep) ? "waiting_approval" : "running";
 }
 
 async function buildTaskActionSummary(task) {
@@ -1168,6 +1220,94 @@ async function buildTaskActionSummary(task) {
         const detail = step.keyword || step.filename || step.oldName || step.goal || "";
         return `- ${index + 1}. ${step.type}${detail ? ` (${detail})` : ""}`;
     }).join("\n");
+}
+
+function getRemainingTaskSteps(task) {
+    const steps = Array.isArray(task?.actions_json?.steps) ? task.actions_json.steps : [];
+    const startIndex = Number.isInteger(task?.current_step) ? task.current_step : 0;
+
+    return steps.slice(startIndex);
+}
+
+async function autoRunReadOnlyTaskSteps(taskId) {
+    const aggregate = {
+        ok: true,
+        status: "running",
+        executed: [],
+        skipped: [],
+        generatedPlan: "",
+        deferredActions: [],
+        remainingActions: [],
+        completedMessage: "",
+        taskId
+    };
+
+    while (true) {
+        let task = await pgGetAgentTask(taskId);
+
+        if (!task) {
+            return {
+                ok: false,
+                message: `Agent task not found: ${taskId}`
+            };
+        }
+
+        if (task.status === "completed") {
+            aggregate.status = "completed";
+            aggregate.completedMessage = "Task completed. No approval required.";
+            return aggregate;
+        }
+
+        const remainingSteps = getRemainingTaskSteps(task);
+
+        if (!remainingSteps.length) {
+            aggregate.status = task.status === "completed" ? "completed" : "running";
+            if (task.status === "completed") {
+                aggregate.completedMessage = "Task completed. No approval required.";
+            }
+            return aggregate;
+        }
+
+        const nextStep = remainingSteps[0];
+
+        if (!isReadOnlyAgentAction(nextStep)) {
+            await pgUpdateAgentTask(taskId, {
+                status: "waiting_approval",
+                result: `Task is waiting for approval before ${nextStep.type}.`
+            });
+
+            task = await pgGetAgentTask(taskId);
+            aggregate.status = "waiting_approval";
+            aggregate.remainingActions = getRemainingTaskSteps(task);
+            aggregate.deferredActions = Array.isArray(task.actions_json?.deferredActions) ? task.actions_json.deferredActions : [];
+            return aggregate;
+        }
+
+        const execution = await executeApprovedAgentTask(taskId);
+
+        if (!execution.ok) {
+            return execution;
+        }
+
+        aggregate.executed.push(...execution.results);
+        aggregate.skipped.push(...execution.skipped);
+
+        if (execution.generatedProposal) {
+            aggregate.generatedPlan = execution.plan || "";
+        }
+
+        task = await pgGetAgentTask(taskId);
+        aggregate.status = task?.status || execution.status;
+        aggregate.remainingActions = task ? getRemainingTaskSteps(task) : [];
+        aggregate.deferredActions = Array.isArray(task?.actions_json?.deferredActions) ? task.actions_json.deferredActions : [];
+
+        if (aggregate.status === "waiting_approval" || aggregate.status === "completed") {
+            if (aggregate.status === "completed") {
+                aggregate.completedMessage = "Task completed. No approval required.";
+            }
+            return aggregate;
+        }
+    }
 }
 
 async function runAgentPlanningCycle(taskId) {
@@ -3099,6 +3239,43 @@ ${task.plan || "No plan saved."}`
                 };
             }
 
+            if (AUTONOMY_LEVEL === "2") {
+                const autoRun = await autoRunReadOnlyTaskSteps(task.id);
+
+                if (!autoRun.ok) {
+                    return {
+                        ok: false,
+                        reply: autoRun.message
+                    };
+                }
+
+                const executedText = autoRun.executed.length
+                    ? autoRun.executed.map(item => `- ${item}`).join("\n")
+                    : "- None";
+                const awaitingText = autoRun.remainingActions.length
+                    ? autoRun.remainingActions.map(step => formatAgentStepForDisplay(step)).join("\n")
+                    : "- None";
+                const deferredText = autoRun.deferredActions.length
+                    ? autoRun.deferredActions.map(item => `- ${item}`).join("\n")
+                    : "- None";
+
+                if (autoRun.status === "completed") {
+                    return {
+                        ok: true,
+                        reply: `Agent task #${task.id} planned.\n\nExecuted automatically:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nTask completed. No approval required.`,
+                        taskId: task.id,
+                        status: autoRun.status
+                    };
+                }
+
+                return {
+                    ok: true,
+                    reply: `Agent task #${task.id} planned.\n\nExecuted automatically:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nAwaiting approval:\n${awaitingText}\n\nDeferred actions:\n${deferredText}\n\nNext approval needed: approve task ${task.id}`,
+                    taskId: task.id,
+                    status: autoRun.status
+                };
+            }
+
             return {
                 ok: true,
                 reply: planning.fallbackMessage
@@ -3127,6 +3304,40 @@ ${task.plan || "No plan saved."}`
                 return {
                     ok: false,
                     reply: "Task requires approval"
+                };
+            }
+
+            if (AUTONOMY_LEVEL === "2") {
+                const autoRun = await autoRunReadOnlyTaskSteps(task.id);
+
+                if (!autoRun.ok) {
+                    return {
+                        ok: false,
+                        reply: autoRun.message
+                    };
+                }
+
+                const executedText = autoRun.executed.length
+                    ? autoRun.executed.map(item => `- ${item}`).join("\n")
+                    : "- None";
+                const awaitingText = autoRun.remainingActions.length
+                    ? autoRun.remainingActions.map(step => formatAgentStepForDisplay(step)).join("\n")
+                    : "- None";
+
+                if (autoRun.status === "completed") {
+                    return {
+                        ok: true,
+                        reply: `Agent task #${task.id} continued.\n\nExecuted automatically:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nTask completed. No approval required.`,
+                        taskId: task.id,
+                        status: autoRun.status
+                    };
+                }
+
+                return {
+                    ok: true,
+                    reply: `Agent task #${task.id} continued.\n\nExecuted automatically:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nAwaiting approval:\n${awaitingText}\n\nNext approval needed: approve task ${task.id}`,
+                    taskId: task.id,
+                    status: autoRun.status
                 };
             }
 
@@ -3295,6 +3506,39 @@ Choose one:
             }
 
             const execution = await executeApprovedAgentTask(task.id);
+
+            if (execution.ok && AUTONOMY_LEVEL === "2" && execution.status === "running") {
+                const autoRun = await autoRunReadOnlyTaskSteps(task.id);
+
+                if (!autoRun.ok) {
+                    return {
+                        ok: false,
+                        reply: autoRun.message
+                    };
+                }
+
+                const combinedExecuted = [...execution.results, ...autoRun.executed];
+                const combinedSkipped = [...execution.skipped, ...autoRun.skipped];
+                const awaitingText = autoRun.remainingActions.length
+                    ? autoRun.remainingActions.map(step => formatAgentStepForDisplay(step)).join("\n")
+                    : "- None";
+
+                if (autoRun.status === "completed") {
+                    return {
+                        ok: true,
+                        reply: `Agent task #${task.id} executed.\n\nExecuted steps:\n- ${combinedExecuted.join("\n- ")}${combinedSkipped.length ? `\n\nSkipped steps:\n- ${combinedSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nTask completed. No approval required.`,
+                        taskId: task.id,
+                        status: autoRun.status
+                    };
+                }
+
+                return {
+                    ok: true,
+                    reply: `Agent task #${task.id} executed.\n\nExecuted steps:\n- ${combinedExecuted.join("\n- ")}${combinedSkipped.length ? `\n\nSkipped steps:\n- ${combinedSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nAwaiting approval:\n${awaitingText}\n\nNext approval needed: approve task ${task.id}`,
+                    taskId: task.id,
+                    status: autoRun.status
+                };
+            }
 
             return execution.ok
                 ? {
