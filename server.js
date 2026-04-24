@@ -1423,9 +1423,10 @@ async function executeApprovedAgentTask(taskId) {
     };
     let finalStatus = nextStatus;
     let finalResult = result;
-    let finalPlan = task.plan || "";
+    let finalPlan = "";
     let finalSteps = [currentStep];
     let finalSkipped = execution.skipped;
+    let generatedProposal = false;
 
     await pgUpdateAgentTask(taskId, {
         status: nextStatus,
@@ -1451,6 +1452,7 @@ async function executeApprovedAgentTask(taskId) {
         finalPlan = followUp.plan;
         finalSteps = followUp.validSteps;
         finalSkipped = followUp.skipped;
+        generatedProposal = true;
     }
 
     await pgLogAgentAction(
@@ -1479,7 +1481,8 @@ async function executeApprovedAgentTask(taskId) {
         skipped: finalSkipped,
         planSkipped: plannedSkipped,
         result: finalResult,
-        plan: finalPlan
+        plan: finalPlan,
+        generatedProposal
     };
 }
 
@@ -2951,7 +2954,7 @@ ${task.plan || "No plan saved."}`
             return execution.ok
                 ? {
                     ok: true,
-                    reply: `Agent task #${task.id} continued.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.plan ? `\n\nGenerated cleanup plan:\n\n${execution.plan}` : ""}${execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
+                    reply: `Agent task #${task.id} continued.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.generatedProposal ? `${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nGenerated cleanup plan:\n\n${execution.plan}\n\nNext approval needed: approve task ${task.id}` : execution.status === "running" ? `\n\nContinue with: continue agent` : execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
                     taskId: task.id,
                     status: execution.status
                 }
@@ -3115,7 +3118,7 @@ Choose one:
             return execution.ok
                 ? {
                     ok: true,
-                    reply: `Agent task #${task.id} executed.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.plan ? `\n\nGenerated cleanup plan:\n\n${execution.plan}` : ""}${execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : execution.status === "running" ? `\n\nContinue with: continue agent` : ""}`,
+                    reply: `Agent task #${task.id} executed.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.generatedProposal ? `${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nGenerated cleanup plan:\n\n${execution.plan}\n\nNext approval needed: approve task ${task.id}` : execution.status === "running" ? `\n\nContinue with: continue agent` : execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
                     taskId: task.id,
                     status: execution.status
                 }
