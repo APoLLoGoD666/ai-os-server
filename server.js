@@ -1032,12 +1032,29 @@ function stepRequiresNoMatches(step) {
     return phrases.some(phrase => searchableText.includes(phrase));
 }
 
+function requestAllowsDuplicateCreation(request = "") {
+    const text = String(request || "").toLowerCase();
+    const allowedPhrases = [
+        "create anyway",
+        "make another",
+        "create a new version",
+        "create variant",
+        "v2",
+        "v3",
+        "duplicate copy"
+    ];
+
+    return allowedPhrases.some(phrase => text.includes(phrase));
+}
+
 async function executeApprovedAgentActions(steps, options = {}) {
     const results = [];
     const undoEntries = [];
     const duplicateDecision = options.duplicateDecision || null;
     const skipped = Array.isArray(options.skipped) ? [...options.skipped] : [];
     let latestSearchResult = null;
+    let duplicateFoundInThisRun = false;
+    const allowDuplicateCreation = requestAllowsDuplicateCreation(options.originalRequest || "");
 
     for (let index = 0; index < steps.length; index += 1) {
         const step = steps[index];
@@ -1056,6 +1073,14 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     undoEntries,
                     skipped
                 };
+            }
+
+            if (duplicateFoundInThisRun && !allowDuplicateCreation) {
+                skipped.push({
+                    type: step.type,
+                    reason: "Skipped create_document because duplicates were found and no explicit create-anyway instruction was given."
+                });
+                continue;
             }
 
             if (stepRequiresNoMatches(step) && latestSearchResult && latestSearchResult.count > 0) {
@@ -1247,6 +1272,9 @@ async function executeApprovedAgentActions(steps, options = {}) {
                 keyword: step.keyword,
                 count: docs.length
             };
+            if (docs.length > 0) {
+                duplicateFoundInThisRun = true;
+            }
             results.push(`Searched documents for "${step.keyword}" and found ${docs.length} matches.`);
         }
     }
@@ -1955,7 +1983,8 @@ Choose one:
             }
 
             const execution = await executeApprovedAgentActions(validation.validSteps, {
-                skipped: validation.skipped
+                skipped: validation.skipped,
+                originalRequest: latestAgentPlan.request
             });
 
             if (!execution.ok) {
@@ -2006,6 +2035,7 @@ Choose one:
                 pendingDuplicateDecision.steps,
                 {
                     skipped: pendingDuplicateDecision.skipped,
+                    originalRequest: pendingDuplicateDecision.request,
                     duplicateDecision: {
                         index: pendingDuplicateDecision.duplicateIndex,
                         duplicate: pendingDuplicateDecision.duplicate,
