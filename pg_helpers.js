@@ -1,24 +1,8 @@
 const pool = require("./pg_database");
 
-let memoryTableReadyPromise = null;
-
-function ensureMemoryTable() {
-    if (!memoryTableReadyPromise) {
-        memoryTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS memory (
-                id SERIAL PRIMARY KEY,
-                role TEXT,
-                message TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `).catch(error => {
-            memoryTableReadyPromise = null;
-            throw error;
-        });
-    }
-
-    return memoryTableReadyPromise;
-}
+/* =========================
+   POSTGRES DOCUMENTS
+========================= */
 
 async function pgSaveDocument(filename, content, classification = "personal", summary = "") {
     await pool.query(
@@ -61,18 +45,7 @@ async function pgGetDocument(filename) {
 }
 
 async function pgSearchDocuments(keyword) {
-    const k = (keyword || "").trim().toLowerCase();
-
-    if (!k) {
-        const result = await pool.query(`
-            SELECT filename, classification, summary, content, created_at
-            FROM documents
-            ORDER BY created_at DESC
-            LIMIT 5
-        `);
-
-        return result.rows;
-    }
+    const k = `%${String(keyword || "").toLowerCase()}%`;
 
     const result = await pool.query(
         `
@@ -86,7 +59,7 @@ async function pgSearchDocuments(keyword) {
         ORDER BY created_at DESC
         LIMIT 5
         `,
-        [`%${k}%`]
+        [k]
     );
 
     return result.rows;
@@ -100,6 +73,8 @@ async function pgDeleteDocument(filename) {
         `,
         [filename]
     );
+
+    return true;
 }
 
 async function pgRenameDocument(oldName, newName) {
@@ -111,6 +86,8 @@ async function pgRenameDocument(oldName, newName) {
         `,
         [newName, oldName]
     );
+
+    return true;
 }
 
 async function pgUpdateDocumentSummary(filename, summary) {
@@ -122,11 +99,15 @@ async function pgUpdateDocumentSummary(filename, summary) {
         `,
         [summary, filename]
     );
+
+    return true;
 }
 
-async function pgAddMemory(role, message) {
-    await ensureMemoryTable();
+/* =========================
+   POSTGRES MEMORY
+========================= */
 
+async function pgAddMemory(role, message) {
     await pool.query(
         `
         INSERT INTO memory (role, message)
@@ -138,8 +119,7 @@ async function pgAddMemory(role, message) {
     await pool.query(`
         DELETE FROM memory
         WHERE id NOT IN (
-            SELECT id
-            FROM memory
+            SELECT id FROM memory
             ORDER BY id DESC
             LIMIT 20
         )
@@ -147,8 +127,6 @@ async function pgAddMemory(role, message) {
 }
 
 async function pgLoadMemory() {
-    await ensureMemoryTable();
-
     const result = await pool.query(`
         SELECT role, message, created_at AS time
         FROM memory
