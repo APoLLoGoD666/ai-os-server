@@ -47,6 +47,7 @@ const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 const WORKSPACE_DIR = path.join(__dirname, "workspace");
 const LAYOUT_FILE = path.join(__dirname, "layout.json");
 const HIDDEN_FILES = new Set([]);
+let latestAgentPlan = null;
 
 function ensureSetup() {
     if (!fs.existsSync(WORKSPACE_DIR)) {
@@ -581,6 +582,255 @@ Be practical and concise.`
         .trim();
 }
 
+function extractJsonBlock(text) {
+    const raw = (text || "").trim();
+
+    if (!raw) {
+        return null;
+    }
+
+    const fencedMatch = raw.match(/```json\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/i);
+    if (fencedMatch) {
+        return fencedMatch[1].trim();
+    }
+
+    const firstBrace = raw.indexOf("{");
+    const lastBrace = raw.lastIndexOf("}");
+
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        return raw.slice(firstBrace, lastBrace + 1);
+    }
+
+    return raw;
+}
+
+function normalizeAgentFilename(filename) {
+    if (!filename || typeof filename !== "string" || !filename.trim()) {
+        return null;
+    }
+
+    return ensureTxtExtension(path.basename(filename.trim()));
+}
+
+async function getApprovedAgentActions(latestPlan) {
+    const response = await client.messages.create({
+        model: MODEL,
+        max_tokens: 700,
+        messages: [
+            {
+                role: "user",
+                content: `You are converting an approved agent plan into a strict JSON action list.
+
+Only include safe actions from this allowlist:
+- create_note
+- create_workspace_file
+- summarise_document
+- rename_document
+- delete_document
+
+Forbidden actions:
+- editing server.js
+- editing dashboard.html
+- changing code
+- pushing to GitHub
+- deleting all files
+- deleting memory
+- changing environment variables
+
+If the plan is ambiguous, unsafe, or cannot be executed safely, return:
+{"actions":[],"needs_clarification":"short reason"}
+
+Otherwise return strict JSON only in this format:
+{
+  "actions": [
+    {
+      "type": "create_note",
+      "filename": "note name",
+      "content": "text content",
+      "classification": "personal",
+      "summary": "optional summary"
+    }
+  ]
+}
+
+Plan request:
+${latestPlan.request}
+
+Plan text:
+${latestPlan.plan}
+
+Plan context:
+${JSON.stringify({
+    memoryCount: latestPlan.memory.length,
+    documentNames: latestPlan.documents.map(doc => doc.filename),
+    files: latestPlan.files
+}, null, 2)}`
+            }
+        ]
+    });
+
+    const text = (response.content || [])
+        .filter(part => part.type === "text")
+        .map(part => part.text || "")
+        .join("\n")
+        .trim();
+
+    const jsonText = extractJsonBlock(text);
+
+    if (!jsonText) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(jsonText);
+    } catch (error) {
+        console.error("AGENT ACTION JSON ERROR:", error.message);
+        return null;
+    }
+}
+
+async function executeApprovedAgentActions(actions) {
+    const allowedTypes = new Set([
+        "create_note",
+        "create_workspace_file",
+        "summarise_document",
+        "rename_document",
+        "delete_document"
+    ]);
+    const results = [];
+
+    for (const action of actions) {
+        if (!action || typeof action !== "object" || !allowedTypes.has(action.type)) {
+            return {
+                ok: false,
+                message: "Agent plan included an unsafe or unsupported action type."
+            };
+        }
+
+        if (action.type === "create_note") {
+            const filename = action.filename
+                ? normalizeAgentFilename(action.filename)
+                : makeTimestampedFilename(action.classification || "personal");
+            const content = typeof action.content === "string" ? action.content.trim() : "";
+
+            if (!filename || !content) {
+                return {
+                    ok: false,
+                    message: "Agent plan needs a clearer note filename or content before it can be applied."
+                };
+            }
+
+            await pgSaveDocument(
+                filename,
+                content,
+                action.classification || "personal",
+                action.summary || `Saved note: ${filename}`
+            );
+
+            saveDocumentToDatabase(
+                filename,
+                content,
+                action.classification || "personal",
+                action.summary || `Saved note: ${filename}`
+            );
+
+            results.push(`Created Postgres note: ${filename}`);
+            continue;
+        }
+
+        if (action.type === "create_workspace_file") {
+            const filename = normalizeAgentFilename(action.filename);
+            const content = typeof action.content === "string" ? action.content.trim() : "";
+
+            if (!filename || !content) {
+                return {
+                    ok: false,
+                    message: "Agent plan needs a clearer workspace filename or content before it can be applied."
+                };
+            }
+
+            await createWorkspaceFile(filename, content);
+            results.push(`Created workspace file: ${filename}`);
+            continue;
+        }
+
+        if (action.type === "summarise_document") {
+            const filename = normalizeAgentFilename(action.filename);
+
+            if (!filename) {
+                return {
+                    ok: false,
+                    message: "Agent plan needs a clearer document name before it can be summarised."
+                };
+            }
+
+            let doc = await pgGetDocument(filename);
+
+            if (!doc) {
+                doc = getDocumentByFilename(filename);
+            }
+
+            if (!doc || !doc.content) {
+                return {
+                    ok: false,
+                    message: `Agent plan references a document that could not be loaded safely: ${filename}.`
+                };
+            }
+
+            const summary = await summariseText(doc.content);
+
+            await pgUpdateDocumentSummary(filename, summary);
+            updateDocumentSummary(filename, summary);
+            await pgSaveDocument(
+                filename,
+                doc.content,
+                doc.classification || "personal",
+                summary
+            );
+
+            results.push(`Updated summary for document: ${filename}`);
+            continue;
+        }
+
+        if (action.type === "rename_document") {
+            const oldName = normalizeAgentFilename(action.oldName);
+            const newName = normalizeAgentFilename(action.newName);
+
+            if (!oldName || !newName) {
+                return {
+                    ok: false,
+                    message: "Agent plan needs clearer document names before a rename can be applied."
+                };
+            }
+
+            await pgRenameDocument(oldName, newName);
+            renameDocumentInDatabase(oldName, newName);
+            results.push(`Renamed Postgres document: ${oldName} -> ${newName}`);
+            continue;
+        }
+
+        if (action.type === "delete_document") {
+            const filename = normalizeAgentFilename(action.filename);
+
+            if (!filename) {
+                return {
+                    ok: false,
+                    message: "Agent plan needs a clearer document name before deletion can be applied."
+                };
+            }
+
+            await pgDeleteDocument(filename);
+            deleteDocumentFromDatabase(filename);
+            results.push(`Deleted Postgres document: ${filename}`);
+        }
+    }
+
+    return {
+        ok: true,
+        results
+    };
+}
+
 /* =========================
    COMMAND DETECTION
 ========================= */
@@ -728,6 +978,10 @@ function detectCommand(message) {
             type: "agent_plan",
             request: match[1].trim()
         };
+    }
+
+    if (/^approve agent$/i.test(text)) {
+        return { type: "agent_apply" };
     }
 
     if (/^list files$/i.test(text) || /^list all files$/i.test(text)) {
@@ -1022,10 +1276,60 @@ async function handleCommand(command) {
             const files = await listWorkspaceFiles();
             const plan = await buildAgentPlan(command.request, memory, documents, files);
 
+            latestAgentPlan = {
+                request: command.request,
+                memory,
+                documents,
+                files,
+                plan,
+                createdAt: new Date().toISOString()
+            };
+
             return {
                 ok: true,
                 reply: plan,
                 proposalOnly: true
+            };
+        }
+
+        case "agent_apply": {
+            if (!latestAgentPlan) {
+                return { ok: false, reply: "No agent plan to approve." };
+            }
+
+            const parsed = await getApprovedAgentActions(latestAgentPlan);
+
+            if (!parsed) {
+                return {
+                    ok: false,
+                    reply: "The saved agent plan could not be converted into a safe action list. Please create a clearer agent plan."
+                };
+            }
+
+            if (parsed.needs_clarification || !Array.isArray(parsed.actions) || !parsed.actions.length) {
+                return {
+                    ok: false,
+                    reply: parsed.needs_clarification
+                        ? `The saved agent plan is too ambiguous or unsafe to apply: ${parsed.needs_clarification}`
+                        : "The saved agent plan did not contain any safe actions to apply. Please create a clearer agent plan."
+                };
+            }
+
+            const execution = await executeApprovedAgentActions(parsed.actions);
+
+            if (!execution.ok) {
+                return {
+                    ok: false,
+                    reply: execution.message
+                };
+            }
+
+            latestAgentPlan = null;
+
+            return {
+                ok: true,
+                reply: `Approved agent actions applied:\n\n- ${execution.results.join("\n- ")}`,
+                appliedActions: execution.results.length
             };
         }
 
