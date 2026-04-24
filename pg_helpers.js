@@ -76,18 +76,26 @@ function ensureAgentSchedulesTable() {
 
 function ensureNotificationsTable() {
     if (!notificationsTableReadyPromise) {
-        notificationsTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS notifications (
-                id SERIAL PRIMARY KEY,
-                type TEXT,
-                title TEXT,
-                message TEXT,
-                read BOOLEAN DEFAULT false,
-                related_type TEXT,
-                related_id INTEGER,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `).catch(error => {
+        notificationsTableReadyPromise = (async () => {
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id SERIAL PRIMARY KEY,
+                    type TEXT,
+                    title TEXT,
+                    message TEXT,
+                    read BOOLEAN DEFAULT false,
+                    related_type TEXT,
+                    related_id INTEGER,
+                    event_key TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            `);
+
+            await pool.query(`
+                ALTER TABLE notifications
+                ADD COLUMN IF NOT EXISTS event_key TEXT
+            `);
+        })().catch(error => {
             notificationsTableReadyPromise = null;
             throw error;
         });
@@ -543,6 +551,25 @@ async function pgGetDueAgentSchedules() {
 
 async function pgCreateNotification(type, title, message, relatedType = null, relatedId = null) {
     await ensureNotificationsTable();
+    const eventKey = `${type}:${relatedType || "none"}:${relatedId || "none"}`;
+    const existingResult = await pool.query(
+        `
+        SELECT id, type, title, message, read, related_type, related_id, event_key, created_at
+        FROM notifications
+        WHERE type = $1
+          AND COALESCE(related_type, '') = COALESCE($2, '')
+          AND COALESCE(related_id, -1) = COALESCE($3, -1)
+          AND message = $4
+          AND created_at >= NOW() - INTERVAL '30 seconds'
+        ORDER BY id DESC
+        LIMIT 1
+        `,
+        [type, relatedType, relatedId, message]
+    );
+
+    if (existingResult.rows[0]) {
+        return existingResult.rows[0];
+    }
 
     const queryResult = await pool.query(
         `
@@ -551,12 +578,13 @@ async function pgCreateNotification(type, title, message, relatedType = null, re
             title,
             message,
             related_type,
-            related_id
+            related_id,
+            event_key
         )
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, type, title, message, read, related_type, related_id, created_at
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, type, title, message, read, related_type, related_id, event_key, created_at
         `,
-        [type, title, message, relatedType, relatedId]
+        [type, title, message, relatedType, relatedId, eventKey]
     );
 
     return queryResult.rows[0] || null;
@@ -567,7 +595,7 @@ async function pgListNotifications(limit = 20) {
 
     const queryResult = await pool.query(
         `
-        SELECT id, type, title, message, read, related_type, related_id, created_at
+        SELECT id, type, title, message, read, related_type, related_id, event_key, created_at
         FROM notifications
         ORDER BY id DESC
         LIMIT $1
@@ -586,7 +614,7 @@ async function pgMarkNotificationRead(id) {
         UPDATE notifications
         SET read = true
         WHERE id = $1
-        RETURNING id, type, title, message, read, related_type, related_id, created_at
+        RETURNING id, type, title, message, read, related_type, related_id, event_key, created_at
         `,
         [id]
     );
