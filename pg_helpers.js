@@ -551,24 +551,40 @@ async function pgGetDueAgentSchedules() {
 
 async function pgCreateNotification(type, title, message, relatedType = null, relatedId = null) {
     await ensureNotificationsTable();
-    const eventKey = `${type}:${relatedType || "none"}:${relatedId || "none"}`;
+    const eventKey = `${type}:${relatedType || "none"}:${relatedId || "none"}:${title || "untitled"}`;
     const existingResult = await pool.query(
         `
         SELECT id, type, title, message, read, related_type, related_id, event_key, created_at
         FROM notifications
         WHERE type = $1
-          AND COALESCE(related_type, '') = COALESCE($2, '')
-          AND COALESCE(related_id, -1) = COALESCE($3, -1)
-          AND message = $4
-          AND created_at >= NOW() - INTERVAL '30 seconds'
+          AND title = $2
+          AND COALESCE(related_type, '') = COALESCE($3, '')
+          AND COALESCE(related_id, -1) = COALESCE($4, -1)
+          AND created_at >= NOW() - INTERVAL '60 seconds'
         ORDER BY id DESC
         LIMIT 1
         `,
-        [type, relatedType, relatedId, message]
+        [type, title, relatedType, relatedId]
     );
 
     if (existingResult.rows[0]) {
         return existingResult.rows[0];
+    }
+
+    const eventKeyResult = await pool.query(
+        `
+        SELECT id, type, title, message, read, related_type, related_id, event_key, created_at
+        FROM notifications
+        WHERE event_key = $1
+          AND created_at >= NOW() - INTERVAL '60 seconds'
+        ORDER BY id DESC
+        LIMIT 1
+        `,
+        [eventKey]
+    );
+
+    if (eventKeyResult.rows[0]) {
+        return eventKeyResult.rows[0];
     }
 
     const queryResult = await pool.query(
