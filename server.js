@@ -876,6 +876,48 @@ function buildSafeDefaultDiscoverySteps() {
     ];
 }
 
+function extractDeferredFallbackActions(plan = "") {
+    const readOnlyPrefixes = ["list ", "search ", "summar", "review ", "inspect ", "analyse ", "analyze "];
+    const writeHints = ["create ", "rename ", "delete ", "remove ", "overwrite ", "edit ", "push ", "update "];
+    const lines = String(plan || "")
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
+    const deferred = [];
+
+    for (const line of lines) {
+        const normalized = line.replace(/^[-*]\s*/, "").toLowerCase();
+
+        if (readOnlyPrefixes.some(prefix => normalized.startsWith(prefix))) {
+            continue;
+        }
+
+        if (writeHints.some(prefix => normalized.startsWith(prefix)) || /(create|rename|delete|remove|overwrite|edit|push|update)\b/i.test(normalized)) {
+            deferred.push(line.replace(/^[-*]\s*/, ""));
+        }
+    }
+
+    return [...new Set(deferred)];
+}
+
+function formatExecutableFallbackSteps(steps = []) {
+    if (!steps.length) {
+        return "- None";
+    }
+
+    return steps.map(step => {
+        if (step.type === "search_documents") {
+            return `- ${step.type} (${step.keyword})`;
+        }
+
+        if (step.type === "summarize_document") {
+            return `- ${step.type} (${step.filename})`;
+        }
+
+        return `- ${step.type}`;
+    }).join("\n");
+}
+
 function shouldGenerateFollowUpCleanupPlan(task) {
     const steps = Array.isArray(task?.actions_json?.steps) ? task.actions_json.steps : [];
     const phase = task?.actions_json?.phase || "";
@@ -1167,6 +1209,7 @@ async function runAgentPlanningCycle(taskId) {
         const fallbackSteps = buildSafeDefaultDiscoverySteps();
         const validation = validateAgentSteps(fallbackSteps, task.goal);
         const fallbackMessage = "Using safe default discovery steps because the plan could not be converted.";
+        const deferredActions = extractDeferredFallbackActions(plan);
 
         await pgUpdateAgentTask(taskId, {
             status: "waiting_approval",
@@ -1177,7 +1220,8 @@ async function runAgentPlanningCycle(taskId) {
                 phase: "discovery",
                 steps: validation.validSteps,
                 skipped: validation.skipped,
-                fallback: true
+                fallback: true,
+                deferredActions
             },
             result: fallbackMessage,
             error: null
@@ -1192,7 +1236,8 @@ async function runAgentPlanningCycle(taskId) {
                 taskId,
                 steps: validation.validSteps,
                 skipped: validation.skipped,
-                fallback: true
+                fallback: true,
+                deferredActions
             },
             null,
             fallbackMessage
@@ -1205,7 +1250,8 @@ async function runAgentPlanningCycle(taskId) {
             validSteps: validation.validSteps,
             skipped: validation.skipped,
             result: fallbackMessage,
-            fallbackMessage
+            fallbackMessage,
+            deferredActions
         };
     }
 
@@ -3005,7 +3051,9 @@ ${task.plan || "No plan saved."}`
 
             return {
                 ok: true,
-                reply: `Agent task #${task.id} planned.\n\nStatus: ${planning.status}${planning.fallbackMessage ? `\n${planning.fallbackMessage}` : ""}\n${planning.plan}${planning.validSteps.length ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
+                reply: planning.fallbackMessage
+                    ? `Agent task #${task.id} planned.\n\nStatus: ${planning.status}\n${planning.fallbackMessage}\n\nExecutable steps (read-only):\n${formatExecutableFallbackSteps(planning.validSteps)}\n\nDeferred actions (requires follow-up plan):\n${planning.deferredActions?.length ? planning.deferredActions.map(item => `- ${item}`).join("\n") : "- None"}${planning.validSteps.length ? `\n\nNext approval needed: approve task ${task.id}` : ""}`
+                    : `Agent task #${task.id} planned.\n\nStatus: ${planning.status}\n${planning.plan}${planning.validSteps.length ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
                 taskId: task.id,
                 status: planning.status
             };
