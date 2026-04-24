@@ -517,7 +517,7 @@ ${limitedDocs.join("\n\n----------------------\n\n")}`
         .trim();
 }
 
-async function buildAgentPlan(request, memory, documents, files) {
+async function buildAgentPlan(request, memory, documents, files, today) {
     const memoryText = memory.length
         ? memory
             .slice(-8)
@@ -562,6 +562,8 @@ ${docsText}
 
 Workspace files from storage:
 ${filesText}
+
+Today's real server date is: ${today}. Use this date for dated filenames.
 
 Return a plan only using these exact sections:
 - Objective
@@ -618,6 +620,7 @@ function makeAgentDatedFilename(description = "note") {
         .trim()
         .toLowerCase()
         .replace(/\.txt$/i, "")
+        .replace(/^\d{4}[-_]\d{2}[-_]\d{2}[_-]*/, "")
         .replace(/[^a-z0-9]+/g, "_")
         .replace(/^_+|_+$/g, "") || "note";
 
@@ -1286,13 +1289,15 @@ async function handleCommand(command) {
             const memory = await loadMemory();
             const documents = await getRelevantDocuments(command.request);
             const files = await listWorkspaceFiles();
-            const plan = await buildAgentPlan(command.request, memory, documents, files);
+            const today = new Date().toISOString().slice(0, 10);
+            const plan = await buildAgentPlan(command.request, memory, documents, files, today);
 
             latestAgentPlan = {
                 request: command.request,
                 memory,
                 documents,
                 files,
+                today,
                 plan,
                 createdAt: new Date().toISOString()
             };
