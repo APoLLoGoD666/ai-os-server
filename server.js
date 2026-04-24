@@ -804,6 +804,32 @@ function buildTaskContext(memory, documents, files, today) {
     };
 }
 
+function getTaskExecutionState(task) {
+    const context = task && task.context_json && typeof task.context_json === "object"
+        ? task.context_json
+        : {};
+    const agentExecution = context.agentExecution && typeof context.agentExecution === "object"
+        ? context.agentExecution
+        : {};
+
+    return {
+        context,
+        agentExecution,
+        history: Array.isArray(agentExecution.history) ? [...agentExecution.history] : [],
+        latestSearchResult: agentExecution.latestSearchResult || null,
+        duplicateFoundInThisRun: Boolean(agentExecution.duplicateFoundInThisRun)
+    };
+}
+
+function getNextTaskStatus(steps, nextIndex) {
+    if (nextIndex >= steps.length) {
+        return "completed";
+    }
+
+    const nextStep = steps[nextIndex];
+    return nextStep && isDestructiveAgentStepType(nextStep.type) ? "waiting_approval" : "running";
+}
+
 async function buildTaskActionSummary(task) {
     const steps = Array.isArray(task?.actions_json?.steps) ? task.actions_json.steps : [];
 
@@ -985,7 +1011,9 @@ async function executeApprovedAgentTask(taskId) {
 
     const actions = task.actions_json || {};
     const steps = Array.isArray(actions.steps) ? actions.steps : [];
-    const skipped = Array.isArray(actions.skipped) ? actions.skipped : [];
+    const plannedSkipped = Array.isArray(actions.skipped) ? actions.skipped : [];
+    const startIndex = Number.isInteger(task.current_step) ? task.current_step : 0;
+    const executionState = getTaskExecutionState(task);
 
     if (!steps.length) {
         return {
@@ -994,11 +1022,25 @@ async function executeApprovedAgentTask(taskId) {
         };
     }
 
+    if (startIndex >= steps.length) {
+        await pgUpdateAgentTask(taskId, {
+            status: "completed",
+            result: task.result || "Task already completed.",
+            error: null
+        });
+
+        return {
+            ok: false,
+            message: "Task already completed."
+        };
+    }
+
     if (AUTONOMY_LEVEL === "1" || AUTONOMY_LEVEL === "2") {
         // TODO: Background worker can resume approved tasks asynchronously in a future deployment.
     }
 
-    const duplicateMatch = await findPendingDuplicateForSteps(steps);
+    const currentStep = steps[startIndex];
+    const duplicateMatch = await findPendingDuplicateForSteps([currentStep]);
 
     if (duplicateMatch) {
         await pgUpdateAgentTask(taskId, {
@@ -1021,9 +1063,11 @@ async function executeApprovedAgentTask(taskId) {
         status: "running"
     });
 
-    const execution = await executeApprovedAgentActions(steps, {
-        skipped,
-        originalRequest: task.goal
+    const execution = await executeApprovedAgentActions([currentStep], {
+        skipped: [],
+        originalRequest: task.goal,
+        latestSearchResult: executionState.latestSearchResult,
+        duplicateFoundInThisRun: executionState.duplicateFoundInThisRun
     });
 
     if (!execution.ok) {
@@ -1040,8 +1084,9 @@ async function executeApprovedAgentTask(taskId) {
             task.plan || "",
             {
                 taskId,
-                steps,
-                skipped: execution.skipped || skipped
+                stepIndex: startIndex,
+                steps: [currentStep],
+                skipped: execution.skipped || []
             },
             execution.undoEntries || null,
             execution.message
@@ -1053,12 +1098,42 @@ async function executeApprovedAgentTask(taskId) {
         };
     }
 
-    const nextStatus = execution.results.length ? "completed" : "waiting_approval";
-    const result = `Executed: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`;
+    const nextIndex = startIndex + 1;
+    const nextStatus = getNextTaskStatus(steps, nextIndex);
+    const cycleResult = execution.results.length
+        ? `Executed: ${execution.results.join(" | ")}`
+        : "No executable result was produced in this cycle.";
+    const skipResult = execution.skipped.length
+        ? `Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}`
+        : "";
+    const nextStepMessage = nextIndex < steps.length
+        ? `Next step: ${steps[nextIndex].type}`
+        : "No further steps remain.";
+    const result = [cycleResult, skipResult, nextStepMessage].filter(Boolean).join(" | ");
+    const historyEntry = {
+        stepIndex: startIndex,
+        stepType: currentStep.type,
+        executed: execution.results,
+        skipped: execution.skipped,
+        lastSearchResult: execution.latestSearchResult,
+        completedAt: new Date().toISOString()
+    };
+    const updatedContextJson = {
+        ...executionState.context,
+        agentExecution: {
+            ...executionState.agentExecution,
+            history: [...executionState.history, historyEntry],
+            latestSearchResult: execution.latestSearchResult,
+            duplicateFoundInThisRun: execution.duplicateFoundInThisRun,
+            lastCycle: historyEntry,
+            planSkipped: plannedSkipped
+        }
+    };
 
     await pgUpdateAgentTask(taskId, {
         status: nextStatus,
-        current_step: steps.length,
+        current_step: nextIndex,
+        context_json: updatedContextJson,
         result,
         error: null
     });
@@ -1070,8 +1145,11 @@ async function executeApprovedAgentTask(taskId) {
         task.plan || "",
         {
             taskId,
-            steps,
-            skipped: execution.skipped
+            stepIndex: startIndex,
+            steps: [currentStep],
+            skipped: execution.skipped,
+            nextStatus,
+            nextIndex
         },
         execution.undoEntries,
         result
@@ -1080,8 +1158,12 @@ async function executeApprovedAgentTask(taskId) {
     return {
         ok: true,
         status: nextStatus,
+        currentStep: startIndex,
+        nextStep: nextIndex < steps.length ? steps[nextIndex].type : null,
         results: execution.results,
-        skipped: execution.skipped
+        skipped: execution.skipped,
+        planSkipped: plannedSkipped,
+        result
     };
 }
 
@@ -1533,8 +1615,8 @@ async function executeApprovedAgentActions(steps, options = {}) {
     const undoEntries = [];
     const duplicateDecision = options.duplicateDecision || null;
     const skipped = Array.isArray(options.skipped) ? [...options.skipped] : [];
-    let latestSearchResult = null;
-    let duplicateFoundInThisRun = false;
+    let latestSearchResult = options.latestSearchResult || null;
+    let duplicateFoundInThisRun = Boolean(options.duplicateFoundInThisRun);
     const allowDuplicateCreation = requestAllowsDuplicateCreation(options.originalRequest || "");
 
     for (let index = 0; index < steps.length; index += 1) {
@@ -1764,7 +1846,9 @@ async function executeApprovedAgentActions(steps, options = {}) {
         ok: true,
         results,
         undoEntries,
-        skipped
+        skipped,
+        latestSearchResult,
+        duplicateFoundInThisRun
     };
 }
 
@@ -2502,29 +2586,38 @@ ${task.plan || "No plan saved."}`
         }
 
         case "continue_agent": {
-            const task = await pgGetLatestWaitingAgentTask();
+            const recentTasks = await pgGetRecentAgentTasks(10);
+            const task = recentTasks.find(item => item.status === "running" || item.status === "waiting_approval");
 
             if (!task) {
+                const latestTask = recentTasks[0];
+
+                if (latestTask && latestTask.status === "completed") {
+                    return { ok: false, reply: "Task already completed" };
+                }
+
                 return { ok: false, reply: "No recent agent task is available to continue." };
             }
 
             if (task.status === "waiting_approval") {
                 return {
-                    ok: true,
-                    reply: `Agent task #${task.id} is waiting for approval.\nUse \`approve task ${task.id}\` to continue execution.`
+                    ok: false,
+                    reply: "Task requires approval"
                 };
             }
 
-            const planning = await runAgentPlanningCycle(task.id);
+            const execution = await executeApprovedAgentTask(task.id);
 
-            return planning.ok
+            return execution.ok
                 ? {
                     ok: true,
-                    reply: `Agent task #${task.id} continued.\n\nStatus: ${planning.status}\n${planning.plan}${planning.validSteps.length ? `\n\nNext approval needed: approve task ${task.id}` : ""}`
+                    reply: `Agent task #${task.id} continued.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
+                    taskId: task.id,
+                    status: execution.status
                 }
                 : {
                     ok: false,
-                    reply: planning.message
+                    reply: execution.message
                 };
         }
 
@@ -2682,7 +2775,7 @@ Choose one:
             return execution.ok
                 ? {
                     ok: true,
-                    reply: `Agent task #${task.id} executed.\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}`,
+                    reply: `Agent task #${task.id} executed.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : execution.status === "running" ? `\n\nContinue with: continue agent` : ""}`,
                     taskId: task.id,
                     status: execution.status
                 }
