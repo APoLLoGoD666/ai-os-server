@@ -17,7 +17,11 @@ const {
     pgRenameDocument,
     pgUpdateDocumentSummary,
     pgAddMemory,
-    pgLoadMemory
+    pgLoadMemory,
+    pgLogAgentAction,
+    pgGetRecentAgentActions,
+    pgGetLastUndoableAgentAction,
+    pgMarkAgentActionUndone
 } = require("./pg_helpers");
 const {
     uploadWorkspaceFile,
@@ -47,7 +51,23 @@ const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 const WORKSPACE_DIR = path.join(__dirname, "workspace");
 const LAYOUT_FILE = path.join(__dirname, "layout.json");
 const HIDDEN_FILES = new Set([]);
+const AGENT_SECRET = process.env.AGENT_SECRET || "";
+const ALLOWED_AGENT_STEP_TYPES = new Set([
+    "create_document",
+    "create_workspace_file",
+    "summarize_document",
+    "rename_document",
+    "delete_document",
+    "list_documents",
+    "list_files",
+    "search_documents"
+]);
 let latestAgentPlan = null;
+let pendingDuplicateDecision = null;
+
+if (!AGENT_SECRET) {
+    console.warn("AGENT_SECRET not set. Agent approval is unprotected.");
+}
 
 function ensureSetup() {
     if (!fs.existsSync(WORKSPACE_DIR)) {
@@ -565,6 +585,16 @@ ${filesText}
 
 Today's real server date is: ${today}. Use this date for dated filenames.
 
+You may propose a multi-step workflow, but only with safe ordered steps that map to:
+- create_document
+- create_workspace_file
+- summarize_document
+- rename_document
+- delete_document
+- list_documents
+- list_files
+- search_documents
+
 Return a plan only using these exact sections:
 - Objective
 - Current Context
@@ -627,6 +657,235 @@ function makeAgentDatedFilename(description = "note") {
     return `${currentDate}_${safeDescription}.txt`;
 }
 
+function getProtectedAgentCommandLabel(type) {
+    if (type === "agent_apply") {
+        return "approve agent";
+    }
+
+    if (type === "agent_undo") {
+        return "undo agent";
+    }
+
+    if (type === "duplicate_create_approval") {
+        return "approve duplicate create";
+    }
+
+    if (type === "duplicate_replace_approval") {
+        return "approve duplicate replace";
+    }
+
+    return type;
+}
+
+function getAgentAccessError(command) {
+    const protectedTypes = new Set([
+        "agent_apply",
+        "agent_undo",
+        "duplicate_create_approval",
+        "duplicate_replace_approval"
+    ]);
+
+    if (!protectedTypes.has(command.type) || !AGENT_SECRET) {
+        return null;
+    }
+
+    if (command.secret !== AGENT_SECRET) {
+        return `Agent approval is protected. Use: secret YOUR_SECRET ${getProtectedAgentCommandLabel(command.type)}`;
+    }
+
+    return null;
+}
+
+async function getDocumentSnapshotForUndo(filename) {
+    let doc = await pgGetDocument(filename);
+
+    if (!doc) {
+        doc = getDocumentByFilename(filename);
+    }
+
+    return doc || null;
+}
+
+async function makeUniqueAgentFilename(description, fallback = "note") {
+    const baseFilename = makeAgentDatedFilename(description || fallback);
+    let candidate = baseFilename;
+    let counter = 2;
+
+    while (await pgGetDocument(candidate)) {
+        candidate = baseFilename.replace(/\.txt$/i, `_${counter}.txt`);
+        counter += 1;
+    }
+
+    return candidate;
+}
+
+async function makeUniqueWorkspaceAgentFilename(description, fallback = "workspace_file") {
+    const baseFilename = makeAgentDatedFilename(description || fallback);
+    const existingFiles = new Set(await listWorkspaceFiles());
+    let candidate = baseFilename;
+    let counter = 2;
+
+    while (existingFiles.has(candidate)) {
+        candidate = baseFilename.replace(/\.txt$/i, `_${counter}.txt`);
+        counter += 1;
+    }
+
+    return candidate;
+}
+
+function buildDuplicateSearchTerms(step) {
+    return [
+        step.filename,
+        step.summary,
+        typeof step.content === "string" ? step.content.slice(0, 120) : ""
+    ].filter(Boolean);
+}
+
+function normalizeDuplicateText(value) {
+    return String(value || "")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function scoreDuplicateCandidate(candidate, proposedFilename, step) {
+    let score = 0;
+    const candidateFilename = normalizeDuplicateText(candidate.filename);
+    const normalizedProposedFilename = normalizeDuplicateText(proposedFilename);
+    const candidateSummary = normalizeDuplicateText(candidate.summary);
+    const stepSummary = normalizeDuplicateText(step.summary);
+    const candidateContent = normalizeDuplicateText(candidate.content);
+    const stepContent = normalizeDuplicateText(step.content);
+
+    if (candidateFilename && candidateFilename === normalizedProposedFilename) {
+        score += 5;
+    }
+
+    if (candidateFilename && normalizedProposedFilename && (
+        candidateFilename.includes(normalizedProposedFilename) ||
+        normalizedProposedFilename.includes(candidateFilename)
+    )) {
+        score += 2;
+    }
+
+    if (stepSummary && candidateSummary && (
+        candidateSummary.includes(stepSummary) ||
+        stepSummary.includes(candidateSummary)
+    )) {
+        score += 2;
+    }
+
+    if (stepContent && candidateContent && (
+        candidateContent === stepContent ||
+        candidateContent.includes(stepContent.slice(0, 120)) ||
+        stepContent.includes(candidateContent.slice(0, 120))
+    )) {
+        score += 4;
+    }
+
+    return score;
+}
+
+async function findLikelyDuplicateDocument(step) {
+    if (step.type !== "create_document") {
+        return null;
+    }
+
+    const proposedFilename = step.filename
+        ? makeAgentDatedFilename(step.filename)
+        : makeAgentDatedFilename(step.classification || "note");
+    const terms = buildDuplicateSearchTerms(step);
+    const candidates = new Map();
+
+    for (const term of terms) {
+        const matches = await pgSearchDocuments(term);
+
+        for (const candidate of matches) {
+            candidates.set(candidate.filename, candidate);
+        }
+    }
+
+    const recentDocs = await pgListDocuments();
+
+    for (const recentDoc of recentDocs) {
+        const fullDoc = await getDocumentSnapshotForUndo(recentDoc.filename);
+
+        if (fullDoc) {
+            candidates.set(fullDoc.filename, fullDoc);
+        }
+    }
+
+    let bestMatch = null;
+
+    for (const candidate of candidates.values()) {
+        const score = scoreDuplicateCandidate(candidate, proposedFilename, step);
+
+        if (score >= 5 && (!bestMatch || score > bestMatch.score)) {
+            bestMatch = {
+                score,
+                filename: candidate.filename,
+                classification: candidate.classification,
+                summary: candidate.summary,
+                content: candidate.content
+            };
+        }
+    }
+
+    return bestMatch;
+}
+
+async function findPendingDuplicateForSteps(steps) {
+    for (let index = 0; index < steps.length; index += 1) {
+        const step = steps[index];
+        const duplicate = await findLikelyDuplicateDocument(step);
+
+        if (duplicate) {
+            return {
+                index,
+                step,
+                duplicate
+            };
+        }
+    }
+
+    return null;
+}
+
+function validateAgentSteps(steps) {
+    if (!Array.isArray(steps) || !steps.length) {
+        return "The saved agent plan did not contain any safe actions to apply. Please create a clearer agent plan.";
+    }
+
+    for (const step of steps) {
+        if (!step || typeof step !== "object" || !ALLOWED_AGENT_STEP_TYPES.has(step.type)) {
+            return "The saved agent plan included an unsafe or unsupported step type.";
+        }
+
+        if ((step.type === "create_document" || step.type === "create_workspace_file") &&
+            typeof step.content !== "string"
+        ) {
+            return `The step "${step.type}" is missing content.`;
+        }
+
+        if ((step.type === "rename_document" || step.type === "delete_document" || step.type === "summarize_document") &&
+            !step.filename &&
+            !(step.oldName && step.newName)
+        ) {
+            return `The step "${step.type}" is missing required document names.`;
+        }
+
+        if (step.type === "rename_document" && (!step.oldName || !step.newName)) {
+            return "The step \"rename_document\" needs both oldName and newName.";
+        }
+
+        if (step.type === "search_documents" && !step.keyword) {
+            return "The step \"search_documents\" needs a keyword.";
+        }
+    }
+
+    return null;
+}
+
 async function getApprovedAgentActions(latestPlan) {
     const response = await client.messages.create({
         model: MODEL,
@@ -634,14 +893,17 @@ async function getApprovedAgentActions(latestPlan) {
         messages: [
             {
                 role: "user",
-                content: `You are converting an approved agent plan into a strict JSON action list.
+                content: `You are converting an approved agent plan into a strict JSON workflow.
 
-Only include safe actions from this allowlist:
-- create_note
+Only include safe steps from this allowlist:
+- create_document
 - create_workspace_file
-- summarise_document
+- summarize_document
 - rename_document
 - delete_document
+- list_documents
+- list_files
+- search_documents
 
 Forbidden actions:
 - editing server.js
@@ -653,14 +915,14 @@ Forbidden actions:
 - changing environment variables
 
 If the plan is ambiguous, unsafe, or cannot be executed safely, return:
-{"actions":[],"needs_clarification":"short reason"}
+{"steps":[],"needs_clarification":"short reason"}
 
 Otherwise return strict JSON only in this format:
 {
-  "actions": [
+  "steps": [
     {
-      "type": "create_note",
-      "filename": "note name",
+      "type": "create_document",
+      "filename": "short description",
       "content": "text content",
       "classification": "personal",
       "summary": "optional summary"
@@ -676,6 +938,7 @@ ${latestPlan.plan}
 
 Plan context:
 ${JSON.stringify({
+    today: latestPlan.today,
     memoryCount: latestPlan.memory.length,
     documentNames: latestPlan.documents.map(doc => doc.filename),
     files: latestPlan.files
@@ -704,96 +967,116 @@ ${JSON.stringify({
     }
 }
 
-async function executeApprovedAgentActions(actions) {
-    const allowedTypes = new Set([
-        "create_note",
-        "create_workspace_file",
-        "summarise_document",
-        "rename_document",
-        "delete_document"
-    ]);
+async function executeApprovedAgentActions(steps, options = {}) {
     const results = [];
+    const undoEntries = [];
+    const duplicateDecision = options.duplicateDecision || null;
 
-    for (const action of actions) {
-        if (!action || typeof action !== "object" || !allowedTypes.has(action.type)) {
-            return {
-                ok: false,
-                message: "Agent plan included an unsafe or unsupported action type."
-            };
-        }
+    for (let index = 0; index < steps.length; index += 1) {
+        const step = steps[index];
 
-        if (action.type === "create_note") {
-            const filename = action.filename
-                ? makeAgentDatedFilename(action.filename)
-                : makeAgentDatedFilename(action.classification || "note");
-            const content = typeof action.content === "string" ? action.content.trim() : "";
+        if (step.type === "create_document") {
+            const content = typeof step.content === "string" ? step.content.trim() : "";
+            let filename = step.filename
+                ? makeAgentDatedFilename(step.filename)
+                : await makeUniqueAgentFilename(step.classification || "note", "note");
 
-            if (!filename || !content) {
+            if (!content) {
                 return {
                     ok: false,
-                    message: "Agent plan needs a clearer note filename or content before it can be applied."
+                    message: "Agent plan needs clearer content before a document can be created.",
+                    results,
+                    undoEntries
                 };
+            }
+
+            if (duplicateDecision && duplicateDecision.index === index) {
+                if (duplicateDecision.mode === "replace") {
+                    const existingDoc = await getDocumentSnapshotForUndo(duplicateDecision.duplicate.filename);
+                    filename = duplicateDecision.duplicate.filename;
+                    undoEntries.push({
+                        type: "restore_document",
+                        document: existingDoc
+                    });
+                } else {
+                    filename = await makeUniqueAgentFilename(step.filename || step.classification || "note", "note");
+                }
             }
 
             await pgSaveDocument(
                 filename,
                 content,
-                action.classification || "personal",
-                action.summary || `Saved note: ${filename}`
+                step.classification || "personal",
+                step.summary || `Saved note: ${filename}`
             );
 
             saveDocumentToDatabase(
                 filename,
                 content,
-                action.classification || "personal",
-                action.summary || `Saved note: ${filename}`
+                step.classification || "personal",
+                step.summary || `Saved note: ${filename}`
             );
 
-            results.push(`Created Postgres note: ${filename}`);
+            undoEntries.push({
+                type: "delete_document",
+                filename
+            });
+            results.push(`Created Postgres document: ${filename}`);
             continue;
         }
 
-        if (action.type === "create_workspace_file") {
-            const filename = action.filename ? makeAgentDatedFilename(action.filename) : null;
-            const content = typeof action.content === "string" ? action.content.trim() : "";
+        if (step.type === "create_workspace_file") {
+            const filename = await makeUniqueWorkspaceAgentFilename(step.filename || "workspace_file", "workspace_file");
+            const content = typeof step.content === "string" ? step.content.trim() : "";
 
-            if (!filename || !content) {
+            if (!content) {
                 return {
                     ok: false,
-                    message: "Agent plan needs a clearer workspace filename or content before it can be applied."
+                    message: "Agent plan needs clearer content before a workspace file can be created.",
+                    results,
+                    undoEntries
                 };
             }
 
             await createWorkspaceFile(filename, content);
+            undoEntries.push({
+                type: "delete_workspace_file",
+                filename
+            });
             results.push(`Created workspace file: ${filename}`);
             continue;
         }
 
-        if (action.type === "summarise_document") {
-            const filename = normalizeAgentFilename(action.filename);
+        if (step.type === "summarize_document") {
+            const filename = normalizeAgentFilename(step.filename);
 
             if (!filename) {
                 return {
                     ok: false,
-                    message: "Agent plan needs a clearer document name before it can be summarised."
+                    message: "Agent plan needs a clearer document name before it can be summarised.",
+                    results,
+                    undoEntries
                 };
             }
 
-            let doc = await pgGetDocument(filename);
-
-            if (!doc) {
-                doc = getDocumentByFilename(filename);
-            }
+            const doc = await getDocumentSnapshotForUndo(filename);
 
             if (!doc || !doc.content) {
                 return {
                     ok: false,
-                    message: `Agent plan references a document that could not be loaded safely: ${filename}.`
+                    message: `Agent plan references a document that could not be loaded safely: ${filename}.`,
+                    results,
+                    undoEntries
                 };
             }
 
             const summary = await summariseText(doc.content);
 
+            undoEntries.push({
+                type: "restore_document_summary",
+                filename,
+                summary: doc.summary || ""
+            });
             await pgUpdateDocumentSummary(filename, summary);
             updateDocumentSummary(filename, summary);
             await pgSaveDocument(
@@ -807,36 +1090,147 @@ async function executeApprovedAgentActions(actions) {
             continue;
         }
 
-        if (action.type === "rename_document") {
-            const oldName = normalizeAgentFilename(action.oldName);
-            const newName = normalizeAgentFilename(action.newName);
+        if (step.type === "rename_document") {
+            const oldName = normalizeAgentFilename(step.oldName);
+            const newName = normalizeAgentFilename(step.newName);
 
             if (!oldName || !newName) {
                 return {
                     ok: false,
-                    message: "Agent plan needs clearer document names before a rename can be applied."
+                    message: "Agent plan needs clearer document names before a rename can be applied.",
+                    results,
+                    undoEntries
                 };
             }
 
             await pgRenameDocument(oldName, newName);
             renameDocumentInDatabase(oldName, newName);
+            undoEntries.push({
+                type: "rename_document",
+                oldName: newName,
+                newName: oldName
+            });
             results.push(`Renamed Postgres document: ${oldName} -> ${newName}`);
             continue;
         }
 
-        if (action.type === "delete_document") {
-            const filename = normalizeAgentFilename(action.filename);
+        if (step.type === "delete_document") {
+            const filename = normalizeAgentFilename(step.filename);
 
             if (!filename) {
                 return {
                     ok: false,
-                    message: "Agent plan needs a clearer document name before deletion can be applied."
+                    message: "Agent plan needs a clearer document name before deletion can be applied.",
+                    results,
+                    undoEntries
+                };
+            }
+
+            const existingDoc = await getDocumentSnapshotForUndo(filename);
+
+            if (!existingDoc) {
+                return {
+                    ok: false,
+                    message: `The document could not be found for safe deletion: ${filename}.`,
+                    results,
+                    undoEntries
                 };
             }
 
             await pgDeleteDocument(filename);
             deleteDocumentFromDatabase(filename);
+            undoEntries.push({
+                type: "restore_document",
+                document: existingDoc
+            });
             results.push(`Deleted Postgres document: ${filename}`);
+            continue;
+        }
+
+        if (step.type === "list_documents") {
+            const docs = await pgListDocuments();
+            results.push(`Listed ${docs.length} documents.`);
+            continue;
+        }
+
+        if (step.type === "list_files") {
+            const files = await listWorkspaceFiles();
+            results.push(`Listed ${files.length} workspace files.`);
+            continue;
+        }
+
+        if (step.type === "search_documents") {
+            const docs = await pgSearchDocuments(step.keyword);
+            results.push(`Searched documents for "${step.keyword}" and found ${docs.length} matches.`);
+        }
+    }
+
+    return {
+        ok: true,
+        results,
+        undoEntries
+    };
+}
+
+async function undoAgentActionRecord(record) {
+    const undoEntries = Array.isArray(record?.undo_json) ? [...record.undo_json].reverse() : [];
+    const results = [];
+
+    if (!undoEntries.length) {
+        return {
+            ok: false,
+            message: "The last agent action does not have undo information."
+        };
+    }
+
+    for (const entry of undoEntries) {
+        if (entry.type === "delete_document") {
+            await pgDeleteDocument(entry.filename);
+            deleteDocumentFromDatabase(entry.filename);
+            results.push(`Removed created document: ${entry.filename}`);
+            continue;
+        }
+
+        if (entry.type === "restore_document" && entry.document) {
+            await pgSaveDocument(
+                entry.document.filename,
+                entry.document.content || "",
+                entry.document.classification || "personal",
+                entry.document.summary || ""
+            );
+            saveDocumentToDatabase(
+                entry.document.filename,
+                entry.document.content || "",
+                entry.document.classification || "personal",
+                entry.document.summary || ""
+            );
+            results.push(`Restored deleted document: ${entry.document.filename}`);
+            continue;
+        }
+
+        if (entry.type === "rename_document") {
+            await pgRenameDocument(entry.oldName, entry.newName);
+            renameDocumentInDatabase(entry.oldName, entry.newName);
+            results.push(`Reverted document rename: ${entry.oldName} -> ${entry.newName}`);
+            continue;
+        }
+
+        if (entry.type === "delete_workspace_file") {
+            await deleteWorkspaceFile(entry.filename);
+            results.push(`Removed created workspace file: ${entry.filename}`);
+            continue;
+        }
+
+        if (entry.type === "restore_workspace_file") {
+            await createWorkspaceFile(entry.filename, entry.content || "");
+            results.push(`Restored workspace file: ${entry.filename}`);
+            continue;
+        }
+
+        if (entry.type === "restore_document_summary") {
+            await pgUpdateDocumentSummary(entry.filename, entry.summary || "");
+            updateDocumentSummary(entry.filename, entry.summary || "");
+            results.push(`Restored document summary: ${entry.filename}`);
         }
     }
 
@@ -851,7 +1245,21 @@ async function executeApprovedAgentActions(actions) {
 ========================= */
 
 function detectCommand(message) {
-    const text = message.trim();
+    const rawText = message.trim();
+    const secretMatch = rawText.match(/^secret\s+(\S+)\s+([\s\S]+)$/i);
+    const providedSecret = secretMatch ? secretMatch[1] : null;
+    const text = secretMatch ? secretMatch[2].trim() : rawText;
+    const attachSecret = command => {
+        if (!command) {
+            return null;
+        }
+
+        if (providedSecret) {
+            command.secret = providedSecret;
+        }
+
+        return command;
+    };
     let match;
 
     match = text.match(/^create file\s+(.+?)\s+with\s+([\s\S]+)$/i);
@@ -977,34 +1385,54 @@ function detectCommand(message) {
 
     match = text.match(/^search documents\s+(.+)$/i);
     if (match) {
-        return {
+        return attachSecret({
             type: "search_documents",
             keyword: match[1].trim()
-        };
+        });
     }
 
     if (/^analyse documents$/i.test(text)) {
-        return { type: "analyse_documents" };
+        return attachSecret({ type: "analyse_documents" });
+    }
+
+    if (/^agent history$/i.test(text)) {
+        return attachSecret({ type: "agent_history" });
     }
 
     match = text.match(/^agent\s+([\s\S]+)$/i);
     if (match) {
-        return {
+        return attachSecret({
             type: "agent_plan",
             request: match[1].trim()
-        };
+        });
     }
 
     if (/^approve agent$/i.test(text)) {
-        return { type: "agent_apply" };
+        return attachSecret({ type: "agent_apply" });
+    }
+
+    if (/^undo agent$/i.test(text)) {
+        return attachSecret({ type: "agent_undo" });
+    }
+
+    if (/^approve duplicate create$/i.test(text)) {
+        return attachSecret({ type: "duplicate_create_approval" });
+    }
+
+    if (/^approve duplicate replace$/i.test(text)) {
+        return attachSecret({ type: "duplicate_replace_approval" });
+    }
+
+    if (/^cancel duplicate$/i.test(text)) {
+        return attachSecret({ type: "duplicate_cancel" });
     }
 
     if (/^list files$/i.test(text) || /^list all files$/i.test(text)) {
-        return { type: "list_files" };
+        return attachSecret({ type: "list_files" });
     }
 
     if (/^list documents$/i.test(text) || /^what documents do i have$/i.test(text)) {
-        return { type: "list_documents" };
+        return attachSecret({ type: "list_documents" });
     }
 
     return null;
@@ -1015,6 +1443,15 @@ function detectCommand(message) {
 ========================= */
 
 async function handleCommand(command) {
+    const accessError = getAgentAccessError(command);
+
+    if (accessError) {
+        return {
+            ok: false,
+            reply: accessError
+        };
+    }
+
     switch (command.type) {
         case "create_file": {
             const filename = ensureTxtExtension(command.filename);
@@ -1244,6 +1681,24 @@ async function handleCommand(command) {
             return { ok: true, reply: `Saved documents:\n\n${lines.join("\n")}` };
         }
 
+        case "agent_history": {
+            const actions = await pgGetRecentAgentActions(10);
+
+            if (!actions.length) {
+                return { ok: true, reply: "No recent agent actions logged." };
+            }
+
+            const lines = actions.map(action => {
+                const requestPreview = (action.request || "No request").slice(0, 80);
+                return `- #${action.id} ${action.action_type} [${action.status}] ${requestPreview}`;
+            });
+
+            return {
+                ok: true,
+                reply: `Recent agent actions:\n\n${lines.join("\n")}`
+            };
+        }
+
         case "search_documents": {
             const dbDocs = searchDocuments(command.keyword);
             const workspaceMatches = await searchWorkspaceFiles(command.keyword);
@@ -1302,6 +1757,16 @@ async function handleCommand(command) {
                 createdAt: new Date().toISOString()
             };
 
+            await pgLogAgentAction(
+                "agent_plan",
+                "planned",
+                command.request,
+                plan,
+                { documents: documents.map(doc => doc.filename), files },
+                null,
+                "Proposal generated"
+            );
+
             return {
                 ok: true,
                 reply: plan,
@@ -1323,7 +1788,7 @@ async function handleCommand(command) {
                 };
             }
 
-            if (parsed.needs_clarification || !Array.isArray(parsed.actions) || !parsed.actions.length) {
+            if (parsed.needs_clarification || !Array.isArray(parsed.steps) || !parsed.steps.length) {
                 return {
                     ok: false,
                     reply: parsed.needs_clarification
@@ -1332,21 +1797,195 @@ async function handleCommand(command) {
                 };
             }
 
-            const execution = await executeApprovedAgentActions(parsed.actions);
+            const validationError = validateAgentSteps(parsed.steps);
+
+            if (validationError) {
+                await pgLogAgentAction(
+                    "agent_apply",
+                    "blocked",
+                    latestAgentPlan.request,
+                    latestAgentPlan.plan,
+                    parsed.steps,
+                    null,
+                    validationError
+                );
+
+                return {
+                    ok: false,
+                    reply: validationError
+                };
+            }
+
+            const duplicateMatch = await findPendingDuplicateForSteps(parsed.steps);
+
+            if (duplicateMatch) {
+                pendingDuplicateDecision = {
+                    request: latestAgentPlan.request,
+                    plan: latestAgentPlan.plan,
+                    steps: parsed.steps,
+                    duplicateIndex: duplicateMatch.index,
+                    duplicate: duplicateMatch.duplicate
+                };
+
+                await pgLogAgentAction(
+                    "agent_apply",
+                    "duplicate_pending",
+                    latestAgentPlan.request,
+                    latestAgentPlan.plan,
+                    parsed.steps,
+                    null,
+                    `Duplicate detected for ${duplicateMatch.duplicate.filename}`
+                );
+
+                return {
+                    ok: false,
+                    reply: `A likely duplicate was found: ${duplicateMatch.duplicate.filename}.
+
+Choose one:
+- create anyway: \`approve duplicate create\`
+- replace existing: \`approve duplicate replace\`
+- rename new note: create a clearer new agent plan
+- cancel: \`cancel duplicate\``
+                };
+            }
+
+            const execution = await executeApprovedAgentActions(parsed.steps);
 
             if (!execution.ok) {
+                await pgLogAgentAction(
+                    "agent_apply",
+                    "failed",
+                    latestAgentPlan.request,
+                    latestAgentPlan.plan,
+                    parsed.steps,
+                    execution.undoEntries || null,
+                    execution.message
+                );
+
                 return {
                     ok: false,
                     reply: execution.message
                 };
             }
 
+            await pgLogAgentAction(
+                "agent_apply",
+                "applied",
+                latestAgentPlan.request,
+                latestAgentPlan.plan,
+                parsed.steps,
+                execution.undoEntries,
+                execution.results.join(" | ")
+            );
+
             latestAgentPlan = null;
+            pendingDuplicateDecision = null;
 
             return {
                 ok: true,
                 reply: `Approved agent actions applied:\n\n- ${execution.results.join("\n- ")}`,
                 appliedActions: execution.results.length
+            };
+        }
+
+        case "duplicate_create_approval":
+        case "duplicate_replace_approval": {
+            if (!pendingDuplicateDecision) {
+                return { ok: false, reply: "No duplicate decision is waiting for approval." };
+            }
+
+            const execution = await executeApprovedAgentActions(
+                pendingDuplicateDecision.steps,
+                {
+                    duplicateDecision: {
+                        index: pendingDuplicateDecision.duplicateIndex,
+                        duplicate: pendingDuplicateDecision.duplicate,
+                        mode: command.type === "duplicate_replace_approval" ? "replace" : "create"
+                    }
+                }
+            );
+
+            if (!execution.ok) {
+                await pgLogAgentAction(
+                    "agent_apply",
+                    "failed",
+                    pendingDuplicateDecision.request,
+                    pendingDuplicateDecision.plan,
+                    pendingDuplicateDecision.steps,
+                    execution.undoEntries || null,
+                    execution.message
+                );
+
+                return {
+                    ok: false,
+                    reply: execution.message
+                };
+            }
+
+            await pgLogAgentAction(
+                "agent_apply",
+                "applied",
+                pendingDuplicateDecision.request,
+                pendingDuplicateDecision.plan,
+                pendingDuplicateDecision.steps,
+                execution.undoEntries,
+                execution.results.join(" | ")
+            );
+
+            latestAgentPlan = null;
+            pendingDuplicateDecision = null;
+
+            return {
+                ok: true,
+                reply: `Approved duplicate decision applied:\n\n- ${execution.results.join("\n- ")}`,
+                appliedActions: execution.results.length
+            };
+        }
+
+        case "duplicate_cancel": {
+            if (!pendingDuplicateDecision) {
+                return { ok: false, reply: "No duplicate decision is waiting." };
+            }
+
+            await pgLogAgentAction(
+                "agent_apply",
+                "cancelled",
+                pendingDuplicateDecision.request,
+                pendingDuplicateDecision.plan,
+                pendingDuplicateDecision.steps,
+                null,
+                "Duplicate creation cancelled"
+            );
+
+            pendingDuplicateDecision = null;
+
+            return {
+                ok: true,
+                reply: "Duplicate approval cancelled."
+            };
+        }
+
+        case "agent_undo": {
+            const lastAction = await pgGetLastUndoableAgentAction();
+
+            if (!lastAction) {
+                return { ok: false, reply: "No undoable agent action found." };
+            }
+
+            const undoResult = await undoAgentActionRecord(lastAction);
+
+            if (!undoResult.ok) {
+                return {
+                    ok: false,
+                    reply: undoResult.message
+                };
+            }
+
+            await pgMarkAgentActionUndone(lastAction.id);
+
+            return {
+                ok: true,
+                reply: `Undid last agent action:\n\n- ${undoResult.results.join("\n- ")}`
             };
         }
 

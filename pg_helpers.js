@@ -1,5 +1,30 @@
 const pool = require("./pg_database");
 
+let agentActionsTableReadyPromise = null;
+
+function ensureAgentActionsTable() {
+    if (!agentActionsTableReadyPromise) {
+        agentActionsTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS agent_actions (
+                id SERIAL PRIMARY KEY,
+                action_type TEXT,
+                status TEXT,
+                request TEXT,
+                plan TEXT,
+                actions_json JSONB,
+                undo_json JSONB,
+                result TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `).catch(error => {
+            agentActionsTableReadyPromise = null;
+            throw error;
+        });
+    }
+
+    return agentActionsTableReadyPromise;
+}
+
 /* =========================
    POSTGRES DOCUMENTS
 ========================= */
@@ -137,6 +162,91 @@ async function pgLoadMemory() {
     return result.rows.reverse();
 }
 
+async function pgLogAgentAction(
+    actionType,
+    status,
+    request = "",
+    plan = "",
+    actionsJson = null,
+    undoJson = null,
+    result = ""
+) {
+    await ensureAgentActionsTable();
+
+    const queryResult = await pool.query(
+        `
+        INSERT INTO agent_actions (
+            action_type,
+            status,
+            request,
+            plan,
+            actions_json,
+            undo_json,
+            result
+        )
+        VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7)
+        RETURNING id, action_type, status, request, plan, actions_json, undo_json, result, created_at
+        `,
+        [
+            actionType,
+            status,
+            request,
+            plan,
+            actionsJson ? JSON.stringify(actionsJson) : null,
+            undoJson ? JSON.stringify(undoJson) : null,
+            result
+        ]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgGetRecentAgentActions(limit = 10) {
+    await ensureAgentActionsTable();
+
+    const queryResult = await pool.query(
+        `
+        SELECT id, action_type, status, request, plan, actions_json, undo_json, result, created_at
+        FROM agent_actions
+        ORDER BY id DESC
+        LIMIT $1
+        `,
+        [limit]
+    );
+
+    return queryResult.rows;
+}
+
+async function pgGetLastUndoableAgentAction() {
+    await ensureAgentActionsTable();
+
+    const queryResult = await pool.query(`
+        SELECT id, action_type, status, request, plan, actions_json, undo_json, result, created_at
+        FROM agent_actions
+        WHERE status = 'applied'
+        ORDER BY id DESC
+        LIMIT 1
+    `);
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgMarkAgentActionUndone(id) {
+    await ensureAgentActionsTable();
+
+    const queryResult = await pool.query(
+        `
+        UPDATE agent_actions
+        SET status = 'undone'
+        WHERE id = $1
+        RETURNING id, action_type, status, request, plan, actions_json, undo_json, result, created_at
+        `,
+        [id]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
 module.exports = {
     pgSaveDocument,
     pgListDocuments,
@@ -146,5 +256,9 @@ module.exports = {
     pgRenameDocument,
     pgUpdateDocumentSummary,
     pgAddMemory,
-    pgLoadMemory
+    pgLoadMemory,
+    pgLogAgentAction,
+    pgGetRecentAgentActions,
+    pgGetLastUndoableAgentAction,
+    pgMarkAgentActionUndone
 };
