@@ -1004,7 +1004,7 @@ function buildCleanupProposalPlan(goal, duplicateGroups, files = []) {
             "- A broader document scan may still reveal duplicates outside the recent discovery set.",
             "",
             "Approval Question",
-            "No cleanup actions are recommended right now. Do you want to keep the task open for another discovery cycle?"
+            "Task completed. No further action required."
         ].join("\n");
     }
 
@@ -1107,7 +1107,7 @@ async function generateTaskCleanupProposal(task) {
     const status = hasActions ? "waiting_approval" : "completed";
     const result = hasActions
         ? `Generated cleanup plan with ${actionsJson.steps.length} proposed action(s).`
-        : "Generated cleanup plan but no safe cleanup actions were recommended.";
+        : "Task completed. No further action required.";
 
     await pgUpdateAgentTask(task.id, {
         status,
@@ -1565,8 +1565,10 @@ async function executeApprovedAgentTask(taskId) {
         }
 
         finalStatus = followUp.status;
-        finalResult = `Generated cleanup plan.\n\n${followUp.plan}`;
-        finalPlan = followUp.plan;
+        finalResult = followUp.status === "completed"
+            ? "Task completed. No further action required."
+            : `Generated cleanup plan.\n\n${followUp.plan}`;
+        finalPlan = followUp.status === "waiting_approval" ? followUp.plan : "";
         finalSteps = followUp.validSteps;
         finalSkipped = followUp.skipped;
         generatedProposal = true;
@@ -3064,6 +3066,12 @@ ${task.plan || "No plan saved."}`
             const task = getLatestActiveAgentTask(recentTasks);
 
             if (!task) {
+                const latestTask = recentTasks[0];
+
+                if (latestTask && latestTask.status === "completed") {
+                    return { ok: false, reply: "Task already completed" };
+                }
+
                 return { ok: false, reply: "No active agent task is available to continue." };
             }
 
@@ -3079,7 +3087,7 @@ ${task.plan || "No plan saved."}`
             return execution.ok
                 ? {
                     ok: true,
-                    reply: `Agent task #${task.id} continued.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.generatedProposal ? `${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nGenerated cleanup plan:\n\n${execution.plan}\n\nNext approval needed: approve task ${task.id}` : execution.status === "running" ? `\n\nContinue with: continue agent` : execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
+                    reply: `Agent task #${task.id} continued.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.generatedProposal && execution.status === "waiting_approval" ? `${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nGenerated cleanup plan:\n\n${execution.plan}\n\nNext approval needed: approve task ${task.id}` : execution.status === "completed" ? `\n\nTask completed. No further action required.` : execution.status === "running" ? `\n\nContinue with: continue agent` : execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
                     taskId: task.id,
                     status: execution.status
                 }
@@ -3243,7 +3251,7 @@ Choose one:
             return execution.ok
                 ? {
                     ok: true,
-                    reply: `Agent task #${task.id} executed.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.generatedProposal ? `${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nGenerated cleanup plan:\n\n${execution.plan}\n\nNext approval needed: approve task ${task.id}` : execution.status === "running" ? `\n\nContinue with: continue agent` : execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
+                    reply: `Agent task #${task.id} executed.\n\nStatus: ${execution.status}\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${execution.generatedProposal && execution.status === "waiting_approval" ? `${execution.planSkipped.length ? `\n\nPreviously skipped during planning:\n- ${execution.planSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nGenerated cleanup plan:\n\n${execution.plan}\n\nNext approval needed: approve task ${task.id}` : execution.status === "completed" ? `\n\nTask completed. No further action required.` : execution.status === "running" ? `\n\nContinue with: continue agent` : execution.status === "waiting_approval" ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
                     taskId: task.id,
                     status: execution.status
                 }
