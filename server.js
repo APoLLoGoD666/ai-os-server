@@ -1017,11 +1017,27 @@ ${JSON.stringify({
     }
 }
 
+function stepRequiresNoMatches(step) {
+    const phrases = [
+        "only if no collision found",
+        "only if no existing match",
+        "if no matches found",
+        "if no duplicate exists"
+    ];
+    const searchableText = Object.values(step || {})
+        .filter(value => typeof value === "string")
+        .join(" ")
+        .toLowerCase();
+
+    return phrases.some(phrase => searchableText.includes(phrase));
+}
+
 async function executeApprovedAgentActions(steps, options = {}) {
     const results = [];
     const undoEntries = [];
     const duplicateDecision = options.duplicateDecision || null;
     const skipped = Array.isArray(options.skipped) ? [...options.skipped] : [];
+    let latestSearchResult = null;
 
     for (let index = 0; index < steps.length; index += 1) {
         const step = steps[index];
@@ -1040,6 +1056,14 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     undoEntries,
                     skipped
                 };
+            }
+
+            if (stepRequiresNoMatches(step) && latestSearchResult && latestSearchResult.count > 0) {
+                skipped.push({
+                    type: step.type,
+                    reason: `Skipped because search_documents for "${latestSearchResult.keyword}" found ${latestSearchResult.count} matches.`
+                });
+                continue;
             }
 
             if (duplicateDecision && duplicateDecision.index === index) {
@@ -1219,6 +1243,10 @@ async function executeApprovedAgentActions(steps, options = {}) {
 
         if (step.type === "search_documents") {
             const docs = await pgSearchDocuments(step.keyword);
+            latestSearchResult = {
+                keyword: step.keyword,
+                count: docs.length
+            };
             results.push(`Searched documents for "${step.keyword}" and found ${docs.length} matches.`);
         }
     }
