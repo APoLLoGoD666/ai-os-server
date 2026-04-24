@@ -180,6 +180,33 @@
             margin-top: 2px;
         }
 
+        .agent-list-item {
+            border-bottom: 1px solid #292929;
+            padding: 8px 0;
+        }
+
+        .agent-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .agent-item-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-block;
+            min-width: 20px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #2b6fff;
+            color: white;
+            font-size: 12px;
+            text-align: center;
+        }
+
         .widget-chat-box {
             background: #121212;
             border: 1px solid #2d2d2d;
@@ -362,12 +389,17 @@
             <div class="panel">
                 <h3>Agent Control</h3>
                 <div class="button-row">
-                    <button onclick="refreshAgentData()">Refresh Agent Data</button>
+                    <button onclick="refreshAgentData()">Refresh</button>
                     <button onclick="runSchedulesNowFromDashboard()">Run Schedules Now</button>
                     <button class="secondary" onclick="openNotificationsPanel()">Open Notifications</button>
                 </div>
                 <div id="agentTasksPanel" class="small" style="margin-top:10px;">Loading tasks...</div>
+                <div id="agentTaskDetailPanel" class="small" style="margin-top:10px;">Select a task to view details.</div>
                 <div id="agentSchedulesPanel" class="small" style="margin-top:10px;">Loading schedules...</div>
+            </div>
+
+            <div class="panel">
+                <h3>Notifications <span id="notificationBadge" class="badge">0</span></h3>
                 <div id="notificationsPanel" class="small" style="margin-top:10px;">Loading notifications...</div>
             </div>
         </aside>
@@ -698,10 +730,12 @@
 
         async function loadAgentControlPanel() {
             const tasksPanel = document.getElementById("agentTasksPanel");
+            const taskDetailPanel = document.getElementById("agentTaskDetailPanel");
             const schedulesPanel = document.getElementById("agentSchedulesPanel");
             const notificationsPanel = document.getElementById("notificationsPanel");
+            const notificationBadge = document.getElementById("notificationBadge");
 
-            if (!tasksPanel || !schedulesPanel || !notificationsPanel) {
+            if (!tasksPanel || !taskDetailPanel || !schedulesPanel || !notificationsPanel || !notificationBadge) {
                 return;
             }
 
@@ -721,20 +755,68 @@
                 const tasks = Array.isArray(tasksData.tasks) ? tasksData.tasks.slice(0, 5) : [];
                 const schedules = Array.isArray(schedulesData.schedules) ? schedulesData.schedules.slice(0, 5) : [];
                 const notifications = Array.isArray(notificationsData.notifications) ? notificationsData.notifications.slice(0, 5) : [];
+                const unreadCount = notifications.filter(item => !item.read).length;
 
-                tasksPanel.innerHTML = `<b>Recent Agent Tasks</b><br>${tasks.length ? tasks.map(task => `#${task.id} [${escapeHtml(task.status)}] ${escapeHtml(task.goal)}`).join("<br>") : "<span class=\"empty\">No tasks found.</span>"}`;
-                schedulesPanel.innerHTML = `<b>Schedules</b><br>${schedules.length ? schedules.map(schedule => `#${schedule.id} [${schedule.enabled ? "enabled" : "disabled"}] ${escapeHtml(schedule.frequency)}: ${escapeHtml(schedule.goal)}`).join("<br>") : "<span class=\"empty\">No schedules found.</span>"}`;
-                notificationsPanel.innerHTML = `<b>Notifications</b><br>${notifications.length ? notifications.map(item => `#${item.id} [${item.read ? "read" : "unread"}] ${escapeHtml(item.title)}`).join("<br>") : "<span class=\"empty\">No notifications found.</span>"}`;
+                notificationBadge.textContent = String(unreadCount);
+
+                tasksPanel.innerHTML = `<b>Tasks</b><br>${tasks.length ? tasks.map(task => `
+                    <div class="agent-list-item">
+                        <div><b>#${task.id}</b> ${escapeHtml(task.goal)}</div>
+                        <div class="doc-meta">${escapeHtml(task.status || "unknown")}</div>
+                        <div class="agent-item-actions">
+                            <button class="widget-button secondary" onclick="viewAgentTask(${task.id})">View</button>
+                            ${task.status === "waiting_approval" ? `<button class="widget-button" onclick="approveAgentTask(${task.id})">Approve</button>` : ""}
+                        </div>
+                    </div>
+                `).join("") : "<span class=\"empty\">No tasks found.</span>"}`;
+
+                schedulesPanel.innerHTML = `<b>Schedules</b><br>${schedules.length ? schedules.map(schedule => `
+                    <div class="agent-list-item">
+                        <div><b>#${schedule.id}</b> ${escapeHtml(schedule.frequency)}: ${escapeHtml(schedule.goal)}</div>
+                        <div class="doc-meta">${schedule.enabled ? "enabled" : "disabled"}</div>
+                        <div class="agent-item-actions">
+                            <button class="widget-button secondary" onclick="runScheduleFromDashboard(${schedule.id})">Run</button>
+                            ${schedule.enabled ? `<button class="widget-button" onclick="disableScheduleFromDashboard(${schedule.id})">Disable</button>` : ""}
+                        </div>
+                    </div>
+                `).join("") : "<span class=\"empty\">No schedules found.</span>"}`;
+
+                notificationsPanel.innerHTML = notifications.length ? notifications.map(item => `
+                    <div class="agent-list-item">
+                        <div><b>#${item.id}</b> ${escapeHtml(item.title || "Notification")}</div>
+                        <div class="doc-meta">${item.read ? "read" : "unread"}</div>
+                        <div>${escapeHtml(item.message || "")}</div>
+                        <div class="agent-item-actions">
+                            ${!item.read ? `<button class="widget-button secondary" onclick="markNotificationReadFromDashboard(${item.id})">Mark Read</button>` : ""}
+                        </div>
+                    </div>
+                `).join("") : "<span class=\"empty\">No notifications found.</span>";
+
+                if (!taskDetailPanel.dataset.loaded) {
+                    taskDetailPanel.innerHTML = "Select a task to view details.";
+                }
             } catch (error) {
                 console.error("Agent control load error:", error);
                 tasksPanel.innerHTML = `<span class="empty">Could not load tasks.</span>`;
+                taskDetailPanel.innerHTML = `<span class="empty">Could not load task details.</span>`;
                 schedulesPanel.innerHTML = `<span class="empty">Could not load schedules.</span>`;
                 notificationsPanel.innerHTML = `<span class="empty">Could not load notifications.</span>`;
+                notificationBadge.textContent = "0";
             }
         }
 
         async function refreshAgentData() {
             await loadAgentControlPanel();
+        }
+
+        async function sendDashboardCommand(message) {
+            const res = await fetch(buildApiUrl("/chat"), {
+                method: "POST",
+                headers: buildApiHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify({ message })
+            });
+
+            return res.json();
         }
 
         async function runSchedulesNowFromDashboard() {
@@ -745,21 +827,80 @@
             }
 
             try {
-                const res = await fetch(buildApiUrl("/chat"), {
+                const res = await fetch(buildApiUrl("/run-schedules-now"), {
                     method: "POST",
-                    headers: buildApiHeaders({ "Content-Type": "application/json" }),
-                    body: JSON.stringify({ message: "run schedules now" })
+                    headers: buildApiHeaders({ "Content-Type": "application/json" })
                 });
                 const data = await res.json();
 
                 if (chatBox) {
-                    chatBox.innerHTML += `\n\nAI: ${escapeHtml(data.reply || "No reply")}`;
+                    const summaryText = Array.isArray(data.summary) ? data.summary.join(" | ") : (data.reply || "No reply");
+                    chatBox.innerHTML += `\n\nAI: ${escapeHtml(summaryText)}`;
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
 
                 await loadAgentControlPanel();
             } catch (error) {
                 console.error("Run schedules now error:", error);
+            }
+        }
+
+        async function approveAgentTask(id) {
+            const data = await sendDashboardCommand(`approve task ${id}`);
+            const detail = document.getElementById("agentTaskDetailPanel");
+            if (detail) {
+                detail.dataset.loaded = "true";
+                detail.innerHTML = `<pre class="preview-box">${escapeHtml(data.reply || "No reply")}</pre>`;
+            }
+            await loadAgentControlPanel();
+        }
+
+        async function viewAgentTask(id) {
+            const detail = document.getElementById("agentTaskDetailPanel");
+            if (!detail) return;
+
+            try {
+                const res = await fetch(buildApiUrl(`/agent-task/${id}`), { headers: buildApiHeaders() });
+                const data = await res.json();
+                detail.dataset.loaded = "true";
+                detail.innerHTML = data.ok
+                    ? `<pre class="preview-box">${escapeHtml(`Task #${data.task.id}\nStatus: ${data.task.status}\nGoal: ${data.task.goal}\nResult: ${data.task.result || "No result yet"}\n\nPlan:\n${data.task.plan || "No plan saved."}`)}</pre>`
+                    : `<div class="empty">${escapeHtml(data.error || "Could not load task.")}</div>`;
+            } catch (error) {
+                console.error("View task error:", error);
+                detail.innerHTML = `<div class="empty">Could not load task.</div>`;
+            }
+        }
+
+        async function runScheduleFromDashboard(id) {
+            const data = await sendDashboardCommand(`run schedule ${id}`);
+            const detail = document.getElementById("agentTaskDetailPanel");
+            if (detail) {
+                detail.dataset.loaded = "true";
+                detail.innerHTML = `<pre class="preview-box">${escapeHtml(data.reply || "No reply")}</pre>`;
+            }
+            await loadAgentControlPanel();
+        }
+
+        async function disableScheduleFromDashboard(id) {
+            const data = await sendDashboardCommand(`disable schedule ${id}`);
+            const detail = document.getElementById("agentTaskDetailPanel");
+            if (detail) {
+                detail.dataset.loaded = "true";
+                detail.innerHTML = `<pre class="preview-box">${escapeHtml(data.reply || "No reply")}</pre>`;
+            }
+            await loadAgentControlPanel();
+        }
+
+        async function markNotificationReadFromDashboard(id) {
+            try {
+                await fetch(buildApiUrl(`/notifications/${id}/read`), {
+                    method: "POST",
+                    headers: buildApiHeaders({ "Content-Type": "application/json" })
+                });
+                await loadAgentControlPanel();
+            } catch (error) {
+                console.error("Mark notification read error:", error);
             }
         }
 
@@ -1071,6 +1212,7 @@
 
         loadSidebarData();
         loadCustomLayout();
+        setInterval(loadAgentControlPanel, 12000);
     </script>
 </body>
 </html>

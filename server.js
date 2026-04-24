@@ -939,15 +939,17 @@ function isSafeLevel3WriteAction(action) {
     }
 
     const safeAuto = action.safe_auto === true || action.low_risk === true || /low[-_\s]?risk/i.test(JSON.stringify(action));
-    const contentLength = typeof action.content === "string" ? action.content.trim().length : 0;
+    const content = typeof action.content === "string" ? action.content.trim() : "";
+    const contentLength = content.length;
     const classification = String(action.classification || "").toLowerCase();
+    const sensitiveContent = /(password|secret|api[_-\s]?key|private key|token)/i.test(content);
 
     if (action.type === "create_document") {
-        return safeAuto && contentLength > 0 && contentLength < 2000 && classification !== "sensitive";
+        return safeAuto && contentLength > 0 && contentLength < 2000 && classification !== "sensitive" && !sensitiveContent;
     }
 
     if (action.type === "create_workspace_file") {
-        return safeAuto && contentLength > 0 && contentLength < 2000;
+        return safeAuto && contentLength > 0 && contentLength < 2000 && !sensitiveContent;
     }
 
     return false;
@@ -1433,6 +1435,28 @@ async function notifyTaskStatus(task, status, detail = "") {
             task.id
         );
     }
+}
+
+function formatScheduleRunSummary(result) {
+    if (!result.ok) {
+        return `- Schedule #${result.schedule.id} failed: ${result.message}`;
+    }
+
+    const parts = [`- Schedule #${result.schedule.id} created task #${result.taskId}`];
+
+    if (result.autoRun?.executed?.length) {
+        parts.push(`auto-ran ${result.autoRun.executed.length} safe step(s)`);
+    }
+
+    if (result.autoRun?.status === "waiting_approval") {
+        parts.push("waiting for approval");
+    }
+
+    if (result.autoRun?.status === "completed" || result.planning?.status === "completed") {
+        parts.push("completed");
+    }
+
+    return parts.join(" | ");
 }
 
 async function notifyUnsafeActionBlocked(request, message) {
@@ -1987,7 +2011,7 @@ async function executeApprovedAgentTask(taskId) {
     if (AUTONOMY_LEVEL === "3" && isSafeLevel3WriteAction(currentStep) && execution.results.length) {
         await createAgentNotification(
             "autonomy_level_3_auto_action",
-            "Autonomy Level 3 executed safe auto action",
+            "Autonomy Level 3 executed safe action",
             execution.results.join(" | "),
             "agent_task",
             task.id
@@ -4415,6 +4439,24 @@ app.post("/notifications/:id/read", requireAppAccess, async (req, res) => {
         });
     } catch (error) {
         console.error("NOTIFICATION READ ERROR:", error);
+        return res.status(500).json({
+            ok: false,
+            reply: error.message
+        });
+    }
+});
+
+app.post("/run-schedules-now", requireAppAccess, async (req, res) => {
+    try {
+        const scheduleRun = await runDueSchedules();
+        return res.status(200).json({
+            ok: true,
+            count: scheduleRun.results.length,
+            summary: scheduleRun.results.map(formatScheduleRunSummary),
+            results: scheduleRun.results
+        });
+    } catch (error) {
+        console.error("RUN SCHEDULES NOW ERROR:", error);
         return res.status(500).json({
             ok: false,
             reply: error.message
