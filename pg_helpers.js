@@ -430,7 +430,7 @@ async function pgCreateAgentSchedule(name, goal, frequency) {
     return queryResult.rows[0] || null;
 }
 
-async function pgGetAgentSchedules(limit = 50) {
+async function pgListAgentSchedules(limit = 50) {
     await ensureAgentSchedulesTable();
 
     const queryResult = await pool.query(
@@ -444,6 +444,10 @@ async function pgGetAgentSchedules(limit = 50) {
     );
 
     return queryResult.rows;
+}
+
+async function pgGetAgentSchedules(limit = 50) {
+    return pgListAgentSchedules(limit);
 }
 
 async function pgDisableAgentSchedule(id) {
@@ -482,6 +486,7 @@ module.exports = {
     pgGetRecentAgentTasks,
     pgGetLatestWaitingAgentTask,
     pgCreateAgentSchedule,
+    pgListAgentSchedules,
     pgGetAgentSchedules,
     pgDisableAgentSchedule
 };

@@ -28,7 +28,7 @@ const {
     pgGetRecentAgentTasks,
     pgGetLatestWaitingAgentTask,
     pgCreateAgentSchedule,
-    pgGetAgentSchedules,
+    pgListAgentSchedules,
     pgDisableAgentSchedule
 } = require("./pg_helpers");
 const {
@@ -2818,6 +2818,15 @@ function detectCommand(message) {
         });
     }
 
+    match = text.match(/^schedule agent weekly\s+([\s\S]+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "schedule_agent",
+            frequency: "weekly",
+            goal: match[1].trim()
+        });
+    }
+
     if (/^schedules$/i.test(text)) {
         return attachSecret({ type: "agent_schedules" });
     }
@@ -3694,13 +3703,13 @@ Choose one:
 
             return {
                 ok: true,
-                reply: `Scheduled agent #${schedule.id} (${schedule.frequency}) for goal: ${schedule.goal}`,
+                reply: `Schedule saved. Automatic execution will be added with background worker.\n\nSchedule #${schedule.id} [${schedule.frequency}] ${schedule.goal}`,
                 scheduleId: schedule.id
             };
         }
 
         case "agent_schedules": {
-            const schedules = await pgGetAgentSchedules(20);
+            const schedules = await pgListAgentSchedules(20);
 
             if (!schedules.length) {
                 return { ok: true, reply: "No agent schedules saved." };
@@ -3928,7 +3937,7 @@ app.get("/agent-task/:id", async (req, res) => {
 
 app.get("/agent-schedules", async (req, res) => {
     try {
-        const schedules = await pgGetAgentSchedules(50);
+        const schedules = await pgListAgentSchedules(50);
 
         res.status(200).json({
             ok: true,
