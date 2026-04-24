@@ -516,6 +516,71 @@ ${limitedDocs.join("\n\n----------------------\n\n")}`
         .trim();
 }
 
+async function buildAgentPlan(request, memory, documents, files) {
+    const memoryText = memory.length
+        ? memory
+            .slice(-8)
+            .map(item => `[${item.role.toUpperCase()}] ${item.message}`)
+            .join("\n")
+        : "No recent memory.";
+
+    const docsText = documents.length
+        ? documents.map((doc, index) => {
+            const preview = (doc.content || "").slice(0, 1000);
+            return [
+                `DOCUMENT ${index + 1}`,
+                `Filename: ${doc.filename}`,
+                `Type: ${doc.classification || "unknown"}`,
+                `Summary: ${doc.summary || "No summary"}`,
+                "Content Preview:",
+                preview
+            ].join("\n");
+        }).join("\n\n----------------------\n\n")
+        : "No relevant documents found.";
+
+    const filesText = files.length
+        ? files.map(name => `- ${name}`).join("\n")
+        : "No workspace files found.";
+
+    const response = await client.messages.create({
+        model: MODEL,
+        max_tokens: 700,
+        messages: [
+            {
+                role: "user",
+                content: `You are in safe proposal mode. Do not execute any changes.
+
+User request:
+${request}
+
+Recent memory:
+${memoryText}
+
+Relevant Postgres documents:
+${docsText}
+
+Workspace files from storage:
+${filesText}
+
+Return a plan only using these exact sections:
+- Objective
+- Current Context
+- Recommended Actions
+- Risks
+- Approval Question
+
+Be practical and concise.`
+            }
+        ]
+    });
+
+    return (response.content || [])
+        .filter(part => part.type === "text")
+        .map(part => part.text || "")
+        .join("\n")
+        .trim();
+}
+
 /* =========================
    COMMAND DETECTION
 ========================= */
@@ -655,6 +720,14 @@ function detectCommand(message) {
 
     if (/^analyse documents$/i.test(text)) {
         return { type: "analyse_documents" };
+    }
+
+    match = text.match(/^agent\s+([\s\S]+)$/i);
+    if (match) {
+        return {
+            type: "agent_plan",
+            request: match[1].trim()
+        };
     }
 
     if (/^list files$/i.test(text) || /^list all files$/i.test(text)) {
@@ -940,6 +1013,19 @@ async function handleCommand(command) {
                 ok: true,
                 reply: `Document analysis:\n\n${analysis}`,
                 documentsAnalysed: docs.length
+            };
+        }
+
+        case "agent_plan": {
+            const memory = await loadMemory();
+            const documents = await getRelevantDocuments(command.request);
+            const files = await listWorkspaceFiles();
+            const plan = await buildAgentPlan(command.request, memory, documents, files);
+
+            return {
+                ok: true,
+                reply: plan,
+                proposalOnly: true
             };
         }
 
