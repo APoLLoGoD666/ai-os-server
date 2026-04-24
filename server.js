@@ -21,7 +21,15 @@ const {
     pgLogAgentAction,
     pgGetRecentAgentActions,
     pgGetLastUndoableAgentAction,
-    pgMarkAgentActionUndone
+    pgMarkAgentActionUndone,
+    pgCreateAgentTask,
+    pgUpdateAgentTask,
+    pgGetAgentTask,
+    pgGetRecentAgentTasks,
+    pgGetLatestWaitingAgentTask,
+    pgCreateAgentSchedule,
+    pgGetAgentSchedules,
+    pgDisableAgentSchedule
 } = require("./pg_helpers");
 const {
     uploadWorkspaceFile,
@@ -47,6 +55,7 @@ const client = new Anthropic({
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+const AUTONOMY_LEVEL = String(process.env.AUTONOMY_LEVEL || "1");
 
 const WORKSPACE_DIR = path.join(__dirname, "workspace");
 const LAYOUT_FILE = path.join(__dirname, "layout.json");
@@ -765,6 +774,317 @@ Be practical and concise.`
         .trim();
 }
 
+function getAutonomyLevelMessage() {
+    if (AUTONOMY_LEVEL === "3") {
+        return "AUTONOMY_LEVEL 3 is not enabled yet.";
+    }
+
+    if (AUTONOMY_LEVEL === "4") {
+        return "AUTONOMY_LEVEL 4 is disabled.";
+    }
+
+    return null;
+}
+
+function isDestructiveAgentStepType(type) {
+    return type === "rename_document" || type === "delete_document";
+}
+
+function buildTaskContext(memory, documents, files, today) {
+    return {
+        today,
+        memoryCount: memory.length,
+        documents: documents.map(doc => ({
+            filename: doc.filename,
+            classification: doc.classification,
+            summary: doc.summary,
+            created_at: doc.created_at
+        })),
+        files
+    };
+}
+
+async function buildTaskActionSummary(task) {
+    const steps = Array.isArray(task?.actions_json?.steps) ? task.actions_json.steps : [];
+
+    if (!steps.length) {
+        return "No stored actions.";
+    }
+
+    return steps.map((step, index) => {
+        const detail = step.keyword || step.filename || step.oldName || step.goal || "";
+        return `- ${index + 1}. ${step.type}${detail ? ` (${detail})` : ""}`;
+    }).join("\n");
+}
+
+async function runAgentPlanningCycle(taskId) {
+    const task = await pgGetAgentTask(taskId);
+
+    if (!task) {
+        return {
+            ok: false,
+            message: `Agent task not found: ${taskId}`
+        };
+    }
+
+    const autonomyMessage = getAutonomyLevelMessage();
+
+    if (autonomyMessage) {
+        await pgUpdateAgentTask(taskId, {
+            status: "failed",
+            error: autonomyMessage
+        });
+
+        return {
+            ok: false,
+            message: autonomyMessage
+        };
+    }
+
+    const memory = await loadMemory();
+    const documents = await getRelevantDocuments(task.goal);
+    const files = await listWorkspaceFiles();
+    const today = new Date().toISOString().slice(0, 10);
+    const plan = await buildAgentPlan(task.goal, memory, documents, files, today);
+    const parsed = await getApprovedAgentActions({
+        request: task.goal,
+        plan,
+        today,
+        memory,
+        documents,
+        files
+    });
+
+    if (!parsed) {
+        await pgUpdateAgentTask(taskId, {
+            status: "failed",
+            plan,
+            error: "The agent task plan could not be converted into safe steps."
+        });
+
+        return {
+            ok: false,
+            message: "The agent task plan could not be converted into safe steps."
+        };
+    }
+
+    if (parsed.needs_clarification) {
+        await pgUpdateAgentTask(taskId, {
+            status: "failed",
+            plan,
+            error: parsed.needs_clarification,
+            context_json: buildTaskContext(memory, documents, files, today),
+            actions_json: parsed
+        });
+
+        return {
+            ok: false,
+            message: parsed.needs_clarification
+        };
+    }
+
+    const validation = validateAgentSteps(parsed.steps, task.goal);
+
+    if (validation.fatalError) {
+        await pgUpdateAgentTask(taskId, {
+            status: "failed",
+            plan,
+            context_json: buildTaskContext(memory, documents, files, today),
+            actions_json: {
+                steps: [],
+                skipped: validation.skipped
+            },
+            result: validation.fatalError,
+            error: validation.fatalError
+        });
+
+        await pgLogAgentAction(
+            "agent_task_plan",
+            "failed",
+            task.goal,
+            plan,
+            {
+                taskId,
+                skipped: validation.skipped
+            },
+            null,
+            validation.fatalError
+        );
+
+        return {
+            ok: false,
+            message: validation.fatalError
+        };
+    }
+
+    const status = validation.validSteps.length ? "waiting_approval" : "completed";
+    const result = validation.validSteps.length
+        ? `Task planned with ${validation.validSteps.length} safe step(s).`
+        : "Task planning completed with no executable safe steps.";
+
+    await pgUpdateAgentTask(taskId, {
+        status,
+        current_step: 0,
+        plan,
+        context_json: buildTaskContext(memory, documents, files, today),
+        actions_json: {
+            steps: validation.validSteps,
+            skipped: validation.skipped
+        },
+        result,
+        error: validation.fatalError
+    });
+
+    await pgLogAgentAction(
+        "agent_task_plan",
+        status === "waiting_approval" ? "planned" : "completed",
+        task.goal,
+        plan,
+        {
+            taskId,
+            steps: validation.validSteps,
+            skipped: validation.skipped
+        },
+        null,
+        result
+    );
+
+    return {
+        ok: true,
+        status,
+        plan,
+        validSteps: validation.validSteps,
+        skipped: validation.skipped,
+        result
+    };
+}
+
+async function executeApprovedAgentTask(taskId) {
+    const task = await pgGetAgentTask(taskId);
+
+    if (!task) {
+        return {
+            ok: false,
+            message: `Agent task not found: ${taskId}`
+        };
+    }
+
+    const autonomyMessage = getAutonomyLevelMessage();
+
+    if (autonomyMessage) {
+        await pgUpdateAgentTask(taskId, {
+            status: "failed",
+            error: autonomyMessage
+        });
+
+        return {
+            ok: false,
+            message: autonomyMessage
+        };
+    }
+
+    const actions = task.actions_json || {};
+    const steps = Array.isArray(actions.steps) ? actions.steps : [];
+    const skipped = Array.isArray(actions.skipped) ? actions.skipped : [];
+
+    if (!steps.length) {
+        return {
+            ok: false,
+            message: "No safe task actions are available to execute."
+        };
+    }
+
+    if (AUTONOMY_LEVEL === "1" || AUTONOMY_LEVEL === "2") {
+        // TODO: Background worker can resume approved tasks asynchronously in a future deployment.
+    }
+
+    const duplicateMatch = await findPendingDuplicateForSteps(steps);
+
+    if (duplicateMatch) {
+        await pgUpdateAgentTask(taskId, {
+            status: "waiting_approval",
+            result: `Duplicate detected for ${duplicateMatch.duplicate.filename}. Create a clearer task goal or variant request.`
+        });
+
+        return {
+            ok: false,
+            message: `Duplicate detected for ${duplicateMatch.duplicate.filename}. Create a clearer task goal or variant request.`
+        };
+    }
+
+    await pgUpdateAgentTask(taskId, {
+        status: "approved",
+        result: "Task approved for one execution cycle."
+    });
+
+    await pgUpdateAgentTask(taskId, {
+        status: "running"
+    });
+
+    const execution = await executeApprovedAgentActions(steps, {
+        skipped,
+        originalRequest: task.goal
+    });
+
+    if (!execution.ok) {
+        await pgUpdateAgentTask(taskId, {
+            status: "failed",
+            result: execution.message,
+            error: execution.message
+        });
+
+        await pgLogAgentAction(
+            "agent_task_execute",
+            "failed",
+            task.goal,
+            task.plan || "",
+            {
+                taskId,
+                steps,
+                skipped: execution.skipped || skipped
+            },
+            execution.undoEntries || null,
+            execution.message
+        );
+
+        return {
+            ok: false,
+            message: execution.message
+        };
+    }
+
+    const nextStatus = execution.results.length ? "completed" : "waiting_approval";
+    const result = `Executed: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`;
+
+    await pgUpdateAgentTask(taskId, {
+        status: nextStatus,
+        current_step: steps.length,
+        result,
+        error: null
+    });
+
+    await pgLogAgentAction(
+        "agent_task_execute",
+        nextStatus,
+        task.goal,
+        task.plan || "",
+        {
+            taskId,
+            steps,
+            skipped: execution.skipped
+        },
+        execution.undoEntries,
+        result
+    );
+
+    return {
+        ok: true,
+        status: nextStatus,
+        results: execution.results,
+        skipped: execution.skipped
+    };
+}
+
 function extractJsonBlock(text) {
     const raw = (text || "").trim();
 
@@ -825,6 +1145,14 @@ function getProtectedAgentCommandLabel(type) {
         return "approve duplicate replace";
     }
 
+    if (type === "approve_task") {
+        return "approve task";
+    }
+
+    if (type === "cancel_agent") {
+        return "cancel agent";
+    }
+
     return type;
 }
 
@@ -833,7 +1161,9 @@ function getAgentAccessError(command) {
         "agent_apply",
         "agent_undo",
         "duplicate_create_approval",
-        "duplicate_replace_approval"
+        "duplicate_replace_approval",
+        "approve_task",
+        "cancel_agent"
     ]);
 
     if (!protectedTypes.has(command.type) || !AGENT_SECRET) {
@@ -1665,6 +1995,30 @@ function detectCommand(message) {
         return attachSecret({ type: "agent_history" });
     }
 
+    match = text.match(/^run agent\s+([\s\S]+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "run_agent",
+            goal: match[1].trim()
+        });
+    }
+
+    if (/^agent tasks$/i.test(text)) {
+        return attachSecret({ type: "agent_tasks" });
+    }
+
+    match = text.match(/^agent task\s+(\d+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "agent_task",
+            id: Number(match[1])
+        });
+    }
+
+    if (/^continue agent$/i.test(text)) {
+        return attachSecret({ type: "continue_agent" });
+    }
+
     match = text.match(/^agent\s+([\s\S]+)$/i);
     if (match) {
         return attachSecret({
@@ -1677,8 +2031,24 @@ function detectCommand(message) {
         return attachSecret({ type: "agent_apply" });
     }
 
+    if (/^approve task$/i.test(text)) {
+        return attachSecret({ type: "approve_task" });
+    }
+
+    match = text.match(/^approve task\s+(\d+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "approve_task",
+            id: Number(match[1])
+        });
+    }
+
     if (/^undo agent$/i.test(text)) {
         return attachSecret({ type: "agent_undo" });
+    }
+
+    if (/^cancel agent$/i.test(text)) {
+        return attachSecret({ type: "cancel_agent" });
     }
 
     if (/^approve duplicate create$/i.test(text)) {
@@ -1691,6 +2061,27 @@ function detectCommand(message) {
 
     if (/^cancel duplicate$/i.test(text)) {
         return attachSecret({ type: "duplicate_cancel" });
+    }
+
+    match = text.match(/^schedule agent daily\s+([\s\S]+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "schedule_agent",
+            frequency: "daily",
+            goal: match[1].trim()
+        });
+    }
+
+    if (/^schedules$/i.test(text)) {
+        return attachSecret({ type: "agent_schedules" });
+    }
+
+    match = text.match(/^disable schedule\s+(\d+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "disable_schedule",
+            id: Number(match[1])
+        });
     }
 
     if (/^list files$/i.test(text) || /^list all files$/i.test(text)) {
@@ -1965,6 +2356,46 @@ async function handleCommand(command) {
             };
         }
 
+        case "agent_tasks": {
+            const tasks = await pgGetRecentAgentTasks(10);
+
+            if (!tasks.length) {
+                return { ok: true, reply: "No recent agent tasks found." };
+            }
+
+            const lines = tasks.map(task => `- #${task.id} [${task.status}] ${task.goal}`);
+            return {
+                ok: true,
+                reply: `Recent agent tasks:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "agent_task": {
+            const task = await pgGetAgentTask(command.id);
+
+            if (!task) {
+                return { ok: false, reply: `Could not find agent task: ${command.id}` };
+            }
+
+            const actionSummary = await buildTaskActionSummary(task);
+
+            return {
+                ok: true,
+                reply: `Agent task #${task.id}
+Status: ${task.status}
+Goal: ${task.goal}
+Current Step: ${task.current_step}
+Result: ${task.result || "No result yet"}
+Error: ${task.error || "No error"}
+
+Stored actions:
+${actionSummary}
+
+Plan:
+${task.plan || "No plan saved."}`
+            };
+        }
+
         case "search_documents": {
             const dbDocs = searchDocuments(command.keyword);
             const workspaceMatches = await searchWorkspaceFiles(command.keyword);
@@ -2038,6 +2469,63 @@ async function handleCommand(command) {
                 reply: plan,
                 proposalOnly: true
             };
+        }
+
+        case "run_agent": {
+            const task = await pgCreateAgentTask(
+                command.goal,
+                "planned",
+                "",
+                null,
+                null
+            );
+
+            if (!task) {
+                return { ok: false, reply: "Could not create agent task." };
+            }
+
+            const planning = await runAgentPlanningCycle(task.id);
+
+            if (!planning.ok) {
+                return {
+                    ok: false,
+                    reply: planning.message
+                };
+            }
+
+            return {
+                ok: true,
+                reply: `Agent task #${task.id} planned.\n\nStatus: ${planning.status}\n${planning.plan}${planning.validSteps.length ? `\n\nNext approval needed: approve task ${task.id}` : ""}`,
+                taskId: task.id,
+                status: planning.status
+            };
+        }
+
+        case "continue_agent": {
+            const task = await pgGetLatestWaitingAgentTask();
+
+            if (!task) {
+                return { ok: false, reply: "No recent agent task is available to continue." };
+            }
+
+            if (task.status === "waiting_approval") {
+                return {
+                    ok: true,
+                    reply: `Agent task #${task.id} is waiting for approval.\nUse \`approve task ${task.id}\` to continue execution.`
+                };
+            }
+
+            const planning = await runAgentPlanningCycle(task.id);
+
+            return planning.ok
+                ? {
+                    ok: true,
+                    reply: `Agent task #${task.id} continued.\n\nStatus: ${planning.status}\n${planning.plan}${planning.validSteps.length ? `\n\nNext approval needed: approve task ${task.id}` : ""}`
+                }
+                : {
+                    ok: false,
+                    reply: planning.message
+                };
         }
 
         case "agent_apply": {
@@ -2176,6 +2664,34 @@ Choose one:
             };
         }
 
+        case "approve_task": {
+            const task = command.id
+                ? await pgGetAgentTask(command.id)
+                : await pgGetLatestWaitingAgentTask();
+
+            if (!task) {
+                return { ok: false, reply: "No waiting agent task found." };
+            }
+
+            if (!["waiting_approval", "approved", "planned", "running"].includes(task.status)) {
+                return { ok: false, reply: `Agent task #${task.id} is not awaiting approval.` };
+            }
+
+            const execution = await executeApprovedAgentTask(task.id);
+
+            return execution.ok
+                ? {
+                    ok: true,
+                    reply: `Agent task #${task.id} executed.\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}`,
+                    taskId: task.id,
+                    status: execution.status
+                }
+                : {
+                    ok: false,
+                    reply: execution.message
+                };
+        }
+
         case "duplicate_create_approval":
         case "duplicate_replace_approval": {
             if (!pendingDuplicateDecision) {
@@ -2277,6 +2793,75 @@ Choose one:
             return {
                 ok: true,
                 reply: `Undid last agent action:\n\n- ${undoResult.results.join("\n- ")}`
+            };
+        }
+
+        case "cancel_agent": {
+            const task = await pgGetLatestWaitingAgentTask();
+
+            if (!task || task.status !== "waiting_approval") {
+                return { ok: false, reply: "No waiting agent task found to cancel." };
+            }
+
+            await pgUpdateAgentTask(task.id, {
+                status: "cancelled",
+                result: "Task cancelled by user."
+            });
+
+            await pgLogAgentAction(
+                "agent_task_cancel",
+                "cancelled",
+                task.goal,
+                task.plan || "",
+                task.actions_json || null,
+                null,
+                "Task cancelled by user."
+            );
+
+            return {
+                ok: true,
+                reply: `Cancelled agent task #${task.id}.`
+            };
+        }
+
+        case "schedule_agent": {
+            const schedule = await pgCreateAgentSchedule(
+                `schedule_${Date.now()}`,
+                command.goal,
+                command.frequency
+            );
+
+            return {
+                ok: true,
+                reply: `Scheduled agent #${schedule.id} (${schedule.frequency}) for goal: ${schedule.goal}`,
+                scheduleId: schedule.id
+            };
+        }
+
+        case "agent_schedules": {
+            const schedules = await pgGetAgentSchedules(20);
+
+            if (!schedules.length) {
+                return { ok: true, reply: "No agent schedules saved." };
+            }
+
+            const lines = schedules.map(schedule => `- #${schedule.id} [${schedule.enabled ? "enabled" : "disabled"}] ${schedule.frequency}: ${schedule.goal}`);
+            return {
+                ok: true,
+                reply: `Agent schedules:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "disable_schedule": {
+            const schedule = await pgDisableAgentSchedule(command.id);
+
+            if (!schedule) {
+                return { ok: false, reply: `Could not find schedule: ${command.id}` };
+            }
+
+            return {
+                ok: true,
+                reply: `Disabled schedule #${schedule.id}.`
             };
         }
 
@@ -2416,6 +3001,84 @@ app.get("/documents", async (req, res) => {
         res.status(500).json({
             ok: false,
             error: err.message
+        });
+    }
+});
+
+app.get("/agent-history", async (req, res) => {
+    try {
+        const actions = await pgGetRecentAgentActions(20);
+
+        res.status(200).json({
+            ok: true,
+            count: actions.length,
+            actions
+        });
+    } catch (error) {
+        console.error("AGENT HISTORY ERROR:", error);
+        res.status(500).json({
+            ok: false,
+            error: error.message
+        });
+    }
+});
+
+app.get("/agent-tasks", async (req, res) => {
+    try {
+        const tasks = await pgGetRecentAgentTasks(20);
+
+        res.status(200).json({
+            ok: true,
+            count: tasks.length,
+            tasks
+        });
+    } catch (error) {
+        console.error("AGENT TASKS ERROR:", error);
+        res.status(500).json({
+            ok: false,
+            error: error.message
+        });
+    }
+});
+
+app.get("/agent-task/:id", async (req, res) => {
+    try {
+        const task = await pgGetAgentTask(Number(req.params.id));
+
+        if (!task) {
+            return res.status(404).json({
+                ok: false,
+                error: "Agent task not found"
+            });
+        }
+
+        return res.status(200).json({
+            ok: true,
+            task
+        });
+    } catch (error) {
+        console.error("AGENT TASK ERROR:", error);
+        return res.status(500).json({
+            ok: false,
+            error: error.message
+        });
+    }
+});
+
+app.get("/agent-schedules", async (req, res) => {
+    try {
+        const schedules = await pgGetAgentSchedules(50);
+
+        res.status(200).json({
+            ok: true,
+            count: schedules.length,
+            schedules
+        });
+    } catch (error) {
+        console.error("AGENT SCHEDULES ERROR:", error);
+        res.status(500).json({
+            ok: false,
+            error: error.message
         });
     }
 });

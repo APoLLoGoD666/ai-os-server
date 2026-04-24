@@ -1,6 +1,8 @@
 const pool = require("./pg_database");
 
 let agentActionsTableReadyPromise = null;
+let agentTasksTableReadyPromise = null;
+let agentSchedulesTableReadyPromise = null;
 
 function ensureAgentActionsTable() {
     if (!agentActionsTableReadyPromise) {
@@ -23,6 +25,52 @@ function ensureAgentActionsTable() {
     }
 
     return agentActionsTableReadyPromise;
+}
+
+function ensureAgentTasksTable() {
+    if (!agentTasksTableReadyPromise) {
+        agentTasksTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS agent_tasks (
+                id SERIAL PRIMARY KEY,
+                goal TEXT,
+                status TEXT,
+                current_step INTEGER DEFAULT 0,
+                plan TEXT,
+                context_json JSONB,
+                actions_json JSONB,
+                result TEXT,
+                error TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        `).catch(error => {
+            agentTasksTableReadyPromise = null;
+            throw error;
+        });
+    }
+
+    return agentTasksTableReadyPromise;
+}
+
+function ensureAgentSchedulesTable() {
+    if (!agentSchedulesTableReadyPromise) {
+        agentSchedulesTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS agent_schedules (
+                id SERIAL PRIMARY KEY,
+                name TEXT,
+                goal TEXT,
+                frequency TEXT,
+                enabled BOOLEAN DEFAULT true,
+                last_run_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `).catch(error => {
+            agentSchedulesTableReadyPromise = null;
+            throw error;
+        });
+    }
+
+    return agentSchedulesTableReadyPromise;
 }
 
 /* =========================
@@ -247,6 +295,173 @@ async function pgMarkAgentActionUndone(id) {
     return queryResult.rows[0] || null;
 }
 
+async function pgCreateAgentTask(goal, status, plan = "", contextJson = null, actionsJson = null) {
+    await ensureAgentTasksTable();
+
+    const queryResult = await pool.query(
+        `
+        INSERT INTO agent_tasks (
+            goal,
+            status,
+            plan,
+            context_json,
+            actions_json
+        )
+        VALUES ($1, $2, $3, $4::jsonb, $5::jsonb)
+        RETURNING id, goal, status, current_step, plan, context_json, actions_json, result, error, created_at, updated_at
+        `,
+        [
+            goal,
+            status,
+            plan,
+            contextJson ? JSON.stringify(contextJson) : null,
+            actionsJson ? JSON.stringify(actionsJson) : null
+        ]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgUpdateAgentTask(id, updates) {
+    await ensureAgentTasksTable();
+
+    const keys = Object.keys(updates || {}).filter(key => updates[key] !== undefined);
+
+    if (!keys.length) {
+        return pgGetAgentTask(id);
+    }
+
+    const assignments = [];
+    const values = [];
+    let paramIndex = 1;
+
+    for (const key of keys) {
+        let value = updates[key];
+
+        if (key === "context_json" || key === "actions_json") {
+            value = value === null ? null : JSON.stringify(value);
+            assignments.push(`${key} = $${paramIndex}::jsonb`);
+        } else {
+            assignments.push(`${key} = $${paramIndex}`);
+        }
+
+        values.push(value);
+        paramIndex += 1;
+    }
+
+    assignments.push("updated_at = NOW()");
+    values.push(id);
+
+    const queryResult = await pool.query(
+        `
+        UPDATE agent_tasks
+        SET ${assignments.join(", ")}
+        WHERE id = $${paramIndex}
+        RETURNING id, goal, status, current_step, plan, context_json, actions_json, result, error, created_at, updated_at
+        `,
+        values
+    );
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgGetAgentTask(id) {
+    await ensureAgentTasksTable();
+
+    const queryResult = await pool.query(
+        `
+        SELECT id, goal, status, current_step, plan, context_json, actions_json, result, error, created_at, updated_at
+        FROM agent_tasks
+        WHERE id = $1
+        LIMIT 1
+        `,
+        [id]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgGetRecentAgentTasks(limit = 10) {
+    await ensureAgentTasksTable();
+
+    const queryResult = await pool.query(
+        `
+        SELECT id, goal, status, current_step, plan, context_json, actions_json, result, error, created_at, updated_at
+        FROM agent_tasks
+        ORDER BY id DESC
+        LIMIT $1
+        `,
+        [limit]
+    );
+
+    return queryResult.rows;
+}
+
+async function pgGetLatestWaitingAgentTask() {
+    await ensureAgentTasksTable();
+
+    const queryResult = await pool.query(`
+        SELECT id, goal, status, current_step, plan, context_json, actions_json, result, error, created_at, updated_at
+        FROM agent_tasks
+        WHERE status IN ('waiting_approval', 'planned', 'approved', 'running')
+        ORDER BY id DESC
+        LIMIT 1
+    `);
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgCreateAgentSchedule(name, goal, frequency) {
+    await ensureAgentSchedulesTable();
+
+    const queryResult = await pool.query(
+        `
+        INSERT INTO agent_schedules (
+            name,
+            goal,
+            frequency
+        )
+        VALUES ($1, $2, $3)
+        RETURNING id, name, goal, frequency, enabled, last_run_at, created_at
+        `,
+        [name, goal, frequency]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgGetAgentSchedules(limit = 50) {
+    await ensureAgentSchedulesTable();
+
+    const queryResult = await pool.query(
+        `
+        SELECT id, name, goal, frequency, enabled, last_run_at, created_at
+        FROM agent_schedules
+        ORDER BY id DESC
+        LIMIT $1
+        `,
+        [limit]
+    );
+
+    return queryResult.rows;
+}
+
+async function pgDisableAgentSchedule(id) {
+    await ensureAgentSchedulesTable();
+
+    const queryResult = await pool.query(
+        `
+        UPDATE agent_schedules
+        SET enabled = false
+        WHERE id = $1
+        RETURNING id, name, goal, frequency, enabled, last_run_at, created_at
+        `,
+        [id]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
 module.exports = {
     pgSaveDocument,
     pgListDocuments,
@@ -260,5 +475,13 @@ module.exports = {
     pgLogAgentAction,
     pgGetRecentAgentActions,
     pgGetLastUndoableAgentAction,
-    pgMarkAgentActionUndone
+    pgMarkAgentActionUndone,
+    pgCreateAgentTask,
+    pgUpdateAgentTask,
+    pgGetAgentTask,
+    pgGetRecentAgentTasks,
+    pgGetLatestWaitingAgentTask,
+    pgCreateAgentSchedule,
+    pgGetAgentSchedules,
+    pgDisableAgentSchedule
 };
