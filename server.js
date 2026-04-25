@@ -3510,7 +3510,15 @@ function validateAgentSteps(steps, originalRequest = "") {
         if (normalizedStep.type === "rename_document" && (!normalizedStep.oldName || !normalizedStep.newName)) {
             skipped.push({
                 type: normalizedStep.type,
-                reason: "Missing oldName or newName for rename_document."
+                reason: "Invalid rename_document step (missing exact oldName or newName)."
+            });
+            continue;
+        }
+
+        if (normalizedStep.type === "rename_document" && normalizedStep.oldName === normalizedStep.newName) {
+            skipped.push({
+                type: normalizedStep.type,
+                reason: "Invalid rename_document step (oldName and newName are identical)."
             });
             continue;
         }
@@ -3626,6 +3634,12 @@ For search_documents:
 - Use the shortest meaningful keyword phrase from the plan.
 - Do not use the full original request unless no better keyword exists.
 - If the plan already shows an explicit keyword, preserve that exact keyword in the JSON.
+
+For rename_document:
+- Only create rename_document if both "oldName" and "newName" are explicitly known.
+- Never infer rename targets from vague wording.
+- Never create rename_document from a recommendation, guess, or cleanup suggestion alone.
+- If uncertain, leave it as recommendation text in the plan and do not emit an executable step.
 
 Forbidden actions:
 - editing server.js
