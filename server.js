@@ -1129,6 +1129,12 @@ function getTaskExecutionState(task) {
     return {
         context,
         agentExecution,
+        executionMode: typeof agentExecution.execution_mode === "string"
+            ? agentExecution.execution_mode
+            : "",
+        stepsExecuted: Number.isInteger(agentExecution.steps_executed)
+            ? agentExecution.steps_executed
+            : 0,
         history: Array.isArray(agentExecution.history) ? [...agentExecution.history] : [],
         latestSearchResult: agentExecution.latestSearchResult || null,
         duplicateFoundInThisRun: Boolean(agentExecution.duplicateFoundInThisRun),
@@ -1613,6 +1619,9 @@ async function autoRunReadOnlyTaskSteps(taskId) {
     const aggregate = {
         ok: true,
         status: "running",
+        executionMode: "chained",
+        stepsExecuted: 0,
+        maxSteps: 10,
         executed: [],
         skipped: [],
         generatedPlan: "",
@@ -1635,6 +1644,24 @@ async function autoRunReadOnlyTaskSteps(taskId) {
         if (task.status === "completed") {
             aggregate.status = "completed";
             aggregate.completedMessage = "Task completed. No approval required.";
+            return aggregate;
+        }
+
+        if (aggregate.stepsExecuted >= aggregate.maxSteps) {
+            const remaining = getRemainingTaskSteps(task);
+            const pendingStep = remaining[0] || null;
+
+            await pgUpdateAgentTask(taskId, {
+                status: "waiting_approval",
+                result: pendingStep
+                    ? `Chained execution paused after ${aggregate.maxSteps} safe steps before ${pendingStep.type}.`
+                    : `Chained execution paused after ${aggregate.maxSteps} safe steps.`
+            });
+
+            task = await pgGetAgentTask(taskId);
+            aggregate.status = "waiting_approval";
+            aggregate.remainingActions = getRemainingTaskSteps(task);
+            aggregate.deferredActions = Array.isArray(task.actions_json?.deferredActions) ? task.actions_json.deferredActions : [];
             return aggregate;
         }
 
@@ -1703,7 +1730,8 @@ async function autoRunReadOnlyTaskSteps(taskId) {
         }
 
         const execution = await executeApprovedAgentTask(taskId, {
-            autoMode: true
+            autoMode: true,
+            chainMode: true
         });
 
         if (!execution.ok) {
@@ -1712,6 +1740,7 @@ async function autoRunReadOnlyTaskSteps(taskId) {
 
         aggregate.executed.push(...execution.results);
         aggregate.skipped.push(...execution.skipped);
+        aggregate.stepsExecuted += 1;
 
         if (standingApproval && execution.results.length) {
             await pgLogAgentAction(
@@ -2144,6 +2173,7 @@ async function executeApprovedAgentTask(taskId, options = {}) {
     const plannedSkipped = Array.isArray(actions.skipped) ? actions.skipped : [];
     const startIndex = Number.isInteger(task.current_step) ? task.current_step : 0;
     const executionState = getTaskExecutionState(task);
+    const nextStepsExecuted = executionState.stepsExecuted + 1;
 
     if (!steps.length) {
         return {
@@ -2303,6 +2333,8 @@ async function executeApprovedAgentTask(taskId, options = {}) {
             duplicateFoundInThisRun: execution.duplicateFoundInThisRun,
             lastListDocumentsCount: execution.lastListDocumentsCount,
             unavailableDocuments: execution.unavailableDocuments,
+            execution_mode: options.chainMode === true ? "chained" : executionState.executionMode,
+            steps_executed: options.chainMode === true ? nextStepsExecuted : executionState.stepsExecuted,
             autoExecuted: Boolean(executionState.agentExecution.autoExecuted)
                 || (AUTONOMY_LEVEL === "3" && isSafeAutoAction(currentStep) && execution.results.length > 0),
             lastCycle: historyEntry,
@@ -5262,7 +5294,7 @@ ${task.plan || "No plan saved."}`
                 if (autoRun.status === "completed") {
                     return {
                         ok: true,
-                        reply: `Agent task #${task.id} planned.\n\nExecuted automatically:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nTask completed. No approval required.`,
+                        reply: `Auto-executed safely (chained execution)\n\nExecuted steps:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped steps:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}`,
                         taskId: task.id,
                         status: autoRun.status
                     };
@@ -5270,7 +5302,7 @@ ${task.plan || "No plan saved."}`
 
                 return {
                     ok: true,
-                    reply: `Agent task #${task.id} planned.\n\nExecuted automatically:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nAwaiting approval:\n${awaitingText}\n\nDeferred actions:\n${deferredText}\n\nNext approval needed: approve task ${task.id}`,
+                    reply: `Chained execution paused for approval\n\nExecuted steps:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped steps:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nPending step:\n${awaitingText}\n\nDeferred actions:\n${deferredText}\n\nNext approval needed: approve task ${task.id}`,
                     taskId: task.id,
                     status: autoRun.status
                 };
@@ -5327,7 +5359,7 @@ ${task.plan || "No plan saved."}`
                 if (autoRun.status === "completed") {
                     return {
                         ok: true,
-                        reply: `Agent task #${task.id} continued.\n\nExecuted automatically:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nTask completed. No approval required.`,
+                        reply: `Auto-executed safely (chained execution)\n\nExecuted steps:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped steps:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}`,
                         taskId: task.id,
                         status: autoRun.status
                     };
@@ -5335,7 +5367,7 @@ ${task.plan || "No plan saved."}`
 
                 return {
                     ok: true,
-                    reply: `Agent task #${task.id} continued.\n\nExecuted automatically:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nAwaiting approval:\n${awaitingText}\n\nNext approval needed: approve task ${task.id}`,
+                    reply: `Chained execution paused for approval\n\nExecuted steps:\n${executedText}${autoRun.skipped.length ? `\n\nSkipped steps:\n- ${autoRun.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nPending step:\n${awaitingText}\n\nNext approval needed: approve task ${task.id}`,
                     taskId: task.id,
                     status: autoRun.status
                 };
@@ -5537,7 +5569,7 @@ Choose one:
                 if (autoRun.status === "completed") {
                     return {
                         ok: true,
-                        reply: `Agent task #${task.id} executed.\n\nExecuted steps:\n- ${combinedExecuted.join("\n- ")}${combinedSkipped.length ? `\n\nSkipped steps:\n- ${combinedSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nTask completed. No approval required.`,
+                        reply: `Auto-executed safely (chained execution)\n\nExecuted steps:\n- ${combinedExecuted.join("\n- ")}${combinedSkipped.length ? `\n\nSkipped steps:\n- ${combinedSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}`,
                         taskId: task.id,
                         status: autoRun.status
                     };
@@ -5545,7 +5577,7 @@ Choose one:
 
                 return {
                     ok: true,
-                    reply: `Agent task #${task.id} executed.\n\nExecuted steps:\n- ${combinedExecuted.join("\n- ")}${combinedSkipped.length ? `\n\nSkipped steps:\n- ${combinedSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nAwaiting approval:\n${awaitingText}\n\nNext approval needed: approve task ${task.id}`,
+                    reply: `Chained execution paused for approval\n\nExecuted steps:\n- ${combinedExecuted.join("\n- ")}${combinedSkipped.length ? `\n\nSkipped steps:\n- ${combinedSkipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}${autoRun.generatedPlan ? `\n\nFindings:\n${autoRun.generatedPlan}` : ""}\n\nPending step:\n${awaitingText}\n\nNext approval needed: approve task ${task.id}`,
                     taskId: task.id,
                     status: autoRun.status
                 };
