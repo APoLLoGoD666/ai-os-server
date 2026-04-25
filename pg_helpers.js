@@ -5,6 +5,7 @@ let agentTasksTableReadyPromise = null;
 let agentSchedulesTableReadyPromise = null;
 let notificationsTableReadyPromise = null;
 let agentReflectionsTableReadyPromise = null;
+let standingApprovalsTableReadyPromise = null;
 
 function ensureAgentActionsTable() {
     if (!agentActionsTableReadyPromise) {
@@ -125,6 +126,26 @@ function ensureAgentReflectionsTable() {
     }
 
     return agentReflectionsTableReadyPromise;
+}
+
+function ensureStandingApprovalsTable() {
+    if (!standingApprovalsTableReadyPromise) {
+        standingApprovalsTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS standing_approvals (
+                id SERIAL PRIMARY KEY,
+                name TEXT,
+                action_type TEXT,
+                pattern TEXT,
+                enabled BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `).catch(error => {
+            standingApprovalsTableReadyPromise = null;
+            throw error;
+        });
+    }
+
+    return standingApprovalsTableReadyPromise;
 }
 
 /* =========================
@@ -731,6 +752,83 @@ async function pgApproveAgentReflection(id) {
     return queryResult.rows[0] || null;
 }
 
+async function pgCreateStandingApproval(name, actionType, pattern) {
+    await ensureStandingApprovalsTable();
+
+    const queryResult = await pool.query(
+        `
+        INSERT INTO standing_approvals (
+            name,
+            action_type,
+            pattern
+        )
+        VALUES ($1, $2, $3)
+        RETURNING id, name, action_type, pattern, enabled, created_at
+        `,
+        [name, actionType, pattern]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgListStandingApprovals(limit = 50) {
+    await ensureStandingApprovalsTable();
+
+    const queryResult = await pool.query(
+        `
+        SELECT id, name, action_type, pattern, enabled, created_at
+        FROM standing_approvals
+        ORDER BY id DESC
+        LIMIT $1
+        `,
+        [limit]
+    );
+
+    return queryResult.rows;
+}
+
+async function pgDisableStandingApproval(id) {
+    await ensureStandingApprovalsTable();
+
+    const queryResult = await pool.query(
+        `
+        UPDATE standing_approvals
+        SET enabled = false
+        WHERE id = $1
+        RETURNING id, name, action_type, pattern, enabled, created_at
+        `,
+        [id]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgGetEnabledStandingApprovals(actionType = null) {
+    await ensureStandingApprovalsTable();
+
+    const queryResult = actionType
+        ? await pool.query(
+            `
+            SELECT id, name, action_type, pattern, enabled, created_at
+            FROM standing_approvals
+            WHERE enabled = true
+              AND action_type = $1
+            ORDER BY id DESC
+            `,
+            [actionType]
+        )
+        : await pool.query(
+            `
+            SELECT id, name, action_type, pattern, enabled, created_at
+            FROM standing_approvals
+            WHERE enabled = true
+            ORDER BY id DESC
+            `
+        );
+
+    return queryResult.rows;
+}
+
 module.exports = {
     pgSaveDocument,
     pgListDocuments,
@@ -763,5 +861,9 @@ module.exports = {
     pgCreateAgentReflection,
     pgListAgentReflections,
     pgGetApprovedReflections,
-    pgApproveAgentReflection
+    pgApproveAgentReflection,
+    pgCreateStandingApproval,
+    pgListStandingApprovals,
+    pgDisableStandingApproval,
+    pgGetEnabledStandingApprovals
 };

@@ -39,7 +39,11 @@ const {
     pgCreateAgentReflection,
     pgListAgentReflections,
     pgGetApprovedReflections,
-    pgApproveAgentReflection
+    pgApproveAgentReflection,
+    pgCreateStandingApproval,
+    pgListStandingApprovals,
+    pgDisableStandingApproval,
+    pgGetEnabledStandingApprovals
 } = require("./pg_helpers");
 const {
     uploadWorkspaceFile,
@@ -1071,6 +1075,10 @@ function isSafeAutoAction(step) {
     return SAFE_TYPES.includes(step.type);
 }
 
+function isStandingApprovalEligibleAction(step) {
+    return step && ["create_document", "create_workspace_file", "summarize_document"].includes(step.type);
+}
+
 function isReadOnlyAgentAction(action) {
     if (!action || typeof action !== "object") {
         return false;
@@ -1544,8 +1552,30 @@ async function autoRunReadOnlyTaskSteps(taskId) {
         }
 
         const nextStep = remainingSteps[0];
+        let standingApproval = null;
 
         if (!shouldAutoRunTaskAction(nextStep)) {
+            standingApproval = await getMatchingStandingApproval(nextStep);
+
+            if (standingApproval) {
+                const standingCheck = await canAutoRunLevel3Action(nextStep);
+
+                if (!standingCheck.ok) {
+                    await pgUpdateAgentTask(taskId, {
+                        status: "waiting_approval",
+                        result: standingCheck.reason
+                    });
+
+                    task = await pgGetAgentTask(taskId);
+                    aggregate.status = "waiting_approval";
+                    aggregate.remainingActions = getRemainingTaskSteps(task);
+                    aggregate.deferredActions = Array.isArray(task.actions_json?.deferredActions) ? task.actions_json.deferredActions : [];
+                    return aggregate;
+                }
+            }
+        }
+
+        if (!shouldAutoRunTaskAction(nextStep) && !standingApproval) {
             await pgUpdateAgentTask(taskId, {
                 status: "waiting_approval",
                 result: `Task is waiting for approval before ${nextStep.type}.`
@@ -1558,7 +1588,7 @@ async function autoRunReadOnlyTaskSteps(taskId) {
             return aggregate;
         }
 
-        if (AUTONOMY_LEVEL === "3" && isSafeAutoAction(nextStep) && !isReadOnlyAgentAction(nextStep)) {
+        if ((AUTONOMY_LEVEL === "3" && isSafeAutoAction(nextStep) && !isReadOnlyAgentAction(nextStep)) || standingApproval) {
             const level3Check = await canAutoRunLevel3Action(nextStep);
 
             if (!level3Check.ok) {
@@ -1583,6 +1613,30 @@ async function autoRunReadOnlyTaskSteps(taskId) {
 
         aggregate.executed.push(...execution.results);
         aggregate.skipped.push(...execution.skipped);
+
+        if (standingApproval && execution.results.length) {
+            await pgLogAgentAction(
+                "standing_approval_used",
+                "applied",
+                task.goal || "standing approval",
+                task.plan || "",
+                {
+                    taskId,
+                    standingApprovalId: standingApproval.id,
+                    step: nextStep
+                },
+                execution.undoEntries || null,
+                execution.results.join(" | ")
+            );
+
+            await createAgentNotification(
+                "standing_approval_used",
+                "Standing approval used",
+                `Standing approval "${standingApproval.name}" auto-executed ${nextStep.type} for task #${taskId}.`,
+                "agent_task",
+                taskId
+            );
+        }
 
         if (execution.generatedProposal) {
             aggregate.generatedPlan = execution.plan || "";
@@ -3388,6 +3442,40 @@ async function canAutoRunLevel3Action(step) {
     return { ok: true };
 }
 
+function stepMatchesStandingApproval(step, rule) {
+    if (!step || !rule || !rule.enabled) {
+        return false;
+    }
+
+    if (rule.action_type !== step.type) {
+        return false;
+    }
+
+    const pattern = String(rule.pattern || "").toLowerCase().trim();
+    if (!pattern) {
+        return false;
+    }
+
+    const filename = String(step.filename || "").toLowerCase();
+    const content = String(step.content || "").toLowerCase();
+    const targetText = [filename, content].filter(Boolean).join(" ");
+
+    return targetText.includes(pattern);
+}
+
+async function getMatchingStandingApproval(step) {
+    if (!isStandingApprovalEligibleAction(step)) {
+        return null;
+    }
+
+    if (step.type === "summarize_document" && step.readOnly !== true) {
+        return null;
+    }
+
+    const rules = await pgGetEnabledStandingApprovals(step.type);
+    return rules.find(rule => stepMatchesStandingApproval(step, rule)) || null;
+}
+
 async function getLevel3AutoExecutablePrefix(steps = []) {
     const executable = [];
     const blocked = [];
@@ -3968,6 +4056,22 @@ function detectCommand(message) {
         return attachSecret({ type: "approved_reflections" });
     }
 
+    if (/^standing approvals$/i.test(text)) {
+        return attachSecret({ type: "standing_approvals" });
+    }
+
+    if (/^approve standing rule workspace index$/i.test(text)) {
+        return attachSecret({ type: "approve_standing_workspace_index" });
+    }
+
+    match = text.match(/^disable standing approval\s+(\d+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "disable_standing_approval",
+            id: Number(match[1])
+        });
+    }
+
     match = text.match(/^approve reflection\s+(\d+)$/i);
     if (match) {
         return attachSecret({
@@ -4455,6 +4559,63 @@ ${saved.lesson}`,
             return {
                 ok: true,
                 reply: `Approved reflections:\n\n${lines.join("\n\n")}`
+            };
+        }
+
+        case "standing_approvals": {
+            const approvals = await pgListStandingApprovals(20);
+
+            if (!approvals.length) {
+                return { ok: true, reply: "No standing approvals saved." };
+            }
+
+            const lines = approvals.map(rule =>
+                `- #${rule.id} [${rule.enabled ? "enabled" : "disabled"}] ${rule.name} -> ${rule.action_type} (${rule.pattern})`
+            );
+
+            return {
+                ok: true,
+                reply: `Standing approvals:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "approve_standing_workspace_index": {
+            const existingRules = await pgListStandingApprovals(20);
+            const existing = existingRules.find(rule =>
+                rule.action_type === "create_workspace_file"
+                && String(rule.pattern || "").toLowerCase() === "workspace_index"
+                && rule.enabled
+            );
+
+            if (existing) {
+                return {
+                    ok: true,
+                    reply: `Standing approval already enabled: #${existing.id} ${existing.name}`
+                };
+            }
+
+            const rule = await pgCreateStandingApproval(
+                "Workspace Index Creation",
+                "create_workspace_file",
+                "workspace_index"
+            );
+
+            return {
+                ok: true,
+                reply: `Standing approval saved: #${rule.id} ${rule.name}`
+            };
+        }
+
+        case "disable_standing_approval": {
+            const rule = await pgDisableStandingApproval(command.id);
+
+            if (!rule) {
+                return { ok: false, reply: `Could not find standing approval: ${command.id}` };
+            }
+
+            return {
+                ok: true,
+                reply: `Disabled standing approval #${rule.id}.`
             };
         }
 
