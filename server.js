@@ -92,6 +92,58 @@ const DISCOVERY_AGENT_STEP_TYPES = new Set([
     "list_files",
     "search_documents"
 ]);
+const AGENT_PROFILES = {
+    system_agent: {
+        name: "system_agent",
+        title: "System Agent",
+        purpose: "Handles system health, schedules, notifications, cron, safety, and reflections.",
+        allowedAreas: ["system health", "schedules", "notifications", "cron", "safety review", "reflections"],
+        safetyLimits: [
+            "Cannot change env vars, secrets, GitHub, or code without explicit approval.",
+            "Must follow existing safety, approval, and autonomy rules."
+        ]
+    },
+    file_agent: {
+        name: "file_agent",
+        title: "File Agent",
+        purpose: "Handles documents, files, storage, cleanup, and duplicate detection.",
+        allowedAreas: ["documents", "files", "storage", "cleanup", "duplicate detection"],
+        safetyLimits: [
+            "Cannot edit code.",
+            "Must keep destructive actions behind approval."
+        ]
+    },
+    uni_agent: {
+        name: "uni_agent",
+        title: "Uni Agent",
+        purpose: "Handles coursework, revision, assignments, and university notes.",
+        allowedAreas: ["coursework", "revision", "assignments", "university notes"],
+        safetyLimits: [
+            "Cannot fabricate sources.",
+            "Must keep planning grounded in available notes and documents."
+        ]
+    },
+    finance_agent: {
+        name: "finance_agent",
+        title: "Finance Agent",
+        purpose: "Handles budgets, finance notes, investing notes, and financial planning support.",
+        allowedAreas: ["budgets", "finance notes", "investing notes", "financial planning support"],
+        safetyLimits: [
+            "Cannot give regulated financial advice.",
+            "Must frame outputs as educational or planning support only."
+        ]
+    },
+    business_agent: {
+        name: "business_agent",
+        title: "Business Agent",
+        purpose: "Handles business ideas, Shopify, pitches, AI services, and project plans.",
+        allowedAreas: ["business ideas", "Shopify", "pitches", "AI services", "project plans"],
+        safetyLimits: [
+            "Cannot make unsupported claims.",
+            "Must keep proposals realistic and evidence-aware."
+        ]
+    }
+};
 let latestAgentPlan = null;
 let pendingDuplicateDecision = null;
 let latestAgentCleanupPreview = null;
@@ -732,6 +784,42 @@ function normalizeDuplicateComparisonText(value) {
         .trim();
 }
 
+function normalizeAgentProfileName(name = "") {
+    const raw = String(name || "").trim().toLowerCase().replace(/\s+/g, "_");
+    const aliasMap = {
+        system: "system_agent",
+        system_agent: "system_agent",
+        file: "file_agent",
+        file_agent: "file_agent",
+        uni: "uni_agent",
+        uni_agent: "uni_agent",
+        finance: "finance_agent",
+        finance_agent: "finance_agent",
+        business: "business_agent",
+        business_agent: "business_agent"
+    };
+
+    return aliasMap[raw] || null;
+}
+
+function getAgentProfile(agentName = "") {
+    const normalized = normalizeAgentProfileName(agentName) || "system_agent";
+    return AGENT_PROFILES[normalized] || AGENT_PROFILES.system_agent;
+}
+
+function formatAgentProfile(profile) {
+    return `${profile.title}
+
+Purpose:
+${profile.purpose}
+
+Allowed areas:
+- ${profile.allowedAreas.join("\n- ")}
+
+Safety limits:
+- ${profile.safetyLimits.join("\n- ")}`;
+}
+
 function getFilenameClarityScore(filename) {
     const clean = String(filename || "").replace(/\.txt$/i, "");
     let score = 0;
@@ -896,7 +984,7 @@ function buildDuplicatePlanningInsights(documents) {
     ].join("\n")).join("\n\n");
 }
 
-async function buildAgentPlan(request, memory, documents, files, today) {
+async function buildAgentPlan(request, memory, documents, files, today, agentProfile = AGENT_PROFILES.system_agent) {
     const memoryText = memory.length
         ? memory
             .slice(-8)
@@ -926,6 +1014,14 @@ async function buildAgentPlan(request, memory, documents, files, today) {
     const approvedLessonsText = approvedReflections.length
         ? approvedReflections.map(reflection => `- ${reflection.lesson}`).join("\n\n")
         : "No approved operational lessons.";
+    const profile = agentProfile || AGENT_PROFILES.system_agent;
+    const profileText = [
+        `Agent role: ${profile.title}`,
+        `Purpose: ${profile.purpose}`,
+        `Allowed areas: ${profile.allowedAreas.join(", ")}`,
+        `Safety limits: ${profile.safetyLimits.join(" ")}`,
+        "Use this role context to shape planning style and scope, but do not bypass any existing safety, approval, autonomy, or allowlist rules."
+    ].join("\n");
 
     const response = await client.messages.create({
         model: MODEL,
@@ -952,6 +1048,9 @@ ${duplicateInsightsText}
 
 APPROVED OPERATIONAL LESSONS:
 ${approvedLessonsText}
+
+AGENT PROFILE:
+${profileText}
 
 Today's real server date is: ${today}. Use this date for dated filenames.
 
@@ -1007,9 +1106,13 @@ function isDestructiveAgentStepType(type) {
     return type === "rename_document" || type === "delete_document";
 }
 
-function buildTaskContext(memory, documents, files, today) {
+function buildTaskContext(memory, documents, files, today, agentProfile = AGENT_PROFILES.system_agent) {
     return {
         today,
+        agentProfile: {
+            name: agentProfile.name,
+            title: agentProfile.title
+        },
         memoryCount: memory.length,
         documents: documents.map(doc => ({
             filename: doc.filename,
@@ -1854,7 +1957,8 @@ async function runAgentPlanningCycle(taskId) {
     const documents = await getRelevantDocuments(task.goal);
     const files = await listWorkspaceFiles();
     const today = new Date().toISOString().slice(0, 10);
-    const plan = await buildAgentPlan(task.goal, memory, documents, files, today);
+    const agentProfile = getAgentProfile(task.context_json?.agentProfile?.name || "system_agent");
+    const plan = await buildAgentPlan(task.goal, memory, documents, files, today, agentProfile);
     const parsed = await getApprovedAgentActions({
         request: task.goal,
         plan,
@@ -1874,7 +1978,7 @@ async function runAgentPlanningCycle(taskId) {
             status: "waiting_approval",
             current_step: 0,
             plan,
-            context_json: buildTaskContext(memory, documents, files, today),
+            context_json: buildTaskContext(memory, documents, files, today, agentProfile),
             actions_json: {
                 phase: "discovery",
                 steps: validation.validSteps,
@@ -1919,7 +2023,7 @@ async function runAgentPlanningCycle(taskId) {
             status: "failed",
             plan,
             error: parsed.needs_clarification,
-            context_json: buildTaskContext(memory, documents, files, today),
+            context_json: buildTaskContext(memory, documents, files, today, agentProfile),
             actions_json: parsed
         });
 
@@ -1935,7 +2039,7 @@ async function runAgentPlanningCycle(taskId) {
         await pgUpdateAgentTask(taskId, {
             status: "failed",
             plan,
-            context_json: buildTaskContext(memory, documents, files, today),
+            context_json: buildTaskContext(memory, documents, files, today, agentProfile),
             actions_json: {
                 steps: [],
                 skipped: validation.skipped
@@ -1975,7 +2079,7 @@ async function runAgentPlanningCycle(taskId) {
         status,
         current_step: 0,
         plan,
-        context_json: buildTaskContext(memory, documents, files, today),
+        context_json: buildTaskContext(memory, documents, files, today, agentProfile),
         actions_json: {
             phase: validation.validSteps.every(step => isDiscoveryAgentStepType(step.type)) ? "discovery" : "planned_actions",
             steps: validation.validSteps,
@@ -4044,6 +4148,18 @@ function detectCommand(message) {
         return attachSecret({ type: "agent_history" });
     }
 
+    if (/^agents$/i.test(text)) {
+        return attachSecret({ type: "agents" });
+    }
+
+    match = text.match(/^agent profile\s+([a-z_ ]+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "agent_profile",
+            agentName: match[1].trim()
+        });
+    }
+
     if (/^reflect on last task$/i.test(text)) {
         return attachSecret({ type: "reflect_last_task" });
     }
@@ -4084,7 +4200,26 @@ function detectCommand(message) {
     if (match) {
         return attachSecret({
             type: "run_agent",
+            agentName: "system_agent",
             goal: match[1].trim()
+        });
+    }
+
+    match = text.match(/^ask\s+([a-z_ ]+?)\s+agent\s+([\s\S]+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "agent_plan",
+            agentName: match[1].trim(),
+            request: match[2].trim()
+        });
+    }
+
+    match = text.match(/^ask\s+(finance|uni|business|file|system)\s+([\s\S]+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "agent_plan",
+            agentName: match[1].trim(),
+            request: match[2].trim()
         });
     }
 
@@ -4108,6 +4243,7 @@ function detectCommand(message) {
     if (match) {
         return attachSecret({
             type: "agent_plan",
+            agentName: "system_agent",
             request: match[1].trim()
         });
     }
@@ -4491,6 +4627,22 @@ async function handleCommand(command) {
             };
         }
 
+        case "agents": {
+            const lines = Object.values(AGENT_PROFILES).map(profile => `- ${profile.name}: ${profile.purpose}`);
+            return {
+                ok: true,
+                reply: `Available agents:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "agent_profile": {
+            const profile = getAgentProfile(command.agentName || "system_agent");
+            return {
+                ok: true,
+                reply: formatAgentProfile(profile)
+            };
+        }
+
         case "reflect_last_task": {
             const recentTasks = await pgGetRecentAgentTasks(20);
             const task = getLatestCompletedAgentTask(recentTasks);
@@ -4723,6 +4875,7 @@ ${task.plan || "No plan saved."}`
         case "agent_plan": {
             const autonomyLevel = Number(process.env.AUTONOMY_LEVEL || "1");
             console.log("AUTONOMY_LEVEL active:", autonomyLevel);
+            const agentProfile = getAgentProfile(command.agentName || "system_agent");
 
             if (autonomyLevel >= 3) {
                 const directSafeSteps = buildDirectSafeAgentStepsFromRequest(command.request);
@@ -4757,7 +4910,10 @@ ${task.plan || "No plan saved."}`
                                     "applied",
                                     command.request,
                                     "Auto-executed directly from normal agent command path.",
-                                    directAutoPlan.executable,
+                                    {
+                                        agentProfile: agentProfile.name,
+                                        steps: directAutoPlan.executable
+                                    },
                                     execution.undoEntries,
                                     `Executed automatically: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`
                                 );
@@ -4788,9 +4944,10 @@ ${task.plan || "No plan saved."}`
             const documents = await getRelevantDocuments(command.request);
             const files = await listWorkspaceFiles();
             const today = new Date().toISOString().slice(0, 10);
-            const plan = await buildAgentPlan(command.request, memory, documents, files, today);
+            const plan = await buildAgentPlan(command.request, memory, documents, files, today, agentProfile);
 
             latestAgentPlan = {
+                agentProfile,
                 request: command.request,
                 memory,
                 documents,
@@ -4853,7 +5010,10 @@ ${task.plan || "No plan saved."}`
                                     autoPlan.remaining.length ? "partially_applied" : "applied",
                                     command.request,
                                     plan,
-                                    autoPlan.executable,
+                                    {
+                                        agentProfile: agentProfile.name,
+                                        steps: autoPlan.executable
+                                    },
                                     execution.undoEntries,
                                     `Executed automatically: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`
                                 );
@@ -4916,11 +5076,17 @@ ${task.plan || "No plan saved."}`
         }
 
         case "run_agent": {
+            const agentProfile = getAgentProfile(command.agentName || "system_agent");
             const task = await pgCreateAgentTask(
                 command.goal,
                 "planned",
                 "",
-                null,
+                {
+                    agentProfile: {
+                        name: agentProfile.name,
+                        title: agentProfile.title
+                    }
+                },
                 null
             );
 
