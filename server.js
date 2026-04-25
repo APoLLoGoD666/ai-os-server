@@ -1359,6 +1359,16 @@ function formatAgentStepForDisplay(step) {
     return `- ${step.type}`;
 }
 
+function isIncompleteRenameDocumentStep(step) {
+    return step
+        && step.type === "rename_document"
+        && (!step.oldName || !step.newName);
+}
+
+function filterPendingApprovalSteps(steps = []) {
+    return (Array.isArray(steps) ? steps : []).filter(step => !isIncompleteRenameDocumentStep(step));
+}
+
 function shouldGenerateFollowUpCleanupPlan(task) {
     const steps = Array.isArray(task?.actions_json?.steps) ? task.actions_json.steps : [];
     const phase = task?.actions_json?.phase || "";
@@ -3510,7 +3520,7 @@ function validateAgentSteps(steps, originalRequest = "") {
         if (normalizedStep.type === "rename_document" && (!normalizedStep.oldName || !normalizedStep.newName)) {
             skipped.push({
                 type: normalizedStep.type,
-                reason: "Invalid rename_document step (missing exact oldName or newName)."
+                reason: "Incomplete rename proposal; exact oldName and newName required."
             });
             continue;
         }
@@ -3882,7 +3892,7 @@ function normalizeExecutableAgentStep(step, originalRequest = "") {
     if (normalizedStep.type === "rename_document" && (!normalizedStep.oldName || !normalizedStep.newName)) {
         return {
             ok: false,
-            reason: "Skipped invalid rename_document step (missing fields)."
+            reason: "Incomplete rename proposal; exact oldName and newName required."
         };
     }
 
@@ -5434,7 +5444,7 @@ ${task.plan || "No plan saved."}`
 
                                 return {
                                     ok: true,
-                                    reply: `Auto-executed safely (Autonomy Level 3)\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nAwaiting approval:\n- ${autoPlan.remaining.map(step => `${step.type}${step.filename ? ` (${step.filename})` : step.keyword ? ` (${step.keyword})` : ""}`).join("\n- ")}\n\nUse: approve agent`,
+                                reply: `Auto-executed safely (Autonomy Level 3)\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nAwaiting approval:\n- ${filterPendingApprovalSteps(autoPlan.remaining).map(step => `${step.type}${step.filename ? ` (${step.filename})` : step.keyword ? ` (${step.keyword})` : ""}`).join("\n- ")}\n\nUse: approve agent`,
                                     proposalOnly: false,
                                     autoExecuted: true
                                 };
@@ -5446,7 +5456,7 @@ ${task.plan || "No plan saved."}`
 
                         return {
                             ok: true,
-                            reply: `Safe actions could not be auto-executed.\n\nAwaiting approval:\n- ${validation.validSteps.map(step => `${step.type}${step.filename ? ` (${step.filename})` : step.keyword ? ` (${step.keyword})` : ""}`).join("\n- ")}\n\nUse: approve agent\n\n${plan}`,
+                            reply: `Safe actions could not be auto-executed.\n\nAwaiting approval:\n- ${filterPendingApprovalSteps(validation.validSteps).map(step => `${step.type}${step.filename ? ` (${step.filename})` : step.keyword ? ` (${step.keyword})` : ""}`).join("\n- ")}\n\nUse: approve agent\n\n${plan}`,
                             proposalOnly: true
                         };
                     }
@@ -5507,8 +5517,8 @@ ${task.plan || "No plan saved."}`
                 const executedText = autoRun.executed.length
                     ? autoRun.executed.map(item => `- ${item}`).join("\n")
                     : "- None";
-                const awaitingText = autoRun.remainingActions.length
-                    ? autoRun.remainingActions.map(step => formatAgentStepForDisplay(step)).join("\n")
+                const awaitingText = filterPendingApprovalSteps(autoRun.remainingActions).length
+                    ? filterPendingApprovalSteps(autoRun.remainingActions).map(step => formatAgentStepForDisplay(step)).join("\n")
                     : "- None";
                 const deferredText = autoRun.deferredActions.length
                     ? autoRun.deferredActions.map(item => `- ${item}`).join("\n")
@@ -5575,8 +5585,8 @@ ${task.plan || "No plan saved."}`
                 const executedText = autoRun.executed.length
                     ? autoRun.executed.map(item => `- ${item}`).join("\n")
                     : "- None";
-                const awaitingText = autoRun.remainingActions.length
-                    ? autoRun.remainingActions.map(step => formatAgentStepForDisplay(step)).join("\n")
+                const awaitingText = filterPendingApprovalSteps(autoRun.remainingActions).length
+                    ? filterPendingApprovalSteps(autoRun.remainingActions).map(step => formatAgentStepForDisplay(step)).join("\n")
                     : "- None";
 
                 if (autoRun.status === "completed") {
@@ -5785,8 +5795,8 @@ Choose one:
 
                 const combinedExecuted = [...execution.results, ...autoRun.executed];
                 const combinedSkipped = [...execution.skipped, ...autoRun.skipped];
-                const awaitingText = autoRun.remainingActions.length
-                    ? autoRun.remainingActions.map(step => formatAgentStepForDisplay(step)).join("\n")
+                const awaitingText = filterPendingApprovalSteps(autoRun.remainingActions).length
+                    ? filterPendingApprovalSteps(autoRun.remainingActions).map(step => formatAgentStepForDisplay(step)).join("\n")
                     : "- None";
 
                 if (autoRun.status === "completed") {
