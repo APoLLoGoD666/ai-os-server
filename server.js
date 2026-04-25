@@ -1708,7 +1708,9 @@ async function autoRunReadOnlyTaskSteps(taskId) {
             }
         }
 
-        const execution = await executeApprovedAgentTask(taskId);
+        const execution = await executeApprovedAgentTask(taskId, {
+            autoMode: true
+        });
 
         if (!execution.ok) {
             return execution;
@@ -2119,7 +2121,7 @@ async function runAgentPlanningCycle(taskId) {
     };
 }
 
-async function executeApprovedAgentTask(taskId) {
+async function executeApprovedAgentTask(taskId, options = {}) {
     const task = await pgGetAgentTask(taskId);
 
     if (!task) {
@@ -2209,7 +2211,8 @@ async function executeApprovedAgentTask(taskId) {
         latestSearchResult: executionState.latestSearchResult,
         duplicateFoundInThisRun: executionState.duplicateFoundInThisRun,
         lastListDocumentsCount: executionState.lastListDocumentsCount,
-        unavailableDocuments: executionState.unavailableDocuments
+        unavailableDocuments: executionState.unavailableDocuments,
+        autoMode: options.autoMode === true
     });
 
     if (!execution.ok) {
@@ -3065,6 +3068,34 @@ async function makeUniqueWorkspaceAgentFilename(description, fallback = "workspa
     return candidate;
 }
 
+function normalizeWorkspaceFileMeaning(filename) {
+    return String(filename || "")
+        .toLowerCase()
+        .replace(/\.[a-z0-9]+$/i, "")
+        .replace(/^\d{4}-\d{2}-\d{2}_/, "")
+        .replace(/[-.\s]+/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/(?:_md|_markdown|_txt)$/i, "")
+        .replace(/^_+|_+$/g, "");
+}
+
+async function findSimilarWorkspaceFile(filename) {
+    const files = await listWorkspaceFiles();
+    const normalizedTarget = normalizeWorkspaceFileMeaning(filename);
+
+    for (const existingFile of files) {
+        if (String(existingFile).toLowerCase() === String(filename).toLowerCase()) {
+            return existingFile;
+        }
+
+        if (normalizedTarget && normalizeWorkspaceFileMeaning(existingFile) === normalizedTarget) {
+            return existingFile;
+        }
+    }
+
+    return null;
+}
+
 function buildDuplicateSearchTerms(step) {
     return [
         step.filename,
@@ -3531,18 +3562,6 @@ async function canAutoRunLevel3Action(step) {
         }
     }
 
-    if (step.type === "create_workspace_file") {
-        const candidate = step.filename ? makeAgentDatedFilename(step.filename) : makeAgentDatedFilename("workspace_file");
-        const existingFiles = new Set(await listWorkspaceFiles());
-
-        if (existingFiles.has(candidate)) {
-            return {
-                ok: false,
-                reason: `Task is waiting for approval before ${step.type}.`
-            };
-        }
-    }
-
     return { ok: true };
 }
 
@@ -3725,6 +3744,18 @@ async function executeApprovedAgentActions(steps, options = {}) {
                     undoEntries,
                     skipped
                 };
+            }
+
+            if (options.autoMode === true) {
+                const similarFile = await findSimilarWorkspaceFile(filename);
+
+                if (similarFile) {
+                    skipped.push({
+                        type: step.type,
+                        reason: `Skipped create_workspace_file because a workspace index already exists: ${similarFile}`
+                    });
+                    continue;
+                }
             }
 
             await createWorkspaceFile(filename, content);
@@ -4901,7 +4932,8 @@ ${task.plan || "No plan saved."}`
                         if (directAutoPlan.executable.length && !directAutoPlan.remaining.length) {
                             const execution = await executeApprovedAgentActions(directAutoPlan.executable, {
                                 skipped: directValidation.skipped,
-                                originalRequest: command.request
+                                originalRequest: command.request,
+                                autoMode: true
                             });
 
                             if (execution.ok) {
@@ -5001,7 +5033,8 @@ ${task.plan || "No plan saved."}`
                         if (autoPlan.executable.length) {
                             const execution = await executeApprovedAgentActions(autoPlan.executable, {
                                 skipped: validation.skipped,
-                                originalRequest: command.request
+                                originalRequest: command.request,
+                                autoMode: true
                             });
 
                             if (execution.ok) {
