@@ -943,11 +943,11 @@
                 <article class="card span-3" aria-label="Documents">
                     <div class="card-inner">
                         <div class="card-head">
-                            <div>
-                                <h2 class="card-title">Documents</h2>
-                                <div class="card-subtitle">Latest 5</div>
+                            <h2 class="card-title">Documents</h2>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                <button class="btn ghost" aria-label="View all documents" onclick="openAllDocumentsModal()">View All</button>
+                                <button class="btn ghost" aria-label="Refresh documents" onclick="refreshDocuments(this)">Refresh</button>
                             </div>
-                            <button class="btn ghost" aria-label="Refresh documents" onclick="refreshDocuments(this)">Refresh</button>
                         </div>
                         <div id="documentsList" class="list"></div>
                     </div>
@@ -956,12 +956,9 @@
                 <article class="card span-3" aria-label="Files">
                     <div class="card-inner">
                         <div class="card-head">
-                            <div>
-                                <h2 class="card-title">Files</h2>
-                                <div class="card-subtitle">Latest 5</div>
-                            </div>
+                            <h2 class="card-title">Files</h2>
                             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                <button class="btn ghost" aria-label="View all files" onclick="openAllFilesModal()">View All Files</button>
+                                <button class="btn ghost" aria-label="View all files" onclick="openAllFilesModal()">View All</button>
                                 <button class="btn ghost" aria-label="Refresh files" onclick="refreshFiles(this)">Refresh</button>
                             </div>
                         </div>
@@ -972,10 +969,7 @@
                 <article class="card span-3" aria-label="Memory">
                     <div class="card-inner">
                         <div class="card-head">
-                            <div>
-                                <h2 class="card-title">Memory</h2>
-                                <div class="card-subtitle">Latest 5</div>
-                            </div>
+                            <h2 class="card-title">Memory</h2>
                             <button class="btn ghost" aria-label="Refresh memory" onclick="refreshMemory(this)">Refresh</button>
                         </div>
                         <div id="memoryList" class="memory-list"></div>
@@ -1048,6 +1042,7 @@
         let cachedSchedules = [];
         let cachedNotifications = [];
         let cachedAllFiles = [];
+        let cachedAllDocuments = [];
         let chatInitialised = false;
         let refreshDebounceTimer = null;
         const renderSignatures = {};
@@ -1426,8 +1421,14 @@
 
                 try {
                     const data = await fetchJson("/documents");
-                    const documents = Array.isArray(data.documents) ? data.documents.slice(0, MAX_ITEMS) : [];
-                    cachedDocuments = Array.isArray(data.documents) ? data.documents : [];
+                    const allDocuments = Array.isArray(data.documents) ? data.documents : [];
+                    const documents = allDocuments.slice(0, MAX_ITEMS);
+                    cachedDocuments = allDocuments;
+                    cachedAllDocuments = [...allDocuments].sort((a, b) => {
+                        const timeA = new Date(a?.created_at || 0).getTime();
+                        const timeB = new Date(b?.created_at || 0).getTime();
+                        return timeB - timeA;
+                    });
 
                     if (!documents.length) {
                         renderIntoContainer(container, renderEmptyState("No documents yet"), "documents", "empty");
@@ -1811,6 +1812,73 @@
                     list.innerHTML = renderErrorState(error.message || "Could not load files.");
                 }
             }
+        }
+
+        async function openAllDocumentsModal() {
+            openModal(
+                "All Documents",
+                `
+                    <div style="display:grid; gap:14px;">
+                        <label class="field-label" for="allDocumentsSearch">Search documents</label>
+                        <input id="allDocumentsSearch" type="text" placeholder="Filter by filename or classification..." style="width:100%; min-height:46px; padding:0 14px; border-radius:14px; border:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text);" />
+                        <div id="allDocumentsModalList">${renderLoadingState("Loading documents...")}</div>
+                    </div>
+                `
+            );
+
+            try {
+                const data = await fetchJson("/documents");
+                cachedAllDocuments = Array.isArray(data.documents) ? [...data.documents].sort((a, b) => {
+                    const timeA = new Date(a?.created_at || 0).getTime();
+                    const timeB = new Date(b?.created_at || 0).getTime();
+                    return timeB - timeA;
+                }) : [];
+                renderAllDocumentsModalList();
+                const searchInput = document.getElementById("allDocumentsSearch");
+                if (searchInput && !searchInput.dataset.bound) {
+                    searchInput.dataset.bound = "true";
+                    searchInput.addEventListener("input", () => renderAllDocumentsModalList(searchInput.value));
+                }
+            } catch (error) {
+                const list = document.getElementById("allDocumentsModalList");
+                if (list) {
+                    list.innerHTML = renderErrorState(error.message || "Could not load documents.");
+                }
+            }
+        }
+
+        function renderAllDocumentsModalList(query = "") {
+            const list = document.getElementById("allDocumentsModalList");
+            if (!list) return;
+            const term = String(query || "").trim().toLowerCase();
+            const documents = cachedAllDocuments.filter(doc => {
+                const filename = String(doc?.filename || "").toLowerCase();
+                const classification = String(doc?.classification || "").toLowerCase();
+                const summary = String(doc?.summary || "").toLowerCase();
+                return filename.includes(term) || classification.includes(term) || summary.includes(term);
+            });
+
+            if (!documents.length) {
+                list.innerHTML = renderEmptyState(term ? "No documents match your search" : "No documents yet");
+                return;
+            }
+
+            list.innerHTML = documents.map(doc => `
+                <div class="list-item" style="margin-bottom:10px;">
+                    <div class="item-top">
+                        <div class="item-copy">
+                            <p class="item-title">${escapeHtml(doc.filename || "Untitled")}</p>
+                            <div class="item-subtitle">${renderBadge(doc.classification || "unknown")}</div>
+                            <div class="item-meta">${doc.created_at ? escapeHtml(formatTimestamp(doc.created_at)) : ""}</div>
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="mini-btn" aria-label="View document ${escapeHtml(doc.filename || "document")}" onclick="viewDocument('${encodeURIComponent(doc.filename || "")}')">View</button>
+                        <button class="mini-btn primary" aria-label="Summarise document ${escapeHtml(doc.filename || "document")}" onclick="summariseDocument('${encodeURIComponent(doc.filename || "")}', this)">Summarise</button>
+                        <button class="mini-btn danger" aria-label="Delete document ${escapeHtml(doc.filename || "document")}" onclick="deleteDocumentAction('${encodeURIComponent(doc.filename || "")}', this)">Delete</button>
+                    </div>
+                </div>
+            `).join("");
         }
 
         function renderAllFilesModalList(query = "") {
