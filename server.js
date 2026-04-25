@@ -87,6 +87,7 @@ const DISCOVERY_AGENT_STEP_TYPES = new Set([
 let latestAgentPlan = null;
 let pendingDuplicateDecision = null;
 let latestAgentCleanupPreview = null;
+let latestObviousAgentCleanupPreview = null;
 
 if (!AGENT_SECRET) {
     console.warn("AGENT_SECRET not set. Agent approval is unprotected.");
@@ -2369,11 +2370,170 @@ function buildAgentCleanupPreviewData({ tasks, schedules }) {
     };
 }
 
+function buildObviousAgentCleanupPreviewData({ tasks, schedules }) {
+    const canonicalScheduleGoal = "organise my workspace and suggest cleanup";
+    const taskDeleteCandidates = [];
+    const taskKeeps = [];
+    const scheduleDeleteMap = new Map();
+    const scheduleKeepMap = new Map();
+    const scheduleGroups = new Map();
+
+    for (const task of tasks) {
+        const normalizedGoal = normalizeAgentCleanupGoal(task.goal);
+        const isTest = isAgentCleanupTestGoal(task.goal);
+        const shouldDelete = isTest;
+
+        if (shouldDelete) {
+            taskDeleteCandidates.push({
+                ...task,
+                reasons: ["test_goal"]
+            });
+            continue;
+        }
+
+        taskKeeps.push({
+            ...task,
+            reasons: task.status === "waiting_approval"
+                ? ["waiting_approval_task"]
+                : [normalizedGoal ? "meaningful_task" : "kept_task"]
+        });
+    }
+
+    for (const schedule of schedules) {
+        const normalizedGoal = normalizeAgentCleanupGoal(schedule.goal);
+        const key = `${String(schedule.frequency || "").toLowerCase()}::${normalizedGoal}`;
+
+        if (!scheduleGroups.has(key)) {
+            scheduleGroups.set(key, []);
+        }
+
+        scheduleGroups.get(key).push(schedule);
+    }
+
+    for (const [, group] of scheduleGroups.entries()) {
+        const ordered = [...group].sort((a, b) => b.id - a.id);
+        const enabledSchedules = ordered.filter(schedule => schedule.enabled);
+        const newestEnabled = enabledSchedules[0] || null;
+        const newestAny = ordered[0] || null;
+
+        for (const schedule of ordered) {
+            const normalizedGoal = normalizeAgentCleanupGoal(schedule.goal);
+            const isCanonicalDaily = normalizedGoal === canonicalScheduleGoal
+                && String(schedule.frequency || "").toLowerCase() === "daily";
+            const isTest = isAgentCleanupTestGoal(schedule.goal);
+            const reasons = [];
+
+            if (isCanonicalDaily && schedule.enabled) {
+                scheduleKeepMap.set(schedule.id, {
+                    ...schedule,
+                    reasons: ["canonical_daily_schedule"]
+                });
+                continue;
+            }
+
+            if (isTest) {
+                reasons.push("test_schedule");
+            }
+
+            const isDisabledDuplicate = !schedule.enabled && (
+                (newestEnabled && schedule.id !== newestEnabled.id)
+                || (!newestEnabled && newestAny && schedule.id !== newestAny.id)
+            );
+
+            if (isDisabledDuplicate) {
+                reasons.push("disabled_duplicate_schedule");
+            }
+
+            if (reasons.length) {
+                scheduleDeleteMap.set(schedule.id, {
+                    ...schedule,
+                    reasons
+                });
+                continue;
+            }
+
+            scheduleKeepMap.set(schedule.id, {
+                ...schedule,
+                reasons: [schedule.enabled ? "enabled_schedule" : "kept_schedule"]
+            });
+        }
+    }
+
+    const canonicalKept = [...scheduleKeepMap.values()].some(schedule =>
+        normalizeAgentCleanupGoal(schedule.goal) === canonicalScheduleGoal
+        && String(schedule.frequency || "").toLowerCase() === "daily"
+        && schedule.enabled
+    );
+
+    if (!canonicalKept) {
+        const fallbackCanonical = schedules
+            .filter(schedule =>
+                normalizeAgentCleanupGoal(schedule.goal) === canonicalScheduleGoal
+                && String(schedule.frequency || "").toLowerCase() === "daily"
+                && schedule.enabled
+            )
+            .sort((a, b) => b.id - a.id)[0];
+
+        if (fallbackCanonical) {
+            scheduleKeepMap.set(fallbackCanonical.id, {
+                ...fallbackCanonical,
+                reasons: ["canonical_daily_schedule"]
+            });
+            scheduleDeleteMap.delete(fallbackCanonical.id);
+        }
+    }
+
+    const scheduleDeleteCandidates = [...scheduleDeleteMap.values()].sort((a, b) => b.id - a.id);
+    const scheduleKeeps = [...scheduleKeepMap.values()]
+        .filter((schedule, index, array) => array.findIndex(item => item.id === schedule.id) === index)
+        .sort((a, b) => b.id - a.id);
+
+    const taskDeleteRatio = tasks.length ? taskDeleteCandidates.length / tasks.length : 0;
+    const scheduleDeleteRatio = schedules.length ? scheduleDeleteCandidates.length / schedules.length : 0;
+    const wouldDeleteAllTasks = tasks.length > 0 && taskDeleteCandidates.length === tasks.length;
+    const wouldDeleteAllSchedules = schedules.length > 0 && scheduleDeleteCandidates.length === schedules.length;
+    const blockedReasons = [];
+
+    if (taskDeleteRatio > 0.8) {
+        blockedReasons.push("Obvious cleanup task delete candidates exceed 80% of rows.");
+    }
+
+    if (scheduleDeleteRatio > 0.8) {
+        blockedReasons.push("Obvious cleanup schedule delete candidates exceed 80% of rows.");
+    }
+
+    if (wouldDeleteAllTasks) {
+        blockedReasons.push("Obvious cleanup would delete all tasks.");
+    }
+
+    if (wouldDeleteAllSchedules) {
+        blockedReasons.push("Obvious cleanup would delete all schedules.");
+    }
+
+    return {
+        mode: "obvious",
+        createdAt: new Date().toISOString(),
+        tasks: {
+            total: tasks.length,
+            toDelete: taskDeleteCandidates.sort((a, b) => b.id - a.id),
+            toKeep: taskKeeps.sort((a, b) => b.id - a.id)
+        },
+        schedules: {
+            total: schedules.length,
+            toDelete: scheduleDeleteCandidates,
+            toKeep: scheduleKeeps
+        },
+        blockedReasons,
+        safeToApply: blockedReasons.length === 0
+    };
+}
+
 function formatAgentCleanupPreview(preview) {
+    const modePrefix = preview.mode === "obvious" ? "Obvious agent cleanup preview" : "Agent cleanup preview";
     const formatTask = task => `- #${task.id} [${task.status}] ${task.goal} (${task.reasons.join(", ")})`;
     const formatSchedule = schedule => `- #${schedule.id} [${schedule.enabled ? "enabled" : "disabled"}] ${schedule.frequency}: ${schedule.goal} (${schedule.reasons.join(", ")})`;
 
-    return `Agent cleanup preview
+    return `${modePrefix}
 
 Tasks to delete:
 ${preview.tasks.toDelete.length ? preview.tasks.toDelete.map(formatTask).join("\n") : "- None"}
@@ -2492,6 +2652,10 @@ function getProtectedAgentCommandLabel(type) {
         return "apply cleanup agent data";
     }
 
+    if (type === "apply_cleanup_obvious_agent_data") {
+        return "apply cleanup obvious agent data";
+    }
+
     return type;
 }
 
@@ -2506,7 +2670,8 @@ function getAgentAccessError(command) {
         "run_schedules_now",
         "run_schedule",
         "disable_schedule",
-        "apply_cleanup_agent_data"
+        "apply_cleanup_agent_data",
+        "apply_cleanup_obvious_agent_data"
     ]);
 
     if (!protectedTypes.has(command.type) || !AGENT_SECRET) {
@@ -3537,6 +3702,14 @@ function detectCommand(message) {
         return attachSecret({ type: "apply_cleanup_agent_data" });
     }
 
+    if (/^preview cleanup obvious agent data$/i.test(text)) {
+        return attachSecret({ type: "preview_cleanup_obvious_agent_data" });
+    }
+
+    if (/^apply cleanup obvious agent data$/i.test(text)) {
+        return attachSecret({ type: "apply_cleanup_obvious_agent_data" });
+    }
+
     match = text.match(/^run schedule\s+(\d+)$/i);
     if (match) {
         return attachSecret({
@@ -4489,6 +4662,18 @@ Choose one:
             };
         }
 
+        case "preview_cleanup_obvious_agent_data": {
+            const rows = await fetchAgentCleanupRows();
+            const preview = buildObviousAgentCleanupPreviewData(rows);
+            latestObviousAgentCleanupPreview = preview;
+
+            return {
+                ok: true,
+                reply: formatAgentCleanupPreview(preview),
+                preview
+            };
+        }
+
         case "apply_cleanup_agent_data": {
             if (!latestAgentCleanupPreview) {
                 return {
@@ -4518,6 +4703,40 @@ Final clean state summary:
 - Remaining tasks: ${refreshedRows.tasks.length}
 - Remaining schedules: ${refreshedRows.schedules.length}
 - Preview delete candidates now: ${refreshedPreview.tasks.toDelete.length} tasks, ${refreshedPreview.schedules.toDelete.length} schedules`,
+                deletedTaskIds: applyResult.deletedTaskIds,
+                deletedScheduleIds: applyResult.deletedScheduleIds
+            };
+        }
+
+        case "apply_cleanup_obvious_agent_data": {
+            if (!latestObviousAgentCleanupPreview) {
+                return {
+                    ok: false,
+                    reply: "Run preview cleanup obvious agent data first."
+                };
+            }
+
+            const applyResult = await applyAgentCleanupPreview(latestObviousAgentCleanupPreview);
+
+            if (!applyResult.ok) {
+                return {
+                    ok: false,
+                    reply: applyResult.reply
+                };
+            }
+
+            const refreshedRows = await fetchAgentCleanupRows();
+            const refreshedPreview = buildObviousAgentCleanupPreviewData(refreshedRows);
+            latestObviousAgentCleanupPreview = null;
+
+            return {
+                ok: true,
+                reply: `${applyResult.reply}
+
+Final obvious clean state summary:
+- Remaining tasks: ${refreshedRows.tasks.length}
+- Remaining schedules: ${refreshedRows.schedules.length}
+- Obvious preview delete candidates now: ${refreshedPreview.tasks.toDelete.length} tasks, ${refreshedPreview.schedules.toDelete.length} schedules`,
                 deletedTaskIds: applyResult.deletedTaskIds,
                 deletedScheduleIds: applyResult.deletedScheduleIds
             };
