@@ -943,6 +943,23 @@ function buildSafeDefaultDiscoverySteps() {
     ];
 }
 
+function isSafeAutoAction(step) {
+    if (!step || typeof step !== "object" || !step.type) {
+        return false;
+    }
+
+    const SAFE_TYPES = [
+        "create_document",
+        "create_workspace_file",
+        "summarize_document",
+        "search_documents",
+        "list_documents",
+        "list_files"
+    ];
+
+    return SAFE_TYPES.includes(step.type);
+}
+
 function isReadOnlyAgentAction(action) {
     if (!action || typeof action !== "object") {
         return false;
@@ -957,6 +974,21 @@ function isReadOnlyAgentAction(action) {
     }
 
     return false;
+}
+
+function getAgentStepTextBlob(action) {
+    if (!action || typeof action !== "object") {
+        return "";
+    }
+
+    return Object.values(action)
+        .filter(value => typeof value === "string")
+        .join(" ")
+        .toLowerCase();
+}
+
+function hasUnsafeAutoActionLanguage(action) {
+    return /\b(delete|remove|overwrite|update)\b/i.test(getAgentStepTextBlob(action));
 }
 
 function isSafeLevel3WriteAction(action) {
@@ -999,10 +1031,44 @@ function shouldAutoRunTaskAction(action) {
     }
 
     if (AUTONOMY_LEVEL === "3") {
-        return isReadOnlyAgentAction(action) || isSafeLevel3WriteAction(action);
+        return isReadOnlyAgentAction(action) || isSafeAutoAction(action);
     }
 
     return false;
+}
+
+function shouldInferSafeAuto(step, originalRequest = "") {
+    if (!step || typeof step !== "object") {
+        return false;
+    }
+
+    if (!["create_document", "create_workspace_file"].includes(step.type)) {
+        return false;
+    }
+
+    if (step.safe_auto === true) {
+        return false;
+    }
+
+    const content = typeof step.content === "string" ? step.content.trim() : "";
+    const classification = String(step.classification || "").toLowerCase();
+    const requestText = String(originalRequest || "").toLowerCase();
+    const lowRiskRequest = /(create|make|write|save)\b/.test(requestText)
+        && /(note|document|file|txt|summary)/.test(requestText);
+
+    if (!lowRiskRequest || !content || content.length >= 500) {
+        return false;
+    }
+
+    if (classification === "sensitive" || hasUnsafeAutoActionLanguage(step)) {
+        return false;
+    }
+
+    if (/(password|secret|api[_-\s]?key|private key|token)/i.test(content)) {
+        return false;
+    }
+
+    return true;
 }
 
 function extractDeferredFallbackActions(plan = "") {
@@ -1381,7 +1447,7 @@ async function autoRunReadOnlyTaskSteps(taskId) {
             return aggregate;
         }
 
-        if (AUTONOMY_LEVEL === "3" && isSafeLevel3WriteAction(nextStep)) {
+        if (AUTONOMY_LEVEL === "3" && isSafeAutoAction(nextStep) && !isReadOnlyAgentAction(nextStep)) {
             const level3Check = await canAutoRunLevel3Action(nextStep);
 
             if (!level3Check.ok) {
@@ -1925,6 +1991,7 @@ async function executeApprovedAgentTask(taskId) {
         executed: execution.results,
         skipped: execution.skipped,
         lastSearchResult: execution.latestSearchResult,
+        autoExecuted: AUTONOMY_LEVEL === "3" && isSafeAutoAction(currentStep) && execution.results.length > 0,
         completedAt: new Date().toISOString()
     };
     const discoveryOutputs = execution.stepOutputs || [];
@@ -1970,6 +2037,8 @@ async function executeApprovedAgentTask(taskId) {
             duplicateFoundInThisRun: execution.duplicateFoundInThisRun,
             lastListDocumentsCount: execution.lastListDocumentsCount,
             unavailableDocuments: execution.unavailableDocuments,
+            autoExecuted: Boolean(executionState.agentExecution.autoExecuted)
+                || (AUTONOMY_LEVEL === "3" && isSafeAutoAction(currentStep) && execution.results.length > 0),
             lastCycle: historyEntry,
             planSkipped: plannedSkipped,
             discovery: {
@@ -2038,7 +2107,7 @@ async function executeApprovedAgentTask(taskId) {
         await createAgentNotification(
             "autonomy_level_3_auto_action",
             "Autonomy Level 3 executed safe action",
-            execution.results.join(" | "),
+            `Task #${task.id} for "${task.goal}" auto-executed: ${execution.results.join(" | ")}`,
             "agent_task",
             task.id
         );
@@ -2863,6 +2932,10 @@ function validateAgentSteps(steps, originalRequest = "") {
 
         const normalizedStep = { ...step };
 
+        if (shouldInferSafeAuto(normalizedStep, originalRequest)) {
+            normalizedStep.safe_auto = true;
+        }
+
         if ((normalizedStep.type === "create_document" || normalizedStep.type === "create_workspace_file") &&
             typeof normalizedStep.content !== "string"
         ) {
@@ -2976,6 +3049,8 @@ Only set "safe_auto": true for very low-risk new create_document or create_works
 - the action does not overwrite existing data
 - the action is not sensitive
 
+For a simple request to create a short note/document/file, prefer "safe_auto": true when all of those constraints are satisfied.
+
 Plan request:
 ${latestPlan.request}
 
@@ -3069,6 +3144,45 @@ function getStepDocumentTargets(step) {
 }
 
 async function canAutoRunLevel3Action(step) {
+    if (isReadOnlyAgentAction(step)) {
+        return { ok: true };
+    }
+
+    if (!isSafeAutoAction(step)) {
+        return {
+            ok: false,
+            reason: `Task is waiting for approval before ${step?.type || "unknown action"}.`
+        };
+    }
+
+    if (hasUnsafeAutoActionLanguage(step)) {
+        return {
+            ok: false,
+            reason: `Task is waiting for approval before ${step?.type || "unknown action"}.`
+        };
+    }
+
+    if (step.type === "summarize_document") {
+        if (step.readOnly !== true) {
+            return {
+                ok: false,
+                reason: `Task is waiting for approval before ${step.type}.`
+            };
+        }
+
+        const filename = normalizeAgentFilename(step.filename);
+        const doc = filename ? await getDocumentSnapshotForUndo(filename) : null;
+
+        if (!doc || !doc.content) {
+            return {
+                ok: false,
+                reason: `Task is waiting for approval before ${step.type}.`
+            };
+        }
+
+        return { ok: true };
+    }
+
     if (!isSafeLevel3WriteAction(step)) {
         return {
             ok: false,
@@ -3109,6 +3223,40 @@ async function canAutoRunLevel3Action(step) {
     }
 
     return { ok: true };
+}
+
+async function getLevel3AutoExecutablePrefix(steps = []) {
+    const executable = [];
+    const blocked = [];
+
+    for (let index = 0; index < steps.length; index += 1) {
+        const step = steps[index];
+
+        if (!shouldAutoRunTaskAction(step)) {
+            blocked.push({
+                step,
+                reason: `Approval is required before ${step.type}.`
+            });
+            break;
+        }
+
+        const check = await canAutoRunLevel3Action(step);
+        if (!check.ok) {
+            blocked.push({
+                step,
+                reason: check.reason
+            });
+            break;
+        }
+
+        executable.push(step);
+    }
+
+    return {
+        executable,
+        blocked,
+        remaining: steps.slice(executable.length)
+    };
 }
 
 async function executeApprovedAgentActions(steps, options = {}) {
@@ -3266,6 +3414,17 @@ async function executeApprovedAgentActions(steps, options = {}) {
             }
 
             const summary = await summariseText(doc.content);
+
+            if (step.readOnly === true) {
+                stepOutputs.push({
+                    type: "summarize_document",
+                    filename,
+                    summary,
+                    readOnly: true
+                });
+                results.push(`Generated read-only summary for document: ${filename}`);
+                continue;
+            }
 
             undoEntries.push({
                 type: "restore_document_summary",
@@ -4153,6 +4312,67 @@ ${task.plan || "No plan saved."}`
                 "Proposal generated"
             );
 
+            if (AUTONOMY_LEVEL === "3") {
+                const parsed = await getApprovedAgentActions(latestAgentPlan);
+
+                if (parsed && !parsed.needs_clarification) {
+                    const validation = validateAgentSteps(parsed.steps, command.request);
+
+                    if (!validation.fatalError && validation.validSteps.length) {
+                        const autoPlan = await getLevel3AutoExecutablePrefix(validation.validSteps);
+
+                        if (autoPlan.executable.length) {
+                            const execution = await executeApprovedAgentActions(autoPlan.executable, {
+                                skipped: validation.skipped,
+                                originalRequest: command.request
+                            });
+
+                            if (execution.ok) {
+                                await pgLogAgentAction(
+                                    "agent_apply",
+                                    autoPlan.remaining.length ? "partially_applied" : "applied",
+                                    command.request,
+                                    plan,
+                                    autoPlan.executable,
+                                    execution.undoEntries,
+                                    `Executed automatically: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`
+                                );
+
+                                await createAgentNotification(
+                                    "autonomy_level_3_auto_action",
+                                    "Autonomy Level 3 executed safe task",
+                                    `Goal "${command.request}" auto-executed: ${execution.results.join(" | ")}`,
+                                    "agent_request",
+                                    null
+                                );
+
+                                if (!autoPlan.remaining.length) {
+                                    latestAgentPlan = null;
+
+                                    return {
+                                        ok: true,
+                                        reply: `Autonomy Level 3 auto-executed safe actions:\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nTask completed. No approval required.`,
+                                        proposalOnly: false,
+                                        autoExecuted: true
+                                    };
+                                }
+
+                                latestAgentPlan.pendingSteps = autoPlan.remaining;
+                                latestAgentPlan.pendingSkipped = validation.skipped;
+                                latestAgentPlan.autoExecutedResults = execution.results;
+
+                                return {
+                                    ok: true,
+                                    reply: `Autonomy Level 3 auto-executed safe actions:\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nAwaiting approval:\n- ${autoPlan.remaining.map(step => `${step.type}${step.filename ? ` (${step.filename})` : step.keyword ? ` (${step.keyword})` : ""}`).join("\n- ")}\n\nUse: approve agent`,
+                                    proposalOnly: false,
+                                    autoExecuted: true
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+
             return {
                 ok: true,
                 reply: plan,
@@ -4304,7 +4524,10 @@ ${task.plan || "No plan saved."}`
                 return { ok: false, reply: "No agent plan to approve." };
             }
 
-            const parsed = await getApprovedAgentActions(latestAgentPlan);
+            const hasPendingSteps = Array.isArray(latestAgentPlan.pendingSteps);
+            const parsed = hasPendingSteps
+                ? { steps: latestAgentPlan.pendingSteps }
+                : await getApprovedAgentActions(latestAgentPlan);
 
             if (!parsed) {
                 return {
@@ -4322,7 +4545,13 @@ ${task.plan || "No plan saved."}`
                 };
             }
 
-            const validation = validateAgentSteps(parsed.steps, latestAgentPlan.request);
+            const validation = hasPendingSteps
+                ? {
+                    fatalError: null,
+                    validSteps: latestAgentPlan.pendingSteps,
+                    skipped: Array.isArray(latestAgentPlan.pendingSkipped) ? latestAgentPlan.pendingSkipped : []
+                }
+                : validateAgentSteps(parsed.steps, latestAgentPlan.request);
 
             if (validation.fatalError) {
                 await pgLogAgentAction(

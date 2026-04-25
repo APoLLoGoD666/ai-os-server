@@ -187,6 +187,12 @@
             border-color: rgba(91, 168, 255, 0.24);
         }
 
+        .badge.auto_executed {
+            color: #ddd2ff;
+            background: rgba(142, 106, 255, 0.16);
+            border-color: rgba(142, 106, 255, 0.26);
+        }
+
         .badge.failed,
         .badge.disabled {
             color: #ffd0d0;
@@ -1089,7 +1095,8 @@
                 failed: "Failed",
                 enabled: "Enabled",
                 disabled: "Disabled",
-                unread: "Unread"
+                unread: "Unread",
+                auto_executed: "Auto-executed"
             };
             return {
                 normalized,
@@ -1583,6 +1590,7 @@
 
                     const html = tasks.map(task => {
                         const status = getStatusLabel(task.status);
+                        const autoExecuted = Boolean(task?.context_json?.agentExecution?.autoExecuted);
                         const shortGoal = shortenText(task.goal || "Untitled task", 40);
                         const displayTitle = status.normalized === "waiting_approval"
                             ? `Task waiting approval - ${shortGoal}`
@@ -1593,7 +1601,7 @@
                                 <div class="item-top">
                                     <div class="item-copy">
                                         <p class="item-title">${escapeHtml(displayTitle)}</p>
-                                        <div class="item-subtitle">${renderBadge(task.status)}</div>
+                                        <div class="item-subtitle">${renderBadge(task.status)}${autoExecuted ? ` ${renderBadge("auto_executed")}` : ""}</div>
                                         <div class="item-meta">Task ${escapeHtml(task.id)}</div>
                                     </div>
                                 </div>
