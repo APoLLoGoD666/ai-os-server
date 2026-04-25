@@ -580,16 +580,17 @@ async function analyseDocumentsWithAI(documents) {
         }
 
         const trimmedContent = content.slice(0, remaining);
+        const contentPreview = trimmedContent.slice(0, 1400);
         const block = [
             `Filename: ${doc.filename}`,
             `Type: ${doc.classification || "unknown"}`,
             `Summary: ${doc.summary || "No summary"}`,
-            "Content:",
-            trimmedContent
+            "Content Preview:",
+            contentPreview
         ].join("\n");
 
         limitedDocs.push(block);
-        combinedLength += trimmedContent.length;
+        combinedLength += contentPreview.length;
     }
 
     const response = await client.messages.create({
@@ -598,13 +599,14 @@ async function analyseDocumentsWithAI(documents) {
         messages: [
             {
                 role: "user",
-                content: `Analyse these documents and summarise key insights, themes, and important points.
+                content: `Analyse these documents. Return key themes, important points, duplicates, cleanup suggestions, and next actions.
 
 Return a structured response with these exact sections:
 1. Key Insights
 2. Main Themes
 3. Important Points
-4. Suggested Next Steps
+4. Duplicate Or Cleanup Signals
+5. Suggested Next Actions
 
 DOCUMENTS:
 ${limitedDocs.join("\n\n----------------------\n\n")}`
@@ -617,6 +619,22 @@ ${limitedDocs.join("\n\n----------------------\n\n")}`
         .map(part => part.text || "")
         .join("\n")
         .trim();
+}
+
+async function getRecentDocumentsForAnalysis(limit = 10) {
+    const recentDocs = await pgListDocuments();
+    const selectedDocs = recentDocs.slice(0, limit);
+    const fullDocs = [];
+
+    for (const doc of selectedDocs) {
+        const fullDoc = await pgGetDocument(doc.filename);
+
+        if (fullDoc && fullDoc.content) {
+            fullDocs.push(fullDoc);
+        }
+    }
+
+    return fullDocs;
 }
 
 function normalizeDuplicateComparisonText(value) {
@@ -4270,19 +4288,26 @@ ${task.plan || "No plan saved."}`
         }
 
         case "analyse_documents": {
-            const docs = await pgSearchDocuments("");
+            const docs = await getRecentDocumentsForAnalysis(10);
 
             if (!docs.length) {
-                return { ok: true, reply: "No documents available to analyse." };
+                return { ok: true, reply: "No documents found to analyse." };
             }
 
-            const analysis = await analyseDocumentsWithAI(docs);
+            try {
+                const analysis = await analyseDocumentsWithAI(docs);
 
-            return {
-                ok: true,
-                reply: `Document analysis:\n\n${analysis}`,
-                documentsAnalysed: docs.length
-            };
+                return {
+                    ok: true,
+                    reply: `Document analysis:\n\n${analysis}`,
+                    documentsAnalysed: docs.length
+                };
+            } catch (error) {
+                return {
+                    ok: false,
+                    reply: `Document analysis failed: ${error.message || "Unknown error"}`
+                };
+            }
         }
 
         case "agent_plan": {
