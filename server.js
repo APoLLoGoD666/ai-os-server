@@ -35,7 +35,10 @@ const {
     pgGetDueAgentSchedules,
     pgCreateNotification,
     pgListNotifications,
-    pgMarkNotificationRead
+    pgMarkNotificationRead,
+    pgCreateAgentReflection,
+    pgListAgentReflections,
+    pgApproveAgentReflection
 } = require("./pg_helpers");
 const {
     uploadWorkspaceFile,
@@ -635,6 +638,86 @@ async function getRecentDocumentsForAnalysis(limit = 10) {
     }
 
     return fullDocs;
+}
+
+function getLatestCompletedAgentTask(tasks = []) {
+    return tasks.find(item => item.status === "completed") || null;
+}
+
+async function generateReflectionForTask(task) {
+    const response = await client.messages.create({
+        model: MODEL,
+        max_tokens: 400,
+        messages: [
+            {
+                role: "user",
+                content: `You are writing a safe operational reflection for an AI task.
+
+Task:
+- id: ${task.id}
+- goal: ${task.goal}
+- status: ${task.status}
+- result: ${task.result || "No result"}
+- error: ${task.error || "No error"}
+- plan: ${task.plan || "No saved plan"}
+
+Answer as strict JSON only:
+{
+  "lesson": "short learning note",
+  "category": "operational|proposal_only",
+  "confidence": 50,
+  "what_worked": "short text",
+  "what_failed": "short text",
+  "remember_next_time": "short text",
+  "requires_human_approval": true
+}
+
+Safety rules:
+- Reflections are learning notes only.
+- Do not propose modifying server.js, dashboard.html, pg_helpers.js, env vars, schemas, autonomy rules, or security rules as automatic action.
+- If any system or code improvement is suggested, set category to "proposal_only" and requires_human_approval to true.
+- Keep the lesson practical and concise.`
+            }
+        ]
+    });
+
+    const text = (response.content || [])
+        .filter(part => part.type === "text")
+        .map(part => part.text || "")
+        .join("\n")
+        .trim();
+    const jsonText = extractJsonBlock(text);
+
+    if (!jsonText) {
+        throw new Error("No reflection JSON returned.");
+    }
+
+    const parsed = JSON.parse(jsonText);
+    const whatWorked = String(parsed.what_worked || "No specific success noted.").trim();
+    const whatFailed = String(parsed.what_failed || "No specific failure noted.").trim();
+    const rememberNextTime = String(parsed.remember_next_time || parsed.lesson || "").trim();
+    const requiresHumanApproval = Boolean(parsed.requires_human_approval) || String(parsed.category || "").trim() === "proposal_only";
+    const category = requiresHumanApproval ? "proposal_only" : (String(parsed.category || "operational").trim() || "operational");
+    const confidenceValue = Number.parseInt(parsed.confidence, 10);
+    const confidence = Number.isFinite(confidenceValue)
+        ? Math.max(0, Math.min(100, confidenceValue))
+        : 50;
+    const lesson = [
+        `What worked: ${whatWorked}`,
+        `What failed: ${whatFailed}`,
+        `Remember next time: ${rememberNextTime}`,
+        `Requires human approval: ${requiresHumanApproval ? "yes" : "no"}`
+    ].join("\n");
+
+    return {
+        lesson,
+        category,
+        confidence,
+        whatWorked,
+        whatFailed,
+        rememberNextTime,
+        requiresHumanApproval
+    };
 }
 
 function normalizeDuplicateComparisonText(value) {
@@ -2743,6 +2826,10 @@ function getProtectedAgentCommandLabel(type) {
         return "apply cleanup obvious agent data";
     }
 
+    if (type === "approve_reflection") {
+        return "approve reflection <id>";
+    }
+
     return type;
 }
 
@@ -2758,7 +2845,8 @@ function getAgentAccessError(command) {
         "run_schedule",
         "disable_schedule",
         "apply_cleanup_agent_data",
-        "apply_cleanup_obvious_agent_data"
+        "apply_cleanup_obvious_agent_data",
+        "approve_reflection"
     ]);
 
     if (!protectedTypes.has(command.type) || !AGENT_SECRET) {
@@ -3858,6 +3946,22 @@ function detectCommand(message) {
         return attachSecret({ type: "agent_history" });
     }
 
+    if (/^reflect on last task$/i.test(text)) {
+        return attachSecret({ type: "reflect_last_task" });
+    }
+
+    if (/^reflections$/i.test(text)) {
+        return attachSecret({ type: "list_reflections" });
+    }
+
+    match = text.match(/^approve reflection\s+(\d+)$/i);
+    if (match) {
+        return attachSecret({
+            type: "approve_reflection",
+            id: Number(match[1])
+        });
+    }
+
     match = text.match(/^run agent\s+([\s\S]+)$/i);
     if (match) {
         return attachSecret({
@@ -4266,6 +4370,73 @@ async function handleCommand(command) {
             return {
                 ok: true,
                 reply: `Recent agent actions:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "reflect_last_task": {
+            const recentTasks = await pgGetRecentAgentTasks(20);
+            const task = getLatestCompletedAgentTask(recentTasks);
+
+            if (!task) {
+                return { ok: false, reply: "No completed agent task found to reflect on." };
+            }
+
+            try {
+                const reflection = await generateReflectionForTask(task);
+                const saved = await pgCreateAgentReflection(
+                    "agent_task",
+                    task.id,
+                    reflection.lesson,
+                    reflection.category,
+                    reflection.confidence
+                );
+
+                return {
+                    ok: true,
+                    reply: `Reflection saved for task #${task.id}.
+
+Category: ${saved.category}
+Confidence: ${saved.confidence}
+Approved: no
+
+${saved.lesson}`,
+                    reflection: saved
+                };
+            } catch (error) {
+                return {
+                    ok: false,
+                    reply: `Could not create reflection: ${error.message || "Unknown error"}`
+                };
+            }
+        }
+
+        case "list_reflections": {
+            const reflections = await pgListAgentReflections(10);
+
+            if (!reflections.length) {
+                return { ok: true, reply: "No reflections saved yet." };
+            }
+
+            const lines = reflections.map(reflection =>
+                `- #${reflection.id} [${reflection.approved ? "approved" : "pending"}] ${reflection.category} (confidence ${reflection.confidence}) from ${reflection.source_type} #${reflection.source_id}`
+            );
+
+            return {
+                ok: true,
+                reply: `Recent reflections:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "approve_reflection": {
+            const reflection = await pgApproveAgentReflection(command.id);
+
+            if (!reflection) {
+                return { ok: false, reply: `Could not find reflection: ${command.id}` };
+            }
+
+            return {
+                ok: true,
+                reply: `Approved reflection #${reflection.id}.`
             };
         }
 

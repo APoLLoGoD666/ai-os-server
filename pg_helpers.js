@@ -4,6 +4,7 @@ let agentActionsTableReadyPromise = null;
 let agentTasksTableReadyPromise = null;
 let agentSchedulesTableReadyPromise = null;
 let notificationsTableReadyPromise = null;
+let agentReflectionsTableReadyPromise = null;
 
 function ensureAgentActionsTable() {
     if (!agentActionsTableReadyPromise) {
@@ -102,6 +103,28 @@ function ensureNotificationsTable() {
     }
 
     return notificationsTableReadyPromise;
+}
+
+function ensureAgentReflectionsTable() {
+    if (!agentReflectionsTableReadyPromise) {
+        agentReflectionsTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS agent_reflections (
+                id SERIAL PRIMARY KEY,
+                source_type TEXT,
+                source_id INTEGER,
+                lesson TEXT,
+                category TEXT,
+                confidence INTEGER DEFAULT 50,
+                approved BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `).catch(error => {
+            agentReflectionsTableReadyPromise = null;
+            throw error;
+        });
+    }
+
+    return agentReflectionsTableReadyPromise;
 }
 
 /* =========================
@@ -638,6 +661,59 @@ async function pgMarkNotificationRead(id) {
     return queryResult.rows[0] || null;
 }
 
+async function pgCreateAgentReflection(sourceType, sourceId, lesson, category, confidence = 50) {
+    await ensureAgentReflectionsTable();
+
+    const queryResult = await pool.query(
+        `
+        INSERT INTO agent_reflections (
+            source_type,
+            source_id,
+            lesson,
+            category,
+            confidence
+        )
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, source_type, source_id, lesson, category, confidence, approved, created_at
+        `,
+        [sourceType, sourceId, lesson, category, confidence]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
+async function pgListAgentReflections(limit = 20) {
+    await ensureAgentReflectionsTable();
+
+    const queryResult = await pool.query(
+        `
+        SELECT id, source_type, source_id, lesson, category, confidence, approved, created_at
+        FROM agent_reflections
+        ORDER BY id DESC
+        LIMIT $1
+        `,
+        [limit]
+    );
+
+    return queryResult.rows;
+}
+
+async function pgApproveAgentReflection(id) {
+    await ensureAgentReflectionsTable();
+
+    const queryResult = await pool.query(
+        `
+        UPDATE agent_reflections
+        SET approved = true
+        WHERE id = $1
+        RETURNING id, source_type, source_id, lesson, category, confidence, approved, created_at
+        `,
+        [id]
+    );
+
+    return queryResult.rows[0] || null;
+}
+
 module.exports = {
     pgSaveDocument,
     pgListDocuments,
@@ -666,5 +742,8 @@ module.exports = {
     pgGetDueAgentSchedules,
     pgCreateNotification,
     pgListNotifications,
-    pgMarkNotificationRead
+    pgMarkNotificationRead,
+    pgCreateAgentReflection,
+    pgListAgentReflections,
+    pgApproveAgentReflection
 };
