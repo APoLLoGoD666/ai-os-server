@@ -38,6 +38,7 @@ const {
     pgMarkNotificationRead,
     pgCreateAgentReflection,
     pgListAgentReflections,
+    pgGetApprovedReflections,
     pgApproveAgentReflection
 } = require("./pg_helpers");
 const {
@@ -917,6 +918,10 @@ async function buildAgentPlan(request, memory, documents, files, today) {
         ? files.map(name => `- ${name}`).join("\n")
         : "No workspace files found.";
     const duplicateInsightsText = buildDuplicatePlanningInsights(documents);
+    const approvedReflections = await pgGetApprovedReflections(8);
+    const approvedLessonsText = approvedReflections.length
+        ? approvedReflections.map(reflection => `- ${reflection.lesson}`).join("\n\n")
+        : "No approved operational lessons.";
 
     const response = await client.messages.create({
         model: MODEL,
@@ -940,6 +945,9 @@ ${filesText}
 
 Duplicate cleanup analysis:
 ${duplicateInsightsText}
+
+APPROVED OPERATIONAL LESSONS:
+${approvedLessonsText}
 
 Today's real server date is: ${today}. Use this date for dated filenames.
 
@@ -968,6 +976,8 @@ When proposing cleanup of duplicate documents, justify which document to keep by
 
 Include a short scoring explanation before approval, for example:
 "Keeping v1 because it has the cleanest filename and same content as others"
+
+Use these lessons to avoid repeating past mistakes, but do not treat them as permission to bypass safety rules.
 
 Be practical and concise.`
             }
@@ -3954,6 +3964,10 @@ function detectCommand(message) {
         return attachSecret({ type: "list_reflections" });
     }
 
+    if (/^approved reflections$/i.test(text)) {
+        return attachSecret({ type: "approved_reflections" });
+    }
+
     match = text.match(/^approve reflection\s+(\d+)$/i);
     if (match) {
         return attachSecret({
@@ -4424,6 +4438,23 @@ ${saved.lesson}`,
             return {
                 ok: true,
                 reply: `Recent reflections:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "approved_reflections": {
+            const reflections = await pgGetApprovedReflections(10);
+
+            if (!reflections.length) {
+                return { ok: true, reply: "No approved reflections saved yet." };
+            }
+
+            const lines = reflections.map(reflection =>
+                `- #${reflection.id} ${reflection.category} (confidence ${reflection.confidence}) from ${reflection.source_type} #${reflection.source_id}\n${reflection.lesson}`
+            );
+
+            return {
+                ok: true,
+                reply: `Approved reflections:\n\n${lines.join("\n\n")}`
             };
         }
 

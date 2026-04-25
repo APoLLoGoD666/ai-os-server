@@ -698,6 +698,23 @@ async function pgListAgentReflections(limit = 20) {
     return queryResult.rows;
 }
 
+async function pgGetApprovedReflections(limit = 20) {
+    await ensureAgentReflectionsTable();
+
+    const queryResult = await pool.query(
+        `
+        SELECT id, source_type, source_id, lesson, category, confidence, approved, created_at
+        FROM agent_reflections
+        WHERE approved = true
+        ORDER BY id DESC
+        LIMIT $1
+        `,
+        [limit]
+    );
+
+    return queryResult.rows;
+}
+
 async function pgApproveAgentReflection(id) {
     await ensureAgentReflectionsTable();
 
@@ -745,5 +762,6 @@ module.exports = {
     pgMarkNotificationRead,
     pgCreateAgentReflection,
     pgListAgentReflections,
+    pgGetApprovedReflections,
     pgApproveAgentReflection
 };
