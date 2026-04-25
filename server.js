@@ -1595,6 +1595,36 @@ function getNextTaskStatus(steps, nextIndex) {
     return nextStep && isWriteAgentAction(nextStep) ? "waiting_approval" : "running";
 }
 
+async function getNextTaskStatusForExecution(steps, nextIndex, originalRequest = "") {
+    if (nextIndex >= steps.length) {
+        return "completed";
+    }
+
+    const nextValidation = normalizeExecutableAgentStep(steps[nextIndex], originalRequest);
+
+    if (!nextValidation.ok) {
+        return "running";
+    }
+
+    const nextStep = nextValidation.step;
+
+    if (shouldAutoRunTaskAction(nextStep)) {
+        return "running";
+    }
+
+    const standingApproval = await getMatchingStandingApproval(nextStep);
+
+    if (standingApproval) {
+        const standingCheck = await canAutoRunLevel3Action(nextStep);
+
+        if (standingCheck.ok) {
+            return "running";
+        }
+    }
+
+    return isWriteAgentAction(nextStep) ? "waiting_approval" : "running";
+}
+
 async function buildTaskActionSummary(task) {
     const steps = Array.isArray(task?.actions_json?.steps) ? task.actions_json.steps : [];
 
@@ -1641,11 +1671,11 @@ async function autoRunReadOnlyTaskSteps(taskId) {
             };
         }
 
-        if (task.status === "completed") {
-            aggregate.status = "completed";
-            aggregate.completedMessage = "Task completed. No approval required.";
-            return aggregate;
-        }
+    if (task.status === "completed") {
+        aggregate.status = "completed";
+        aggregate.completedMessage = "Task completed. No approval required.";
+        return aggregate;
+    }
 
         if (aggregate.stepsExecuted >= aggregate.maxSteps) {
             const remaining = getRemainingTaskSteps(task);
@@ -1676,13 +1706,54 @@ async function autoRunReadOnlyTaskSteps(taskId) {
         }
 
         const nextStep = remainingSteps[0];
+        const nextStepValidation = normalizeExecutableAgentStep(nextStep, task.goal || "");
+
+        if (!nextStepValidation.ok) {
+            const skippedItem = {
+                type: nextStep?.type || "unknown_step",
+                reason: nextStepValidation.reason
+            };
+            const nextIndex = (Number.isInteger(task.current_step) ? task.current_step : 0) + 1;
+            const nextStatus = await getNextTaskStatusForExecution(
+                Array.isArray(task.actions_json?.steps) ? task.actions_json.steps : [],
+                nextIndex,
+                task.goal || ""
+            );
+
+            await pgUpdateAgentTask(taskId, {
+                status: nextStatus,
+                current_step: nextIndex,
+                result: skippedItem.reason,
+                error: null,
+                context_json: {
+                    ...(task.context_json || {}),
+                    agentExecution: {
+                        ...((task.context_json && task.context_json.agentExecution) || {}),
+                        execution_mode: "chained",
+                        steps_executed: aggregate.stepsExecuted,
+                        lastCycle: {
+                            stepIndex: Number.isInteger(task.current_step) ? task.current_step : 0,
+                            stepType: skippedItem.type,
+                            executed: [],
+                            skipped: [skippedItem],
+                            completedAt: new Date().toISOString()
+                        }
+                    }
+                }
+            });
+
+            aggregate.skipped.push(skippedItem);
+            continue;
+        }
+
+        const executableNextStep = nextStepValidation.step;
         let standingApproval = null;
 
-        if (!shouldAutoRunTaskAction(nextStep)) {
-            standingApproval = await getMatchingStandingApproval(nextStep);
+        if (!shouldAutoRunTaskAction(executableNextStep)) {
+            standingApproval = await getMatchingStandingApproval(executableNextStep);
 
             if (standingApproval) {
-                const standingCheck = await canAutoRunLevel3Action(nextStep);
+                const standingCheck = await canAutoRunLevel3Action(executableNextStep);
 
                 if (!standingCheck.ok) {
                     await pgUpdateAgentTask(taskId, {
@@ -1699,10 +1770,10 @@ async function autoRunReadOnlyTaskSteps(taskId) {
             }
         }
 
-        if (!shouldAutoRunTaskAction(nextStep) && !standingApproval) {
+        if (!shouldAutoRunTaskAction(executableNextStep) && !standingApproval) {
             await pgUpdateAgentTask(taskId, {
                 status: "waiting_approval",
-                result: `Task is waiting for approval before ${nextStep.type}.`
+                result: `Task is waiting for approval before ${executableNextStep.type}.`
             });
 
             task = await pgGetAgentTask(taskId);
@@ -1712,8 +1783,8 @@ async function autoRunReadOnlyTaskSteps(taskId) {
             return aggregate;
         }
 
-        if ((AUTONOMY_LEVEL === "3" && isSafeAutoAction(nextStep) && !isReadOnlyAgentAction(nextStep)) || standingApproval) {
-            const level3Check = await canAutoRunLevel3Action(nextStep);
+        if ((AUTONOMY_LEVEL === "3" && isSafeAutoAction(executableNextStep) && !isReadOnlyAgentAction(executableNextStep)) || standingApproval) {
+            const level3Check = await canAutoRunLevel3Action(executableNextStep);
 
             if (!level3Check.ok) {
                 await pgUpdateAgentTask(taskId, {
@@ -1751,7 +1822,7 @@ async function autoRunReadOnlyTaskSteps(taskId) {
                 {
                     taskId,
                     standingApprovalId: standingApproval.id,
-                    step: nextStep
+                    step: executableNextStep
                 },
                 execution.undoEntries || null,
                 execution.results.join(" | ")
@@ -1760,7 +1831,7 @@ async function autoRunReadOnlyTaskSteps(taskId) {
             await createAgentNotification(
                 "standing_approval_used",
                 "Standing approval used",
-                `Standing approval "${standingApproval.name}" auto-executed ${nextStep.type} for task #${taskId}.`,
+                `Standing approval "${standingApproval.name}" auto-executed ${executableNextStep.type} for task #${taskId}.`,
                 "agent_task",
                 taskId
             );
@@ -2204,7 +2275,57 @@ async function executeApprovedAgentTask(taskId, options = {}) {
     }
 
     const currentStep = steps[startIndex];
-    const duplicateMatch = await findPendingDuplicateForSteps([currentStep]);
+    const currentValidation = normalizeExecutableAgentStep(currentStep, task.goal || "");
+
+    if (!currentValidation.ok) {
+        const skippedItem = {
+            type: currentStep?.type || "unknown_step",
+            reason: currentValidation.reason
+        };
+        const nextIndex = startIndex + 1;
+        const nextStatus = await getNextTaskStatusForExecution(steps, nextIndex, task.goal || "");
+        const historyEntry = {
+            stepIndex: startIndex,
+            stepType: skippedItem.type,
+            executed: [],
+            skipped: [skippedItem],
+            autoExecuted: false,
+            completedAt: new Date().toISOString()
+        };
+        const updatedContextJson = {
+            ...executionState.context,
+            agentExecution: {
+                ...executionState.agentExecution,
+                history: [...executionState.history, historyEntry],
+                execution_mode: options.chainMode === true ? "chained" : executionState.executionMode,
+                steps_executed: options.chainMode === true ? nextStepsExecuted : executionState.stepsExecuted,
+                lastCycle: historyEntry,
+                planSkipped: plannedSkipped
+            }
+        };
+
+        await pgUpdateAgentTask(taskId, {
+            status: nextStatus,
+            current_step: nextIndex,
+            context_json: updatedContextJson,
+            result: skippedItem.reason,
+            error: null
+        });
+
+        return {
+            ok: true,
+            status: nextStatus,
+            results: [],
+            skipped: [skippedItem],
+            plan: "",
+            generatedProposal: false,
+            planSkipped: plannedSkipped,
+            message: skippedItem.reason
+        };
+    }
+
+    const executableCurrentStep = currentValidation.step;
+    const duplicateMatch = await findPendingDuplicateForSteps([executableCurrentStep]);
 
     if (duplicateMatch) {
         await pgUpdateAgentTask(taskId, {
@@ -2229,7 +2350,7 @@ async function executeApprovedAgentTask(taskId, options = {}) {
         status: "running"
     });
 
-    const execution = await executeApprovedAgentActions([currentStep], {
+    const execution = await executeApprovedAgentActions([executableCurrentStep], {
         skipped: [],
         originalRequest: task.goal,
         latestSearchResult: executionState.latestSearchResult,
@@ -2254,7 +2375,7 @@ async function executeApprovedAgentTask(taskId, options = {}) {
             {
                 taskId,
                 stepIndex: startIndex,
-                steps: [currentStep],
+                steps: [executableCurrentStep],
                 skipped: execution.skipped || []
             },
             execution.undoEntries || null,
@@ -2270,7 +2391,7 @@ async function executeApprovedAgentTask(taskId, options = {}) {
     }
 
     const nextIndex = startIndex + 1;
-    const nextStatus = getNextTaskStatus(steps, nextIndex);
+    const nextStatus = await getNextTaskStatusForExecution(steps, nextIndex, task.goal || "");
     const cycleResult = execution.results.length
         ? `Executed: ${execution.results.join(" | ")}`
         : "No executable result was produced in this cycle.";
@@ -2283,11 +2404,11 @@ async function executeApprovedAgentTask(taskId, options = {}) {
     const result = [cycleResult, skipResult, nextStepMessage].filter(Boolean).join(" | ");
     const historyEntry = {
         stepIndex: startIndex,
-        stepType: currentStep.type,
+        stepType: executableCurrentStep.type,
         executed: execution.results,
         skipped: execution.skipped,
         lastSearchResult: execution.latestSearchResult,
-        autoExecuted: AUTONOMY_LEVEL === "3" && isSafeAutoAction(currentStep) && execution.results.length > 0,
+        autoExecuted: AUTONOMY_LEVEL === "3" && isSafeAutoAction(executableCurrentStep) && execution.results.length > 0,
         completedAt: new Date().toISOString()
     };
     const discoveryOutputs = execution.stepOutputs || [];
@@ -2336,7 +2457,7 @@ async function executeApprovedAgentTask(taskId, options = {}) {
             execution_mode: options.chainMode === true ? "chained" : executionState.executionMode,
             steps_executed: options.chainMode === true ? nextStepsExecuted : executionState.stepsExecuted,
             autoExecuted: Boolean(executionState.agentExecution.autoExecuted)
-                || (AUTONOMY_LEVEL === "3" && isSafeAutoAction(currentStep) && execution.results.length > 0),
+                || (AUTONOMY_LEVEL === "3" && isSafeAutoAction(executableCurrentStep) && execution.results.length > 0),
             lastCycle: historyEntry,
             planSkipped: plannedSkipped,
             discovery: {
@@ -2351,7 +2472,7 @@ async function executeApprovedAgentTask(taskId, options = {}) {
     let finalStatus = nextStatus;
     let finalResult = result;
     let finalPlan = "";
-    let finalSteps = [currentStep];
+    let finalSteps = [executableCurrentStep];
     let finalSkipped = execution.skipped;
     let generatedProposal = false;
 
@@ -3361,7 +3482,8 @@ function validateAgentSteps(steps, originalRequest = "") {
             };
         }
 
-        const normalizedStep = { ...step };
+        const executionReady = normalizeExecutableAgentStep(step, originalRequest);
+        const normalizedStep = executionReady.ok ? executionReady.step : { ...step };
 
         if (shouldInferSafeAuto(normalizedStep, originalRequest)) {
             normalizedStep.safe_auto = true;
@@ -3373,6 +3495,14 @@ function validateAgentSteps(steps, originalRequest = "") {
             skipped.push({
                 type: normalizedStep.type,
                 reason: `Missing content for ${normalizedStep.type}.`
+            });
+            continue;
+        }
+
+        if (normalizedStep.type === "create_workspace_file" && !normalizedStep.filename) {
+            skipped.push({
+                type: normalizedStep.type,
+                reason: "Missing filename for create_workspace_file."
             });
             continue;
         }
@@ -3402,7 +3532,9 @@ function validateAgentSteps(steps, originalRequest = "") {
         }
 
         if (normalizedStep.type === "search_documents" && !normalizedStep.keyword) {
-            if (originalRequest && originalRequest.trim()) {
+            if (typeof normalizedStep.query === "string" && normalizedStep.query.trim()) {
+                normalizedStep.keyword = normalizedStep.query.trim();
+            } else if (originalRequest && originalRequest.trim()) {
                 normalizedStep.keyword = originalRequest.trim();
             } else {
                 skipped.push({
@@ -3689,6 +3821,83 @@ async function canAutoRunLevel3Action(step) {
     }
 
     return { ok: true };
+}
+
+function normalizeExecutableAgentStep(step, originalRequest = "") {
+    if (!step || typeof step !== "object" || !step.type) {
+        return {
+            ok: false,
+            reason: "Skipped invalid step (missing type)."
+        };
+    }
+
+    const normalizedStep = { ...step };
+
+    if (normalizedStep.type === "search_documents" && !normalizedStep.keyword && typeof normalizedStep.query === "string") {
+        normalizedStep.keyword = normalizedStep.query.trim();
+    }
+
+    if (normalizedStep.type === "summarize_document" && !normalizedStep.filename && typeof normalizedStep.target === "string") {
+        normalizedStep.filename = normalizeAgentFilename(normalizedStep.target);
+    }
+
+    if (normalizedStep.type === "create_workspace_file") {
+        if (!normalizedStep.filename && typeof normalizedStep.target === "string") {
+            normalizedStep.filename = path.basename(String(normalizedStep.target).trim());
+        }
+
+        if (typeof normalizedStep.filename === "string" && normalizedStep.filename.trim()) {
+            normalizedStep.filename = path.basename(normalizedStep.filename.trim());
+        }
+    }
+
+    if (normalizedStep.type === "rename_document") {
+        if (typeof normalizedStep.oldName === "string" && normalizedStep.oldName.trim()) {
+            normalizedStep.oldName = normalizeAgentFilename(normalizedStep.oldName);
+        }
+
+        if (typeof normalizedStep.newName === "string" && normalizedStep.newName.trim()) {
+            normalizedStep.newName = normalizeAgentFilename(normalizedStep.newName);
+        }
+    }
+
+    if (normalizedStep.type === "search_documents" && !normalizedStep.keyword && originalRequest.trim()) {
+        normalizedStep.keyword = originalRequest.trim();
+    }
+
+    if (normalizedStep.type === "rename_document" && (!normalizedStep.oldName || !normalizedStep.newName)) {
+        return {
+            ok: false,
+            reason: "Skipped invalid rename_document step (missing fields)."
+        };
+    }
+
+    if (normalizedStep.type === "create_workspace_file" &&
+        (!normalizedStep.filename || typeof normalizedStep.content !== "string" || !normalizedStep.content.trim())) {
+        return {
+            ok: false,
+            reason: "Skipped invalid create_workspace_file step (missing filename or content)."
+        };
+    }
+
+    if (normalizedStep.type === "summarize_document" && !normalizedStep.filename) {
+        return {
+            ok: false,
+            reason: "Skipped invalid summarize_document step (missing target)."
+        };
+    }
+
+    if (normalizedStep.type === "search_documents" && !normalizedStep.keyword) {
+        return {
+            ok: false,
+            reason: "Skipped invalid search_documents step (missing query)."
+        };
+    }
+
+    return {
+        ok: true,
+        step: normalizedStep
+    };
 }
 
 function stepMatchesStandingApproval(step, rule) {
