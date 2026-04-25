@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const { createClient } = require("@supabase/supabase-js");
+const path = require("path");
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -12,35 +13,42 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+function normalizeWorkspaceStorageFilename(filename) {
+    return path.basename(String(filename || "").trim());
+}
+
 async function uploadWorkspaceFile(filename, content) {
+    const cleanName = normalizeWorkspaceStorageFilename(filename);
     const { error } = await supabase.storage
         .from(SUPABASE_BUCKET)
-        .upload(filename, Buffer.from(content, "utf8"), {
+        .upload(cleanName, Buffer.from(content, "utf8"), {
             contentType: "text/plain",
             upsert: true
         });
 
     if (error) throw error;
 
-    return { filename, content };
+    return { filename: cleanName, content };
 }
 
 async function readWorkspaceFileFromStorage(filename) {
+    const cleanName = normalizeWorkspaceStorageFilename(filename);
     const { data, error } = await supabase.storage
         .from(SUPABASE_BUCKET)
-        .download(filename);
+        .download(cleanName);
 
     if (error) return null;
 
     const content = await data.text();
 
-    return { filename, content };
+    return { filename: cleanName, content };
 }
 
 async function deleteWorkspaceFileFromStorage(filename) {
+    const cleanName = normalizeWorkspaceStorageFilename(filename);
     const { error } = await supabase.storage
         .from(SUPABASE_BUCKET)
-        .remove([filename]);
+        .remove([cleanName]);
 
     if (error) throw error;
 
@@ -62,9 +70,31 @@ async function listWorkspaceFilesFromStorage() {
         .map(item => item.name);
 }
 
+async function getWorkspaceStorageDebug() {
+    try {
+        const files = await listWorkspaceFilesFromStorage();
+        return {
+            ok: true,
+            bucket: SUPABASE_BUCKET,
+            fileCount: files.length,
+            files,
+            error: null
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            bucket: SUPABASE_BUCKET,
+            fileCount: 0,
+            files: [],
+            error: error.message || "Unknown storage error"
+        };
+    }
+}
+
 module.exports = {
     uploadWorkspaceFile,
     readWorkspaceFileFromStorage,
     deleteWorkspaceFileFromStorage,
-    listWorkspaceFilesFromStorage
+    listWorkspaceFilesFromStorage,
+    getWorkspaceStorageDebug
 };

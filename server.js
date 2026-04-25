@@ -49,7 +49,8 @@ const {
     uploadWorkspaceFile,
     readWorkspaceFileFromStorage,
     deleteWorkspaceFileFromStorage,
-    listWorkspaceFilesFromStorage
+    listWorkspaceFilesFromStorage,
+    getWorkspaceStorageDebug
 } = require("./storage");
 
 const { runAutoCoder } = require("./auto_coder");
@@ -261,21 +262,14 @@ function safeFilePath(filename) {
 }
 
 async function listWorkspaceFiles() {
-    try {
-        const files = await listWorkspaceFilesFromStorage();
+    const debug = await getWorkspaceStorageDebug();
 
-        return files
-            .filter(name => !HIDDEN_FILES.has(name))
-            .sort();
-    } catch (error) {
-        console.error("STORAGE LIST ERROR:", error.message);
+    if (!debug.ok) {
+        console.error("STORAGE LIST ERROR:", debug.error);
+        throw new Error(`Workspace storage listing failed: ${debug.error}`);
     }
 
-    ensureSetup();
-
-    return fs.readdirSync(WORKSPACE_DIR, { withFileTypes: true })
-        .filter(entry => entry.isFile())
-        .map(entry => entry.name)
+    return debug.files
         .filter(name => !HIDDEN_FILES.has(name))
         .sort();
 }
@@ -3092,22 +3086,45 @@ function getWorkspaceOverviewFamilyKey(filename) {
     return familyMap.get(normalized) || normalized;
 }
 
+function getWorkspaceOverviewSearchTerms(filename = "") {
+    const familyKey = getWorkspaceOverviewFamilyKey(filename);
+    const familyTerms = {
+        workspace_overview_family: [
+            "workspace index",
+            "workspace overview",
+            "workspace report",
+            "workspace cleanup",
+            "workspace baseline"
+        ]
+    };
+
+    return familyTerms[familyKey] || [String(filename || "").replace(/[_-]+/g, " ").trim()].filter(Boolean);
+}
+
 async function findSimilarWorkspaceArtifact(filename) {
-    const files = await listWorkspaceFiles();
+    const storageDebug = await getWorkspaceStorageDebug();
+    if (!storageDebug.ok) {
+        console.error("WORKSPACE STORAGE FILE COUNT:", 0);
+        console.error("WORKSPACE MATCHING POSTGRES DOC COUNT:", 0);
+        throw new Error(`Workspace storage listing failed: ${storageDebug.error}`);
+    }
+
+    const files = storageDebug.files;
     const normalizedTarget = normalizeWorkspaceFileMeaning(filename);
     const targetFamily = getWorkspaceOverviewFamilyKey(filename);
     const docs = await pgListDocuments();
-    const matchingDocs = [];
+    const matchingDocs = new Map();
+    const searchTerms = getWorkspaceOverviewSearchTerms(filename);
 
     for (const existingFile of files) {
         if (String(existingFile).toLowerCase() === String(filename).toLowerCase()) {
             console.log("WORKSPACE STORAGE FILE COUNT:", files.length);
-            console.log("WORKSPACE MATCHING POSTGRES DOC COUNT:", matchingDocs.length);
+            console.log("WORKSPACE MATCHING POSTGRES DOC COUNT:", matchingDocs.size);
             return {
                 name: existingFile,
                 source: "storage",
                 storageCount: files.length,
-                matchingDocCount: matchingDocs.length
+                matchingDocCount: matchingDocs.size
             };
         }
 
@@ -3119,12 +3136,12 @@ async function findSimilarWorkspaceArtifact(filename) {
             (targetFamily && existingFamily === targetFamily)
         ) {
             console.log("WORKSPACE STORAGE FILE COUNT:", files.length);
-            console.log("WORKSPACE MATCHING POSTGRES DOC COUNT:", matchingDocs.length);
+            console.log("WORKSPACE MATCHING POSTGRES DOC COUNT:", matchingDocs.size);
             return {
                 name: existingFile,
                 source: "storage",
                 storageCount: files.length,
-                matchingDocCount: matchingDocs.length
+                matchingDocCount: matchingDocs.size
             };
         }
     }
@@ -3137,19 +3154,36 @@ async function findSimilarWorkspaceArtifact(filename) {
             (normalizedTarget && docNormalized === normalizedTarget) ||
             (targetFamily && docFamily === targetFamily)
         ) {
-            matchingDocs.push(doc.filename);
+            matchingDocs.set(doc.filename, doc.filename);
+        }
+    }
+
+    for (const term of searchTerms) {
+        const results = await pgSearchDocuments(term);
+
+        for (const doc of results) {
+            const haystack = [
+                doc.filename,
+                doc.summary,
+                typeof doc.content === "string" ? doc.content.slice(0, 500) : ""
+            ].join(" ").toLowerCase();
+
+            if (haystack.includes(term.toLowerCase())) {
+                matchingDocs.set(doc.filename, doc.filename);
+            }
         }
     }
 
     console.log("WORKSPACE STORAGE FILE COUNT:", files.length);
-    console.log("WORKSPACE MATCHING POSTGRES DOC COUNT:", matchingDocs.length);
+    console.log("WORKSPACE MATCHING POSTGRES DOC COUNT:", matchingDocs.size);
 
-    if (matchingDocs.length) {
+    if (matchingDocs.size) {
+        const firstMatch = Array.from(matchingDocs.keys())[0];
         return {
-            name: matchingDocs[0],
+            name: firstMatch,
             source: "postgres",
             storageCount: files.length,
-            matchingDocCount: matchingDocs.length
+            matchingDocCount: matchingDocs.size
         };
     }
 
@@ -4680,7 +4714,16 @@ async function handleCommand(command) {
         }
 
         case "list_files": {
-            const files = await listWorkspaceFiles();
+            let files = [];
+
+            try {
+                files = await listWorkspaceFiles();
+            } catch (error) {
+                return {
+                    ok: false,
+                    reply: error.message || "Workspace storage listing failed."
+                };
+            }
 
             if (!files.length) {
                 return { ok: true, reply: "No files in workspace." };
@@ -5972,6 +6015,11 @@ app.get("/version", (req, res) => {
         version: "postgres-documents-v1",
         autonomyLevel: process.env.AUTONOMY_LEVEL || "not set"
     });
+});
+
+app.get("/debug-storage", async (req, res) => {
+    const debug = await getWorkspaceStorageDebug();
+    res.status(debug.ok ? 200 : 500).json(debug);
 });
 
 app.get("/memory", async (req, res) => {
