@@ -2124,7 +2124,7 @@ async function executeApprovedAgentTask(taskId) {
     if (AUTONOMY_LEVEL === "3" && isSafeLevel3WriteAction(currentStep) && execution.results.length) {
         await createAgentNotification(
             "autonomy_level_3_auto_action",
-            "Autonomy Level 3 executed safe action",
+            "Autonomy Level 3 executed task",
             `Task #${task.id} for "${task.goal}" auto-executed: ${execution.results.join(" | ")}`,
             "agent_task",
             task.id
@@ -3008,6 +3008,47 @@ function validateAgentSteps(steps, originalRequest = "") {
         validSteps,
         skipped
     };
+}
+
+function buildDirectSafeAgentStepsFromRequest(request = "") {
+    const text = String(request || "").trim();
+    const noteMatch = text.match(/^create\s+(?:a\s+)?(?:note|document)\s+(?:saying|that says|with content)\s+(.+)$/i);
+
+    if (noteMatch) {
+        const content = noteMatch[1].trim();
+        const filenameSeed = content
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "_")
+            .replace(/^_+|_+$/g, "")
+            .slice(0, 48) || "note";
+
+        return [{
+            type: "create_document",
+            filename: filenameSeed,
+            content,
+            classification: "personal",
+            summary: `Auto-created note: ${content.slice(0, 80)}`,
+            safe_auto: true
+        }];
+    }
+
+    const fileMatch = text.match(/^create\s+(?:a\s+)?(?:workspace\s+)?file\s+(?:named\s+)?([a-z0-9._-]+)(?:\s+with content\s+(.+))?$/i);
+
+    if (fileMatch) {
+        const filename = fileMatch[1].trim();
+        const content = String(fileMatch[2] || "").trim();
+
+        if (content) {
+            return [{
+                type: "create_workspace_file",
+                filename,
+                content,
+                safe_auto: true
+            }];
+        }
+    }
+
+    return [];
 }
 
 async function getApprovedAgentActions(latestPlan) {
@@ -4338,13 +4379,37 @@ ${task.plan || "No plan saved."}`
             );
 
             if (AUTONOMY_LEVEL === "3") {
-                const parsed = await getApprovedAgentActions(latestAgentPlan);
+                console.log("AUTONOMY LEVEL:", AUTONOMY_LEVEL);
+
+                let parsed = await getApprovedAgentActions(latestAgentPlan);
+                let usedDirectFallback = false;
+
+                if (!parsed || parsed.needs_clarification || !Array.isArray(parsed.steps) || !parsed.steps.length) {
+                    const directSteps = buildDirectSafeAgentStepsFromRequest(command.request);
+
+                    if (directSteps.length) {
+                        parsed = { steps: directSteps };
+                        usedDirectFallback = true;
+                    }
+                }
 
                 if (parsed && !parsed.needs_clarification) {
                     const validation = validateAgentSteps(parsed.steps, command.request);
 
                     if (!validation.fatalError && validation.validSteps.length) {
                         const autoPlan = await getLevel3AutoExecutablePrefix(validation.validSteps);
+                        const safeCheckResult = {
+                            usedDirectFallback,
+                            validSteps: validation.validSteps.map(step => ({
+                                type: step.type,
+                                safe_auto: step.safe_auto === true
+                            })),
+                            executableCount: autoPlan.executable.length,
+                            remainingCount: autoPlan.remaining.length,
+                            blockedReasons: autoPlan.blocked.map(item => item.reason)
+                        };
+
+                        console.log("SAFE CHECK RESULT:", safeCheckResult);
 
                         if (autoPlan.executable.length) {
                             const execution = await executeApprovedAgentActions(autoPlan.executable, {
@@ -4365,7 +4430,7 @@ ${task.plan || "No plan saved."}`
 
                                 await createAgentNotification(
                                     "autonomy_level_3_auto_action",
-                                    "Autonomy Level 3 executed safe task",
+                                    "Autonomy Level 3 executed task",
                                     `Goal "${command.request}" auto-executed: ${execution.results.join(" | ")}`,
                                     "agent_request",
                                     null
@@ -4376,7 +4441,7 @@ ${task.plan || "No plan saved."}`
 
                                     return {
                                         ok: true,
-                                        reply: `Autonomy Level 3 auto-executed safe actions:\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nTask completed. No approval required.`,
+                                        reply: `Auto-executed safely (Autonomy Level 3)\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}`,
                                         proposalOnly: false,
                                         autoExecuted: true
                                     };
@@ -4388,14 +4453,29 @@ ${task.plan || "No plan saved."}`
 
                                 return {
                                     ok: true,
-                                    reply: `Autonomy Level 3 auto-executed safe actions:\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nAwaiting approval:\n- ${autoPlan.remaining.map(step => `${step.type}${step.filename ? ` (${step.filename})` : step.keyword ? ` (${step.keyword})` : ""}`).join("\n- ")}\n\nUse: approve agent`,
+                                    reply: `Auto-executed safely (Autonomy Level 3)\n\nExecuted steps:\n- ${execution.results.join("\n- ")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}\n\nAwaiting approval:\n- ${autoPlan.remaining.map(step => `${step.type}${step.filename ? ` (${step.filename})` : step.keyword ? ` (${step.keyword})` : ""}`).join("\n- ")}\n\nUse: approve agent`,
                                     proposalOnly: false,
                                     autoExecuted: true
                                 };
                             }
                         }
+
+                        latestAgentPlan.pendingSteps = validation.validSteps;
+                        latestAgentPlan.pendingSkipped = validation.skipped;
+
+                        return {
+                            ok: true,
+                            reply: `Safe actions could not be auto-executed.\n\nAwaiting approval:\n- ${validation.validSteps.map(step => `${step.type}${step.filename ? ` (${step.filename})` : step.keyword ? ` (${step.keyword})` : ""}`).join("\n- ")}\n\nUse: approve agent\n\n${plan}`,
+                            proposalOnly: true
+                        };
                     }
                 }
+
+                console.log("SAFE CHECK RESULT:", {
+                    usedDirectFallback,
+                    parsed: Boolean(parsed),
+                    reason: parsed?.needs_clarification || "No safe executable steps were produced."
+                });
             }
 
             return {
