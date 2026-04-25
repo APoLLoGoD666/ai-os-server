@@ -3012,6 +3012,12 @@ function validateAgentSteps(steps, originalRequest = "") {
 
 function buildDirectSafeAgentStepsFromRequest(request = "") {
     const text = String(request || "").trim();
+    const blockedTerms = /\b(delete|remove|rename|overwrite|update|code|github|env|secret)\b/i;
+
+    if (blockedTerms.test(text)) {
+        return [];
+    }
+
     const noteMatch = text.match(/^create\s+(?:a\s+)?(?:note|document)\s+(?:saying|that says|with content)\s+(.+)$/i);
 
     if (noteMatch) {
@@ -4354,31 +4360,6 @@ ${task.plan || "No plan saved."}`
         case "agent_plan": {
             const autonomyLevel = Number(process.env.AUTONOMY_LEVEL || "1");
             console.log("AUTONOMY_LEVEL active:", autonomyLevel);
-            const memory = await loadMemory();
-            const documents = await getRelevantDocuments(command.request);
-            const files = await listWorkspaceFiles();
-            const today = new Date().toISOString().slice(0, 10);
-            const plan = await buildAgentPlan(command.request, memory, documents, files, today);
-
-            latestAgentPlan = {
-                request: command.request,
-                memory,
-                documents,
-                files,
-                today,
-                plan,
-                createdAt: new Date().toISOString()
-            };
-
-            await pgLogAgentAction(
-                "agent_plan",
-                "planned",
-                command.request,
-                plan,
-                { documents: documents.map(doc => doc.filename), files },
-                null,
-                "Proposal generated"
-            );
 
             if (autonomyLevel >= 3) {
                 const directSafeSteps = buildDirectSafeAgentStepsFromRequest(command.request);
@@ -4412,7 +4393,7 @@ ${task.plan || "No plan saved."}`
                                     "agent_apply",
                                     "applied",
                                     command.request,
-                                    plan,
+                                    "Auto-executed directly from normal agent command path.",
                                     directAutoPlan.executable,
                                     execution.undoEntries,
                                     `Executed automatically: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`
@@ -4438,7 +4419,35 @@ ${task.plan || "No plan saved."}`
                         }
                     }
                 }
+            }
 
+            const memory = await loadMemory();
+            const documents = await getRelevantDocuments(command.request);
+            const files = await listWorkspaceFiles();
+            const today = new Date().toISOString().slice(0, 10);
+            const plan = await buildAgentPlan(command.request, memory, documents, files, today);
+
+            latestAgentPlan = {
+                request: command.request,
+                memory,
+                documents,
+                files,
+                today,
+                plan,
+                createdAt: new Date().toISOString()
+            };
+
+            await pgLogAgentAction(
+                "agent_plan",
+                "planned",
+                command.request,
+                plan,
+                { documents: documents.map(doc => doc.filename), files },
+                null,
+                "Proposal generated"
+            );
+
+            if (autonomyLevel >= 3) {
                 let parsed = await getApprovedAgentActions(latestAgentPlan);
                 let usedDirectFallback = false;
 
@@ -5338,7 +5347,8 @@ app.get("/test-db", async (req, res) => {
 app.get("/version", (req, res) => {
     res.status(200).json({
         ok: true,
-        version: "postgres-documents-v1"
+        version: "postgres-documents-v1",
+        autonomyLevel: process.env.AUTONOMY_LEVEL || "not set"
     });
 });
 
