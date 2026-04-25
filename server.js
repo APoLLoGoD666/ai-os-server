@@ -4352,6 +4352,8 @@ ${task.plan || "No plan saved."}`
         }
 
         case "agent_plan": {
+            const autonomyLevel = Number(process.env.AUTONOMY_LEVEL || "1");
+            console.log("AUTONOMY_LEVEL active:", autonomyLevel);
             const memory = await loadMemory();
             const documents = await getRelevantDocuments(command.request);
             const files = await listWorkspaceFiles();
@@ -4378,8 +4380,64 @@ ${task.plan || "No plan saved."}`
                 "Proposal generated"
             );
 
-            if (AUTONOMY_LEVEL === "3") {
-                console.log("AUTONOMY LEVEL:", AUTONOMY_LEVEL);
+            if (autonomyLevel >= 3) {
+                const directSafeSteps = buildDirectSafeAgentStepsFromRequest(command.request);
+
+                if (directSafeSteps.length) {
+                    const directValidation = validateAgentSteps(directSafeSteps, command.request);
+
+                    if (!directValidation.fatalError && directValidation.validSteps.length) {
+                        const directAutoPlan = await getLevel3AutoExecutablePrefix(directValidation.validSteps);
+                        const directSafeResult = {
+                            mode: "direct_request",
+                            validSteps: directValidation.validSteps.map(step => ({
+                                type: step.type,
+                                safe_auto: step.safe_auto === true
+                            })),
+                            executableCount: directAutoPlan.executable.length,
+                            remainingCount: directAutoPlan.remaining.length,
+                            blockedReasons: directAutoPlan.blocked.map(item => item.reason)
+                        };
+
+                        console.log("Agent Level 3 safe auto result:", directSafeResult);
+
+                        if (directAutoPlan.executable.length && !directAutoPlan.remaining.length) {
+                            const execution = await executeApprovedAgentActions(directAutoPlan.executable, {
+                                skipped: directValidation.skipped,
+                                originalRequest: command.request
+                            });
+
+                            if (execution.ok) {
+                                await pgLogAgentAction(
+                                    "agent_apply",
+                                    "applied",
+                                    command.request,
+                                    plan,
+                                    directAutoPlan.executable,
+                                    execution.undoEntries,
+                                    `Executed automatically: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`
+                                );
+
+                                await createAgentNotification(
+                                    "autonomy_level_3_auto_action",
+                                    "Autonomy Level 3 executed task",
+                                    `Goal "${command.request}" auto-executed: ${execution.results.join(" | ")}`,
+                                    "agent_request",
+                                    null
+                                );
+
+                                latestAgentPlan = null;
+
+                                return {
+                                    ok: true,
+                                    reply: `Auto-executed safely (Autonomy Level 3)\n\n${execution.results.join("\n")}${execution.skipped.length ? `\n\nSkipped steps:\n- ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join("\n- ")}` : ""}`,
+                                    proposalOnly: false,
+                                    autoExecuted: true
+                                };
+                            }
+                        }
+                    }
+                }
 
                 let parsed = await getApprovedAgentActions(latestAgentPlan);
                 let usedDirectFallback = false;
@@ -4409,7 +4467,7 @@ ${task.plan || "No plan saved."}`
                             blockedReasons: autoPlan.blocked.map(item => item.reason)
                         };
 
-                        console.log("SAFE CHECK RESULT:", safeCheckResult);
+                        console.log("Agent Level 3 safe auto result:", safeCheckResult);
 
                         if (autoPlan.executable.length) {
                             const execution = await executeApprovedAgentActions(autoPlan.executable, {
@@ -4471,7 +4529,7 @@ ${task.plan || "No plan saved."}`
                     }
                 }
 
-                console.log("SAFE CHECK RESULT:", {
+                console.log("Agent Level 3 safe auto result:", {
                     usedDirectFallback,
                     parsed: Boolean(parsed),
                     reason: parsed?.needs_clarification || "No safe executable steps were produced."
