@@ -493,6 +493,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            min-height: 360px;
         }
 
         .list-item {
@@ -579,6 +580,16 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            min-height: 360px;
+        }
+
+        #tasksList,
+        #notificationsList {
+            min-height: 420px;
+        }
+
+        #filesList {
+            min-height: 360px;
         }
 
         .memory-item {
@@ -936,7 +947,7 @@
                                 <h2 class="card-title">Documents</h2>
                                 <div class="card-subtitle">Latest 5</div>
                             </div>
-                            <button class="btn ghost" aria-label="Refresh documents" onclick="refreshDocuments()">Refresh</button>
+                            <button class="btn ghost" aria-label="Refresh documents" onclick="refreshDocuments(this)">Refresh</button>
                         </div>
                         <div id="documentsList" class="list"></div>
                     </div>
@@ -949,7 +960,10 @@
                                 <h2 class="card-title">Files</h2>
                                 <div class="card-subtitle">Latest 5</div>
                             </div>
-                            <button class="btn ghost" aria-label="Refresh files" onclick="refreshFiles()">Refresh</button>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                <button class="btn ghost" aria-label="View all files" onclick="openAllFilesModal()">View All Files</button>
+                                <button class="btn ghost" aria-label="Refresh files" onclick="refreshFiles(this)">Refresh</button>
+                            </div>
                         </div>
                         <div id="filesList" class="list"></div>
                     </div>
@@ -962,7 +976,7 @@
                                 <h2 class="card-title">Memory</h2>
                                 <div class="card-subtitle">Latest 5</div>
                             </div>
-                            <button class="btn ghost" aria-label="Refresh memory" onclick="refreshMemory()">Refresh</button>
+                            <button class="btn ghost" aria-label="Refresh memory" onclick="refreshMemory(this)">Refresh</button>
                         </div>
                         <div id="memoryList" class="memory-list"></div>
                     </div>
@@ -1033,8 +1047,11 @@
         let cachedTasks = [];
         let cachedSchedules = [];
         let cachedNotifications = [];
+        let cachedAllFiles = [];
         let chatInitialised = false;
         let refreshDebounceTimer = null;
+        const renderSignatures = {};
+        const inFlightRefreshes = {};
 
         function buildApiUrl(path) {
             if (!APP_KEY) {
@@ -1135,6 +1152,50 @@
             return `<div class="error-state">${escapeHtml(message)}</div>`;
         }
 
+        function preserveScroll(container) {
+            if (!container) return 0;
+            return container.scrollTop;
+        }
+
+        function restoreScroll(container, position) {
+            if (!container) return;
+            container.scrollTop = position;
+        }
+
+        function preservePageScroll() {
+            return window.scrollY || window.pageYOffset || 0;
+        }
+
+        function restorePageScroll(position) {
+            window.scrollTo({ top: position, left: 0, behavior: "auto" });
+        }
+
+        function renderIntoContainer(container, html, signatureKey, signatureValue) {
+            if (!container) return false;
+            if (renderSignatures[signatureKey] === signatureValue) {
+                return false;
+            }
+            const scrollPosition = preserveScroll(container);
+            container.innerHTML = html;
+            renderSignatures[signatureKey] = signatureValue;
+            restoreScroll(container, scrollPosition);
+            return true;
+        }
+
+        async function runRefresh(key, fn) {
+            if (inFlightRefreshes[key]) {
+                return inFlightRefreshes[key];
+            }
+            inFlightRefreshes[key] = (async () => {
+                try {
+                    return await fn();
+                } finally {
+                    delete inFlightRefreshes[key];
+                }
+            })();
+            return inFlightRefreshes[key];
+        }
+
         async function fetchJson(path, options = {}) {
             const response = await fetch(buildApiUrl(path), {
                 ...options,
@@ -1164,6 +1225,7 @@
         function renderChatMessage(role, message) {
             const chatLog = document.getElementById("chatLog");
             if (!chatLog) return;
+            const isNearBottom = (chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight) < 200;
 
             const row = document.createElement("div");
             row.className = `chat-row ${role}`;
@@ -1198,7 +1260,9 @@
 
             row.appendChild(bubble);
             chatLog.appendChild(row);
-            chatLog.scrollTop = chatLog.scrollHeight;
+            if (isNearBottom || role === "user" || role === "system") {
+                chatLog.scrollTop = chatLog.scrollHeight;
+            }
         }
 
         function openModal(title, content) {
@@ -1300,6 +1364,7 @@
 
         async function refreshSections(targets = {}, silent = false) {
             const jobs = [];
+            const pageScroll = preservePageScroll();
 
             if (targets.agent) jobs.push(refreshAgentData());
             if (targets.documents) jobs.push(refreshDocuments());
@@ -1313,6 +1378,7 @@
                 setConnectionStatus("Refreshing...");
             }
             await Promise.all(jobs);
+            restorePageScroll(pageScroll);
             if (!silent) {
                 setConnectionStatus("Connected");
             }
@@ -1324,6 +1390,7 @@
             }
             setButtonBusy(button, true, "Refreshing...");
             refreshDebounceTimer = setTimeout(async () => {
+                const pageScroll = preservePageScroll();
                 try {
                     await Promise.all([
                         refreshAgentData(),
@@ -1332,6 +1399,7 @@
                         refreshMemory(),
                         loadCustomLayout()
                     ]);
+                    restorePageScroll(pageScroll);
                 } finally {
                     setButtonBusy(button, false);
                 }
@@ -1346,218 +1414,265 @@
             ]);
         }
 
-        async function refreshDocuments() {
-            const container = document.getElementById("documentsList");
-            container.innerHTML = renderLoadingState("Loading documents...");
-
-            try {
-                const data = await fetchJson("/documents");
-                const documents = Array.isArray(data.documents) ? data.documents.slice(0, MAX_ITEMS) : [];
-                cachedDocuments = Array.isArray(data.documents) ? data.documents : [];
-
-                if (!documents.length) {
-                    container.innerHTML = renderEmptyState("No documents yet");
-                    return;
-                }
-
-                container.innerHTML = documents.map(doc => `
-                    <div class="list-item">
-                        <div class="item-top">
-                            <div class="item-copy">
-                                <p class="item-title">${escapeHtml(shortenText(doc.filename, 32))}</p>
-                                <div class="item-subtitle">${renderBadge(doc.classification || "unknown")}</div>
-                                <div class="item-meta">${doc.created_at ? escapeHtml(formatTimestamp(doc.created_at)) : ""}</div>
-                            </div>
-                        </div>
-                        <div class="item-actions">
-                            <button class="mini-btn" aria-label="View document ${escapeHtml(doc.filename)}" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">View</button>
-                            <button class="mini-btn primary" aria-label="Summarise document ${escapeHtml(doc.filename)}" onclick="summariseDocument('${encodeURIComponent(doc.filename)}', this)">Summarise</button>
-                            <button class="mini-btn danger" aria-label="Delete document ${escapeHtml(doc.filename)}" onclick="deleteDocumentAction('${encodeURIComponent(doc.filename)}', this)">Delete</button>
-                        </div>
-                    </div>
-                `).join("");
-            } catch (error) {
-                container.innerHTML = renderErrorState(error.message || "Could not load documents.");
+        async function refreshDocuments(button = null) {
+            if (button) {
+                return withButtonBusy(button, () => refreshDocuments(), "Loading...");
             }
-        }
-
-        async function refreshFiles() {
-            const container = document.getElementById("filesList");
-            container.innerHTML = renderLoadingState("Loading files...");
-
-            try {
-                const data = await fetchJson("/files");
-                const files = Array.isArray(data.files) ? data.files.slice(0, MAX_ITEMS) : [];
-                cachedFiles = Array.isArray(data.files) ? data.files : [];
-
-                if (!files.length) {
-                    container.innerHTML = renderEmptyState("No files yet");
-                    return;
+            return runRefresh("documents", async () => {
+                const container = document.getElementById("documentsList");
+                if (!renderSignatures.documents) {
+                    container.innerHTML = renderLoadingState("Loading documents...");
                 }
 
-                container.innerHTML = files.map(file => `
-                    <div class="list-item">
-                        <div class="item-top">
-                            <div class="item-copy">
-                                <p class="item-title">${escapeHtml(shortenText(file, 32))}</p>
-                                <div class="item-subtitle">Workspace file</div>
-                            </div>
-                        </div>
-                        <div class="item-actions">
-                            <button class="mini-btn" aria-label="Read file ${escapeHtml(file)}" onclick="readFileAction('${encodeURIComponent(file)}')">Read</button>
-                            <button class="mini-btn danger" aria-label="Delete file ${escapeHtml(file)}" onclick="deleteFileAction('${encodeURIComponent(file)}', this)">Delete</button>
-                        </div>
-                    </div>
-                `).join("");
-            } catch (error) {
-                container.innerHTML = renderErrorState(error.message || "Could not load files.");
-            }
-        }
+                try {
+                    const data = await fetchJson("/documents");
+                    const documents = Array.isArray(data.documents) ? data.documents.slice(0, MAX_ITEMS) : [];
+                    cachedDocuments = Array.isArray(data.documents) ? data.documents : [];
 
-        async function refreshMemory() {
-            const container = document.getElementById("memoryList");
-            container.innerHTML = renderLoadingState("Loading memory...");
+                    if (!documents.length) {
+                        renderIntoContainer(container, renderEmptyState("No documents yet"), "documents", "empty");
+                        return;
+                    }
 
-            try {
-                const data = await fetchJson("/memory");
-                const memory = Array.isArray(data.memory) ? data.memory.slice(-MAX_ITEMS).reverse() : [];
-
-                if (!memory.length) {
-                    container.innerHTML = renderEmptyState("No memory yet");
-                    return;
-                }
-
-                container.innerHTML = memory.map(item => {
-                    const role = String(item.role || "memory").toLowerCase();
-                    const roleClass = role === "assistant" ? "ai" : role;
-                    const roleLabel = role === "assistant" ? "AI" : role === "user" ? "User" : role === "system" ? "System" : "AI";
-                    return `
-                        <div class="memory-item">
-                            <span class="role-badge ${escapeHtml(roleClass)}">${escapeHtml(roleLabel)}</span>
-                            <div class="memory-text">${escapeHtml(shortenText(item.message || "", 120))}</div>
-                            <div class="memory-time">${escapeHtml(formatTimestamp(item.time || item.created_at))}</div>
-                        </div>
-                    `;
-                }).join("");
-            } catch (error) {
-                container.innerHTML = renderErrorState(error.message || "Could not load memory.");
-            }
-        }
-
-        async function loadTasks() {
-            const container = document.getElementById("tasksList");
-            container.innerHTML = renderLoadingState("Loading tasks...");
-
-            try {
-                const data = await fetchJson("/agent-tasks");
-                const tasks = Array.isArray(data.tasks) ? data.tasks.slice(0, MAX_ITEMS) : [];
-                cachedTasks = tasks;
-
-                if (!tasks.length) {
-                    container.innerHTML = renderEmptyState("No tasks yet");
-                    return;
-                }
-
-                container.innerHTML = tasks.map(task => {
-                    const status = getStatusLabel(task.status);
-                    const shortGoal = shortenText(task.goal || "Untitled task", 40);
-                    const displayTitle = status.normalized === "waiting_approval"
-                        ? `Task waiting approval - ${shortGoal}`
-                        : `Task - ${shortGoal}`;
-
-                    return `
+                    const html = documents.map(doc => `
                         <div class="list-item">
                             <div class="item-top">
                                 <div class="item-copy">
-                                    <p class="item-title">${escapeHtml(displayTitle)}</p>
-                                    <div class="item-subtitle">${renderBadge(task.status)}</div>
-                                    <div class="item-meta">Task ${escapeHtml(task.id)}</div>
+                                    <p class="item-title">${escapeHtml(shortenText(doc.filename, 32))}</p>
+                                    <div class="item-subtitle">${renderBadge(doc.classification || "unknown")}</div>
+                                    <div class="item-meta">${doc.created_at ? escapeHtml(formatTimestamp(doc.created_at)) : ""}</div>
                                 </div>
                             </div>
                             <div class="item-actions">
-                                <button class="mini-btn" aria-label="View task ${escapeHtml(task.id)} details" onclick="viewTaskDetails(${task.id})">View</button>
-                                ${status.normalized === "waiting_approval" ? `<button class="mini-btn primary" aria-label="Approve task ${escapeHtml(task.id)}" onclick="approveAgentTask(${task.id}, this)">Approve</button>` : ""}
+                                <button class="mini-btn" aria-label="View document ${escapeHtml(doc.filename)}" onclick="viewDocument('${encodeURIComponent(doc.filename)}')">View</button>
+                                <button class="mini-btn primary" aria-label="Summarise document ${escapeHtml(doc.filename)}" onclick="summariseDocument('${encodeURIComponent(doc.filename)}', this)">Summarise</button>
+                                <button class="mini-btn danger" aria-label="Delete document ${escapeHtml(doc.filename)}" onclick="deleteDocumentAction('${encodeURIComponent(doc.filename)}', this)">Delete</button>
                             </div>
                         </div>
-                    `;
-                }).join("");
-            } catch (error) {
-                container.innerHTML = renderErrorState(error.message || "Could not load tasks.");
+                    `).join("");
+                    const signature = JSON.stringify(documents.map(doc => [doc.filename, doc.classification, doc.created_at, doc.summary || ""]));
+                    renderIntoContainer(container, html, "documents", signature);
+                } catch (error) {
+                    renderIntoContainer(container, renderErrorState(error.message || "Could not load documents."), "documents", `error:${error.message}`);
+                }
+            });
+        }
+
+        async function refreshFiles(button = null) {
+            if (button) {
+                return withButtonBusy(button, () => refreshFiles(), "Loading...");
             }
+            return runRefresh("files", async () => {
+                const container = document.getElementById("filesList");
+                if (!renderSignatures.files) {
+                    container.innerHTML = renderLoadingState("Loading files...");
+                }
+
+                try {
+                    const data = await fetchJson("/files");
+                    const allFiles = Array.isArray(data.files) ? data.files : [];
+                    const files = allFiles.slice(0, MAX_ITEMS);
+                    cachedFiles = allFiles;
+                    cachedAllFiles = [...allFiles].sort((a, b) => String(b).localeCompare(String(a)));
+
+                    if (!files.length) {
+                        renderIntoContainer(container, renderEmptyState("No files yet"), "files", "empty");
+                        return;
+                    }
+
+                    const html = files.map(file => `
+                        <div class="list-item">
+                            <div class="item-top">
+                                <div class="item-copy">
+                                    <p class="item-title">${escapeHtml(shortenText(file, 32))}</p>
+                                    <div class="item-subtitle">Workspace file</div>
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="mini-btn" aria-label="Read file ${escapeHtml(file)}" onclick="readFileAction('${encodeURIComponent(file)}')">Read</button>
+                                <button class="mini-btn danger" aria-label="Delete file ${escapeHtml(file)}" onclick="deleteFileAction('${encodeURIComponent(file)}', this)">Delete</button>
+                            </div>
+                        </div>
+                    `).join("");
+                    const signature = JSON.stringify(files);
+                    renderIntoContainer(container, html, "files", signature);
+                } catch (error) {
+                    renderIntoContainer(container, renderErrorState(error.message || "Could not load files."), "files", `error:${error.message}`);
+                }
+            });
+        }
+
+        async function refreshMemory(button = null) {
+            if (button) {
+                return withButtonBusy(button, () => refreshMemory(), "Loading...");
+            }
+            return runRefresh("memory", async () => {
+                const container = document.getElementById("memoryList");
+                if (!renderSignatures.memory) {
+                    container.innerHTML = renderLoadingState("Loading memory...");
+                }
+
+                try {
+                    const data = await fetchJson("/memory");
+                    const memory = Array.isArray(data.memory) ? data.memory.slice(-MAX_ITEMS).reverse() : [];
+
+                    if (!memory.length) {
+                        renderIntoContainer(container, renderEmptyState("No memory yet"), "memory", "empty");
+                        return;
+                    }
+
+                    const html = memory.map(item => {
+                        const role = String(item.role || "memory").toLowerCase();
+                        const roleClass = role === "assistant" ? "ai" : role;
+                        const roleLabel = role === "assistant" ? "AI" : role === "user" ? "User" : role === "system" ? "System" : "AI";
+                        return `
+                            <div class="memory-item">
+                                <span class="role-badge ${escapeHtml(roleClass)}">${escapeHtml(roleLabel)}</span>
+                                <div class="memory-text">${escapeHtml(shortenText(item.message || "", 120))}</div>
+                                <div class="memory-time">${escapeHtml(formatTimestamp(item.time || item.created_at))}</div>
+                            </div>
+                        `;
+                    }).join("");
+                    const signature = JSON.stringify(memory.map(item => [item.role, item.message, item.time || item.created_at]));
+                    renderIntoContainer(container, html, "memory", signature);
+                } catch (error) {
+                    renderIntoContainer(container, renderErrorState(error.message || "Could not load memory."), "memory", `error:${error.message}`);
+                }
+            });
+        }
+
+        async function loadTasks() {
+            return runRefresh("tasks", async () => {
+                const container = document.getElementById("tasksList");
+                if (!renderSignatures.tasks) {
+                    container.innerHTML = renderLoadingState("Loading tasks...");
+                }
+
+                try {
+                    const data = await fetchJson("/agent-tasks");
+                    const tasks = Array.isArray(data.tasks) ? data.tasks.slice(0, MAX_ITEMS) : [];
+                    cachedTasks = tasks;
+
+                    if (!tasks.length) {
+                        renderIntoContainer(container, renderEmptyState("No tasks yet"), "tasks", "empty");
+                        return;
+                    }
+
+                    const html = tasks.map(task => {
+                        const status = getStatusLabel(task.status);
+                        const shortGoal = shortenText(task.goal || "Untitled task", 40);
+                        const displayTitle = status.normalized === "waiting_approval"
+                            ? `Task waiting approval - ${shortGoal}`
+                            : `Task - ${shortGoal}`;
+
+                        return `
+                            <div class="list-item">
+                                <div class="item-top">
+                                    <div class="item-copy">
+                                        <p class="item-title">${escapeHtml(displayTitle)}</p>
+                                        <div class="item-subtitle">${renderBadge(task.status)}</div>
+                                        <div class="item-meta">Task ${escapeHtml(task.id)}</div>
+                                    </div>
+                                </div>
+                                <div class="item-actions">
+                                    <button class="mini-btn" aria-label="View task ${escapeHtml(task.id)} details" onclick="viewTaskDetails(${task.id})">View</button>
+                                    ${status.normalized === "waiting_approval" ? `<button class="mini-btn primary" aria-label="Approve task ${escapeHtml(task.id)}" onclick="approveAgentTask(${task.id}, this)">Approve</button>` : ""}
+                                </div>
+                            </div>
+                        `;
+                    }).join("");
+                    const signature = JSON.stringify(tasks.map(task => [task.id, task.goal, task.status, task.result || ""]));
+                    renderIntoContainer(container, html, "tasks", signature);
+                } catch (error) {
+                    renderIntoContainer(container, renderErrorState(error.message || "Could not load tasks."), "tasks", `error:${error.message}`);
+                }
+            });
         }
 
         async function loadSchedules() {
-            const container = document.getElementById("schedulesList");
-            container.innerHTML = renderLoadingState("Loading schedules...");
-
-            try {
-                const data = await fetchJson("/agent-schedules");
-                const schedules = Array.isArray(data.schedules) ? data.schedules.slice(0, MAX_ITEMS) : [];
-                cachedSchedules = schedules;
-
-                if (!schedules.length) {
-                    container.innerHTML = renderEmptyState("No schedules yet");
-                    return;
+            return runRefresh("schedules", async () => {
+                const container = document.getElementById("schedulesList");
+                if (!renderSignatures.schedules) {
+                    container.innerHTML = renderLoadingState("Loading schedules...");
                 }
 
-                container.innerHTML = schedules.map(schedule => `
-                    <div class="list-item">
-                        <div class="item-top">
-                            <div class="item-copy">
-                                <p class="item-title">${escapeHtml(shortenText(`${schedule.frequency || "schedule"} - ${schedule.goal || ""}`, 40))}</p>
-                                <div class="item-subtitle">${renderBadge(schedule.enabled ? "enabled" : "disabled")}</div>
-                                <div class="item-meta">Schedule ${escapeHtml(schedule.id)}</div>
+                try {
+                    const data = await fetchJson("/agent-schedules");
+                    const schedules = Array.isArray(data.schedules) ? data.schedules.slice(0, MAX_ITEMS) : [];
+                    cachedSchedules = schedules;
+
+                    if (!schedules.length) {
+                        renderIntoContainer(container, renderEmptyState("No schedules yet"), "schedules", "empty");
+                        return;
+                    }
+
+                    const html = schedules.map(schedule => `
+                        <div class="list-item">
+                            <div class="item-top">
+                                <div class="item-copy">
+                                    <p class="item-title">${escapeHtml(shortenText(`${schedule.frequency || "schedule"} - ${schedule.goal || ""}`, 40))}</p>
+                                    <div class="item-subtitle">${renderBadge(schedule.enabled ? "enabled" : "disabled")}</div>
+                                    <div class="item-meta">Schedule ${escapeHtml(schedule.id)}</div>
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="mini-btn" aria-label="Run schedule ${escapeHtml(schedule.id)} now" onclick="runScheduleFromDashboard(${schedule.id}, this)">Run Now</button>
+                                ${schedule.enabled ? `<button class="mini-btn danger" aria-label="Disable schedule ${escapeHtml(schedule.id)}" onclick="disableScheduleFromDashboard(${schedule.id}, this)">Disable</button>` : ""}
                             </div>
                         </div>
-                        <div class="item-actions">
-                            <button class="mini-btn" aria-label="Run schedule ${escapeHtml(schedule.id)} now" onclick="runScheduleFromDashboard(${schedule.id}, this)">Run Now</button>
-                            ${schedule.enabled ? `<button class="mini-btn danger" aria-label="Disable schedule ${escapeHtml(schedule.id)}" onclick="disableScheduleFromDashboard(${schedule.id}, this)">Disable</button>` : ""}
-                        </div>
-                    </div>
-                `).join("");
-            } catch (error) {
-                container.innerHTML = renderErrorState(error.message || "Could not load schedules.");
-            }
+                    `).join("");
+                    const signature = JSON.stringify(schedules.map(schedule => [schedule.id, schedule.goal, schedule.frequency, schedule.enabled]));
+                    renderIntoContainer(container, html, "schedules", signature);
+                } catch (error) {
+                    renderIntoContainer(container, renderErrorState(error.message || "Could not load schedules."), "schedules", `error:${error.message}`);
+                }
+            });
         }
 
         async function loadNotifications() {
-            const container = document.getElementById("notificationsList");
-            container.innerHTML = renderLoadingState("Loading notifications...");
-
-            try {
-                const data = await fetchJson("/notifications");
-                const notifications = Array.isArray(data.notifications) ? data.notifications.slice(0, MAX_ITEMS) : [];
-                cachedNotifications = Array.isArray(data.notifications) ? data.notifications : [];
-
-                const unreadCount = cachedNotifications.filter(item => !item.read).length;
-                document.getElementById("notificationSummaryBadge").textContent = `${unreadCount} unread`;
-                document.getElementById("notificationSummaryBadge").className = `badge ${unreadCount ? "unread" : "completed"}`;
-
-                if (!notifications.length) {
-                    container.innerHTML = renderEmptyState("No notifications");
-                    return;
+            return runRefresh("notifications", async () => {
+                const container = document.getElementById("notificationsList");
+                if (!renderSignatures.notifications) {
+                    container.innerHTML = renderLoadingState("Loading notifications...");
                 }
 
-                container.innerHTML = notifications.map(item => `
-                    <div class="list-item">
-                        <div class="item-top">
-                            <div class="item-copy">
-                                <p class="item-title">${escapeHtml(shortenText(item.title || "Notification", 38))}</p>
-                                <div class="item-subtitle">${renderBadge(item.read ? "completed" : "unread")}</div>
-                                <div class="item-meta">${escapeHtml(formatTimestamp(item.created_at))}</div>
+                try {
+                    const data = await fetchJson("/notifications");
+                    const notifications = Array.isArray(data.notifications) ? data.notifications.slice(0, MAX_ITEMS) : [];
+                    cachedNotifications = Array.isArray(data.notifications) ? data.notifications : [];
+
+                    const unreadCount = cachedNotifications.filter(item => !item.read).length;
+                    document.getElementById("notificationSummaryBadge").textContent = `${unreadCount} unread`;
+                    document.getElementById("notificationSummaryBadge").className = `badge ${unreadCount ? "unread" : "completed"}`;
+
+                    if (!notifications.length) {
+                        renderIntoContainer(container, renderEmptyState("No notifications"), "notifications", "empty");
+                        return;
+                    }
+
+                    const html = notifications.map(item => `
+                        <div class="list-item">
+                            <div class="item-top">
+                                <div class="item-copy">
+                                    <p class="item-title">${escapeHtml(shortenText(item.title || "Notification", 38))}</p>
+                                    <div class="item-subtitle">${renderBadge(item.read ? "completed" : "unread")}</div>
+                                    <div class="item-meta">${escapeHtml(formatTimestamp(item.created_at))}</div>
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="mini-btn" aria-label="View notification ${escapeHtml(item.id)}" onclick="viewNotification(${item.id}, '${encodeURIComponent(item.title || "Notification")}', '${encodeURIComponent(item.message || "")}', ${item.read ? "true" : "false"})">View</button>
+                                ${!item.read ? `<button class="mini-btn primary" aria-label="Mark notification ${escapeHtml(item.id)} as read" onclick="markNotificationReadFromDashboard(${item.id}, this)">Mark Read</button>` : ""}
                             </div>
                         </div>
-                        <div class="item-actions">
-                            <button class="mini-btn" aria-label="View notification ${escapeHtml(item.id)}" onclick="viewNotification(${item.id}, '${encodeURIComponent(item.title || "Notification")}', '${encodeURIComponent(item.message || "")}', ${item.read ? "true" : "false"})">View</button>
-                            ${!item.read ? `<button class="mini-btn primary" aria-label="Mark notification ${escapeHtml(item.id)} as read" onclick="markNotificationReadFromDashboard(${item.id}, this)">Mark Read</button>` : ""}
-                        </div>
-                    </div>
-                `).join("");
-            } catch (error) {
-                document.getElementById("notificationSummaryBadge").textContent = "0 unread";
-                document.getElementById("notificationSummaryBadge").className = "badge";
-                container.innerHTML = renderErrorState(error.message || "Could not load notifications.");
-            }
+                    `).join("");
+                    const signature = JSON.stringify(cachedNotifications.map(item => [item.id, item.title, item.message, item.read, item.created_at]));
+                    renderIntoContainer(container, html, "notifications", signature);
+                } catch (error) {
+                    document.getElementById("notificationSummaryBadge").textContent = "0 unread";
+                    document.getElementById("notificationSummaryBadge").className = "badge";
+                    renderIntoContainer(container, renderErrorState(error.message || "Could not load notifications."), "notifications", `error:${error.message}`);
+                }
+            });
         }
 
         async function viewTaskDetails(id) {
@@ -1664,6 +1779,65 @@
                 return;
             }
             await withButtonBusy(button, () => sendChatCommandFromText(`delete file ${filename}`, { refresh: { files: true, agent: true } }), "Deleting...");
+            if (document.getElementById("allFilesModalList")) {
+                await openAllFilesModal();
+            }
+        }
+
+        async function openAllFilesModal() {
+            openModal(
+                "All Files",
+                `
+                    <div style="display:grid; gap:14px;">
+                        <label class="field-label" for="allFilesSearch">Search files</label>
+                        <input id="allFilesSearch" type="text" placeholder="Filter by filename..." style="width:100%; min-height:46px; padding:0 14px; border-radius:14px; border:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text);" />
+                        <div id="allFilesModalList">${renderLoadingState("Loading files...")}</div>
+                    </div>
+                `
+            );
+
+            try {
+                const data = await fetchJson("/files");
+                cachedAllFiles = Array.isArray(data.files) ? [...data.files].sort((a, b) => String(b).localeCompare(String(a))) : [];
+                renderAllFilesModalList();
+                const searchInput = document.getElementById("allFilesSearch");
+                if (searchInput && !searchInput.dataset.bound) {
+                    searchInput.dataset.bound = "true";
+                    searchInput.addEventListener("input", () => renderAllFilesModalList(searchInput.value));
+                }
+            } catch (error) {
+                const list = document.getElementById("allFilesModalList");
+                if (list) {
+                    list.innerHTML = renderErrorState(error.message || "Could not load files.");
+                }
+            }
+        }
+
+        function renderAllFilesModalList(query = "") {
+            const list = document.getElementById("allFilesModalList");
+            if (!list) return;
+            const term = String(query || "").trim().toLowerCase();
+            const files = cachedAllFiles.filter(file => String(file).toLowerCase().includes(term));
+
+            if (!files.length) {
+                list.innerHTML = renderEmptyState(term ? "No files match your search" : "No files yet");
+                return;
+            }
+
+            list.innerHTML = files.map(file => `
+                <div class="list-item" style="margin-bottom:10px;">
+                    <div class="item-top">
+                        <div class="item-copy">
+                            <p class="item-title">${escapeHtml(file)}</p>
+                            <div class="item-subtitle">Workspace file</div>
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="mini-btn" aria-label="Read file ${escapeHtml(file)}" onclick="readFileAction('${encodeURIComponent(file)}')">Read</button>
+                        <button class="mini-btn danger" aria-label="Delete file ${escapeHtml(file)}" onclick="deleteFileAction('${encodeURIComponent(file)}', this)">Delete</button>
+                    </div>
+                </div>
+            `).join("");
         }
 
         async function runSchedulesNowFromDashboard(button = null) {
@@ -1873,13 +2047,16 @@
 
         async function loadCustomLayout() {
             const container = document.getElementById("customLayout");
-            container.innerHTML = renderLoadingState("Loading saved layout...");
+            const previousScroll = preserveScroll(container);
+            if (!renderSignatures.layout) {
+                container.innerHTML = renderLoadingState("Loading saved layout...");
+            }
 
             try {
                 const data = await fetchJson("/load-layout");
 
                 if (!data.html || !data.html.trim()) {
-                    container.innerHTML = renderEmptyState("No saved layout yet");
+                    renderIntoContainer(container, renderEmptyState("No saved layout yet"), "layout", "empty");
                     return;
                 }
 
@@ -1891,11 +2068,24 @@
                 style.textContent = data.css || "";
                 document.head.appendChild(style);
 
-                container.innerHTML = data.html;
+                renderIntoContainer(container, data.html, "layout", `${data.html}::${data.css || ""}`);
+                restoreScroll(container, previousScroll);
                 await hydrateCustomLayout();
             } catch (error) {
-                container.innerHTML = renderErrorState(error.message || "Could not load saved layout.");
+                renderIntoContainer(container, renderErrorState(error.message || "Could not load saved layout."), "layout", `error:${error.message}`);
             }
+        }
+
+        async function updateTasks() {
+            return loadTasks();
+        }
+
+        async function updateFiles() {
+            return refreshFiles();
+        }
+
+        async function updateNotifications() {
+            return loadNotifications();
         }
 
         document.getElementById("chatInput").addEventListener("keydown", event => {
