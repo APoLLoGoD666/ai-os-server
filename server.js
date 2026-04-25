@@ -3079,18 +3079,78 @@ function normalizeWorkspaceFileMeaning(filename) {
         .replace(/^_+|_+$/g, "");
 }
 
-async function findSimilarWorkspaceFile(filename) {
+function getWorkspaceOverviewFamilyKey(filename) {
+    const normalized = normalizeWorkspaceFileMeaning(filename);
+    const familyMap = new Map([
+        ["workspace_index", "workspace_overview_family"],
+        ["workspace_overview", "workspace_overview_family"],
+        ["workspace_report", "workspace_overview_family"],
+        ["workspace_cleanup_report", "workspace_overview_family"],
+        ["workspace_baseline", "workspace_overview_family"]
+    ]);
+
+    return familyMap.get(normalized) || normalized;
+}
+
+async function findSimilarWorkspaceArtifact(filename) {
     const files = await listWorkspaceFiles();
     const normalizedTarget = normalizeWorkspaceFileMeaning(filename);
+    const targetFamily = getWorkspaceOverviewFamilyKey(filename);
+    const docs = await pgListDocuments();
+    const matchingDocs = [];
 
     for (const existingFile of files) {
         if (String(existingFile).toLowerCase() === String(filename).toLowerCase()) {
-            return existingFile;
+            console.log("WORKSPACE STORAGE FILE COUNT:", files.length);
+            console.log("WORKSPACE MATCHING POSTGRES DOC COUNT:", matchingDocs.length);
+            return {
+                name: existingFile,
+                source: "storage",
+                storageCount: files.length,
+                matchingDocCount: matchingDocs.length
+            };
         }
 
-        if (normalizedTarget && normalizeWorkspaceFileMeaning(existingFile) === normalizedTarget) {
-            return existingFile;
+        const existingNormalized = normalizeWorkspaceFileMeaning(existingFile);
+        const existingFamily = getWorkspaceOverviewFamilyKey(existingFile);
+
+        if (
+            (normalizedTarget && existingNormalized === normalizedTarget) ||
+            (targetFamily && existingFamily === targetFamily)
+        ) {
+            console.log("WORKSPACE STORAGE FILE COUNT:", files.length);
+            console.log("WORKSPACE MATCHING POSTGRES DOC COUNT:", matchingDocs.length);
+            return {
+                name: existingFile,
+                source: "storage",
+                storageCount: files.length,
+                matchingDocCount: matchingDocs.length
+            };
         }
+    }
+
+    for (const doc of docs) {
+        const docNormalized = normalizeWorkspaceFileMeaning(doc.filename);
+        const docFamily = getWorkspaceOverviewFamilyKey(doc.filename);
+
+        if (
+            (normalizedTarget && docNormalized === normalizedTarget) ||
+            (targetFamily && docFamily === targetFamily)
+        ) {
+            matchingDocs.push(doc.filename);
+        }
+    }
+
+    console.log("WORKSPACE STORAGE FILE COUNT:", files.length);
+    console.log("WORKSPACE MATCHING POSTGRES DOC COUNT:", matchingDocs.length);
+
+    if (matchingDocs.length) {
+        return {
+            name: matchingDocs[0],
+            source: "postgres",
+            storageCount: files.length,
+            matchingDocCount: matchingDocs.length
+        };
     }
 
     return null;
@@ -3747,12 +3807,12 @@ async function executeApprovedAgentActions(steps, options = {}) {
             }
 
             if (options.autoMode === true) {
-                const similarFile = await findSimilarWorkspaceFile(filename);
+                const similarFile = await findSimilarWorkspaceArtifact(filename);
 
                 if (similarFile) {
                     skipped.push({
                         type: step.type,
-                        reason: `Skipped create_workspace_file because a workspace index already exists: ${similarFile}`
+                        reason: `Skipped create_workspace_file because a workspace overview/index already exists: ${similarFile.name}`
                     });
                     continue;
                 }
