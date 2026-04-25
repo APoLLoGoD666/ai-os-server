@@ -86,6 +86,7 @@ const DISCOVERY_AGENT_STEP_TYPES = new Set([
 ]);
 let latestAgentPlan = null;
 let pendingDuplicateDecision = null;
+let latestAgentCleanupPreview = null;
 
 if (!AGENT_SECRET) {
     console.warn("AGENT_SECRET not set. Agent approval is unprotected.");
@@ -2105,6 +2106,351 @@ function makeAgentDatedFilename(description = "note") {
     return `${currentDate}_${safeDescription}.txt`;
 }
 
+function normalizeAgentCleanupGoal(value) {
+    return String(value || "")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function isAgentCleanupTestGoal(goal) {
+    const normalized = normalizeAgentCleanupGoal(goal);
+    return normalized.includes("test")
+        || normalized.includes("duplicate")
+        || normalized.includes("cleanup test");
+}
+
+async function fetchAgentCleanupRows() {
+    const [tasksResult, schedulesResult] = await Promise.all([
+        pool.query(`
+            SELECT id, goal, status, current_step, result, error, created_at, updated_at
+            FROM agent_tasks
+            ORDER BY id DESC
+        `),
+        pool.query(`
+            SELECT id, name, goal, frequency, enabled, last_run_at, created_at
+            FROM agent_schedules
+            ORDER BY id DESC
+        `)
+    ]);
+
+    return {
+        tasks: tasksResult.rows,
+        schedules: schedulesResult.rows
+    };
+}
+
+function buildAgentCleanupPreviewData({ tasks, schedules }) {
+    const taskDeleteMap = new Map();
+    const taskKeepMap = new Map();
+    const taskGroups = new Map();
+    const canonicalScheduleGoal = "organise my workspace and suggest cleanup";
+
+    for (const task of tasks) {
+        const normalizedGoal = normalizeAgentCleanupGoal(task.goal);
+        if (!taskGroups.has(normalizedGoal)) {
+            taskGroups.set(normalizedGoal, []);
+        }
+        taskGroups.get(normalizedGoal).push(task);
+    }
+
+    for (const [normalizedGoal, group] of taskGroups.entries()) {
+        const ordered = [...group].sort((a, b) => b.id - a.id);
+        const latestTask = ordered[0] || null;
+        const hasCompleted = ordered.some(task => task.status === "completed");
+
+        for (const task of ordered) {
+            const reasons = [];
+            const isTest = isAgentCleanupTestGoal(task.goal);
+
+            if (isTest) {
+                reasons.push("test_or_duplicate_goal");
+            }
+
+            if (latestTask && task.id !== latestTask.id && normalizedGoal) {
+                reasons.push("older_duplicate_goal");
+            }
+
+            if (task.status === "failed" && (hasCompleted || (latestTask && latestTask.id > task.id))) {
+                reasons.push("older_failed_task");
+            }
+
+            if (task.status === "waiting_approval" && !isTest) {
+                taskKeepMap.set(task.id, {
+                    ...task,
+                    reasons: ["waiting_approval_task"]
+                });
+                continue;
+            }
+
+            if (!reasons.length) {
+                taskKeepMap.set(task.id, {
+                    ...task,
+                    reasons: task.id === latestTask?.id ? ["latest_task_for_goal"] : ["meaningful_task"]
+                });
+                continue;
+            }
+
+            if (task.id === latestTask?.id && !isTest) {
+                taskKeepMap.set(task.id, {
+                    ...task,
+                    reasons: ["latest_task_for_goal"]
+                });
+                continue;
+            }
+
+            taskDeleteMap.set(task.id, {
+                ...task,
+                reasons
+            });
+        }
+    }
+
+    let taskKeeps = [...taskKeepMap.values()].sort((a, b) => b.id - a.id);
+    let taskDeleteCandidates = [...taskDeleteMap.values()].sort((a, b) => b.id - a.id);
+
+    const manyTaskDuplicates = tasks.length >= 8 && taskDeleteCandidates.length >= Math.ceil(tasks.length * 0.5);
+    if (manyTaskDuplicates && taskKeeps.length > 5) {
+        const protectedKeepIds = new Set(
+            taskKeeps
+                .filter(task => task.status === "waiting_approval" && !isAgentCleanupTestGoal(task.goal))
+                .map(task => task.id)
+        );
+
+        const newestKeepIds = new Set(
+            taskKeeps
+                .filter(task => !protectedKeepIds.has(task.id))
+                .slice(0, 5)
+                .map(task => task.id)
+        );
+
+        for (const task of taskKeeps) {
+            if (protectedKeepIds.has(task.id) || newestKeepIds.has(task.id)) {
+                continue;
+            }
+
+            taskDeleteMap.set(task.id, {
+                ...task,
+                reasons: ["safe_mode_trim_older_task"]
+            });
+        }
+
+        taskKeeps = taskKeeps.filter(task => !taskDeleteMap.has(task.id));
+        taskDeleteCandidates = [...taskDeleteMap.values()].sort((a, b) => b.id - a.id);
+    }
+
+    const scheduleDeleteMap = new Map();
+    const scheduleKeepMap = new Map();
+    const scheduleGroups = new Map();
+
+    for (const schedule of schedules) {
+        const normalizedGoal = normalizeAgentCleanupGoal(schedule.goal);
+        const key = `${String(schedule.frequency || "").toLowerCase()}::${normalizedGoal}`;
+        if (!scheduleGroups.has(key)) {
+            scheduleGroups.set(key, []);
+        }
+        scheduleGroups.get(key).push(schedule);
+    }
+
+    for (const [, group] of scheduleGroups.entries()) {
+        const ordered = [...group].sort((a, b) => b.id - a.id);
+        const newest = ordered[0] || null;
+
+        for (const schedule of ordered) {
+            const normalizedGoal = normalizeAgentCleanupGoal(schedule.goal);
+            const reasons = [];
+            const isTest = isAgentCleanupTestGoal(schedule.goal);
+
+            if (isTest) {
+                reasons.push("test_schedule");
+            }
+
+            if (newest && schedule.id !== newest.id) {
+                reasons.push("duplicate_frequency_goal");
+            }
+
+            const isCanonicalDaily = normalizedGoal === canonicalScheduleGoal
+                && String(schedule.frequency || "").toLowerCase() === "daily";
+
+            if (isCanonicalDaily && schedule.id === newest?.id) {
+                scheduleKeepMap.set(schedule.id, {
+                    ...schedule,
+                    reasons: ["canonical_daily_schedule"]
+                });
+                continue;
+            }
+
+            if (!reasons.length) {
+                scheduleKeepMap.set(schedule.id, {
+                    ...schedule,
+                    reasons: ["unique_schedule"]
+                });
+                continue;
+            }
+
+            if (schedule.id === newest?.id && !isTest) {
+                scheduleKeepMap.set(schedule.id, {
+                    ...schedule,
+                    reasons: ["newest_duplicate_schedule"]
+                });
+                continue;
+            }
+
+            scheduleDeleteMap.set(schedule.id, {
+                ...schedule,
+                reasons
+            });
+        }
+    }
+
+    const canonicalKeeps = [...scheduleKeepMap.values()].filter(schedule =>
+        normalizeAgentCleanupGoal(schedule.goal) === canonicalScheduleGoal
+        && String(schedule.frequency || "").toLowerCase() === "daily"
+    );
+
+    if (!canonicalKeeps.length) {
+        const fallbackCanonical = schedules
+            .filter(schedule =>
+                normalizeAgentCleanupGoal(schedule.goal) === canonicalScheduleGoal
+                && String(schedule.frequency || "").toLowerCase() === "daily"
+            )
+            .sort((a, b) => b.id - a.id)[0];
+
+        if (fallbackCanonical) {
+            scheduleKeepMap.set(fallbackCanonical.id, {
+                ...fallbackCanonical,
+                reasons: ["canonical_daily_schedule"]
+            });
+            scheduleDeleteMap.delete(fallbackCanonical.id);
+        }
+    }
+
+    const scheduleDeleteCandidates = [...scheduleDeleteMap.values()].sort((a, b) => b.id - a.id);
+    const scheduleKeeps = [...scheduleKeepMap.values()]
+        .filter((schedule, index, array) => array.findIndex(item => item.id === schedule.id) === index)
+        .sort((a, b) => b.id - a.id);
+
+    const taskDeleteRatio = tasks.length ? taskDeleteCandidates.length / tasks.length : 0;
+    const scheduleDeleteRatio = schedules.length ? scheduleDeleteCandidates.length / schedules.length : 0;
+    const wouldDeleteAllTasks = tasks.length > 0 && taskDeleteCandidates.length === tasks.length;
+    const wouldDeleteAllSchedules = schedules.length > 0 && scheduleDeleteCandidates.length === schedules.length;
+    const blockedReasons = [];
+
+    if (taskDeleteRatio > 0.8) {
+        blockedReasons.push("Task delete candidates exceed 80% of rows.");
+    }
+
+    if (scheduleDeleteRatio > 0.8) {
+        blockedReasons.push("Schedule delete candidates exceed 80% of rows.");
+    }
+
+    if (wouldDeleteAllTasks) {
+        blockedReasons.push("Cleanup would delete all tasks.");
+    }
+
+    if (wouldDeleteAllSchedules) {
+        blockedReasons.push("Cleanup would delete all schedules.");
+    }
+
+    return {
+        createdAt: new Date().toISOString(),
+        tasks: {
+            total: tasks.length,
+            toDelete: taskDeleteCandidates,
+            toKeep: taskKeeps
+        },
+        schedules: {
+            total: schedules.length,
+            toDelete: scheduleDeleteCandidates,
+            toKeep: scheduleKeeps
+        },
+        blockedReasons,
+        safeToApply: blockedReasons.length === 0
+    };
+}
+
+function formatAgentCleanupPreview(preview) {
+    const formatTask = task => `- #${task.id} [${task.status}] ${task.goal} (${task.reasons.join(", ")})`;
+    const formatSchedule = schedule => `- #${schedule.id} [${schedule.enabled ? "enabled" : "disabled"}] ${schedule.frequency}: ${schedule.goal} (${schedule.reasons.join(", ")})`;
+
+    return `Agent cleanup preview
+
+Tasks to delete:
+${preview.tasks.toDelete.length ? preview.tasks.toDelete.map(formatTask).join("\n") : "- None"}
+
+Tasks to keep:
+${preview.tasks.toKeep.length ? preview.tasks.toKeep.map(formatTask).join("\n") : "- None"}
+
+Schedules to delete:
+${preview.schedules.toDelete.length ? preview.schedules.toDelete.map(formatSchedule).join("\n") : "- None"}
+
+Schedules to keep:
+${preview.schedules.toKeep.length ? preview.schedules.toKeep.map(formatSchedule).join("\n") : "- None"}
+
+Safety:
+${preview.safeToApply ? "- Safe to apply." : preview.blockedReasons.map(reason => `- ${reason}`).join("\n")}`;
+}
+
+async function applyAgentCleanupPreview(preview) {
+    const taskIds = preview.tasks.toDelete.map(task => task.id);
+    const scheduleIds = preview.schedules.toDelete.map(schedule => schedule.id);
+
+    if (preview.blockedReasons.length) {
+        return {
+            ok: false,
+            reply: `Cleanup is blocked:\n- ${preview.blockedReasons.join("\n- ")}`
+        };
+    }
+
+    if (!taskIds.length && !scheduleIds.length) {
+        return {
+            ok: true,
+            deletedTaskIds: [],
+            deletedScheduleIds: [],
+            reply: "No cleanup changes were needed."
+        };
+    }
+
+    await pool.query("BEGIN");
+
+    try {
+        if (taskIds.length) {
+            await pool.query(
+                `
+                DELETE FROM agent_tasks
+                WHERE id = ANY($1::int[])
+                `,
+                [taskIds]
+            );
+        }
+
+        if (scheduleIds.length) {
+            await pool.query(
+                `
+                DELETE FROM agent_schedules
+                WHERE id = ANY($1::int[])
+                `,
+                [scheduleIds]
+            );
+        }
+
+        await pool.query("COMMIT");
+
+        return {
+            ok: true,
+            deletedTaskIds: taskIds,
+            deletedScheduleIds: scheduleIds,
+            reply: `Cleanup applied.
+
+Deleted task IDs: ${taskIds.length ? taskIds.join(", ") : "None"}
+Deleted schedule IDs: ${scheduleIds.length ? scheduleIds.join(", ") : "None"}`
+        };
+    } catch (error) {
+        await pool.query("ROLLBACK");
+        throw error;
+    }
+}
+
 function getProtectedAgentCommandLabel(type) {
     if (type === "agent_apply") {
         return "approve agent";
@@ -2142,6 +2488,10 @@ function getProtectedAgentCommandLabel(type) {
         return "disable schedule <id>";
     }
 
+    if (type === "apply_cleanup_agent_data") {
+        return "apply cleanup agent data";
+    }
+
     return type;
 }
 
@@ -2155,7 +2505,8 @@ function getAgentAccessError(command) {
         "cancel_agent",
         "run_schedules_now",
         "run_schedule",
-        "disable_schedule"
+        "disable_schedule",
+        "apply_cleanup_agent_data"
     ]);
 
     if (!protectedTypes.has(command.type) || !AGENT_SECRET) {
@@ -3178,6 +3529,14 @@ function detectCommand(message) {
         return attachSecret({ type: "run_schedules_now" });
     }
 
+    if (/^preview cleanup agent data$/i.test(text)) {
+        return attachSecret({ type: "preview_cleanup_agent_data" });
+    }
+
+    if (/^apply cleanup agent data$/i.test(text)) {
+        return attachSecret({ type: "apply_cleanup_agent_data" });
+    }
+
     match = text.match(/^run schedule\s+(\d+)$/i);
     if (match) {
         return attachSecret({
@@ -4115,6 +4474,52 @@ Choose one:
             return {
                 ok: true,
                 reply: `Schedule run summary:\n\n${lines.join("\n")}`
+            };
+        }
+
+        case "preview_cleanup_agent_data": {
+            const rows = await fetchAgentCleanupRows();
+            const preview = buildAgentCleanupPreviewData(rows);
+            latestAgentCleanupPreview = preview;
+
+            return {
+                ok: true,
+                reply: formatAgentCleanupPreview(preview),
+                preview
+            };
+        }
+
+        case "apply_cleanup_agent_data": {
+            if (!latestAgentCleanupPreview) {
+                return {
+                    ok: false,
+                    reply: "Run preview cleanup agent data first."
+                };
+            }
+
+            const applyResult = await applyAgentCleanupPreview(latestAgentCleanupPreview);
+
+            if (!applyResult.ok) {
+                return {
+                    ok: false,
+                    reply: applyResult.reply
+                };
+            }
+
+            const refreshedRows = await fetchAgentCleanupRows();
+            const refreshedPreview = buildAgentCleanupPreviewData(refreshedRows);
+            latestAgentCleanupPreview = null;
+
+            return {
+                ok: true,
+                reply: `${applyResult.reply}
+
+Final clean state summary:
+- Remaining tasks: ${refreshedRows.tasks.length}
+- Remaining schedules: ${refreshedRows.schedules.length}
+- Preview delete candidates now: ${refreshedPreview.tasks.toDelete.length} tasks, ${refreshedPreview.schedules.toDelete.length} schedules`,
+                deletedTaskIds: applyResult.deletedTaskIds,
+                deletedScheduleIds: applyResult.deletedScheduleIds
             };
         }
 
