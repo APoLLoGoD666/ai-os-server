@@ -1194,9 +1194,31 @@
         async function fetchJson(path, options = {}) {
             const response = await fetch(buildApiUrl(path), {
                 ...options,
-                headers: buildApiHeaders(options.headers || {})
+                headers: buildApiHeaders({
+                    Accept: "application/json",
+                    ...(options.headers || {})
+                })
             });
-            const data = await response.json();
+            const contentType = response.headers.get("content-type") || "";
+            const responseText = await response.text();
+
+            if (!contentType.toLowerCase().includes("application/json")) {
+                const isHtml = responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html");
+                const accessHint = APP_KEY ? "" : " If APP_ACCESS_KEY is enabled, open the dashboard with the correct app_key.";
+                throw new Error(
+                    isHtml
+                        ? `Expected JSON from ${path}, but received HTML instead.${accessHint}`
+                        : `Expected JSON from ${path}, but received ${contentType || "an unknown response type"}.`
+                );
+            }
+
+            let data;
+            try {
+                data = responseText ? JSON.parse(responseText) : {};
+            } catch (error) {
+                throw new Error(`Invalid JSON returned from ${path}.`);
+            }
+
             if (!response.ok) {
                 throw new Error(data.reply || data.error || "Request failed.");
             }
