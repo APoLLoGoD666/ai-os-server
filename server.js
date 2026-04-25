@@ -68,6 +68,7 @@ const LAYOUT_FILE = path.join(__dirname, "layout.json");
 const HIDDEN_FILES = new Set([]);
 const AGENT_SECRET = process.env.AGENT_SECRET || "";
 const APP_ACCESS_KEY = process.env.APP_ACCESS_KEY || "";
+const CRON_SECRET = process.env.CRON_SECRET || "";
 const ALLOWED_AGENT_STEP_TYPES = new Set([
     "create_document",
     "create_workspace_file",
@@ -92,6 +93,10 @@ if (!AGENT_SECRET) {
 
 if (!APP_ACCESS_KEY) {
     console.warn("APP_ACCESS_KEY not set. App access is unprotected.");
+}
+
+if (!CRON_SECRET) {
+    console.warn("CRON_SECRET not set. Cron route is unprotected.");
 }
 
 function ensureSetup() {
@@ -119,6 +124,25 @@ function requireAppAccess(req, res, next) {
     return res.status(401).json({
         ok: false,
         reply: "Access key required."
+    });
+}
+
+function hasCronAccess(req) {
+    if (!CRON_SECRET) {
+        return true;
+    }
+
+    return req.get("x-cron-secret") === CRON_SECRET;
+}
+
+function requireCronAccess(req, res, next) {
+    if (hasCronAccess(req)) {
+        return next();
+    }
+
+    return res.status(401).json({
+        ok: false,
+        error: "Unauthorized cron request"
     });
 }
 
@@ -4460,6 +4484,31 @@ app.post("/run-schedules-now", requireAppAccess, async (req, res) => {
         return res.status(500).json({
             ok: false,
             reply: error.message
+        });
+    }
+});
+
+app.get("/cron/health", (req, res) => {
+    return res.status(200).json({
+        ok: true,
+        cronReady: true,
+        hasCronSecret: Boolean(CRON_SECRET)
+    });
+});
+
+app.post("/cron/run-schedules", requireCronAccess, async (req, res) => {
+    try {
+        const scheduleRun = await runDueSchedules();
+        return res.status(200).json({
+            ok: true,
+            summary: scheduleRun.results.map(formatScheduleRunSummary).join("\n") || "No enabled schedules are due right now.",
+            results: scheduleRun.results
+        });
+    } catch (error) {
+        console.error("CRON RUN SCHEDULES ERROR:", error);
+        return res.status(500).json({
+            ok: false,
+            error: error.message
         });
     }
 });
