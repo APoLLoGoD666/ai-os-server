@@ -401,6 +401,49 @@ async function renameWorkspaceFile(oldName, newName) {
     };
 }
 
+async function renameDocumentStorageFile(oldName, newName) {
+    const cleanOldName = path.basename(String(oldName || "").trim());
+    const cleanNewName = path.basename(String(newName || "").trim());
+
+    try {
+        const oldFile = await readWorkspaceFileFromStorage(cleanOldName);
+
+        if (!oldFile) {
+            return {
+                ok: true,
+                applied: false,
+                reason: "old_missing"
+            };
+        }
+
+        const newFile = await readWorkspaceFileFromStorage(cleanNewName);
+
+        if (newFile) {
+            return {
+                ok: false,
+                reason: "new_exists"
+            };
+        }
+
+        await uploadWorkspaceFile(cleanNewName, oldFile.content);
+        await deleteWorkspaceFileFromStorage(cleanOldName);
+
+        return {
+            ok: true,
+            applied: true,
+            oldName: cleanOldName,
+            newName: cleanNewName
+        };
+    } catch (error) {
+        console.error("DOCUMENT STORAGE RENAME ERROR:", error.message);
+        return {
+            ok: false,
+            reason: "storage_error",
+            error: error.message || "Unknown storage rename error"
+        };
+    }
+}
+
 /* =========================
    OLD SQLITE DOCUMENT HELPERS
    Keep for now until fully migrated.
@@ -4224,6 +4267,28 @@ async function executeApprovedAgentActions(steps, options = {}) {
                 };
             }
 
+            const storageRename = await renameDocumentStorageFile(oldName, newName);
+
+            if (!storageRename.ok) {
+                if (storageRename.reason === "new_exists") {
+                    return {
+                        ok: false,
+                        message: `Storage rename target already exists and needs explicit review: ${newName}.`,
+                        results,
+                        undoEntries,
+                        skipped
+                    };
+                }
+
+                return {
+                    ok: false,
+                    message: `Storage rename failed for ${oldName} -> ${newName}: ${storageRename.error || storageRename.reason}`,
+                    results,
+                    undoEntries,
+                    skipped
+                };
+            }
+
             await pgRenameDocument(oldName, newName);
             renameDocumentInDatabase(oldName, newName);
             undoEntries.push({
@@ -4231,7 +4296,13 @@ async function executeApprovedAgentActions(steps, options = {}) {
                 oldName: newName,
                 newName: oldName
             });
-            results.push(`Renamed Postgres document: ${oldName} -> ${newName}`);
+
+            if (storageRename.applied) {
+                results.push(`Renamed:\n- Postgres document: ${oldName} -> ${newName}\n- Storage file: ${oldName} -> ${newName}`);
+            } else {
+                console.log("No storage file found; Postgres-only rename applied");
+                results.push(`Renamed:\n- Postgres document: ${oldName} -> ${newName}\n- No storage file found; Postgres-only rename applied`);
+            }
             continue;
         }
 
@@ -4369,9 +4440,27 @@ async function undoAgentActionRecord(record) {
         }
 
         if (entry.type === "rename_document") {
+            const storageRename = await renameDocumentStorageFile(entry.oldName, entry.newName);
+
+            if (!storageRename.ok) {
+                return {
+                    ok: false,
+                    results,
+                    message: storageRename.reason === "new_exists"
+                        ? `Could not revert storage rename because the target already exists: ${entry.newName}`
+                        : `Could not revert storage rename: ${storageRename.error || storageRename.reason}`
+                };
+            }
+
             await pgRenameDocument(entry.oldName, entry.newName);
             renameDocumentInDatabase(entry.oldName, entry.newName);
-            results.push(`Reverted document rename: ${entry.oldName} -> ${entry.newName}`);
+
+            if (storageRename.applied) {
+                results.push(`Reverted rename:\n- Postgres document: ${entry.oldName} -> ${entry.newName}\n- Storage file: ${entry.oldName} -> ${entry.newName}`);
+            } else {
+                console.log("No storage file found; Postgres-only rename revert applied");
+                results.push(`Reverted rename:\n- Postgres document: ${entry.oldName} -> ${entry.newName}\n- No storage file found; Postgres-only rename revert applied`);
+            }
             continue;
         }
 
