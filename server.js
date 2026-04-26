@@ -4273,7 +4273,7 @@ async function executeApprovedAgentActions(steps, options = {}) {
                 if (storageRename.reason === "new_exists") {
                     return {
                         ok: false,
-                        message: `Storage rename target already exists and needs explicit review: ${newName}.`,
+                        message: `Storage rename failed; Postgres not updated. Target filename already exists: ${newName}.`,
                         results,
                         undoEntries,
                         skipped
@@ -4282,7 +4282,7 @@ async function executeApprovedAgentActions(steps, options = {}) {
 
                 return {
                     ok: false,
-                    message: `Storage rename failed for ${oldName} -> ${newName}: ${storageRename.error || storageRename.reason}`,
+                    message: `Storage rename failed; Postgres not updated. ${storageRename.error || storageRename.reason}`,
                     results,
                     undoEntries,
                     skipped
@@ -4298,7 +4298,7 @@ async function executeApprovedAgentActions(steps, options = {}) {
             });
 
             if (storageRename.applied) {
-                results.push(`Renamed:\n- Postgres document: ${oldName} -> ${newName}\n- Storage file: ${oldName} -> ${newName}`);
+                results.push(`Renamed:\n- Storage file: ${oldName} -> ${newName}\n- Postgres document: ${oldName} -> ${newName}`);
             } else {
                 console.log("No storage file found; Postgres-only rename applied");
                 results.push(`Renamed:\n- Postgres document: ${oldName} -> ${newName}\n- No storage file found; Postgres-only rename applied`);
