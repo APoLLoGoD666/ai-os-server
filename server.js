@@ -6399,12 +6399,12 @@ app.get("/debug-storage", async (req, res) => {
     res.status(debug.ok ? 200 : 500).json(debug);
 });
 
-app.get("/memory", async (req, res) => {
+app.get("/memory", requireAppAccess, async (req, res) => {
     const memory = await loadMemory();
     res.status(200).json({ ok: true, count: memory.length, memory });
 });
 
-app.get("/documents", async (req, res) => {
+app.get("/documents", requireAppAccess, async (req, res) => {
     try {
         const docs = await pgListDocuments();
 
