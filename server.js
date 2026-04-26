@@ -93,58 +93,7 @@ const DISCOVERY_AGENT_STEP_TYPES = new Set([
     "list_files",
     "search_documents"
 ]);
-const AGENT_PROFILES = {
-    system_agent: {
-        name: "system_agent",
-        title: "System Agent",
-        purpose: "Handles system health, schedules, notifications, cron, safety, and reflections.",
-        allowedAreas: ["system health", "schedules", "notifications", "cron", "safety review", "reflections"],
-        safetyLimits: [
-            "Cannot change env vars, secrets, GitHub, or code without explicit approval.",
-            "Must follow existing safety, approval, and autonomy rules."
-        ]
-    },
-    file_agent: {
-        name: "file_agent",
-        title: "File Agent",
-        purpose: "Handles documents, files, storage, cleanup, and duplicate detection.",
-        allowedAreas: ["documents", "files", "storage", "cleanup", "duplicate detection"],
-        safetyLimits: [
-            "Cannot edit code.",
-            "Must keep destructive actions behind approval."
-        ]
-    },
-    uni_agent: {
-        name: "uni_agent",
-        title: "Uni Agent",
-        purpose: "Handles coursework, revision, assignments, and university notes.",
-        allowedAreas: ["coursework", "revision", "assignments", "university notes"],
-        safetyLimits: [
-            "Cannot fabricate sources.",
-            "Must keep planning grounded in available notes and documents."
-        ]
-    },
-    finance_agent: {
-        name: "finance_agent",
-        title: "Finance Agent",
-        purpose: "Handles budgets, finance notes, investing notes, and financial planning support.",
-        allowedAreas: ["budgets", "finance notes", "investing notes", "financial planning support"],
-        safetyLimits: [
-            "Cannot give regulated financial advice.",
-            "Must frame outputs as educational or planning support only."
-        ]
-    },
-    business_agent: {
-        name: "business_agent",
-        title: "Business Agent",
-        purpose: "Handles business ideas, Shopify, pitches, AI services, and project plans.",
-        allowedAreas: ["business ideas", "Shopify", "pitches", "AI services", "project plans"],
-        safetyLimits: [
-            "Cannot make unsupported claims.",
-            "Must keep proposals realistic and evidence-aware."
-        ]
-    }
-};
+const { AGENT_PROFILES } = require("./agents");
 let latestAgentPlan = null;
 let pendingDuplicateDecision = null;
 let latestAgentCleanupPreview = null;
@@ -842,8 +791,17 @@ function normalizeAgentProfileName(name = "") {
 }
 
 function getAgentProfile(agentName = "") {
-    const normalized = normalizeAgentProfileName(agentName) || "system_agent";
-    return AGENT_PROFILES[normalized] || AGENT_PROFILES.system_agent;
+    const normalized = normalizeAgentProfileName(agentName);
+    if (!normalized) return null;
+    return AGENT_PROFILES[normalized] || null;
+}
+
+function getAvailableAgentNames() {
+    return Object.keys(AGENT_PROFILES);
+}
+
+function getAvailableAgentsText() {
+    return getAvailableAgentNames().join(", ");
 }
 
 function formatAgentProfile(profile) {
@@ -1073,6 +1031,7 @@ async function buildAgentPlan(request, memory, documents, files, today, agentPro
         `Purpose: ${profile.purpose}`,
         `Allowed areas: ${profile.allowedAreas.join(", ")}`,
         `Safety limits: ${profile.safetyLimits.join(" ")}`,
+        ...(profile.planningInstructions ? [`Planning guidance: ${profile.planningInstructions}`] : []),
         "Use this role context to shape planning style and scope, but do not bypass any existing safety, approval, autonomy, or allowlist rules."
     ].join("\n");
 
@@ -1171,7 +1130,10 @@ function buildTaskContext(memory, documents, files, today, agentProfile = AGENT_
         today,
         agentProfile: {
             name: agentProfile.name,
-            title: agentProfile.title
+            id: agentProfile.id,
+            title: agentProfile.title,
+            displayName: agentProfile.displayName,
+            purpose: agentProfile.purpose
         },
         memoryCount: memory.length,
         documents: documents.map(doc => ({
@@ -5139,7 +5101,9 @@ async function handleCommand(command) {
         }
 
         case "agents": {
-            const lines = Object.values(AGENT_PROFILES).map(profile => `- ${profile.name}: ${profile.purpose}`);
+            const lines = Object.values(AGENT_PROFILES).map(profile =>
+                `- ${profile.displayName || profile.title} (${profile.name}): ${profile.purpose}`
+            );
             return {
                 ok: true,
                 reply: `Available agents:\n\n${lines.join("\n")}`
@@ -5147,6 +5111,10 @@ async function handleCommand(command) {
         }
 
         case "agent_profile": {
+            const resolvedProfileName = normalizeAgentProfileName(command.agentName || "");
+            if (!resolvedProfileName) {
+                return { ok: false, reply: `Unknown agent. Available agents: ${getAvailableAgentsText()}` };
+            }
             const profile = getAgentProfile(command.agentName || "system_agent");
             return {
                 ok: true,
@@ -5386,6 +5354,9 @@ ${task.plan || "No plan saved."}`
         case "agent_plan": {
             const autonomyLevel = Number(process.env.AUTONOMY_LEVEL || "1");
             console.log("AUTONOMY_LEVEL active:", autonomyLevel);
+            if (command.agentName && !normalizeAgentProfileName(command.agentName)) {
+                return { ok: false, reply: `Unknown agent "${command.agentName}". Available agents: ${getAvailableAgentsText()}` };
+            }
             const agentProfile = getAgentProfile(command.agentName || "system_agent");
 
             if (autonomyLevel >= 3) {
@@ -5597,7 +5568,10 @@ ${task.plan || "No plan saved."}`
                 {
                     agentProfile: {
                         name: agentProfile.name,
-                        title: agentProfile.title
+                        id: agentProfile.id,
+                        title: agentProfile.title,
+                        displayName: agentProfile.displayName,
+                        purpose: agentProfile.purpose
                     }
                 },
                 null
