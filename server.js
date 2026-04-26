@@ -5734,8 +5734,15 @@ ${task.plan || "No plan saved."}`
         }
 
         case "agent_apply": {
+            // TODO: Move latestAgentPlan into agent_tasks.context_json before concurrent multi-agent execution.
             if (!latestAgentPlan) {
                 return { ok: false, reply: "No agent plan to approve." };
+            }
+
+            const planAgeMs = Date.now() - new Date(latestAgentPlan.createdAt || 0).getTime();
+            if (planAgeMs > 10 * 60 * 1000) {
+                latestAgentPlan = null;
+                return { ok: false, reply: "Agent plan expired. Please create a new plan." };
             }
 
             const hasPendingSteps = Array.isArray(latestAgentPlan.pendingSteps);
