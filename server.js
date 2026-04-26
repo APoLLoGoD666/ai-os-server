@@ -978,6 +978,19 @@ function buildDuplicatePlanningInsights(documents) {
     ].join("\n")).join("\n\n");
 }
 
+async function buildActiveStandingApprovalsText() {
+    const approvals = await pgGetEnabledStandingApprovals();
+
+    if (!approvals.length) {
+        return "None.";
+    }
+
+    return approvals.map(rule => {
+        const pattern = String(rule.pattern || "").trim();
+        return `- ${rule.action_type}${pattern ? ` (${pattern})` : ""}`;
+    }).join("\n");
+}
+
 async function buildAgentPlan(request, memory, documents, files, today, agentProfile = AGENT_PROFILES.system_agent) {
     const memoryText = memory.length
         ? memory
@@ -1008,6 +1021,7 @@ async function buildAgentPlan(request, memory, documents, files, today, agentPro
     const approvedLessonsText = approvedReflections.length
         ? approvedReflections.map(reflection => `- ${reflection.lesson}`).join("\n\n")
         : "No approved operational lessons.";
+    const activeStandingApprovalsText = await buildActiveStandingApprovalsText();
     const profile = agentProfile || AGENT_PROFILES.system_agent;
     const profileText = [
         `Agent role: ${profile.title}`,
@@ -1043,6 +1057,9 @@ ${duplicateInsightsText}
 APPROVED OPERATIONAL LESSONS:
 ${approvedLessonsText}
 
+ACTIVE STANDING APPROVALS:
+${activeStandingApprovalsText}
+
 AGENT PROFILE:
 ${profileText}
 
@@ -1075,6 +1092,10 @@ Include a short scoring explanation before approval, for example:
 "Keeping v1 because it has the cleanest filename and same content as others"
 
 Use these lessons to avoid repeating past mistakes, but do not treat them as permission to bypass safety rules.
+
+Only reference standing approvals that are explicitly listed in ACTIVE STANDING APPROVALS above.
+Do not assume any other action is auto-approved.
+If rename_document is not explicitly listed in ACTIVE STANDING APPROVALS, treat rename_document as approval-required.
 
 Be practical and concise.`
             }
