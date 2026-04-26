@@ -305,6 +305,7 @@ async function readWorkspaceFile(filename) {
         }
     } catch (error) {
         console.error("STORAGE READ ERROR:", error.message);
+        throw error;
     }
 
     ensureSetup();
@@ -329,6 +330,7 @@ async function deleteWorkspaceFile(filename) {
         storageFile = await readWorkspaceFileFromStorage(cleanName);
     } catch (error) {
         console.error("STORAGE READ BEFORE DELETE ERROR:", error.message);
+        throw error;
     }
 
     if (storageFile) {

@@ -37,7 +37,13 @@ async function readWorkspaceFileFromStorage(filename) {
         .from(SUPABASE_BUCKET)
         .download(cleanName);
 
-    if (error) return null;
+    if (error) {
+        const status = error.status || error.statusCode;
+        const isNotFound = status === 404 || status === "404"
+            || /not found|no such object/i.test(error.message || "");
+        if (isNotFound) return null;
+        throw error;
+    }
 
     const content = await data.text();
 
