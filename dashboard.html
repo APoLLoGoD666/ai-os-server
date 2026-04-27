@@ -74,7 +74,7 @@
         .app-shell {
             max-width: 1520px;
             margin: 0 auto;
-            padding: 28px;
+            padding: 28px 28px 40px;
         }
 
         .topbar {
@@ -85,11 +85,13 @@
             align-items: center;
             justify-content: space-between;
             gap: 18px;
-            margin-bottom: 24px;
-            padding: 18px 22px;
-            border: 1px solid var(--border-soft);
+            margin-bottom: 28px;
+            padding: 22px 24px;
+            border: 1px solid rgba(125, 141, 177, 0.16);
             border-radius: var(--radius-xl);
-            background: rgba(15, 17, 21, 0.84);
+            background:
+                linear-gradient(135deg, rgba(109, 141, 255, 0.14), rgba(141, 99, 255, 0.08) 42%, rgba(15, 17, 21, 0.9) 100%),
+                rgba(15, 17, 21, 0.9);
             backdrop-filter: blur(14px);
             box-shadow: var(--shadow);
         }
@@ -129,6 +131,48 @@
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
+        }
+
+        .dashboard-main {
+            display: grid;
+            gap: 28px;
+        }
+
+        .section-block {
+            display: grid;
+            gap: 18px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .section-copy {
+            display: grid;
+            gap: 6px;
+        }
+
+        .section-kicker {
+            color: #b8c7ff;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .section-heading {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: -0.05em;
+        }
+
+        .section-subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.55;
         }
 
         .status-pill,
@@ -250,16 +294,46 @@
 
         .page-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1.5fr) minmax(360px, 0.95fr);
-            gap: 22px;
+            grid-template-columns: minmax(360px, 1.02fr) minmax(0, 1.34fr);
+            gap: 24px;
             align-items: start;
         }
 
-        .bottom-grid {
+        .operations-grid,
+        .resources-grid,
+        .system-grid {
             display: grid;
             grid-template-columns: repeat(12, minmax(0, 1fr));
             gap: 22px;
-            margin-top: 22px;
+        }
+
+        .operations-grid > .card:nth-child(1) {
+            grid-column: span 4;
+        }
+
+        .operations-grid > .card:nth-child(2) {
+            grid-column: span 4;
+        }
+
+        .operations-grid > .card:nth-child(3) {
+            grid-column: span 4;
+        }
+
+        .resources-grid > .card:nth-child(1),
+        .resources-grid > .card:nth-child(2) {
+            grid-column: span 3;
+        }
+
+        .resources-grid > .card:nth-child(3) {
+            grid-column: span 6;
+        }
+
+        .system-grid > .card:nth-child(1) {
+            grid-column: span 4;
+        }
+
+        .system-grid > .card:nth-child(2) {
+            grid-column: span 8;
         }
 
         .span-3 {
@@ -291,6 +365,22 @@
                 var(--card);
             box-shadow: var(--shadow);
             overflow: hidden;
+        }
+
+        .command-card {
+            min-height: 720px;
+        }
+
+        .command-card.agent-command {
+            order: 1;
+            background:
+                radial-gradient(circle at top left, rgba(109, 141, 255, 0.12), transparent 40%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
+                var(--card);
+        }
+
+        .command-card.chat-card {
+            order: 2;
         }
 
         .card::after {
@@ -428,6 +518,102 @@
             gap: 18px;
         }
 
+        .agent-hero {
+            display: grid;
+            gap: 16px;
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(109, 141, 255, 0.16);
+            background:
+                linear-gradient(145deg, rgba(109, 141, 255, 0.18), rgba(141, 99, 255, 0.08)),
+                rgba(255, 255, 255, 0.02);
+        }
+
+        .agent-hero-copy h3 {
+            margin: 0;
+            font-size: 20px;
+            letter-spacing: -0.03em;
+        }
+
+        .agent-hero-copy p {
+            margin: 8px 0 0;
+            color: #cad3e5;
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .agent-stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .agent-stat {
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            background: rgba(8, 10, 14, 0.22);
+        }
+
+        .agent-stat strong {
+            display: block;
+            font-size: 18px;
+            letter-spacing: -0.03em;
+        }
+
+        .agent-stat span {
+            color: var(--muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .agent-roster {
+            display: grid;
+            gap: 10px;
+        }
+
+        .agent-roster-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .agent-roster-copy {
+            min-width: 0;
+        }
+
+        .agent-roster-copy strong {
+            display: block;
+            font-size: 14px;
+        }
+
+        .agent-roster-copy span {
+            display: block;
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .agent-icon {
+            width: 36px;
+            height: 36px;
+            flex: 0 0 36px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            background: rgba(109, 141, 255, 0.14);
+            color: #dfe7ff;
+            font-size: 15px;
+            font-weight: 800;
+        }
+
         .quick-actions {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -500,6 +686,13 @@
             flex-direction: column;
             gap: 12px;
             min-height: 360px;
+        }
+
+        .compact-list {
+            min-height: 220px;
+            max-height: 340px;
+            overflow-y: auto;
+            padding-right: 4px;
         }
 
         .list-item {
@@ -589,13 +782,29 @@
             min-height: 360px;
         }
 
-        #tasksList,
-        #notificationsList {
-            min-height: 420px;
+        .workspace-panel {
+            min-height: 300px;
         }
 
-        #filesList {
-            min-height: 360px;
+        .workspace-box.compact {
+            min-height: 280px;
+            max-height: 380px;
+            overflow: auto;
+        }
+
+        #tasksList,
+        #notificationsList,
+        #approvalQueueList {
+            min-height: 340px;
+        }
+
+        #documentsList,
+        #filesList,
+        #memoryList,
+        #schedulesList {
+            max-height: 340px;
+            overflow-y: auto;
+            padding-right: 4px;
         }
 
         .memory-item {
@@ -800,6 +1009,17 @@
                 grid-template-columns: 1fr;
             }
 
+            .operations-grid > .card,
+            .resources-grid > .card,
+            .system-grid > .card {
+                grid-column: span 12;
+            }
+
+            .command-card.agent-command,
+            .command-card.chat-card {
+                order: initial;
+            }
+
             .chat-card,
             .chat-card .card-inner {
                 min-height: 620px;
@@ -816,6 +1036,14 @@
         @media (max-width: 820px) {
             .app-shell {
                 padding: 16px;
+            }
+
+            .dashboard-main {
+                gap: 22px;
+            }
+
+            .section-heading {
+                font-size: 24px;
             }
 
             .topbar {
@@ -840,6 +1068,14 @@
 
             .quick-actions {
                 grid-template-columns: 1fr;
+            }
+
+            .agent-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .agent-roster-item {
+                align-items: flex-start;
             }
 
             .chat-bubble {
@@ -1304,211 +1540,355 @@
             </div>
         </header>
 
-        <main>
-            <div class="section-group-head"><span>Control Centre</span></div>
-            <section class="page-grid">
-                <article id="sec-chat" class="card chat-card" aria-label="Chat">
-                    <div class="card-inner">
-                        <div class="card-head">
-                            <div>
-                                <h2 class="card-title">Chat</h2>
-                                <div class="card-subtitle">Ask questions, run commands, and review output clearly.</div>
-                            </div>
-                            <button class="btn ghost" aria-label="Clear chat" onclick="clearChat()">Clear</button>
-                        </div>
-
-                        <div id="chatLog" class="chat-log" aria-live="polite"></div>
-
-                        <div class="chat-input-wrap">
-                            <label class="visually-hidden" for="chatInput">Chat input</label>
-                            <textarea id="chatInput" placeholder="Type a command or ask a question..." aria-label="Chat input"></textarea>
-                            <button id="chatSendButton" class="btn primary" aria-label="Send chat message" onclick="sendChatCommand(this)">Send</button>
-                        </div>
+                <main class="dashboard-main">
+            <section class="section-block" aria-label="Command Centre">
+                <div class="section-header">
+                    <div class="section-copy">
+                        <span class="section-kicker">Command Centre</span>
+                        <h2 class="section-heading">Control agents and conversation from one place.</h2>
+                        <div class="section-subtitle">Your primary command surface lives here: orchestrate agents on the left and work through chat on the right.</div>
                     </div>
-                </article>
+                </div>
 
-                <aside id="sec-agent-ctrl" class="card" aria-label="Agent control">
-                    <div class="card-inner agent-layout">
-                        <div class="card-head" style="margin-bottom: 0;">
-                            <div>
-                                <h2 class="card-title">Agent Control</h2>
-                                <div class="card-subtitle">Tasks, schedules, notifications, and quick actions.</div>
+                <section class="page-grid">
+                    <aside id="sec-agent-ctrl" class="card command-card agent-command" aria-label="Agent control">
+                        <div class="card-inner agent-layout">
+                            <div class="card-head" style="margin-bottom: 0;">
+                                <div>
+                                    <h2 class="card-title">Agent Control</h2>
+                                    <div class="card-subtitle">Direct the right specialist, trigger routines, and keep approvals visible.</div>
+                                </div>
+                                <span id="notificationSummaryBadge" class="badge unread">0 unread</span>
                             </div>
-                            <span id="notificationSummaryBadge" class="badge unread">0 unread</span>
+
+                            <section class="agent-hero">
+                                <div class="agent-hero-copy">
+                                    <h3>AI command centre</h3>
+                                    <p>Plan safe actions, coordinate specialists, and keep automation constrained by the live approval model already running in your OS.</p>
+                                </div>
+                                <div class="agent-stats">
+                                    <div class="agent-stat">
+                                        <strong>5</strong>
+                                        <span>Agent roles</span>
+                                    </div>
+                                    <div class="agent-stat">
+                                        <strong>Live</strong>
+                                        <span>Approval flow</span>
+                                    </div>
+                                    <div class="agent-stat">
+                                        <strong>Safe</strong>
+                                        <span>Autonomy rules</span>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <div class="quick-actions">
+                                    <button class="quick-action" aria-label="Analyse documents" onclick="sendChatCommandFromText('analyse documents', { refresh: { documents: true, memory: true, notifications: true } })">
+                                        <strong>Analyse Documents</strong>
+                                        <span>Summarise recent document themes.</span>
+                                    </button>
+                                    <button class="quick-action" aria-label="Organise workspace" onclick="sendChatCommandFromText('agent organise my workspace and suggest cleanup', { refresh: { tasks: true, notifications: true } })">
+                                        <strong>Organise Workspace</strong>
+                                        <span>Generate a safe cleanup plan.</span>
+                                    </button>
+                                    <button class="quick-action" aria-label="Run schedules now" onclick="runSchedulesNowFromDashboard(this)">
+                                        <strong>Run Schedules</strong>
+                                        <span>Trigger due schedule checks once.</span>
+                                    </button>
+                                    <button class="quick-action" aria-label="Open agent history" onclick="sendChatCommandFromText('agent history', { refresh: { tasks: true, notifications: true } })">
+                                        <strong>Agent History</strong>
+                                        <span>Review recent task activity.</span>
+                                    </button>
+                                </div>
+                            </section>
+
+                            <section id="sec-agents">
+                                <div class="card-head" style="margin-bottom: 12px;">
+                                    <div>
+                                        <h3 class="card-title" style="font-size:16px;">Specialist Agents</h3>
+                                        <div class="card-subtitle">Select a role, inspect its profile, and send a focused task.</div>
+                                    </div>
+                                    <button class="btn ghost small" aria-label="List all agents in chat" onclick="sendChatCommandFromText('agents')">List All</button>
+                                </div>
+
+                                <div class="agent-picker" id="agentPicker">
+                                    <button class="agent-btn" data-agent="system_agent" aria-label="Select System Agent" onclick="selectAgent('system_agent', this)">?? System</button>
+                                    <button class="agent-btn" data-agent="file_agent" aria-label="Select File Agent" onclick="selectAgent('file_agent', this)">?? Files</button>
+                                    <button class="agent-btn" data-agent="uni_agent" aria-label="Select Uni Agent" onclick="selectAgent('uni_agent', this)">?? Uni</button>
+                                    <button class="agent-btn" data-agent="finance_agent" aria-label="Select Finance Agent" onclick="selectAgent('finance_agent', this)">? Finance</button>
+                                    <button class="agent-btn" data-agent="business_agent" aria-label="Select Business Agent" onclick="selectAgent('business_agent', this)">?? Business</button>
+                                </div>
+
+                                <div id="agentSelectedLabel" class="agent-selected-label">Selected: <strong>None</strong></div>
+                                <div id="agentTemplates" class="agent-templates" style="display:none;"></div>
+                                <div id="agentProfileBox" class="agent-profile-box">Select an agent above to view its profile.</div>
+
+                                <label class="field-label" for="agentTaskInput">Task</label>
+                                <textarea id="agentTaskInput" class="autopilot-input" style="min-height: 80px;" placeholder="Describe the task for the selected agent..." aria-label="Agent task input"></textarea>
+
+                                <div class="autopilot-actions">
+                                    <button class="btn primary" aria-label="Send task to selected agent" onclick="sendAgentTask(this)">Ask Agent</button>
+                                    <button class="btn ghost small" aria-label="Clear agent task input" onclick="document.getElementById('agentTaskInput').value=''; document.getElementById('agentWarn').textContent=''; document.getElementById('agentStatus').textContent='';">Clear</button>
+                                </div>
+
+                                <div id="agentStatus" class="agent-status"></div>
+                                <div id="agentWarn" class="agent-warn"></div>
+                            </section>
+
+                            <section>
+                                <div class="tabs" role="tablist" aria-label="Agent control tabs">
+                                    <button id="tabTasks" class="tab active" role="tab" aria-selected="true" aria-controls="panelTasks" onclick="switchTab('tasks')">Agents</button>
+                                    <button id="tabSchedules" class="tab" role="tab" aria-selected="false" aria-controls="panelSchedules" onclick="switchTab('schedules')">Schedules</button>
+                                    <button id="tabNotifications" class="tab" role="tab" aria-selected="false" aria-controls="panelNotifications" onclick="switchTab('notifications')">Control Notes</button>
+                                </div>
+
+                                <div id="panelTasks" class="tab-panel active" role="tabpanel" aria-labelledby="tabTasks">
+                                    <div class="agent-roster">
+                                        <div class="agent-roster-item">
+                                            <div style="display:flex; gap:12px; align-items:flex-start;">
+                                                <span class="agent-icon">SY</span>
+                                                <div class="agent-roster-copy">
+                                                    <strong>System Agent</strong>
+                                                    <span>Health, schedules, notifications, cron, safety, reflections.</span>
+                                                </div>
+                                            </div>
+                                            <span class="badge running">Active</span>
+                                        </div>
+                                        <div class="agent-roster-item">
+                                            <div style="display:flex; gap:12px; align-items:flex-start;">
+                                                <span class="agent-icon">FI</span>
+                                                <div class="agent-roster-copy">
+                                                    <strong>File Agent</strong>
+                                                    <span>Documents, files, storage, cleanup, duplicate detection.</span>
+                                                </div>
+                                            </div>
+                                            <span class="badge enabled">Ready</span>
+                                        </div>
+                                        <div class="agent-roster-item">
+                                            <div style="display:flex; gap:12px; align-items:flex-start;">
+                                                <span class="agent-icon">UN</span>
+                                                <div class="agent-roster-copy">
+                                                    <strong>Uni Agent</strong>
+                                                    <span>Coursework, revision plans, assignments, and notes.</span>
+                                                </div>
+                                            </div>
+                                            <span class="badge enabled">Ready</span>
+                                        </div>
+                                        <div class="agent-roster-item">
+                                            <div style="display:flex; gap:12px; align-items:flex-start;">
+                                                <span class="agent-icon">FN</span>
+                                                <div class="agent-roster-copy">
+                                                    <strong>Finance Agent</strong>
+                                                    <span>Budgeting notes and educational financial planning support.</span>
+                                                </div>
+                                            </div>
+                                            <span class="badge enabled">Ready</span>
+                                        </div>
+                                        <div class="agent-roster-item">
+                                            <div style="display:flex; gap:12px; align-items:flex-start;">
+                                                <span class="agent-icon">BZ</span>
+                                                <div class="agent-roster-copy">
+                                                    <strong>Business Agent</strong>
+                                                    <span>Ideas, project plans, ecommerce concepts, service offers.</span>
+                                                </div>
+                                            </div>
+                                            <span class="badge enabled">Ready</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="panelSchedules" class="tab-panel" role="tabpanel" aria-labelledby="tabSchedules">
+                                    <div id="schedulesList" class="list compact-list"></div>
+                                </div>
+                                <div id="panelNotifications" class="tab-panel" role="tabpanel" aria-labelledby="tabNotifications">
+                                    <div class="list-item">
+                                        <div class="item-copy">
+                                            <p class="item-title">Approval boundaries stay intact</p>
+                                            <div class="item-subtitle">Deletes, renames, overwrites, and sensitive changes still pause for review even when autonomy is enabled.</div>
+                                            <div class="item-meta">Use the Operations section below to approve or inspect active work.</div>
+                                        </div>
+                                    </div>
+                                    <div class="list-item">
+                                        <div class="item-copy">
+                                            <p class="item-title">Standing approvals are live-only</p>
+                                            <div class="item-subtitle">The agent prompt reflects the actual enabled rules from Postgres, not hardcoded assumptions.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
                         </div>
+                    </aside>
 
-                        <section>
-                            <div class="quick-actions">
-                                <button class="quick-action" aria-label="Analyse documents" onclick="sendChatCommandFromText('analyse documents', { refresh: { documents: true, memory: true, notifications: true } })">
-                                    <strong>Analyse Documents</strong>
-                                    <span>Summarise recent document themes.</span>
-                                </button>
-                                <button class="quick-action" aria-label="Organise workspace" onclick="sendChatCommandFromText('agent organise my workspace and suggest cleanup', { refresh: { tasks: true, notifications: true } })">
-                                    <strong>Organise Workspace</strong>
-                                    <span>Generate a safe cleanup plan.</span>
-                                </button>
-                                <button class="quick-action" aria-label="Run schedules now" onclick="runSchedulesNowFromDashboard(this)">
-                                    <strong>Run Schedules</strong>
-                                    <span>Trigger due schedule checks once.</span>
-                                </button>
-                                <button class="quick-action" aria-label="Open agent history" onclick="sendChatCommandFromText('agent history', { refresh: { tasks: true, notifications: true } })">
-                                    <strong>Agent History</strong>
-                                    <span>Review recent task activity.</span>
-                                </button>
-                            </div>
-                        </section>
-
-                        <section>
-                            <div class="tabs" role="tablist" aria-label="Agent control tabs">
-                                <button id="tabTasks" class="tab active" role="tab" aria-selected="true" aria-controls="panelTasks" onclick="switchTab('tasks')">Tasks</button>
-                                <button id="tabSchedules" class="tab" role="tab" aria-selected="false" aria-controls="panelSchedules" onclick="switchTab('schedules')">Schedules</button>
-                                <button id="tabNotifications" class="tab" role="tab" aria-selected="false" aria-controls="panelNotifications" onclick="switchTab('notifications')">Notifications</button>
+                    <article id="sec-chat" class="card command-card chat-card" aria-label="Chat">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <div>
+                                    <h2 class="card-title">Chat</h2>
+                                    <div class="card-subtitle">Ask questions, run commands, and review output clearly.</div>
+                                </div>
+                                <button class="btn ghost" aria-label="Clear chat" onclick="clearChat()">Clear</button>
                             </div>
 
-                            <div id="panelTasks" class="tab-panel active" role="tabpanel" aria-labelledby="tabTasks">
-                                <div id="tasksList" class="list"></div>
+                            <div id="chatLog" class="chat-log" aria-live="polite"></div>
+
+                            <div class="chat-input-wrap">
+                                <label class="visually-hidden" for="chatInput">Chat input</label>
+                                <textarea id="chatInput" placeholder="Type a command or ask a question..." aria-label="Chat input"></textarea>
+                                <button id="chatSendButton" class="btn primary" aria-label="Send chat message" onclick="sendChatCommand(this)">Send</button>
                             </div>
-                            <div id="panelSchedules" class="tab-panel" role="tabpanel" aria-labelledby="tabSchedules">
-                                <div id="schedulesList" class="list"></div>
-                            </div>
-                            <div id="panelNotifications" class="tab-panel" role="tabpanel" aria-labelledby="tabNotifications">
-                                <div id="notificationsList" class="list"></div>
-                            </div>
-                        </section>
-                    </div>
-                </aside>
+                        </div>
+                    </article>
+                </section>
             </section>
 
-            <section class="bottom-grid">
-                <div class="section-head ops-head"><span class="section-label-text">Operations</span></div>
-                <div class="section-head res-head"><span class="section-label-text">Resources</span></div>
-                <div class="section-head ws-head"><span class="section-label-text">System</span></div>
+            <section class="section-block" aria-label="Operations">
+                <div class="section-header">
+                    <div class="section-copy">
+                        <span class="section-kicker">Operations</span>
+                        <h2 class="section-heading">Live work, approvals, and signals.</h2>
+                        <div class="section-subtitle">Track active execution, keep approval decisions obvious, and surface the latest notifications without crowding the command surface.</div>
+                    </div>
+                </div>
 
-                <article id="sec-documents" class="card span-3" aria-label="Documents">
-                    <div class="card-inner">
-                        <div class="card-head">
-                            <h2 class="card-title">Documents</h2>
-                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                <button class="btn ghost" aria-label="View all documents" onclick="openAllDocumentsModal()">View All</button>
-                                <button class="btn ghost" aria-label="Refresh documents" onclick="refreshDocuments(this)">Refresh</button>
+                <section class="operations-grid">
+                    <article class="card" aria-label="Active Tasks">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <div>
+                                    <h2 class="card-title">Active Tasks</h2>
+                                    <div class="card-subtitle">Recent running, completed, and failed work.</div>
+                                </div>
+                                <button class="btn ghost" aria-label="Refresh tasks" onclick="refreshAgentData(this)">Refresh</button>
+                            </div>
+                            <div id="tasksList" class="list compact-list"></div>
+                        </div>
+                    </article>
+
+                    <article id="sec-approvals" class="card" aria-label="Approval Queue">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <div>
+                                    <h2 class="card-title">Approval Queue</h2>
+                                    <div class="card-subtitle">Only actions that genuinely need review appear here.</div>
+                                </div>
+                                <button class="btn ghost small" aria-label="Refresh approval queue" onclick="refreshAgentData()">Refresh</button>
+                            </div>
+                            <div id="approvalsList" class="list compact-list"></div>
+                        </div>
+                    </article>
+
+                    <article class="card" aria-label="Notifications">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <div>
+                                    <h2 class="card-title">Notifications</h2>
+                                    <div class="card-subtitle">Unread alerts, task outcomes, and schedule events.</div>
+                                </div>
+                            </div>
+                            <div id="notificationsList" class="list compact-list"></div>
+                        </div>
+                    </article>
+                </section>
+            </section>
+
+            <section class="section-block" aria-label="Resources">
+                <div class="section-header">
+                    <div class="section-copy">
+                        <span class="section-kicker">Resources</span>
+                        <h2 class="section-heading">Documents, files, and workspace context.</h2>
+                        <div class="section-subtitle">Keep the knowledge base compact and scannable, while preserving full access through modals and the workspace canvas.</div>
+                    </div>
+                </div>
+
+                <section class="resources-grid">
+                    <article id="sec-documents" class="card" aria-label="Documents">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <h2 class="card-title">Documents</h2>
+                                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                    <button class="btn ghost" aria-label="View all documents" onclick="openAllDocumentsModal()">View All</button>
+                                    <button class="btn ghost" aria-label="Refresh documents" onclick="refreshDocuments(this)">Refresh</button>
+                                </div>
+                            </div>
+                            <div id="documentsList" class="list compact-list"></div>
+                        </div>
+                    </article>
+
+                    <article id="sec-files" class="card" aria-label="Files">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <h2 class="card-title">Files</h2>
+                                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                    <button class="btn ghost" aria-label="View all files" onclick="openAllFilesModal()">View All</button>
+                                    <button class="btn ghost" aria-label="Refresh files" onclick="refreshFiles(this)">Refresh</button>
+                                </div>
+                            </div>
+                            <div id="filesList" class="list compact-list"></div>
+                        </div>
+                    </article>
+
+                    <article id="sec-workspace" class="card workspace-panel" aria-label="Workspace canvas">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <div>
+                                    <h2 class="card-title">Workspace Canvas</h2>
+                                    <div class="card-subtitle">Saved layout content remains available here at lower priority.</div>
+                                </div>
+                                <button class="btn ghost" aria-label="Refresh workspace canvas" onclick="loadCustomLayout()">Refresh Layout</button>
+                            </div>
+                            <div id="customLayout" class="workspace-box compact">
+                                <div class="loading-state">Loading saved layout...</div>
                             </div>
                         </div>
-                        <div id="documentsList" class="list"></div>
-                    </div>
-                </article>
+                    </article>
+                </section>
+            </section>
 
-                <article id="sec-files" class="card span-3" aria-label="Files">
-                    <div class="card-inner">
-                        <div class="card-head">
-                            <h2 class="card-title">Files</h2>
-                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                <button class="btn ghost" aria-label="View all files" onclick="openAllFilesModal()">View All</button>
-                                <button class="btn ghost" aria-label="Refresh files" onclick="refreshFiles(this)">Refresh</button>
+            <section class="section-block" aria-label="System">
+                <div class="section-header">
+                    <div class="section-copy">
+                        <span class="section-kicker">System</span>
+                        <h2 class="section-heading">Memory and lower-priority system tools.</h2>
+                        <div class="section-subtitle">Keep reflective context and cloud operations available without letting them dominate the main command experience.</div>
+                    </div>
+                </div>
+
+                <section class="system-grid">
+                    <article id="sec-memory" class="card" aria-label="Memory">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <h2 class="card-title">Memory</h2>
+                                <button class="btn ghost" aria-label="Refresh memory" onclick="refreshMemory(this)">Refresh</button>
                             </div>
+                            <div id="memoryList" class="memory-list"></div>
                         </div>
-                        <div id="filesList" class="list"></div>
-                    </div>
-                </article>
+                    </article>
 
-                <article id="sec-memory" class="card span-3" aria-label="Memory">
-                    <div class="card-inner">
-                        <div class="card-head">
-                            <h2 class="card-title">Memory</h2>
-                            <button class="btn ghost" aria-label="Refresh memory" onclick="refreshMemory(this)">Refresh</button>
-                        </div>
-                        <div id="memoryList" class="memory-list"></div>
-                    </div>
-                </article>
-
-                <article id="sec-autopilot" class="card span-3" aria-label="Cloud Autopilot">
-                    <div class="card-inner">
-                        <div class="card-head">
-                            <div>
-                                <h2 class="card-title">Cloud Autopilot</h2>
-                                <div class="card-subtitle">Preview and apply cloud changes.</div>
+                    <article id="sec-autopilot" class="card" aria-label="Cloud Autopilot">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <div>
+                                    <h2 class="card-title">Cloud Autopilot</h2>
+                                    <div class="card-subtitle">Preview and apply cloud changes.</div>
+                                </div>
                             </div>
-                        </div>
 
-                        <label class="field-label" for="autopilotInput">Instructions</label>
-                        <textarea id="autopilotInput" class="autopilot-input" placeholder="Describe what you want to change..." aria-label="Cloud Autopilot instructions"></textarea>
+                            <label class="field-label" for="autopilotInput">Instructions</label>
+                            <textarea id="autopilotInput" class="autopilot-input" placeholder="Describe what you want to change..." aria-label="Cloud Autopilot instructions"></textarea>
 
-                        <div class="autopilot-actions">
-                            <button class="btn primary" aria-label="Preview cloud autopilot changes" onclick="previewCloudAutopilot(this)">Preview</button>
-                            <button class="btn" aria-label="Approve and apply cloud autopilot changes" onclick="applyCloudAutopilot(this)">Apply</button>
-                            <button class="btn ghost" aria-label="Clear cloud autopilot prompt" onclick="clearAutopilot()">Clear</button>
-                        </div>
-
-                        <details id="autopilotResultPanel" class="result-panel">
-                            <summary>Autopilot Result</summary>
-                            <div id="autopilotResult" class="result-body">Ready.</div>
-                        </details>
-                    </div>
-                </article>
-
-                <article id="sec-agents" class="card span-6" aria-label="Agents">
-                    <div class="card-inner">
-                        <div class="card-head">
-                            <div>
-                                <h2 class="card-title">Agents</h2>
-                                <div class="card-subtitle">Select an agent, view its profile, and send a task.</div>
+                            <div class="autopilot-actions">
+                                <button class="btn primary" aria-label="Preview cloud autopilot changes" onclick="previewCloudAutopilot(this)">Preview</button>
+                                <button class="btn" aria-label="Approve and apply cloud autopilot changes" onclick="applyCloudAutopilot(this)">Apply</button>
+                                <button class="btn ghost" aria-label="Clear cloud autopilot prompt" onclick="clearAutopilot()">Clear</button>
                             </div>
-                            <button class="btn ghost small" aria-label="List all agents in chat" onclick="sendChatCommandFromText('agents')">List All</button>
+
+                            <details id="autopilotResultPanel" class="result-panel">
+                                <summary>Autopilot Result</summary>
+                                <div id="autopilotResult" class="result-body">Ready.</div>
+                            </details>
                         </div>
-
-                        <div class="agent-picker" id="agentPicker">
-                            <button class="agent-btn" data-agent="system_agent" aria-label="Select System Agent" onclick="selectAgent('system_agent', this)">⚙️ System</button>
-                            <button class="agent-btn" data-agent="file_agent" aria-label="Select File Agent" onclick="selectAgent('file_agent', this)">📁 Files</button>
-                            <button class="agent-btn" data-agent="uni_agent" aria-label="Select Uni Agent" onclick="selectAgent('uni_agent', this)">🎓 Uni</button>
-                            <button class="agent-btn" data-agent="finance_agent" aria-label="Select Finance Agent" onclick="selectAgent('finance_agent', this)">£ Finance</button>
-                            <button class="agent-btn" data-agent="business_agent" aria-label="Select Business Agent" onclick="selectAgent('business_agent', this)">💼 Business</button>
-                        </div>
-
-                        <div id="agentSelectedLabel" class="agent-selected-label">Selected: <strong>None</strong></div>
-
-                        <div id="agentTemplates" class="agent-templates" style="display:none;"></div>
-
-                        <div id="agentProfileBox" class="agent-profile-box">Select an agent above to view its profile.</div>
-
-                        <label class="field-label" for="agentTaskInput">Task</label>
-                        <textarea id="agentTaskInput" class="autopilot-input" style="min-height: 80px;" placeholder="Describe the task for the selected agent..." aria-label="Agent task input"></textarea>
-
-                        <div class="autopilot-actions">
-                            <button class="btn primary" aria-label="Send task to selected agent" onclick="sendAgentTask(this)">Ask Agent</button>
-                            <button class="btn ghost small" aria-label="Clear agent task input" onclick="document.getElementById('agentTaskInput').value=''; document.getElementById('agentWarn').textContent=''; document.getElementById('agentStatus').textContent='';">Clear</button>
-                        </div>
-
-                        <div id="agentStatus" class="agent-status"></div>
-                        <div id="agentWarn" class="agent-warn"></div>
-                    </div>
-                </article>
-
-                <article id="sec-approvals" class="card span-6" aria-label="Approval Queue">
-                    <div class="card-inner">
-                        <div class="card-head">
-                            <div>
-                                <h2 class="card-title">Approval Queue</h2>
-                                <div class="card-subtitle">Tasks waiting for your approval.</div>
-                            </div>
-                            <button class="btn ghost small" aria-label="Refresh approval queue" onclick="refreshAgentData()">Refresh</button>
-                        </div>
-                        <div id="approvalsList" class="list"></div>
-                    </div>
-                </article>
-
-                <article id="sec-workspace" class="card span-12" aria-label="Workspace canvas">
-                    <div class="card-inner">
-                        <div class="card-head">
-                            <div>
-                                <h2 class="card-title">Workspace Canvas</h2>
-                                <div class="card-subtitle">Saved layout content remains available here.</div>
-                            </div>
-                            <button class="btn ghost" aria-label="Refresh workspace canvas" onclick="loadCustomLayout()">Refresh Layout</button>
-                        </div>
-                        <div id="customLayout" class="workspace-box">
-                            <div class="loading-state">Loading saved layout...</div>
-                        </div>
-                    </div>
-                </article>
+                    </article>
+                </section>
             </section>
         </main>
     </div>
@@ -2076,42 +2456,41 @@
 
                 try {
                     const data = await fetchJson("/agent-tasks");
-                    const tasks = Array.isArray(data.tasks) ? data.tasks.slice(0, MAX_ITEMS) : [];
-                    cachedTasks = tasks;
+                    const allTasks = Array.isArray(data.tasks) ? data.tasks : [];
+                    cachedTasks = allTasks;
                     renderApprovalQueue();
 
-                    if (!tasks.length) {
+                    const activeTasks = allTasks
+                        .filter(task => String(task?.status || "").toLowerCase() !== "waiting_approval")
+                        .slice(0, MAX_ITEMS);
+
+                    if (!activeTasks.length) {
                         renderIntoContainer(container, renderEmptyState("No tasks yet", "Ask an agent a task to create one."), "tasks", "empty");
-                        return;
-                    }
+                    } else {
+                        const html = activeTasks.map(task => {
+                            const autoExecuted = Boolean(task?.context_json?.agentExecution?.autoExecuted);
+                            const agentTitle = task?.context_json?.agentProfile?.displayName || task?.context_json?.agentProfile?.title || null;
+                            const shortGoal = shortenText(task.goal || "Untitled task", 40);
+                            const displayTitle = `Task � ${shortGoal}`;
 
-                    const html = tasks.map(task => {
-                        const status = getStatusLabel(task.status);
-                        const autoExecuted = Boolean(task?.context_json?.agentExecution?.autoExecuted);
-                        const agentTitle = task?.context_json?.agentProfile?.displayName || task?.context_json?.agentProfile?.title || null;
-                        const shortGoal = shortenText(task.goal || "Untitled task", 40);
-                        const displayTitle = status.normalized === "waiting_approval"
-                            ? `Task waiting approval - ${shortGoal}`
-                            : `Task - ${shortGoal}`;
-
-                        return `
-                            <div class="list-item" data-status="${escapeHtml(task.status || '')}">
-                                <div class="item-top">
-                                    <div class="item-copy">
-                                        <p class="item-title">${escapeHtml(displayTitle)}</p>
-                                        <div class="item-subtitle">${renderBadge(task.status)}${autoExecuted ? ` ${renderBadge("auto_executed")}` : ""}${agentTitle ? ' <span class="agent-label">' + escapeHtml(agentTitle) + '</span>' : ''}</div>
-                                        <div class="item-meta">Task ${escapeHtml(task.id)}</div>
+                            return `
+                                <div class="list-item" data-status="${escapeHtml(task.status || '')}">
+                                    <div class="item-top">
+                                        <div class="item-copy">
+                                            <p class="item-title">${escapeHtml(displayTitle)}</p>
+                                            <div class="item-subtitle">${renderBadge(task.status)}${autoExecuted ? ` ${renderBadge("auto_executed")}` : ""}${agentTitle ? ' <span class="agent-label">' + escapeHtml(agentTitle) + '</span>' : ''}</div>
+                                            <div class="item-meta">Task ${escapeHtml(task.id)}</div>
+                                        </div>
+                                    </div>
+                                    <div class="item-actions">
+                                        <button class="mini-btn" aria-label="View task ${escapeHtml(task.id)} details" onclick="viewTaskDetails(${task.id})">View Details</button>
                                     </div>
                                 </div>
-                                <div class="item-actions">
-                                    <button class="mini-btn" aria-label="View task ${escapeHtml(task.id)} details" onclick="viewTaskDetails(${task.id})">View</button>
-                                    ${status.normalized === "waiting_approval" ? `<button class="mini-btn primary" aria-label="Approve task ${escapeHtml(task.id)}" onclick="approveAgentTask(${task.id}, this)">Approve</button>` : ""}
-                                </div>
-                            </div>
-                        `;
-                    }).join("");
-                    const signature = JSON.stringify(tasks.map(task => [task.id, task.goal, task.status, task.result || ""]));
-                    renderIntoContainer(container, html, "tasks", signature);
+                            `;
+                        }).join("");
+                        const signature = JSON.stringify(activeTasks.map(task => [task.id, task.goal, task.status, task.result || ""]));
+                        renderIntoContainer(container, html, "tasks", signature);
+                    }
                 } catch (error) {
                     renderIntoContainer(container, renderErrorState(error.message || "Could not load tasks."), "tasks", `error:${error.message}`);
                 }
