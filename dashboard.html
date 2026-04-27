@@ -1139,6 +1139,135 @@
             .tab { min-height: 44px; }
             .chat-input-wrap textarea { font-size: 16px; }
         }
+        /* ── Layout Redesign 3 ────────────────────────────────────── */
+
+        /* Control Centre: Agent Control left (narrower), Chat right (wider) */
+        .page-grid {
+            grid-template-columns: minmax(320px, 1fr) minmax(0, 1.35fr);
+        }
+
+        /* Desktop: visually swap so Agent Control is left, Chat is right */
+        @media (min-width: 1221px) {
+            #sec-agent-ctrl { order: 1; }
+            #sec-chat       { order: 2; }
+        }
+        /* Mobile: Chat first */
+        @media (max-width: 1220px) {
+            #sec-chat { order: -1; }
+        }
+
+        /* Section group heading — appears outside grids */
+        .section-group-head {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 34px 0 16px;
+        }
+        .section-group-head:first-child { margin-top: 0; }
+        .section-group-head::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .section-group-head span {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.13em;
+            text-transform: uppercase;
+            color: var(--muted-2);
+            white-space: nowrap;
+        }
+
+        /* Section head — grid child inside bottom-grid, spans full width */
+        .section-head {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 2px 0;
+            pointer-events: none;
+        }
+        .section-head::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .section-label-text {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.13em;
+            text-transform: uppercase;
+            color: var(--muted-2);
+            white-space: nowrap;
+        }
+
+        /* Bottom-grid visual ordering */
+        .section-head.ops-head  { order: 0; }
+        #sec-agents             { order: 1; }
+        #sec-approvals          { order: 2; }
+        .section-head.res-head  { order: 10; }
+        #sec-documents          { order: 11; }
+        #sec-files              { order: 12; }
+        #sec-memory             { order: 13; }
+        #sec-autopilot          { order: 14; }
+        .section-head.ws-head   { order: 20; }
+        #sec-workspace          { order: 21; }
+
+        /* Control Centre cards — accent glow */
+        #sec-chat, #sec-agent-ctrl {
+            border-color: rgba(109, 141, 255, 0.22);
+            box-shadow: 0 24px 56px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(109, 141, 255, 0.08);
+        }
+
+        /* Operations cards — blue tint */
+        #sec-agents, #sec-approvals {
+            border-color: rgba(91, 168, 255, 0.15);
+        }
+
+        /* Resources cards — compact, low-priority */
+        #sec-documents, #sec-files, #sec-memory, #sec-autopilot {
+            border-color: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+        }
+        #sec-documents .card-inner,
+        #sec-files .card-inner,
+        #sec-memory .card-inner,
+        #sec-autopilot .card-inner {
+            padding: 14px 16px;
+        }
+        #sec-documents .card-title,
+        #sec-files .card-title,
+        #sec-memory .card-title,
+        #sec-autopilot .card-title {
+            font-size: 15px;
+        }
+
+        /* Compressed scrollable resource lists */
+        #documentsList, #filesList {
+            max-height: 220px;
+            min-height: unset;
+            overflow-y: auto;
+        }
+        #memoryList {
+            max-height: 220px;
+            min-height: unset;
+            overflow-y: auto;
+        }
+        /* Keep memory-list min-height from layout.css overridden */
+        .section-resources-card .memory-list {
+            min-height: unset;
+        }
+
+        /* Workspace canvas: lower visual weight */
+        #sec-workspace {
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        @media (max-width: 820px) {
+            .section-group-head { margin: 18px 0 10px; }
+        }
     </style>
 </head>
 <body>
@@ -1176,6 +1305,7 @@
         </header>
 
         <main>
+            <div class="section-group-head"><span>Control Centre</span></div>
             <section class="page-grid">
                 <article id="sec-chat" class="card chat-card" aria-label="Chat">
                     <div class="card-inner">
@@ -1250,6 +1380,10 @@
             </section>
 
             <section class="bottom-grid">
+                <div class="section-head ops-head"><span class="section-label-text">Operations</span></div>
+                <div class="section-head res-head"><span class="section-label-text">Resources</span></div>
+                <div class="section-head ws-head"><span class="section-label-text">System</span></div>
+
                 <article id="sec-documents" class="card span-3" aria-label="Documents">
                     <div class="card-inner">
                         <div class="card-head">
@@ -1263,7 +1397,7 @@
                     </div>
                 </article>
 
-                <article class="card span-3" aria-label="Files">
+                <article id="sec-files" class="card span-3" aria-label="Files">
                     <div class="card-inner">
                         <div class="card-head">
                             <h2 class="card-title">Files</h2>
@@ -1276,7 +1410,7 @@
                     </div>
                 </article>
 
-                <article class="card span-3" aria-label="Memory">
+                <article id="sec-memory" class="card span-3" aria-label="Memory">
                     <div class="card-inner">
                         <div class="card-head">
                             <h2 class="card-title">Memory</h2>
@@ -1286,7 +1420,7 @@
                     </div>
                 </article>
 
-                <article class="card span-3" aria-label="Cloud Autopilot">
+                <article id="sec-autopilot" class="card span-3" aria-label="Cloud Autopilot">
                     <div class="card-inner">
                         <div class="card-head">
                             <div>
@@ -1361,7 +1495,7 @@
                     </div>
                 </article>
 
-                <article class="card span-12" aria-label="Workspace canvas">
+                <article id="sec-workspace" class="card span-12" aria-label="Workspace canvas">
                     <div class="card-inner">
                         <div class="card-head">
                             <div>
