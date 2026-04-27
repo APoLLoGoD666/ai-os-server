@@ -850,6 +850,58 @@
                 padding: 12px;
             }
         }
+        /* ── Agents panel ── */
+        .agent-picker {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .agent-btn {
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            transition: background var(--transition), border-color var(--transition), transform var(--transition);
+        }
+
+        .agent-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(109, 141, 255, 0.28);
+            background: rgba(109, 141, 255, 0.1);
+        }
+
+        .agent-btn.active {
+            background: linear-gradient(135deg, rgba(109, 141, 255, 0.28), rgba(141, 99, 255, 0.2));
+            border-color: rgba(109, 141, 255, 0.4);
+            color: #dce7ff;
+        }
+
+        .agent-profile-box {
+            min-height: 72px;
+            padding: 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 16px;
+        }
+
+        .agent-warn {
+            font-size: 12px;
+            color: var(--yellow);
+            min-height: 18px;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -1004,6 +1056,37 @@
                             <summary>Autopilot Result</summary>
                             <div id="autopilotResult" class="result-body">Ready.</div>
                         </details>
+                    </div>
+                </article>
+
+                <article class="card span-6" aria-label="Agents">
+                    <div class="card-inner">
+                        <div class="card-head">
+                            <div>
+                                <h2 class="card-title">Agents</h2>
+                                <div class="card-subtitle">Select an agent, view its profile, and send a task.</div>
+                            </div>
+                            <button class="btn ghost small" aria-label="List all agents in chat" onclick="sendChatCommandFromText('agents')">List All</button>
+                        </div>
+
+                        <div class="agent-picker" id="agentPicker">
+                            <button class="agent-btn" aria-label="Select System Agent" onclick="selectAgent('system_agent', this)">System Agent</button>
+                            <button class="agent-btn" aria-label="Select File Agent" onclick="selectAgent('file_agent', this)">File Agent</button>
+                            <button class="agent-btn" aria-label="Select Uni Agent" onclick="selectAgent('uni_agent', this)">Uni Agent</button>
+                            <button class="agent-btn" aria-label="Select Finance Agent" onclick="selectAgent('finance_agent', this)">Finance Agent</button>
+                            <button class="agent-btn" aria-label="Select Business Agent" onclick="selectAgent('business_agent', this)">Business Agent</button>
+                        </div>
+
+                        <div id="agentProfileBox" class="agent-profile-box">Select an agent above to view its profile.</div>
+
+                        <label class="field-label" for="agentTaskInput">Task</label>
+                        <textarea id="agentTaskInput" class="autopilot-input" style="min-height: 80px;" placeholder="Describe the task for the selected agent..." aria-label="Agent task input"></textarea>
+
+                        <div class="autopilot-actions">
+                            <button class="btn primary" aria-label="Send task to selected agent" onclick="sendAgentTask(this)">Ask Agent</button>
+                        </div>
+
+                        <div id="agentWarn" class="agent-warn"></div>
                     </div>
                 </article>
 
@@ -2209,6 +2292,43 @@
                 closeModal();
             }
         });
+
+        let selectedAgent = null;
+
+        async function selectAgent(agentName, btn) {
+            selectedAgent = agentName;
+            document.querySelectorAll('#agentPicker .agent-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('agentWarn').textContent = '';
+            const box = document.getElementById('agentProfileBox');
+            box.textContent = 'Loading...';
+            try {
+                const data = await sendChatCommandFromText(`agent profile ${agentName}`);
+                box.textContent = (data && data.reply) ? data.reply : 'No profile available.';
+            } catch (_) {
+                box.textContent = 'Could not load profile.';
+            }
+        }
+
+        async function sendAgentTask(button) {
+            const warn = document.getElementById('agentWarn');
+            const taskInput = document.getElementById('agentTaskInput');
+            const task = (taskInput.value || '').trim();
+            if (!selectedAgent) {
+                warn.textContent = 'Please select an agent first.';
+                return;
+            }
+            if (!task) {
+                warn.textContent = 'Please enter a task description.';
+                return;
+            }
+            warn.textContent = '';
+            taskInput.value = '';
+            await withButtonBusy(button, () =>
+                sendChatCommandFromText(`ask ${selectedAgent} agent ${task}`, { refresh: { tasks: true, notifications: true } }),
+                'Sending...'
+            );
+        }
 
         initialiseChat();
         Promise.all([
