@@ -902,6 +902,59 @@
             min-height: 18px;
             margin-top: 8px;
         }
+
+        .agent-selected-label {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
+
+        .agent-selected-label strong {
+            color: var(--text);
+        }
+
+        .agent-templates {
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        .agent-tpl-btn {
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--muted);
+            font-size: 12px;
+            text-align: left;
+            transition: background var(--transition), color var(--transition), border-color var(--transition);
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .agent-tpl-btn:hover {
+            background: rgba(109, 141, 255, 0.1);
+            border-color: rgba(109, 141, 255, 0.22);
+            color: var(--text);
+        }
+
+        .agent-label {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(109, 141, 255, 0.12);
+            border: 1px solid rgba(109, 141, 255, 0.2);
+            color: #dce7ff;
+            font-size: 11px;
+            font-weight: 700;
+            vertical-align: middle;
+        }
+
+        .agent-profile-section {
+            color: var(--accent);
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
@@ -1077,6 +1130,10 @@
                             <button class="agent-btn" aria-label="Select Business Agent" onclick="selectAgent('business_agent', this)">Business Agent</button>
                         </div>
 
+                        <div id="agentSelectedLabel" class="agent-selected-label">Selected: <strong>None</strong></div>
+
+                        <div id="agentTemplates" class="agent-templates" style="display:none;"></div>
+
                         <div id="agentProfileBox" class="agent-profile-box">Select an agent above to view its profile.</div>
 
                         <label class="field-label" for="agentTaskInput">Task</label>
@@ -1087,6 +1144,19 @@
                         </div>
 
                         <div id="agentWarn" class="agent-warn"></div>
+                    </div>
+                </article>
+
+                <article class="card span-6" aria-label="Approval Queue">
+                    <div class="card-inner">
+                        <div class="card-head">
+                            <div>
+                                <h2 class="card-title">Approval Queue</h2>
+                                <div class="card-subtitle">Tasks waiting for your approval.</div>
+                            </div>
+                            <button class="btn ghost small" aria-label="Refresh approval queue" onclick="refreshAgentData()">Refresh</button>
+                        </div>
+                        <div id="approvalsList" class="list"></div>
                     </div>
                 </article>
 
@@ -1665,6 +1735,7 @@
                     const data = await fetchJson("/agent-tasks");
                     const tasks = Array.isArray(data.tasks) ? data.tasks.slice(0, MAX_ITEMS) : [];
                     cachedTasks = tasks;
+                    renderApprovalQueue();
 
                     if (!tasks.length) {
                         renderIntoContainer(container, renderEmptyState("No tasks yet"), "tasks", "empty");
@@ -1674,6 +1745,7 @@
                     const html = tasks.map(task => {
                         const status = getStatusLabel(task.status);
                         const autoExecuted = Boolean(task?.context_json?.agentExecution?.autoExecuted);
+                        const agentTitle = task?.context_json?.agentProfile?.displayName || task?.context_json?.agentProfile?.title || null;
                         const shortGoal = shortenText(task.goal || "Untitled task", 40);
                         const displayTitle = status.normalized === "waiting_approval"
                             ? `Task waiting approval - ${shortGoal}`
@@ -1684,7 +1756,7 @@
                                 <div class="item-top">
                                     <div class="item-copy">
                                         <p class="item-title">${escapeHtml(displayTitle)}</p>
-                                        <div class="item-subtitle">${renderBadge(task.status)}${autoExecuted ? ` ${renderBadge("auto_executed")}` : ""}</div>
+                                        <div class="item-subtitle">${renderBadge(task.status)}${autoExecuted ? ` ${renderBadge("auto_executed")}` : ""}${agentTitle ? ' <span class="agent-label">' + escapeHtml(agentTitle) + '</span>' : ''}</div>
                                         <div class="item-meta">Task ${escapeHtml(task.id)}</div>
                                     </div>
                                 </div>
@@ -1769,7 +1841,7 @@
                             <div class="item-top">
                                 <div class="item-copy">
                                     <p class="item-title">${escapeHtml(shortenText(item.title || "Notification", 38))}</p>
-                                    <div class="item-subtitle">${renderBadge(item.read ? "completed" : "unread")}</div>
+                                    <div class="item-subtitle">${renderBadge(item.read ? "completed" : "unread")}${item.type && (item.type.includes('autonomy') || item.type.includes('agent')) ? ' <span class="agent-label">' + escapeHtml(item.type.replace(/_/g, ' ')) + '</span>' : ''}</div>
                                     <div class="item-meta">${escapeHtml(formatTimestamp(item.created_at))}</div>
                                 </div>
                             </div>
@@ -2293,6 +2365,65 @@
             }
         });
 
+        const AGENT_TEMPLATES = {
+            system_agent: ['Check system status', 'Show pending approvals', 'Show recent notifications'],
+            file_agent: ['List my files', 'Show recent documents', 'Find duplicate documents', 'Organise my documents'],
+            uni_agent: ['Summarise my uni documents', 'Create a revision plan', 'Find assignment deadlines', 'Create study tasks'],
+            finance_agent: ['Create budget summary', 'Find finance documents', 'Build savings plan', 'Analyse spending notes'],
+            business_agent: ['Summarise business documents', 'Create project plan', 'Review Shopify ideas', 'Build pitch outline']
+        };
+
+        function fillAgentTemplate(text) {
+            const input = document.getElementById('agentTaskInput');
+            if (input) { input.value = text; input.focus(); }
+            document.getElementById('agentWarn').textContent = '';
+        }
+
+        function renderAgentTemplates(agentName) {
+            const container = document.getElementById('agentTemplates');
+            if (!container) return;
+            const templates = AGENT_TEMPLATES[agentName] || [];
+            if (!templates.length) { container.style.display = 'none'; container.innerHTML = ''; return; }
+            container.innerHTML = templates.map(t =>
+                '<button class="agent-tpl-btn" onclick="fillAgentTemplate(\'' + escapeHtml(t).replace(/'/g, '&#39;') + '\')">' + escapeHtml(t) + '</button>'
+            ).join('');
+            container.style.display = 'grid';
+        }
+
+        function formatAgentProfileHtml(text) {
+            if (!text) return '';
+            const sections = ['Purpose:', 'Allowed areas:', 'Safety limits:', 'Planning guidance:'];
+            return text.split('\n').map((line, idx) => {
+                const escaped = escapeHtml(line);
+                if (idx === 0 && line.trim()) return '<strong>' + escaped + '</strong>';
+                if (sections.some(s => line.trim().startsWith(s))) return '<span class="agent-profile-section">' + escaped + '</span>';
+                return escaped;
+            }).join('<br>');
+        }
+
+        function renderApprovalQueue() {
+            const container = document.getElementById('approvalsList');
+            if (!container) return;
+            const waiting = cachedTasks.filter(t => t.status === 'waiting_approval');
+            if (!waiting.length) {
+                container.innerHTML = renderEmptyState('No tasks waiting approval.');
+                return;
+            }
+            container.innerHTML = waiting.map(task => {
+                const agentTitle = task?.context_json?.agentProfile?.displayName || task?.context_json?.agentProfile?.title || null;
+                return '<div class="list-item">'
+                    + '<div class="item-top"><div class="item-copy">'
+                    + '<p class="item-title">' + escapeHtml(shortenText(task.goal || 'Untitled task', 44)) + '</p>'
+                    + '<div class="item-subtitle">' + renderBadge('waiting_approval') + (agentTitle ? ' <span class="agent-label">' + escapeHtml(agentTitle) + '</span>' : '') + '</div>'
+                    + '<div class="item-meta">Task ' + escapeHtml(String(task.id)) + '</div>'
+                    + '</div></div>'
+                    + '<div class="item-actions">'
+                    + '<button class="mini-btn" onclick="viewTaskDetails(' + task.id + ')">View</button>'
+                    + '<button class="mini-btn primary" onclick="approveAgentTask(' + task.id + ', this)">Approve</button>'
+                    + '</div></div>';
+            }).join('');
+        }
+
         let selectedAgent = null;
 
         async function selectAgent(agentName, btn) {
@@ -2300,11 +2431,14 @@
             document.querySelectorAll('#agentPicker .agent-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById('agentWarn').textContent = '';
+            const label = document.getElementById('agentSelectedLabel');
+            if (label) label.innerHTML = 'Selected: <strong>' + escapeHtml(btn.textContent.trim()) + '</strong>';
+            renderAgentTemplates(agentName);
             const box = document.getElementById('agentProfileBox');
             box.textContent = 'Loading...';
             try {
                 const data = await sendChatCommandFromText(`agent profile ${agentName}`);
-                box.textContent = (data && data.reply) ? data.reply : 'No profile available.';
+                box.innerHTML = (data && data.reply) ? formatAgentProfileHtml(data.reply) : 'No profile available.';
             } catch (_) {
                 box.textContent = 'Could not load profile.';
             }
