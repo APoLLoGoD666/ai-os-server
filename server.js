@@ -72,6 +72,88 @@ const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 const AUTONOMY_LEVEL = String(process.env.AUTONOMY_LEVEL || "1");
 
+const TOOLS = [
+    {
+        name: "save_note",
+        description: "Save a note to the workspace with a classification.",
+        input_schema: {
+            type: "object",
+            properties: {
+                content: { type: "string", description: "The note content to save." },
+                classification: { type: "string", enum: ["uni", "business", "personal"], description: "Category for the note." }
+            },
+            required: ["content", "classification"]
+        }
+    },
+    {
+        name: "read_file",
+        description: "Read a file from the workspace by filename.",
+        input_schema: {
+            type: "object",
+            properties: {
+                filename: { type: "string", description: "The filename to read." }
+            },
+            required: ["filename"]
+        }
+    },
+    {
+        name: "delete_file",
+        description: "Delete a file from the workspace by filename.",
+        input_schema: {
+            type: "object",
+            properties: {
+                filename: { type: "string", description: "The filename to delete." }
+            },
+            required: ["filename"]
+        }
+    },
+    {
+        name: "rename_file",
+        description: "Rename a file in the workspace.",
+        input_schema: {
+            type: "object",
+            properties: {
+                oldName: { type: "string", description: "Current filename." },
+                newName: { type: "string", description: "New filename." }
+            },
+            required: ["oldName", "newName"]
+        }
+    },
+    {
+        name: "list_files",
+        description: "List all files in the workspace.",
+        input_schema: { type: "object", properties: {} }
+    },
+    {
+        name: "list_documents",
+        description: "List all saved documents in Postgres.",
+        input_schema: { type: "object", properties: {} }
+    },
+    {
+        name: "search_documents",
+        description: "Search saved documents by keyword.",
+        input_schema: {
+            type: "object",
+            properties: {
+                keyword: { type: "string", description: "Keyword to search for." }
+            },
+            required: ["keyword"]
+        }
+    },
+    {
+        name: "create_file",
+        description: "Create a new file in the workspace with specific content.",
+        input_schema: {
+            type: "object",
+            properties: {
+                filename: { type: "string", description: "The filename to create." },
+                content: { type: "string", description: "The file content." }
+            },
+            required: ["filename", "content"]
+        }
+    }
+];
+
 const WORKSPACE_DIR = path.join(__dirname, "workspace");
 const LAYOUT_FILE = path.join(__dirname, "layout.json");
 const HIDDEN_FILES = new Set([]);
@@ -4454,379 +4536,34 @@ async function undoAgentActionRecord(record) {
 }
 
 /* =========================
-   COMMAND DETECTION
+   detectCommand() removed — Claude tool calling handles command detection in /chat
 ========================= */
 
-function detectCommand(message) {
-    const rawText = message.trim();
-    const secretMatch = rawText.match(/^secret\s+(\S+)\s+([\s\S]+)$/i);
-    const providedSecret = secretMatch ? secretMatch[1] : null;
-    const text = secretMatch ? secretMatch[2].trim() : rawText;
-    const attachSecret = command => {
-        if (!command) {
+/* =========================
+   TOOL USE → COMMAND MAPPER
+========================= */
+
+function toolUseInputToCommand(toolName, input) {
+    switch (toolName) {
+        case "save_note":
+            return { type: "save_note", content: input.content, classification: input.classification };
+        case "read_file":
+            return { type: "read_file", filename: input.filename };
+        case "delete_file":
+            return { type: "delete_file", filename: input.filename };
+        case "rename_file":
+            return { type: "rename_file", oldName: input.oldName, newName: input.newName };
+        case "list_files":
+            return { type: "list_files" };
+        case "list_documents":
+            return { type: "list_documents" };
+        case "search_documents":
+            return { type: "search_documents", keyword: input.keyword };
+        case "create_file":
+            return { type: "create_file", filename: input.filename, content: input.content };
+        default:
             return null;
-        }
-
-        if (providedSecret) {
-            command.secret = providedSecret;
-        }
-
-        return command;
-    };
-    let match;
-
-    match = text.match(/^create file\s+(.+?)\s+with\s+([\s\S]+)$/i);
-    if (match) {
-        return {
-            type: "create_file",
-            filename: match[1].trim(),
-            content: match[2].trim()
-        };
     }
-
-    match = text.match(/^read file\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "read_file",
-            filename: match[1].trim()
-        };
-    }
-
-    match = text.match(/^delete file\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "delete_file",
-            filename: match[1].trim()
-        };
-    }
-
-    match = text.match(/^delete document\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "delete_document",
-            filename: match[1].trim()
-        };
-    }
-
-    match = text.match(/^delete\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "delete_file",
-            filename: match[1].trim()
-        };
-    }
-
-    match = text.match(/^rename file\s+(.+?)\s+to\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "rename_file",
-            oldName: match[1].trim(),
-            newName: match[2].trim()
-        };
-    }
-
-    match = text.match(/^show document\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "show_document",
-            filename: match[1].trim()
-        };
-    }
-
-    match = text.match(/^summarise file\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "summarise_file",
-            filename: match[1].trim()
-        };
-    }
-
-    match = text.match(/^move file\s+(.+?)\s+to\s+(uni|business|personal)$/i);
-    if (match) {
-        return {
-            type: "move_file",
-            filename: match[1].trim(),
-            category: match[2].trim().toLowerCase()
-        };
-    }
-
-    match = text.match(/^save note called\s+(.+?)\s+with\s+([\s\S]+)$/i);
-    if (match) {
-        return {
-            type: "save_named_note",
-            filename: match[1].trim(),
-            content: match[2].trim(),
-            classification: "personal"
-        };
-    }
-
-    match = text.match(/^save uni note\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "save_note",
-            classification: "uni",
-            content: match[1].trim()
-        };
-    }
-
-    match = text.match(/^save business note\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "save_note",
-            classification: "business",
-            content: match[1].trim()
-        };
-    }
-
-    match = text.match(/^save personal note\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "save_note",
-            classification: "personal",
-            content: match[1].trim()
-        };
-    }
-
-    match = text.match(/^save note\s+(.+)$/i);
-    if (match) {
-        return {
-            type: "save_note",
-            classification: "personal",
-            content: match[1].trim()
-        };
-    }
-
-    match = text.match(/^search documents\s+(.+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "search_documents",
-            keyword: match[1].trim()
-        });
-    }
-
-    if (/^analyse documents$/i.test(text)) {
-        return attachSecret({ type: "analyse_documents" });
-    }
-
-    if (/^agent history$/i.test(text)) {
-        return attachSecret({ type: "agent_history" });
-    }
-
-    if (/^agents$/i.test(text)) {
-        return attachSecret({ type: "agents" });
-    }
-
-    match = text.match(/^agent profile\s+([a-z_ ]+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "agent_profile",
-            agentName: match[1].trim()
-        });
-    }
-
-    if (/^reflect on last task$/i.test(text)) {
-        return attachSecret({ type: "reflect_last_task" });
-    }
-
-    if (/^reflections$/i.test(text)) {
-        return attachSecret({ type: "list_reflections" });
-    }
-
-    if (/^approved reflections$/i.test(text)) {
-        return attachSecret({ type: "approved_reflections" });
-    }
-
-    if (/^standing approvals$/i.test(text)) {
-        return attachSecret({ type: "standing_approvals" });
-    }
-
-    if (/^approve standing rule workspace index$/i.test(text)) {
-        return attachSecret({ type: "approve_standing_workspace_index" });
-    }
-
-    match = text.match(/^disable standing approval\s+(\d+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "disable_standing_approval",
-            id: Number(match[1])
-        });
-    }
-
-    match = text.match(/^approve reflection\s+(\d+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "approve_reflection",
-            id: Number(match[1])
-        });
-    }
-
-    match = text.match(/^run agent\s+([\s\S]+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "run_agent",
-            agentName: "system_agent",
-            goal: match[1].trim()
-        });
-    }
-
-    match = text.match(/^ask\s+([a-z_ ]+?)\s+agent\s+([\s\S]+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "agent_plan",
-            agentName: match[1].trim(),
-            request: match[2].trim()
-        });
-    }
-
-    match = text.match(/^ask\s+(finance|uni|business|file|system)\s+([\s\S]+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "agent_plan",
-            agentName: match[1].trim(),
-            request: match[2].trim()
-        });
-    }
-
-    if (/^agent tasks$/i.test(text)) {
-        return attachSecret({ type: "agent_tasks" });
-    }
-
-    match = text.match(/^agent task\s+(\d+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "agent_task",
-            id: Number(match[1])
-        });
-    }
-
-    if (/^continue agent$/i.test(text)) {
-        return attachSecret({ type: "continue_agent" });
-    }
-
-    match = text.match(/^agent\s+([\s\S]+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "agent_plan",
-            agentName: "system_agent",
-            request: match[1].trim()
-        });
-    }
-
-    if (/^approve agent$/i.test(text)) {
-        return attachSecret({ type: "agent_apply" });
-    }
-
-    if (/^approve task$/i.test(text)) {
-        return attachSecret({ type: "approve_task" });
-    }
-
-    match = text.match(/^approve task\s+(\d+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "approve_task",
-            id: Number(match[1])
-        });
-    }
-
-    if (/^undo agent$/i.test(text)) {
-        return attachSecret({ type: "agent_undo" });
-    }
-
-    if (/^cancel agent$/i.test(text)) {
-        return attachSecret({ type: "cancel_agent" });
-    }
-
-    if (/^run schedules now$/i.test(text)) {
-        return attachSecret({ type: "run_schedules_now" });
-    }
-
-    if (/^preview cleanup agent data$/i.test(text)) {
-        return attachSecret({ type: "preview_cleanup_agent_data" });
-    }
-
-    if (/^apply cleanup agent data$/i.test(text)) {
-        return attachSecret({ type: "apply_cleanup_agent_data" });
-    }
-
-    if (/^preview cleanup obvious agent data$/i.test(text)) {
-        return attachSecret({ type: "preview_cleanup_obvious_agent_data" });
-    }
-
-    if (/^apply cleanup obvious agent data$/i.test(text)) {
-        return attachSecret({ type: "apply_cleanup_obvious_agent_data" });
-    }
-
-    match = text.match(/^run schedule\s+(\d+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "run_schedule",
-            id: Number(match[1])
-        });
-    }
-
-    if (/^approve duplicate create$/i.test(text)) {
-        return attachSecret({ type: "duplicate_create_approval" });
-    }
-
-    if (/^approve duplicate replace$/i.test(text)) {
-        return attachSecret({ type: "duplicate_replace_approval" });
-    }
-
-    if (/^cancel duplicate$/i.test(text)) {
-        return attachSecret({ type: "duplicate_cancel" });
-    }
-
-    match = text.match(/^schedule agent daily\s+([\s\S]+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "schedule_agent",
-            frequency: "daily",
-            goal: match[1].trim()
-        });
-    }
-
-    match = text.match(/^schedule agent weekly\s+([\s\S]+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "schedule_agent",
-            frequency: "weekly",
-            goal: match[1].trim()
-        });
-    }
-
-    if (/^schedules$/i.test(text)) {
-        return attachSecret({ type: "agent_schedules" });
-    }
-
-    match = text.match(/^disable schedule\s+(\d+)$/i);
-    if (match) {
-        return attachSecret({
-            type: "disable_schedule",
-            id: Number(match[1])
-        });
-    }
-
-    if (/^notifications$/i.test(text)) {
-        return attachSecret({ type: "notifications" });
-    }
-
-    match = text.match(/^mark notification\s+(\d+)\s+read$/i);
-    if (match) {
-        return attachSecret({
-            type: "mark_notification_read",
-            id: Number(match[1])
-        });
-    }
-
-    if (/^list files$/i.test(text) || /^list all files$/i.test(text)) {
-        return attachSecret({ type: "list_files" });
-    }
-
-    if (/^list documents$/i.test(text) || /^what documents do i have$/i.test(text)) {
-        return attachSecret({ type: "list_documents" });
-    }
-
-    return null;
 }
 
 /* =========================
@@ -6636,14 +6373,6 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         const userMessage = rawMessage.trim();
         await addToMemory("user", userMessage);
 
-        const command = detectCommand(userMessage);
-
-        if (command) {
-            const result = await handleCommand(command);
-            await addToMemory("ai", result.reply);
-            return res.status(result.ok ? 200 : 404).json(result);
-        }
-
         const memoryText = await formatRecentMemory();
         const relevantDocs = await getRelevantDocuments(userMessage);
         const docsText = relevantDocs.length
@@ -6666,6 +6395,7 @@ ${preview}
         const response = await client.messages.create({
             model: MODEL,
             max_tokens: 700,
+            tools: TOOLS,
             messages: [
                 {
                     role: "user",
@@ -6673,6 +6403,18 @@ ${preview}
                 }
             ]
         });
+
+        const toolUseBlock = (response.content || []).find(part => part.type === "tool_use");
+
+        if (toolUseBlock) {
+            const command = toolUseInputToCommand(toolUseBlock.name, toolUseBlock.input || {});
+
+            if (command) {
+                const result = await handleCommand(command);
+                await addToMemory("ai", result.reply);
+                return res.status(result.ok ? 200 : 404).json(result);
+            }
+        }
 
         const reply = (response.content || [])
             .filter(part => part.type === "text")
