@@ -4642,6 +4642,16 @@ function toolUseInputToCommand(toolName, input) {
             return { type: "get_finance_summary" };
         case "set_budget":
             return { type: "set_budget", category: input.category, amount: input.amount };
+        case "check_emails":
+            return { type: "check_emails" };
+        case "list_emails":
+            return { type: "list_emails" };
+        case "list_routines":
+            return { type: "list_routines" };
+        case "create_routine":
+            return { type: "create_routine", name: input.name, description: input.description, schedule_cron: input.schedule_cron };
+        case "create_notification":
+            return { type: "create_notification", title: input.title, body: input.body, priority: input.priority || "normal" };
         default:
             return null;
     }
