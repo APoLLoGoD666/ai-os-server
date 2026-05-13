@@ -829,6 +829,243 @@ async function pgGetEnabledStandingApprovals(actionType = null) {
     return queryResult.rows;
 }
 
+/* =========================
+   EMAIL QUEUE
+========================= */
+
+let emailQueueTableReadyPromise = null;
+
+function ensureEmailQueueTable() {
+    if (!emailQueueTableReadyPromise) {
+        emailQueueTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS email_queue (
+                id SERIAL PRIMARY KEY,
+                gmail_id TEXT UNIQUE,
+                sender TEXT,
+                subject TEXT,
+                summary TEXT,
+                priority TEXT DEFAULT 'normal',
+                category TEXT DEFAULT 'personal',
+                suggested_reply TEXT,
+                status TEXT DEFAULT 'pending_approval',
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `).catch(err => { emailQueueTableReadyPromise = null; throw err; });
+    }
+    return emailQueueTableReadyPromise;
+}
+
+async function pgSaveEmailQueueItem(gmailId, sender, subject, summary, priority, category, suggestedReply) {
+    await ensureEmailQueueTable();
+    const r = await pool.query(
+        `INSERT INTO email_queue (gmail_id, sender, subject, summary, priority, category, suggested_reply)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (gmail_id) DO NOTHING
+         RETURNING *`,
+        [gmailId, sender, subject, summary, priority, category, suggestedReply]
+    );
+    return r.rows[0] || null;
+}
+
+async function pgGetEmailQueueItemByGmailId(gmailId) {
+    await ensureEmailQueueTable();
+    const r = await pool.query(`SELECT * FROM email_queue WHERE gmail_id = $1 LIMIT 1`, [gmailId]);
+    return r.rows[0] || null;
+}
+
+async function pgListEmailQueue(limit = 20) {
+    await ensureEmailQueueTable();
+    const r = await pool.query(
+        `SELECT * FROM email_queue ORDER BY created_at DESC LIMIT $1`, [limit]
+    );
+    return r.rows;
+}
+
+async function pgUpdateEmailQueueStatus(id, status) {
+    await ensureEmailQueueTable();
+    const r = await pool.query(
+        `UPDATE email_queue SET status = $1 WHERE id = $2 RETURNING *`, [status, id]
+    );
+    return r.rows[0] || null;
+}
+
+/* =========================
+   FINANCE — TRANSACTIONS
+========================= */
+
+let transactionsTableReadyPromise = null;
+
+function ensureTransactionsTable() {
+    if (!transactionsTableReadyPromise) {
+        transactionsTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS transactions (
+                id SERIAL PRIMARY KEY,
+                date DATE DEFAULT CURRENT_DATE,
+                description TEXT,
+                amount NUMERIC(12,2),
+                type TEXT DEFAULT 'expense',
+                category TEXT DEFAULT 'other',
+                source TEXT DEFAULT 'manual',
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `).catch(err => { transactionsTableReadyPromise = null; throw err; });
+    }
+    return transactionsTableReadyPromise;
+}
+
+async function pgSaveTransaction(date, description, amount, type, category, source = "manual") {
+    await ensureTransactionsTable();
+    const r = await pool.query(
+        `INSERT INTO transactions (date, description, amount, type, category, source)
+         VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+        [date || new Date().toISOString().split("T")[0], description, amount, type, category, source]
+    );
+    return r.rows[0] || null;
+}
+
+async function pgListTransactions(limit = 30) {
+    await ensureTransactionsTable();
+    const r = await pool.query(
+        `SELECT * FROM transactions ORDER BY date DESC, created_at DESC LIMIT $1`, [limit]
+    );
+    return r.rows;
+}
+
+async function pgGetFinanceSummaryCurrentMonth() {
+    await ensureTransactionsTable();
+    const r = await pool.query(`
+        SELECT category, type, COALESCE(SUM(amount), 0)::NUMERIC AS total
+        FROM transactions
+        WHERE date >= DATE_TRUNC('month', CURRENT_DATE)
+          AND date <  DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+        GROUP BY category, type
+        ORDER BY total DESC
+    `);
+    return r.rows;
+}
+
+/* =========================
+   FINANCE — BUDGETS
+========================= */
+
+let budgetsTableReadyPromise = null;
+
+function ensureBudgetsTable() {
+    if (!budgetsTableReadyPromise) {
+        budgetsTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS budgets (
+                id SERIAL PRIMARY KEY,
+                category TEXT,
+                monthly_limit NUMERIC(12,2),
+                month INTEGER,
+                year INTEGER,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(category, month, year)
+            )
+        `).catch(err => { budgetsTableReadyPromise = null; throw err; });
+    }
+    return budgetsTableReadyPromise;
+}
+
+async function pgSaveBudget(category, monthlyLimit, month, year) {
+    await ensureBudgetsTable();
+    const r = await pool.query(
+        `INSERT INTO budgets (category, monthly_limit, month, year)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (category, month, year)
+         DO UPDATE SET monthly_limit = EXCLUDED.monthly_limit
+         RETURNING *`,
+        [category, monthlyLimit, month, year]
+    );
+    return r.rows[0] || null;
+}
+
+async function pgListBudgets(month, year) {
+    await ensureBudgetsTable();
+    const r = await pool.query(
+        `SELECT * FROM budgets WHERE month = $1 AND year = $2 ORDER BY category`, [month, year]
+    );
+    return r.rows;
+}
+
+async function pgGetBudgetByCategory(category, month, year) {
+    await ensureBudgetsTable();
+    const r = await pool.query(
+        `SELECT * FROM budgets WHERE category = $1 AND month = $2 AND year = $3 LIMIT 1`,
+        [category, month, year]
+    );
+    return r.rows[0] || null;
+}
+
+/* =========================
+   ROUTINES
+========================= */
+
+let routinesTableReadyPromise = null;
+
+function ensureRoutinesTable() {
+    if (!routinesTableReadyPromise) {
+        routinesTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS routines (
+                id SERIAL PRIMARY KEY,
+                name TEXT,
+                description TEXT,
+                schedule_cron TEXT,
+                last_run TIMESTAMP,
+                active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `).catch(err => { routinesTableReadyPromise = null; throw err; });
+    }
+    return routinesTableReadyPromise;
+}
+
+async function pgCreateRoutine(name, description, scheduleCron) {
+    await ensureRoutinesTable();
+    const r = await pool.query(
+        `INSERT INTO routines (name, description, schedule_cron)
+         VALUES ($1,$2,$3) RETURNING *`,
+        [name, description, scheduleCron]
+    );
+    return r.rows[0] || null;
+}
+
+async function pgListRoutines() {
+    await ensureRoutinesTable();
+    const r = await pool.query(`SELECT * FROM routines ORDER BY id ASC`);
+    return r.rows;
+}
+
+async function pgUpdateRoutine(id, updates) {
+    await ensureRoutinesTable();
+    const keys = Object.keys(updates || {}).filter(k => updates[k] !== undefined);
+    if (!keys.length) return null;
+
+    const assignments = keys.map((k, i) => `${k} = $${i + 1}`);
+    const values = keys.map(k => updates[k]);
+    values.push(id);
+
+    const r = await pool.query(
+        `UPDATE routines SET ${assignments.join(", ")} WHERE id = $${values.length} RETURNING *`,
+        values
+    );
+    return r.rows[0] || null;
+}
+
+async function pgDeleteRoutine(id) {
+    await ensureRoutinesTable();
+    await pool.query(`DELETE FROM routines WHERE id = $1`, [id]);
+    return true;
+}
+
+async function pgMarkRoutineRun(id) {
+    await ensureRoutinesTable();
+    const r = await pool.query(
+        `UPDATE routines SET last_run = NOW() WHERE id = $1 RETURNING *`, [id]
+    );
+    return r.rows[0] || null;
+}
+
 module.exports = {
     pgSaveDocument,
     pgListDocuments,
@@ -865,5 +1102,20 @@ module.exports = {
     pgCreateStandingApproval,
     pgListStandingApprovals,
     pgDisableStandingApproval,
-    pgGetEnabledStandingApprovals
+    pgGetEnabledStandingApprovals,
+    pgSaveEmailQueueItem,
+    pgGetEmailQueueItemByGmailId,
+    pgListEmailQueue,
+    pgUpdateEmailQueueStatus,
+    pgSaveTransaction,
+    pgListTransactions,
+    pgGetFinanceSummaryCurrentMonth,
+    pgSaveBudget,
+    pgListBudgets,
+    pgGetBudgetByCategory,
+    pgCreateRoutine,
+    pgListRoutines,
+    pgUpdateRoutine,
+    pgDeleteRoutine,
+    pgMarkRoutineRun
 };

@@ -766,6 +766,166 @@
             font-size: 14px;
         }
 
+        /* ══ PHASE 2 PANELS ════════════════════════════════════════════ */
+        .right-panel { overflow-y: auto !important; }
+
+        .subpanel {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 14px;
+            margin-top: 4px;
+        }
+
+        .subpanel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+
+        .subpanel-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .subpanel-btn {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,212,255,0.28);
+            background: transparent;
+            color: var(--accent);
+            cursor: pointer;
+            transition: background 0.18s;
+        }
+
+        .subpanel-btn:hover { background: rgba(0,212,255,0.1); }
+
+        /* Email items */
+        .email-item {
+            padding: 9px 11px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.02);
+            font-size: 11px;
+        }
+
+        .email-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+
+        .email-priority {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .email-priority.urgent  { background: rgba(255,77,109,0.22); color: #ff4d6d; }
+        .email-priority.normal  { background: rgba(0,212,255,0.12);  color: var(--accent); }
+        .email-priority.low     { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+        .email-sender { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
+        .email-subject { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 3px; line-height: 1.35; }
+        .email-summary { font-size: 10px; color: var(--muted); line-height: 1.4; }
+        .email-actions { display: flex; gap: 6px; margin-top: 6px; }
+
+        .email-btn {
+            flex: 1;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 4px 0;
+            border-radius: 6px;
+            border: 1px solid;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+
+        .email-btn.approve { border-color: rgba(0,212,255,0.4); color: var(--accent); background: rgba(0,212,255,0.06); }
+        .email-btn.reject  { border-color: rgba(255,77,109,0.3); color: #ff4d6d;      background: rgba(255,77,109,0.04); }
+        .email-btn:hover   { opacity: 0.75; }
+
+        /* Finance items */
+        .finance-bar-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .finance-cat-row { display: flex; flex-direction: column; gap: 2px; }
+
+        .finance-cat-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .finance-cat-label span:last-child { color: var(--text); font-weight: 600; }
+
+        .finance-bar-bg {
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.07);
+            overflow: hidden;
+        }
+
+        .finance-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            background: var(--accent);
+            transition: width 0.4s ease;
+        }
+
+        .finance-bar-fill.over { background: #ff4d6d; }
+
+        /* Routine items */
+        .routine-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-radius: 9px;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.02);
+            font-size: 11px;
+        }
+
+        .routine-name { font-size: 11px; font-weight: 600; color: var(--text); }
+        .routine-cron { font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+        .routine-toggle {
+            width: 32px;
+            height: 17px;
+            border-radius: 9px;
+            border: 1px solid rgba(0,212,255,0.3);
+            background: rgba(255,255,255,0.05);
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .routine-toggle.on { background: rgba(0,212,255,0.25); border-color: var(--accent); }
+
+        .routine-toggle::after {
+            content: "";
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 11px; height: 11px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.35);
+            transition: left 0.2s, background 0.2s;
+        }
+
+        .routine-toggle.on::after { left: 17px; background: var(--accent); }
+
         /* ══ UTILITY ════════════════════════════════════════════════════ */
         .empty-note {
             font-size: 11px;
@@ -849,15 +1009,45 @@
         <div class="chat-log" id="chatLog"></div>
     </main>
 
-    <!-- ══ RIGHT: Approval Queue ══ -->
+    <!-- ══ RIGHT: Approval Queue + Phase 2 Panels ══ -->
     <aside class="side-panel right-panel">
+
+        <!-- Approval Queue -->
         <div class="panel-label">Approval Queue</div>
-        <div class="queue-scroll" id="approvalQueue">
+        <div class="queue-scroll" id="approvalQueue" style="max-height:200px">
             <div class="queue-empty">
                 <div class="queue-empty-icon">✓</div>
                 <div class="queue-empty-text">No pending</div>
             </div>
         </div>
+
+        <!-- Email Panel -->
+        <div class="subpanel">
+            <div class="subpanel-header">
+                <span class="subpanel-label">Email</span>
+                <button class="subpanel-btn" onclick="checkEmailNow()">Check</button>
+            </div>
+            <div id="emailList"><div class="empty-note">Loading…</div></div>
+        </div>
+
+        <!-- Finance Panel -->
+        <div class="subpanel">
+            <div class="subpanel-header">
+                <span class="subpanel-label">Finance</span>
+                <button class="subpanel-btn" onclick="logExpenseQuick()">+ Expense</button>
+            </div>
+            <div id="financePanel"><div class="empty-note">Loading…</div></div>
+        </div>
+
+        <!-- Routines Panel -->
+        <div class="subpanel">
+            <div class="subpanel-header">
+                <span class="subpanel-label">Routines</span>
+                <button class="subpanel-btn" onclick="addRoutineQuick()">+ Add</button>
+            </div>
+            <div id="routinesPanel"><div class="empty-note">Loading…</div></div>
+        </div>
+
     </aside>
 
     <!-- ══ NOTIFICATION STRIP ══ -->
@@ -1599,11 +1789,206 @@ async function viewTaskDetails(id) {
 }
 
 // ══ REFRESH ALL ════════════════════════════════════════════════════════
+// ══ EMAIL PANEL ═══════════════════════════════════════════════════════
+async function refreshEmailPanel() {
+    const el = document.getElementById("emailList");
+    if (!el) return;
+    try {
+        const data   = await fetchJson("/api/emails");
+        const emails = (data.emails || []).slice(0, 5);
+        if (!emails.length) {
+            el.innerHTML = '<div class="empty-note">No emails yet.</div>';
+            return;
+        }
+        el.innerHTML = emails.map(e => {
+            const hasReply = !!e.suggested_reply;
+            const statusSent = e.status === "sent" || e.status === "rejected";
+            const actionBtns = hasReply && !statusSent
+                ? `<div class="email-actions">
+                    <button class="email-btn approve" onclick="approveEmail(${e.id})">Reply</button>
+                    <button class="email-btn reject"  onclick="rejectEmail(${e.id})">Skip</button>
+                   </div>`
+                : `<div style="font-size:10px;color:var(--muted);margin-top:5px">${e.status}</div>`;
+            return `
+                <div class="email-item" id="email-${e.id}">
+                    <div class="email-meta">
+                        <span class="email-priority ${escapeHtml(e.priority)}">${escapeHtml(e.priority)}</span>
+                        <span class="email-sender">${escapeHtml(e.sender || "Unknown")}</span>
+                    </div>
+                    <div class="email-subject">${escapeHtml(shortenText(e.subject || "No subject", 50))}</div>
+                    <div class="email-summary">${escapeHtml(shortenText(e.summary || "", 80))}</div>
+                    ${actionBtns}
+                </div>`;
+        }).join("");
+    } catch (err) {
+        el.innerHTML = `<div class="empty-note">${escapeHtml(err.message)}</div>`;
+    }
+}
+
+async function checkEmailNow() {
+    renderChatMessage("system", "Checking email…");
+    try {
+        const data = await fetchJson("/api/emails/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+        renderChatMessage("system", data.reply || "Done.");
+        await refreshEmailPanel();
+    } catch (err) {
+        renderChatMessage("system", err.message);
+    }
+}
+
+async function approveEmail(id) {
+    try {
+        const data = await fetchJson(`/api/emails/${id}/approve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+        renderChatMessage("system", data.reply || "Reply sent.");
+        await refreshEmailPanel();
+    } catch (err) {
+        renderChatMessage("system", err.message);
+    }
+}
+
+async function rejectEmail(id) {
+    try {
+        await fetchJson(`/api/emails/${id}/reject`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+        await refreshEmailPanel();
+    } catch (err) {
+        renderChatMessage("system", err.message);
+    }
+}
+
+// ══ FINANCE PANEL ═════════════════════════════════════════════════════
+async function refreshFinancePanel() {
+    const el = document.getElementById("financePanel");
+    if (!el) return;
+    try {
+        const data    = await fetchJson("/api/finance/summary");
+        const summary = data.summary || [];
+        const budgets = data.budgets || [];
+
+        if (!summary.length) {
+            el.innerHTML = '<div class="empty-note">No transactions yet.</div>';
+            return;
+        }
+
+        const budgetMap = {};
+        for (const b of budgets) budgetMap[b.category] = parseFloat(b.monthly_limit);
+
+        let totalIncome  = 0;
+        let totalExpense = 0;
+        const catSpend   = {};
+
+        for (const row of summary) {
+            const amt = parseFloat(row.total);
+            if (row.type === "income")  totalIncome  += amt;
+            if (row.type === "expense") { totalExpense += amt; catSpend[row.category] = (catSpend[row.category] || 0) + amt; }
+        }
+
+        const topCats = Object.entries(catSpend).sort((a,b) => b[1]-a[1]).slice(0,3);
+
+        const totalHtml = `
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:8px">
+                <span style="color:#4ade80">In: £${totalIncome.toFixed(0)}</span>
+                <span style="color:#ff4d6d">Out: £${totalExpense.toFixed(0)}</span>
+            </div>`;
+
+        const catHtml = topCats.map(([cat, spent]) => {
+            const limit = budgetMap[cat];
+            const pct   = limit ? Math.min((spent / limit) * 100, 100) : 0;
+            const over  = limit && spent > limit;
+            const limitStr = limit ? `£${limit}` : "—";
+            return `<div class="finance-cat-row">
+                <div class="finance-cat-label"><span>${cat}</span><span>£${spent.toFixed(0)} / ${limitStr}</span></div>
+                ${limit ? `<div class="finance-bar-bg"><div class="finance-bar-fill${over ? " over" : ""}" style="width:${pct}%"></div></div>` : ""}
+            </div>`;
+        }).join("");
+
+        el.innerHTML = totalHtml + `<div class="finance-bar-row">${catHtml}</div>`;
+    } catch (err) {
+        el.innerHTML = `<div class="empty-note">${escapeHtml(err.message)}</div>`;
+    }
+}
+
+async function logExpenseQuick() {
+    const desc = prompt("Description:");
+    if (!desc) return;
+    const amt = prompt("Amount (£):");
+    if (!amt || isNaN(parseFloat(amt))) return;
+    const type = confirm("Is this income? (Cancel = expense)") ? "income" : "expense";
+    try {
+        const data = await fetchJson("/api/finance/transaction", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description: desc, amount: parseFloat(amt), type })
+        });
+        renderChatMessage("system", data.reply || "Saved.");
+        await refreshFinancePanel();
+    } catch (err) {
+        renderChatMessage("system", err.message);
+    }
+}
+
+// ══ ROUTINES PANEL ════════════════════════════════════════════════════
+async function refreshRoutinesPanel() {
+    const el = document.getElementById("routinesPanel");
+    if (!el) return;
+    try {
+        const data     = await fetchJson("/api/routines");
+        const routines = data.routines || [];
+        if (!routines.length) {
+            el.innerHTML = '<div class="empty-note">No routines.</div>';
+            return;
+        }
+        el.innerHTML = routines.map(r => `
+            <div class="routine-item">
+                <div>
+                    <div class="routine-name">${escapeHtml(r.name)}</div>
+                    <div class="routine-cron">${escapeHtml(r.schedule_cron)}</div>
+                </div>
+                <button class="routine-toggle${r.active ? " on" : ""}" onclick="toggleRoutine(${r.id}, ${!r.active})" title="${r.active ? "Disable" : "Enable"}"></button>
+            </div>`).join("");
+    } catch (err) {
+        el.innerHTML = `<div class="empty-note">${escapeHtml(err.message)}</div>`;
+    }
+}
+
+async function toggleRoutine(id, active) {
+    try {
+        await fetchJson(`/api/routines/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ active })
+        });
+        await refreshRoutinesPanel();
+    } catch (err) {
+        renderChatMessage("system", err.message);
+    }
+}
+
+async function addRoutineQuick() {
+    const name = prompt("Routine name:");
+    if (!name) return;
+    const cron = prompt("Cron schedule (e.g. 0 8 * * * for 8am daily):");
+    if (!cron) return;
+    const desc = prompt("Description (optional):") || "";
+    try {
+        await fetchJson("/api/routines", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, description: desc, schedule_cron: cron })
+        });
+        await refreshRoutinesPanel();
+    } catch (err) {
+        renderChatMessage("system", err.message);
+    }
+}
+
 async function refreshAll() {
     await Promise.all([
         refreshMemory(),
         loadNotifications(),
-        loadTasks()
+        loadTasks(),
+        refreshEmailPanel(),
+        refreshFinancePanel(),
+        refreshRoutinesPanel()
     ]);
 }
 

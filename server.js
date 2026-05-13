@@ -55,6 +55,22 @@ const {
 
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
+const { checkEmails, sendEmailReply, initEmailAgent } = require("./email_agent");
+const { categoriseTransaction, checkBudgetAlerts, parseCsvTransactions, FINANCE_CATEGORIES } = require("./finance_agent");
+const { initRoutineAgent } = require("./routine_agent");
+const {
+    pgListEmailQueue,
+    pgUpdateEmailQueueStatus,
+    pgSaveTransaction,
+    pgListTransactions,
+    pgGetFinanceSummaryCurrentMonth,
+    pgSaveBudget,
+    pgListBudgets,
+    pgCreateRoutine,
+    pgListRoutines,
+    pgUpdateRoutine,
+    pgDeleteRoutine
+} = require("./pg_helpers");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -172,6 +188,36 @@ const TOOLS = [
                 filename: { type: "string", description: "The document filename to delete." }
             },
             required: ["filename"]
+        }
+    },
+    {
+        name: "log_expense",
+        description: "Log a personal expense or income transaction.",
+        input_schema: {
+            type: "object",
+            properties: {
+                description: { type: "string", description: "What the transaction is for." },
+                amount: { type: "number", description: "The transaction amount in GBP." },
+                type: { type: "string", enum: ["expense", "income"], description: "Whether this is an expense or income." }
+            },
+            required: ["description", "amount"]
+        }
+    },
+    {
+        name: "get_finance_summary",
+        description: "Get this month's finance summary — total spend by category vs budgets.",
+        input_schema: { type: "object", properties: {} }
+    },
+    {
+        name: "set_budget",
+        description: "Set a monthly budget limit for a spending category.",
+        input_schema: {
+            type: "object",
+            properties: {
+                category: { type: "string", enum: ["housing","food","transport","entertainment","business","health","savings","other"], description: "The spending category." },
+                amount: { type: "number", description: "Monthly budget limit in GBP." }
+            },
+            required: ["category", "amount"]
         }
     }
 ];
@@ -4587,6 +4633,12 @@ function toolUseInputToCommand(toolName, input) {
             return { type: "summarise_file", filename: input.filename };
         case "delete_document":
             return { type: "delete_document", filename: input.filename };
+        case "log_expense":
+            return { type: "log_expense", description: input.description, amount: input.amount, transactionType: input.type || "expense" };
+        case "get_finance_summary":
+            return { type: "get_finance_summary" };
+        case "set_budget":
+            return { type: "set_budget", category: input.category, amount: input.amount };
         default:
             return null;
     }
@@ -6021,6 +6073,53 @@ Final obvious clean state summary:
             };
         }
 
+        case "log_expense": {
+            const now = new Date();
+            const category = await categoriseTransaction(
+                command.description, command.amount, command.transactionType || "expense", client
+            );
+            const tx = await pgSaveTransaction(
+                now.toISOString().split("T")[0],
+                command.description,
+                command.amount,
+                command.transactionType || "expense",
+                category
+            );
+            await checkBudgetAlerts(client);
+            return { ok: true, reply: `Logged ${command.transactionType || "expense"}: £${command.amount} for "${command.description}" (${category}).` };
+        }
+
+        case "get_finance_summary": {
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const year  = now.getFullYear();
+            const [summary, budgets] = await Promise.all([
+                pgGetFinanceSummaryCurrentMonth(),
+                pgListBudgets(month, year)
+            ]);
+
+            if (!summary.length) {
+                return { ok: true, reply: "No transactions recorded this month yet." };
+            }
+
+            const budgetMap = {};
+            for (const b of budgets) budgetMap[b.category] = b.monthly_limit;
+
+            const lines = summary.map(row => {
+                const limit = budgetMap[row.category];
+                const limitStr = limit ? ` / £${limit} budget` : "";
+                return `- ${row.category} (${row.type}): £${parseFloat(row.total).toFixed(2)}${limitStr}`;
+            });
+
+            return { ok: true, reply: `Finance summary for ${now.toLocaleString("default", { month: "long" })}:\n\n${lines.join("\n")}` };
+        }
+
+        case "set_budget": {
+            const now = new Date();
+            const b = await pgSaveBudget(command.category, command.amount, now.getMonth() + 1, now.getFullYear());
+            return { ok: true, reply: `Budget set: £${command.amount}/month for ${command.category}.` };
+        }
+
         default:
             return null;
     }
@@ -6561,6 +6660,183 @@ app.post("/cloud-autopilot/apply", requireAppAccess, async (req, res) => {
     }
 });
 
+/* =========================
+   EMAIL ROUTES
+========================= */
+
+app.get("/api/emails", requireAppAccess, async (req, res) => {
+    try {
+        const emails = await pgListEmailQueue(20);
+        return res.json({ ok: true, emails });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.post("/api/emails/check", requireAppAccess, async (req, res) => {
+    try {
+        const count = await checkEmails(client);
+        return res.json({ ok: true, reply: `Checked email. Found ${count} new messages.` });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.post("/api/emails/:id/approve", requireAppAccess, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const emails = await pgListEmailQueue(100);
+        const email  = emails.find(e => e.id === id);
+
+        if (!email) return res.status(404).json({ ok: false, reply: "Email not found." });
+        if (!email.suggested_reply) return res.status(400).json({ ok: false, reply: "No suggested reply to send." });
+
+        await sendEmailReply(email.gmail_id, email.sender, email.subject, email.suggested_reply);
+        await pgUpdateEmailQueueStatus(id, "sent");
+        return res.json({ ok: true, reply: `Reply sent to ${email.sender}.` });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.post("/api/emails/:id/reject", requireAppAccess, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        await pgUpdateEmailQueueStatus(id, "rejected");
+        return res.json({ ok: true, reply: "Email rejected, no reply sent." });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+/* =========================
+   FINANCE ROUTES
+========================= */
+
+app.post("/api/finance/transaction", requireAppAccess, async (req, res) => {
+    try {
+        const { description, amount, type, date } = req.body || {};
+        if (!description || !amount) return res.status(400).json({ ok: false, reply: "description and amount required." });
+
+        const txType   = type === "income" ? "income" : "expense";
+        const category = await categoriseTransaction(description, parseFloat(amount), txType, client);
+        const tx = await pgSaveTransaction(date || null, description, parseFloat(amount), txType, category);
+
+        await checkBudgetAlerts(client);
+        return res.json({ ok: true, reply: `Saved: ${txType} £${amount} — ${description} (${category})`, transaction: tx });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.get("/api/finance/transactions", requireAppAccess, async (req, res) => {
+    try {
+        const transactions = await pgListTransactions(30);
+        return res.json({ ok: true, transactions });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.get("/api/finance/summary", requireAppAccess, async (req, res) => {
+    try {
+        const now   = new Date();
+        const month = now.getMonth() + 1;
+        const year  = now.getFullYear();
+        const [summary, budgets] = await Promise.all([
+            pgGetFinanceSummaryCurrentMonth(),
+            pgListBudgets(month, year)
+        ]);
+        return res.json({ ok: true, summary, budgets, month, year });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.post("/api/finance/budget", requireAppAccess, async (req, res) => {
+    try {
+        const { category, amount } = req.body || {};
+        if (!category || !amount) return res.status(400).json({ ok: false, reply: "category and amount required." });
+        if (!FINANCE_CATEGORIES.includes(category)) {
+            return res.status(400).json({ ok: false, reply: `Invalid category. Use: ${FINANCE_CATEGORIES.join(", ")}` });
+        }
+        const now = new Date();
+        const b = await pgSaveBudget(category, parseFloat(amount), now.getMonth() + 1, now.getFullYear());
+        return res.json({ ok: true, reply: `Budget set: £${amount}/month for ${category}.`, budget: b });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.post("/api/finance/upload-csv", requireAppAccess, async (req, res) => {
+    try {
+        const { csv } = req.body || {};
+        if (!csv) return res.status(400).json({ ok: false, reply: "csv field required." });
+
+        const parsed = await parseCsvTransactions(csv, client);
+        const saved  = [];
+        for (const tx of parsed) {
+            const row = await pgSaveTransaction(tx.date, tx.description, tx.amount, tx.type, tx.category, "csv");
+            saved.push(row);
+        }
+        await checkBudgetAlerts(client);
+        return res.json({ ok: true, reply: `Imported ${saved.length} transactions from CSV.`, count: saved.length });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+/* =========================
+   ROUTINES ROUTES
+========================= */
+
+app.get("/api/routines", requireAppAccess, async (req, res) => {
+    try {
+        const routines = await pgListRoutines();
+        return res.json({ ok: true, routines });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.post("/api/routines", requireAppAccess, async (req, res) => {
+    try {
+        const { name, description, schedule_cron } = req.body || {};
+        if (!name || !schedule_cron) return res.status(400).json({ ok: false, reply: "name and schedule_cron required." });
+        const routine = await pgCreateRoutine(name, description || "", schedule_cron);
+        return res.json({ ok: true, routine });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.patch("/api/routines/:id", requireAppAccess, async (req, res) => {
+    try {
+        const id      = parseInt(req.params.id);
+        const updates = req.body || {};
+        const allowed = ["name", "description", "schedule_cron", "active"];
+        const filtered = {};
+        for (const k of allowed) {
+            if (updates[k] !== undefined) filtered[k] = updates[k];
+        }
+        const routine = await pgUpdateRoutine(id, filtered);
+        if (!routine) return res.status(404).json({ ok: false, reply: "Routine not found." });
+        return res.json({ ok: true, routine });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.delete("/api/routines/:id", requireAppAccess, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        await pgDeleteRoutine(id);
+        return res.json({ ok: true, reply: `Routine ${id} deleted.` });
+    } catch (error) {
+        return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
 app.post("/api/speak", async (req, res) => {
     try {
         const text = String(req.body?.text || "").trim();
@@ -6683,4 +6959,8 @@ app.listen(PORT, () => {
     console.log(`🤖 Model: ${MODEL}`);
     console.log(`🔑 API KEY LOADED: ${!!process.env.ANTHROPIC_API_KEY}`);
     console.log(`📁 Workspace: ${WORKSPACE_DIR}`);
+
+    // Phase 2 agents
+    initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
+    initRoutineAgent(client).catch(err => console.error("ROUTINE AGENT INIT ERROR:", err.message));
 });
