@@ -7234,10 +7234,28 @@ app.get("/api/config", requireAppAccess, (req, res) => {
     });
 });
 
-app.get("/api/deepgram-token", (req, res) => {
+app.get("/api/deepgram-token", async (req, res) => {
     const key = process.env.DEEPGRAM_API_KEY;
     if (!key) return res.status(503).json({ ok: false, error: "Deepgram not configured." });
-    res.json({ ok: true, token: key });
+    try {
+        const response = await fetch("https://api.deepgram.com/v1/auth/token", {
+            method: "POST",
+            headers: {
+                "Authorization": `Token ${key}`,
+                "Content-Type": "application/json"
+            }
+        });
+        if (!response.ok) {
+            const err = await response.text();
+            console.error("DEEPGRAM TOKEN ERROR:", err);
+            return res.status(502).json({ ok: false, error: err });
+        }
+        const data = await response.json();
+        res.json({ ok: true, token: data.token });
+    } catch (err) {
+        console.error("DEEPGRAM TOKEN FETCH ERROR:", err.message);
+        res.status(500).json({ ok: false, error: err.message });
+    }
 });
 
 app.post("/api/upload-file", requireAppAccess, async (req, res) => {
