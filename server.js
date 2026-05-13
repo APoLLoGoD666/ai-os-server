@@ -4,6 +4,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
+const compression = require("compression");
 const Anthropic = require("@anthropic-ai/sdk");
 
 const db = require("./database");
@@ -56,7 +57,7 @@ const {
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
 const { checkEmails, sendEmailReply, initEmailAgent } = require("./email_agent");
-const { initMastra } = require("./mastra_agents");
+const { initMastra, getMastraStatus } = require("./mastra_agents");
 const { categoriseTransaction, checkBudgetAlerts, parseCsvTransactions, FINANCE_CATEGORIES } = require("./finance_agent");
 const { initRoutineAgent } = require("./routine_agent");
 const {
@@ -77,6 +78,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+app.use(compression());
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
@@ -90,6 +92,18 @@ const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 const AUTONOMY_LEVEL = String(process.env.AUTONOMY_LEVEL || "1");
 
 let mastraAgents = null;
+
+// ── Response cache (60s TTL) ──────────────────────────────────────────
+const apiCache   = new Map();
+const CACHE_TTL  = 60000;
+function getCached(key) {
+    const e = apiCache.get(key);
+    if (!e) return null;
+    if (Date.now() - e.ts > CACHE_TTL) { apiCache.delete(key); return null; }
+    return e.data;
+}
+function setCache(key, data) { apiCache.set(key, { ts: Date.now(), data }); }
+function clearCache(...keys) { keys.forEach(k => apiCache.delete(k)); }
 
 const TOOLS = [
     {
@@ -343,24 +357,57 @@ async function loadMemory() {
     }
 }
 
+let _memMsgCount = 0;
+
+function timeAgo(dateStr) {
+    if (!dateStr) return "";
+    const secs = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (secs < 90)    return "just now";
+    if (secs < 3600)  return `${Math.floor(secs / 60)}m ago`;
+    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+    return "yesterday";
+}
+
 async function addToMemory(role, message) {
     try {
         await pgAddMemory(role, message);
+        if (role === "user") {
+            _memMsgCount++;
+            if (_memMsgCount % 20 === 0) {
+                setImmediate(() => _compressMemory());
+            }
+        }
     } catch (error) {
         console.error("MEMORY SAVE ERROR:", error.message);
     }
 }
 
+async function _compressMemory() {
+    try {
+        const memory = await loadMemory();
+        if (memory.length < 10) return;
+        const toCompress = memory.slice(0, memory.length - 6)
+            .map(m => `[${m.role}] ${m.message}`)
+            .join("\n");
+        const res = await client.messages.create({
+            model: HAIKU_MODEL,
+            max_tokens: 100,
+            messages: [{ role: "user", content: `Summarise this conversation history in one sentence:\n\n${toCompress}` }]
+        });
+        const summary = (res.content[0]?.text || "").trim();
+        if (summary) await pgAddMemory("summary", summary);
+    } catch (_) {}
+}
+
 async function formatRecentMemory() {
     const memory = await loadMemory();
-
-    if (!memory.length) {
-        return "No recent memory.";
-    }
-
+    if (!memory.length) return "No recent memory.";
     return memory
-        .slice(-8)
-        .map(item => `[${item.role.toUpperCase()}] ${item.message}`)
+        .slice(-12)
+        .map(item => {
+            const when = timeAgo(item.time);
+            return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${item.message}`;
+        })
         .join("\n");
 }
 
@@ -6573,10 +6620,17 @@ app.post("/chat", requireAppAccess, async (req, res) => {
             });
         }
 
-        const userMessage = rawMessage.trim();
-        await addToMemory("user", userMessage);
+        const chatTimeout = setTimeout(() => {
+            if (!res.headersSent) res.status(504).json({ ok: false, reply: "Request timed out. Please try again." });
+        }, 25000);
 
-        const memoryText = await formatRecentMemory();
+        const userMessage = rawMessage.trim();
+        const memory = await loadMemory();
+        setImmediate(() => addToMemory("user", userMessage));
+
+        const memoryText = memory.length
+            ? memory.slice(-12).map(m => `[${m.role.toUpperCase()}]${m.time ? ` (${timeAgo(m.time)})` : ""} ${m.message}`).join("\n")
+            : "No recent memory.";
         const relevantDocs = await getRelevantDocuments(userMessage);
         const docsText = relevantDocs.length
             ? relevantDocs.map((doc, index) => {
@@ -6596,9 +6650,17 @@ ${preview}
         const prompt = buildPrompt(userMessage, memoryText, docsText);
 
         if (mastraAgents && mastraAgents.apexAgent) {
-            const result = await mastraAgents.apexAgent.generate([{ role: "user", content: prompt }]);
+            const historyMessages = memory.slice(-3).map(m => ({
+                role: m.role === "user" ? "user" : "assistant",
+                content: m.message
+            }));
+            const result = await mastraAgents.apexAgent.generate([
+                ...historyMessages,
+                { role: "user", content: prompt }
+            ]);
+            clearTimeout(chatTimeout);
             const reply = result.text || "No response from AI";
-            await addToMemory("ai", reply);
+            setImmediate(() => addToMemory("ai", reply));
             return res.status(200).json({
                 ok: true,
                 reply,
@@ -6610,10 +6672,12 @@ ${preview}
         // Fallback: raw Anthropic SDK if Mastra not initialised
         const response = await client.messages.create({
             model: MODEL,
-            max_tokens: 700,
+            max_tokens: 500,
             tools: TOOLS,
             messages: [{ role: "user", content: prompt }]
         });
+
+        clearTimeout(chatTimeout);
 
         const toolUseBlock = (response.content || []).find(part => part.type === "tool_use");
 
@@ -6622,7 +6686,7 @@ ${preview}
 
             if (command) {
                 const result = await handleCommand(command);
-                await addToMemory("ai", result.reply);
+                setImmediate(() => addToMemory("ai", result.reply));
                 return res.status(result.ok ? 200 : 404).json(result);
             }
         }
@@ -6633,7 +6697,7 @@ ${preview}
             .join("\n")
             .trim() || "No response from AI";
 
-        await addToMemory("ai", reply);
+        setImmediate(() => addToMemory("ai", reply));
 
         return res.status(200).json({
             ok: true,
@@ -6642,6 +6706,7 @@ ${preview}
             documentsUsed: relevantDocs.length
         });
     } catch (error) {
+        clearTimeout(chatTimeout);
         console.error("CHAT ERROR:", error);
 
         return res.status(error?.status || 500).json({
@@ -6752,8 +6817,12 @@ app.post("/cloud-autopilot/apply", requireAppAccess, async (req, res) => {
 
 app.get("/api/emails", requireAppAccess, async (req, res) => {
     try {
+        const cached = getCached("emails");
+        if (cached) return res.json(cached);
         const emails = await pgListEmailQueue(20);
-        return res.json({ ok: true, emails });
+        const payload = { ok: true, emails };
+        setCache("emails", payload);
+        return res.json(payload);
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
     }
@@ -6762,6 +6831,7 @@ app.get("/api/emails", requireAppAccess, async (req, res) => {
 app.post("/api/emails/check", requireAppAccess, async (req, res) => {
     try {
         const count = await checkEmails(client);
+        clearCache("emails");
         return res.json({ ok: true, reply: `Checked email. Found ${count} new messages.` });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
@@ -6779,6 +6849,7 @@ app.post("/api/emails/:id/approve", requireAppAccess, async (req, res) => {
 
         await sendEmailReply(email.gmail_id, email.sender, email.subject, email.suggested_reply);
         await pgUpdateEmailQueueStatus(id, "sent");
+        clearCache("emails");
         return res.json({ ok: true, reply: `Reply sent to ${email.sender}.` });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
@@ -6789,6 +6860,7 @@ app.post("/api/emails/:id/reject", requireAppAccess, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         await pgUpdateEmailQueueStatus(id, "rejected");
+        clearCache("emails");
         return res.json({ ok: true, reply: "Email rejected, no reply sent." });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
@@ -6809,6 +6881,7 @@ app.post("/api/finance/transaction", requireAppAccess, async (req, res) => {
         const tx = await pgSaveTransaction(date || null, description, parseFloat(amount), txType, category);
 
         await checkBudgetAlerts(client);
+        clearCache("finance_summary");
         return res.json({ ok: true, reply: `Saved: ${txType} £${amount} — ${description} (${category})`, transaction: tx });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
@@ -6826,6 +6899,8 @@ app.get("/api/finance/transactions", requireAppAccess, async (req, res) => {
 
 app.get("/api/finance/summary", requireAppAccess, async (req, res) => {
     try {
+        const cached = getCached("finance_summary");
+        if (cached) return res.json(cached);
         const now   = new Date();
         const month = now.getMonth() + 1;
         const year  = now.getFullYear();
@@ -6833,7 +6908,9 @@ app.get("/api/finance/summary", requireAppAccess, async (req, res) => {
             pgGetFinanceSummaryCurrentMonth(),
             pgListBudgets(month, year)
         ]);
-        return res.json({ ok: true, summary, budgets, month, year });
+        const payload = { ok: true, summary, budgets, month, year };
+        setCache("finance_summary", payload);
+        return res.json(payload);
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
     }
@@ -6848,6 +6925,7 @@ app.post("/api/finance/budget", requireAppAccess, async (req, res) => {
         }
         const now = new Date();
         const b = await pgSaveBudget(category, parseFloat(amount), now.getMonth() + 1, now.getFullYear());
+        clearCache("finance_summary");
         return res.json({ ok: true, reply: `Budget set: £${amount}/month for ${category}.`, budget: b });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
@@ -6878,8 +6956,12 @@ app.post("/api/finance/upload-csv", requireAppAccess, async (req, res) => {
 
 app.get("/api/routines", requireAppAccess, async (req, res) => {
     try {
+        const cached = getCached("routines");
+        if (cached) return res.json(cached);
         const routines = await pgListRoutines();
-        return res.json({ ok: true, routines });
+        const payload = { ok: true, routines };
+        setCache("routines", payload);
+        return res.json(payload);
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
     }
@@ -6890,6 +6972,7 @@ app.post("/api/routines", requireAppAccess, async (req, res) => {
         const { name, description, schedule_cron } = req.body || {};
         if (!name || !schedule_cron) return res.status(400).json({ ok: false, reply: "name and schedule_cron required." });
         const routine = await pgCreateRoutine(name, description || "", schedule_cron);
+        clearCache("routines");
         return res.json({ ok: true, routine });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
@@ -6907,6 +6990,7 @@ app.patch("/api/routines/:id", requireAppAccess, async (req, res) => {
         }
         const routine = await pgUpdateRoutine(id, filtered);
         if (!routine) return res.status(404).json({ ok: false, reply: "Routine not found." });
+        clearCache("routines");
         return res.json({ ok: true, routine });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
@@ -6917,6 +7001,7 @@ app.delete("/api/routines/:id", requireAppAccess, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         await pgDeleteRoutine(id);
+        clearCache("routines");
         return res.json({ ok: true, reply: `Routine ${id} deleted.` });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
@@ -7072,11 +7157,20 @@ app.post("/api/mastra/run", requireAppAccess, async (req, res) => {
     }
 });
 
+app.get("/api/ping", (req, res) => {
+    res.json({ ok: true, ts: Date.now(), mastra: getMastraStatus() });
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,
         reply: "Route not found"
     });
+});
+
+app.use((err, req, res, next) => {
+    console.error("UNHANDLED ERROR:", err);
+    if (!res.headersSent) res.status(500).json({ ok: false, reply: "Something went wrong." });
 });
 
 app.listen(PORT, () => {
@@ -7086,6 +7180,11 @@ app.listen(PORT, () => {
     console.log(`🤖 Model: ${MODEL}`);
     console.log(`🔑 API KEY LOADED: ${!!process.env.ANTHROPIC_API_KEY}`);
     console.log(`📁 Workspace: ${WORKSPACE_DIR}`);
+
+    setInterval(() => {
+        const mem = process.memoryUsage();
+        console.log(`[HEALTH] uptime=${Math.floor(process.uptime())}s rss=${Math.round(mem.rss/1024/1024)}MB heap=${Math.round(mem.heapUsed/1024/1024)}MB ts=${new Date().toISOString()}`);
+    }, 300000);
 
     // Phase 2 agents
     initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));

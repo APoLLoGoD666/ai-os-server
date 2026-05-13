@@ -482,7 +482,73 @@
             font-size: 13px;
             line-height: 1.55;
             word-break: break-word;
+            user-select: text;
         }
+
+        .apex-latency {
+            font-size: 10px;
+            color: var(--muted);
+            align-self: flex-start;
+            padding-left: 4px;
+            margin-top: -4px;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            gap: 4px;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+        }
+        .typing-indicator.active { display: flex; }
+        .typing-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.4;
+            animation: tdot 1.2s ease-in-out infinite;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes tdot { 0%,80%,100% { opacity:0.2; transform:scale(0.8); } 40% { opacity:1; transform:scale(1); } }
+
+        .chat-status-bar {
+            width: 100%;
+            max-width: 540px;
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-align: center;
+            z-index: 2;
+            padding: 0 20px;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .speed-control label { font-size: 9px; color: var(--muted); white-space: nowrap; }
+        .speed-control input[type=range] { width: 64px; accent-color: var(--accent); cursor: pointer; }
+
+        .clear-chat-btn {
+            flex-shrink: 0;
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: transparent;
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .clear-chat-btn:hover { border-color: rgba(255,77,109,0.4); color: #ff4d6d; }
 
         .chat-bubble.user {
             align-self: flex-end;
@@ -1014,7 +1080,15 @@
 
         <div class="orb-status" id="orbStatus">Ready</div>
 
-        <div class="chat-log" id="chatLog"></div>
+        <div class="chat-status-bar" id="chatStatusBar">Apex · Connecting…</div>
+
+        <div class="chat-log" id="chatLog">
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
     </main>
 
     <!-- ══ RIGHT: Approval Queue + Phase 2 Panels ══ -->
@@ -1070,6 +1144,11 @@
     <div class="input-area">
         <button class="mic-btn" id="micBtn" onclick="toggleListening()" title="Voice input">🎤</button>
         <input class="chat-input" id="chatInput" type="text" placeholder="Ask APEX anything…" autocomplete="off" />
+        <button class="clear-chat-btn" onclick="clearChat()" title="Clear chat">Clear</button>
+        <div class="speed-control" title="Voice speed">
+            <label>Speed</label>
+            <input type="range" id="speedSlider" min="0.9" max="1.6" step="0.1" value="1.3" oninput="updateVoiceSpeed(this.value)" />
+        </div>
         <button class="auto-listen-btn on" id="autoListenBtn" onclick="toggleAutoListen()" title="Toggle auto-listen">Auto-listen: ON</button>
         <button class="send-btn" onclick="sendChatCommand()" title="Send">&#10148;</button>
     </div>
@@ -1091,8 +1170,14 @@ let cachedTasks         = [];
 let cachedNotifications = [];
 let recognition         = null;
 let currentAudio        = null;
+let speakQueue          = [];
+let isSpeakingNow       = false;
+let cachedEmailCount    = 0;
+let cachedActiveRoutines = 0;
+let voiceSpeed          = parseFloat(localStorage.getItem("apexVoiceSpeed") || "1.3");
 const inFlightRefreshes = {};
 const renderSigs        = {};
+const SLOW_REFRESH_MS   = 60000;
 
 // ══ UTILITIES ═════════════════════════════════════════════════════════
 function buildApiUrl(path) {
@@ -1228,11 +1313,16 @@ function cleanForSpeech(text) {
         .replace(/`{1,3}[^`]*`{1,3}/g, "")
         .replace(/!\[.*?\]\(.*?\)/g, "")
         .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+        .replace(/\[[^\]]*\]/g, "")
+        .replace(/\([^)]{1,60}\)/g, "")
         .replace(/https?:\/\/\S+/g, "")
         .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
         .replace(/[\u{2600}-\u{26FF}]/gu, "")
         .replace(/[\u{2700}-\u{27BF}]/gu, "")
         .replace(/\b[\w.-]+\.(txt|md|js|ts|json|csv|pdf|png|jpg|jpeg|html|py|sh)\b/gi, "")
+        .replace(/£(\d[\d.,]*)/g, "$1 pounds")
+        .replace(/\$(\d[\d.,]*)/g, "$1 dollars")
+        .replace(/€(\d[\d.,]*)/g, "$1 euros")
         .replace(/^[-•*+]\s+/gm, ", ")
         .replace(/^\d+\.\s+/gm, "")
         .replace(/→/g, "to")
@@ -1321,7 +1411,7 @@ async function speakWithElevenLabs(text) {
                 const ms    = new MediaSource();
                 const msUrl = URL.createObjectURL(ms);
                 const audio = new Audio(msUrl);
-                audio.playbackRate = 1.3;
+                audio.playbackRate = voiceSpeed;
                 currentAudio = audio;
 
                 const done = ok => { URL.revokeObjectURL(msUrl); currentAudio = null; resolve(ok); };
@@ -1363,7 +1453,7 @@ async function speakWithElevenLabs(text) {
         const blob   = await fetchRes.blob();
         const blobUrl = URL.createObjectURL(blob);
         const audio   = new Audio(blobUrl);
-        audio.playbackRate = 1.3;
+        audio.playbackRate = voiceSpeed;
         currentAudio = audio;
         await new Promise((res2, rej) => {
             audio.onended = res2;
@@ -1391,41 +1481,61 @@ function _speakFallback(phrase, { onEnd } = {}) {
     window.speechSynthesis.speak(utt);
 }
 
-async function speak(text, { useFiller = false } = {}) {
+function updateVoiceSpeed(val) {
+    voiceSpeed = parseFloat(val) || 1.3;
+    localStorage.setItem("apexVoiceSpeed", String(voiceSpeed));
+}
+
+function showTypingIndicator() {
+    const el = document.getElementById("typingIndicator");
+    if (el) el.classList.add("active");
+    const log = document.getElementById("chatLog");
+    if (log) log.scrollTop = log.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    const el = document.getElementById("typingIndicator");
+    if (el) el.classList.remove("active");
+}
+
+async function _speakInternal(text, useFiller) {
     try {
         if (window.speechSynthesis) window.speechSynthesis.cancel();
-
         const phrase = summariseForSpeech(text);
         if (!phrase) return;
 
         setOrbState("speaking");
-
         const filler = useFiller ? _pickFiller() : null;
-
-        const speakMain = async () => {
-            const ok = await speakWithElevenLabs(phrase);
-            if (!ok) {
-                await new Promise(resolve => _speakFallback(phrase, { onEnd: resolve }));
-            }
-            if (autoListen) {
-                setOrbState("waiting");
-                setTimeout(() => { if (autoListen && !isListening) startListening(); }, 800);
-            } else {
-                setOrbState("ready");
-            }
-        };
 
         if (filler) {
             const fillerOk = await speakWithElevenLabs(filler);
-            if (!fillerOk) {
-                await new Promise(resolve => _speakFallback(filler, { onEnd: resolve }));
-            }
+            if (!fillerOk) await new Promise(r => _speakFallback(filler, { onEnd: r }));
         }
 
-        await speakMain();
-    } catch (_) {
+        const ok = await speakWithElevenLabs(phrase);
+        if (!ok) await new Promise(r => _speakFallback(phrase, { onEnd: r }));
+    } catch (_) {}
+}
+
+async function _processSpeak() {
+    if (isSpeakingNow || !speakQueue.length) return;
+    isSpeakingNow = true;
+    while (speakQueue.length) {
+        const { text, useFiller } = speakQueue.shift();
+        await _speakInternal(text, useFiller);
+    }
+    isSpeakingNow = false;
+    if (autoListen) {
+        setOrbState("waiting");
+        setTimeout(() => { if (autoListen && !isListening) startListening(); }, 800);
+    } else {
         setOrbState("ready");
     }
+}
+
+function speak(text, { useFiller = false } = {}) {
+    speakQueue.push({ text, useFiller });
+    _processSpeak();
 }
 
 function interruptSpeech() {
@@ -1454,13 +1564,16 @@ function initRecognition() {
     rec.continuous     = false;
     rec.interimResults = false;
     rec.lang           = "en-GB";
+    let gotResult      = false;
 
     rec.onstart = () => {
+        gotResult = false;
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     };
 
     rec.onresult = e => {
+        gotResult = true;
         const transcript = e.results[0][0].transcript;
         interruptSpeech();
         document.getElementById("chatInput").value = transcript;
@@ -1479,7 +1592,12 @@ function initRecognition() {
         }
     };
 
-    rec.onend = () => { if (isListening) stopListening(); };
+    rec.onend = () => {
+        if (isListening) stopListening();
+        if (!gotResult && autoListen) {
+            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 300);
+        }
+    };
     return rec;
 }
 
@@ -1588,6 +1706,8 @@ async function sendChatCommandFromText(command, options = {}) {
 
     if (!silent) renderChatMessage("user", command);
     setOrbState("thinking");
+    if (!silent) showTypingIndicator();
+    const t0 = Date.now();
 
     try {
         const data = await fetchJson("/chat", {
@@ -1596,9 +1716,18 @@ async function sendChatCommandFromText(command, options = {}) {
             body: JSON.stringify({ message: command })
         });
 
+        hideTypingIndicator();
         const reply = data.reply || "No reply.";
         if (!silent) {
             renderChatMessage("ai", reply);
+            const ms = Date.now() - t0;
+            const log = document.getElementById("chatLog");
+            if (log) {
+                const lat = document.createElement("div");
+                lat.className = "apex-latency";
+                lat.textContent = `${ms}ms`;
+                log.appendChild(lat);
+            }
             setOrbState("speaking");
             speak(reply, { useFiller: wasVoice });
         } else {
@@ -1606,9 +1735,10 @@ async function sendChatCommandFromText(command, options = {}) {
         }
 
         setConnStatus(true);
-        refreshAll();
+        _smartRefresh(command);
         return data;
     } catch (error) {
+        hideTypingIndicator();
         const msg = error.message || "Server error.";
         if (!silent) {
             renderChatMessage("system", msg);
@@ -1625,6 +1755,8 @@ async function sendVoiceChatCommand(msg) {
     document.getElementById("chatInput").value = "";
     renderChatMessage("user", msg);
     setOrbState("thinking");
+    showTypingIndicator();
+    const t0 = Date.now();
 
     try {
         const data = await fetchJson("/api/voice-chat", {
@@ -1633,17 +1765,27 @@ async function sendVoiceChatCommand(msg) {
             body: JSON.stringify({ message: msg })
         });
 
+        hideTypingIndicator();
         const reply = data.reply || "Done.";
         renderChatMessage("ai", reply);
+        const ms = Date.now() - t0;
+        const log = document.getElementById("chatLog");
+        if (log) {
+            const lat = document.createElement("div");
+            lat.className = "apex-latency";
+            lat.textContent = `${ms}ms`;
+            log.appendChild(lat);
+        }
         setOrbState("speaking");
-        await speak(reply, { useFiller: true });
+        speak(reply, { useFiller: true });
 
         setConnStatus(true);
-        refreshAll();
+        _smartRefresh(msg);
     } catch (error) {
+        hideTypingIndicator();
         const errMsg = error.message || "Server error.";
         renderChatMessage("system", errMsg);
-        try { await speak(errMsg); } catch (_) {}
+        try { speak(errMsg); } catch (_) {}
         setOrbState("ready");
         setConnStatus(false);
     }
@@ -1836,8 +1978,10 @@ async function refreshEmailPanel() {
     try {
         const data   = await fetchJson("/api/emails");
         const emails = (data.emails || []).slice(0, 5);
+        cachedEmailCount = emails.length;
+        updateStatusBar();
         if (!emails.length) {
-            el.innerHTML = '<div class="empty-note">No emails yet.</div>';
+            el.innerHTML = '<div class="empty-note">Say "check my emails" to fetch them.</div>';
             return;
         }
         el.innerHTML = emails.map(e => {
@@ -1973,8 +2117,10 @@ async function refreshRoutinesPanel() {
     try {
         const data     = await fetchJson("/api/routines");
         const routines = data.routines || [];
+        cachedActiveRoutines = routines.filter(r => r.active).length;
+        updateStatusBar();
         if (!routines.length) {
-            el.innerHTML = '<div class="empty-note">No routines.</div>';
+            el.innerHTML = '<div class="empty-note">Say "add a routine" to create one.</div>';
             return;
         }
         el.innerHTML = routines.map(r => `
@@ -2021,15 +2167,54 @@ async function addRoutineQuick() {
     }
 }
 
+async function refreshFast() {
+    await Promise.all([refreshMemory(), loadNotifications(), loadTasks()]);
+}
+
+async function refreshSlow() {
+    await Promise.all([refreshEmailPanel(), refreshFinancePanel(), refreshRoutinesPanel()]);
+}
+
 async function refreshAll() {
-    await Promise.all([
-        refreshMemory(),
-        loadNotifications(),
-        loadTasks(),
-        refreshEmailPanel(),
-        refreshFinancePanel(),
-        refreshRoutinesPanel()
-    ]);
+    await Promise.all([refreshFast(), refreshSlow()]);
+}
+
+function _smartRefresh(msg) {
+    const t = (msg || "").toLowerCase();
+    const isEmail    = /email|inbox|mail/.test(t);
+    const isFinance  = /spend|budget|transact|expense|income|finance/.test(t);
+    const isRoutine  = /routine|schedule|cron/.test(t);
+    const isMemory   = /remember|save|note|forget/.test(t);
+
+    const fast = [refreshMemory(), loadNotifications(), loadTasks()];
+    const slow = [];
+    if (isEmail)   slow.push(refreshEmailPanel());
+    if (isFinance) slow.push(refreshFinancePanel());
+    if (isRoutine) slow.push(refreshRoutinesPanel());
+    if (!slow.length) slow.push(refreshEmailPanel(), refreshFinancePanel(), refreshRoutinesPanel());
+    Promise.all([...fast, ...slow]);
+}
+
+function updateStatusBar() {
+    const bar = document.getElementById("chatStatusBar");
+    if (!bar) return;
+    const conn  = document.getElementById("connDot");
+    const online = conn && conn.classList.contains("on");
+    const parts = ["Apex"];
+    if (!online) parts.push("· Offline");
+    else parts.push("· Online");
+    if (cachedEmailCount > 0) parts.push(`· ${cachedEmailCount} email${cachedEmailCount !== 1 ? "s" : ""}`);
+    if (cachedActiveRoutines > 0) parts.push(`· ${cachedActiveRoutines} routine${cachedActiveRoutines !== 1 ? "s" : ""} active`);
+    bar.textContent = parts.join(" ");
+}
+
+function clearChat() {
+    const log = document.getElementById("chatLog");
+    if (!log) return;
+    const keep = log.querySelector("#typingIndicator");
+    log.innerHTML = "";
+    if (keep) log.appendChild(keep);
+    log.innerHTML += '<div class="empty-note" style="text-align:center;padding:20px 0">Chat cleared. Say something or type below.</div>';
 }
 
 // ══ KEYBOARD ══════════════════════════════════════════════════════════
@@ -2037,10 +2222,30 @@ document.getElementById("chatInput").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatCommand(); }
 });
 
+document.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+        if (isListening) stopListening();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        speakQueue.length = 0;
+        isSpeakingNow = false;
+        setOrbState(autoListen ? "waiting" : "ready");
+    }
+});
+
 // ══ INIT ══════════════════════════════════════════════════════════════
 setOrbState("waiting");
-refreshAll();
-setInterval(refreshAll, REFRESH_INTERVAL_MS);
+updateStatusBar();
+const slider = document.getElementById("speedSlider");
+if (slider) { slider.value = voiceSpeed; }
+refreshFast();
+refreshSlow();
+setInterval(refreshFast, REFRESH_INTERVAL_MS);
+setInterval(refreshSlow, SLOW_REFRESH_MS);
+fetch(buildApiUrl("/api/ping"), { headers: buildApiHeaders({}) })
+    .then(r => r.json())
+    .then(d => { setConnStatus(true); updateStatusBar(); })
+    .catch(() => { setConnStatus(false); updateStatusBar(); });
 setTimeout(() => { if (autoListen && !isListening) startListening(); }, 1000);
 </script>
 </body>

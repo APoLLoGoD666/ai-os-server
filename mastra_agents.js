@@ -8,6 +8,31 @@ const { anthropic } = require("@ai-sdk/anthropic");
 const { z } = require("zod");
 
 let apexAgent, emailAgent, financeAgent, routineAgent, researchAgent, mastraInstance;
+const _agentStatus = {};
+
+function getMastraStatus() {
+    return {
+        apex:     !!apexAgent,
+        email:    !!emailAgent,
+        finance:  !!financeAgent,
+        routine:  !!routineAgent,
+        research: !!researchAgent,
+        mastra:   !!mastraInstance,
+        details:  _agentStatus
+    };
+}
+
+function _tryInitAgent(name, factory) {
+    try {
+        const agent = factory();
+        _agentStatus[name] = "ok";
+        return agent;
+    } catch (err) {
+        _agentStatus[name] = `error: ${err.message}`;
+        console.error(`MASTRA: ${name} init failed —`, err.message);
+        return null;
+    }
+}
 
 function initMastra(handleCommand) {
 
@@ -222,7 +247,7 @@ function initMastra(handleCommand) {
 
     // ── Agents ─────────────────────────────────────────────────────────────
 
-    apexAgent = new Agent({
+    apexAgent = _tryInitAgent("apex", () => new Agent({
         name: "apexAgent",
         instructions: `You are Apex, an autonomous AI assistant with access to the following tools:
 
@@ -257,7 +282,8 @@ NOTIFICATIONS:
 - When asked to check for new emails, call check_emails.
 - When asked for a finance summary, call get_finance_summary immediately.
 - Never deny a capability that a tool exists for. Never describe what you would do — just do it.
-- Be concise and practical. Use the most specific tool available.`,
+- Be concise and practical. Use the most specific tool available.
+- Be extremely concise. Maximum 3 sentences unless the user explicitly asks for more detail. Prefer bullet points for lists.`,
         model: anthropic(process.env.ANTHROPIC_MODEL || "claude-opus-4-7"),
         tools: {
             save_note: saveNoteTool,
@@ -277,9 +303,9 @@ NOTIFICATIONS:
             create_routine: createRoutineTool,
             create_notification: createNotificationTool
         }
-    });
+    }));
 
-    emailAgent = new Agent({
+    emailAgent = _tryInitAgent("email", () => new Agent({
         name: "emailAgent",
         instructions: `You are the Email Agent for Apex AI OS. You manage the user's Gmail inbox.
 
@@ -291,9 +317,9 @@ Flag urgent emails immediately. Present emails in a clear, actionable format.`,
             list_emails: listEmailsTool,
             create_notification: createNotificationTool
         }
-    });
+    }));
 
-    financeAgent = new Agent({
+    financeAgent = _tryInitAgent("finance", () => new Agent({
         name: "financeAgent",
         instructions: `You are the Finance Agent for Apex AI OS. You track the user's personal finances.
 
@@ -306,9 +332,9 @@ Always show GBP amounts. Provide clear, precise summaries.`,
             set_budget: setBudgetTool,
             create_notification: createNotificationTool
         }
-    });
+    }));
 
-    routineAgent = new Agent({
+    routineAgent = _tryInitAgent("routine", () => new Agent({
         name: "routineAgent",
         instructions: `You are the Routine Agent for Apex AI OS. You manage the user's daily and weekly routines.
 
@@ -320,9 +346,9 @@ When routines are due, execute and report outcomes clearly.`,
             create_routine: createRoutineTool,
             create_notification: createNotificationTool
         }
-    });
+    }));
 
-    researchAgent = new Agent({
+    researchAgent = _tryInitAgent("research", () => new Agent({
         name: "researchAgent",
         instructions: `You are the Research Agent for Apex AI OS. You help the user research topics and synthesise information.
 
@@ -336,7 +362,7 @@ Summarise research clearly. When saving findings, classify them appropriately (u
             save_note: saveNoteTool,
             create_file: createFileTool
         }
-    });
+    }));
 
     // ── Daily Briefing Workflow ────────────────────────────────────────────
     // Steps pass data forward through their output schema so every subsequent
@@ -474,4 +500,22 @@ Summarise research clearly. When saving findings, classify them appropriately (u
     return { apexAgent, emailAgent, financeAgent, routineAgent, researchAgent, mastra: mastraInstance };
 }
 
-module.exports = { initMastra };
+function initMastraWithRetry(handleCommand) {
+    try {
+        return initMastra(handleCommand);
+    } catch (err) {
+        console.error("MASTRA INIT FAILED, retrying in 5s:", err.message);
+        setTimeout(() => {
+            try {
+                const agents = initMastra(handleCommand);
+                Object.assign(apexAgent    && {}, agents);
+                console.log("MASTRA RETRY SUCCESS");
+            } catch (e2) {
+                console.error("MASTRA RETRY FAILED:", e2.message);
+            }
+        }, 5000);
+        return { apexAgent, emailAgent, financeAgent, routineAgent, researchAgent, mastra: mastraInstance };
+    }
+}
+
+module.exports = { initMastra: initMastraWithRetry, getMastraStatus };
