@@ -7291,9 +7291,10 @@ const server = require("http").createServer(app);
 
 const wss = new WebSocketServer({ server, path: "/deepgram-proxy" });
 wss.on("connection", (browserSocket) => {
-    const dgWs = new WS("wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=300&interim_results=true", {
-        headers: { "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}` }
-    });
+    const dgWs = new WS(
+        "wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=300&interim_results=true&encoding=linear16&sample_rate=16000",
+        { headers: { "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}` } }
+    );
     dgWs.on("open", () => browserSocket.send(JSON.stringify({ type: "Connected" })));
     dgWs.on("message", (data) => { if (browserSocket.readyState === 1) browserSocket.send(data); });
     dgWs.on("close", () => browserSocket.close());

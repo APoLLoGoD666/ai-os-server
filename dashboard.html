@@ -1253,6 +1253,8 @@ let cachedNotifications = [];
 let dgSocket            = null;
 let dgStream            = null;
 let dgRecorder          = null;
+let dgAudioCtx          = null;
+let dgProcessor         = null;
 let dgMuted             = false;
 let currentAudio        = null;
 let speakQueue          = [];
@@ -1648,8 +1650,25 @@ async function initDeepgram() {
     if (dgSocket && dgSocket.readyState === WebSocket.OPEN) return;
     dgMuted = false;
     try {
-        dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log("[Deepgram] mic stream acquired");
+        dgStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+        console.log("[Deepgram] mic acquired");
+
+        dgAudioCtx = new AudioContext({ sampleRate: 16000 });
+        const source = dgAudioCtx.createMediaStreamSource(dgStream);
+        dgProcessor = dgAudioCtx.createScriptProcessor(4096, 1, 1);
+        source.connect(dgProcessor);
+        dgProcessor.connect(dgAudioCtx.destination);
+
+        dgProcessor.onaudioprocess = e => {
+            if (!dgSocket || dgSocket.readyState !== WebSocket.OPEN || dgMuted) return;
+            const float32 = e.inputBuffer.getChannelData(0);
+            const int16 = new Int16Array(float32.length);
+            for (let i = 0; i < float32.length; i++) {
+                int16[i] = Math.max(-32768, Math.min(32767, float32[i] * 32768));
+            }
+            dgSocket.send(int16.buffer);
+        };
+        console.log("[Deepgram] audio processor started");
 
         const wsUrl = `wss://ai-os-server-jx20.onrender.com/deepgram-proxy`;
         console.log("[Deepgram] connecting to proxy:", wsUrl);
@@ -1661,15 +1680,9 @@ async function initDeepgram() {
 
         dgSocket.onopen = () => {
             dgMuted = false;
-            console.log("[Deepgram] ready, dgMuted reset to false");
-            dgRecorder = new MediaRecorder(dgStream);
-            dgRecorder.ondataavailable = e => {
-                if (dgSocket && dgSocket.readyState === WebSocket.OPEN && e.data.size > 0) {
-                    dgSocket.send(e.data);
-                }
-            };
-            dgRecorder.start(100);
-            console.log("[Deepgram] recording started");
+            console.log("[Deepgram] proxy connected, ready");
+            setOrbState("listening");
+            isListening = true;
         };
 
         dgSocket.onmessage = e => {
@@ -1694,7 +1707,6 @@ async function initDeepgram() {
         dgSocket.onclose = e => {
             console.log("[Deepgram] onclose fired, code:", e.code, "reason:", e.reason);
             isListening = false;
-            dgRecorder = null;
             if (autoListen) setTimeout(initDeepgram, 1000);
         };
     } catch (err) {
@@ -1727,10 +1739,10 @@ function stopListening() {
     isListening = false;
     dgMuted = false;
     setOrbState("ready");
-    try { if (dgRecorder && dgRecorder.state !== "inactive") dgRecorder.stop(); } catch (_) {}
+    try { if (dgProcessor) { dgProcessor.disconnect(); dgProcessor = null; } } catch (_) {}
+    try { if (dgAudioCtx) { dgAudioCtx.close(); dgAudioCtx = null; } } catch (_) {}
     try { if (dgSocket) { dgSocket.close(); dgSocket = null; } } catch (_) {}
     try { if (dgStream) { dgStream.getTracks().forEach(t => t.stop()); dgStream = null; } } catch (_) {}
-    dgRecorder = null;
 }
 
 function toggleListening() {
