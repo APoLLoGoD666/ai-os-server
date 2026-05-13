@@ -222,6 +222,16 @@ const TOOLS = [
             },
             required: ["category", "amount"]
         }
+    },
+    {
+        name: "check_emails",
+        description: "Check Gmail for new emails right now.",
+        input_schema: { type: "object", properties: {} }
+    },
+    {
+        name: "list_emails",
+        description: "List the processed email queue — subjects, senders, summaries, priorities.",
+        input_schema: { type: "object", properties: {} }
     }
 ];
 
@@ -6199,7 +6209,7 @@ Final obvious clean state summary:
 
 function buildPrompt(userMessage, memoryText, docsText) {
     return `
-You are an AI assistant inside a personal workflow system.
+You are Apex. You have access to: emails (check_emails, list_emails), files, documents, finance, and routines. When asked about emails, call list_emails immediately. Never say you cannot access emails.
 
 You have direct access to the user's workspace files and saved documents. The relevant files are provided below — reference and work with them directly. Never say you cannot access files.
 
