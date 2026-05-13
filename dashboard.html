@@ -207,6 +207,12 @@
 
         .mem-role.user { color: rgba(238,242,255,0.45); }
 
+        .mem-time {
+            font-size: 9px;
+            color: var(--muted);
+            margin-top: 3px;
+        }
+
         .mem-text {
             font-size: 12px;
             line-height: 1.55;
@@ -239,6 +245,13 @@
             color: var(--text);
             margin-bottom: 4px;
             line-height: 1.45;
+        }
+
+        .queue-card-summary {
+            font-size: 11px;
+            color: var(--muted);
+            margin: 3px 0 5px;
+            line-height: 1.4;
         }
 
         .queue-card-meta {
@@ -1528,8 +1541,9 @@ async function _processSpeak() {
     }
     isSpeakingNow = false;
     if (autoListen) {
+        recognition = initRecognition();
         setOrbState("waiting");
-        setTimeout(() => { if (autoListen && !isListening) startListening(); }, 800);
+        setTimeout(() => { if (autoListen && !isListening) startListening(); }, 200);
     } else {
         setOrbState("ready");
     }
@@ -1587,6 +1601,7 @@ function initRecognition() {
     rec.onerror = e => {
         stopListening();
         if (e.error === "not-allowed" || e.error === "permission-denied") {
+            recognition = null;
             _showBanner("banner-micdenied",
                 "Microphone access denied — <strong style='cursor:pointer;text-decoration:underline' onclick=\"navigator.mediaDevices.getUserMedia({audio:true}).catch(()=>{})\">click here to enable</strong>.");
         } else if (e.error === "no-speech" && autoListen) {
@@ -1632,8 +1647,9 @@ function toggleAutoListen() {
         setOrbState("ready");
     } else {
         if (!isListening) {
+            recognition = initRecognition();
             setOrbState("waiting");
-            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 500);
+            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 200);
         }
     }
 }
@@ -1817,9 +1833,11 @@ async function refreshMemory() {
                 const role      = String(item.role || "ai").toLowerCase();
                 const roleClass = role === "assistant" ? "ai" : role;
                 const roleLabel = role === "user" ? "You" : "APEX";
+                const ts        = item.created_at || item.timestamp || "";
+                const timeStr   = ts ? new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
                 return `
                     <div class="mem-item">
-                        <div class="mem-role ${escapeHtml(roleClass)}">${escapeHtml(roleLabel)}</div>
+                        <div class="mem-role ${escapeHtml(roleClass)}">${escapeHtml(roleLabel)}${timeStr ? ` <span class="mem-time">${escapeHtml(timeStr)}</span>` : ""}</div>
                         <div class="mem-text">${escapeHtml(shortenText(item.message || "", 96))}</div>
                     </div>
                 `;
@@ -1900,16 +1918,26 @@ function renderApprovalQueue() {
         return;
     }
 
-    container.innerHTML = waiting.map(task => `
+    container.innerHTML = waiting.map(task => {
+        const ctx     = task.context_json || {};
+        const isEmail = ctx.type === "email_reply";
+        const title   = isEmail
+            ? escapeHtml(shortenText(ctx.subject || task.goal, 60))
+            : escapeHtml(shortenText(task.goal || "Untitled task", 70));
+        const summary = isEmail
+            ? `<div class="queue-card-summary">${escapeHtml(shortenText(task.goal.replace(/^Email from [^:]+:\s*/i, ""), 100))}</div>`
+            : "";
+        return `
         <div class="queue-card">
-            <div class="queue-card-goal">${escapeHtml(shortenText(task.goal || "Untitled task", 70))}</div>
+            <div class="queue-card-goal">${title}</div>
+            ${summary}
             <div class="queue-card-meta">Task ${escapeHtml(String(task.id))}</div>
             <div class="queue-actions">
                 <button class="queue-btn yes" onclick="approveAgentTask(${task.id}, this)">Approve</button>
                 <button class="queue-btn no"  onclick="rejectAgentTask(${task.id}, this)">Reject</button>
             </div>
-        </div>
-    `).join("");
+        </div>`;
+    }).join("");
 }
 
 async function approveAgentTask(id, btn) {
@@ -1988,8 +2016,9 @@ async function refreshEmailPanel() {
             return;
         }
         el.innerHTML = emails.map(e => {
-            const hasReply = !!e.suggested_reply;
+            const hasReply   = !!e.suggested_reply;
             const statusSent = e.status === "sent" || e.status === "rejected";
+            const isUrgent   = e.priority === "urgent";
             const actionBtns = hasReply && !statusSent
                 ? `<div class="email-actions">
                     <button class="email-btn approve" onclick="approveEmail(${e.id})">Reply</button>
@@ -1997,7 +2026,7 @@ async function refreshEmailPanel() {
                    </div>`
                 : `<div style="font-size:10px;color:var(--muted);margin-top:5px">${e.status}</div>`;
             return `
-                <div class="email-item" id="email-${e.id}">
+                <div class="email-item" id="email-${e.id}"${isUrgent ? ' style="border-left:2px solid #ff4d6d"' : ''}>
                     <div class="email-meta">
                         <span class="email-priority ${escapeHtml(e.priority)}">${escapeHtml(e.priority)}</span>
                         <span class="email-sender">${escapeHtml(e.sender || "Unknown")}</span>
@@ -2205,7 +2234,6 @@ function updateStatusBar() {
     const online = conn && conn.classList.contains("on");
     const parts = ["Apex"];
     if (!online) parts.push("· Offline");
-    else parts.push("· Online");
     if (cachedEmailCount > 0) parts.push(`· ${cachedEmailCount} email${cachedEmailCount !== 1 ? "s" : ""}`);
     if (cachedActiveRoutines > 0) parts.push(`· ${cachedActiveRoutines} routine${cachedActiveRoutines !== 1 ? "s" : ""} active`);
     bar.textContent = parts.join(" ");

@@ -103,6 +103,13 @@ async function checkEmails(anthropicClient) {
             const email  = await parseEmailMessage(gmail, msg.id);
             const triage = await triageEmail(email, anthropicClient);
 
+            // Force urgent for failed payment emails regardless of Claude triage
+            const subjectLc = (email.subject || "").toLowerCase();
+            if (/payment/.test(subjectLc) && /unsuccessful|failed/.test(subjectLc)) {
+                triage.priority      = "urgent";
+                triage.needs_approval = true;
+            }
+
             const saved = await pgSaveEmailQueueItem(
                 email.gmailId,
                 email.sender,
