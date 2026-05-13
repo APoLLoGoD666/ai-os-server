@@ -1653,13 +1653,18 @@ async function initDeepgram() {
         console.log("[Deepgram] token fetched");
 
         dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("[Deepgram] mic stream acquired");
 
         const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=300&token=${token}`;
+        console.log("[Deepgram] creating WebSocket:", wsUrl.replace(token, "TOKEN"));
         dgSocket = new WebSocket(wsUrl);
+        console.log("[Deepgram] WebSocket created, readyState:", dgSocket.readyState);
+
+        isListening = true;
+        setOrbState("listening");
 
         dgSocket.onopen = () => {
-            isListening = true;
-            setOrbState("listening");
+            console.log("[Deepgram] onopen fired");
             dgRecorder = new MediaRecorder(dgStream);
             dgRecorder.ondataavailable = e => {
                 if (dgSocket && dgSocket.readyState === WebSocket.OPEN && e.data.size > 0) {
@@ -1685,9 +1690,11 @@ async function initDeepgram() {
             } catch (_) {}
         };
 
-        dgSocket.onerror = e => console.error("[Deepgram] error", e);
-        dgSocket.onclose = () => {
-            console.log("[Deepgram] closed, reconnecting…");
+        dgSocket.onerror = e => {
+            console.error("[Deepgram] WebSocket error:", e);
+        };
+        dgSocket.onclose = e => {
+            console.log("[Deepgram] onclose fired, code:", e.code, "reason:", e.reason);
             isListening = false;
             dgRecorder = null;
             if (autoListen) setTimeout(initDeepgram, 1000);

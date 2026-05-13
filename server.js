@@ -7234,7 +7234,7 @@ app.get("/api/config", requireAppAccess, (req, res) => {
     });
 });
 
-app.get("/api/deepgram-token", requireAppAccess, (req, res) => {
+app.get("/api/deepgram-token", (req, res) => {
     const key = process.env.DEEPGRAM_API_KEY;
     if (!key) return res.status(503).json({ ok: false, error: "Deepgram not configured." });
     res.json({ ok: true, token: key });
