@@ -1646,12 +1646,12 @@ function _showBanner(id, html) {
 
 async function initDeepgram() {
     if (dgSocket && dgSocket.readyState === WebSocket.OPEN) return;
+    dgMuted = false;
     try {
         const tokenRes = await fetch(buildApiUrl("/api/deepgram-token"), { headers: buildApiHeaders() });
         if (!tokenRes.ok) throw new Error("Deepgram token unavailable");
         const { token } = await tokenRes.json();
         console.log("[Deepgram] token fetched");
-        dgMuted = false;
 
         dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log("[Deepgram] mic stream acquired");
@@ -1673,7 +1673,7 @@ async function initDeepgram() {
                     dgSocket.send(e.data);
                 }
             };
-            dgRecorder.start(250);
+            dgRecorder.start(100);
             console.log("[Deepgram] recording started");
         };
 
