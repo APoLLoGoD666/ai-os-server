@@ -1253,6 +1253,9 @@ let cachedNotifications = [];
 let dgSocket            = null;
 let dgStream            = null;
 let dgRecorder          = null;
+let dgAudioCtx          = null;
+let dgGainNode          = null;
+let dgMuted             = false;
 let currentAudio        = null;
 let speakQueue          = [];
 let isSpeakingNow       = false;
@@ -1583,8 +1586,8 @@ function hideTypingIndicator() {
 
 async function _speakInternal(text, useFiller) {
     try {
-        // Mute mic before speaking to prevent feedback loop (keep WebSocket alive)
-        pauseListening();
+        // Mute mic via GainNode — WebSocket stays alive
+        muteDeepgram();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         const phrase = summariseForSpeech(text);
         if (!phrase) return;
@@ -1611,12 +1614,11 @@ async function _processSpeak() {
     }
     isSpeakingNow = false;
     if (autoListen) {
-        setOrbState("waiting");
-        if (dgSocket && dgSocket.readyState === WebSocket.OPEN) {
-            resumeListening();
-            setOrbState("listening");
+        unmuteDeepgram();
+        if (!dgSocket || dgSocket.readyState !== WebSocket.OPEN) {
+            setTimeout(initDeepgram, 300);
         } else {
-            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 300);
+            setOrbState("listening");
         }
     } else {
         setOrbState("ready");
@@ -1644,11 +1646,8 @@ function _showBanner(id, html) {
     document.body.appendChild(el);
 }
 
-async function startListening() {
-    if (isSpeakingNow || isListening) return;
-    interruptSpeech();
-    speakQueue.length = 0;
-
+async function initDeepgram() {
+    if (dgSocket && dgSocket.readyState === WebSocket.OPEN) return;
     try {
         const tokenRes = await fetch(buildApiUrl("/api/deepgram-token"), { headers: buildApiHeaders() });
         if (!tokenRes.ok) throw new Error("Deepgram token unavailable");
@@ -1657,69 +1656,91 @@ async function startListening() {
 
         dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+        dgAudioCtx = new AudioContext();
+        const source = dgAudioCtx.createMediaStreamSource(dgStream);
+        dgGainNode = dgAudioCtx.createGain();
+        dgGainNode.gain.value = 1;
+        const dest = dgAudioCtx.createMediaStreamDestination();
+        source.connect(dgGainNode);
+        dgGainNode.connect(dest);
+
         const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=300&token=${token}`;
         dgSocket = new WebSocket(wsUrl);
 
         dgSocket.onopen = () => {
             isListening = true;
             setOrbState("listening");
-            dgRecorder = new MediaRecorder(dgStream, { mimeType: "audio/webm" });
+            dgRecorder = new MediaRecorder(dest.stream, { mimeType: "audio/webm" });
             dgRecorder.ondataavailable = e => {
                 if (dgSocket && dgSocket.readyState === WebSocket.OPEN && e.data.size > 0) {
                     dgSocket.send(e.data);
                 }
             };
             dgRecorder.start(250);
+            console.log("[Deepgram] WebSocket open, recording started");
         };
 
         dgSocket.onmessage = e => {
+            if (dgMuted) return;
             try {
                 const msg = JSON.parse(e.data);
                 const transcript = msg?.channel?.alternatives?.[0]?.transcript?.trim();
                 const isFinal = msg?.is_final;
                 if (transcript && isFinal) {
+                    console.log("[Deepgram] transcript:", transcript);
                     document.getElementById("chatInput").value = transcript;
                     lastSendWasVoice = true;
-                    pauseListening();
+                    muteDeepgram();
                     sendVoiceChatCommand(transcript);
                 }
             } catch (_) {}
         };
 
-        dgSocket.onerror = () => stopListening();
+        dgSocket.onerror = e => console.error("[Deepgram] error", e);
         dgSocket.onclose = () => {
-            if (isListening) {
-                isListening = false;
-                setOrbState("ready");
-            }
+            console.log("[Deepgram] WebSocket closed, reconnecting in 1s…");
+            isListening = false;
+            setOrbState("ready");
+            if (autoListen) setTimeout(initDeepgram, 1000);
         };
     } catch (err) {
         isListening = false;
         setOrbState("ready");
         if (err.name === "NotAllowedError") {
-            _showBanner("banner-micdenied",
-                "Microphone access denied — <strong style='cursor:pointer;text-decoration:underline' onclick=\"navigator.mediaDevices.getUserMedia({audio:true}).catch(()=>{})\">click here to enable</strong>.");
+            _showBanner("banner-micdenied", "Microphone access denied.");
         } else {
-            console.error("DEEPGRAM START ERROR:", err.message);
+            console.error("[Deepgram] init error:", err.message);
+            if (autoListen) setTimeout(initDeepgram, 2000);
         }
     }
 }
 
-function pauseListening() {
-    try { if (dgRecorder && dgRecorder.state === "recording") dgRecorder.pause(); } catch (_) {}
+function muteDeepgram() {
+    dgMuted = true;
+    if (dgGainNode) dgGainNode.gain.value = 0;
+    setOrbState("thinking");
 }
 
-function resumeListening() {
-    try { if (dgRecorder && dgRecorder.state === "paused") dgRecorder.resume(); } catch (_) {}
+function unmuteDeepgram() {
+    dgMuted = false;
+    if (dgGainNode) dgGainNode.gain.value = 1;
+    if (isListening) setOrbState("listening");
+}
+
+function startListening() {
+    initDeepgram();
 }
 
 function stopListening() {
     isListening = false;
+    dgMuted = false;
     setOrbState("ready");
     try { if (dgRecorder && dgRecorder.state !== "inactive") dgRecorder.stop(); } catch (_) {}
     try { if (dgSocket) { dgSocket.close(); dgSocket = null; } } catch (_) {}
     try { if (dgStream) { dgStream.getTracks().forEach(t => t.stop()); dgStream = null; } } catch (_) {}
+    try { if (dgAudioCtx) { dgAudioCtx.close(); dgAudioCtx = null; } } catch (_) {}
     dgRecorder = null;
+    dgGainNode = null;
 }
 
 function toggleListening() {
@@ -1735,9 +1756,9 @@ function toggleAutoListen() {
         if (isListening) stopListening();
         setOrbState("ready");
     } else {
-        if (!isListening) {
+        if (!dgSocket || dgSocket.readyState !== WebSocket.OPEN) {
             setOrbState("waiting");
-            startListening();
+            initDeepgram();
         }
     }
 }
@@ -2522,7 +2543,7 @@ setInterval(refreshSlow, SLOW_REFRESH_MS);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
-setTimeout(() => { if (autoListen && !isListening) startListening(); }, 1000);
+setTimeout(() => { if (autoListen) initDeepgram(); }, 1000);
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(err => console.warn("SW register failed:", err.message));
 }
