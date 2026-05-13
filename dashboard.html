@@ -1648,16 +1648,11 @@ async function initDeepgram() {
     if (dgSocket && dgSocket.readyState === WebSocket.OPEN) return;
     dgMuted = false;
     try {
-        const tokenRes = await fetch(buildApiUrl("/api/deepgram-token"), { headers: buildApiHeaders() });
-        if (!tokenRes.ok) throw new Error("Deepgram token unavailable");
-        const { token } = await tokenRes.json();
-        console.log("[Deepgram] token fetched");
-
         dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log("[Deepgram] mic stream acquired");
 
-        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=300&token=${token}`;
-        console.log("[Deepgram] creating WebSocket:", wsUrl.replace(token, "TOKEN"));
+        const wsUrl = `wss://ai-os-server-jx20.onrender.com/deepgram-proxy`;
+        console.log("[Deepgram] connecting to proxy:", wsUrl);
         dgSocket = new WebSocket(wsUrl);
         console.log("[Deepgram] WebSocket created, readyState:", dgSocket.readyState);
 
