@@ -1366,7 +1366,7 @@ function summariseForSpeech(raw) {
 
     if (clean.length >= 300) {
         if (/saved|note saved|stored/.test(t))                         return "Got it, saved.";
-        if (/deleted|removed/.test(t))                                 return "Done, removed.";
+        if (/\bdeleted\b|\bremoved\b/.test(t))                         return "Done, removed.";
         if (/file created|created/.test(t))                            return "Created.";
         if (/renamed/.test(t))                                         return "Renamed.";
         if (/error|could not|couldn't|failed|unable/.test(t))          return "Something went wrong, please try again.";
@@ -1540,13 +1540,7 @@ async function _processSpeak() {
         await _speakInternal(text, useFiller);
     }
     isSpeakingNow = false;
-    if (autoListen) {
-        recognition = initRecognition();
-        setOrbState("waiting");
-        setTimeout(() => { if (autoListen && !isListening) startListening(); }, 200);
-    } else {
-        setOrbState("ready");
-    }
+    setOrbState(autoListen ? "waiting" : "ready");
 }
 
 function speak(text, { useFiller = false } = {}) {
@@ -1577,42 +1571,47 @@ function initRecognition() {
         return null;
     }
     const rec = new SR();
-    rec.continuous     = false;
+    rec.continuous     = true;
     rec.interimResults = false;
     rec.lang           = "en-GB";
-    let gotResult      = false;
 
-    rec.onstart = () => {
-        gotResult = false;
+    rec.onspeechstart = () => {
+        // User started talking — cancel any playing TTS immediately
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        speakQueue.length = 0;
+        isSpeakingNow = false;
+        setOrbState("listening");
     };
 
     rec.onresult = e => {
-        gotResult = true;
-        const transcript = e.results[0][0].transcript;
-        interruptSpeech();
+        const result = e.results[e.results.length - 1];
+        if (!result.isFinal) return;
+        const transcript = result[0].transcript.trim();
+        if (!transcript) return;
         document.getElementById("chatInput").value = transcript;
-        stopListening();
         lastSendWasVoice = true;
         sendVoiceChatCommand(transcript);
     };
 
     rec.onerror = e => {
-        stopListening();
         if (e.error === "not-allowed" || e.error === "permission-denied") {
             recognition = null;
+            isListening = false;
+            setOrbState("ready");
             _showBanner("banner-micdenied",
                 "Microphone access denied — <strong style='cursor:pointer;text-decoration:underline' onclick=\"navigator.mediaDevices.getUserMedia({audio:true}).catch(()=>{})\">click here to enable</strong>.");
-        } else if (e.error === "no-speech" && autoListen) {
-            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 500);
         }
+        // Other errors (no-speech, audio-capture) are ignored — continuous mode recovers
     };
 
     rec.onend = () => {
-        if (isListening) stopListening();
-        if (!gotResult && autoListen) {
-            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 300);
+        // Restart immediately if we're supposed to be listening (unexpected end)
+        if (isListening && autoListen) {
+            try { recognition.start(); } catch (_) {}
+        } else {
+            isListening = false;
+            setOrbState(autoListen ? "waiting" : "ready");
         }
     };
     return rec;
@@ -1647,9 +1646,8 @@ function toggleAutoListen() {
         setOrbState("ready");
     } else {
         if (!isListening) {
-            recognition = initRecognition();
             setOrbState("waiting");
-            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 200);
+            startListening();
         }
     }
 }
@@ -1833,7 +1831,7 @@ async function refreshMemory() {
                 const role      = String(item.role || "ai").toLowerCase();
                 const roleClass = role === "assistant" ? "ai" : role;
                 const roleLabel = role === "user" ? "You" : "APEX";
-                const ts        = item.created_at || item.timestamp || "";
+                const ts        = item.time || item.created_at || item.timestamp || "";
                 const timeStr   = ts ? new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
                 return `
                     <div class="mem-item">
@@ -2018,7 +2016,7 @@ async function refreshEmailPanel() {
         el.innerHTML = emails.map(e => {
             const hasReply   = !!e.suggested_reply;
             const statusSent = e.status === "sent" || e.status === "rejected";
-            const isUrgent   = e.priority === "urgent";
+            const isUrgent   = (e.priority || "").toLowerCase() === "urgent";
             const actionBtns = hasReply && !statusSent
                 ? `<div class="email-actions">
                     <button class="email-btn approve" onclick="approveEmail(${e.id})">Reply</button>

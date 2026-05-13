@@ -7180,6 +7180,15 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     ensureSetup();
 
+    // One-time backfill: mark existing payment failure emails as urgent
+    pool.query(
+        `UPDATE email_queue SET priority = 'urgent'
+         WHERE LOWER(subject) LIKE '%payment%'
+           AND (LOWER(subject) LIKE '%unsuccessful%' OR LOWER(subject) LIKE '%failed%')
+           AND priority != 'urgent'`
+    ).then(r => { if (r.rowCount > 0) console.log(`EMAIL BACKFILL: Marked ${r.rowCount} payment email(s) as urgent.`); })
+     .catch(err => console.error("EMAIL BACKFILL ERROR:", err.message));
+
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🤖 Model: ${MODEL}`);
     console.log(`🔑 API KEY LOADED: ${!!process.env.ANTHROPIC_API_KEY}`);
