@@ -1664,9 +1664,10 @@ async function startListening() {
     speakQueue.length = 0;
 
     try {
-        const tokenRes = await fetch(buildApiUrl("/api/deepgram-token"), { headers: buildHeaders() });
+        const tokenRes = await fetch(buildApiUrl("/api/deepgram-token"), { headers: buildApiHeaders() });
         if (!tokenRes.ok) throw new Error("Deepgram token unavailable");
         const { token } = await tokenRes.json();
+        console.log("[Deepgram] token fetched, opening WebSocket…");
 
         dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -2471,7 +2472,7 @@ document.addEventListener("drop", async e => {
             const base64 = ev.target.result.split(",")[1] || ev.target.result;
             const res = await fetch(buildApiUrl("/api/upload-file"), {
                 method: "POST",
-                headers: { ...buildHeaders(), "Content-Type": "application/json" },
+                headers: { ...buildApiHeaders(), "Content-Type": "application/json" },
                 body: JSON.stringify({ filename: file.name, data: base64, mimeType: file.type })
             });
             const data = await res.json();
@@ -2487,7 +2488,7 @@ document.addEventListener("drop", async e => {
 // ══ SUPABASE REALTIME ════════════════════════════════════════════════
 async function initSupabaseRealtime() {
     try {
-        const cfgRes = await fetch(buildApiUrl("/api/config"), { headers: buildHeaders() });
+        const cfgRes = await fetch(buildApiUrl("/api/config"), { headers: buildApiHeaders() });
         if (!cfgRes.ok) return;
         const { supabaseUrl, supabaseAnonKey } = await cfgRes.json();
         if (!supabaseUrl || !supabaseAnonKey) return;
