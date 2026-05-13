@@ -1515,6 +1515,9 @@ function hideTypingIndicator() {
 
 async function _speakInternal(text, useFiller) {
     try {
+        // Mute mic before speaking to prevent feedback loop
+        if (recognition) { try { recognition.stop(); } catch (_) {} }
+        isListening = false;
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         const phrase = summariseForSpeech(text);
         if (!phrase) return;
@@ -1540,7 +1543,12 @@ async function _processSpeak() {
         await _speakInternal(text, useFiller);
     }
     isSpeakingNow = false;
-    setOrbState(autoListen ? "waiting" : "ready");
+    if (autoListen) {
+        setOrbState("waiting");
+        setTimeout(() => { if (autoListen && !isListening) startListening(); }, 300);
+    } else {
+        setOrbState("ready");
+    }
 }
 
 function speak(text, { useFiller = false } = {}) {
@@ -1571,25 +1579,19 @@ function initRecognition() {
         return null;
     }
     const rec = new SR();
-    rec.continuous     = true;
+    rec.continuous     = false;
     rec.interimResults = false;
     rec.lang           = "en-GB";
+    let gotResult      = false;
 
-    rec.onspeechstart = () => {
-        // User started talking — cancel any playing TTS immediately
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
-        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-        speakQueue.length = 0;
-        isSpeakingNow = false;
-        setOrbState("listening");
-    };
+    rec.onstart = () => { gotResult = false; };
 
     rec.onresult = e => {
-        const result = e.results[e.results.length - 1];
-        if (!result.isFinal) return;
-        const transcript = result[0].transcript.trim();
+        gotResult = true;
+        const transcript = e.results[0][0].transcript.trim();
         if (!transcript) return;
         document.getElementById("chatInput").value = transcript;
+        stopListening();
         lastSendWasVoice = true;
         sendVoiceChatCommand(transcript);
     };
@@ -1601,29 +1603,29 @@ function initRecognition() {
             setOrbState("ready");
             _showBanner("banner-micdenied",
                 "Microphone access denied — <strong style='cursor:pointer;text-decoration:underline' onclick=\"navigator.mediaDevices.getUserMedia({audio:true}).catch(()=>{})\">click here to enable</strong>.");
+        } else if (e.error === "no-speech" && autoListen) {
+            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 500);
         }
-        // Other errors (no-speech, audio-capture) are ignored — continuous mode recovers
     };
 
     rec.onend = () => {
-        // Restart immediately if we're supposed to be listening (unexpected end)
-        if (isListening && autoListen) {
-            try { recognition.start(); } catch (_) {}
-        } else {
-            isListening = false;
-            setOrbState(autoListen ? "waiting" : "ready");
+        if (isListening) stopListening();
+        if (!gotResult && autoListen) {
+            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 300);
         }
     };
     return rec;
 }
 
 function startListening() {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    interruptSpeech();
+    speakQueue.length = 0;
+    isSpeakingNow = false;
     if (!recognition) recognition = initRecognition();
     if (!recognition) return;
     isListening = true;
     setOrbState("listening");
-    try { recognition.start(); } catch { stopListening(); }
+    try { recognition.start(); } catch (_) { stopListening(); }
 }
 
 function stopListening() {
