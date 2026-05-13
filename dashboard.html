@@ -1100,10 +1100,53 @@ function _speakUtterance(phrase, { onStart, onEnd } = {}) {
     window.speechSynthesis.speak(utt);
 }
 
-function speak(text, { useFiller = false } = {}) {
-    if (!window.speechSynthesis) return;
+async function speakWithElevenLabs(text) {
+    const phrase = summariseForSpeech(text);
+    if (!phrase) return false;
+
     try {
-        window.speechSynthesis.cancel();
+        const res = await fetch(buildApiUrl("/api/speak"), {
+            method: "POST",
+            headers: buildApiHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ text: phrase })
+        });
+
+        if (!res.ok) return false;
+
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+
+        setOrbState("speaking");
+        await new Promise((resolve, reject) => {
+            audio.onended  = resolve;
+            audio.onerror  = reject;
+            audio.play().catch(reject);
+        });
+
+        URL.revokeObjectURL(url);
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
+function _speakFallback(phrase, { onEnd } = {}) {
+    if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(phrase);
+    utt.rate = 1.08; utt.pitch = 0.95; utt.volume = 1;
+    const voice = _selectedVoice || _pickVoice();
+    if (voice) utt.voice = voice;
+    utt.onend   = () => { if (onEnd) onEnd(); };
+    utt.onerror = () => { if (onEnd) onEnd(); };
+    window.speechSynthesis.speak(utt);
+}
+
+async function speak(text, { useFiller = false } = {}) {
+    try {
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+
         const phrase = summariseForSpeech(text);
         if (!phrase) return;
 
@@ -1111,27 +1154,24 @@ function speak(text, { useFiller = false } = {}) {
 
         const filler = useFiller ? _pickFiller() : null;
 
+        const speakMain = async () => {
+            const ok = await speakWithElevenLabs(phrase);
+            if (!ok) {
+                await new Promise(resolve => _speakFallback(phrase, { onEnd: resolve }));
+            }
+            setOrbState("ready");
+            if (autoListen) setTimeout(() => startListening(), 1000);
+        };
+
         if (filler) {
-            _speakUtterance(filler, {
-                onEnd: () => {
-                    setTimeout(() => {
-                        _speakUtterance(phrase, {
-                            onEnd: () => {
-                                setOrbState("ready");
-                                if (autoListen) setTimeout(() => startListening(), 1000);
-                            }
-                        });
-                    }, 300);
-                }
-            });
-        } else {
-            _speakUtterance(phrase, {
-                onEnd: () => {
-                    setOrbState("ready");
-                    if (autoListen) setTimeout(() => startListening(), 1000);
-                }
-            });
+            const fillerOk = await speakWithElevenLabs(filler);
+            if (!fillerOk) {
+                await new Promise(resolve => _speakFallback(filler, { onEnd: resolve }));
+            }
+            await new Promise(r => setTimeout(r, 300));
         }
+
+        await speakMain();
     } catch (_) {
         setOrbState("ready");
     }
@@ -1163,7 +1203,7 @@ function initRecognition() {
         document.getElementById("chatInput").value = transcript;
         stopListening();
         lastSendWasVoice = true;
-        sendChatCommand();
+        sendVoiceChatCommand(transcript);
     };
 
     rec.onerror = e => {
@@ -1304,6 +1344,35 @@ async function sendChatCommandFromText(command, options = {}) {
         setOrbState("ready");
         setConnStatus(false);
         throw error;
+    }
+}
+
+async function sendVoiceChatCommand(msg) {
+    if (!msg || !msg.trim()) return;
+    document.getElementById("chatInput").value = "";
+    renderChatMessage("user", msg);
+    setOrbState("thinking");
+
+    try {
+        const data = await fetchJson("/api/voice-chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: msg })
+        });
+
+        const reply = data.reply || "Done.";
+        renderChatMessage("ai", reply);
+        setOrbState("speaking");
+        await speak(reply, { useFiller: true });
+
+        setConnStatus(true);
+        refreshAll();
+    } catch (error) {
+        const errMsg = error.message || "Server error.";
+        renderChatMessage("system", errMsg);
+        try { await speak(errMsg); } catch (_) {}
+        setOrbState("ready");
+        setConnStatus(false);
     }
 }
 

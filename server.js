@@ -6561,6 +6561,112 @@ app.post("/cloud-autopilot/apply", requireAppAccess, async (req, res) => {
     }
 });
 
+app.post("/api/speak", async (req, res) => {
+    try {
+        const text = String(req.body?.text || "").trim();
+        if (!text) return res.status(400).json({ ok: false, reply: "No text provided." });
+
+        const apiKey = process.env.ELEVENLABS_API_KEY;
+        if (!apiKey) return res.status(500).json({ ok: false, reply: "Missing ELEVENLABS_API_KEY." });
+
+        const elRes = await fetch("https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB", {
+            method: "POST",
+            headers: {
+                "xi-api-key": apiKey,
+                "Content-Type": "application/json",
+                "Accept": "audio/mpeg"
+            },
+            body: JSON.stringify({
+                text,
+                model_id: "eleven_monolingual_v1",
+                voice_settings: { stability: 0.5, similarity_boost: 0.85 }
+            })
+        });
+
+        if (!elRes.ok) {
+            const errText = await elRes.text();
+            return res.status(502).json({ ok: false, reply: `ElevenLabs error: ${errText}` });
+        }
+
+        res.set("Content-Type", "audio/mpeg");
+        const buf = await elRes.arrayBuffer();
+        return res.send(Buffer.from(buf));
+    } catch (error) {
+        console.error("SPEAK ERROR:", error);
+        return res.status(500).json({ ok: false, reply: error.message || "Speak failed." });
+    }
+});
+
+app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
+    try {
+        const rawMessage = req.body?.message;
+
+        if (!rawMessage || typeof rawMessage !== "string" || !rawMessage.trim()) {
+            return res.status(400).json({ ok: false, reply: "Please enter a message." });
+        }
+
+        if (!process.env.ANTHROPIC_API_KEY) {
+            return res.status(500).json({ ok: false, reply: "Missing ANTHROPIC_API_KEY in .env" });
+        }
+
+        const userMessage = rawMessage.trim();
+        await addToMemory("user", userMessage);
+
+        const memoryText = await formatRecentMemory();
+        const relevantDocs = await getRelevantDocuments(userMessage);
+        const docsText = relevantDocs.length
+            ? relevantDocs.map((doc, i) => {
+                return `DOC ${i + 1}: ${doc.filename} — ${doc.summary || "No summary"}`;
+            }).join("\n")
+            : "No relevant documents.";
+
+        const voicePrompt = `You are Apex, a British AI assistant. Respond in natural spoken English only. Maximum 2 sentences. No markdown, no bullet points, no lists, no file names, no technical strings. Speak like a human, be direct and confident.
+
+RECENT MEMORY:
+${memoryText}
+
+RELEVANT DOCUMENTS:
+${docsText}
+
+USER: ${userMessage}
+
+Respond naturally in 1-2 sentences.`.trim();
+
+        const response = await client.messages.create({
+            model: MODEL,
+            max_tokens: 150,
+            tools: TOOLS,
+            messages: [{ role: "user", content: voicePrompt }]
+        });
+
+        const toolUseBlock = (response.content || []).find(part => part.type === "tool_use");
+
+        if (toolUseBlock) {
+            const command = toolUseInputToCommand(toolUseBlock.name, toolUseBlock.input || {});
+            if (command) {
+                const result = await handleCommand(command);
+                await addToMemory("ai", result.reply);
+                return res.status(result.ok ? 200 : 404).json(result);
+            }
+        }
+
+        const reply = (response.content || [])
+            .filter(part => part.type === "text")
+            .map(part => part.text || "")
+            .join(" ")
+            .trim() || "Done.";
+
+        await addToMemory("ai", reply);
+        return res.status(200).json({ ok: true, reply });
+    } catch (error) {
+        console.error("VOICE CHAT ERROR:", error);
+        return res.status(error?.status || 500).json({
+            ok: false,
+            reply: error?.error?.message || error?.message || "Server error"
+        });
+    }
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,
