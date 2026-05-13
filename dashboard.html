@@ -543,15 +543,6 @@
             padding: 0 20px;
         }
 
-        .speed-control {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-        .speed-control label { font-size: 9px; color: var(--muted); white-space: nowrap; }
-        .speed-control input[type=range] { width: 64px; accent-color: var(--accent); cursor: pointer; }
-
         .clear-chat-btn {
             flex-shrink: 0;
             height: 32px;
@@ -1240,10 +1231,6 @@
         <button class="mic-btn" id="micBtn" onclick="toggleListening()" title="Voice input">🎤</button>
         <input class="chat-input" id="chatInput" type="text" placeholder="Ask APEX anything…" autocomplete="off" />
         <button class="clear-chat-btn" onclick="clearChat()" title="Clear chat">Clear</button>
-        <div class="speed-control" title="Voice speed">
-            <label>Speed</label>
-            <input type="range" id="speedSlider" min="0.9" max="1.6" step="0.1" value="1.3" oninput="updateVoiceSpeed(this.value)" />
-        </div>
         <button class="auto-listen-btn on" id="autoListenBtn" onclick="toggleAutoListen()" title="Toggle auto-listen">Auto-listen: ON</button>
         <button class="send-btn" onclick="sendChatCommand()" title="Send">&#10148;</button>
     </div>
@@ -1271,7 +1258,7 @@ let speakQueue          = [];
 let isSpeakingNow       = false;
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
-let voiceSpeed          = parseFloat(localStorage.getItem("apexVoiceSpeed") || "1.3");
+const voiceSpeed        = 1.3;
 const inFlightRefreshes = {};
 const renderSigs        = {};
 const SLOW_REFRESH_MS   = 60000;
@@ -1582,12 +1569,6 @@ function _speakFallback(phrase, { onEnd } = {}) {
     window.speechSynthesis.speak(utt);
 }
 
-function updateVoiceSpeed(val) {
-    voiceSpeed = parseFloat(val) || 1.3;
-    localStorage.setItem("apexVoiceSpeed", String(voiceSpeed));
-    if (currentAudio) currentAudio.playbackRate = voiceSpeed;
-}
-
 function showTypingIndicator() {
     const el = document.getElementById("typingIndicator");
     if (el) el.classList.add("active");
@@ -1671,7 +1652,7 @@ async function startListening() {
 
         dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=600&token=${token}`;
+        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=300&token=${token}`;
         dgSocket = new WebSocket(wsUrl);
 
         dgSocket.onopen = () => {
@@ -1693,8 +1674,8 @@ async function startListening() {
                 const isFinal = msg?.is_final;
                 if (transcript && isFinal) {
                     document.getElementById("chatInput").value = transcript;
-                    stopListening();
                     lastSendWasVoice = true;
+                    if (!autoListen) stopListening();
                     sendVoiceChatCommand(transcript);
                 }
             } catch (_) {}
@@ -2521,8 +2502,6 @@ async function initSupabaseRealtime() {
 // ══ INIT ══════════════════════════════════════════════════════════════
 setOrbState("waiting");
 updateStatusBar();
-const slider = document.getElementById("speedSlider");
-if (slider) { slider.value = voiceSpeed; }
 refreshFast();
 refreshSlow();
 setInterval(refreshFast, REFRESH_INTERVAL_MS);
