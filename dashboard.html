@@ -1583,8 +1583,8 @@ function hideTypingIndicator() {
 
 async function _speakInternal(text, useFiller) {
     try {
-        // Mute mic before speaking to prevent feedback loop
-        if (isListening) stopListening();
+        // Mute mic before speaking to prevent feedback loop (keep WebSocket alive)
+        pauseListening();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         const phrase = summariseForSpeech(text);
         if (!phrase) return;
@@ -1610,9 +1610,14 @@ async function _processSpeak() {
         await _speakInternal(text, useFiller);
     }
     isSpeakingNow = false;
-    if (autoListen && !isListening) {
+    if (autoListen) {
         setOrbState("waiting");
-        setTimeout(() => { if (autoListen && !isListening) startListening(); }, 300);
+        if (dgSocket && dgSocket.readyState === WebSocket.OPEN) {
+            resumeListening();
+            setOrbState("listening");
+        } else {
+            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 300);
+        }
     } else {
         setOrbState("ready");
     }
@@ -1675,7 +1680,7 @@ async function startListening() {
                 if (transcript && isFinal) {
                     document.getElementById("chatInput").value = transcript;
                     lastSendWasVoice = true;
-                    if (!autoListen) stopListening();
+                    pauseListening();
                     sendVoiceChatCommand(transcript);
                 }
             } catch (_) {}
@@ -1698,6 +1703,14 @@ async function startListening() {
             console.error("DEEPGRAM START ERROR:", err.message);
         }
     }
+}
+
+function pauseListening() {
+    try { if (dgRecorder && dgRecorder.state === "recording") dgRecorder.pause(); } catch (_) {}
+}
+
+function resumeListening() {
+    try { if (dgRecorder && dgRecorder.state === "paused") dgRecorder.resume(); } catch (_) {}
 }
 
 function stopListening() {
