@@ -2642,20 +2642,21 @@
 
             if (value.startsWith("agent ") || value.startsWith("run agent") || value.includes("approve task") || value.includes("agent history")) {
                 targets.agent = true;
+                targets.notifications = true;
             }
             if (value.includes("run schedule") || value.includes("run schedules now") || value.includes("disable schedule")) {
                 targets.agent = true;
+                targets.notifications = true;
             }
-            if (value.includes("show document") || value.includes("summarise file") || value.includes("delete document")) {
-                targets.documents = true;
-            }
-            if (value.includes("read file") || value.includes("delete file")) {
+            if (value.includes("read file") || value.includes("summarise file") || value.includes("delete file")) {
                 targets.files = true;
+                targets.documents = true;
             }
             if (value.includes("analyse documents")) {
                 targets.documents = true;
                 targets.memory = true;
                 targets.agent = true;
+                targets.notifications = true;
             }
 
             return targets;
@@ -2710,6 +2711,7 @@
             const pageScroll = preservePageScroll();
 
             if (targets.agent) jobs.push(refreshAgentData());
+            if (targets.notifications && !targets.agent) jobs.push(loadNotifications());
             if (targets.documents) jobs.push(refreshDocuments());
             if (targets.files) jobs.push(refreshFiles());
             if (targets.memory) jobs.push(refreshMemory());
@@ -2914,7 +2916,7 @@
                             const autoExecuted = Boolean(task?.context_json?.agentExecution?.autoExecuted);
                             const agentTitle = task?.context_json?.agentProfile?.displayName || task?.context_json?.agentProfile?.title || null;
                             const shortGoal = shortenText(task.goal || "Untitled task", 40);
-                            const displayTitle = `Task · ${shortGoal}`;
+                            const displayTitle = `Task #${shortGoal}`;
 
                             return `
                                 <div class="list-item" data-status="${escapeHtml(task.status || '')}">
@@ -3094,7 +3096,7 @@
 
         async function viewDocument(encodedFilename) {
             const filename = decodeURIComponent(encodedFilename);
-            const data = await sendChatCommandFromText(`show document ${filename}`, {
+            const data = await sendChatCommandFromText(`read file ${filename}`, {
                 silent: true,
                 openReplyInModal: true,
                 modalTitle: `Document - ${filename}`
@@ -3112,7 +3114,7 @@
             if (!window.confirm(`Delete document "${filename}"?`)) {
                 return;
             }
-            await withButtonBusy(button, () => sendChatCommandFromText(`delete document ${filename}`, { refresh: { documents: true, agent: true } }), "Deleting...");
+            await withButtonBusy(button, () => sendChatCommandFromText(`delete file ${filename}`, { refresh: { documents: true, files: true, agent: true } }), "Deleting...");
         }
 
         async function readFileAction(encodedFilename) {

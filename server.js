@@ -151,6 +151,28 @@ const TOOLS = [
             },
             required: ["filename", "content"]
         }
+    },
+    {
+        name: "summarise_file",
+        description: "Summarise the contents of a workspace file.",
+        input_schema: {
+            type: "object",
+            properties: {
+                filename: { type: "string", description: "The filename to summarise." }
+            },
+            required: ["filename"]
+        }
+    },
+    {
+        name: "delete_document",
+        description: "Delete a saved document from Postgres.",
+        input_schema: {
+            type: "object",
+            properties: {
+                filename: { type: "string", description: "The document filename to delete." }
+            },
+            required: ["filename"]
+        }
     }
 ];
 
@@ -4561,6 +4583,10 @@ function toolUseInputToCommand(toolName, input) {
             return { type: "search_documents", keyword: input.keyword };
         case "create_file":
             return { type: "create_file", filename: input.filename, content: input.content };
+        case "summarise_file":
+            return { type: "summarise_file", filename: input.filename };
+        case "delete_document":
+            return { type: "delete_document", filename: input.filename };
         default:
             return null;
     }
