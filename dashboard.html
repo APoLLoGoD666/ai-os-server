@@ -719,6 +719,53 @@
 
         .send-btn:active { transform: scale(0.96); }
 
+        .auto-listen-btn {
+            flex-shrink: 0;
+            height: 32px;
+            padding: 0 13px;
+            border-radius: 16px;
+            border: 1px solid rgba(0,212,255,0.22);
+            background: transparent;
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+        }
+
+        .auto-listen-btn.on {
+            border-color: rgba(0,212,255,0.55);
+            color: var(--accent);
+            background: rgba(0,212,255,0.08);
+        }
+
+        .apex-banner {
+            position: fixed;
+            top: 68px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            background: rgba(255,77,109,0.14);
+            border: 1px solid rgba(255,77,109,0.4);
+            border-radius: 10px;
+            padding: 9px 18px;
+            font-size: 12px;
+            color: #ff8099;
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .apex-banner-close {
+            cursor: pointer;
+            opacity: 0.6;
+            font-size: 14px;
+        }
+
         /* ══ UTILITY ════════════════════════════════════════════════════ */
         .empty-note {
             font-size: 11px;
@@ -825,6 +872,7 @@
     <div class="input-area">
         <button class="mic-btn" id="micBtn" onclick="toggleListening()" title="Voice input">🎤</button>
         <input class="chat-input" id="chatInput" type="text" placeholder="Ask APEX anything…" autocomplete="off" />
+        <button class="auto-listen-btn" id="autoListenBtn" onclick="toggleAutoListen()" title="Toggle auto-listen">Auto-listen: OFF</button>
         <button class="send-btn" onclick="sendChatCommand()" title="Send">&#10148;</button>
     </div>
 
@@ -838,10 +886,12 @@ const MAX_ITEMS           = 5;
 const REFRESH_INTERVAL_MS = 18000;
 
 // ══ STATE ═════════════════════════════════════════════════════════════
-let isListening       = false;
-let cachedTasks        = [];
+let isListening         = false;
+let autoListen          = false;
+let lastSendWasVoice    = false;
+let cachedTasks         = [];
 let cachedNotifications = [];
-let recognition        = null;
+let recognition         = null;
 const inFlightRefreshes = {};
 const renderSigs        = {};
 
@@ -928,7 +978,7 @@ function setOrbState(state) {
     waveform.classList.remove("active");
     micBtn.classList.remove("listening");
 
-    const labels = { ready: "Ready", listening: "Listening…", processing: "Processing…", speaking: "Speaking…" };
+    const labels = { ready: "Ready", listening: "Listening…", processing: "Processing…", thinking: "Thinking…", speaking: "Speaking…" };
     statusEl.textContent = labels[state] || "Ready";
 
     if (state === "listening") {
@@ -944,16 +994,20 @@ function setOrbState(state) {
 let _selectedVoice = null;
 
 function _pickVoice() {
+    if (!window.speechSynthesis) return null;
     const vv = window.speechSynthesis.getVoices();
     if (!vv.length) return null;
     _selectedVoice =
-        vv.find(v => /google uk english male/i.test(v.name))   ||
-        vv.find(v => /microsoft guy/i.test(v.name))            ||
-        vv.find(v => /microsoft david/i.test(v.name))          ||
-        vv.find(v => v.lang === "en-GB" && !v.localService)    ||
-        vv.find(v => v.lang === "en-GB")                       ||
-        vv.find(v => v.lang === "en-US" && !v.localService)    ||
-        vv.find(v => v.lang.startsWith("en"))                  ||
+        vv.find(v => /google uk english male/i.test(v.name))                         ||
+        vv.find(v => /google us english/i.test(v.name))                              ||
+        vv.find(v => /microsoft ryan online.*english.*united kingdom/i.test(v.name)) ||
+        vv.find(v => /microsoft guy online.*natural/i.test(v.name))                  ||
+        vv.find(v => v.lang === "en-GB" && /male/i.test(v.name))                     ||
+        vv.find(v => v.lang === "en-US" && /male/i.test(v.name))                     ||
+        vv.find(v => v.lang.startsWith("en") && /male/i.test(v.name))               ||
+        vv.find(v => v.lang === "en-GB")                                              ||
+        vv.find(v => v.lang === "en-US")                                              ||
+        vv.find(v => v.lang.startsWith("en"))                                         ||
         vv[0];
     return _selectedVoice;
 }
@@ -963,83 +1017,171 @@ if (window.speechSynthesis) {
     _pickVoice();
 }
 
-function _stripMarkdown(text) {
+function cleanForSpeech(text) {
     return String(text || "")
         .replace(/\[APPROVAL REQUIRED\]/gi, "")
         .replace(/#{1,6}\s*/g, "")
         .replace(/\*\*(.+?)\*\*/g, "$1")
         .replace(/\*(.+?)\*/g, "$1")
+        .replace(/~~(.+?)~~/g, "$1")
         .replace(/`{1,3}[^`]*`{1,3}/g, "")
-        .replace(/^[-*+]\s+/gm, "")
-        .replace(/^\d+\.\s+/gm, "")
         .replace(/!\[.*?\]\(.*?\)/g, "")
-        .replace(/\[.*?\]\(.*?\)/g, "")
-        .replace(/\b[\w.-]+\.(txt|md|js|json|csv|pdf|png|jpg|html|py|ts)\b/gi, "")
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+        .replace(/https?:\/\/\S+/g, "")
+        .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
+        .replace(/[\u{2600}-\u{26FF}]/gu, "")
+        .replace(/[\u{2700}-\u{27BF}]/gu, "")
+        .replace(/\b[\w.-]+\.(txt|md|js|ts|json|csv|pdf|png|jpg|jpeg|html|py|sh)\b/gi, "")
+        .replace(/^[-•*+]\s+/gm, ", ")
+        .replace(/^\d+\.\s+/gm, "")
+        .replace(/→/g, "to")
+        .replace(/&/g, "and")
+        .replace(/\n+/g, " ")
         .replace(/\s{2,}/g, " ")
         .trim();
 }
 
-function _summariseForSpeech(text) {
-    const t = text.toLowerCase();
-    if (/saved|created|written/.test(t))          return "Done.";
-    if (/deleted|removed/.test(t))                return "Removed.";
-    if (/found|here are|here is|results/.test(t)) return "Ready, showing results.";
-    if (/error|could not|couldn't|failed/.test(t)) return "Something went wrong.";
-    // First sentence only, stripped of markdown
-    const clean = _stripMarkdown(text);
-    const sentence = clean.split(/(?<=[.!?])\s+/)[0] || clean;
-    return sentence.slice(0, 200);
+function _firstSentence(text) {
+    const m = text.match(/^.+?[.!?](?=\s|$)/);
+    return m ? m[0].trim() : text.split(" ").slice(0, 30).join(" ");
 }
 
-function speak(text) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
+function _firstTwoSentences(text) {
+    const parts = text.match(/[^.!?]+[.!?](?:\s|$)/g);
+    if (!parts) return text.split(" ").slice(0, 50).join(" ");
+    return (parts.slice(0, 2).join("")).trim();
+}
 
-    const phrase = _summariseForSpeech(text);
-    if (!phrase) return;
+function summariseForSpeech(raw) {
+    const clean = cleanForSpeech(raw);
+    if (clean.length < 100) return clean;
 
+    const t = clean.toLowerCase();
+
+    if (clean.length >= 300) {
+        if (/saved|note saved|stored/.test(t))                         return "Got it, saved.";
+        if (/deleted|removed/.test(t))                                 return "Done, removed.";
+        if (/file created|created/.test(t))                            return "Created.";
+        if (/renamed/.test(t))                                         return "Renamed.";
+        if (/error|could not|couldn't|failed|unable/.test(t))          return "Something went wrong, please try again.";
+        if (/here are|found|results|documents/.test(t) || /\?/.test(clean)) return _firstSentence(clean);
+        return _firstTwoSentences(clean);
+    }
+
+    // 100-299 chars
+    return _firstSentence(clean);
+}
+
+const FILLERS = [
+    { text: null, weight: 40 },
+    { text: "Sure.", weight: 20 },
+    { text: "On it.", weight: 20 },
+    { text: "Right.", weight: 10 },
+    { text: "Got it.", weight: 10 },
+];
+
+function _pickFiller() {
+    const roll = Math.random() * 100;
+    let acc = 0;
+    for (const f of FILLERS) { acc += f.weight; if (roll < acc) return f.text; }
+    return null;
+}
+
+function _speakUtterance(phrase, { onStart, onEnd } = {}) {
     const utt = new SpeechSynthesisUtterance(phrase);
-    utt.rate   = 1.1;
-    utt.pitch  = 0.9;
+    utt.rate   = 1.08;
+    utt.pitch  = 0.95;
     utt.volume = 1;
-
     const voice = _selectedVoice || _pickVoice();
     if (voice) utt.voice = voice;
-
-    utt.onstart = () => setOrbState("speaking");
-    utt.onend   = () => setOrbState("ready");
-    utt.onerror = () => setOrbState("ready");
+    if (onStart) utt.onstart = onStart;
+    if (onEnd)   utt.onend   = onEnd;
+    utt.onerror = () => {};
     window.speechSynthesis.speak(utt);
 }
 
+function speak(text, { useFiller = false } = {}) {
+    if (!window.speechSynthesis) return;
+    try {
+        window.speechSynthesis.cancel();
+        const phrase = summariseForSpeech(text);
+        if (!phrase) return;
+
+        setOrbState("speaking");
+
+        const filler = useFiller ? _pickFiller() : null;
+
+        if (filler) {
+            _speakUtterance(filler, {
+                onEnd: () => {
+                    setTimeout(() => {
+                        _speakUtterance(phrase, {
+                            onEnd: () => {
+                                setOrbState("ready");
+                                if (autoListen) setTimeout(() => startListening(), 1000);
+                            }
+                        });
+                    }, 300);
+                }
+            });
+        } else {
+            _speakUtterance(phrase, {
+                onEnd: () => {
+                    setOrbState("ready");
+                    if (autoListen) setTimeout(() => startListening(), 1000);
+                }
+            });
+        }
+    } catch (_) {
+        setOrbState("ready");
+    }
+}
+
 // ══ VOICE INPUT ═══════════════════════════════════════════════════════
+function _showBanner(id, html) {
+    if (document.getElementById(id)) return;
+    const el = document.createElement("div");
+    el.id = id;
+    el.className = "apex-banner";
+    el.innerHTML = html + `<span class="apex-banner-close" onclick="document.getElementById('${id}').remove()">✕</span>`;
+    document.body.appendChild(el);
+}
+
 function initRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return null;
+    if (!SR) {
+        _showBanner("banner-nospeech", "Voice not supported in this browser — use Chrome.");
+        return null;
+    }
     const rec = new SR();
-    rec.continuous      = false;
-    rec.interimResults  = false;
-    rec.lang            = "en-GB";
+    rec.continuous     = false;
+    rec.interimResults = false;
+    rec.lang           = "en-GB";
 
     rec.onresult = e => {
         const transcript = e.results[0][0].transcript;
         document.getElementById("chatInput").value = transcript;
         stopListening();
+        lastSendWasVoice = true;
         sendChatCommand();
     };
 
-    rec.onerror = () => stopListening();
-    rec.onend   = () => { if (isListening) stopListening(); };
+    rec.onerror = e => {
+        stopListening();
+        if (e.error === "not-allowed" || e.error === "permission-denied") {
+            _showBanner("banner-micdenied",
+                "Microphone access denied — <strong style='cursor:pointer;text-decoration:underline' onclick=\"navigator.mediaDevices.getUserMedia({audio:true}).catch(()=>{})\">click here to enable</strong>.");
+        }
+    };
+
+    rec.onend = () => { if (isListening) stopListening(); };
     return rec;
 }
 
 function startListening() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (!recognition) recognition = initRecognition();
-    if (!recognition) {
-        renderChatMessage("system", "Voice input not supported in this browser.");
-        return;
-    }
+    if (!recognition) return;
     isListening = true;
     setOrbState("listening");
     try { recognition.start(); } catch { stopListening(); }
@@ -1055,20 +1197,42 @@ function toggleListening() {
     if (isListening) stopListening(); else startListening();
 }
 
+function toggleAutoListen() {
+    autoListen = !autoListen;
+    const btn = document.getElementById("autoListenBtn");
+    btn.textContent = `Auto-listen: ${autoListen ? "ON" : "OFF"}`;
+    btn.classList.toggle("on", autoListen);
+}
+
 // ══ CHAT ══════════════════════════════════════════════════════════════
+function _cleanForDisplay(text) {
+    return String(text || "")
+        .replace(/\*\*(.+?)\*\*/g, "$1")
+        .replace(/\*(.+?)\*/g, "$1")
+        .replace(/~~(.+?)~~/g, "$1")
+        .replace(/`{1,3}[^`]*`{1,3}/g, "")
+        .replace(/#{1,6}\s*/g, "")
+        .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
+        .replace(/[\u{2600}-\u{26FF}]/gu, "")
+        .replace(/[\u{2700}-\u{27BF}]/gu, "")
+        .replace(/\[APPROVAL REQUIRED\]/gi, "")
+        .trim();
+}
+
 function renderChatMessage(role, message) {
     const log = document.getElementById("chatLog");
     if (!log) return;
     const nearBottom = (log.scrollHeight - log.scrollTop - log.clientHeight) < 120;
 
-    // Approval required check
     if (role === "ai" && /\[APPROVAL REQUIRED\]/i.test(message)) {
         renderCentreApprovalCard(message);
     }
 
+    const display = role === "ai" ? _cleanForDisplay(message) : String(message || "");
+
     const bubble = document.createElement("div");
     bubble.className = `chat-bubble ${role}`;
-    bubble.textContent = shortenText(message, 220);
+    bubble.textContent = display || message;
     log.appendChild(bubble);
 
     if (nearBottom || role === "user" || role === "system") {
@@ -1106,8 +1270,11 @@ async function sendApprovalDecision(decision) {
 
 async function sendChatCommandFromText(command, options = {}) {
     const { silent = false } = options;
+    const wasVoice = lastSendWasVoice;
+    lastSendWasVoice = false;
+
     if (!silent) renderChatMessage("user", command);
-    setOrbState("processing");
+    setOrbState("thinking");
 
     try {
         const data = await fetchJson("/chat", {
@@ -1119,10 +1286,12 @@ async function sendChatCommandFromText(command, options = {}) {
         const reply = data.reply || "No reply.";
         if (!silent) {
             renderChatMessage("ai", reply);
-            speak(reply);
+            setOrbState("speaking");
+            speak(reply, { useFiller: wasVoice });
+        } else {
+            setOrbState("ready");
         }
 
-        setOrbState("ready");
         setConnStatus(true);
         refreshAll();
         return data;
@@ -1130,7 +1299,7 @@ async function sendChatCommandFromText(command, options = {}) {
         const msg = error.message || "Server error.";
         if (!silent) {
             renderChatMessage("system", msg);
-            speak(msg);
+            try { speak(msg); } catch (_) {}
         }
         setOrbState("ready");
         setConnStatus(false);
