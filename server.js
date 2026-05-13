@@ -6232,14 +6232,16 @@ Final obvious clean state summary:
 
         case "create_notification": {
             try {
+                const title = command.title || "Reminder";
+                const body  = command.body  || "";
                 await pgCreateNotification(
                     command.priority || "normal",
-                    command.title,
-                    command.body,
+                    title,
+                    body,
                     null,
                     null
                 );
-                return { ok: true, reply: `Notification created: "${command.title}".` };
+                return { ok: true, reply: `Notification created: "${title}".` };
             } catch (err) {
                 return { ok: false, reply: `Could not create notification: ${err.message}` };
             }

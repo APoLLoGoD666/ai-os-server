@@ -1626,7 +1626,8 @@ function toggleAutoListen() {
     btn.textContent = `Auto-listen: ${autoListen ? "ON" : "OFF"}`;
     btn.classList.toggle("on", autoListen);
     if (!autoListen) {
-        if (!isListening) setOrbState("ready");
+        if (isListening) stopListening();
+        setOrbState("ready");
     } else {
         if (!isListening) {
             setOrbState("waiting");
