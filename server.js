@@ -6578,8 +6578,8 @@ app.post("/api/speak", async (req, res) => {
             },
             body: JSON.stringify({
                 text,
-                model_id: "eleven_monolingual_v1",
-                voice_settings: { stability: 0.5, similarity_boost: 0.85 }
+                model_id: "eleven_turbo_v2",
+                voice_settings: { stability: 0.4, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.25 }
             })
         });
 
@@ -6589,8 +6589,10 @@ app.post("/api/speak", async (req, res) => {
         }
 
         res.set("Content-Type", "audio/mpeg");
-        const buf = await elRes.arrayBuffer();
-        return res.send(Buffer.from(buf));
+        for await (const chunk of elRes.body) {
+            res.write(chunk);
+        }
+        return res.end();
     } catch (error) {
         console.error("SPEAK ERROR:", error);
         return res.status(500).json({ ok: false, reply: error.message || "Speak failed." });
@@ -6634,7 +6636,7 @@ Respond naturally in 1-2 sentences.`.trim();
 
         const response = await client.messages.create({
             model: MODEL,
-            max_tokens: 150,
+            max_tokens: 80,
             tools: TOOLS,
             messages: [{ role: "user", content: voicePrompt }]
         });

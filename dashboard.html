@@ -1105,27 +1105,71 @@ async function speakWithElevenLabs(text) {
     if (!phrase) return false;
 
     try {
-        const res = await fetch(buildApiUrl("/api/speak"), {
+        const fetchRes = await fetch(buildApiUrl("/api/speak"), {
             method: "POST",
             headers: buildApiHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ text: phrase })
         });
+        if (!fetchRes.ok) return false;
 
-        if (!res.ok) return false;
+        const MIME = "audio/mpeg";
+        const canStream = "MediaSource" in window && MediaSource.isTypeSupported(MIME);
 
-        const blob = await res.blob();
-        const url  = URL.createObjectURL(blob);
-        const audio = new Audio(url);
+        if (canStream) {
+            return await new Promise(resolve => {
+                const ms    = new MediaSource();
+                const msUrl = URL.createObjectURL(ms);
+                const audio = new Audio(msUrl);
+                audio.playbackRate = 1.3;
 
-        setOrbState("speaking");
-        await new Promise((resolve, reject) => {
-            audio.onended  = resolve;
-            audio.onerror  = reject;
-            audio.play().catch(reject);
+                const done = ok => { URL.revokeObjectURL(msUrl); resolve(ok); };
+
+                ms.addEventListener("sourceopen", async () => {
+                    const sb = ms.addSourceBuffer(MIME);
+                    sb.mode  = "sequence";
+                    const reader = fetchRes.body.getReader();
+                    let playing  = false;
+
+                    const tryPlay = () => {
+                        if (!playing && audio.readyState >= 2) {
+                            playing = true;
+                            audio.play().catch(() => {});
+                        }
+                    };
+
+                    audio.addEventListener("canplay", tryPlay, { once: true });
+                    audio.addEventListener("ended",   () => done(true),  { once: true });
+                    audio.addEventListener("error",   () => done(false), { once: true });
+
+                    try {
+                        while (true) {
+                            const { done: eof, value } = await reader.read();
+                            if (eof) { if (ms.readyState === "open") ms.endOfStream(); break; }
+                            if (sb.updating) await new Promise(r => sb.addEventListener("updateend", r, { once: true }));
+                            sb.appendBuffer(value);
+                            tryPlay();
+                        }
+                        if (!playing) { playing = true; audio.play().catch(() => done(false)); }
+                    } catch (_) { done(false); }
+                }, { once: true });
+
+                ms.addEventListener("error", () => done(false));
+            });
+        }
+
+        // Fallback: full blob download
+        const blob   = await fetchRes.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const audio   = new Audio(blobUrl);
+        audio.playbackRate = 1.3;
+        await new Promise((res2, rej) => {
+            audio.onended = res2;
+            audio.onerror = rej;
+            audio.play().catch(rej);
         });
-
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(blobUrl);
         return true;
+
     } catch (_) {
         return false;
     }
@@ -1168,7 +1212,6 @@ async function speak(text, { useFiller = false } = {}) {
             if (!fillerOk) {
                 await new Promise(resolve => _speakFallback(filler, { onEnd: resolve }));
             }
-            await new Promise(r => setTimeout(r, 300));
         }
 
         await speakMain();
