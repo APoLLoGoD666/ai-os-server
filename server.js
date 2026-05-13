@@ -445,7 +445,7 @@ async function createWorkspaceFile(filename, content) {
     ensureSetup();
 
     const filePath = safeFilePath(cleanName);
-    fs.writeFileSync(filePath, content, "utf8");
+    fs.writeFileSync(filePath, String(content || ""), "utf8");
 
     return {
         filename: path.basename(filePath),
@@ -4674,7 +4674,7 @@ async function undoAgentActionRecord(record) {
 function toolUseInputToCommand(toolName, input) {
     switch (toolName) {
         case "save_note":
-            return { type: "save_note", content: input.content, classification: input.classification };
+            return { type: "save_note", content: input.content || "", classification: input.classification };
         case "read_file":
             return { type: "read_file", filename: input.filename };
         case "delete_file":
@@ -4708,7 +4708,7 @@ function toolUseInputToCommand(toolName, input) {
         case "create_routine":
             return { type: "create_routine", name: input.name, description: input.description, schedule_cron: input.schedule_cron };
         case "create_notification":
-            return { type: "create_notification", title: input.title, body: input.body, priority: input.priority || "normal" };
+            return { type: "create_notification", title: input.title || "Reminder", body: input.body || "", priority: input.priority || "normal" };
         default:
             return null;
     }
@@ -4883,26 +4883,27 @@ async function handleCommand(command) {
         }
 
         case "save_note": {
-            const prefix = command.classification || "personal";
+            const content  = String(command.content || "");
+            const prefix   = command.classification || "personal";
             const filename = makeTimestampedFilename(prefix);
 
-            await createWorkspaceFile(filename, command.content);
+            await createWorkspaceFile(filename, content);
 
             await pgSaveDocument(
                 filename,
-                command.content,
+                content,
                 command.classification,
                 `Saved ${command.classification} note`
             );
 
             saveDocumentToDatabase(
                 filename,
-                command.content,
+                content,
                 command.classification,
                 `Saved ${command.classification} note`
             );
 
-            setImmediate(() => backgroundClassifyAndSummarise(filename, command.content));
+            setImmediate(() => backgroundClassifyAndSummarise(filename, content));
 
             return {
                 ok: true,
@@ -4911,25 +4912,26 @@ async function handleCommand(command) {
         }
 
         case "save_named_note": {
+            const content  = String(command.content || "");
             const filename = ensureTxtExtension(command.filename);
 
-            await createWorkspaceFile(filename, command.content);
+            await createWorkspaceFile(filename, content);
 
             await pgSaveDocument(
                 filename,
-                command.content,
+                content,
                 command.classification || "personal",
                 `Saved named note: ${filename}`
             );
 
             saveDocumentToDatabase(
                 filename,
-                command.content,
+                content,
                 command.classification || "personal",
                 `Saved named note: ${filename}`
             );
 
-            setImmediate(() => backgroundClassifyAndSummarise(filename, command.content));
+            setImmediate(() => backgroundClassifyAndSummarise(filename, content));
 
             return {
                 ok: true,
