@@ -1247,7 +1247,9 @@ function setConnStatus(online) {
     const dot   = document.getElementById("connDot");
     const label = document.getElementById("connLabel");
     dot.classList.toggle("offline", !online);
+    dot.classList.toggle("on", online);
     label.textContent = online ? "Online" : "Offline";
+    updateStatusBar();
 }
 
 // ══ ORB STATE ═════════════════════════════════════════════════════════
@@ -2243,10 +2245,9 @@ refreshFast();
 refreshSlow();
 setInterval(refreshFast, REFRESH_INTERVAL_MS);
 setInterval(refreshSlow, SLOW_REFRESH_MS);
-fetch(buildApiUrl("/api/ping"), { headers: buildApiHeaders({}) })
-    .then(r => r.json())
-    .then(d => { setConnStatus(true); updateStatusBar(); })
-    .catch(() => { setConnStatus(false); updateStatusBar(); });
+fetch(API_BASE + "/api/ping")
+    .then(r => setConnStatus(r.ok))
+    .catch(() => setConnStatus(false));
 setTimeout(() => { if (autoListen && !isListening) startListening(); }, 1000);
 </script>
 </body>
