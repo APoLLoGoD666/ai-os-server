@@ -1651,6 +1651,7 @@ async function initDeepgram() {
         if (!tokenRes.ok) throw new Error("Deepgram token unavailable");
         const { token } = await tokenRes.json();
         console.log("[Deepgram] token fetched");
+        dgMuted = false;
 
         dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log("[Deepgram] mic stream acquired");
@@ -1664,7 +1665,8 @@ async function initDeepgram() {
         setOrbState("listening");
 
         dgSocket.onopen = () => {
-            console.log("[Deepgram] onopen fired");
+            dgMuted = false;
+            console.log("[Deepgram] ready, dgMuted reset to false");
             dgRecorder = new MediaRecorder(dgStream);
             dgRecorder.ondataavailable = e => {
                 if (dgSocket && dgSocket.readyState === WebSocket.OPEN && e.data.size > 0) {
@@ -1680,6 +1682,7 @@ async function initDeepgram() {
                 const msg = JSON.parse(e.data);
                 const transcript = msg?.channel?.alternatives?.[0]?.transcript?.trim();
                 const isFinal = msg?.is_final;
+                console.log("[Deepgram] msg received, isFinal:", isFinal, "transcript:", transcript, "muted:", dgMuted);
                 if (transcript && isFinal && !dgMuted) {
                     console.log("[Deepgram] transcript:", transcript);
                     document.getElementById("chatInput").value = transcript;
