@@ -4,9 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>APEX</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#00d4ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1037,9 +1042,86 @@
             }
             .left-panel, .right-panel { display: none; }
         }
+
+        /* ══ COMMAND PALETTE ═══════════════════════════════════════════ */
+        .cmd-palette {
+            display: none;
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 120px;
+        }
+        .cmd-palette.open { display: flex; }
+        .cmd-box {
+            width: min(560px, 92vw);
+            background: rgba(10,10,16,0.96);
+            border: 1px solid rgba(0,212,255,0.25);
+            border-radius: 14px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,212,255,0.08);
+            overflow: hidden;
+        }
+        .cmd-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(0,212,255,0.12);
+            color: var(--text);
+            font-size: 16px;
+            font-family: inherit;
+            padding: 16px 20px;
+            outline: none;
+        }
+        .cmd-input::placeholder { color: var(--muted); }
+        .cmd-list { max-height: 340px; overflow-y: auto; padding: 6px; }
+        .cmd-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text);
+            transition: background 0.12s;
+        }
+        .cmd-item:hover, .cmd-item.active { background: rgba(0,212,255,0.1); }
+        .cmd-item .cmd-icon { font-size: 18px; width: 24px; text-align: center; }
+        .cmd-item .cmd-label { flex: 1; }
+        .cmd-item .cmd-hint { font-size: 11px; color: var(--muted); }
+
+        /* ══ DROP OVERLAY ══════════════════════════════════════════════ */
+        .drop-overlay {
+            display: none;
+            position: fixed; inset: 0; z-index: 8888;
+            background: rgba(0,212,255,0.08);
+            border: 2px dashed rgba(0,212,255,0.5);
+            border-radius: 12px;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .drop-overlay.active { display: flex; }
+        .drop-label {
+            font-size: 20px;
+            color: var(--accent);
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
     </style>
 </head>
 <body>
+
+<!-- ══ COMMAND PALETTE ══ -->
+<div class="cmd-palette" id="cmdPalette" onclick="if(event.target===this)closeCommandPalette()">
+    <div class="cmd-box">
+        <input class="cmd-input" id="cmdInput" placeholder="Search commands…" oninput="renderCmdList(this.value)" onkeydown="cmdKeyNav(event)" autocomplete="off" spellcheck="false">
+        <div class="cmd-list" id="cmdList"></div>
+    </div>
+</div>
+
+<!-- ══ DROP OVERLAY ══ -->
+<div class="drop-overlay" id="dropOverlay"><span class="drop-label">Drop file to upload</span></div>
+
 <div class="app">
 
     <!-- ══ TOP BAR ══ -->
@@ -1181,7 +1263,9 @@ let autoListen          = true;
 let lastSendWasVoice    = false;
 let cachedTasks         = [];
 let cachedNotifications = [];
-let recognition         = null;
+let dgSocket            = null;
+let dgStream            = null;
+let dgRecorder          = null;
 let currentAudio        = null;
 let speakQueue          = [];
 let isSpeakingNow       = false;
@@ -1519,7 +1603,7 @@ function hideTypingIndicator() {
 async function _speakInternal(text, useFiller) {
     try {
         // Mute mic before speaking to prevent feedback loop
-        if (recognition && isListening) { try { recognition.stop(); } catch (_) {} isListening = false; }
+        if (isListening) stopListening();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         const phrase = summariseForSpeech(text);
         if (!phrase) return;
@@ -1545,8 +1629,9 @@ async function _processSpeak() {
         await _speakInternal(text, useFiller);
     }
     isSpeakingNow = false;
-    if (autoListen) {
-        startListening();
+    if (autoListen && !isListening) {
+        setOrbState("waiting");
+        setTimeout(() => { if (autoListen && !isListening) startListening(); }, 300);
     } else {
         setOrbState("ready");
     }
@@ -1573,66 +1658,73 @@ function _showBanner(id, html) {
     document.body.appendChild(el);
 }
 
-function initRecognition() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-        _showBanner("banner-nospeech", "Voice not supported in this browser — use Chrome.");
-        return null;
-    }
-    const rec = new SR();
-    rec.continuous     = false;
-    rec.interimResults = false;
-    rec.lang           = "en-GB";
-    let gotResult      = false;
-
-    rec.onstart = () => { gotResult = false; };
-
-    rec.onresult = e => {
-        gotResult = true;
-        const transcript = e.results[0][0].transcript.trim();
-        if (!transcript) return;
-        document.getElementById("chatInput").value = transcript;
-        stopListening();
-        lastSendWasVoice = true;
-        sendVoiceChatCommand(transcript);
-    };
-
-    rec.onerror = e => {
-        if (e.error === "not-allowed" || e.error === "permission-denied") {
-            recognition = null;
-            isListening = false;
-            setOrbState("ready");
-            _showBanner("banner-micdenied",
-                "Microphone access denied — <strong style='cursor:pointer;text-decoration:underline' onclick=\"navigator.mediaDevices.getUserMedia({audio:true}).catch(()=>{})\">click here to enable</strong>.");
-        } else if (e.error === "no-speech" && autoListen) {
-            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 500);
-        }
-    };
-
-    rec.onend = () => {
-        if (isListening) stopListening();
-        if (!gotResult && autoListen) {
-            setTimeout(() => { if (autoListen && !isListening) startListening(); }, 300);
-        }
-    };
-    return rec;
-}
-
-function startListening() {
-    if (isSpeakingNow) return;
+async function startListening() {
+    if (isSpeakingNow || isListening) return;
     interruptSpeech();
     speakQueue.length = 0;
-    if (!recognition) recognition = initRecognition();
-    if (!recognition) return;
-    isListening = true;
-    setOrbState("listening");
-    try { recognition.start(); } catch (_) { stopListening(); }
+
+    try {
+        const tokenRes = await fetch(buildApiUrl("/api/deepgram-token"), { headers: buildHeaders() });
+        if (!tokenRes.ok) throw new Error("Deepgram token unavailable");
+        const { token } = await tokenRes.json();
+
+        dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=600&token=${token}`;
+        dgSocket = new WebSocket(wsUrl);
+
+        dgSocket.onopen = () => {
+            isListening = true;
+            setOrbState("listening");
+            dgRecorder = new MediaRecorder(dgStream, { mimeType: "audio/webm" });
+            dgRecorder.ondataavailable = e => {
+                if (dgSocket && dgSocket.readyState === WebSocket.OPEN && e.data.size > 0) {
+                    dgSocket.send(e.data);
+                }
+            };
+            dgRecorder.start(250);
+        };
+
+        dgSocket.onmessage = e => {
+            try {
+                const msg = JSON.parse(e.data);
+                const transcript = msg?.channel?.alternatives?.[0]?.transcript?.trim();
+                const isFinal = msg?.is_final;
+                if (transcript && isFinal) {
+                    document.getElementById("chatInput").value = transcript;
+                    stopListening();
+                    lastSendWasVoice = true;
+                    sendVoiceChatCommand(transcript);
+                }
+            } catch (_) {}
+        };
+
+        dgSocket.onerror = () => stopListening();
+        dgSocket.onclose = () => {
+            if (isListening) {
+                isListening = false;
+                setOrbState("ready");
+            }
+        };
+    } catch (err) {
+        isListening = false;
+        setOrbState("ready");
+        if (err.name === "NotAllowedError") {
+            _showBanner("banner-micdenied",
+                "Microphone access denied — <strong style='cursor:pointer;text-decoration:underline' onclick=\"navigator.mediaDevices.getUserMedia({audio:true}).catch(()=>{})\">click here to enable</strong>.");
+        } else {
+            console.error("DEEPGRAM START ERROR:", err.message);
+        }
+    }
 }
 
 function stopListening() {
     isListening = false;
     setOrbState("ready");
-    if (recognition) { try { recognition.stop(); } catch (_) {} }
+    try { if (dgRecorder && dgRecorder.state !== "inactive") dgRecorder.stop(); } catch (_) {}
+    try { if (dgSocket) { dgSocket.close(); dgSocket = null; } } catch (_) {}
+    try { if (dgStream) { dgStream.getTracks().forEach(t => t.stop()); dgStream = null; } } catch (_) {}
+    dgRecorder = null;
 }
 
 function toggleListening() {
@@ -2255,7 +2347,16 @@ document.getElementById("chatInput").addEventListener("keydown", e => {
 });
 
 document.addEventListener("keydown", e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        openCommandPalette();
+        return;
+    }
     if (e.key === "Escape") {
+        if (document.getElementById("cmdPalette").classList.contains("open")) {
+            closeCommandPalette();
+            return;
+        }
         if (isListening) stopListening();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         if (currentAudio) { currentAudio.pause(); currentAudio = null; }
@@ -2264,6 +2365,157 @@ document.addEventListener("keydown", e => {
         setOrbState(autoListen ? "waiting" : "ready");
     }
 });
+
+// ══ COMMAND PALETTE ══════════════════════════════════════════════════
+const CMD_LIST = [
+    { icon: "💬", label: "New chat", hint: "Clear and focus", action: () => { clearChat(); document.getElementById("chatInput").focus(); } },
+    { icon: "🎙️", label: "Toggle voice listening", hint: "Start / stop mic", action: toggleListening },
+    { icon: "🔄", label: "Refresh all panels", hint: "Pull latest data", action: refreshAll },
+    { icon: "📧", label: "Check emails now", hint: "Gmail inbox scan", action: () => sendChatCommand("check my emails") },
+    { icon: "📝", label: "Save a note", hint: "Type content first", action: () => { closeCommandPalette(); document.getElementById("chatInput").focus(); document.getElementById("chatInput").value = "save note: "; } },
+    { icon: "📋", label: "List documents", hint: "Show saved docs", action: () => sendChatCommand("list my documents") },
+    { icon: "💰", label: "Finance summary", hint: "This month's spending", action: () => sendChatCommand("finance summary") },
+    { icon: "🔍", label: "Search documents", hint: "Semantic search", action: () => { closeCommandPalette(); document.getElementById("chatInput").focus(); document.getElementById("chatInput").value = "search for: "; } },
+    { icon: "⚡", label: "Auto-listen toggle", hint: "Turn auto-listen on/off", action: toggleAutoListen },
+    { icon: "🗑️", label: "Clear chat history", hint: "Wipe chat log", action: clearChat },
+];
+
+let _cmdActive = 0;
+
+function openCommandPalette() {
+    document.getElementById("cmdPalette").classList.add("open");
+    const inp = document.getElementById("cmdInput");
+    inp.value = "";
+    _cmdActive = 0;
+    renderCmdList("");
+    setTimeout(() => inp.focus(), 50);
+}
+
+function closeCommandPalette() {
+    document.getElementById("cmdPalette").classList.remove("open");
+}
+
+function renderCmdList(query) {
+    const q = (query || "").toLowerCase();
+    const filtered = CMD_LIST.filter(c => !q || c.label.toLowerCase().includes(q) || (c.hint || "").toLowerCase().includes(q));
+    _cmdActive = 0;
+    const el = document.getElementById("cmdList");
+    el.innerHTML = filtered.map((c, i) =>
+        `<div class="cmd-item${i === 0 ? " active" : ""}" data-idx="${i}" onclick="executeCmdItem(${CMD_LIST.indexOf(c)})">
+            <span class="cmd-icon">${c.icon}</span>
+            <span class="cmd-label">${c.label}</span>
+            <span class="cmd-hint">${c.hint || ""}</span>
+        </div>`
+    ).join("");
+}
+
+function executeCmdItem(idx) {
+    closeCommandPalette();
+    const cmd = CMD_LIST[idx];
+    if (cmd) cmd.action();
+}
+
+function cmdKeyNav(e) {
+    const items = document.querySelectorAll("#cmdList .cmd-item");
+    if (!items.length) return;
+    if (e.key === "ArrowDown") {
+        e.preventDefault();
+        items[_cmdActive]?.classList.remove("active");
+        _cmdActive = (_cmdActive + 1) % items.length;
+        items[_cmdActive]?.classList.add("active");
+        items[_cmdActive]?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        items[_cmdActive]?.classList.remove("active");
+        _cmdActive = (_cmdActive - 1 + items.length) % items.length;
+        items[_cmdActive]?.classList.add("active");
+        items[_cmdActive]?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter") {
+        e.preventDefault();
+        const active = items[_cmdActive];
+        if (active) active.click();
+    } else if (e.key === "Escape") {
+        closeCommandPalette();
+    }
+}
+
+// ══ DRAG AND DROP ════════════════════════════════════════════════════
+let _dragCount = 0;
+
+document.addEventListener("dragenter", e => {
+    e.preventDefault();
+    _dragCount++;
+    document.getElementById("dropOverlay").classList.add("active");
+});
+
+document.addEventListener("dragleave", () => {
+    _dragCount--;
+    if (_dragCount <= 0) { _dragCount = 0; document.getElementById("dropOverlay").classList.remove("active"); }
+});
+
+document.addEventListener("dragover", e => e.preventDefault());
+
+document.addEventListener("drop", async e => {
+    e.preventDefault();
+    _dragCount = 0;
+    document.getElementById("dropOverlay").classList.remove("active");
+
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+
+    renderChatMessage("system", `Uploading "${file.name}"…`);
+
+    const reader = new FileReader();
+    reader.onload = async ev => {
+        try {
+            const base64 = ev.target.result.split(",")[1] || ev.target.result;
+            const res = await fetch(buildApiUrl("/api/upload-file"), {
+                method: "POST",
+                headers: { ...buildHeaders(), "Content-Type": "application/json" },
+                body: JSON.stringify({ filename: file.name, data: base64, mimeType: file.type })
+            });
+            const data = await res.json();
+            renderChatMessage("ai", data.reply || "File uploaded.");
+            if (data.summary) renderChatMessage("ai", `Summary: ${data.summary}`);
+        } catch (err) {
+            renderChatMessage("system", `Upload failed: ${err.message}`);
+        }
+    };
+    reader.readAsDataURL(file);
+});
+
+// ══ SUPABASE REALTIME ════════════════════════════════════════════════
+async function initSupabaseRealtime() {
+    try {
+        const cfgRes = await fetch(buildApiUrl("/api/config"), { headers: buildHeaders() });
+        if (!cfgRes.ok) return;
+        const { supabaseUrl, supabaseAnonKey } = await cfgRes.json();
+        if (!supabaseUrl || !supabaseAnonKey) return;
+
+        const sb = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+        sb.channel("realtime-notifications")
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, payload => {
+                const n = payload.new;
+                if (n) {
+                    cachedNotifications.unshift({ id: n.id, title: n.title, body: n.body, created_at: n.created_at, read: false });
+                    if (cachedNotifications.length > 50) cachedNotifications.pop();
+                    renderNotifications(cachedNotifications);
+                }
+            })
+            .subscribe();
+
+        sb.channel("realtime-email")
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "email_queue" }, () => {
+                refreshEmailPanel();
+            })
+            .subscribe();
+
+        console.log("Supabase Realtime connected.");
+    } catch (err) {
+        console.warn("Supabase Realtime unavailable:", err.message);
+    }
+}
 
 // ══ INIT ══════════════════════════════════════════════════════════════
 setOrbState("waiting");
@@ -2278,6 +2530,10 @@ fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
 setTimeout(() => { if (autoListen && !isListening) startListening(); }, 1000);
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(err => console.warn("SW register failed:", err.message));
+}
+initSupabaseRealtime();
 </script>
 </body>
 </html>

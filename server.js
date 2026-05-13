@@ -1,11 +1,17 @@
 require("dotenv").config();
 
+const Sentry = require("@sentry/node");
+Sentry.init({ dsn: process.env.SENTRY_DSN || "", tracesSampleRate: 0.1 });
+
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
 const compression = require("compression");
+const rateLimit = require("express-rate-limit");
 const Anthropic = require("@anthropic-ai/sdk");
+const { createClient: createDeepgramClient } = require("@deepgram/sdk");
+const axios = require("axios");
 
 const db = require("./database");
 const pool = require("./pg_database");
@@ -79,9 +85,13 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(compression());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
+
+const chatLimiter = rateLimit({ windowMs: 60000, max: 30, message: { ok: false, reply: "Too many requests, slow down." } });
+app.use("/chat", chatLimiter);
+app.use("/api/voice-chat", chatLimiter);
 
 const client = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY
@@ -693,9 +703,58 @@ function searchDocuments(keyword) {
     }
 }
 
+async function embedText(text) {
+    if (!process.env.VOYAGE_API_KEY) return null;
+    try {
+        const resp = await axios.post(
+            "https://api.voyageai.com/v1/embeddings",
+            { model: "voyage-3-lite", input: [text.slice(0, 2000)] },
+            { headers: { Authorization: `Bearer ${process.env.VOYAGE_API_KEY}` }, timeout: 8000 }
+        );
+        return resp.data?.data?.[0]?.embedding || null;
+    } catch (err) {
+        console.error("VOYAGE EMBED ERROR:", err.message);
+        return null;
+    }
+}
+
+async function embedAndStoreDocument(filename, content) {
+    try {
+        const embedding = await embedText(`${filename}\n${content}`);
+        if (!embedding) return;
+        await pool.query(
+            "UPDATE documents SET embedding = $1::vector WHERE filename = $2",
+            [`[${embedding.join(",")}]`, filename]
+        );
+    } catch (err) {
+        console.error("EMBED STORE ERROR:", err.message);
+    }
+}
+
 async function getRelevantDocuments(question) {
     const q = (question || "").trim().toLowerCase();
 
+    // Try semantic vector search first
+    if (process.env.VOYAGE_API_KEY && q) {
+        try {
+            const embedding = await embedText(q);
+            if (embedding) {
+                const result = await pool.query(
+                    `SELECT filename, classification, summary, content, created_at
+                     FROM documents
+                     WHERE embedding IS NOT NULL
+                     ORDER BY embedding <=> $1::vector
+                     LIMIT 5`,
+                    [`[${embedding.join(",")}]`]
+                );
+                if (result.rows.length > 0) return result.rows;
+            }
+        } catch (err) {
+            console.error("VECTOR SEARCH ERROR:", err.message);
+        }
+    }
+
+    // Fall back to keyword search
     try {
         return await pgSearchDocuments(q);
     } catch (error) {
@@ -4904,6 +4963,7 @@ async function handleCommand(command) {
             );
 
             setImmediate(() => backgroundClassifyAndSummarise(filename, content));
+            setImmediate(() => embedAndStoreDocument(filename, content));
 
             return {
                 ok: true,
@@ -4932,6 +4992,7 @@ async function handleCommand(command) {
             );
 
             setImmediate(() => backgroundClassifyAndSummarise(filename, content));
+            setImmediate(() => embedAndStoreDocument(filename, content));
 
             return {
                 ok: true,
@@ -6674,16 +6735,16 @@ ${preview}
         }
 
         // Fallback: raw Anthropic SDK if Mastra not initialised
-        const response = await client.messages.create({
+        const streamMsg = await client.messages.stream({
             model: MODEL,
             max_tokens: 500,
             tools: TOOLS,
             messages: [{ role: "user", content: prompt }]
-        });
+        }).finalMessage();
 
         clearTimeout(chatTimeout);
 
-        const toolUseBlock = (response.content || []).find(part => part.type === "tool_use");
+        const toolUseBlock = (streamMsg.content || []).find(part => part.type === "tool_use");
 
         if (toolUseBlock) {
             const command = toolUseInputToCommand(toolUseBlock.name, toolUseBlock.input || {});
@@ -6695,7 +6756,7 @@ ${preview}
             }
         }
 
-        const reply = (response.content || [])
+        const reply = (streamMsg.content || [])
             .filter(part => part.type === "text")
             .map(part => part.text || "")
             .join("\n")
@@ -7165,12 +7226,60 @@ app.get("/api/ping", (req, res) => {
     res.json({ ok: true, ts: Date.now(), mastra: getMastraStatus() });
 });
 
+app.get("/api/config", requireAppAccess, (req, res) => {
+    res.json({
+        ok: true,
+        supabaseUrl: process.env.SUPABASE_URL || "",
+        supabaseAnonKey: process.env.SUPABASE_ANON_KEY || ""
+    });
+});
+
+app.get("/api/deepgram-token", requireAppAccess, (req, res) => {
+    const key = process.env.DEEPGRAM_API_KEY;
+    if (!key) return res.status(503).json({ ok: false, error: "Deepgram not configured." });
+    res.json({ ok: true, token: key });
+});
+
+app.post("/api/upload-file", requireAppAccess, async (req, res) => {
+    try {
+        const { filename, data, mimeType } = req.body || {};
+        if (!filename || !data) return res.status(400).json({ ok: false, reply: "filename and data required." });
+
+        const cleanName = path.basename(filename.trim());
+        const buffer = Buffer.from(data, "base64");
+        const textContent = buffer.toString("utf-8").slice(0, 8000);
+
+        await createWorkspaceFile(cleanName, textContent);
+
+        const summaryResp = await client.messages.create({
+            model: HAIKU_MODEL,
+            max_tokens: 150,
+            messages: [{ role: "user", content: `Summarise this file in 2-3 sentences:\n\nFilename: ${cleanName}\n\n${textContent.slice(0, 3000)}` }]
+        });
+        const summary = (summaryResp.content[0]?.text || "").trim();
+
+        await pgSaveDocument(cleanName, textContent, "personal", summary);
+        setImmediate(() => embedAndStoreDocument(cleanName, textContent));
+
+        return res.json({ ok: true, reply: `File "${cleanName}" uploaded and summarised.`, summary });
+    } catch (error) {
+        console.error("UPLOAD FILE ERROR:", error);
+        return res.status(500).json({ ok: false, reply: error.message || "Upload failed." });
+    }
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,
         reply: "Route not found"
     });
 });
+
+if (Sentry.setupExpressErrorHandler) {
+    Sentry.setupExpressErrorHandler(app);
+} else if (Sentry.expressErrorHandler) {
+    app.use(Sentry.expressErrorHandler());
+}
 
 app.use((err, req, res, next) => {
     console.error("UNHANDLED ERROR:", err);
@@ -7188,6 +7297,16 @@ app.listen(PORT, () => {
            AND priority != 'urgent'`
     ).then(r => { if (r.rowCount > 0) console.log(`EMAIL BACKFILL: Marked ${r.rowCount} payment email(s) as urgent.`); })
      .catch(err => console.error("EMAIL BACKFILL ERROR:", err.message));
+
+    // pgvector setup
+    pool.query("CREATE EXTENSION IF NOT EXISTS vector")
+        .then(() => pool.query("ALTER TABLE documents ADD COLUMN IF NOT EXISTS embedding vector(512)"))
+        .then(() => pool.query(`
+            CREATE INDEX IF NOT EXISTS documents_embedding_idx
+            ON documents USING hnsw (embedding vector_cosine_ops)
+        `))
+        .then(() => console.log("pgvector: extension + index ready."))
+        .catch(err => console.error("PGVECTOR SETUP ERROR:", err.message));
 
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🤖 Model: ${MODEL}`);

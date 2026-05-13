@@ -2,8 +2,10 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.77",
     "@anthropic-ai/sdk": "^0.90.0",
+    "@deepgram/sdk": "^5.2.0",
     "@mastra/core": "^1.33.1",
     "@mastra/memory": "^1.18.0",
+    "@sentry/node": "^10.53.1",
     "@supabase/supabase-js": "^2.104.1",
     "axios": "^1.15.0",
     "better-sqlite3": "^12.9.0",
@@ -12,6 +14,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.1",
     "fs": "^0.0.1-security",
     "googleapis": "^144.0.0",
     "path": "^0.12.7",
