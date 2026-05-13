@@ -1426,8 +1426,9 @@ async function speakWithElevenLabs(text) {
                 const ms    = new MediaSource();
                 const msUrl = URL.createObjectURL(ms);
                 const audio = new Audio(msUrl);
-                audio.playbackRate = voiceSpeed;
                 currentAudio = audio;
+                let rateSet  = false;
+                const applyRate = () => { if (!rateSet) { rateSet = true; audio.playbackRate = voiceSpeed; } };
 
                 const done = ok => { URL.revokeObjectURL(msUrl); currentAudio = null; resolve(ok); };
 
@@ -1440,13 +1441,14 @@ async function speakWithElevenLabs(text) {
                     const tryPlay = () => {
                         if (!playing && audio.readyState >= 2) {
                             playing = true;
-                            audio.play().catch(() => {});
+                            audio.play().then(() => applyRate()).catch(() => {});
                         }
                     };
 
-                    audio.addEventListener("canplay", tryPlay, { once: true });
-                    audio.addEventListener("ended",   () => done(true),  { once: true });
-                    audio.addEventListener("error",   () => done(false), { once: true });
+                    audio.addEventListener("canplay",   () => { applyRate(); tryPlay(); }, { once: true });
+                    audio.addEventListener("timeupdate", applyRate,            { once: true });
+                    audio.addEventListener("ended",      () => done(true),     { once: true });
+                    audio.addEventListener("error",      () => done(false),    { once: true });
 
                     try {
                         while (true) {
@@ -1456,7 +1458,7 @@ async function speakWithElevenLabs(text) {
                             sb.appendBuffer(value);
                             tryPlay();
                         }
-                        if (!playing) { playing = true; audio.play().catch(() => done(false)); }
+                        if (!playing) { playing = true; audio.play().then(() => applyRate()).catch(() => done(false)); }
                     } catch (_) { done(false); }
                 }, { once: true });
 
@@ -1465,15 +1467,15 @@ async function speakWithElevenLabs(text) {
         }
 
         // Fallback: full blob download
-        const blob   = await fetchRes.blob();
+        const blob    = await fetchRes.blob();
         const blobUrl = URL.createObjectURL(blob);
         const audio   = new Audio(blobUrl);
-        audio.playbackRate = voiceSpeed;
-        currentAudio = audio;
+        currentAudio  = audio;
         await new Promise((res2, rej) => {
-            audio.onended = res2;
-            audio.onerror = rej;
-            audio.play().catch(rej);
+            audio.onended   = res2;
+            audio.onerror   = rej;
+            audio.oncanplay = () => { audio.playbackRate = voiceSpeed; };
+            audio.play().then(() => { audio.playbackRate = voiceSpeed; }).catch(rej);
         });
         currentAudio = null;
         URL.revokeObjectURL(blobUrl);
@@ -1499,6 +1501,7 @@ function _speakFallback(phrase, { onEnd } = {}) {
 function updateVoiceSpeed(val) {
     voiceSpeed = parseFloat(val) || 1.3;
     localStorage.setItem("apexVoiceSpeed", String(voiceSpeed));
+    if (currentAudio) currentAudio.playbackRate = voiceSpeed;
 }
 
 function showTypingIndicator() {
@@ -1516,8 +1519,7 @@ function hideTypingIndicator() {
 async function _speakInternal(text, useFiller) {
     try {
         // Mute mic before speaking to prevent feedback loop
-        if (recognition) { try { recognition.stop(); } catch (_) {} }
-        isListening = false;
+        if (recognition && isListening) { try { recognition.stop(); } catch (_) {} isListening = false; }
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         const phrase = summariseForSpeech(text);
         if (!phrase) return;
@@ -1544,8 +1546,7 @@ async function _processSpeak() {
     }
     isSpeakingNow = false;
     if (autoListen) {
-        setOrbState("waiting");
-        setTimeout(() => { if (autoListen && !isListening) startListening(); }, 300);
+        startListening();
     } else {
         setOrbState("ready");
     }
@@ -1618,9 +1619,9 @@ function initRecognition() {
 }
 
 function startListening() {
+    if (isSpeakingNow) return;
     interruptSpeech();
     speakQueue.length = 0;
-    isSpeakingNow = false;
     if (!recognition) recognition = initRecognition();
     if (!recognition) return;
     isListening = true;
