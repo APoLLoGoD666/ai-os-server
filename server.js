@@ -56,6 +56,7 @@ const {
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
 const { checkEmails, sendEmailReply, initEmailAgent } = require("./email_agent");
+const { initMastra } = require("./mastra_agents");
 const { categoriseTransaction, checkBudgetAlerts, parseCsvTransactions, FINANCE_CATEGORIES } = require("./finance_agent");
 const { initRoutineAgent } = require("./routine_agent");
 const {
@@ -87,6 +88,8 @@ const client = new Anthropic({
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 const AUTONOMY_LEVEL = String(process.env.AUTONOMY_LEVEL || "1");
+
+let mastraAgents = null;
 
 const TOOLS = [
     {
@@ -6120,6 +6123,61 @@ Final obvious clean state summary:
             return { ok: true, reply: `Budget set: £${command.amount}/month for ${command.category}.` };
         }
 
+        case "check_emails": {
+            try {
+                const count = await checkEmails(client);
+                return { ok: true, reply: `Checked email. Found ${count} new message${count !== 1 ? "s" : ""}.` };
+            } catch (err) {
+                return { ok: false, reply: `Email check failed: ${err.message}` };
+            }
+        }
+
+        case "list_emails": {
+            try {
+                const emails = await pgListEmailQueue(20);
+                if (!emails.length) return { ok: true, reply: "No emails pending." };
+                const lines = emails.map(e => `- #${e.id} [${e.status}] From: ${e.sender} | Subject: ${e.subject}`);
+                return { ok: true, reply: `Emails:\n\n${lines.join("\n")}` };
+            } catch (err) {
+                return { ok: false, reply: `Could not list emails: ${err.message}` };
+            }
+        }
+
+        case "list_routines": {
+            try {
+                const routines = await pgListRoutines();
+                if (!routines.length) return { ok: true, reply: "No routines set up." };
+                const lines = routines.map(r => `- #${r.id} [${r.active ? "active" : "inactive"}] ${r.name} (${r.schedule_cron}): ${r.description}`);
+                return { ok: true, reply: `Routines:\n\n${lines.join("\n")}` };
+            } catch (err) {
+                return { ok: false, reply: `Could not list routines: ${err.message}` };
+            }
+        }
+
+        case "create_routine": {
+            try {
+                const routine = await pgCreateRoutine(command.name, command.description || "", command.schedule_cron);
+                return { ok: true, reply: `Routine created: "${command.name}" (${command.schedule_cron}).` };
+            } catch (err) {
+                return { ok: false, reply: `Could not create routine: ${err.message}` };
+            }
+        }
+
+        case "create_notification": {
+            try {
+                await pgCreateNotification(
+                    command.priority || "normal",
+                    command.title,
+                    command.body,
+                    null,
+                    null
+                );
+                return { ok: true, reply: `Notification created: "${command.title}".` };
+            } catch (err) {
+                return { ok: false, reply: `Could not create notification: ${err.message}` };
+            }
+        }
+
         default:
             return null;
     }
@@ -6517,16 +6575,24 @@ ${preview}
 
         const prompt = buildPrompt(userMessage, memoryText, docsText);
 
+        if (mastraAgents && mastraAgents.apexAgent) {
+            const result = await mastraAgents.apexAgent.generate([{ role: "user", content: prompt }]);
+            const reply = result.text || "No response from AI";
+            await addToMemory("ai", reply);
+            return res.status(200).json({
+                ok: true,
+                reply,
+                memoryUsed: true,
+                documentsUsed: relevantDocs.length
+            });
+        }
+
+        // Fallback: raw Anthropic SDK if Mastra not initialised
         const response = await client.messages.create({
             model: MODEL,
             max_tokens: 700,
             tools: TOOLS,
-            messages: [
-                {
-                    role: "user",
-                    content: prompt
-                }
-            ]
+            messages: [{ role: "user", content: prompt }]
         });
 
         const toolUseBlock = (response.content || []).find(part => part.type === "tool_use");
@@ -6945,6 +7011,47 @@ Respond naturally in 1-2 sentences.`.trim();
     }
 });
 
+app.post("/api/mastra/run", requireAppAccess, async (req, res) => {
+    try {
+        const { agent: agentName, message, workflow: workflowName, input } = req.body || {};
+
+        if (workflowName) {
+            if (!mastraAgents || !mastraAgents.mastra) {
+                return res.status(503).json({ ok: false, reply: "Mastra not initialised." });
+            }
+            const wf = mastraAgents.mastra.getWorkflow(workflowName);
+            if (!wf) return res.status(404).json({ ok: false, reply: `Workflow not found: ${workflowName}` });
+            const run = await wf.createRun();
+            const result = await run.start({ inputData: input || {} });
+            return res.json({ ok: true, status: result.status, steps: result.steps });
+        }
+
+        if (!message || typeof message !== "string" || !message.trim()) {
+            return res.status(400).json({ ok: false, reply: "message is required." });
+        }
+
+        const agentMap = {
+            apex: mastraAgents && mastraAgents.apexAgent,
+            email: mastraAgents && mastraAgents.emailAgent,
+            finance: mastraAgents && mastraAgents.financeAgent,
+            routine: mastraAgents && mastraAgents.routineAgent,
+            research: mastraAgents && mastraAgents.researchAgent
+        };
+
+        const target = agentMap[agentName] || (mastraAgents && mastraAgents.apexAgent);
+
+        if (!target) {
+            return res.status(503).json({ ok: false, reply: "Mastra agents not initialised." });
+        }
+
+        const result = await target.generate([{ role: "user", content: message.trim() }]);
+        return res.json({ ok: true, reply: result.text, toolResults: result.toolResults });
+    } catch (error) {
+        console.error("MASTRA RUN ERROR:", error);
+        return res.status(500).json({ ok: false, reply: error.message || "Mastra run failed." });
+    }
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,
@@ -6963,4 +7070,12 @@ app.listen(PORT, () => {
     // Phase 2 agents
     initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
     initRoutineAgent(client).catch(err => console.error("ROUTINE AGENT INIT ERROR:", err.message));
+
+    // Mastra agent framework
+    try {
+        mastraAgents = initMastra(handleCommand);
+        console.log("🤖 Mastra agents initialised.");
+    } catch (err) {
+        console.error("MASTRA INIT ERROR:", err.message);
+    }
 });
