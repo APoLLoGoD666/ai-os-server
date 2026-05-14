@@ -1362,6 +1362,11 @@ const inFlightRefreshes = {};
 const renderSigs        = {};
 const SLOW_REFRESH_MS   = 60000;
 
+// iOS PWA detection — gates all iOS-specific code paths; desktop pipeline is untouched
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let _iosConvTimer = null; // iOS conversation silence timeout (replaces AnalyserNode VAD on iOS)
+
 // ══ UTILITIES ═════════════════════════════════════════════════════════
 function buildApiUrl(path) {
     if (!APP_KEY) return `${API_BASE}${path}`;
@@ -1490,6 +1495,8 @@ if (window.speechSynthesis) {
         _pickVoice();
     };
     _pickVoice();
+    // iOS PWA voices are not available at parse time — re-pick after 500ms
+    setTimeout(_pickVoice, 500);
 }
 
 function cleanForSpeech(text) {
@@ -1579,34 +1586,25 @@ function _speakUtterance(phrase, { onStart, onEnd } = {}) {
 // Minimal silent WAV for unlocking the Audio element in iOS PWA (data URI works offline, no CORS)
 const _SILENT_WAV = 'data:audio/wav;base64,UklGRiUAABXQVZFZm10IBAAAAAABAAEARKwAAESsAAABAAgAZGF0YQEAAACA';
 
-// Unlock audio, speech synthesis, and mic on the very first user gesture (iOS PWA requirement).
-// iOS PWA is stricter than Safari browser: each getUserMedia call can trigger a separate prompt,
-// audio elements must be unlocked with a real src (not empty), and speechSynthesis needs a gesture.
-document.addEventListener('touchstart', async () => {
-    // ── 1. Audio element: use a data URI src so iOS PWA actually unlocks it ──
+// Unlock audio and speech synthesis on the very first user gesture.
+// On iOS PWA: webkitSpeechRecognition manages its own mic internally — calling getUserMedia
+// separately always triggers a second permission prompt (confirmed WebKit behaviour, no workaround).
+// So we never call getUserMedia on iOS. The AnalyserNode VAD is replaced by a conversation timeout.
+document.addEventListener('touchstart', () => {
+    // ── Audio: data URI src + load() + play() is the required iOS PWA unlock sequence ──
     if (!_apexAudio) {
         _apexAudio = new Audio();
         _apexAudio.src = _SILENT_WAV;
+        _apexAudio.load();
         _apexAudio.play().catch(() => {});
         console.log('[iOS] audio element created and unlocked');
     }
-    // ── 2. Speech synthesis: speaking a silent utterance inside a gesture primes all subsequent calls ──
+    // ── Speech synthesis: silent utterance inside a gesture primes all subsequent speak() calls ──
     if (window.speechSynthesis) {
         const u = new SpeechSynthesisUtterance('');
         u.volume = 0;
         window.speechSynthesis.speak(u);
         console.log('[iOS] speechSynthesis unlocked');
-    }
-    // ── 3. Mic: call getUserMedia exactly once here — SpeechRecognition manages its own mic internally.
-    // iOS PWA shows one permission prompt per getUserMedia call; doing it here on a gesture means the
-    // user sees exactly one prompt, and the stream is reused by the AnalyserNode in startVoicePipeline.
-    if (!dgStream) {
-        try {
-            dgStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            console.log('[iOS] mic granted on touchstart');
-        } catch (e) {
-            console.warn('[iOS] getUserMedia on touchstart failed:', e.message);
-        }
     }
 }, { once: true });
 
@@ -1865,6 +1863,26 @@ function _showBanner(id, html) {
     document.body.appendChild(el);
 }
 
+// ── iOS conversation silence timeout (replaces AnalyserNode VAD on iOS) ──────
+// Called from unmuteDeepgram() after each AI response ends.
+// Resets a 4-second timer; if it fires with no new speech → return to wake mode.
+function _iosResetConvTimer() {
+    clearTimeout(_iosConvTimer);
+    _iosConvTimer = setTimeout(() => {
+        _iosConvTimer = null;
+        if (dgMode === "conversation" && !dgMuted && !isSpeakingNow) {
+            console.log('[iOS] 4s silence timeout → returning to standby');
+            dgMode = "wake";
+            setOrbState("waiting");
+        }
+    }, 4000);
+}
+
+function _iosClearConvTimer() {
+    clearTimeout(_iosConvTimer);
+    _iosConvTimer = null;
+}
+
 // ── Web Speech API voice pipeline ─────────────────────────────────────
 function _rms(buf) {
     let s = 0;
@@ -1876,7 +1894,7 @@ function _rms(buf) {
 async function startVoicePipeline() {
     if (srec || !autoListen) return;
 
-    // ── 1. Web Speech API first — iOS shows one permission prompt for both SR + getUserMedia ──
+    // ── 1. Web Speech API (SR manages its own mic internally on all platforms) ──
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
         _showBanner("banner-nospeech", "Voice input not supported on this browser — please use Chrome or type below.");
@@ -1954,15 +1972,14 @@ async function startVoicePipeline() {
     console.log('[Voice] SpeechRecognition starting — mode:wake');
     try { srec.start(); } catch (e) { console.error('[SR] start error:', e.message); }
 
-    // ── 2. AnalyserNode for VAD — reuse mic stream acquired on touchstart (iOS) or get it now (desktop) ──
-    if (!dgAudioCtx) {
+    // ── 2. AnalyserNode + VAD silence timer — desktop only ──────────────────────────────────
+    // On iOS: webkitSpeechRecognition owns the mic; calling getUserMedia triggers a second
+    // permission prompt (confirmed WebKit bug). Silence detection uses _iosResetConvTimer instead.
+    if (!isIOS && !dgAudioCtx) {
         try {
             if (!dgStream) {
-                // Desktop path: no touchstart fired, acquire mic stream now
                 dgStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                console.log('[Voice] mic granted in startVoicePipeline (desktop path)');
-            } else {
-                console.log('[Voice] reusing mic stream from touchstart (iOS path)');
+                console.log('[Voice] mic granted (desktop)');
             }
             dgAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             dgAnalyser = dgAudioCtx.createAnalyser();
@@ -2012,6 +2029,7 @@ function stopVoicePipeline() {
     if (_vadInterruptSR) { try { _vadInterruptSR.abort(); } catch (_) {} _vadInterruptSR = null; }
     if (srec) { try { srec.abort(); } catch (_) {} srec = null; }
     isListening = false;
+    if (isIOS) _iosClearConvTimer();
 }
 
 // ── Background / foreground mic lifecycle ─────────────────────────────
@@ -2038,6 +2056,7 @@ function _pauseVoiceForBackground() {
     if (_vadInterruptSR) { try { _vadInterruptSR.abort(); } catch (_) {} _vadInterruptSR = null; }
     // Pause any in-flight audio too
     if (currentAudio) { try { currentAudio.pause(); } catch (_) {} }
+    if (isIOS) _iosClearConvTimer();
 }
 
 async function _restoreVoiceFromBackground() {
@@ -2058,6 +2077,8 @@ function unmuteDeepgram() {
     lastSpeechMs = Date.now();
     console.log(`[Voice] unmuteDeepgram — mode:${dgMode} isListening:${isListening}`);
     if (isListening) setOrbState(dgMode === "conversation" ? "listening" : "waiting");
+    // iOS: start 4s silence countdown now that speaking has ended
+    if (isIOS && dgMode === "conversation") _iosResetConvTimer();
 }
 
 function startListening() {
