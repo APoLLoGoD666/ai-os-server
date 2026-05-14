@@ -1267,9 +1267,15 @@ let sbCtx               = null;  // standby AudioContext
 let sbAnalyser          = null;
 let sbInterval          = null;
 let sbActive            = false; // true = in standby (no Deepgram)
+let sbRecorder          = null;  // always-running MediaRecorder (pre-roll + live)
+let sbRingBuf           = [];    // circular pre-roll ring buffer (recent chunks)
+let dgPreBuffer         = [];    // chunks buffered while Deepgram WS is connecting
+let dgConnecting        = false; // true while WebSocket is in CONNECTING state
 let lastSpeechMs        = 0;
-const SB_SPEECH_DB      = -50;   // dB threshold to activate Deepgram
+const SB_SPEECH_DB      = -55;   // dB threshold to activate Deepgram (lower = more sensitive)
 const SB_SILENCE_MS     = 1500;  // ms of silence before returning to standby
+const SB_PREROLL_N      = 6;     // chunks to keep as pre-roll (6 × 50ms = ~300ms)
+const SB_CHUNK_MS       = 50;    // MediaRecorder timeslice ms
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 const voiceSpeed        = 1.3;
@@ -1739,6 +1745,24 @@ async function startStandby() {
         sbCtx.createMediaStreamSource(dgStream).connect(sbAnalyser);
         sbActive = true;
         lastSpeechMs = Date.now();
+
+        // Single always-running recorder: feeds ring buffer in standby,
+        // dgPreBuffer while connecting, and directly to Deepgram once live.
+        sbRecorder = new MediaRecorder(dgStream);
+        sbRecorder.ondataavailable = e => {
+            if (!e.data.size) return;
+            if (dgConnecting) {
+                dgPreBuffer.push(e.data);
+            } else if (dgSocket && dgSocket.readyState === WebSocket.OPEN) {
+                dgSocket.send(e.data);
+            } else {
+                // Standby: maintain rolling pre-roll ring buffer
+                sbRingBuf.push(e.data);
+                if (sbRingBuf.length > SB_PREROLL_N) sbRingBuf.shift();
+            }
+        };
+        sbRecorder.start(SB_CHUNK_MS);
+
         setOrbState("waiting");
         console.log("[Standby] monitoring mic");
 
@@ -1752,6 +1776,10 @@ async function startStandby() {
                 if (db > SB_SPEECH_DB) {
                     console.log("[Standby] → [Listening]");
                     sbActive = false;
+                    // Seed pre-buffer with ring buffer so the pre-roll is flushed on connect
+                    dgPreBuffer = [...sbRingBuf];
+                    sbRingBuf = [];
+                    dgConnecting = true;
                     lastSpeechMs = Date.now();
                     _activateDg();
                 }
@@ -1774,7 +1802,11 @@ async function startStandby() {
 
 function stopStandby() {
     sbActive = false;
+    dgConnecting = false;
+    dgPreBuffer = [];
+    sbRingBuf = [];
     if (sbInterval) { clearInterval(sbInterval); sbInterval = null; }
+    try { if (sbRecorder && sbRecorder.state !== "inactive") sbRecorder.stop(); sbRecorder = null; } catch (_) {}
     try { if (sbCtx) { sbCtx.close(); sbCtx = null; } } catch (_) {}
     sbAnalyser = null;
 }
@@ -1787,26 +1819,26 @@ function _activateDg() {
     setOrbState("listening");
 
     dgSocket.onopen = () => {
+        // Flush pre-roll + any chunks buffered during connection, in order
+        const toFlush = [...dgPreBuffer];
+        dgPreBuffer = [];
+        for (const chunk of toFlush) {
+            if (dgSocket.readyState === WebSocket.OPEN) dgSocket.send(chunk);
+        }
+        dgConnecting = false; // sbRecorder.ondataavailable now forwards live to dgSocket
         dgMuted = false;
         isListening = true;
         lastSpeechMs = Date.now();
         setOrbState("listening");
-        dgRecorder = new MediaRecorder(dgStream);
-        dgRecorder.ondataavailable = e => {
-            if (dgSocket && dgSocket.readyState === WebSocket.OPEN && e.data.size > 0) {
-                dgSocket.send(e.data);
-            }
-        };
-        dgRecorder.start(100);
-        console.log("[Listening] Deepgram active");
+        console.log(`[Listening] Deepgram open, flushed ${toFlush.length} pre-roll chunks (~${toFlush.length * SB_CHUNK_MS}ms)`);
     };
 
     dgSocket.onmessage = e => {
         try {
             const msg = JSON.parse(e.data);
             if (msg.type === "Connected") return;
-            const transcript = msg?.channel?.alternatives?.[0]?.transcript?.trim();
-            const isFinal    = msg?.is_final;
+            const transcript  = msg?.channel?.alternatives?.[0]?.transcript?.trim();
+            const isFinal     = msg?.is_final;
             const speechFinal = msg?.speech_final;
             if (transcript && (isFinal || speechFinal) && !dgMuted) {
                 document.getElementById("chatInput").value = transcript;
@@ -1820,8 +1852,8 @@ function _activateDg() {
     dgSocket.onerror = e => { console.error("[Deepgram] error:", e); };
     dgSocket.onclose = () => {
         isListening = false;
+        dgConnecting = false;
         if (autoListen && sbCtx && !sbActive) {
-            // Deepgram closed unexpectedly — flip back to standby mode
             sbActive = true;
             setOrbState("waiting");
             console.log("[Deepgram] closed → Standby");
@@ -1830,7 +1862,8 @@ function _activateDg() {
 }
 
 function _deactivateDg() {
-    try { if (dgRecorder && dgRecorder.state !== "inactive") dgRecorder.stop(); dgRecorder = null; } catch (_) {}
+    dgConnecting = false;
+    dgPreBuffer = [];
     try { if (dgSocket) { dgSocket.close(); dgSocket = null; } } catch (_) {}
     isListening = false;
 }
