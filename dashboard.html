@@ -1851,23 +1851,34 @@ function _activateDg() {
 
     dgSocket.onmessage = e => {
         try {
-            const msg = JSON.parse(e.data);
+            const raw = String(e.data);
+            console.log("[Deepgram] raw message:", raw.slice(0, 300));
+            const msg = JSON.parse(raw);
+            console.log("[Deepgram] msg.type:", msg.type, "| keys:", Object.keys(msg).join(", "));
             if (msg.type === "Connected") return;
-            const transcript  = msg?.channel?.alternatives?.[0]?.transcript?.trim();
-            const isFinal     = msg?.is_final;
-            const speechFinal = msg?.speech_final;
+
+            // Try both known Deepgram response shapes
+            const altA = msg?.channel?.alternatives?.[0]?.transcript;           // nova-2 streaming
+            const altB = msg?.results?.channels?.[0]?.alternatives?.[0]?.transcript; // batch / alt shape
+            const transcript = (altA ?? altB ?? "").trim();
+            const isFinal    = msg?.is_final === true;
+
+            console.log(`[Deepgram] transcript: "${transcript}" | is_final: ${isFinal} | muted: ${dgMuted}`);
+
             if (transcript) {
-                dgGotTranscript = true; // transcript received — normal silence timeout now applies
-                lastSpeechMs = Date.now(); // push back the silence timer while user is speaking
-                if ((isFinal || speechFinal) && !dgMuted) {
-                    console.log(`[Deepgram] transcript: "${transcript}"`);
+                dgGotTranscript = true;
+                lastSpeechMs = Date.now();
+                if (isFinal && !dgMuted) {
+                    console.log(`[Deepgram] sending to server: "${transcript}"`);
                     document.getElementById("chatInput").value = transcript;
                     lastSendWasVoice = true;
                     dgMuted = true;
                     sendVoiceChatCommand(transcript);
                 }
             }
-        } catch (_) {}
+        } catch (err) {
+            console.error("[Deepgram] onmessage error:", err);
+        }
     };
 
     dgSocket.onerror = e => { console.error("[Deepgram] error:", e); };
@@ -2067,8 +2078,10 @@ async function sendVoiceChatCommand(msg) {
         });
 
         console.log(`[LATENCY] +${Date.now() - _t0Voice}ms reply received from server`);
+        console.log("[Voice] server reply:", data);
         hideTypingIndicator();
         const reply = data.reply || "Done.";
+        console.log("[Voice] rendering reply in chat:", reply);
         renderChatMessage("ai", reply);
         const ms = Date.now() - _t0Voice;
         const log = document.getElementById("chatLog");
@@ -2079,6 +2092,7 @@ async function sendVoiceChatCommand(msg) {
             log.appendChild(lat);
         }
         setOrbState("speaking");
+        console.log("[Voice] passing to ElevenLabs / speak queue");
         speak(reply, { useFiller: true });
 
         setConnStatus(true);
