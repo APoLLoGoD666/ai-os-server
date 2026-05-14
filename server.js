@@ -7419,11 +7419,9 @@ wss.on("connection", (browserSocket) => {
     }
 
     browserSocket.on("message", (data, isBinary) => {
-        if (isBinary) {
-            console.log("DG proxy: forwarding audio chunk, bytes:", data.length);
-        }
+        console.log(`DG proxy: received from browser — binary:${isBinary} bytes:${data.length}`);
         if (_dgWs && _dgWs.readyState === 1) {
-            _dgWs.send(data, { binary: isBinary });
+            _dgWs.send(data, { binary: true });
         } else {
             console.warn("DG proxy: Deepgram not ready, dropping chunk");
         }
