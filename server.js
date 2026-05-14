@@ -82,6 +82,7 @@ const {
 } = require("./pg_helpers");
 
 const app = express();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
@@ -7210,10 +7211,11 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         const userMessage = rawMessage.trim();
 
         // Write memory + fetch summary + fetch docs all in parallel
+        // Use direct Postgres keyword search — no Voyage embed, no latency spikes
         const [, memoryText, relevantDocs] = await Promise.all([
             addToMemory("user", userMessage),
             getMemorySummary(),
-            getRelevantDocuments(userMessage)
+            pgSearchDocuments(userMessage.toLowerCase()).catch(() => [])
         ]);
         console.log(`[LATENCY] +${Date.now() - t0}ms parallel fetch complete`);
 
@@ -7235,7 +7237,7 @@ Respond naturally in 1-2 sentences.`.trim();
 
         // Only include tools if the message looks like an action request
         const needsTools = /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment/i.test(userMessage);
-        console.log(`[LATENCY] +${Date.now() - t0}ms calling Anthropic (tools:${needsTools})`);
+        console.log(`[LATENCY] +${Date.now() - t0}ms calling Anthropic model:claude-haiku-4-5-20251001 tools:${needsTools}`);
 
         const response = await client.messages.create({
             model: "claude-haiku-4-5-20251001",
