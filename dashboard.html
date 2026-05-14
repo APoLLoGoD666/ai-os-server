@@ -827,29 +827,6 @@
             background: rgba(0,212,255,0.08);
         }
 
-        /* ── Push-to-talk (iOS only, injected by JS) ── */
-        .ptt-btn {
-            flex: 1;
-            height: 46px;
-            border-radius: 23px;
-            border: 2px solid rgba(255,77,109,0.55);
-            background: rgba(255,77,109,0.1);
-            color: #ff8099;
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            touch-action: none;
-            user-select: none;
-            -webkit-user-select: none;
-            transition: background 0.15s, border-color 0.15s, color 0.15s;
-        }
-        .ptt-btn.recording {
-            background: rgba(255,77,109,0.26);
-            border-color: rgba(255,77,109,0.9);
-            color: #ff4d6d;
-        }
-
         .apex-banner {
             position: fixed;
             top: 68px;
@@ -1361,14 +1338,11 @@ let currentAudio        = null;
 let currentAbort        = null;
 let speakQueue          = [];
 let isSpeakingNow       = false;
-let vadCtx              = null;
 let vadAnalyser         = null;
 let vadInterval         = null;
 let dgAnalyser          = null;   // AnalyserNode for visual UI
 let dgAudioCtx          = null;   // AudioContext for analyser
-const _iosAudio         = new Audio(); // Persistent element unlocked on first touch (iOS)
-let _iosAudioUnlocked   = false;
-const _isIOS            = !window.SpeechRecognition && !window.webkitSpeechRecognition;
+const _apexAudio        = new Audio(); // Single persistent audio element for all TTS playback
 let dgSilenceTimer      = null;   // setInterval for conversation silence tracking
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
@@ -1594,20 +1568,13 @@ function _speakUtterance(phrase, { onStart, onEnd } = {}) {
     window.speechSynthesis.speak(utt);
 }
 
-// iOS audio unlock — play a silent MP3 on the persistent element inside the first touch gesture
-// so its audio session stays unlocked for all subsequent .play() calls without a gesture.
+// Unlock audio session on first user gesture (required by iOS Safari)
 const _SILENT_MP3 = 'data:audio/mpeg;base64,//MkxAAHiAICWABElBeKPL/RANb2w+yiT1g/gTok//lP/W/l3h8QO/OCdCqCW2Cm//MkxAQHkAIWUAhEmAQXWUOFW2dxPu//9mr60ElY5sseQ+xxesmHKtZr7bsqqX2L//MkxAgFwAYiQAhEAC2hq22d3///9FTV6tA36JdgBJooBaRQkHgb/AKc1MAAA';
-function _unlockAudio() {
-    if (_iosAudioUnlocked) return;
-    _iosAudioUnlocked = true;
-    _iosAudio.src = _SILENT_MP3;
-    _iosAudio.volume = 0;
-    _iosAudio.play().then(() => {
-        _iosAudio.volume = 1;
-        console.log('[Audio] iOS audio session unlocked');
-    }).catch(e => console.warn('[Audio] unlock failed:', e.message));
-}
-document.addEventListener('touchstart', _unlockAudio, { once: true });
+_apexAudio.src = _SILENT_MP3;
+_apexAudio.load();
+document.addEventListener('touchstart', () => {
+    _apexAudio.play().then(() => _apexAudio.pause()).catch(() => {});
+}, { once: true });
 
 async function speakWithElevenLabs(text) {
     const phrase = summariseForSpeech(text);
@@ -1626,88 +1593,20 @@ async function speakWithElevenLabs(text) {
         });
         if (!fetchRes.ok) return false;
 
-        const MIME = "audio/mpeg";
-        // On iOS (touchstart fired _unlockAudio), skip MediaSource and use the unlocked Audio element
-        const canStream = !_iosAudioUnlocked && "MediaSource" in window && MediaSource.isTypeSupported(MIME);
-
-        if (canStream) {
-            return await new Promise(resolve => {
-                const ms    = new MediaSource();
-                const msUrl = URL.createObjectURL(ms);
-                const audio = new Audio(msUrl);
-                currentAudio = audio;
-                let rateSet  = false;
-                const applyRate = () => { if (!rateSet) { rateSet = true; audio.playbackRate = voiceSpeed; } };
-
-                const done = ok => { URL.revokeObjectURL(msUrl); currentAudio = null; resolve(ok); };
-
-                ms.addEventListener("sourceopen", async () => {
-                    const sb = ms.addSourceBuffer(MIME);
-                    sb.mode  = "sequence";
-                    const reader = fetchRes.body.getReader();
-                    let playing  = false;
-
-                    const tryPlay = () => {
-                        if (!playing && audio.readyState >= 2) {
-                            playing = true;
-                            console.log(`[LATENCY] +${Date.now() - _t0Voice}ms first audio playing`);
-                            audio.play().then(() => applyRate()).catch(() => {});
-                        }
-                    };
-
-                    audio.addEventListener("canplay",   () => { applyRate(); tryPlay(); }, { once: true });
-                    audio.addEventListener("timeupdate", applyRate,            { once: true });
-                    audio.addEventListener("ended",      () => done(true),     { once: true });
-                    audio.addEventListener("error",      () => done(false),    { once: true });
-                    audio.addEventListener("pause",      () => done(false),    { once: true });
-
-                    try {
-                        while (true) {
-                            const { done: eof, value } = await reader.read();
-                            if (eof) { if (ms.readyState === "open") ms.endOfStream(); break; }
-                            if (sb.updating) await new Promise(r => sb.addEventListener("updateend", r, { once: true }));
-                            sb.appendBuffer(value);
-                            tryPlay();
-                        }
-                        if (!playing) { playing = true; audio.play().then(() => applyRate()).catch(() => done(false)); }
-                    } catch (_) { done(false); }
-                }, { once: true });
-
-                ms.addEventListener("error", () => done(false));
-            });
-        }
-
-        // Fallback: full blob download
         const blob    = await fetchRes.blob();
         const blobUrl = URL.createObjectURL(blob);
 
-        if (_iosAudioUnlocked) {
-            // iOS Safari: reuse the pre-unlocked persistent Audio element
-            _iosAudio.src         = blobUrl;
-            _iosAudio.playbackRate = voiceSpeed;
-            currentAudio = _iosAudio;
-            console.log(`[LATENCY] +${Date.now() - _t0Voice}ms iOS audio playing`);
-            await new Promise((res2, rej) => {
-                const cleanup = () => { _iosAudio.onended = _iosAudio.onerror = _iosAudio.onpause = null; };
-                _iosAudio.onended = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; res2(true);  };
-                _iosAudio.onerror = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; rej();       };
-                _iosAudio.onpause = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; res2(false); };
-                _iosAudio.play().catch(e => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; rej(e); });
-            });
-            return true;
-        }
-
-        const audio  = new Audio(blobUrl);
-        currentAudio = audio;
+        _apexAudio.src          = blobUrl;
+        _apexAudio.playbackRate = voiceSpeed;
+        currentAudio = _apexAudio;
+        console.log(`[LATENCY] +${Date.now() - _t0Voice}ms audio playing`);
         await new Promise((res2, rej) => {
-            audio.onended   = res2;
-            audio.onerror   = rej;
-            audio.onpause   = () => res2(false);
-            audio.oncanplay = () => { audio.playbackRate = voiceSpeed; };
-            audio.play().then(() => { audio.playbackRate = voiceSpeed; }).catch(rej);
+            const cleanup = () => { _apexAudio.onended = _apexAudio.onerror = _apexAudio.onpause = null; };
+            _apexAudio.onended = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; res2(true);  };
+            _apexAudio.onerror = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; rej();       };
+            _apexAudio.onpause = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; res2(false); };
+            _apexAudio.play().catch(e => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; rej(e); });
         });
-        currentAudio = null;
-        URL.revokeObjectURL(blobUrl);
         return true;
 
     } catch (_) {
@@ -1788,11 +1687,10 @@ function speak(text, { useFiller = false } = {}) {
 
 function startVAD() {
     stopVAD();
-    if (!dgStream) return;
+    if (!dgStream || !dgAudioCtx) return;
     try {
-        vadCtx      = new AudioContext();
-        const source = vadCtx.createMediaStreamSource(dgStream);
-        vadAnalyser  = vadCtx.createAnalyser();
+        const source = dgAudioCtx.createMediaStreamSource(dgStream);
+        vadAnalyser  = dgAudioCtx.createAnalyser();
         vadAnalyser.fftSize = 256;
         source.connect(vadAnalyser);
         const buf = new Float32Array(vadAnalyser.fftSize);
@@ -1817,8 +1715,7 @@ function startVAD() {
 
 function stopVAD() {
     if (vadInterval) { clearInterval(vadInterval); vadInterval = null; }
-    try { if (vadCtx) { vadCtx.close(); vadCtx = null; } } catch (_) {}
-    vadAnalyser = null;
+    if (vadAnalyser) { try { vadAnalyser.disconnect(); } catch (_) {} vadAnalyser = null; }
 }
 
 function interruptSpeech() {
@@ -1944,6 +1841,10 @@ async function startVoicePipeline() {
     srec.onerror = e => {
         if (e.error === "not-allowed") {
             _showBanner("banner-micdenied", "Microphone access denied.");
+        } else if (e.error === "no-speech" || e.error === "audio-capture") {
+            if (autoListen && srec && !isSpeakingNow && isListening) {
+                setTimeout(() => { try { srec.start(); } catch (_) {} }, 500);
+            }
         } else if (e.error !== "no-speech") {
             console.error("[SR] error:", e.error);
         }
@@ -1951,7 +1852,7 @@ async function startVoicePipeline() {
 
     srec.onend = () => {
         console.log("[SR] ended — restarting");
-        if (autoListen && srec && !isSpeakingNow) {
+        if (autoListen && srec && !isSpeakingNow && isListening) {
             try { srec.start(); } catch (_) {}
         }
     };
@@ -1983,98 +1884,6 @@ function unmuteDeepgram() {
     dgMuted = false;
     lastSpeechMs = Date.now();
     if (isListening) setOrbState(dgMode === "conversation" ? "listening" : "waiting");
-}
-
-// ══ iOS PUSH-TO-TALK ══════════════════════════════════════════════════
-let _pttRecorder = null;
-let _pttChunks   = [];
-let _pttStream   = null;
-
-async function _pttStart() {
-    if (_pttRecorder) return;
-    _unlockAudio();
-    try {
-        _pttStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        _pttChunks = [];
-        _pttRecorder = new MediaRecorder(_pttStream);
-        _pttRecorder.ondataavailable = e => { if (e.data.size > 0) _pttChunks.push(e.data); };
-        _pttRecorder.start();
-        const btn = document.getElementById("pttBtn");
-        if (btn) { btn.textContent = "🔴 Recording…"; btn.classList.add("recording"); }
-        setOrbState("listening");
-    } catch (e) {
-        console.error("[PTT] mic error:", e.message);
-        renderChatMessage("system", "⚠ Microphone access denied.");
-    }
-}
-
-async function _pttStop() {
-    if (!_pttRecorder) return;
-    const recorder = _pttRecorder;
-    _pttRecorder = null;
-
-    const btn = document.getElementById("pttBtn");
-    if (btn) { btn.textContent = "Processing…"; btn.classList.remove("recording"); }
-    setOrbState("thinking");
-
-    await new Promise(resolve => { recorder.onstop = resolve; recorder.stop(); });
-    if (_pttStream) { _pttStream.getTracks().forEach(t => t.stop()); _pttStream = null; }
-
-    const mimeType = _pttChunks[0]?.type || "audio/webm";
-    const blob = new Blob(_pttChunks, { type: mimeType });
-    _pttChunks = [];
-
-    if (blob.size < 1000) {
-        if (btn) btn.textContent = "🎤 Hold to Talk";
-        setOrbState("ready");
-        renderChatMessage("system", "No audio captured — hold longer.");
-        return;
-    }
-
-    try {
-        const res = await fetch(buildApiUrl("/api/transcribe"), {
-            method: "POST",
-            headers: buildApiHeaders({ "Content-Type": mimeType }),
-            body: blob,
-            credentials: "same-origin"
-        });
-        const data = await res.json();
-        const transcript = (data.transcript || "").trim();
-        if (btn) btn.textContent = "🎤 Hold to Talk";
-        if (!transcript) {
-            setOrbState("ready");
-            renderChatMessage("system", "No speech detected — try again.");
-            return;
-        }
-        document.getElementById("chatInput").value = transcript;
-        lastSendWasVoice = true;
-        sendVoiceChatCommand(transcript);
-    } catch (e) {
-        console.error("[PTT] transcribe error:", e.message);
-        if (btn) btn.textContent = "🎤 Hold to Talk";
-        setOrbState("ready");
-        renderChatMessage("system", "⚠ Transcription failed — try again.");
-    }
-}
-
-function _setupPTT() {
-    const pttBtn = document.createElement("button");
-    pttBtn.id = "pttBtn";
-    pttBtn.className = "ptt-btn";
-    pttBtn.textContent = "🎤 Hold to Talk";
-    pttBtn.addEventListener("touchstart", e => { e.preventDefault(); _pttStart(); }, { passive: false });
-    pttBtn.addEventListener("touchend",   e => { e.preventDefault(); _pttStop();  }, { passive: false });
-    pttBtn.addEventListener("mousedown",  _pttStart);
-    pttBtn.addEventListener("mouseup",    _pttStop);
-
-    const inputArea = document.querySelector(".input-area");
-    const sendBtn   = inputArea.querySelector(".send-btn");
-    inputArea.insertBefore(pttBtn, sendBtn);
-
-    const micBtn = document.getElementById("micBtn");
-    if (micBtn) micBtn.style.display = "none";
-
-    setOrbState("ready");
 }
 
 function startListening() {
@@ -2997,11 +2806,7 @@ setInterval(refreshSlow, SLOW_REFRESH_MS);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
-if (_isIOS) {
-    _setupPTT();
-} else {
-    setTimeout(() => { if (autoListen) startVoicePipeline(); }, 1000);
-}
+setTimeout(() => { if (autoListen) startVoicePipeline(); }, 1000);
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(err => console.warn("SW register failed:", err.message));
 }
