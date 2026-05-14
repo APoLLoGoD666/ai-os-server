@@ -7238,7 +7238,7 @@ Respond naturally in 1-2 sentences.`.trim();
         console.log(`[LATENCY] +${Date.now() - t0}ms calling Anthropic (tools:${needsTools})`);
 
         const response = await client.messages.create({
-            model: MODEL,
+            model: "claude-haiku-4-5-20251001",
             max_tokens: 80,
             ...(needsTools ? { tools: TOOLS } : {}),
             messages: [{ role: "user", content: voicePrompt }]
