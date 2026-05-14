@@ -1364,7 +1364,8 @@ const SLOW_REFRESH_MS   = 60000;
 
 // Detect iOS standalone PWA — gates all iOS-specific code paths; desktop is untouched
 const isIOSPWA = (/iPad|iPhone|iPod/.test(navigator.userAgent)) &&
-                 (window.navigator.standalone === true);
+                 (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches);
+console.log(`[iOS] isIOSPWA:${isIOSPWA} | standalone:${window.navigator.standalone} | displayMode:${window.matchMedia('(display-mode: standalone)').matches} | UA:${navigator.userAgent}`);
 
 // iOS PWA pipeline state (always null on desktop)
 let _iosPWAStream       = null;   // mic MediaStream from getUserMedia
@@ -1376,6 +1377,7 @@ let _iosPWAChunks       = [];     // audio chunks collected by MediaRecorder
 let _iosPWARecording    = false;  // true while MediaRecorder is capturing
 let _iosPWASilenceTimer = null;   // setTimeout — 1.5s end-of-speech countdown
 let _iosPWARunning      = false;  // true when iOS pipeline is active
+let _iosVadLogTs        = 0;      // last timestamp a periodic VAD dB log was emitted
 
 // ══ UTILITIES ═════════════════════════════════════════════════════════
 function buildApiUrl(path) {
@@ -1671,7 +1673,8 @@ async function speakWithElevenLabs(text) {
             _apexAudio.onerror = () => { cleanup(); currentAudio = null; rej(); };
             _apexAudio.onpause = () => { cleanup(); currentAudio = null; res2(false); };
             _apexAudio.load();
-            _apexAudio.play().catch(e => { cleanup(); currentAudio = null; rej(e); });
+            if (isIOSPWA) console.log('[iOS] audio playing');
+            _apexAudio.play().catch(e => { if (isIOSPWA) console.error('[iOS] play() error:', e.message || String(e)); cleanup(); currentAudio = null; rej(e); });
         });
         return true;
 
@@ -1881,7 +1884,7 @@ function _showBanner(id, html) {
 
 async function _iosPWAStartPipeline() {
     if (_iosPWARunning || !autoListen) return;
-    console.log('[iOS PWA] starting pipeline');
+    console.log('[iOS PWA] pipeline starting');
     try {
         _iosPWAStream = await navigator.mediaDevices.getUserMedia({
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -1892,11 +1895,13 @@ async function _iosPWAStartPipeline() {
         _showBanner("banner-micdenied", "Microphone access denied.");
         return;
     }
+    console.log(`[iOS PWA] getUserMedia granted — tracks: ${_iosPWAStream.getTracks().length}`);
     _iosPWAAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (_iosPWAAudioCtx.state === "suspended") await _iosPWAAudioCtx.resume().catch(() => {});
     _iosPWAAnalyser = _iosPWAAudioCtx.createAnalyser();
     _iosPWAAnalyser.fftSize = 256;
     _iosPWAAudioCtx.createMediaStreamSource(_iosPWAStream).connect(_iosPWAAnalyser);
+    console.log('[iOS PWA] AnalyserNode created');
 
     const buf = new Float32Array(_iosPWAAnalyser.fftSize);
     _iosPWAVadTimer = setInterval(() => {
@@ -1904,6 +1909,9 @@ async function _iosPWAStartPipeline() {
         _iosPWAAnalyser.getFloatTimeDomainData(buf);
         const db  = _rms(buf);
         const now = Date.now();
+
+        // Periodic dB log every 2 seconds so we can confirm AnalyserNode is picking up audio
+        if (now - _iosVadLogTs >= 2000) { _iosVadLogTs = now; console.log(`[iOS VAD] dB: ${db === -Infinity ? '-∞' : db.toFixed(1)} | mode:${dgMode} | recording:${_iosPWARecording} | muted:${dgMuted}`); }
 
         // ── Interrupt during playback ──────────────────────────────────
         if (isSpeakingNow) {
@@ -1929,7 +1937,7 @@ async function _iosPWAStartPipeline() {
         if (dgMuted) return;
         if (db > -55) {
             lastSpeechMs = now;
-            if (!_iosPWARecording) _iosPWAStartRecording();
+            if (!_iosPWARecording) { console.log(`[iOS VAD] speech detected — ${db.toFixed(1)}dB — starting MediaRecorder`); _iosPWAStartRecording(); }
             clearTimeout(_iosPWASilenceTimer); _iosPWASilenceTimer = null;
         } else if (_iosPWARecording && !_iosPWASilenceTimer) {
             _iosPWASilenceTimer = setTimeout(() => {
@@ -1938,6 +1946,7 @@ async function _iosPWAStartPipeline() {
             }, 1500);
         }
     }, 80);
+    console.log('[iOS PWA] VAD interval started');
 
     _iosPWARunning = true;
     isListening    = true;
@@ -1988,6 +1997,7 @@ function _iosPWAStartRecording() {
         const blob = new Blob(_iosPWAChunks, { type: mimeType });
         _iosPWAChunks = [];
         if (blob.size < 1000) { console.log("[iOS PWA] blob too small, skipping"); return; }
+        console.log(`[iOS] recording stopped — blob size: ${blob.size}B — sending to /transcribe`);
         await _iosPWATranscribeAndProcess(blob, mimeType);
     };
     try {
@@ -2026,11 +2036,11 @@ async function _iosPWATranscribeAndProcess(blob, mimeType) {
             headers: buildApiHeaders({ "Content-Type": mimeType }),
             body:    blob
         });
-        if (!res.ok) { console.warn("[iOS PWA] /api/transcribe returned", res.status); return; }
+        if (!res.ok) { console.warn(`[iOS] transcribe error: ${res.status}`); return; }
         const data       = await res.json();
         const transcript = (data.transcript || "").trim();
         if (!transcript) { console.log("[iOS PWA] empty transcript, ignoring"); return; }
-        console.log(`[iOS PWA] transcript: "${transcript}"`);
+        console.log(`[iOS] transcribe response: "${transcript}"`);
         _iosPWAHandleTranscript(transcript);
     } catch (e) {
         console.error("[iOS PWA] transcribe error:", e.message);
@@ -2041,7 +2051,7 @@ function _iosPWAHandleTranscript(transcript) {
     if (dgMuted || isSpeakingNow) return;
     lastSpeechMs = Date.now();
     if (dgMode === "wake") {
-        console.log(`[iOS Wake] "${transcript}"`);
+        console.log(`[iOS] wake check: "${transcript}" — matched: ${/\bapex\b/i.test(transcript)}`);
         if (/\bapex\b/i.test(transcript)) {
             console.log("[iOS Wake] wake word matched → conversation");
             dgMode = "conversation";
@@ -2061,6 +2071,7 @@ function _iosPWAHandleTranscript(transcript) {
         document.getElementById("chatInput").value = transcript;
         lastSendWasVoice = true;
         dgMuted = true;
+        console.log(`[iOS] sending to voice-chat: "${transcript}"`);
         sendVoiceChatCommand(transcript);
     }
 }
