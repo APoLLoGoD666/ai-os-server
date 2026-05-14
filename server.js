@@ -7360,39 +7360,72 @@ app.use((err, req, res, next) => {
 
 const server = require("http").createServer(app);
 
-const wss = new WebSocketServer({ server, path: "/deepgram-proxy" });
-wss.on("connection", (browserSocket) => {
-    console.log("DG proxy: browser connected");
+// Persistent Deepgram connection — shared across all browser sessions
+let _dgWs = null;
+let _dgKeepalive = null;
+const _browserSockets = new Set();
 
-    const dgWs = new WS(
+function _openPersistentDg() {
+    if (_dgWs && (_dgWs.readyState === 0 || _dgWs.readyState === 1)) return;
+    console.log("DG proxy: opening persistent Deepgram connection");
+    _dgWs = new WS(
         "wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=300&interim_results=true",
         { headers: { "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}` } }
     );
 
-    dgWs.on("open", () => {
+    _dgWs.on("open", () => {
         console.log("DG proxy: Deepgram connection open");
-        if (browserSocket.readyState === 1) browserSocket.send(JSON.stringify({ type: "Connected" }));
+        for (const bs of _browserSockets) {
+            if (bs.readyState === 1) bs.send(JSON.stringify({ type: "Connected" }));
+        }
+        if (_dgKeepalive) clearInterval(_dgKeepalive);
+        _dgKeepalive = setInterval(() => {
+            if (_dgWs && _dgWs.readyState === 1) {
+                _dgWs.send(JSON.stringify({ type: "KeepAlive" }));
+                console.log("DG proxy: keepalive sent to Deepgram");
+            }
+        }, 5000);
     });
 
-    dgWs.on("message", (data) => {
+    _dgWs.on("message", (data) => {
         const text = data.toString();
-        console.log("DG proxy: Deepgram raw response:", text.slice(0, 500));
-        if (browserSocket.readyState === 1) browserSocket.send(text);
+        console.log("DG proxy: Deepgram response:", text.slice(0, 300));
+        for (const bs of _browserSockets) {
+            if (bs.readyState === 1) bs.send(text);
+        }
     });
 
-    dgWs.on("close", (code, reason) => {
-        console.log("DG proxy: Deepgram closed, code:", code, "reason:", reason.toString());
-        if (browserSocket.readyState === 1) browserSocket.close();
+    _dgWs.on("close", (code, reason) => {
+        console.log(`DG proxy: Deepgram closed — code:${code} reason:${reason.toString()}`);
+        if (_dgKeepalive) { clearInterval(_dgKeepalive); _dgKeepalive = null; }
+        _dgWs = null;
+        // Reconnect automatically — do NOT close browser sockets
+        console.log("DG proxy: reconnecting Deepgram in 1s...");
+        setTimeout(_openPersistentDg, 1000);
     });
 
-    dgWs.on("error", (e) => console.error("DG proxy: Deepgram error:", e.message));
+    _dgWs.on("error", (e) => console.error("DG proxy: Deepgram error:", e.message));
+}
+
+const wss = new WebSocketServer({ server, path: "/deepgram-proxy" });
+wss.on("connection", (browserSocket) => {
+    console.log("DG proxy: browser connected");
+    _browserSockets.add(browserSocket);
+
+    // Open persistent Deepgram connection if not already open
+    _openPersistentDg();
+
+    // If Deepgram is already open, send Connected immediately
+    if (_dgWs && _dgWs.readyState === 1) {
+        browserSocket.send(JSON.stringify({ type: "Connected" }));
+    }
 
     browserSocket.on("message", (data, isBinary) => {
-        if (dgWs.readyState === 1) {
-            if (isBinary) {
-                console.log("DG proxy: forwarding audio chunk, bytes:", data.length);
-            }
-            dgWs.send(data, { binary: isBinary });
+        if (isBinary) {
+            console.log("DG proxy: forwarding audio chunk, bytes:", data.length);
+        }
+        if (_dgWs && _dgWs.readyState === 1) {
+            _dgWs.send(data, { binary: isBinary });
         } else {
             console.warn("DG proxy: Deepgram not ready, dropping chunk");
         }
@@ -7400,7 +7433,8 @@ wss.on("connection", (browserSocket) => {
 
     browserSocket.on("close", () => {
         console.log("DG proxy: browser disconnected");
-        if (dgWs.readyState === 1) dgWs.close();
+        _browserSockets.delete(browserSocket);
+        // Do NOT close _dgWs — keep Deepgram alive for next browser connection
     });
 
     browserSocket.on("error", (e) => console.error("DG proxy: browser socket error:", e.message));
