@@ -1108,6 +1108,11 @@
         .email-draft-btn.send:hover { background:#e74c3c; }
         .email-draft-btn.cancel { background:rgba(255,255,255,0.08); color:#ccc; }
         .email-draft-btn.cancel:hover { background:rgba(255,255,255,0.15); }
+        .email-draft-prompt-row { display:flex; gap:8px; margin-top:8px; }
+        .email-draft-prompt-input { flex:1; padding:8px 10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:7px; color:#e0e0e0; font-size:12px; font-family:inherit; outline:none; }
+        .email-draft-prompt-input:focus { border-color:rgba(0,212,255,0.4); }
+        .email-draft-btn.regenerate { flex:0 0 auto; background:rgba(0,212,255,0.12); color:var(--accent); border:1px solid rgba(0,212,255,0.25); padding:8px 14px; font-size:12px; border-radius:9px; cursor:pointer; font-weight:600; transition:background 0.15s; }
+        .email-draft-btn.regenerate:hover { background:rgba(0,212,255,0.22); }
         textarea.email-draft-value { resize:vertical; min-height:120px; font-family:inherit; font-size:13px; color:#e0e0e0; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:8px 10px; line-height:1.5; width:100%; box-sizing:border-box; outline:none; }
         textarea.email-draft-value:focus { border-color:rgba(0,212,255,0.4); }
         .email-reply-row { margin-top:6px; }
@@ -1291,6 +1296,7 @@ const CONV_SILENCE_MS   = 5000;   // ms of silence before returning to wake mode
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 let _emailCache         = {};
+let _currentDraftEmailId = null;
 const voiceSpeed        = 1.3;
 let _t0Voice            = 0;
 const inFlightRefreshes = {};
@@ -2320,24 +2326,72 @@ function previewEmailDraft(id) {
     document.getElementById("draftBody").focus();
 }
 
-function openReplyDraft(id) {
+async function openReplyDraft(id) {
     const email = _emailCache[id];
     if (!email) { renderChatMessage("system", "Email not found."); return; }
+    _currentDraftEmailId = id;
     const subject = (email.subject || "").startsWith("Re:") ? email.subject : `Re: ${email.subject || ""}`;
-    document.getElementById("draftTo").textContent  = email.sender || "";
+    document.getElementById("draftTo").textContent      = email.sender || "";
     document.getElementById("draftSubject").textContent = subject;
-    document.getElementById("draftBody").value      = "";
-    document.getElementById("draftSendBtn").onclick = () => confirmUserComposedReply(id);
+    document.getElementById("draftBody").value          = "Drafting reply…";
+    document.getElementById("draftBody").disabled       = true;
+    document.getElementById("draftPrompt").value        = "";
+    document.getElementById("draftSendBtn").onclick     = () => confirmUserComposedReply(_currentDraftEmailId);
     document.getElementById("emailDraftModal").classList.add("active");
+    await _fetchAiDraft(id, "");
+    document.getElementById("draftBody").disabled = false;
     document.getElementById("draftBody").focus();
+}
+
+async function _fetchAiDraft(id, userPrompt) {
+    const email = _emailCache[id];
+    if (!email) return;
+    try {
+        const res = await fetch("/api/ai-draft-reply", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                emailSubject: email.subject  || "",
+                emailBody:    email.summary  || email.subject || "",
+                senderName:   email.sender   || "",
+                userPrompt:   userPrompt     || ""
+            })
+        });
+        const data = await res.json();
+        if (data.ok && data.draft) document.getElementById("draftBody").value = data.draft;
+    } catch { /* leave current value */ }
+}
+
+async function regenerateAiDraft() {
+    const id = _currentDraftEmailId;
+    if (!id) return;
+    const userPrompt = document.getElementById("draftPrompt").value.trim();
+    document.getElementById("draftBody").value    = "Drafting reply…";
+    document.getElementById("draftBody").disabled = true;
+    await _fetchAiDraft(id, userPrompt);
+    document.getElementById("draftBody").disabled = false;
 }
 
 async function confirmUserComposedReply(id) {
     const body = document.getElementById("draftBody").value.trim();
     if (!body) { alert("Please write a reply before sending."); return; }
     if (!confirm("Are you sure you want to send this reply?\n\nThis cannot be undone.")) return;
+    const email   = _emailCache[id];
+    if (!email) { renderChatMessage("system", "Email not found."); return; }
+    const subject = document.getElementById("draftSubject").textContent;
+    const to      = document.getElementById("draftTo").textContent;
     closeEmailDraftModal();
-    renderChatMessage("system", "⚠ Manual reply sending is not yet connected — server endpoint coming soon.");
+    try {
+        const res = await fetch("/api/send-reply", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-User-Confirmed": "true" },
+            body: JSON.stringify({ to, subject, body, gmailId: email.gmail_id || "" })
+        });
+        const data = await res.json();
+        renderChatMessage("system", data.ok ? `Reply sent to ${to}.` : `Send failed: ${data.reply}`);
+    } catch (err) {
+        renderChatMessage("system", `Send error: ${err.message}`);
+    }
 }
 
 function closeEmailDraftModal() {
@@ -2758,6 +2812,10 @@ initSupabaseRealtime();
         <div>
             <div class="email-draft-label">Body</div>
             <textarea class="email-draft-value" id="draftBody" rows="8" placeholder="Type your reply here…"></textarea>
+        </div>
+        <div class="email-draft-prompt-row">
+            <input class="email-draft-prompt-input" id="draftPrompt" type="text" placeholder="Adjust tone or focus… (optional)" />
+            <button class="email-draft-btn regenerate" onclick="regenerateAiDraft()">Regenerate</button>
         </div>
         <div class="email-draft-actions">
             <button class="email-draft-btn cancel" onclick="closeEmailDraftModal()">Cancel</button>
