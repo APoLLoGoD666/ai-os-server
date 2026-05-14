@@ -1724,11 +1724,11 @@ async function _speakInternal(text, useFiller) {
 
         if (filler) {
             const fillerOk = await speakWithElevenLabs(filler);
-            if (!fillerOk) await new Promise(r => _speakFallback(filler, { onEnd: r }));
+            if (!fillerOk && isSpeakingNow) await new Promise(r => _speakFallback(filler, { onEnd: r }));
         }
 
         const ok = await speakWithElevenLabs(phrase);
-        if (!ok) await new Promise(r => _speakFallback(phrase, { onEnd: r }));
+        if (!ok && isSpeakingNow) await new Promise(r => _speakFallback(phrase, { onEnd: r }));
     } catch (_) {}
 }
 
@@ -1841,7 +1841,7 @@ function _startInterruptSR() {
             dgMuted = true;
             sendVoiceChatCommand(transcript);
         }
-        // < 4 words: discard — Apex keeps speaking
+        // < 2 words: discard — Apex keeps speaking
     };
     r.onerror = () => { _vadInterruptSR = null; };
     r.onend   = () => { _vadInterruptSR = null; };
@@ -2156,9 +2156,8 @@ async function startVoicePipeline() {
     try { srec.start(); } catch (e) { console.error('[SR] start error:', e.message); }
 
     // ── 2. AnalyserNode + VAD silence timer — desktop only ──────────────────────────────────
-    // On iOS: webkitSpeechRecognition owns the mic; calling getUserMedia triggers a second
-    // permission prompt (confirmed WebKit bug). Silence detection uses _iosResetConvTimer instead.
-    if (!isIOS && !dgAudioCtx) {
+    // iOS PWA returns early above (line 2077) — this block is desktop-only.
+    if (!dgAudioCtx) {
         try {
             if (!dgStream) {
                 dgStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
