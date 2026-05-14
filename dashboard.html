@@ -1572,13 +1572,20 @@ function _speakUtterance(phrase, { onStart, onEnd } = {}) {
     window.speechSynthesis.speak(utt);
 }
 
-// Create and unlock the persistent Audio element on the first user gesture.
-// Calling .play() inside a touchstart handler (even if it fails) satisfies iOS Safari's
-// user-gesture requirement so all subsequent programmatic .play() calls succeed.
+// Unlock audio and speech synthesis on the first user gesture (iOS requirement).
 document.addEventListener('touchstart', () => {
-    if (_apexAudio) return;
-    _apexAudio = new Audio();
-    _apexAudio.play().catch(() => {});
+    // Unlock Audio element for ElevenLabs playback
+    if (!_apexAudio) {
+        _apexAudio = new Audio();
+        _apexAudio.play().catch(() => {});
+    }
+    // Unlock speech synthesis engine for iOS fallback TTS —
+    // speaking a silent utterance inside a gesture primes all subsequent speak() calls
+    if (window.speechSynthesis) {
+        const u = new SpeechSynthesisUtterance("");
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+    }
 }, { once: true });
 
 async function speakWithElevenLabs(text) {
@@ -1835,61 +1842,7 @@ function _rms(buf) {
 async function startVoicePipeline() {
     if (srec || !autoListen) return;
 
-    // Mic stream for AnalyserNode (visual UI) and VAD interrupt
-    if (!dgStream) {
-        try {
-            dgStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-        } catch (err) {
-            if (err.name === "NotAllowedError") _showBanner("banner-micdenied", "Microphone access denied.");
-            else console.error("[Voice] mic error:", err.message);
-            return;
-        }
-    }
-
-    // AnalyserNode for visual UI indicator
-    if (!dgAudioCtx) {
-        try {
-            dgAudioCtx = new AudioContext();
-            dgAnalyser = dgAudioCtx.createAnalyser();
-            dgAnalyser.fftSize = 256;
-            dgAudioCtx.createMediaStreamSource(dgStream).connect(dgAnalyser);
-
-            const buf = new Float32Array(dgAnalyser.fftSize);
-            dgSilenceTimer = setInterval(() => {
-                if (!autoListen) return;
-                dgAnalyser.getFloatTimeDomainData(buf);
-                const db = _rms(buf);
-
-                if (isSpeakingNow) {
-                    if (_vadInterruptSR) return; // already capturing
-                    if (db > -55) {
-                        console.log("[VAD] above -55dB — starting interrupt SR");
-                        _vadDebounceStart = null;
-                        _startInterruptSR();
-                    }
-                    return;
-                }
-
-                const now = Date.now();
-                if (now - dgDbLogTs >= 2000) {
-                    dgDbLogTs = now;
-                    console.log(`[Voice] dB: ${db === -Infinity ? "-∞" : db.toFixed(1)} | mode: ${dgMode}`);
-                }
-                if (dgMode === "conversation" && !dgMuted) {
-                    if (db > -65) lastSpeechMs = now;
-                    else if (now - lastSpeechMs > CONV_SILENCE_MS) {
-                        console.log(`[Voice] silence ${now - lastSpeechMs}ms → wake mode`);
-                        dgMode = "wake";
-                        setOrbState("waiting");
-                    }
-                }
-            }, 80);
-        } catch (e) {
-            console.warn("[Voice] analyser init failed:", e.message);
-        }
-    }
-
-    // Web Speech API
+    // ── 1. Web Speech API first — iOS shows one permission prompt for both SR + getUserMedia ──
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
         _showBanner("banner-nospeech", "Voice input not supported on this browser — please use Chrome or type below.");
@@ -1966,6 +1919,50 @@ async function startVoicePipeline() {
     setOrbState("waiting");
     console.log("[Voice] SpeechRecognition starting");
     try { srec.start(); } catch (e) { console.error("[SR] start error:", e.message); }
+
+    // ── 2. AnalyserNode for VAD — getUserMedia after SR so iOS reuses the already-granted permission ──
+    if (!dgAudioCtx) {
+        try {
+            dgStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            dgAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            dgAnalyser = dgAudioCtx.createAnalyser();
+            dgAnalyser.fftSize = 256;
+            dgAudioCtx.createMediaStreamSource(dgStream).connect(dgAnalyser);
+
+            const buf = new Float32Array(dgAnalyser.fftSize);
+            dgSilenceTimer = setInterval(() => {
+                if (!autoListen) return;
+                dgAnalyser.getFloatTimeDomainData(buf);
+                const db = _rms(buf);
+
+                if (isSpeakingNow) {
+                    if (_vadInterruptSR) return; // already capturing
+                    if (db > -55) {
+                        console.log("[VAD] above -55dB — starting interrupt SR");
+                        _vadDebounceStart = null;
+                        _startInterruptSR();
+                    }
+                    return;
+                }
+
+                const now = Date.now();
+                if (now - dgDbLogTs >= 2000) {
+                    dgDbLogTs = now;
+                    console.log(`[Voice] dB: ${db === -Infinity ? "-∞" : db.toFixed(1)} | mode: ${dgMode}`);
+                }
+                if (dgMode === "conversation" && !dgMuted) {
+                    if (db > -65) lastSpeechMs = now;
+                    else if (now - lastSpeechMs > CONV_SILENCE_MS) {
+                        console.log(`[Voice] silence ${now - lastSpeechMs}ms → wake mode`);
+                        dgMode = "wake";
+                        setOrbState("waiting");
+                    }
+                }
+            }, 80);
+        } catch (e) {
+            console.warn("[Voice] analyser init failed:", e.message);
+        }
+    }
 }
 
 function stopVoicePipeline() {
