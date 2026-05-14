@@ -1782,7 +1782,7 @@ function _startInterruptSR() {
             .trim();
         const wordCount = transcript.split(/\s+/).filter(Boolean).length;
         console.log(`[VAD] interrupt SR: ${wordCount} words — "${transcript}"`);
-        if (wordCount >= 4 && isSpeakingNow) {
+        if (wordCount >= 3 && isSpeakingNow) {
             _vadInterruptSR = null;
             interruptSpeech();
             document.getElementById("chatInput").value = transcript;
@@ -1862,13 +1862,13 @@ async function startVoicePipeline() {
 
                 if (isSpeakingNow) {
                     if (_vadInterruptSR) { _vadDebounceStart = null; return; } // already capturing
-                    // Volume must stay above -35dB continuously for 600ms to start interrupt SR
-                    if (db > -35) {
+                    // Volume must stay above -38dB continuously for 400ms to start interrupt SR
+                    if (db > -38) {
                         if (_vadDebounceStart === null) {
                             _vadDebounceStart = Date.now();
-                        } else if (Date.now() - _vadDebounceStart >= 600) {
+                        } else if (Date.now() - _vadDebounceStart >= 400) {
                             _vadDebounceStart = null;
-                            console.log("[VAD] voice above -35dB for 600ms — starting interrupt SR");
+                            console.log("[VAD] voice above -38dB for 400ms — starting interrupt SR");
                             _startInterruptSR();
                         }
                     } else {
