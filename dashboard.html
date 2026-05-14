@@ -1892,8 +1892,8 @@ async function startVoicePipeline() {
         if (e.error === "not-allowed") {
             _showBanner("banner-micdenied", "Microphone access denied.");
         } else if (e.error === "no-speech" || e.error === "audio-capture") {
-            // Restart even while Apex is speaking — continuous listening
-            if (autoListen && srec && isListening) {
+            // Restart even while Apex is speaking — but not when page is hidden
+            if (autoListen && srec && isListening && document.visibilityState !== "hidden") {
                 setTimeout(() => { try { srec.start(); } catch (_) {} }, 500);
             }
         } else if (e.error !== "no-speech") {
@@ -1903,8 +1903,8 @@ async function startVoicePipeline() {
 
     srec.onend = () => {
         console.log("[SR] ended — restarting");
-        // Restart even while Apex is speaking — continuous listening
-        if (autoListen && srec && isListening) {
+        // Do not restart if page is hidden (mic has been released)
+        if (autoListen && srec && isListening && document.visibilityState !== "hidden") {
             try { srec.start(); } catch (_) {}
         }
     };
@@ -1923,6 +1923,36 @@ function stopVoicePipeline() {
     dgAnalyser = null;
     if (srec) { try { srec.abort(); } catch (_) {} srec = null; }
     isListening = false;
+}
+
+// ── Background / foreground mic lifecycle ─────────────────────────────
+function _pauseVoiceForBackground() {
+    console.log("[Voice] page hidden — releasing mic");
+    // Null srec first so its onend handler does not restart recognition
+    if (srec) {
+        const _old = srec;
+        srec = null;
+        try { _old.stop(); } catch (_) {}
+    }
+    // Stop mic tracks — this immediately kills the orange indicator on iPhone
+    if (dgStream) {
+        try { dgStream.getTracks().forEach(t => t.stop()); } catch (_) {}
+        dgStream = null;
+    }
+    // Tear down AudioContext and silence timer
+    if (dgSilenceTimer) { clearInterval(dgSilenceTimer); dgSilenceTimer = null; }
+    try { if (dgAudioCtx) { dgAudioCtx.close(); } } catch (_) {}
+    dgAudioCtx = null;
+    dgAnalyser = null;
+    stopVAD();
+    // Pause any in-flight audio too
+    if (currentAudio) { try { currentAudio.pause(); } catch (_) {} }
+}
+
+async function _restoreVoiceFromBackground() {
+    console.log("[Voice] page visible — restoring mic");
+    if (!autoListen || srec) return; // user disabled auto-listen or already running
+    await startVoicePipeline();
 }
 
 function muteDeepgram() {
@@ -2859,6 +2889,25 @@ fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
 setTimeout(() => { if (autoListen) startVoicePipeline(); }, 1000);
+
+// Release mic when the page is hidden (tab switch, app background, lock screen)
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+        _pauseVoiceForBackground();
+    } else {
+        _restoreVoiceFromBackground();
+    }
+});
+
+// pagehide fires on iOS Safari when the user swipes away — release tracks immediately
+window.addEventListener("pagehide", () => {
+    if (dgStream) {
+        try { dgStream.getTracks().forEach(t => t.stop()); } catch (_) {}
+        dgStream = null;
+    }
+    if (srec) { try { srec.abort(); } catch (_) {} srec = null; }
+});
+
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(err => console.warn("SW register failed:", err.message));
 }
