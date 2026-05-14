@@ -1031,10 +1031,17 @@
                 --input-h:  68px;
             }
 
-            html, body { overflow: hidden; height: 100%; }
+            html, body {
+                overflow: hidden;
+                overflow-x: hidden;
+                max-width: 100vw;
+                height: 100%;
+            }
 
             .app {
                 width: 100vw;
+                max-width: 100vw;
+                overflow-x: hidden;
                 height: 100dvh; /* dynamic viewport height — accounts for iOS browser chrome */
                 grid-template-columns: 1fr;
                 grid-template-rows: var(--topbar-h) 1fr var(--strip-h) var(--input-h);
@@ -1047,8 +1054,8 @@
 
             .left-panel, .right-panel { display: none; }
 
-            /* Topbar */
-            .topbar { padding: 0 16px; }
+            /* Topbar — constrain to screen width */
+            .topbar { padding: 0 16px; overflow: hidden; max-width: 100vw; }
             .clock-time { font-size: 17px; }
             .clock-date { font-size: 9px; }
             .brand-copy strong { font-size: 14px; }
@@ -1062,16 +1069,22 @@
             .centre-halo { width: 300px; height: 300px; }
 
             /* Chat log */
-            .chat-log { max-height: 40vh; padding: 0 12px; }
+            .chat-log { max-height: 40vh; padding: 0 12px; max-width: 100%; }
             .chat-status-bar { padding: 0 12px; font-size: 9px; }
-            .chat-bubble { font-size: 12px; }
+            .chat-bubble { font-size: 12px; max-width: 92%; }
 
-            /* Input bar */
-            .input-area { padding: 0 12px; gap: 8px; }
-            .chat-input { font-size: 16px; } /* 16px prevents iOS zoom on focus */
+            /* Input bar — hide auxiliary buttons to prevent overflow */
+            .input-area { padding: 0 12px; gap: 8px; overflow: hidden; max-width: 100vw; }
+            .chat-input { font-size: 16px; min-width: 0; } /* 16px prevents iOS zoom; min-width:0 allows shrink */
+            .clear-chat-btn { display: none; }
+            .auto-listen-btn { display: none; }
 
             /* Notification strip */
             .notif-label { padding: 0 10px; font-size: 8px; }
+            .notif-strip { overflow: hidden; max-width: 100vw; }
+
+            /* Banner — prevent overflow on narrow screens */
+            .apex-banner { max-width: calc(100vw - 32px); left: 16px; right: 16px; transform: none; }
 
             /* Modals full-width on mobile */
             .email-draft-box { width: 96vw; max-width: 96vw; }
@@ -1330,7 +1343,8 @@ let vadAnalyser         = null;
 let vadInterval         = null;
 let dgAnalyser          = null;   // AnalyserNode for visual UI
 let dgAudioCtx          = null;   // AudioContext for analyser
-let _iosAudioCtx        = null;   // Unlocked AudioContext for iOS TTS playback
+const _iosAudio         = new Audio(); // Persistent element unlocked on first touch (iOS)
+let _iosAudioUnlocked   = false;
 let dgSilenceTimer      = null;   // setInterval for conversation silence tracking
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
@@ -1556,22 +1570,20 @@ function _speakUtterance(phrase, { onStart, onEnd } = {}) {
     window.speechSynthesis.speak(utt);
 }
 
+// iOS audio unlock — play a silent MP3 on the persistent element inside the first touch gesture
+// so its audio session stays unlocked for all subsequent .play() calls without a gesture.
+const _SILENT_MP3 = 'data:audio/mpeg;base64,//MkxAAHiAICWABElBeKPL/RANb2w+yiT1g/gTok//lP/W/l3h8QO/OCdCqCW2Cm//MkxAQHkAIWUAhEmAQXWUOFW2dxPu//9mr60ElY5sseQ+xxesmHKtZr7bsqqX2L//MkxAgFwAYiQAhEAC2hq22d3///9FTV6tA36JdgBJooBaRQkHgb/AKc1MAAA';
 function _unlockAudio() {
-    if (_iosAudioCtx) return;
-    try {
-        _iosAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const buf = _iosAudioCtx.createBuffer(1, 1, 22050);
-        const src = _iosAudioCtx.createBufferSource();
-        src.buffer = buf;
-        src.connect(_iosAudioCtx.destination);
-        src.start(0);
-        console.log('[Audio] AudioContext unlocked');
-    } catch (e) {
-        console.warn('[Audio] unlock failed:', e.message);
-    }
+    if (_iosAudioUnlocked) return;
+    _iosAudioUnlocked = true;
+    _iosAudio.src = _SILENT_MP3;
+    _iosAudio.volume = 0;
+    _iosAudio.play().then(() => {
+        _iosAudio.volume = 1;
+        console.log('[Audio] iOS audio session unlocked');
+    }).catch(e => console.warn('[Audio] unlock failed:', e.message));
 }
 document.addEventListener('touchstart', _unlockAudio, { once: true });
-document.addEventListener('click',      _unlockAudio, { once: true });
 
 async function speakWithElevenLabs(text) {
     const phrase = summariseForSpeech(text);
@@ -1585,12 +1597,14 @@ async function speakWithElevenLabs(text) {
             method: "POST",
             headers: buildApiHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ text: phrase }),
-            signal: ac.signal
+            signal: ac.signal,
+            credentials: "same-origin"
         });
         if (!fetchRes.ok) return false;
 
         const MIME = "audio/mpeg";
-        const canStream = "MediaSource" in window && MediaSource.isTypeSupported(MIME);
+        // On iOS (touchstart fired _unlockAudio), skip MediaSource and use the unlocked Audio element
+        const canStream = !_iosAudioUnlocked && "MediaSource" in window && MediaSource.isTypeSupported(MIME);
 
         if (canStream) {
             return await new Promise(resolve => {
@@ -1640,30 +1654,27 @@ async function speakWithElevenLabs(text) {
         }
 
         // Fallback: full blob download
-        const arrayBuf = await fetchRes.arrayBuffer();
+        const blob    = await fetchRes.blob();
+        const blobUrl = URL.createObjectURL(blob);
 
-        if (_iosAudioCtx) {
-            // iOS Safari: decode + play via Web Audio API (HTMLAudio blocked without gesture)
-            if (_iosAudioCtx.state === 'suspended') await _iosAudioCtx.resume();
-            await new Promise((resolve, reject) => {
-                _iosAudioCtx.decodeAudioData(arrayBuf.slice(0), decoded => {
-                    const src = _iosAudioCtx.createBufferSource();
-                    src.buffer = decoded;
-                    src.playbackRate.value = voiceSpeed;
-                    src.connect(_iosAudioCtx.destination);
-                    currentAudio = src;
-                    src.onended = () => { currentAudio = null; resolve(true); };
-                    src.start(0);
-                    console.log(`[LATENCY] +${Date.now() - _t0Voice}ms iOS audio playing`);
-                }, reject);
+        if (_iosAudioUnlocked) {
+            // iOS Safari: reuse the pre-unlocked persistent Audio element
+            _iosAudio.src         = blobUrl;
+            _iosAudio.playbackRate = voiceSpeed;
+            currentAudio = _iosAudio;
+            console.log(`[LATENCY] +${Date.now() - _t0Voice}ms iOS audio playing`);
+            await new Promise((res2, rej) => {
+                const cleanup = () => { _iosAudio.onended = _iosAudio.onerror = _iosAudio.onpause = null; };
+                _iosAudio.onended = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; res2(true);  };
+                _iosAudio.onerror = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; rej();       };
+                _iosAudio.onpause = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; res2(false); };
+                _iosAudio.play().catch(e => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; rej(e); });
             });
             return true;
         }
 
-        const blob    = new Blob([arrayBuf], { type: 'audio/mpeg' });
-        const blobUrl = URL.createObjectURL(blob);
-        const audio   = new Audio(blobUrl);
-        currentAudio  = audio;
+        const audio  = new Audio(blobUrl);
+        currentAudio = audio;
         await new Promise((res2, rej) => {
             audio.onended   = res2;
             audio.onerror   = rej;
@@ -1791,7 +1802,7 @@ function interruptSpeech() {
     stopVAD();
     if (currentAbort) { currentAbort.abort(); currentAbort = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    if (currentAudio) { try { if (currentAudio.stop) currentAudio.stop(); else currentAudio.pause(); } catch (_) {} currentAudio = null; }
+    if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
     speakQueue.length = 0;
     isSpeakingNow = false;
     dgMuted = false;
@@ -2702,7 +2713,7 @@ document.addEventListener("keydown", e => {
         }
         if (isListening) stopListening();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
-        if (currentAudio) { try { if (currentAudio.stop) currentAudio.stop(); else currentAudio.pause(); } catch (_) {} currentAudio = null; }
+        if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
         speakQueue.length = 0;
         isSpeakingNow = false;
         setOrbState(autoListen ? "waiting" : "ready");
