@@ -1108,6 +1108,11 @@
         .email-draft-btn.send:hover { background:#e74c3c; }
         .email-draft-btn.cancel { background:rgba(255,255,255,0.08); color:#ccc; }
         .email-draft-btn.cancel:hover { background:rgba(255,255,255,0.15); }
+        textarea.email-draft-value { resize:vertical; min-height:120px; font-family:inherit; font-size:13px; color:#e0e0e0; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:8px 10px; line-height:1.5; width:100%; box-sizing:border-box; outline:none; }
+        textarea.email-draft-value:focus { border-color:rgba(0,212,255,0.4); }
+        .email-reply-row { margin-top:6px; }
+        .email-btn.reply { background:rgba(0,212,255,0.12); color:var(--accent,#00d4ff); border:1px solid rgba(0,212,255,0.25); font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; }
+        .email-btn.reply:hover { background:rgba(0,212,255,0.22); }
         .drop-label {
             font-size: 20px;
             color: var(--accent);
@@ -2268,13 +2273,14 @@ async function refreshEmailPanel() {
             const hasReply   = !!e.suggested_reply;
             const statusSent = e.status === "sent" || e.status === "rejected";
             const isUrgent   = (e.priority || "").toLowerCase() === "urgent";
-            const actionBtns = hasReply && !statusSent
+            const draftBtns = hasReply && !statusSent
                 ? `<div class="email-actions">
                     <div style="font-size:10px;color:#ff9f43;font-weight:700;margin-bottom:5px">DRAFT — not sent</div>
                     <button class="email-btn approve" onclick="previewEmailDraft(${e.id})">Review &amp; Send</button>
                     <button class="email-btn reject"  onclick="rejectEmail(${e.id})">Discard</button>
                    </div>`
                 : `<div style="font-size:10px;color:var(--muted);margin-top:5px">${escapeHtml(e.status || "")}</div>`;
+            const actionBtns = draftBtns + `<div class="email-reply-row"><button class="email-btn reply" onclick="openReplyDraft(${e.id})">Reply</button></div>`;
             return `
                 <div class="email-item" id="email-${e.id}"${isUrgent ? ' style="border-left:2px solid #ff4d6d"' : ''}>
                     <div class="email-meta">
@@ -2306,11 +2312,32 @@ function previewEmailDraft(id) {
     const email = _emailCache[id];
     if (!email || !email.suggested_reply) { renderChatMessage("system", "Draft not available."); return; }
     const subject = (email.subject || "").startsWith("Re:") ? email.subject : `Re: ${email.subject || ""}`;
-    document.getElementById("draftTo").textContent      = email.sender || "";
+    document.getElementById("draftTo").textContent  = email.sender || "";
     document.getElementById("draftSubject").textContent = subject;
-    document.getElementById("draftBody").textContent    = email.suggested_reply;
-    document.getElementById("draftSendBtn").onclick     = () => confirmSendEmail(id);
+    document.getElementById("draftBody").value      = email.suggested_reply;
+    document.getElementById("draftSendBtn").onclick = () => confirmSendEmail(id);
     document.getElementById("emailDraftModal").classList.add("active");
+    document.getElementById("draftBody").focus();
+}
+
+function openReplyDraft(id) {
+    const email = _emailCache[id];
+    if (!email) { renderChatMessage("system", "Email not found."); return; }
+    const subject = (email.subject || "").startsWith("Re:") ? email.subject : `Re: ${email.subject || ""}`;
+    document.getElementById("draftTo").textContent  = email.sender || "";
+    document.getElementById("draftSubject").textContent = subject;
+    document.getElementById("draftBody").value      = "";
+    document.getElementById("draftSendBtn").onclick = () => confirmUserComposedReply(id);
+    document.getElementById("emailDraftModal").classList.add("active");
+    document.getElementById("draftBody").focus();
+}
+
+async function confirmUserComposedReply(id) {
+    const body = document.getElementById("draftBody").value.trim();
+    if (!body) { alert("Please write a reply before sending."); return; }
+    if (!confirm("Are you sure you want to send this reply?\n\nThis cannot be undone.")) return;
+    closeEmailDraftModal();
+    renderChatMessage("system", "⚠ Manual reply sending is not yet connected — server endpoint coming soon.");
 }
 
 function closeEmailDraftModal() {
@@ -2730,7 +2757,7 @@ initSupabaseRealtime();
         </div>
         <div>
             <div class="email-draft-label">Body</div>
-            <div class="email-draft-value" id="draftBody"></div>
+            <textarea class="email-draft-value" id="draftBody" rows="8" placeholder="Type your reply here…"></textarea>
         </div>
         <div class="email-draft-actions">
             <button class="email-draft-btn cancel" onclick="closeEmailDraftModal()">Cancel</button>
