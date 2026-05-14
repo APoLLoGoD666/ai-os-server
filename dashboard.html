@@ -1451,11 +1451,7 @@ function summariseForSpeech(raw) {
 }
 
 const FILLERS = [
-    { text: null, weight: 40 },
-    { text: "Sure.", weight: 20 },
-    { text: "On it.", weight: 20 },
-    { text: "Right.", weight: 10 },
-    { text: "Got it.", weight: 10 },
+    { text: null, weight: 100 },
 ];
 
 function _pickFiller() {
@@ -1631,6 +1627,9 @@ function speak(text, { useFiller = false } = {}) {
 function interruptSpeech() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    speakQueue.length = 0;
+    isSpeakingNow = false;
+    unmuteDeepgram();
     setOrbState("listening");
 }
 
@@ -1741,6 +1740,10 @@ function stopListening() {
 }
 
 function toggleListening() {
+    if (isSpeakingNow || currentAudio) {
+        interruptSpeech();
+        return;
+    }
     if (isListening) stopListening(); else startListening();
 }
 
