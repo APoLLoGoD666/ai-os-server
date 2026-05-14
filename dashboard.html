@@ -1094,6 +1094,20 @@
             pointer-events: none;
         }
         .drop-overlay.active { display: flex; }
+        /* ── Email draft confirmation modal ── */
+        .email-draft-modal { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; }
+        .email-draft-modal.active { display:flex; }
+        .email-draft-box { background:#0f0f1a; border:1px solid rgba(0,212,255,0.35); border-radius:14px; padding:24px; width:min(540px,92vw); max-height:82vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
+        .email-draft-title { font-size:13px; font-weight:700; color:#ff9f43; letter-spacing:0.1em; text-transform:uppercase; }
+        .email-draft-not-sent { font-size:11px; color:#ff4d6d; font-weight:700; padding:5px 10px; background:rgba(255,77,109,0.12); border-radius:6px; border-left:3px solid #ff4d6d; }
+        .email-draft-label { font-size:10px; color:var(--muted,#888); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:3px; }
+        .email-draft-value { font-size:13px; color:#e0e0e0; padding:8px 10px; background:rgba(255,255,255,0.05); border-radius:7px; white-space:pre-wrap; word-break:break-word; line-height:1.5; }
+        .email-draft-actions { display:flex; gap:10px; margin-top:4px; }
+        .email-draft-btn { flex:1; padding:11px; border-radius:9px; border:none; cursor:pointer; font-size:13px; font-weight:700; transition:background 0.15s; }
+        .email-draft-btn.send { background:#c0392b; color:#fff; }
+        .email-draft-btn.send:hover { background:#e74c3c; }
+        .email-draft-btn.cancel { background:rgba(255,255,255,0.08); color:#ccc; }
+        .email-draft-btn.cancel:hover { background:rgba(255,255,255,0.15); }
         .drop-label {
             font-size: 20px;
             color: var(--accent);
@@ -1271,6 +1285,7 @@ let dgDbLogTs           = 0;
 const CONV_SILENCE_MS   = 5000;   // ms of silence before returning to wake mode
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
+let _emailCache         = {};
 const voiceSpeed        = 1.3;
 let _t0Voice            = 0;
 const inFlightRefreshes = {};
@@ -2242,6 +2257,9 @@ async function refreshEmailPanel() {
         const emails = (data.emails || []).slice(0, 5);
         cachedEmailCount = emails.length;
         updateStatusBar();
+        // Cache full email objects so the draft modal can read suggested_reply
+        _emailCache = {};
+        emails.forEach(e => { _emailCache[e.id] = e; });
         if (!emails.length) {
             el.innerHTML = '<div class="empty-note">Say "check my emails" to fetch them.</div>';
             return;
@@ -2252,10 +2270,11 @@ async function refreshEmailPanel() {
             const isUrgent   = (e.priority || "").toLowerCase() === "urgent";
             const actionBtns = hasReply && !statusSent
                 ? `<div class="email-actions">
-                    <button class="email-btn approve" onclick="approveEmail(${e.id})">Reply</button>
-                    <button class="email-btn reject"  onclick="rejectEmail(${e.id})">Skip</button>
+                    <div style="font-size:10px;color:#ff9f43;font-weight:700;margin-bottom:5px">DRAFT — not sent</div>
+                    <button class="email-btn approve" onclick="previewEmailDraft(${e.id})">Review &amp; Send</button>
+                    <button class="email-btn reject"  onclick="rejectEmail(${e.id})">Discard</button>
                    </div>`
-                : `<div style="font-size:10px;color:var(--muted);margin-top:5px">${e.status}</div>`;
+                : `<div style="font-size:10px;color:var(--muted);margin-top:5px">${escapeHtml(e.status || "")}</div>`;
             return `
                 <div class="email-item" id="email-${e.id}"${isUrgent ? ' style="border-left:2px solid #ff4d6d"' : ''}>
                     <div class="email-meta">
@@ -2283,14 +2302,40 @@ async function checkEmailNow() {
     }
 }
 
-async function approveEmail(id) {
+function previewEmailDraft(id) {
+    const email = _emailCache[id];
+    if (!email || !email.suggested_reply) { renderChatMessage("system", "Draft not available."); return; }
+    const subject = (email.subject || "").startsWith("Re:") ? email.subject : `Re: ${email.subject || ""}`;
+    document.getElementById("draftTo").textContent      = email.sender || "";
+    document.getElementById("draftSubject").textContent = subject;
+    document.getElementById("draftBody").textContent    = email.suggested_reply;
+    document.getElementById("draftSendBtn").onclick     = () => confirmSendEmail(id);
+    document.getElementById("emailDraftModal").classList.add("active");
+}
+
+function closeEmailDraftModal() {
+    document.getElementById("emailDraftModal").classList.remove("active");
+}
+
+async function confirmSendEmail(id) {
+    if (!confirm("Are you sure you want to send this email?\n\nThis cannot be undone.")) return;
+    closeEmailDraftModal();
     try {
-        const data = await fetchJson(`/api/emails/${id}/approve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+        const data = await fetchJson(`/api/emails/${id}/approve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-User-Confirmed": "true" },
+            body: JSON.stringify({})
+        });
         renderChatMessage("system", data.reply || "Reply sent.");
         await refreshEmailPanel();
     } catch (err) {
         renderChatMessage("system", err.message);
     }
+}
+
+async function approveEmail(id) {
+    // Always route through the draft preview modal — never send directly
+    previewEmailDraft(id);
 }
 
 async function rejectEmail(id) {
@@ -2671,5 +2716,27 @@ if ("serviceWorker" in navigator) {
 }
 initSupabaseRealtime();
 </script>
+<div class="email-draft-modal" id="emailDraftModal" onclick="if(event.target===this)closeEmailDraftModal()">
+    <div class="email-draft-box">
+        <div class="email-draft-title">Draft Reply</div>
+        <div class="email-draft-not-sent">⚠ DRAFT — This email has NOT been sent</div>
+        <div>
+            <div class="email-draft-label">To</div>
+            <div class="email-draft-value" id="draftTo"></div>
+        </div>
+        <div>
+            <div class="email-draft-label">Subject</div>
+            <div class="email-draft-value" id="draftSubject"></div>
+        </div>
+        <div>
+            <div class="email-draft-label">Body</div>
+            <div class="email-draft-value" id="draftBody"></div>
+        </div>
+        <div class="email-draft-actions">
+            <button class="email-draft-btn cancel" onclick="closeEmailDraftModal()">Cancel</button>
+            <button class="email-draft-btn send" id="draftSendBtn">Send Email</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>

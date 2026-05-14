@@ -6971,6 +6971,10 @@ app.post("/api/emails/check", requireAppAccess, async (req, res) => {
 });
 
 app.post("/api/emails/:id/approve", requireAppAccess, async (req, res) => {
+    // Require explicit user confirmation header — prevents automated sends from agent tool use
+    if (req.headers["x-user-confirmed"] !== "true") {
+        return res.status(403).json({ ok: false, reply: "Email send requires explicit user confirmation. Use the draft preview modal." });
+    }
     try {
         const id = parseInt(req.params.id);
         const emails = await pgListEmailQueue(100);
@@ -6979,6 +6983,7 @@ app.post("/api/emails/:id/approve", requireAppAccess, async (req, res) => {
         if (!email) return res.status(404).json({ ok: false, reply: "Email not found." });
         if (!email.suggested_reply) return res.status(400).json({ ok: false, reply: "No suggested reply to send." });
 
+        console.log(`[EMAIL] User confirmed send to ${email.sender} — subject: ${email.subject}`);
         await sendEmailReply(email.gmail_id, email.sender, email.subject, email.suggested_reply);
         await pgUpdateEmailQueueStatus(id, "sent");
         clearCache("emails");
