@@ -1480,11 +1480,15 @@ function _pickVoice() {
         vv.find(v => v.lang === "en-US")                                              ||
         vv.find(v => v.lang.startsWith("en"))                                         ||
         vv[0];
+    console.log(`[Voice] picked voice: "${_selectedVoice ? _selectedVoice.name : 'none'}" (${vv.length} available)`);
     return _selectedVoice;
 }
 
 if (window.speechSynthesis) {
-    window.speechSynthesis.onvoiceschanged = () => _pickVoice();
+    window.speechSynthesis.onvoiceschanged = () => {
+        console.log('[Voice] voiceschanged fired');
+        _pickVoice();
+    };
     _pickVoice();
 }
 
@@ -1572,19 +1576,37 @@ function _speakUtterance(phrase, { onStart, onEnd } = {}) {
     window.speechSynthesis.speak(utt);
 }
 
-// Unlock audio and speech synthesis on the first user gesture (iOS requirement).
-document.addEventListener('touchstart', () => {
-    // Unlock Audio element for ElevenLabs playback
+// Minimal silent WAV for unlocking the Audio element in iOS PWA (data URI works offline, no CORS)
+const _SILENT_WAV = 'data:audio/wav;base64,UklGRiUAABXQVZFZm10IBAAAAAABAAEARKwAAESsAAABAAgAZGF0YQEAAACA';
+
+// Unlock audio, speech synthesis, and mic on the very first user gesture (iOS PWA requirement).
+// iOS PWA is stricter than Safari browser: each getUserMedia call can trigger a separate prompt,
+// audio elements must be unlocked with a real src (not empty), and speechSynthesis needs a gesture.
+document.addEventListener('touchstart', async () => {
+    // ── 1. Audio element: use a data URI src so iOS PWA actually unlocks it ──
     if (!_apexAudio) {
         _apexAudio = new Audio();
+        _apexAudio.src = _SILENT_WAV;
         _apexAudio.play().catch(() => {});
+        console.log('[iOS] audio element created and unlocked');
     }
-    // Unlock speech synthesis engine for iOS fallback TTS —
-    // speaking a silent utterance inside a gesture primes all subsequent speak() calls
+    // ── 2. Speech synthesis: speaking a silent utterance inside a gesture primes all subsequent calls ──
     if (window.speechSynthesis) {
-        const u = new SpeechSynthesisUtterance("");
+        const u = new SpeechSynthesisUtterance('');
         u.volume = 0;
         window.speechSynthesis.speak(u);
+        console.log('[iOS] speechSynthesis unlocked');
+    }
+    // ── 3. Mic: call getUserMedia exactly once here — SpeechRecognition manages its own mic internally.
+    // iOS PWA shows one permission prompt per getUserMedia call; doing it here on a gesture means the
+    // user sees exactly one prompt, and the stream is reused by the AnalyserNode in startVoicePipeline.
+    if (!dgStream) {
+        try {
+            dgStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            console.log('[iOS] mic granted on touchstart');
+        } catch (e) {
+            console.warn('[iOS] getUserMedia on touchstart failed:', e.message);
+        }
     }
 }, { once: true });
 
@@ -1626,12 +1648,13 @@ async function speakWithElevenLabs(text) {
             _apexAudio.onended = () => {
                 cleanup();
                 currentAudio = null;
-                // iOS safety: if the speaking state is still set ensure we return to standby
+                console.log(`[Speak] audio ended — isSpeakingNow:${isSpeakingNow} queue:${speakQueue.length}`);
                 if (isSpeakingNow && !speakQueue.length) {
                     isSpeakingNow = false;
                     clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
                     dgMuted = false;
-                    unmuteDeepgram(); // resets lastSpeechMs; dgSilenceTimer owns the standby transition
+                    console.log('[Speak] speaking ended → unmuteDeepgram, 3s silence countdown begins');
+                    unmuteDeepgram();
                 }
                 res2(true);
             };
@@ -1654,8 +1677,16 @@ function _speakFallback(phrase, { onEnd } = {}) {
     utt.rate = 1.08; utt.pitch = 0.95; utt.volume = 1;
     const voice = _selectedVoice || _pickVoice();
     if (voice) utt.voice = voice;
-    utt.onend   = () => { if (onEnd) onEnd(); };
-    utt.onerror = () => { if (onEnd) onEnd(); };
+    console.log(`[Speak] speechSynthesis fallback — voice:"${voice ? voice.name : 'default'}" phrase:"${phrase.slice(0, 60)}"`);
+    utt.onstart = () => { console.log('[Speak] speechSynthesis started'); };
+    utt.onend   = () => {
+        console.log('[Speak] speechSynthesis ended');
+        if (onEnd) onEnd();
+    };
+    utt.onerror = (ev) => {
+        console.warn('[Speak] speechSynthesis error:', ev.error);
+        if (onEnd) onEnd();
+    };
     window.speechSynthesis.speak(utt);
 }
 
@@ -1694,19 +1725,21 @@ async function _speakInternal(text, useFiller) {
 async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
+    console.log('[Speak] speaking started');
     if (srec) { try { srec.stop(); } catch (_) {} }
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
         if (!isSpeakingNow) return;
-        console.warn("[Speak] 30s safety timeout — forcing reset");
+        console.warn('[Speak] 30s safety timeout — forcing isSpeakingNow reset');
         speakQueue.length = 0;
         isSpeakingNow = false;
         _speakSafetyTimer = null;
         if (currentAbort) { currentAbort.abort(); currentAbort = null; }
         if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
         dgMuted = false;
-        unmuteDeepgram(); // resets lastSpeechMs; dgSilenceTimer owns the standby transition
+        console.log('[Speak] safety timer → unmuteDeepgram, 3s silence countdown begins');
+        unmuteDeepgram();
         setOrbState(autoListen && isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
     }, 30000);
 
@@ -1719,6 +1752,7 @@ async function _processSpeak() {
     _speakSafetyTimer = null;
     _vadDebounceStart = null;
     isSpeakingNow = false;
+    console.log('[Speak] queue empty — speaking ended, unmuteDeepgram');
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (autoListen) {
         unmuteDeepgram();
@@ -1917,13 +1951,19 @@ async function startVoicePipeline() {
     lastSpeechMs = Date.now();
     isListening = true;
     setOrbState("waiting");
-    console.log("[Voice] SpeechRecognition starting");
-    try { srec.start(); } catch (e) { console.error("[SR] start error:", e.message); }
+    console.log('[Voice] SpeechRecognition starting — mode:wake');
+    try { srec.start(); } catch (e) { console.error('[SR] start error:', e.message); }
 
-    // ── 2. AnalyserNode for VAD — getUserMedia after SR so iOS reuses the already-granted permission ──
+    // ── 2. AnalyserNode for VAD — reuse mic stream acquired on touchstart (iOS) or get it now (desktop) ──
     if (!dgAudioCtx) {
         try {
-            dgStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            if (!dgStream) {
+                // Desktop path: no touchstart fired, acquire mic stream now
+                dgStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                console.log('[Voice] mic granted in startVoicePipeline (desktop path)');
+            } else {
+                console.log('[Voice] reusing mic stream from touchstart (iOS path)');
+            }
             dgAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             dgAnalyser = dgAudioCtx.createAnalyser();
             dgAnalyser.fftSize = 256;
@@ -1953,7 +1993,7 @@ async function startVoicePipeline() {
                 if (dgMode === "conversation" && !dgMuted) {
                     if (db > -65) lastSpeechMs = now;
                     else if (now - lastSpeechMs > CONV_SILENCE_MS) {
-                        console.log(`[Voice] silence ${now - lastSpeechMs}ms → wake mode`);
+                        console.log(`[Voice] ${now - lastSpeechMs}ms silence → returning to standby (wake mode)`);
                         dgMode = "wake";
                         setOrbState("waiting");
                     }
@@ -2016,6 +2056,7 @@ function unmuteDeepgram() {
     stopVAD();
     dgMuted = false;
     lastSpeechMs = Date.now();
+    console.log(`[Voice] unmuteDeepgram — mode:${dgMode} isListening:${isListening}`);
     if (isListening) setOrbState(dgMode === "conversation" ? "listening" : "waiting");
 }
 
