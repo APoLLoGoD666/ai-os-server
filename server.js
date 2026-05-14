@@ -7367,7 +7367,7 @@ const _browserSockets = new Set();
 
 function _openPersistentDg() {
     if (_dgWs && (_dgWs.readyState === 0 || _dgWs.readyState === 1)) return;
-    const DG_URL = "wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=300&interim_results=true&encoding=opus&container=webm&sample_rate=48000";
+    const DG_URL = "wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&interim_results=true&endpointing=300";
     console.log("DG proxy: opening persistent Deepgram connection:", DG_URL);
     _dgWs = new WS(DG_URL, { headers: { "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}` } });
 
