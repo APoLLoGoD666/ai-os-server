@@ -1686,7 +1686,7 @@ async function _speakInternal(text, useFiller) {
 async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
-    // SR stays running — never stop recognition while speaking so user can interrupt at any time
+    if (srec) { try { srec.stop(); } catch (_) {} }
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
@@ -1717,6 +1717,7 @@ async function _processSpeak() {
         if (!srec) {
             startVoicePipeline();
         } else {
+            try { srec.start(); } catch (_) {}
             setOrbState(dgMode === "conversation" ? "listening" : "waiting");
         }
     } else {
@@ -1773,7 +1774,7 @@ function interruptSpeech() {
     isSpeakingNow = false;
     dgMuted = false;
     unmuteDeepgram();
-    // SR is always running — no need to restart it here
+    if (srec && autoListen) { try { srec.start(); } catch (_) {} }
     setOrbState(isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
 }
 
@@ -1854,6 +1855,7 @@ async function startVoicePipeline() {
     srec.lang = "en-GB";
 
     srec.onresult = e => {
+        if (dgMuted) return;
         const transcript = Array.from(e.results)
             .slice(e.resultIndex)
             .map(r => r[0].transcript)
@@ -1862,7 +1864,6 @@ async function startVoicePipeline() {
         if (!transcript) return;
         lastSpeechMs = Date.now();
         if (dgMode === "wake") {
-            if (dgMuted) return; // ignore wake word while Apex is speaking
             console.log(`[Wake] transcript: "${transcript}"`);
             if (/\bapex\b/i.test(transcript)) {
                 console.log("[Wake] wake word matched → conversation mode");
@@ -1878,12 +1879,7 @@ async function startVoicePipeline() {
             console.log(`[SR] conversation: "${transcript}"`);
             document.getElementById("chatInput").value = transcript;
             lastSendWasVoice = true;
-            // If Apex is mid-sentence, interrupt immediately then send
-            if (isSpeakingNow) {
-                console.log("[SR] interrupting Apex to handle new input");
-                interruptSpeech();
-            }
-            dgMuted = true; // prevent further transcripts until this one is processed
+            dgMuted = true;
             sendVoiceChatCommand(transcript);
         }
     };
@@ -1892,8 +1888,7 @@ async function startVoicePipeline() {
         if (e.error === "not-allowed") {
             _showBanner("banner-micdenied", "Microphone access denied.");
         } else if (e.error === "no-speech" || e.error === "audio-capture") {
-            // Restart even while Apex is speaking — but not when page is hidden
-            if (autoListen && srec && isListening && document.visibilityState !== "hidden") {
+            if (autoListen && srec && !isSpeakingNow && isListening && document.visibilityState !== "hidden") {
                 setTimeout(() => { try { srec.start(); } catch (_) {} }, 500);
             }
         } else if (e.error !== "no-speech") {
@@ -1903,8 +1898,7 @@ async function startVoicePipeline() {
 
     srec.onend = () => {
         console.log("[SR] ended — restarting");
-        // Do not restart if page is hidden (mic has been released)
-        if (autoListen && srec && isListening && document.visibilityState !== "hidden") {
+        if (autoListen && srec && !isSpeakingNow && isListening && document.visibilityState !== "hidden") {
             try { srec.start(); } catch (_) {}
         }
     };
