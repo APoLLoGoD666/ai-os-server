@@ -1345,7 +1345,8 @@ let dgAudioCtx          = null;   // AudioContext for analyser
 let _apexAudio          = null;   // Persistent Audio element, created + unlocked on first touch
 let _apexBlobUrl        = null;   // Current blob URL so we can revoke before setting next
 let _speakSafetyTimer   = null;   // 30-second watchdog to force-reset stuck speaking state
-let _vadDebounceStart   = null;   // timestamp when vol first exceeded -30dB during playback
+let _vadDebounceStart   = null;   // timestamp when vol first exceeded threshold during playback
+let _vadInterruptSR     = null;   // dedicated fresh SR instance used only for interrupt capture
 let dgSilenceTimer      = null;   // setInterval for conversation silence tracking
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
@@ -1765,10 +1766,44 @@ function stopVAD() {
     if (vadAnalyser) { try { vadAnalyser.disconnect(); } catch (_) {} vadAnalyser = null; }
 }
 
+function _startInterruptSR() {
+    if (_vadInterruptSR) return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR || !isSpeakingNow) return;
+    console.log("[VAD] starting dedicated interrupt SR");
+    const r = new SR();
+    r.continuous   = false;
+    r.interimResults = false;
+    r.lang         = "en-GB";
+    _vadInterruptSR = r;
+
+    r.onresult = ev => {
+        const transcript = Array.from(ev.results)
+            .map(res => res[0].transcript)
+            .join(" ")
+            .trim();
+        const wordCount = transcript.split(/\s+/).filter(Boolean).length;
+        console.log(`[VAD] interrupt SR: ${wordCount} words — "${transcript}"`);
+        if (wordCount >= 4 && isSpeakingNow) {
+            _vadInterruptSR = null;
+            interruptSpeech();
+            document.getElementById("chatInput").value = transcript;
+            lastSendWasVoice = true;
+            dgMuted = true;
+            sendVoiceChatCommand(transcript);
+        }
+        // < 4 words: discard — Apex keeps speaking
+    };
+    r.onerror = () => { _vadInterruptSR = null; };
+    r.onend   = () => { _vadInterruptSR = null; };
+    try { r.start(); } catch (e) { _vadInterruptSR = null; console.warn("[VAD] interrupt SR start failed:", e.message); }
+}
+
 function interruptSpeech() {
     console.log("Interrupted");
     clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
     _vadDebounceStart = null;
+    if (_vadInterruptSR) { try { _vadInterruptSR.abort(); } catch (_) {} _vadInterruptSR = null; }
     stopVAD();
     if (currentAbort) { currentAbort.abort(); currentAbort = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -1821,24 +1856,36 @@ async function startVoicePipeline() {
             dgAnalyser.fftSize = 256;
             dgAudioCtx.createMediaStreamSource(dgStream).connect(dgAnalyser);
 
-            const buf = new Float32Array(dgAnalyser.fftSize);
+            const buf     = new Float32Array(dgAnalyser.fftSize);
+            const freqBuf = new Uint8Array(dgAnalyser.frequencyBinCount);
             dgSilenceTimer = setInterval(() => {
                 if (!autoListen) return;
                 dgAnalyser.getFloatTimeDomainData(buf);
                 const db = _rms(buf);
 
                 if (isSpeakingNow) {
-                    // VAD interrupt: require -30dB sustained for 800ms before starting SR
-                    if (db > -30) {
+                    if (_vadInterruptSR) { _vadDebounceStart = null; return; } // already capturing
+
+                    // Frequency analysis: speech energy concentrates in 300-3000 Hz band
+                    // (bins 2-17 at ~172 Hz/bin for 44100 Hz, bins 2-16 for 48000 Hz)
+                    dgAnalyser.getByteFrequencyData(freqBuf);
+                    let speechSum = 0, broadSum = 0;
+                    for (let i = 2; i <= 17; i++) speechSum += freqBuf[i];
+                    for (let i = 2; i <= 63; i++) broadSum += freqBuf[i];
+                    // Speech has >35% of its energy in the speech frequency band;
+                    // a desk tap or broadband noise will not meet this ratio
+                    const speechLike = broadSum > 0 && (speechSum / broadSum) > 0.35;
+
+                    if (db > -28 && speechLike) {
                         if (_vadDebounceStart === null) {
                             _vadDebounceStart = Date.now();
-                        } else if (Date.now() - _vadDebounceStart >= 800) {
+                        } else if (Date.now() - _vadDebounceStart >= 700) {
                             _vadDebounceStart = null;
-                            console.log("[VAD] 800ms above -30dB during playback — starting SR");
-                            if (srec) { try { srec.start(); } catch (_) {} }
+                            console.log("[VAD] sustained speech detected — starting interrupt SR");
+                            _startInterruptSR();
                         }
                     } else {
-                        _vadDebounceStart = null; // volume dropped — reset debounce
+                        _vadDebounceStart = null;
                     }
                     return;
                 }
@@ -1883,23 +1930,7 @@ async function startVoicePipeline() {
         if (!transcript) return;
         lastSpeechMs = Date.now();
 
-        // VAD interrupt path: SR was started by the debounce during playback
-        if (isSpeakingNow) {
-            const wordCount = transcript.split(/\s+/).filter(Boolean).length;
-            if (wordCount >= 3) {
-                console.log(`[VAD] interrupt — ${wordCount} words: "${transcript}"`);
-                _vadDebounceStart = null;
-                interruptSpeech();
-                document.getElementById("chatInput").value = transcript;
-                lastSendWasVoice = true;
-                dgMuted = true;
-                sendVoiceChatCommand(transcript);
-            } else {
-                console.log(`[VAD] transcript too short (${wordCount} word${wordCount === 1 ? "" : "s"}) — ignoring`);
-            }
-            return;
-        }
-
+        if (isSpeakingNow) return; // dedicated _vadInterruptSR handles interrupt; discard main SR residuals
         if (dgMuted) return; // block transcripts during thinking phase
         if (dgMode === "wake") {
             console.log(`[Wake] transcript: "${transcript}"`);
@@ -1953,6 +1984,7 @@ function stopVoicePipeline() {
     if (dgSilenceTimer) { clearInterval(dgSilenceTimer); dgSilenceTimer = null; }
     try { if (dgAudioCtx) { dgAudioCtx.close(); dgAudioCtx = null; } } catch (_) {}
     dgAnalyser = null;
+    if (_vadInterruptSR) { try { _vadInterruptSR.abort(); } catch (_) {} _vadInterruptSR = null; }
     if (srec) { try { srec.abort(); } catch (_) {} srec = null; }
     isListening = false;
 }
@@ -1977,6 +2009,8 @@ function _pauseVoiceForBackground() {
     dgAudioCtx = null;
     dgAnalyser = null;
     stopVAD();
+    _vadDebounceStart = null;
+    if (_vadInterruptSR) { try { _vadInterruptSR.abort(); } catch (_) {} _vadInterruptSR = null; }
     // Pause any in-flight audio too
     if (currentAudio) { try { currentAudio.pause(); } catch (_) {} }
 }
@@ -1990,7 +2024,7 @@ async function _restoreVoiceFromBackground() {
 function muteDeepgram() {
     dgMuted = true;
     setOrbState("thinking");
-    startVAD();
+    // VAD interrupt is handled by dgSilenceTimer — no separate startVAD needed
 }
 
 function unmuteDeepgram() {
