@@ -1678,11 +1678,15 @@ async function initDeepgram() {
         dgSocket.onmessage = e => {
             try {
                 const msg = JSON.parse(e.data);
+                if (msg.type === "Connected") {
+                    console.log("[Deepgram] SDK connected");
+                    return;
+                }
                 const transcript = msg?.channel?.alternatives?.[0]?.transcript?.trim();
                 const isFinal = msg?.is_final;
-                console.log("[Deepgram] msg received, isFinal:", isFinal, "transcript:", transcript, "muted:", dgMuted);
-                if (transcript && isFinal && !dgMuted) {
-                    console.log("[Deepgram] transcript:", transcript);
+                const speechFinal = msg?.speech_final;
+                console.log("[Deepgram] msg:", transcript, "final:", isFinal, "speechFinal:", speechFinal, "muted:", dgMuted);
+                if (transcript && (isFinal || speechFinal) && !dgMuted) {
                     document.getElementById("chatInput").value = transcript;
                     lastSendWasVoice = true;
                     dgMuted = true;

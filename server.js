@@ -7291,29 +7291,49 @@ const server = require("http").createServer(app);
 
 const wss = new WebSocketServer({ server, path: "/deepgram-proxy" });
 wss.on("connection", (browserSocket) => {
-    let headerChunk = null;
+    const deepgram = createDeepgramClient(process.env.DEEPGRAM_API_KEY);
 
-    const dgWs = new WS(
-        "wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=300&interim_results=true",
-        { headers: { "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}` } }
-    );
+    const connection = deepgram.listen.live({
+        model: "nova-2",
+        language: "en-GB",
+        punctuate: true,
+        endpointing: 300,
+        interim_results: true,
+        encoding: "linear16",
+        sample_rate: 16000,
+        channels: 1
+    });
 
-    dgWs.on("open", () => browserSocket.send(JSON.stringify({ type: "Connected" })));
-    dgWs.on("message", (data) => { if (browserSocket.readyState === 1) browserSocket.send(data); });
-    dgWs.on("close", () => browserSocket.close());
-    dgWs.on("error", (e) => console.error("DG proxy error:", e.message));
+    connection.on("open", () => {
+        console.log("DG SDK: connection open");
+        browserSocket.send(JSON.stringify({ type: "Connected" }));
+    });
 
-    browserSocket.on("message", (data) => {
-        if (dgWs.readyState === 1) {
-            if (!headerChunk && Buffer.isBuffer(data)) {
-                headerChunk = data;
-                console.log("DG proxy: stored header chunk, size:", data.length);
-            }
-            dgWs.send(data);
+    connection.on("transcript", (data) => {
+        const transcript = data?.channel?.alternatives?.[0]?.transcript;
+        const isFinal = data?.is_final;
+        const speechFinal = data?.speech_final;
+        console.log("DG SDK transcript:", transcript, "final:", isFinal);
+        if (browserSocket.readyState === 1) {
+            browserSocket.send(JSON.stringify({
+                type: "transcript",
+                channel: data.channel,
+                is_final: isFinal,
+                speech_final: speechFinal
+            }));
         }
     });
 
-    browserSocket.on("close", () => dgWs.close());
+    connection.on("error", (e) => console.error("DG SDK error:", e));
+    connection.on("close", () => browserSocket.close());
+
+    browserSocket.on("message", (data) => {
+        if (connection.getReadyState() === 1) {
+            connection.send(data);
+        }
+    });
+
+    browserSocket.on("close", () => connection.finish());
 });
 
 server.listen(PORT, () => {
