@@ -1728,7 +1728,9 @@ async function startVoicePipeline() {
         dgAnalyser.fftSize = 256;
         dgAudioCtx.createMediaStreamSource(dgStream).connect(dgAnalyser);
 
-        dgRecorder = new MediaRecorder(dgStream);
+        const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
+        console.log("[Voice] MediaRecorder mimeType:", mimeType);
+        dgRecorder = new MediaRecorder(dgStream, { mimeType });
         dgRecorder.ondataavailable = e => {
             if (!e.data.size) return;
             if (dgSocket && dgSocket.readyState === 1) {
