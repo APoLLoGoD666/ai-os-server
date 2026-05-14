@@ -263,10 +263,8 @@ const TOOLS = [
 const WORKSPACE_DIR = path.join(__dirname, "workspace");
 const LAYOUT_FILE = path.join(__dirname, "layout.json");
 const HIDDEN_FILES = new Set([]);
-if (!process.env.AGENT_SECRET) process.env.AGENT_SECRET = require("crypto").randomBytes(32).toString("hex");
-if (!process.env.APP_ACCESS_KEY) process.env.APP_ACCESS_KEY = require("crypto").randomBytes(32).toString("hex");
-const AGENT_SECRET = process.env.AGENT_SECRET;
-const APP_ACCESS_KEY = process.env.APP_ACCESS_KEY;
+const AGENT_SECRET = process.env.AGENT_SECRET || "";
+const APP_ACCESS_KEY = process.env.APP_ACCESS_KEY || "";
 const CRON_SECRET = process.env.CRON_SECRET || "";
 const ALLOWED_AGENT_STEP_TYPES = new Set([
     "create_document",
