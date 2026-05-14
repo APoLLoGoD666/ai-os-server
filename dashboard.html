@@ -1926,6 +1926,14 @@ async function startVoicePipeline() {
             }
         } else {
             console.log(`[SR] conversation: "${transcript}"`);
+            // Standby voice commands — cancel audio and return to wake mode immediately
+            if (/\bstand\s*by\b|\bgo\s+to\s+sleep\b|\bstop\s+listening\b/i.test(transcript)) {
+                console.log(`[SR] standby command detected: "${transcript}"`);
+                interruptSpeech();
+                dgMode = "wake";
+                setOrbState("waiting");
+                return;
+            }
             document.getElementById("chatInput").value = transcript;
             lastSendWasVoice = true;
             dgMuted = true;
