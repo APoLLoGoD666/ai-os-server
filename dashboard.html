@@ -1719,7 +1719,7 @@ async function startVoicePipeline() {
     // Mic stream for AnalyserNode (visual UI) and VAD interrupt
     if (!dgStream) {
         try {
-            dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            dgStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
         } catch (err) {
             if (err.name === "NotAllowedError") _showBanner("banner-micdenied", "Microphone access denied.");
             else console.error("[Voice] mic error:", err.message);
