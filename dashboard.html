@@ -1670,7 +1670,8 @@ async function initDeepgram() {
                     dgSocket.send(e.data);
                 }
             };
-            dgRecorder.start(250);
+            dgRecorder.start(100);
+            dgRecorder.requestData();
             console.log("[Deepgram] recording started");
         };
 
