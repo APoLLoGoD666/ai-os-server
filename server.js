@@ -7082,6 +7082,8 @@ app.post("/api/speak", async (req, res) => {
         const apiKey = process.env.ELEVENLABS_API_KEY;
         if (!apiKey) return res.status(500).json({ ok: false, reply: "Missing ELEVENLABS_API_KEY." });
 
+        const elT0 = Date.now();
+        console.log("[LATENCY] ElevenLabs request sent");
         const elRes = await fetch("https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB", {
             method: "POST",
             headers: {
@@ -7091,10 +7093,11 @@ app.post("/api/speak", async (req, res) => {
             },
             body: JSON.stringify({
                 text,
-                model_id: "eleven_turbo_v2",
+                model_id: "eleven_flash_v2_5",
                 voice_settings: { stability: 0.4, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.25 }
             })
         });
+        console.log(`[LATENCY] ElevenLabs response headers: ${Date.now() - elT0}ms`);
 
         if (!elRes.ok) {
             const errText = await elRes.text();
@@ -7124,15 +7127,20 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
             return res.status(500).json({ ok: false, reply: "Missing ANTHROPIC_API_KEY in .env" });
         }
 
+        const t0 = Date.now();
+        console.log("[LATENCY] voice-chat request received");
+
         const userMessage = rawMessage.trim();
         await addToMemory("user", userMessage);
 
-        const memoryText = await formatRecentMemory();
-        const relevantDocs = await getRelevantDocuments(userMessage);
+        // Parallel fetch memory + docs
+        const [memoryText, relevantDocs] = await Promise.all([
+            formatRecentMemory(),
+            getRelevantDocuments(userMessage)
+        ]);
+
         const docsText = relevantDocs.length
-            ? relevantDocs.map((doc, i) => {
-                return `DOC ${i + 1}: ${doc.filename} — ${doc.summary || "No summary"}`;
-            }).join("\n")
+            ? relevantDocs.map((doc, i) => `DOC ${i + 1}: ${doc.filename} — ${doc.summary || "No summary"}`).join("\n")
             : "No relevant documents.";
 
         const voicePrompt = `You are Apex, a British AI assistant. Respond in natural spoken English only. Maximum 2 sentences. No markdown, no bullet points, no lists, no file names, no technical strings. Speak like a human, be direct and confident.
@@ -7149,10 +7157,12 @@ Respond naturally in 1-2 sentences.`.trim();
 
         const response = await client.messages.create({
             model: MODEL,
-            max_tokens: 80,
+            max_tokens: 120,
             tools: TOOLS,
             messages: [{ role: "user", content: voicePrompt }]
         });
+
+        console.log(`[LATENCY] Anthropic response complete: ${Date.now() - t0}ms`);
 
         const toolUseBlock = (response.content || []).find(part => part.type === "tool_use");
 
