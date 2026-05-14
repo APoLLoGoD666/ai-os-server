@@ -1263,24 +1263,14 @@ let isSpeakingNow       = false;
 let vadCtx              = null;
 let vadAnalyser         = null;
 let vadInterval         = null;
-let sbCtx               = null;  // standby AudioContext
-let sbAnalyser          = null;
-let sbInterval          = null;
-let sbActive            = false; // true = in standby (no Deepgram)
-let sbRecorder          = null;  // always-running MediaRecorder (pre-roll + live)
-let sbRingBuf           = [];    // circular pre-roll ring buffer (recent chunks)
-let dgPreBuffer         = [];    // chunks buffered while Deepgram WS is connecting
-let dgConnecting        = false; // true while WebSocket is in CONNECTING state
-let dgGotTranscript     = false; // set true when any transcript is received in this session
-let dgMode              = "wake"; // "wake" = waiting for wake word | "conversation" = active
+let dgAnalyser          = null;  // AnalyserNode for visual UI + silence detection
+let dgAudioCtx          = null;  // AudioContext for analyser
+let dgSilenceTimer      = null;  // setInterval for conversation silence tracking
+let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
-let sbDbLogTs           = 0;    // timestamp of last dB console log
-const SB_SPEECH_DB      = -65;   // dB threshold to activate Deepgram
-const SB_SILENCE_MS     = 2500;  // ms of silence before returning to standby
-const SB_SILENCE_NOTX   = 3500;  // extended silence timeout when no transcript yet
-const SB_CONV_SILENCE_MS = 3000; // silence before returning to standby from conversation
-const SB_PREROLL_N      = 6;     // chunks to keep as pre-roll (6 × 50ms = ~300ms)
-const SB_CHUNK_MS       = 50;    // MediaRecorder timeslice ms
+let dgDbLogTs           = 0;
+const CONV_SILENCE_MS   = 5000;  // silence before returning to wake mode
+const CHUNK_MS          = 50;    // MediaRecorder timeslice ms
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 const voiceSpeed        = 1.3;
@@ -1640,15 +1630,9 @@ async function _processSpeak() {
     }
     isSpeakingNow = false;
     if (autoListen) {
-        unmuteDeepgram(); // resets lastSpeechMs, clears VAD
-        if (!sbCtx) {
-            startStandby();
-        } else if (dgSocket && dgSocket.readyState === WebSocket.OPEN) {
-            setOrbState("listening");
-        } else {
-            sbActive = true;
-            setOrbState("waiting");
-        }
+        unmuteDeepgram();
+        if (!dgAudioCtx) startVoicePipeline();
+        else setOrbState(dgMode === "conversation" ? "listening" : "waiting");
     } else {
         setOrbState("ready");
     }
@@ -1704,14 +1688,7 @@ function interruptSpeech() {
     isSpeakingNow = false;
     dgMuted = false;
     unmuteDeepgram(); // resets lastSpeechMs
-    if (dgSocket && dgSocket.readyState === WebSocket.OPEN) {
-        setOrbState("listening");
-    } else if (sbCtx) {
-        sbActive = true;
-        setOrbState("waiting");
-    } else {
-        setOrbState("ready");
-    }
+    setOrbState(isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
 }
 
 // ══ VOICE INPUT ═══════════════════════════════════════════════════════
@@ -1724,149 +1701,109 @@ function _showBanner(id, html) {
     document.body.appendChild(el);
 }
 
-// ── Standby VAD ───────────────────────────────────────────────────────
-function _sbRms(buf) {
+// ── Always-on Deepgram voice pipeline ────────────────────────────────
+function _rms(buf) {
     let s = 0;
     for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
     const rms = Math.sqrt(s / buf.length);
     return rms > 0 ? 20 * Math.log10(rms) : -Infinity;
 }
 
-async function startStandby() {
-    if (sbCtx || !autoListen) return;
+async function startVoicePipeline() {
+    if (dgAudioCtx || !autoListen) return;
     if (!dgStream) {
         try {
             dgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         } catch (err) {
             if (err.name === "NotAllowedError") _showBanner("banner-micdenied", "Microphone access denied.");
-            else console.error("[Standby] mic error:", err.message);
+            else console.error("[Voice] mic error:", err.message);
             return;
         }
     }
     try {
-        sbCtx      = new AudioContext();
-        sbAnalyser = sbCtx.createAnalyser();
-        sbAnalyser.fftSize = 256;
-        sbCtx.createMediaStreamSource(dgStream).connect(sbAnalyser);
-        sbActive = true;
-        lastSpeechMs = Date.now();
+        dgAudioCtx = new AudioContext();
+        dgAnalyser = dgAudioCtx.createAnalyser();
+        dgAnalyser.fftSize = 256;
+        dgAudioCtx.createMediaStreamSource(dgStream).connect(dgAnalyser);
 
-        // Single always-running recorder: feeds ring buffer in standby,
-        // dgPreBuffer while connecting, and directly to Deepgram once live.
-        sbRecorder = new MediaRecorder(dgStream);
-        sbRecorder.ondataavailable = e => {
+        dgRecorder = new MediaRecorder(dgStream);
+        dgRecorder.ondataavailable = e => {
             if (!e.data.size) return;
-            if (dgConnecting) {
-                dgPreBuffer.push(e.data);
-            } else if (dgSocket && dgSocket.readyState === WebSocket.OPEN) {
-                dgSocket.send(e.data);
-            }
-            // No ring buffer needed — Deepgram is always open
+            if (dgSocket && dgSocket.readyState === WebSocket.OPEN) dgSocket.send(e.data);
         };
-        sbRecorder.start(SB_CHUNK_MS);
+        dgRecorder.start(CHUNK_MS);
 
-        // Open Deepgram immediately — always-on for wake word detection
         dgMode = "wake";
+        lastSpeechMs = Date.now();
         setOrbState("waiting");
-        console.log("[Standby] mic ready — opening Deepgram for wake word detection");
-        _activateDg();
+        console.log("[Voice] pipeline started — opening Deepgram");
+        _openDg();
 
-        // AnalyserNode monitors mic volume only to track speech presence
-        // in conversation mode (for silence-based return to wake mode)
-        const buf = new Float32Array(sbAnalyser.fftSize);
-        sbInterval = setInterval(() => {
+        const buf = new Float32Array(dgAnalyser.fftSize);
+        dgSilenceTimer = setInterval(() => {
             if (!autoListen || isSpeakingNow) return;
-            sbAnalyser.getFloatTimeDomainData(buf);
-            const db = _sbRms(buf);
-
+            dgAnalyser.getFloatTimeDomainData(buf);
+            const db = _rms(buf);
             const now = Date.now();
-            if (now - sbDbLogTs >= 1000) {
-                sbDbLogTs = now;
-                console.log(`[Standby] dB: ${db === -Infinity ? "-∞" : db.toFixed(1)} (mode: ${dgMode})`);
+            if (now - dgDbLogTs >= 1000) {
+                dgDbLogTs = now;
+                console.log(`[Voice] dB: ${db === -Infinity ? "-∞" : db.toFixed(1)} | mode: ${dgMode}`);
             }
-
-            // Only track silence in conversation mode — return to wake mode after 3s quiet
             if (dgMode === "conversation" && !dgMuted) {
-                if (db > SB_SPEECH_DB) {
-                    lastSpeechMs = Date.now();
-                } else if (now - lastSpeechMs > SB_CONV_SILENCE_MS) {
-                    console.log(`[Conversation] → [Wake] silence ${now - lastSpeechMs}ms`);
+                if (db > -65) lastSpeechMs = now;
+                else if (now - lastSpeechMs > CONV_SILENCE_MS) {
+                    console.log(`[Voice] silence ${now - lastSpeechMs}ms → wake mode`);
                     dgMode = "wake";
                     setOrbState("waiting");
-                    // Keep Deepgram open — still listening for next wake word
                 }
             }
         }, 80);
     } catch (e) {
-        console.warn("[Standby] init failed:", e.message);
+        console.warn("[Voice] pipeline init failed:", e.message);
     }
 }
 
-function stopStandby() {
-    sbActive = false;
-    dgConnecting = false;
-    dgPreBuffer = [];
-    sbRingBuf = [];
-    if (sbInterval) { clearInterval(sbInterval); sbInterval = null; }
-    try { if (sbRecorder && sbRecorder.state !== "inactive") sbRecorder.stop(); sbRecorder = null; } catch (_) {}
-    try { if (sbCtx) { sbCtx.close(); sbCtx = null; } } catch (_) {}
-    sbAnalyser = null;
+function stopVoicePipeline() {
+    if (dgSilenceTimer) { clearInterval(dgSilenceTimer); dgSilenceTimer = null; }
+    try { if (dgRecorder && dgRecorder.state !== "inactive") dgRecorder.stop(); dgRecorder = null; } catch (_) {}
+    try { if (dgAudioCtx) { dgAudioCtx.close(); dgAudioCtx = null; } } catch (_) {}
+    dgAnalyser = null;
+    _closeDg();
 }
 
-function _activateDg() {
-    if (dgSocket && dgSocket.readyState === WebSocket.OPEN) return;
-    const wsUrl = `wss://ai-os-server-jx20.onrender.com/deepgram-proxy`;
-    dgSocket = new WebSocket(wsUrl);
-    isListening = true;
-    setOrbState("listening");
+function _openDg() {
+    if (dgSocket && (dgSocket.readyState === WebSocket.OPEN || dgSocket.readyState === WebSocket.CONNECTING)) return;
+    dgSocket = new WebSocket(`wss://ai-os-server-jx20.onrender.com/deepgram-proxy`);
 
     dgSocket.onopen = () => {
-        // Flush pre-roll + any chunks buffered during connection, in order
-        const toFlush = [...dgPreBuffer];
-        dgPreBuffer = [];
-        for (const chunk of toFlush) {
-            if (dgSocket.readyState === WebSocket.OPEN) dgSocket.send(chunk);
-        }
-        dgConnecting = false; // sbRecorder.ondataavailable now forwards live to dgSocket
-        dgGotTranscript = false;
-        dgMuted = false;
         isListening = true;
+        dgMuted = false;
         lastSpeechMs = Date.now();
         setOrbState(dgMode === "conversation" ? "listening" : "waiting");
-        console.log(`[Listening] Deepgram open (mode: ${dgMode}), flushed ${toFlush.length} pre-roll chunks (~${toFlush.length * SB_CHUNK_MS}ms)`);
+        console.log(`[Deepgram] connected (mode: ${dgMode})`);
     };
 
     dgSocket.onmessage = e => {
         try {
-            const raw = String(e.data);
-            console.log("[Deepgram] raw:", raw.slice(0, 200));
-            const msg = JSON.parse(raw);
+            const msg = JSON.parse(String(e.data));
             if (msg.type === "Connected") return;
-
             const altA = msg?.channel?.alternatives?.[0]?.transcript;
             const altB = msg?.results?.channels?.[0]?.alternatives?.[0]?.transcript;
             const transcript = (altA ?? altB ?? "").trim();
             const isFinal    = msg?.is_final === true;
-
-            console.log(`[Deepgram] "${transcript}" | final: ${isFinal} | mode: ${dgMode} | muted: ${dgMuted}`);
-
             if (!transcript) return;
-
-            dgGotTranscript = true;
+            console.log(`[Deepgram] "${transcript}" | final:${isFinal} | mode:${dgMode} | muted:${dgMuted}`);
             lastSpeechMs = Date.now();
-
             if (dgMode === "wake") {
-                // Only activate on wake word
                 if (isFinal && /hey\s*apex/i.test(transcript)) {
                     console.log("[Wake] wake word detected → conversation mode");
                     dgMode = "conversation";
                     lastSpeechMs = Date.now();
                     setOrbState("listening");
+                    speak("Yes?");
                     renderChatMessage("system", "Listening…");
                 }
-                // non-wake-word transcripts ignored in standby
             } else {
-                // Conversation mode — normal processing
                 if (isFinal && !dgMuted) {
                     console.log(`[Deepgram] sending to server: "${transcript}"`);
                     document.getElementById("chatInput").value = transcript;
@@ -1881,23 +1818,20 @@ function _activateDg() {
     };
 
     dgSocket.onerror = e => { console.error("[Deepgram] error:", e); };
+
     dgSocket.onclose = () => {
         isListening = false;
-        dgConnecting = false;
-        if (autoListen && sbCtx) {
-            console.log("[Deepgram] closed → reconnecting in 1s");
+        if (autoListen && dgAudioCtx) {
+            console.log("[Deepgram] disconnected → reconnecting in 1s");
             dgMode = "wake";
             setOrbState("waiting");
-            setTimeout(() => { if (autoListen && sbCtx) _activateDg(); }, 1000);
+            setTimeout(() => { if (autoListen && dgAudioCtx) _openDg(); }, 1000);
         }
     };
 }
 
-function _deactivateDg() {
-    dgConnecting = false;
-    dgPreBuffer = [];
-    dgMode = "wake";
-    try { if (dgSocket) { dgSocket.close(); dgSocket = null; } } catch (_) {}
+function _closeDg() {
+    try { if (dgSocket) { dgSocket.onclose = null; dgSocket.close(); dgSocket = null; } } catch (_) {}
     isListening = false;
 }
 
@@ -1910,19 +1844,18 @@ function muteDeepgram() {
 function unmuteDeepgram() {
     stopVAD();
     dgMuted = false;
-    lastSpeechMs = Date.now(); // reset silence timer so user gets full 1.5s window
-    if (isListening) setOrbState("listening");
+    lastSpeechMs = Date.now();
+    if (isListening) setOrbState(dgMode === "conversation" ? "listening" : "waiting");
 }
 
 function startListening() {
-    startStandby();
+    startVoicePipeline();
 }
 
 function stopListening() {
     isListening = false;
     dgMuted = false;
-    stopStandby();
-    _deactivateDg();
+    stopVoicePipeline();
     try { if (dgStream) { dgStream.getTracks().forEach(t => t.stop()); dgStream = null; } } catch (_) {}
     setOrbState("ready");
 }
@@ -1932,7 +1865,7 @@ function toggleListening() {
         interruptSpeech();
         return;
     }
-    if (isListening || sbCtx) stopListening(); else startListening();
+    if (isListening || dgAudioCtx) stopListening(); else startListening();
 }
 
 function toggleAutoListen() {
@@ -1943,7 +1876,7 @@ function toggleAutoListen() {
     if (!autoListen) {
         stopListening();
     } else {
-        startStandby();
+        startVoicePipeline();
     }
 }
 
@@ -2735,7 +2668,7 @@ setInterval(refreshSlow, SLOW_REFRESH_MS);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
-setTimeout(() => { if (autoListen) startStandby(); }, 1000);
+setTimeout(() => { if (autoListen) startVoicePipeline(); }, 1000);
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(err => console.warn("SW register failed:", err.message));
 }
