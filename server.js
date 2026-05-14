@@ -422,6 +422,56 @@ async function formatRecentMemory() {
         .join("\n");
 }
 
+// Memory compression: summarise recent history with Haiku, cache by message count
+let _memorySummaryCache = null;
+async function getMemorySummary() {
+    const memory = await loadMemory();
+    if (!memory.length) return "No recent memory.";
+    const seq = memory.length;
+    if (_memorySummaryCache && _memorySummaryCache.seq === seq) return _memorySummaryCache.summary;
+    const raw = memory.slice(-12).map(item => {
+        const when = timeAgo(item.time);
+        return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${item.message}`;
+    }).join("\n");
+    try {
+        const res = await client.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 80,
+            messages: [{ role: "user", content: `Summarise this conversation history into one compact paragraph (max 60 words). Focus on facts, preferences, and recent context only.\n\n${raw}` }]
+        });
+        const summary = res.content?.find(b => b.type === "text")?.text?.trim() || raw;
+        _memorySummaryCache = { summary, seq };
+        return summary;
+    } catch (_) {
+        return raw;
+    }
+}
+
+// Minimal solid-colour PNG generator (no external deps)
+function _makeSolidPng(size, r, g, b) {
+    const { deflateSync } = require("zlib");
+    const sig = Buffer.from([137,80,78,71,13,10,26,10]);
+    const crcTbl = new Int32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        crcTbl[n] = c;
+    }
+    const crc32 = buf => { let c = -1; for (let i = 0; i < buf.length; i++) c = crcTbl[(c ^ buf[i]) & 0xff] ^ (c >>> 8); return (c ^ -1) >>> 0; };
+    const chunk = (type, data) => {
+        const t = Buffer.from(type, "ascii");
+        const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+        const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([t, data])));
+        return Buffer.concat([len, t, data, crc]);
+    };
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4); ihdr[8] = 8; ihdr[9] = 2;
+    const row = Buffer.alloc(1 + size * 3);
+    for (let x = 0; x < size; x++) { row[1+x*3]=r; row[2+x*3]=g; row[3+x*3]=b; }
+    const raw = Buffer.concat(Array.from({length: size}, () => row));
+    return Buffer.concat([sig, chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
+}
+
 /* =========================
    WORKSPACE FILES
 ========================= */
@@ -7074,6 +7124,17 @@ app.delete("/api/routines/:id", requireAppAccess, async (req, res) => {
     }
 });
 
+// PWA icons — generated in-memory, no files needed
+let _icon192 = null, _icon512 = null;
+app.get("/icon-192.png", (req, res) => {
+    if (!_icon192) _icon192 = _makeSolidPng(192, 0, 212, 255);
+    res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=604800").send(_icon192);
+});
+app.get("/icon-512.png", (req, res) => {
+    if (!_icon512) _icon512 = _makeSolidPng(512, 0, 212, 255);
+    res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=604800").send(_icon512);
+});
+
 app.post("/api/speak", async (req, res) => {
     try {
         const text = String(req.body?.text || "").trim();
@@ -7133,9 +7194,9 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         const userMessage = rawMessage.trim();
         await addToMemory("user", userMessage);
 
-        // Parallel fetch memory + docs
+        // Parallel fetch compressed memory summary + docs
         const [memoryText, relevantDocs] = await Promise.all([
-            formatRecentMemory(),
+            getMemorySummary(),
             getRelevantDocuments(userMessage)
         ]);
 

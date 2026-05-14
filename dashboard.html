@@ -1272,11 +1272,13 @@ let sbRingBuf           = [];    // circular pre-roll ring buffer (recent chunks
 let dgPreBuffer         = [];    // chunks buffered while Deepgram WS is connecting
 let dgConnecting        = false; // true while WebSocket is in CONNECTING state
 let dgGotTranscript     = false; // set true when any transcript is received in this session
+let dgMode              = "wake"; // "wake" = waiting for wake word | "conversation" = active
 let lastSpeechMs        = 0;
 let sbDbLogTs           = 0;    // timestamp of last dB console log
 const SB_SPEECH_DB      = -65;   // dB threshold to activate Deepgram
 const SB_SILENCE_MS     = 2500;  // ms of silence before returning to standby
 const SB_SILENCE_NOTX   = 3500;  // extended silence timeout when no transcript yet
+const SB_CONV_SILENCE_MS = 3000; // silence before returning to standby from conversation
 const SB_PREROLL_N      = 6;     // chunks to keep as pre-roll (6 × 50ms = ~300ms)
 const SB_CHUNK_MS       = 50;    // MediaRecorder timeslice ms
 let cachedEmailCount    = 0;
@@ -1800,10 +1802,12 @@ async function startStandby() {
                 if (db > SB_SPEECH_DB) {
                     lastSpeechMs = Date.now();
                 } else if (!dgMuted) {
-                    // Use extended timeout if no transcript yet — give Deepgram more time
-                    const timeout = dgGotTranscript ? SB_SILENCE_MS : SB_SILENCE_NOTX;
+                    const timeout = dgMode === "conversation"
+                        ? SB_CONV_SILENCE_MS                              // 3s after conversation
+                        : (dgGotTranscript ? SB_SILENCE_MS : SB_SILENCE_NOTX); // wake-mode
                     if (now - lastSpeechMs > timeout) {
-                        console.log(`[Listening] → [Standby] (silence ${now - lastSpeechMs}ms, gotTranscript: ${dgGotTranscript})`);
+                        console.log(`[Listening] → [Standby] (silence ${now - lastSpeechMs}ms, mode: ${dgMode})`);
+                        dgMode = "wake";
                         sbActive = true;
                         _deactivateDg();
                         setOrbState("waiting");
@@ -1842,32 +1846,45 @@ function _activateDg() {
             if (dgSocket.readyState === WebSocket.OPEN) dgSocket.send(chunk);
         }
         dgConnecting = false; // sbRecorder.ondataavailable now forwards live to dgSocket
+        dgGotTranscript = false;
         dgMuted = false;
         isListening = true;
         lastSpeechMs = Date.now();
         setOrbState("listening");
-        console.log(`[Listening] Deepgram open, flushed ${toFlush.length} pre-roll chunks (~${toFlush.length * SB_CHUNK_MS}ms)`);
+        console.log(`[Listening] Deepgram open (mode: ${dgMode}), flushed ${toFlush.length} pre-roll chunks (~${toFlush.length * SB_CHUNK_MS}ms)`);
     };
 
     dgSocket.onmessage = e => {
         try {
             const raw = String(e.data);
-            console.log("[Deepgram] raw message:", raw.slice(0, 300));
+            console.log("[Deepgram] raw:", raw.slice(0, 200));
             const msg = JSON.parse(raw);
-            console.log("[Deepgram] msg.type:", msg.type, "| keys:", Object.keys(msg).join(", "));
             if (msg.type === "Connected") return;
 
-            // Try both known Deepgram response shapes
-            const altA = msg?.channel?.alternatives?.[0]?.transcript;           // nova-2 streaming
-            const altB = msg?.results?.channels?.[0]?.alternatives?.[0]?.transcript; // batch / alt shape
+            const altA = msg?.channel?.alternatives?.[0]?.transcript;
+            const altB = msg?.results?.channels?.[0]?.alternatives?.[0]?.transcript;
             const transcript = (altA ?? altB ?? "").trim();
             const isFinal    = msg?.is_final === true;
 
-            console.log(`[Deepgram] transcript: "${transcript}" | is_final: ${isFinal} | muted: ${dgMuted}`);
+            console.log(`[Deepgram] "${transcript}" | final: ${isFinal} | mode: ${dgMode} | muted: ${dgMuted}`);
 
-            if (transcript) {
-                dgGotTranscript = true;
-                lastSpeechMs = Date.now();
+            if (!transcript) return;
+
+            dgGotTranscript = true;
+            lastSpeechMs = Date.now();
+
+            if (dgMode === "wake") {
+                // Only activate on wake word
+                if (isFinal && /hey\s*apex/i.test(transcript)) {
+                    console.log("[Wake] wake word detected → conversation mode");
+                    dgMode = "conversation";
+                    lastSpeechMs = Date.now();
+                    setOrbState("listening");
+                    renderChatMessage("system", "Listening…");
+                }
+                // non-wake-word transcripts ignored in standby
+            } else {
+                // Conversation mode — normal processing
                 if (isFinal && !dgMuted) {
                     console.log(`[Deepgram] sending to server: "${transcript}"`);
                     document.getElementById("chatInput").value = transcript;
@@ -1896,6 +1913,7 @@ function _activateDg() {
 function _deactivateDg() {
     dgConnecting = false;
     dgPreBuffer = [];
+    dgMode = "wake";
     try { if (dgSocket) { dgSocket.close(); dgSocket = null; } } catch (_) {}
     isListening = false;
 }
@@ -2099,10 +2117,12 @@ async function sendVoiceChatCommand(msg) {
         _smartRefresh(msg);
     } catch (error) {
         hideTypingIndicator();
-        const errMsg = error.message || "Server error.";
-        renderChatMessage("system", errMsg);
+        console.error("[Voice] request failed:", error);
+        const errMsg = "Something went wrong — please try again.";
+        renderChatMessage("system", `⚠ ${errMsg}`);
         try { speak(errMsg); } catch (_) {}
-        setOrbState("ready");
+        unmuteDeepgram();
+        setOrbState(autoListen ? "waiting" : "ready");
         setConnStatus(false);
     }
 }
