@@ -7013,7 +7013,8 @@ app.post("/api/send-reply", requireAppAccess, async (req, res) => {
         if (!to || !subject || !body) {
             return res.status(400).json({ ok: false, reply: "to, subject, and body are required." });
         }
-        await sendEmailReply(gmailId || "", to, subject, body);
+        const cleanSubject = subject.replace(/[^\x00-\x7F]/g, " ").trim();
+        await sendEmailReply(gmailId || "", to, cleanSubject, body);
         console.log(`SEND REPLY: Sent to ${to}, subject: ${subject}`);
         return res.json({ ok: true, reply: `Reply sent to ${to}.` });
     } catch (error) {
@@ -7024,7 +7025,8 @@ app.post("/api/send-reply", requireAppAccess, async (req, res) => {
 app.post("/api/ai-draft-reply", requireAppAccess, async (req, res) => {
     try {
         const { emailSubject, emailBody, senderName, userPrompt } = req.body || {};
-        const prompt = `You are drafting a short email reply on behalf of the user.\nOriginal email from: ${senderName || "Unknown"}\nSubject: ${emailSubject || ""}\nBody: ${emailBody || ""}\n${userPrompt ? `\nUser instruction: ${userPrompt}` : ""}\n\nWrite a concise, natural 2-3 sentence reply. Output only the reply body text, no subject line, no greeting prefix beyond a natural opening.`;
+        const cleanEmailSubject = (emailSubject || "").replace(/[^\x00-\x7F]/g, " ").trim();
+        const prompt = `You are drafting a short email reply on behalf of the user.\nOriginal email from: ${senderName || "Unknown"}\nSubject: ${cleanEmailSubject}\nBody: ${emailBody || ""}\n${userPrompt ? `\nUser instruction: ${userPrompt}` : ""}\n\nWrite a concise, natural 2-3 sentence reply. Output only the reply body text, no subject line, no greeting prefix beyond a natural opening.`;
         const response = await client.messages.create({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 150,
