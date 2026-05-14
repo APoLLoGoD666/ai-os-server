@@ -1367,6 +1367,13 @@ const isIOSPWA = (/iPad|iPhone|iPod/.test(navigator.userAgent)) &&
                  (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches);
 console.log(`[iOS] isIOSPWA:${isIOSPWA} | standalone:${window.navigator.standalone} | displayMode:${window.matchMedia('(display-mode: standalone)').matches} | UA:${navigator.userAgent}`);
 
+if (new URLSearchParams(window.location.search).get('debug') === '1') {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+    s.onload = () => eruda.init();
+    document.head.appendChild(s);
+}
+
 // iOS PWA pipeline state (always null on desktop)
 let _iosPWAStream       = null;   // mic MediaStream from getUserMedia
 let _iosPWAAudioCtx     = null;   // AudioContext for VAD AnalyserNode
