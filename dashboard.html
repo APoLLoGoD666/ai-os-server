@@ -1271,9 +1271,12 @@ let sbRecorder          = null;  // always-running MediaRecorder (pre-roll + liv
 let sbRingBuf           = [];    // circular pre-roll ring buffer (recent chunks)
 let dgPreBuffer         = [];    // chunks buffered while Deepgram WS is connecting
 let dgConnecting        = false; // true while WebSocket is in CONNECTING state
+let dgGotTranscript     = false; // set true when any transcript is received in this session
 let lastSpeechMs        = 0;
-const SB_SPEECH_DB      = -55;   // dB threshold to activate Deepgram (lower = more sensitive)
-const SB_SILENCE_MS     = 1500;  // ms of silence before returning to standby
+let sbDbLogTs           = 0;    // timestamp of last dB console log
+const SB_SPEECH_DB      = -45;   // dB threshold to activate Deepgram
+const SB_SILENCE_MS     = 2500;  // ms of silence before returning to standby
+const SB_SILENCE_NOTX   = 3500;  // extended silence timeout when no transcript yet
 const SB_PREROLL_N      = 6;     // chunks to keep as pre-roll (6 × 50ms = ~300ms)
 const SB_CHUNK_MS       = 50;    // MediaRecorder timeslice ms
 let cachedEmailCount    = 0;
@@ -1771,11 +1774,20 @@ async function startStandby() {
             if (!autoListen || isSpeakingNow) return;
             sbAnalyser.getFloatTimeDomainData(buf);
             const db = _sbRms(buf);
+
+            // Log dB level every second so threshold can be tuned
+            const now = Date.now();
+            if (now - sbDbLogTs >= 1000) {
+                sbDbLogTs = now;
+                console.log(`[Standby] dB: ${db === -Infinity ? "-∞" : db.toFixed(1)} (threshold: ${SB_SPEECH_DB})`);
+            }
+
             if (sbActive) {
                 // Standby — waiting for speech to open Deepgram
                 if (db > SB_SPEECH_DB) {
-                    console.log("[Standby] → [Listening]");
+                    console.log(`[Standby] → [Listening] (dB: ${db.toFixed(1)})`);
                     sbActive = false;
+                    dgGotTranscript = false;
                     // Seed pre-buffer with ring buffer so the pre-roll is flushed on connect
                     dgPreBuffer = [...sbRingBuf];
                     sbRingBuf = [];
@@ -1787,11 +1799,15 @@ async function startStandby() {
                 // Deepgram active — monitor for silence to return to standby
                 if (db > SB_SPEECH_DB) {
                     lastSpeechMs = Date.now();
-                } else if (!dgMuted && Date.now() - lastSpeechMs > SB_SILENCE_MS) {
-                    console.log("[Listening] → [Standby]");
-                    sbActive = true;
-                    _deactivateDg();
-                    setOrbState("waiting");
+                } else if (!dgMuted) {
+                    // Use extended timeout if no transcript yet — give Deepgram more time
+                    const timeout = dgGotTranscript ? SB_SILENCE_MS : SB_SILENCE_NOTX;
+                    if (now - lastSpeechMs > timeout) {
+                        console.log(`[Listening] → [Standby] (silence ${now - lastSpeechMs}ms, gotTranscript: ${dgGotTranscript})`);
+                        sbActive = true;
+                        _deactivateDg();
+                        setOrbState("waiting");
+                    }
                 }
             }
         }, 80);
@@ -1840,11 +1856,16 @@ function _activateDg() {
             const transcript  = msg?.channel?.alternatives?.[0]?.transcript?.trim();
             const isFinal     = msg?.is_final;
             const speechFinal = msg?.speech_final;
-            if (transcript && (isFinal || speechFinal) && !dgMuted) {
-                document.getElementById("chatInput").value = transcript;
-                lastSendWasVoice = true;
-                dgMuted = true;
-                sendVoiceChatCommand(transcript);
+            if (transcript) {
+                dgGotTranscript = true; // transcript received — normal silence timeout now applies
+                lastSpeechMs = Date.now(); // push back the silence timer while user is speaking
+                if ((isFinal || speechFinal) && !dgMuted) {
+                    console.log(`[Deepgram] transcript: "${transcript}"`);
+                    document.getElementById("chatInput").value = transcript;
+                    lastSendWasVoice = true;
+                    dgMuted = true;
+                    sendVoiceChatCommand(transcript);
+                }
             }
         } catch (_) {}
     };
