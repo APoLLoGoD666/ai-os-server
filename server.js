@@ -422,26 +422,33 @@ async function formatRecentMemory() {
         .join("\n");
 }
 
-// Memory compression: summarise recent history with Haiku, cache by message count
+// Memory summary cache — regenerate only if >10 new messages OR >5 minutes since last
 let _memorySummaryCache = null;
-const SUMMARY_TTL_MS = 45000; // only regenerate summary every 45s max
+let _lastSummaryMsgCount = 0;
+const SUMMARY_TTL_MS = 300000; // 5 minutes hard ceiling
+const SUMMARY_MSG_DELTA = 10;  // also regenerate after 10 new messages
 async function getMemorySummary() {
     const now = Date.now();
-    if (_memorySummaryCache && (now - _memorySummaryCache.ts) < SUMMARY_TTL_MS) return _memorySummaryCache.summary;
+    const msgDelta = _memMsgCount - _lastSummaryMsgCount;
+    if (_memorySummaryCache && (now - _memorySummaryCache.ts) < SUMMARY_TTL_MS && msgDelta < SUMMARY_MSG_DELTA) {
+        return _memorySummaryCache.summary;
+    }
     const memory = await loadMemory();
     if (!memory.length) return "No recent memory.";
-    const raw = memory.slice(-12).map(item => {
+    const raw = memory.slice(-15).map(item => {
         const when = timeAgo(item.time);
         return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${item.message}`;
     }).join("\n");
     try {
         const res = await client.messages.create({
             model: "claude-haiku-4-5-20251001",
-            max_tokens: 80,
+            max_tokens: 60,
+            temperature: 0,
             messages: [{ role: "user", content: `Summarise this conversation history into one compact paragraph (max 60 words). Focus on facts, preferences, and recent context only.\n\n${raw}` }]
         });
         const summary = res.content?.find(b => b.type === "text")?.text?.trim() || raw;
         _memorySummaryCache = { summary, ts: Date.now() };
+        _lastSummaryMsgCount = _memMsgCount;
         return summary;
     } catch (_) {
         return raw;
@@ -7251,10 +7258,10 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         const userMessage = rawMessage.trim();
 
-        // Write memory + fetch summary + fetch docs all in parallel
+        // Fire-and-forget memory write — don't block voice latency
+        addToMemory("user", userMessage);
         // Use direct Postgres keyword search — no Voyage embed, no latency spikes
-        const [, memoryText, relevantDocs] = await Promise.all([
-            addToMemory("user", userMessage),
+        const [memoryText, relevantDocs] = await Promise.all([
             getMemorySummary(),
             pgSearchDocuments(userMessage.toLowerCase()).catch(() => [])
         ]);
@@ -7295,7 +7302,7 @@ Respond naturally in 1-2 sentences.`.trim();
             const command = toolUseInputToCommand(toolUseBlock.name, toolUseBlock.input || {});
             if (command) {
                 const result = await handleCommand(command);
-                await addToMemory("ai", result.reply);
+                addToMemory("ai", result.reply);
                 return res.status(result.ok ? 200 : 404).json(result);
             }
         }
@@ -7306,7 +7313,7 @@ Respond naturally in 1-2 sentences.`.trim();
             .join(" ")
             .trim() || "Done.";
 
-        await addToMemory("ai", reply);
+        addToMemory("ai", reply);
         return res.status(200).json({ ok: true, reply });
     } catch (error) {
         console.error("VOICE CHAT ERROR:", error);
