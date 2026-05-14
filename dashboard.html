@@ -1345,6 +1345,7 @@ let dgAudioCtx          = null;   // AudioContext for analyser
 let _apexAudio          = null;   // Persistent Audio element, created + unlocked on first touch
 let _apexBlobUrl        = null;   // Current blob URL so we can revoke before setting next
 let _speakSafetyTimer   = null;   // 30-second watchdog to force-reset stuck speaking state
+let _vadDebounceStart   = null;   // timestamp when vol first exceeded -30dB during playback
 let dgSilenceTimer      = null;   // setInterval for conversation silence tracking
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
@@ -1710,6 +1711,7 @@ async function _processSpeak() {
 
     clearTimeout(_speakSafetyTimer);
     _speakSafetyTimer = null;
+    _vadDebounceStart = null;
     isSpeakingNow = false;
     if (Date.now() - lastSpeechMs > CONV_SILENCE_MS) dgMode = "wake";
     if (autoListen) {
@@ -1766,6 +1768,7 @@ function stopVAD() {
 function interruptSpeech() {
     console.log("Interrupted");
     clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
+    _vadDebounceStart = null;
     stopVAD();
     if (currentAbort) { currentAbort.abort(); currentAbort = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -1825,10 +1828,17 @@ async function startVoicePipeline() {
                 const db = _rms(buf);
 
                 if (isSpeakingNow) {
-                    // VAD interrupt: user voice detected while Apex is speaking
-                    if (db > -50) {
-                        console.log("[VAD] user voice during playback", db.toFixed(1), "dB — interrupting");
-                        interruptSpeech();
+                    // VAD interrupt: require -30dB sustained for 800ms before starting SR
+                    if (db > -30) {
+                        if (_vadDebounceStart === null) {
+                            _vadDebounceStart = Date.now();
+                        } else if (Date.now() - _vadDebounceStart >= 800) {
+                            _vadDebounceStart = null;
+                            console.log("[VAD] 800ms above -30dB during playback — starting SR");
+                            if (srec) { try { srec.start(); } catch (_) {} }
+                        }
+                    } else {
+                        _vadDebounceStart = null; // volume dropped — reset debounce
                     }
                     return;
                 }
@@ -1865,7 +1875,6 @@ async function startVoicePipeline() {
     srec.lang = "en-GB";
 
     srec.onresult = e => {
-        if (dgMuted) return;
         const transcript = Array.from(e.results)
             .slice(e.resultIndex)
             .map(r => r[0].transcript)
@@ -1873,6 +1882,25 @@ async function startVoicePipeline() {
             .trim();
         if (!transcript) return;
         lastSpeechMs = Date.now();
+
+        // VAD interrupt path: SR was started by the debounce during playback
+        if (isSpeakingNow) {
+            const wordCount = transcript.split(/\s+/).filter(Boolean).length;
+            if (wordCount >= 3) {
+                console.log(`[VAD] interrupt — ${wordCount} words: "${transcript}"`);
+                _vadDebounceStart = null;
+                interruptSpeech();
+                document.getElementById("chatInput").value = transcript;
+                lastSendWasVoice = true;
+                dgMuted = true;
+                sendVoiceChatCommand(transcript);
+            } else {
+                console.log(`[VAD] transcript too short (${wordCount} word${wordCount === 1 ? "" : "s"}) — ignoring`);
+            }
+            return;
+        }
+
+        if (dgMuted) return; // block transcripts during thinking phase
         if (dgMode === "wake") {
             console.log(`[Wake] transcript: "${transcript}"`);
             if (/\bapex\b/i.test(transcript)) {
