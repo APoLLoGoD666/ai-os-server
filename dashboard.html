@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <title>APEX</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#00d4ff">
@@ -1025,15 +1025,57 @@
         }
 
         @media (max-width: 700px) {
+            :root {
+                --topbar-h: 52px;
+                --strip-h:  40px;
+                --input-h:  68px;
+            }
+
+            html, body { overflow: hidden; height: 100%; }
+
             .app {
+                width: 100vw;
+                height: 100dvh; /* dynamic viewport height — accounts for iOS browser chrome */
                 grid-template-columns: 1fr;
+                grid-template-rows: var(--topbar-h) 1fr var(--strip-h) var(--input-h);
                 grid-template-areas:
                     "topbar"
                     "centre"
                     "strip"
                     "inputz";
             }
+
             .left-panel, .right-panel { display: none; }
+
+            /* Topbar */
+            .topbar { padding: 0 16px; }
+            .clock-time { font-size: 17px; }
+            .clock-date { font-size: 9px; }
+            .brand-copy strong { font-size: 14px; }
+
+            /* Orb — shrink to fit narrower screen */
+            .orb { width: 148px; height: 148px; }
+            .orb-name { font-size: 17px; }
+            .pr1 { width: 190px; height: 190px; }
+            .pr2 { width: 238px; height: 238px; }
+            .pr3 { width: 284px; height: 284px; }
+            .centre-halo { width: 300px; height: 300px; }
+
+            /* Chat log */
+            .chat-log { max-height: 40vh; padding: 0 12px; }
+            .chat-status-bar { padding: 0 12px; font-size: 9px; }
+            .chat-bubble { font-size: 12px; }
+
+            /* Input bar */
+            .input-area { padding: 0 12px; gap: 8px; }
+            .chat-input { font-size: 16px; } /* 16px prevents iOS zoom on focus */
+
+            /* Notification strip */
+            .notif-label { padding: 0 10px; font-size: 8px; }
+
+            /* Modals full-width on mobile */
+            .email-draft-box { width: 96vw; max-width: 96vw; }
+            .cmd-box { width: 96vw; }
         }
 
         /* ══ COMMAND PALETTE ═══════════════════════════════════════════ */
@@ -1288,6 +1330,7 @@ let vadAnalyser         = null;
 let vadInterval         = null;
 let dgAnalyser          = null;   // AnalyserNode for visual UI
 let dgAudioCtx          = null;   // AudioContext for analyser
+let _iosAudioCtx        = null;   // Unlocked AudioContext for iOS TTS playback
 let dgSilenceTimer      = null;   // setInterval for conversation silence tracking
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
@@ -1513,6 +1556,23 @@ function _speakUtterance(phrase, { onStart, onEnd } = {}) {
     window.speechSynthesis.speak(utt);
 }
 
+function _unlockAudio() {
+    if (_iosAudioCtx) return;
+    try {
+        _iosAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const buf = _iosAudioCtx.createBuffer(1, 1, 22050);
+        const src = _iosAudioCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(_iosAudioCtx.destination);
+        src.start(0);
+        console.log('[Audio] AudioContext unlocked');
+    } catch (e) {
+        console.warn('[Audio] unlock failed:', e.message);
+    }
+}
+document.addEventListener('touchstart', _unlockAudio, { once: true });
+document.addEventListener('click',      _unlockAudio, { once: true });
+
 async function speakWithElevenLabs(text) {
     const phrase = summariseForSpeech(text);
     if (!phrase) return false;
@@ -1580,7 +1640,27 @@ async function speakWithElevenLabs(text) {
         }
 
         // Fallback: full blob download
-        const blob    = await fetchRes.blob();
+        const arrayBuf = await fetchRes.arrayBuffer();
+
+        if (_iosAudioCtx) {
+            // iOS Safari: decode + play via Web Audio API (HTMLAudio blocked without gesture)
+            if (_iosAudioCtx.state === 'suspended') await _iosAudioCtx.resume();
+            await new Promise((resolve, reject) => {
+                _iosAudioCtx.decodeAudioData(arrayBuf.slice(0), decoded => {
+                    const src = _iosAudioCtx.createBufferSource();
+                    src.buffer = decoded;
+                    src.playbackRate.value = voiceSpeed;
+                    src.connect(_iosAudioCtx.destination);
+                    currentAudio = src;
+                    src.onended = () => { currentAudio = null; resolve(true); };
+                    src.start(0);
+                    console.log(`[LATENCY] +${Date.now() - _t0Voice}ms iOS audio playing`);
+                }, reject);
+            });
+            return true;
+        }
+
+        const blob    = new Blob([arrayBuf], { type: 'audio/mpeg' });
         const blobUrl = URL.createObjectURL(blob);
         const audio   = new Audio(blobUrl);
         currentAudio  = audio;
@@ -1711,7 +1791,7 @@ function interruptSpeech() {
     stopVAD();
     if (currentAbort) { currentAbort.abort(); currentAbort = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if (currentAudio) { try { if (currentAudio.stop) currentAudio.stop(); else currentAudio.pause(); } catch (_) {} currentAudio = null; }
     speakQueue.length = 0;
     isSpeakingNow = false;
     dgMuted = false;
@@ -1787,7 +1867,7 @@ async function startVoicePipeline() {
     // Web Speech API
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-        _showBanner("banner-nospeech", "Speech recognition not supported — use Chrome.");
+        _showBanner("banner-nospeech", "Voice input not supported on this browser — please use Chrome or type below.");
         return;
     }
 
@@ -2622,7 +2702,7 @@ document.addEventListener("keydown", e => {
         }
         if (isListening) stopListening();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
-        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        if (currentAudio) { try { if (currentAudio.stop) currentAudio.stop(); else currentAudio.pause(); } catch (_) {} currentAudio = null; }
         speakQueue.length = 0;
         isSpeakingNow = false;
         setOrbState(autoListen ? "waiting" : "ready");
