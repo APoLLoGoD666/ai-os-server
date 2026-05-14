@@ -12,7 +12,6 @@ const rateLimit = require("express-rate-limit");
 const Anthropic = require("@anthropic-ai/sdk");
 const { createClient: createDeepgramClient } = require("@deepgram/sdk");
 const axios = require("axios");
-const { WebSocketServer, WebSocket: WS } = require("ws");
 
 const db = require("./database");
 const pool = require("./pg_database");
@@ -264,8 +263,10 @@ const TOOLS = [
 const WORKSPACE_DIR = path.join(__dirname, "workspace");
 const LAYOUT_FILE = path.join(__dirname, "layout.json");
 const HIDDEN_FILES = new Set([]);
-const AGENT_SECRET = process.env.AGENT_SECRET || "";
-const APP_ACCESS_KEY = process.env.APP_ACCESS_KEY || "";
+if (!process.env.AGENT_SECRET) process.env.AGENT_SECRET = require("crypto").randomBytes(32).toString("hex");
+if (!process.env.APP_ACCESS_KEY) process.env.APP_ACCESS_KEY = require("crypto").randomBytes(32).toString("hex");
+const AGENT_SECRET = process.env.AGENT_SECRET;
+const APP_ACCESS_KEY = process.env.APP_ACCESS_KEY;
 const CRON_SECRET = process.env.CRON_SECRET || "";
 const ALLOWED_AGENT_STEP_TYPES = new Set([
     "create_document",
@@ -798,8 +799,10 @@ async function embedAndStoreDocument(filename, content) {
 async function getRelevantDocuments(question) {
     const q = (question || "").trim().toLowerCase();
 
-    // If Voyage is rate limited return empty immediately — no point hanging on keyword search either
-    if (Date.now() < _voyage429Until) return [];
+    if (Date.now() < _voyage429Until) {
+        console.log("Voyage 429 - falling back to keyword search");
+        return pgSearchDocuments(q).catch(() => []);
+    }
 
     // Try semantic vector search first
     if (process.env.VOYAGE_API_KEY && q) {
@@ -7369,11 +7372,6 @@ app.get("/api/config", requireAppAccess, (req, res) => {
     });
 });
 
-app.get("/api/deepgram-token", (req, res) => {
-    const key = process.env.DEEPGRAM_API_KEY;
-    if (!key) return res.status(503).json({ ok: false, error: "Deepgram not configured." });
-    res.json({ ok: true, token: key });
-});
 
 app.post("/api/upload-file", requireAppAccess, async (req, res) => {
     try {
@@ -7423,81 +7421,6 @@ app.use((err, req, res, next) => {
 
 const server = require("http").createServer(app);
 
-// Persistent Deepgram connection — shared across all browser sessions
-let _dgWs = null;
-let _dgKeepalive = null;
-const _browserSockets = new Set();
-
-function _openPersistentDg() {
-    if (_dgWs && (_dgWs.readyState === 0 || _dgWs.readyState === 1)) return;
-    const DG_URL = "wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&interim_results=true&endpointing=300";
-    console.log("DG proxy: opening persistent Deepgram connection:", DG_URL);
-    _dgWs = new WS(DG_URL, { headers: { "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}` } });
-
-    _dgWs.on("open", () => {
-        console.log("DG proxy: Deepgram connection open");
-        for (const bs of _browserSockets) {
-            if (bs.readyState === 1) bs.send(JSON.stringify({ type: "Connected" }));
-        }
-        if (_dgKeepalive) clearInterval(_dgKeepalive);
-        _dgKeepalive = setInterval(() => {
-            if (_dgWs && _dgWs.readyState === 1) {
-                _dgWs.send(JSON.stringify({ type: "KeepAlive" }));
-                console.log("DG proxy: keepalive sent to Deepgram");
-            }
-        }, 5000);
-    });
-
-    _dgWs.on("message", (data) => {
-        const text = data.toString();
-        console.log("DG proxy: Deepgram response:", text.slice(0, 300));
-        for (const bs of _browserSockets) {
-            if (bs.readyState === 1) bs.send(text);
-        }
-    });
-
-    _dgWs.on("close", (code, reason) => {
-        console.log(`DG proxy: Deepgram closed — code:${code} reason:${reason.toString()}`);
-        if (_dgKeepalive) { clearInterval(_dgKeepalive); _dgKeepalive = null; }
-        _dgWs = null;
-        // Reconnect automatically — do NOT close browser sockets
-        console.log("DG proxy: reconnecting Deepgram in 1s...");
-        setTimeout(_openPersistentDg, 1000);
-    });
-
-    _dgWs.on("error", (e) => console.error("DG proxy: Deepgram error:", e.message));
-}
-
-const wss = new WebSocketServer({ server, path: "/deepgram-proxy" });
-wss.on("connection", (browserSocket) => {
-    console.log("DG proxy: browser connected");
-    _browserSockets.add(browserSocket);
-
-    // Open persistent Deepgram connection if not already open
-    _openPersistentDg();
-
-    // If Deepgram is already open, send Connected immediately
-    if (_dgWs && _dgWs.readyState === 1) {
-        browserSocket.send(JSON.stringify({ type: "Connected" }));
-    }
-
-    browserSocket.on("message", (data, isBinary) => {
-        console.log(`DG proxy: received from browser — binary:${isBinary} bytes:${data.length}`);
-        if (_dgWs && _dgWs.readyState === 1) {
-            _dgWs.send(data, { binary: true });
-        } else {
-            console.warn("DG proxy: Deepgram not ready, dropping chunk");
-        }
-    });
-
-    browserSocket.on("close", () => {
-        console.log("DG proxy: browser disconnected");
-        _browserSockets.delete(browserSocket);
-        // Do NOT close _dgWs — keep Deepgram alive for next browser connection
-    });
-
-    browserSocket.on("error", (e) => console.error("DG proxy: browser socket error:", e.message));
-});
 
 server.listen(PORT, () => {
     ensureSetup();

@@ -1626,7 +1626,6 @@ function hideTypingIndicator() {
 
 async function _speakInternal(text, useFiller) {
     try {
-        // Mute mic via GainNode — WebSocket stays alive
         muteDeepgram();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         const phrase = summariseForSpeech(text);
