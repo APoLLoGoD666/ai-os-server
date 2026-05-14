@@ -1362,10 +1362,20 @@ const inFlightRefreshes = {};
 const renderSigs        = {};
 const SLOW_REFRESH_MS   = 60000;
 
-// iOS PWA detection — gates all iOS-specific code paths; desktop pipeline is untouched
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-let _iosConvTimer = null; // iOS conversation silence timeout (replaces AnalyserNode VAD on iOS)
+// Detect iOS standalone PWA — gates all iOS-specific code paths; desktop is untouched
+const isIOSPWA = (/iPad|iPhone|iPod/.test(navigator.userAgent)) &&
+                 (window.navigator.standalone === true);
+
+// iOS PWA pipeline state (always null on desktop)
+let _iosPWAStream       = null;   // mic MediaStream from getUserMedia
+let _iosPWAAudioCtx     = null;   // AudioContext for VAD AnalyserNode
+let _iosPWAAnalyser     = null;   // AnalyserNode
+let _iosPWAVadTimer     = null;   // setInterval — polls volume 80ms
+let _iosPWARecorder     = null;   // MediaRecorder instance
+let _iosPWAChunks       = [];     // audio chunks collected by MediaRecorder
+let _iosPWARecording    = false;  // true while MediaRecorder is capturing
+let _iosPWASilenceTimer = null;   // setTimeout — 1.5s end-of-speech countdown
+let _iosPWARunning      = false;  // true when iOS pipeline is active
 
 // ══ UTILITIES ═════════════════════════════════════════════════════════
 function buildApiUrl(path) {
@@ -1586,18 +1596,16 @@ function _speakUtterance(phrase, { onStart, onEnd } = {}) {
 // Minimal silent WAV for unlocking the Audio element in iOS PWA (data URI works offline, no CORS)
 const _SILENT_WAV = 'data:audio/wav;base64,UklGRiUAABXQVZFZm10IBAAAAAABAAEARKwAAESsAAABAAgAZGF0YQEAAACA';
 
-// Unlock audio and speech synthesis on the very first user gesture.
-// On iOS PWA: webkitSpeechRecognition manages its own mic internally — calling getUserMedia
-// separately always triggers a second permission prompt (confirmed WebKit behaviour, no workaround).
-// So we never call getUserMedia on iOS. The AnalyserNode VAD is replaced by a conversation timeout.
-document.addEventListener('touchstart', () => {
-    // ── Audio: data URI src + load() + play() is the required iOS PWA unlock sequence ──
+// First user gesture — unlock audio, speech synthesis, and start iOS PWA voice pipeline.
+// getUserMedia on iOS PWA requires a user gesture, so we start the pipeline here.
+document.addEventListener('touchstart', async () => {
+    // ── Audio element: data URI + load() + play() is the required iOS unlock sequence ──
     if (!_apexAudio) {
         _apexAudio = new Audio();
         _apexAudio.src = _SILENT_WAV;
         _apexAudio.load();
         _apexAudio.play().catch(() => {});
-        console.log('[iOS] audio element created and unlocked');
+        console.log('[iOS] audio element unlocked');
     }
     // ── Speech synthesis: silent utterance inside a gesture primes all subsequent speak() calls ──
     if (window.speechSynthesis) {
@@ -1605,6 +1613,10 @@ document.addEventListener('touchstart', () => {
         u.volume = 0;
         window.speechSynthesis.speak(u);
         console.log('[iOS] speechSynthesis unlocked');
+    }
+    // ── iOS PWA: start voice pipeline on first gesture (getUserMedia requires gesture) ──
+    if (isIOSPWA && !_iosPWARunning && autoListen) {
+        await _iosPWAStartPipeline();
     }
 }, { once: true });
 
@@ -1863,27 +1875,197 @@ function _showBanner(id, html) {
     document.body.appendChild(el);
 }
 
-// ── iOS conversation silence timeout (replaces AnalyserNode VAD on iOS) ──────
-// Called from unmuteDeepgram() after each AI response ends.
-// Resets a 4-second timer; if it fires with no new speech → return to wake mode.
-function _iosResetConvTimer() {
-    clearTimeout(_iosConvTimer);
-    _iosConvTimer = setTimeout(() => {
-        _iosConvTimer = null;
-        if (dgMode === "conversation" && !dgMuted && !isSpeakingNow) {
-            console.log('[iOS] 4s silence timeout → returning to standby');
+// ══ iOS PWA VOICE PIPELINE ═══════════════════════════════════════════════════
+// Uses getUserMedia → AnalyserNode VAD → MediaRecorder → POST /api/transcribe
+// webkitSpeechRecognition is NOT used on iOS PWA (unreliable in standalone mode).
+
+async function _iosPWAStartPipeline() {
+    if (_iosPWARunning || !autoListen) return;
+    console.log('[iOS PWA] starting pipeline');
+    try {
+        _iosPWAStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false
+        });
+    } catch (e) {
+        console.error('[iOS PWA] getUserMedia failed:', e.message);
+        _showBanner("banner-micdenied", "Microphone access denied.");
+        return;
+    }
+    _iosPWAAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_iosPWAAudioCtx.state === "suspended") await _iosPWAAudioCtx.resume().catch(() => {});
+    _iosPWAAnalyser = _iosPWAAudioCtx.createAnalyser();
+    _iosPWAAnalyser.fftSize = 256;
+    _iosPWAAudioCtx.createMediaStreamSource(_iosPWAStream).connect(_iosPWAAnalyser);
+
+    const buf = new Float32Array(_iosPWAAnalyser.fftSize);
+    _iosPWAVadTimer = setInterval(() => {
+        if (!_iosPWAAnalyser || !autoListen) return;
+        _iosPWAAnalyser.getFloatTimeDomainData(buf);
+        const db  = _rms(buf);
+        const now = Date.now();
+
+        // ── Interrupt during playback ──────────────────────────────────
+        if (isSpeakingNow) {
+            if (db > -45) {
+                console.log('[iOS VAD] interrupt — vol:', db.toFixed(1), 'dB');
+                interruptSpeech(); // sets isSpeakingNow=false, dgMuted=false
+                if (!_iosPWARecording) _iosPWAStartRecording();
+            }
+            return;
+        }
+
+        // ── Conversation silence → wake mode ────────────────────────────
+        if (dgMode === "conversation" && !dgMuted) {
+            if (db > -65) lastSpeechMs = now;
+            else if (now - lastSpeechMs > CONV_SILENCE_MS) {
+                console.log('[iOS VAD] 3s silence → standby');
+                dgMode = "wake";
+                setOrbState("waiting");
+            }
+        }
+
+        // ── Speech start/stop detection ─────────────────────────────────
+        if (dgMuted) return;
+        if (db > -55) {
+            lastSpeechMs = now;
+            if (!_iosPWARecording) _iosPWAStartRecording();
+            clearTimeout(_iosPWASilenceTimer); _iosPWASilenceTimer = null;
+        } else if (_iosPWARecording && !_iosPWASilenceTimer) {
+            _iosPWASilenceTimer = setTimeout(() => {
+                _iosPWASilenceTimer = null;
+                _iosPWAStopRecording();
+            }, 1500);
+        }
+    }, 80);
+
+    _iosPWARunning = true;
+    isListening    = true;
+    dgMode         = "wake";
+    lastSpeechMs   = Date.now();
+    setOrbState("waiting");
+    console.log('[iOS PWA] pipeline ready — listening for "apex"');
+}
+
+function _iosPWAStopPipeline() {
+    console.log('[iOS PWA] stopping pipeline');
+    _iosPWARunning  = false;
+    isListening     = false;
+    clearInterval(_iosPWAVadTimer);     _iosPWAVadTimer     = null;
+    clearTimeout(_iosPWASilenceTimer);  _iosPWASilenceTimer = null;
+    if (_iosPWARecorder && _iosPWARecording) {
+        _iosPWARecorder.onstop = null; // discard in-flight audio
+        try { _iosPWARecorder.stop(); } catch (_) {}
+    }
+    _iosPWARecorder  = null;
+    _iosPWARecording = false;
+    _iosPWAChunks    = [];
+    if (_iosPWAStream) {
+        try { _iosPWAStream.getTracks().forEach(t => t.stop()); } catch (_) {}
+        _iosPWAStream = null;
+    }
+    try { if (_iosPWAAudioCtx) _iosPWAAudioCtx.close(); } catch (_) {}
+    _iosPWAAudioCtx = null;
+    _iosPWAAnalyser = null;
+}
+
+function _iosPWAStartRecording() {
+    if (_iosPWARecording || !_iosPWAStream) return;
+    _iosPWAChunks = [];
+    const mime = MediaRecorder.isTypeSupported("audio/mp4")  ? "audio/mp4"  :
+                 MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+    try {
+        _iosPWARecorder = mime ? new MediaRecorder(_iosPWAStream, { mimeType: mime })
+                                : new MediaRecorder(_iosPWAStream);
+    } catch (e) { console.warn("[iOS PWA] MediaRecorder init failed:", e.message); return; }
+
+    _iosPWARecorder.ondataavailable = ev => {
+        if (ev.data && ev.data.size > 0) _iosPWAChunks.push(ev.data);
+    };
+    _iosPWARecorder.onstop = async () => {
+        _iosPWARecording = false;
+        const mimeType = _iosPWARecorder.mimeType || mime || "audio/webm";
+        const blob = new Blob(_iosPWAChunks, { type: mimeType });
+        _iosPWAChunks = [];
+        if (blob.size < 1000) { console.log("[iOS PWA] blob too small, skipping"); return; }
+        await _iosPWATranscribeAndProcess(blob, mimeType);
+    };
+    try {
+        _iosPWARecorder.start(100);
+        _iosPWARecording = true;
+        console.log("[iOS PWA] recording started");
+    } catch (e) {
+        console.warn("[iOS PWA] MediaRecorder.start failed:", e.message);
+        _iosPWARecorder = null;
+    }
+}
+
+function _iosPWAStopRecording() {
+    clearTimeout(_iosPWASilenceTimer); _iosPWASilenceTimer = null;
+    if (!_iosPWARecorder || !_iosPWARecording) return;
+    try { _iosPWARecorder.stop(); } catch (_) { _iosPWARecording = false; }
+    console.log("[iOS PWA] recording stopped — transcribing");
+}
+
+function _iosPWAStopRecordingImmediate() {
+    clearTimeout(_iosPWASilenceTimer); _iosPWASilenceTimer = null;
+    if (!_iosPWARecorder || !_iosPWARecording) return;
+    _iosPWARecorder.onstop = null; // discard — AI is about to speak
+    try { _iosPWARecorder.stop(); } catch (_) {}
+    _iosPWARecording = false;
+    _iosPWAChunks    = [];
+    console.log("[iOS PWA] recording discarded (AI busy)");
+}
+
+async function _iosPWATranscribeAndProcess(blob, mimeType) {
+    if (dgMuted || isSpeakingNow) { console.log("[iOS PWA] transcription skipped — AI busy"); return; }
+    try {
+        console.log(`[iOS PWA] transcribing ${blob.size}B (${mimeType})`);
+        const res = await fetch(buildApiUrl("/api/transcribe"), {
+            method:  "POST",
+            headers: buildApiHeaders({ "Content-Type": mimeType }),
+            body:    blob
+        });
+        if (!res.ok) { console.warn("[iOS PWA] /api/transcribe returned", res.status); return; }
+        const data       = await res.json();
+        const transcript = (data.transcript || "").trim();
+        if (!transcript) { console.log("[iOS PWA] empty transcript, ignoring"); return; }
+        console.log(`[iOS PWA] transcript: "${transcript}"`);
+        _iosPWAHandleTranscript(transcript);
+    } catch (e) {
+        console.error("[iOS PWA] transcribe error:", e.message);
+    }
+}
+
+function _iosPWAHandleTranscript(transcript) {
+    if (dgMuted || isSpeakingNow) return;
+    lastSpeechMs = Date.now();
+    if (dgMode === "wake") {
+        console.log(`[iOS Wake] "${transcript}"`);
+        if (/\bapex\b/i.test(transcript)) {
+            console.log("[iOS Wake] wake word matched → conversation");
+            dgMode = "conversation";
+            lastSpeechMs = Date.now();
+            setOrbState("listening");
+            speak("Yes?");
+            renderChatMessage("system", "Listening…");
+        }
+    } else {
+        console.log(`[iOS Conv] "${transcript}"`);
+        if (/\bstand\s*by\b|\bgo\s+to\s+sleep\b|\bstop\s+listening\b/i.test(transcript)) {
+            interruptSpeech();
             dgMode = "wake";
             setOrbState("waiting");
+            return;
         }
-    }, 4000);
+        document.getElementById("chatInput").value = transcript;
+        lastSendWasVoice = true;
+        dgMuted = true;
+        sendVoiceChatCommand(transcript);
+    }
 }
 
-function _iosClearConvTimer() {
-    clearTimeout(_iosConvTimer);
-    _iosConvTimer = null;
-}
-
-// ── Web Speech API voice pipeline ─────────────────────────────────────
+// ── Web Speech API voice pipeline (desktop only) ──────────────────────
 function _rms(buf) {
     let s = 0;
     for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
@@ -1892,9 +2074,10 @@ function _rms(buf) {
 }
 
 async function startVoicePipeline() {
+    if (isIOSPWA) { await _iosPWAStartPipeline(); return; }
     if (srec || !autoListen) return;
 
-    // ── 1. Web Speech API (SR manages its own mic internally on all platforms) ──
+    // ── 1. Web Speech API (desktop — SR manages its own mic internally) ──
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
         _showBanner("banner-nospeech", "Voice input not supported on this browser — please use Chrome or type below.");
@@ -2023,30 +2206,33 @@ async function startVoicePipeline() {
 }
 
 function stopVoicePipeline() {
+    if (isIOSPWA) { _iosPWAStopPipeline(); return; }
     if (dgSilenceTimer) { clearInterval(dgSilenceTimer); dgSilenceTimer = null; }
     try { if (dgAudioCtx) { dgAudioCtx.close(); dgAudioCtx = null; } } catch (_) {}
     dgAnalyser = null;
     if (_vadInterruptSR) { try { _vadInterruptSR.abort(); } catch (_) {} _vadInterruptSR = null; }
     if (srec) { try { srec.abort(); } catch (_) {} srec = null; }
     isListening = false;
-    if (isIOS) _iosClearConvTimer();
 }
 
 // ── Background / foreground mic lifecycle ─────────────────────────────
 function _pauseVoiceForBackground() {
     console.log("[Voice] page hidden — releasing mic");
-    // Null srec first so its onend handler does not restart recognition
+    if (currentAudio) { try { currentAudio.pause(); } catch (_) {} }
+    if (isIOSPWA) {
+        _iosPWAStopPipeline();
+        return;
+    }
+    // Desktop: null srec first so its onend handler does not restart recognition
     if (srec) {
         const _old = srec;
         srec = null;
         try { _old.stop(); } catch (_) {}
     }
-    // Stop mic tracks — this immediately kills the orange indicator on iPhone
     if (dgStream) {
         try { dgStream.getTracks().forEach(t => t.stop()); } catch (_) {}
         dgStream = null;
     }
-    // Tear down AudioContext and silence timer
     if (dgSilenceTimer) { clearInterval(dgSilenceTimer); dgSilenceTimer = null; }
     try { if (dgAudioCtx) { dgAudioCtx.close(); } } catch (_) {}
     dgAudioCtx = null;
@@ -2054,21 +2240,23 @@ function _pauseVoiceForBackground() {
     stopVAD();
     _vadDebounceStart = null;
     if (_vadInterruptSR) { try { _vadInterruptSR.abort(); } catch (_) {} _vadInterruptSR = null; }
-    // Pause any in-flight audio too
-    if (currentAudio) { try { currentAudio.pause(); } catch (_) {} }
-    if (isIOS) _iosClearConvTimer();
 }
 
 async function _restoreVoiceFromBackground() {
     console.log("[Voice] page visible — restoring mic");
-    if (!autoListen || srec) return; // user disabled auto-listen or already running
+    if (!autoListen) return;
+    if (isIOSPWA) {
+        if (!_iosPWARunning) await _iosPWAStartPipeline();
+        return;
+    }
+    if (srec) return;
     await startVoicePipeline();
 }
 
 function muteDeepgram() {
     dgMuted = true;
     setOrbState("thinking");
-    // VAD interrupt is handled by dgSilenceTimer — no separate startVAD needed
+    if (isIOSPWA) _iosPWAStopRecordingImmediate(); // discard stale audio before AI speaks
 }
 
 function unmuteDeepgram() {
@@ -2077,8 +2265,7 @@ function unmuteDeepgram() {
     lastSpeechMs = Date.now();
     console.log(`[Voice] unmuteDeepgram — mode:${dgMode} isListening:${isListening}`);
     if (isListening) setOrbState(dgMode === "conversation" ? "listening" : "waiting");
-    // iOS: start 4s silence countdown now that speaking has ended
-    if (isIOS && dgMode === "conversation") _iosResetConvTimer();
+    // iOS: VAD timer handles silence tracking — nothing extra needed here
 }
 
 function startListening() {
@@ -3001,7 +3188,8 @@ setInterval(refreshSlow, SLOW_REFRESH_MS);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
-setTimeout(() => { if (autoListen) startVoicePipeline(); }, 1000);
+// iOS PWA: pipeline starts on first touchstart (getUserMedia requires a user gesture)
+if (!isIOSPWA) setTimeout(() => { if (autoListen) startVoicePipeline(); }, 1000);
 
 // Release mic when the page is hidden (tab switch, app background, lock screen)
 document.addEventListener("visibilitychange", () => {
@@ -3012,8 +3200,12 @@ document.addEventListener("visibilitychange", () => {
     }
 });
 
-// pagehide fires on iOS Safari when the user swipes away — release tracks immediately
+// pagehide fires on iOS when the user swipes away — release mic tracks immediately
 window.addEventListener("pagehide", () => {
+    if (isIOSPWA) {
+        _iosPWAStopPipeline();
+        return;
+    }
     if (dgStream) {
         try { dgStream.getTracks().forEach(t => t.stop()); } catch (_) {}
         dgStream = null;
