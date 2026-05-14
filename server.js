@@ -7324,6 +7324,39 @@ Respond naturally in 1-2 sentences.`.trim();
     }
 });
 
+app.post("/api/transcribe", requireAppAccess, express.raw({ type: "*/*", limit: "25mb" }), async (req, res) => {
+    try {
+        const key = process.env.DEEPGRAM_API_KEY;
+        if (!key) return res.status(503).json({ ok: false, transcript: "", error: "Deepgram not configured." });
+
+        const audioBuffer = req.body;
+        if (!audioBuffer || !audioBuffer.length) {
+            return res.status(400).json({ ok: false, transcript: "", error: "No audio data received." });
+        }
+
+        const contentType = req.headers["content-type"] || "audio/webm";
+        const dgRes = await axios.post(
+            "https://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true",
+            audioBuffer,
+            {
+                headers: {
+                    "Authorization": `Token ${key}`,
+                    "Content-Type": contentType
+                },
+                maxBodyLength: 25 * 1024 * 1024,
+                responseType: "json"
+            }
+        );
+
+        const transcript = dgRes.data?.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
+        console.log(`TRANSCRIBE: "${transcript.slice(0, 100)}"`);
+        return res.json({ ok: true, transcript });
+    } catch (error) {
+        console.error("TRANSCRIBE ERROR:", error.message);
+        return res.status(500).json({ ok: false, transcript: "", error: error.message });
+    }
+});
+
 app.post("/api/mastra/run", requireAppAccess, async (req, res) => {
     try {
         const { agent: agentName, message, workflow: workflowName, input } = req.body || {};

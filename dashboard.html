@@ -827,6 +827,29 @@
             background: rgba(0,212,255,0.08);
         }
 
+        /* ── Push-to-talk (iOS only, injected by JS) ── */
+        .ptt-btn {
+            flex: 1;
+            height: 46px;
+            border-radius: 23px;
+            border: 2px solid rgba(255,77,109,0.55);
+            background: rgba(255,77,109,0.1);
+            color: #ff8099;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .ptt-btn.recording {
+            background: rgba(255,77,109,0.26);
+            border-color: rgba(255,77,109,0.9);
+            color: #ff4d6d;
+        }
+
         .apex-banner {
             position: fixed;
             top: 68px;
@@ -1345,6 +1368,7 @@ let dgAnalyser          = null;   // AnalyserNode for visual UI
 let dgAudioCtx          = null;   // AudioContext for analyser
 const _iosAudio         = new Audio(); // Persistent element unlocked on first touch (iOS)
 let _iosAudioUnlocked   = false;
+const _isIOS            = !window.SpeechRecognition && !window.webkitSpeechRecognition;
 let dgSilenceTimer      = null;   // setInterval for conversation silence tracking
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
@@ -1959,6 +1983,98 @@ function unmuteDeepgram() {
     dgMuted = false;
     lastSpeechMs = Date.now();
     if (isListening) setOrbState(dgMode === "conversation" ? "listening" : "waiting");
+}
+
+// ══ iOS PUSH-TO-TALK ══════════════════════════════════════════════════
+let _pttRecorder = null;
+let _pttChunks   = [];
+let _pttStream   = null;
+
+async function _pttStart() {
+    if (_pttRecorder) return;
+    _unlockAudio();
+    try {
+        _pttStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        _pttChunks = [];
+        _pttRecorder = new MediaRecorder(_pttStream);
+        _pttRecorder.ondataavailable = e => { if (e.data.size > 0) _pttChunks.push(e.data); };
+        _pttRecorder.start();
+        const btn = document.getElementById("pttBtn");
+        if (btn) { btn.textContent = "🔴 Recording…"; btn.classList.add("recording"); }
+        setOrbState("listening");
+    } catch (e) {
+        console.error("[PTT] mic error:", e.message);
+        renderChatMessage("system", "⚠ Microphone access denied.");
+    }
+}
+
+async function _pttStop() {
+    if (!_pttRecorder) return;
+    const recorder = _pttRecorder;
+    _pttRecorder = null;
+
+    const btn = document.getElementById("pttBtn");
+    if (btn) { btn.textContent = "Processing…"; btn.classList.remove("recording"); }
+    setOrbState("thinking");
+
+    await new Promise(resolve => { recorder.onstop = resolve; recorder.stop(); });
+    if (_pttStream) { _pttStream.getTracks().forEach(t => t.stop()); _pttStream = null; }
+
+    const mimeType = _pttChunks[0]?.type || "audio/webm";
+    const blob = new Blob(_pttChunks, { type: mimeType });
+    _pttChunks = [];
+
+    if (blob.size < 1000) {
+        if (btn) btn.textContent = "🎤 Hold to Talk";
+        setOrbState("ready");
+        renderChatMessage("system", "No audio captured — hold longer.");
+        return;
+    }
+
+    try {
+        const res = await fetch(buildApiUrl("/api/transcribe"), {
+            method: "POST",
+            headers: buildApiHeaders({ "Content-Type": mimeType }),
+            body: blob,
+            credentials: "same-origin"
+        });
+        const data = await res.json();
+        const transcript = (data.transcript || "").trim();
+        if (btn) btn.textContent = "🎤 Hold to Talk";
+        if (!transcript) {
+            setOrbState("ready");
+            renderChatMessage("system", "No speech detected — try again.");
+            return;
+        }
+        document.getElementById("chatInput").value = transcript;
+        lastSendWasVoice = true;
+        sendVoiceChatCommand(transcript);
+    } catch (e) {
+        console.error("[PTT] transcribe error:", e.message);
+        if (btn) btn.textContent = "🎤 Hold to Talk";
+        setOrbState("ready");
+        renderChatMessage("system", "⚠ Transcription failed — try again.");
+    }
+}
+
+function _setupPTT() {
+    const pttBtn = document.createElement("button");
+    pttBtn.id = "pttBtn";
+    pttBtn.className = "ptt-btn";
+    pttBtn.textContent = "🎤 Hold to Talk";
+    pttBtn.addEventListener("touchstart", e => { e.preventDefault(); _pttStart(); }, { passive: false });
+    pttBtn.addEventListener("touchend",   e => { e.preventDefault(); _pttStop();  }, { passive: false });
+    pttBtn.addEventListener("mousedown",  _pttStart);
+    pttBtn.addEventListener("mouseup",    _pttStop);
+
+    const inputArea = document.querySelector(".input-area");
+    const sendBtn   = inputArea.querySelector(".send-btn");
+    inputArea.insertBefore(pttBtn, sendBtn);
+
+    const micBtn = document.getElementById("micBtn");
+    if (micBtn) micBtn.style.display = "none";
+
+    setOrbState("ready");
 }
 
 function startListening() {
@@ -2881,7 +2997,11 @@ setInterval(refreshSlow, SLOW_REFRESH_MS);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
-setTimeout(() => { if (autoListen) startVoicePipeline(); }, 1000);
+if (_isIOS) {
+    _setupPTT();
+} else {
+    setTimeout(() => { if (autoListen) startVoicePipeline(); }, 1000);
+}
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(err => console.warn("SW register failed:", err.message));
 }
