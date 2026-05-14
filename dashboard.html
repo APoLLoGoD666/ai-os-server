@@ -1274,7 +1274,7 @@ let dgConnecting        = false; // true while WebSocket is in CONNECTING state
 let dgGotTranscript     = false; // set true when any transcript is received in this session
 let lastSpeechMs        = 0;
 let sbDbLogTs           = 0;    // timestamp of last dB console log
-const SB_SPEECH_DB      = -45;   // dB threshold to activate Deepgram
+const SB_SPEECH_DB      = -65;   // dB threshold to activate Deepgram
 const SB_SILENCE_MS     = 2500;  // ms of silence before returning to standby
 const SB_SILENCE_NOTX   = 3500;  // extended silence timeout when no transcript yet
 const SB_PREROLL_N      = 6;     // chunks to keep as pre-roll (6 × 50ms = ~300ms)
