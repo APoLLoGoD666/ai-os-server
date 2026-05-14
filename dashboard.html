@@ -1862,13 +1862,13 @@ async function startVoicePipeline() {
 
                 if (isSpeakingNow) {
                     if (_vadInterruptSR) { _vadDebounceStart = null; return; } // already capturing
-                    // Volume must stay above -45dB continuously for 200ms to start interrupt SR
+                    // Volume must stay above -45dB continuously for 10ms to start interrupt SR
                     if (db > -45) {
                         if (_vadDebounceStart === null) {
                             _vadDebounceStart = Date.now();
-                        } else if (Date.now() - _vadDebounceStart >= 200) {
+                        } else if (Date.now() - _vadDebounceStart >= 10) {
                             _vadDebounceStart = null;
-                            console.log("[VAD] voice above -45dB for 200ms — starting interrupt SR");
+                            console.log("[VAD] voice above -45dB for 10ms — starting interrupt SR");
                             _startInterruptSR();
                         }
                     } else {
