@@ -7291,49 +7291,48 @@ const server = require("http").createServer(app);
 
 const wss = new WebSocketServer({ server, path: "/deepgram-proxy" });
 wss.on("connection", (browserSocket) => {
-    const deepgram = createDeepgramClient(process.env.DEEPGRAM_API_KEY);
+    console.log("DG proxy: browser connected");
 
-    const connection = deepgram.listen.live({
-        model: "nova-2",
-        language: "en-GB",
-        punctuate: true,
-        endpointing: 300,
-        interim_results: true,
-        encoding: "linear16",
-        sample_rate: 16000,
-        channels: 1
+    const dgWs = new WS(
+        "wss://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true&endpointing=300&interim_results=true",
+        { headers: { "Authorization": `Token ${process.env.DEEPGRAM_API_KEY}` } }
+    );
+
+    dgWs.on("open", () => {
+        console.log("DG proxy: Deepgram connection open");
+        if (browserSocket.readyState === 1) browserSocket.send(JSON.stringify({ type: "Connected" }));
     });
 
-    connection.on("open", () => {
-        console.log("DG SDK: connection open");
-        browserSocket.send(JSON.stringify({ type: "Connected" }));
+    dgWs.on("message", (data) => {
+        const text = data.toString();
+        console.log("DG proxy: Deepgram sent:", text.slice(0, 200));
+        if (browserSocket.readyState === 1) browserSocket.send(text);
     });
 
-    connection.on("transcript", (data) => {
-        const transcript = data?.channel?.alternatives?.[0]?.transcript;
-        const isFinal = data?.is_final;
-        const speechFinal = data?.speech_final;
-        console.log("DG SDK transcript:", transcript, "final:", isFinal);
-        if (browserSocket.readyState === 1) {
-            browserSocket.send(JSON.stringify({
-                type: "transcript",
-                channel: data.channel,
-                is_final: isFinal,
-                speech_final: speechFinal
-            }));
+    dgWs.on("close", (code, reason) => {
+        console.log("DG proxy: Deepgram closed, code:", code, "reason:", reason.toString());
+        if (browserSocket.readyState === 1) browserSocket.close();
+    });
+
+    dgWs.on("error", (e) => console.error("DG proxy: Deepgram error:", e.message));
+
+    browserSocket.on("message", (data, isBinary) => {
+        if (dgWs.readyState === 1) {
+            if (isBinary) {
+                console.log("DG proxy: forwarding audio chunk, bytes:", data.length);
+            }
+            dgWs.send(data, { binary: isBinary });
+        } else {
+            console.warn("DG proxy: Deepgram not ready, dropping chunk");
         }
     });
 
-    connection.on("error", (e) => console.error("DG SDK error:", e));
-    connection.on("close", () => browserSocket.close());
-
-    browserSocket.on("message", (data) => {
-        if (connection.getReadyState() === 1) {
-            connection.send(data);
-        }
+    browserSocket.on("close", () => {
+        console.log("DG proxy: browser disconnected");
+        if (dgWs.readyState === 1) dgWs.close();
     });
 
-    browserSocket.on("close", () => connection.finish());
+    browserSocket.on("error", (e) => console.error("DG proxy: browser socket error:", e.message));
 });
 
 server.listen(PORT, () => {
