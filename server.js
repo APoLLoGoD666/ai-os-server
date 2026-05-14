@@ -755,17 +755,28 @@ function searchDocuments(keyword) {
     }
 }
 
+let _voyage429Until = 0;
+
 async function embedText(text) {
     if (!process.env.VOYAGE_API_KEY) return null;
+    if (Date.now() < _voyage429Until) {
+        console.warn("VOYAGE: circuit breaker active — skipping embed");
+        return null;
+    }
     try {
         const resp = await axios.post(
             "https://api.voyageai.com/v1/embeddings",
             { model: "voyage-3-lite", input: [text.slice(0, 2000)] },
-            { headers: { Authorization: `Bearer ${process.env.VOYAGE_API_KEY}` }, timeout: 8000 }
+            { headers: { Authorization: `Bearer ${process.env.VOYAGE_API_KEY}` }, timeout: 5000 }
         );
         return resp.data?.data?.[0]?.embedding || null;
     } catch (err) {
-        console.error("VOYAGE EMBED ERROR:", err.message);
+        if (err.response?.status === 429) {
+            _voyage429Until = Date.now() + 60000;
+            console.warn("VOYAGE: 429 rate limit — circuit breaker active for 60s");
+        } else {
+            console.error("VOYAGE EMBED ERROR:", err.message);
+        }
         return null;
     }
 }
@@ -785,6 +796,9 @@ async function embedAndStoreDocument(filename, content) {
 
 async function getRelevantDocuments(question) {
     const q = (question || "").trim().toLowerCase();
+
+    // If Voyage is rate limited return empty immediately — no point hanging on keyword search either
+    if (Date.now() < _voyage429Until) return [];
 
     // Try semantic vector search first
     if (process.env.VOYAGE_API_KEY && q) {
@@ -7219,10 +7233,14 @@ USER: ${userMessage}
 
 Respond naturally in 1-2 sentences.`.trim();
 
+        // Only include tools if the message looks like an action request
+        const needsTools = /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment/i.test(userMessage);
+        console.log(`[LATENCY] +${Date.now() - t0}ms calling Anthropic (tools:${needsTools})`);
+
         const response = await client.messages.create({
             model: MODEL,
             max_tokens: 80,
-            tools: TOOLS,
+            ...(needsTools ? { tools: TOOLS } : {}),
             messages: [{ role: "user", content: voicePrompt }]
         });
 
