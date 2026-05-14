@@ -424,11 +424,12 @@ async function formatRecentMemory() {
 
 // Memory compression: summarise recent history with Haiku, cache by message count
 let _memorySummaryCache = null;
+const SUMMARY_TTL_MS = 45000; // only regenerate summary every 45s max
 async function getMemorySummary() {
+    const now = Date.now();
+    if (_memorySummaryCache && (now - _memorySummaryCache.ts) < SUMMARY_TTL_MS) return _memorySummaryCache.summary;
     const memory = await loadMemory();
     if (!memory.length) return "No recent memory.";
-    const seq = memory.length;
-    if (_memorySummaryCache && _memorySummaryCache.seq === seq) return _memorySummaryCache.summary;
     const raw = memory.slice(-12).map(item => {
         const when = timeAgo(item.time);
         return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${item.message}`;
@@ -440,7 +441,7 @@ async function getMemorySummary() {
             messages: [{ role: "user", content: `Summarise this conversation history into one compact paragraph (max 60 words). Focus on facts, preferences, and recent context only.\n\n${raw}` }]
         });
         const summary = res.content?.find(b => b.type === "text")?.text?.trim() || raw;
-        _memorySummaryCache = { summary, seq };
+        _memorySummaryCache = { summary, ts: Date.now() };
         return summary;
     } catch (_) {
         return raw;
@@ -7154,11 +7155,12 @@ app.post("/api/speak", async (req, res) => {
             },
             body: JSON.stringify({
                 text,
-                model_id: "eleven_flash_v2_5",
-                voice_settings: { stability: 0.4, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.25 }
+                model_id: "eleven_turbo_v2_5",
+                optimize_streaming_latency: 4,
+                voice_settings: { stability: 0.4, similarity_boost: 0.75, style: 0, use_speaker_boost: false, speed: 1.25 }
             })
         });
-        console.log(`[LATENCY] ElevenLabs response headers: ${Date.now() - elT0}ms`);
+        console.log(`[LATENCY] +${Date.now() - elT0}ms ElevenLabs audio received`);
 
         if (!elRes.ok) {
             const errText = await elRes.text();
@@ -7189,16 +7191,17 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         }
 
         const t0 = Date.now();
-        console.log("[LATENCY] voice-chat request received");
+        console.log("[LATENCY] +0ms request received");
 
         const userMessage = rawMessage.trim();
-        await addToMemory("user", userMessage);
 
-        // Parallel fetch compressed memory summary + docs
-        const [memoryText, relevantDocs] = await Promise.all([
+        // Write memory + fetch summary + fetch docs all in parallel
+        const [, memoryText, relevantDocs] = await Promise.all([
+            addToMemory("user", userMessage),
             getMemorySummary(),
             getRelevantDocuments(userMessage)
         ]);
+        console.log(`[LATENCY] +${Date.now() - t0}ms parallel fetch complete`);
 
         const docsText = relevantDocs.length
             ? relevantDocs.map((doc, i) => `DOC ${i + 1}: ${doc.filename} — ${doc.summary || "No summary"}`).join("\n")
@@ -7218,12 +7221,12 @@ Respond naturally in 1-2 sentences.`.trim();
 
         const response = await client.messages.create({
             model: MODEL,
-            max_tokens: 120,
+            max_tokens: 80,
             tools: TOOLS,
             messages: [{ role: "user", content: voicePrompt }]
         });
 
-        console.log(`[LATENCY] Anthropic response complete: ${Date.now() - t0}ms`);
+        console.log(`[LATENCY] +${Date.now() - t0}ms Anthropic response complete`);
 
         const toolUseBlock = (response.content || []).find(part => part.type === "tool_use");
 
