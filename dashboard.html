@@ -1260,6 +1260,9 @@ let currentAudio        = null;
 let currentAbort        = null;
 let speakQueue          = [];
 let isSpeakingNow       = false;
+let vadCtx              = null;
+let vadAnalyser         = null;
+let vadInterval         = null;
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 const voiceSpeed        = 1.3;
@@ -1632,8 +1635,44 @@ function speak(text, { useFiller = false } = {}) {
     _processSpeak();
 }
 
+function startVAD() {
+    stopVAD();
+    if (!dgStream) return;
+    try {
+        vadCtx      = new AudioContext();
+        const source = vadCtx.createMediaStreamSource(dgStream);
+        vadAnalyser  = vadCtx.createAnalyser();
+        vadAnalyser.fftSize = 256;
+        source.connect(vadAnalyser);
+        const buf = new Float32Array(vadAnalyser.fftSize);
+
+        vadInterval = setInterval(() => {
+            if (!isSpeakingNow) { stopVAD(); return; }
+            vadAnalyser.getFloatTimeDomainData(buf);
+            let sum = 0;
+            for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+            const rms = Math.sqrt(sum / buf.length);
+            const db  = rms > 0 ? 20 * Math.log10(rms) : -Infinity;
+            if (db > -50) {
+                console.log("User interrupt detected — stopping audio", db.toFixed(1), "dB");
+                stopVAD();
+                interruptSpeech();
+            }
+        }, 80);
+    } catch (e) {
+        console.warn("[VAD] could not start:", e.message);
+    }
+}
+
+function stopVAD() {
+    if (vadInterval) { clearInterval(vadInterval); vadInterval = null; }
+    try { if (vadCtx) { vadCtx.close(); vadCtx = null; } } catch (_) {}
+    vadAnalyser = null;
+}
+
 function interruptSpeech() {
     console.log("Interrupted");
+    stopVAD();
     if (currentAbort) { currentAbort.abort(); currentAbort = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
@@ -1730,9 +1769,11 @@ async function initDeepgram() {
 function muteDeepgram() {
     dgMuted = true;
     setOrbState("thinking");
+    startVAD();
 }
 
 function unmuteDeepgram() {
+    stopVAD();
     dgMuted = false;
     if (isListening) setOrbState("listening");
 }
