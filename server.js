@@ -7207,37 +7207,44 @@ app.post("/api/speak", async (req, res) => {
         const apiKey = process.env.ELEVENLABS_API_KEY;
         if (!apiKey) return res.status(500).json({ ok: false, reply: "Missing ELEVENLABS_API_KEY." });
 
-        const elT0 = Date.now();
-        console.log("[LATENCY] ElevenLabs request sent");
-        const elRes = await fetch("https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB", {
-            method: "POST",
-            headers: {
-                "xi-api-key": apiKey,
-                "Content-Type": "application/json",
-                "Accept": "audio/mpeg"
-            },
-            body: JSON.stringify({
-                text,
-                model_id: "eleven_turbo_v2_5",
-                optimize_streaming_latency: 4,
-                voice_settings: { stability: 0.4, similarity_boost: 0.75, style: 0, use_speaker_boost: false, speed: 1.25 }
-            })
-        });
-        console.log(`[LATENCY] +${Date.now() - elT0}ms ElevenLabs audio received`);
+        const VOICE_ID      = "pNInz6obpgDQGcFmaJgB";
+        const VOICE_SETTINGS = { stability: 0.4, similarity_boost: 0.75, style: 0, use_speaker_boost: false, speed: 1.25 };
+        const MODELS        = ["eleven_turbo_v2_5", "eleven_turbo_v2"];
 
-        if (!elRes.ok) {
-            const errText = await elRes.text();
-            return res.status(502).json({ ok: false, reply: `ElevenLabs error: ${errText}` });
+        let elRes = null;
+        for (const model_id of MODELS) {
+            const elT0 = Date.now();
+            console.log(`[Speak] model=${model_id} text="${text.slice(0, 80)}"`);
+            const attempt = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+                method: "POST",
+                headers: { "xi-api-key": apiKey, "Content-Type": "application/json", "Accept": "audio/mpeg" },
+                body: JSON.stringify({ text, model_id, optimize_streaming_latency: 4, voice_settings: VOICE_SETTINGS })
+            });
+            console.log(`[Speak] ElevenLabs status=${attempt.status} model=${model_id} +${Date.now() - elT0}ms`);
+            if (attempt.ok) { elRes = attempt; break; }
+            const errBody = await attempt.text();
+            console.error(`[Speak] ElevenLabs rejected: status=${attempt.status} model=${model_id} body=${errBody}`);
         }
 
-        res.set("Content-Type", "audio/mpeg");
-        for await (const chunk of elRes.body) {
-            res.write(chunk);
+        if (!elRes) {
+            return res.status(502).json({ ok: false, reply: "ElevenLabs TTS failed on all models." });
         }
-        return res.end();
+
+        res.setHeader("Content-Type", "audio/mpeg");
+        try {
+            for await (const chunk of elRes.body) {
+                res.write(chunk);
+            }
+            return res.end();
+        } catch (streamErr) {
+            console.error("[Speak] stream error:", streamErr.message);
+            if (!res.headersSent) return res.status(502).json({ ok: false, reply: "Stream error." });
+            return res.end();
+        }
     } catch (error) {
-        console.error("SPEAK ERROR:", error);
-        return res.status(500).json({ ok: false, reply: error.message || "Speak failed." });
+        console.error("[Speak] unexpected error:", error.message, error.stack);
+        if (!res.headersSent) return res.status(500).json({ ok: false, reply: error.message || "Speak failed." });
+        return res.end();
     }
 });
 
