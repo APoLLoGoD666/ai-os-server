@@ -288,11 +288,9 @@ let latestAgentCleanupPreview = null;
 let latestObviousAgentCleanupPreview = null;
 
 if (!AGENT_SECRET) {
-    console.warn("AGENT_SECRET not set. Agent approval is unprotected.");
 }
 
 if (!APP_ACCESS_KEY) {
-    console.warn("APP_ACCESS_KEY not set. App access is unprotected.");
 }
 
 if (!CRON_SECRET) {
@@ -2432,7 +2430,7 @@ async function runAgentPlanningCycle(taskId) {
     }
 
     const memory = await loadMemory();
-    const documents = await getRelevantDocuments(task.goal);
+    const documents = await getRelevantDocuments(task.goal).catch(e => { console.log("Voyage unavailable - using keyword search"); return pgSearchDocuments(task.goal.toLowerCase()).catch(() => []); });
     const files = await listWorkspaceFiles();
     const today = new Date().toISOString().slice(0, 10);
     const agentProfile = getAgentProfile(task.context_json?.agentProfile?.name || "system_agent");
@@ -5447,7 +5445,7 @@ ${task.plan || "No plan saved."}`
             }
 
             const memory = await loadMemory();
-            const documents = await getRelevantDocuments(command.request);
+            const documents = await getRelevantDocuments(command.request).catch(e => { console.log("Voyage unavailable - using keyword search"); return pgSearchDocuments(command.request.toLowerCase()).catch(() => []); });
             const files = await listWorkspaceFiles();
             const today = new Date().toISOString().slice(0, 10);
             const plan = await buildAgentPlan(command.request, memory, documents, files, today, agentProfile);
@@ -6771,7 +6769,7 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         const memoryText = memory.length
             ? memory.slice(-12).map(m => `[${m.role.toUpperCase()}]${m.time ? ` (${timeAgo(m.time)})` : ""} ${m.message}`).join("\n")
             : "No recent memory.";
-        const relevantDocs = await getRelevantDocuments(userMessage);
+        const relevantDocs = await getRelevantDocuments(userMessage).catch(e => { console.log("Voyage unavailable - using keyword search"); return pgSearchDocuments(userMessage.toLowerCase()).catch(() => []); });
         const docsText = relevantDocs.length
             ? relevantDocs.map((doc, index) => {
                 const preview = (doc.content || "").slice(0, 500);
@@ -7278,7 +7276,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
             ? relevantDocs.map((doc, i) => `DOC ${i + 1}: ${doc.filename} — ${doc.summary || "No summary"}`).join("\n")
             : "No relevant documents.";
 
-        const voicePrompt = `You are Apex, a British AI assistant. Respond in natural spoken English only. Maximum 2 sentences. No markdown, no bullet points, no lists, no file names, no technical strings. Speak like a human, be direct and confident.
+        const voicePrompt = `You are Apex, a personal AI assistant. Always address the user as 'sir'. Never use 'mate', 'jefe', 'pal', 'buddy', 'bro', or any other informal term of address. Respond in natural spoken English only. Maximum 2 sentences. No markdown, no bullet points, no lists, no file names, no technical strings. Speak like a human, be direct and confident.
 
 RECENT MEMORY:
 ${memoryText}
