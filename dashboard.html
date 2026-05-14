@@ -1760,58 +1760,40 @@ async function startStandby() {
                 dgPreBuffer.push(e.data);
             } else if (dgSocket && dgSocket.readyState === WebSocket.OPEN) {
                 dgSocket.send(e.data);
-            } else {
-                // Standby: maintain rolling pre-roll ring buffer
-                sbRingBuf.push(e.data);
-                if (sbRingBuf.length > SB_PREROLL_N) sbRingBuf.shift();
             }
+            // No ring buffer needed — Deepgram is always open
         };
         sbRecorder.start(SB_CHUNK_MS);
 
+        // Open Deepgram immediately — always-on for wake word detection
+        dgMode = "wake";
         setOrbState("waiting");
-        console.log("[Standby] monitoring mic");
+        console.log("[Standby] mic ready — opening Deepgram for wake word detection");
+        _activateDg();
 
+        // AnalyserNode monitors mic volume only to track speech presence
+        // in conversation mode (for silence-based return to wake mode)
         const buf = new Float32Array(sbAnalyser.fftSize);
         sbInterval = setInterval(() => {
             if (!autoListen || isSpeakingNow) return;
             sbAnalyser.getFloatTimeDomainData(buf);
             const db = _sbRms(buf);
 
-            // Log dB level every second so threshold can be tuned
             const now = Date.now();
             if (now - sbDbLogTs >= 1000) {
                 sbDbLogTs = now;
-                console.log(`[Standby] dB: ${db === -Infinity ? "-∞" : db.toFixed(1)} (threshold: ${SB_SPEECH_DB})`);
+                console.log(`[Standby] dB: ${db === -Infinity ? "-∞" : db.toFixed(1)} (mode: ${dgMode})`);
             }
 
-            if (sbActive) {
-                // Standby — waiting for speech to open Deepgram
-                if (db > SB_SPEECH_DB) {
-                    console.log(`[Standby] → [Listening] (dB: ${db.toFixed(1)})`);
-                    sbActive = false;
-                    dgGotTranscript = false;
-                    // Seed pre-buffer with ring buffer so the pre-roll is flushed on connect
-                    dgPreBuffer = [...sbRingBuf];
-                    sbRingBuf = [];
-                    dgConnecting = true;
-                    lastSpeechMs = Date.now();
-                    _activateDg();
-                }
-            } else {
-                // Deepgram active — monitor for silence to return to standby
+            // Only track silence in conversation mode — return to wake mode after 3s quiet
+            if (dgMode === "conversation" && !dgMuted) {
                 if (db > SB_SPEECH_DB) {
                     lastSpeechMs = Date.now();
-                } else if (!dgMuted) {
-                    const timeout = dgMode === "conversation"
-                        ? SB_CONV_SILENCE_MS                              // 3s after conversation
-                        : (dgGotTranscript ? SB_SILENCE_MS : SB_SILENCE_NOTX); // wake-mode
-                    if (now - lastSpeechMs > timeout) {
-                        console.log(`[Listening] → [Standby] (silence ${now - lastSpeechMs}ms, mode: ${dgMode})`);
-                        dgMode = "wake";
-                        sbActive = true;
-                        _deactivateDg();
-                        setOrbState("waiting");
-                    }
+                } else if (now - lastSpeechMs > SB_CONV_SILENCE_MS) {
+                    console.log(`[Conversation] → [Wake] silence ${now - lastSpeechMs}ms`);
+                    dgMode = "wake";
+                    setOrbState("waiting");
+                    // Keep Deepgram open — still listening for next wake word
                 }
             }
         }, 80);
@@ -1850,7 +1832,7 @@ function _activateDg() {
         dgMuted = false;
         isListening = true;
         lastSpeechMs = Date.now();
-        setOrbState("listening");
+        setOrbState(dgMode === "conversation" ? "listening" : "waiting");
         console.log(`[Listening] Deepgram open (mode: ${dgMode}), flushed ${toFlush.length} pre-roll chunks (~${toFlush.length * SB_CHUNK_MS}ms)`);
     };
 
@@ -1902,10 +1884,11 @@ function _activateDg() {
     dgSocket.onclose = () => {
         isListening = false;
         dgConnecting = false;
-        if (autoListen && sbCtx && !sbActive) {
-            sbActive = true;
+        if (autoListen && sbCtx) {
+            console.log("[Deepgram] closed → reconnecting in 1s");
+            dgMode = "wake";
             setOrbState("waiting");
-            console.log("[Deepgram] closed → Standby");
+            setTimeout(() => { if (autoListen && sbCtx) _activateDg(); }, 1000);
         }
     };
 }
@@ -2082,6 +2065,7 @@ async function sendChatCommandFromText(command, options = {}) {
 async function sendVoiceChatCommand(msg) {
     if (!msg || !msg.trim()) return;
     document.getElementById("chatInput").value = "";
+    console.log(`[Chat] appending user: "${msg}"`);
     renderChatMessage("user", msg);
     setOrbState("thinking");
     showTypingIndicator();
@@ -2099,7 +2083,7 @@ async function sendVoiceChatCommand(msg) {
         console.log("[Voice] server reply:", data);
         hideTypingIndicator();
         const reply = data.reply || "Done.";
-        console.log("[Voice] rendering reply in chat:", reply);
+        console.log(`[Chat] appending AI: "${reply}"`);
         renderChatMessage("ai", reply);
         const ms = Date.now() - _t0Voice;
         const log = document.getElementById("chatLog");
