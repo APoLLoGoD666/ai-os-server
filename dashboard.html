@@ -1622,6 +1622,7 @@ async function _speakInternal(text, useFiller) {
 async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
+    if (srec) { try { srec.stop(); } catch (_) {} }
     while (speakQueue.length) {
         const { text, useFiller } = speakQueue.shift();
         await _speakInternal(text, useFiller);
@@ -1629,8 +1630,12 @@ async function _processSpeak() {
     isSpeakingNow = false;
     if (autoListen) {
         unmuteDeepgram();
-        if (!srec) startVoicePipeline();
-        else setOrbState(dgMode === "conversation" ? "listening" : "waiting");
+        if (!srec) {
+            startVoicePipeline();
+        } else {
+            try { srec.start(); } catch (_) {}
+            setOrbState(dgMode === "conversation" ? "listening" : "waiting");
+        }
     } else {
         setOrbState("ready");
     }
@@ -1685,7 +1690,8 @@ function interruptSpeech() {
     speakQueue.length = 0;
     isSpeakingNow = false;
     dgMuted = false;
-    unmuteDeepgram(); // resets lastSpeechMs
+    unmuteDeepgram();
+    if (srec && autoListen) { try { srec.start(); } catch (_) {} }
     setOrbState(isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
 }
 
@@ -1776,7 +1782,7 @@ async function startVoicePipeline() {
         lastSpeechMs = Date.now();
         if (dgMode === "wake") {
             console.log(`[Wake] transcript: "${transcript}"`);
-            if (/hey\s*apex/i.test(transcript)) {
+            if (/\bapex\b/i.test(transcript)) {
                 console.log("[Wake] wake word matched → conversation mode");
                 dgMode = "conversation";
                 lastSpeechMs = Date.now();
