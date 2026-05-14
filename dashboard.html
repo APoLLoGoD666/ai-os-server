@@ -1624,8 +1624,7 @@ async function speakWithElevenLabs(text) {
                     isSpeakingNow = false;
                     clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
                     dgMuted = false;
-                    if (Date.now() - lastSpeechMs > CONV_SILENCE_MS) dgMode = "wake";
-                    unmuteDeepgram();
+                    unmuteDeepgram(); // resets lastSpeechMs; dgSilenceTimer owns the standby transition
                 }
                 res2(true);
             };
@@ -1700,8 +1699,7 @@ async function _processSpeak() {
         if (currentAbort) { currentAbort.abort(); currentAbort = null; }
         if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
         dgMuted = false;
-        if (Date.now() - lastSpeechMs > CONV_SILENCE_MS) dgMode = "wake";
-        unmuteDeepgram();
+        unmuteDeepgram(); // resets lastSpeechMs; dgSilenceTimer owns the standby transition
         setOrbState(autoListen && isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
     }, 30000);
 
@@ -1714,7 +1712,7 @@ async function _processSpeak() {
     _speakSafetyTimer = null;
     _vadDebounceStart = null;
     isSpeakingNow = false;
-    if (Date.now() - lastSpeechMs > CONV_SILENCE_MS) dgMode = "wake";
+    // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (autoListen) {
         unmuteDeepgram();
         if (!srec) {
@@ -1856,8 +1854,7 @@ async function startVoicePipeline() {
             dgAnalyser.fftSize = 256;
             dgAudioCtx.createMediaStreamSource(dgStream).connect(dgAnalyser);
 
-            const buf     = new Float32Array(dgAnalyser.fftSize);
-            const freqBuf = new Uint8Array(dgAnalyser.frequencyBinCount);
+            const buf = new Float32Array(dgAnalyser.fftSize);
             dgSilenceTimer = setInterval(() => {
                 if (!autoListen) return;
                 dgAnalyser.getFloatTimeDomainData(buf);
@@ -1865,27 +1862,17 @@ async function startVoicePipeline() {
 
                 if (isSpeakingNow) {
                     if (_vadInterruptSR) { _vadDebounceStart = null; return; } // already capturing
-
-                    // Frequency analysis: speech energy concentrates in 300-3000 Hz band
-                    // (bins 2-17 at ~172 Hz/bin for 44100 Hz, bins 2-16 for 48000 Hz)
-                    dgAnalyser.getByteFrequencyData(freqBuf);
-                    let speechSum = 0, broadSum = 0;
-                    for (let i = 2; i <= 17; i++) speechSum += freqBuf[i];
-                    for (let i = 2; i <= 63; i++) broadSum += freqBuf[i];
-                    // Speech has >35% of its energy in the speech frequency band;
-                    // a desk tap or broadband noise will not meet this ratio
-                    const speechLike = broadSum > 0 && (speechSum / broadSum) > 0.35;
-
-                    if (db > -28 && speechLike) {
+                    // Volume must stay above -35dB continuously for 600ms to start interrupt SR
+                    if (db > -35) {
                         if (_vadDebounceStart === null) {
                             _vadDebounceStart = Date.now();
-                        } else if (Date.now() - _vadDebounceStart >= 700) {
+                        } else if (Date.now() - _vadDebounceStart >= 600) {
                             _vadDebounceStart = null;
-                            console.log("[VAD] sustained speech detected — starting interrupt SR");
+                            console.log("[VAD] voice above -35dB for 600ms — starting interrupt SR");
                             _startInterruptSR();
                         }
                     } else {
-                        _vadDebounceStart = null;
+                        _vadDebounceStart = null; // volume dropped — reset clock
                     }
                     return;
                 }
