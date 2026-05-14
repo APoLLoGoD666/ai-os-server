@@ -1820,9 +1820,19 @@ async function startVoicePipeline() {
 
             const buf = new Float32Array(dgAnalyser.fftSize);
             dgSilenceTimer = setInterval(() => {
-                if (!autoListen || isSpeakingNow) return;
+                if (!autoListen) return;
                 dgAnalyser.getFloatTimeDomainData(buf);
                 const db = _rms(buf);
+
+                if (isSpeakingNow) {
+                    // VAD interrupt: user voice detected while Apex is speaking
+                    if (db > -50) {
+                        console.log("[VAD] user voice during playback", db.toFixed(1), "dB — interrupting");
+                        interruptSpeech();
+                    }
+                    return;
+                }
+
                 const now = Date.now();
                 if (now - dgDbLogTs >= 2000) {
                     dgDbLogTs = now;
