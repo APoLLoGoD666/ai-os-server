@@ -1342,7 +1342,9 @@ let vadAnalyser         = null;
 let vadInterval         = null;
 let dgAnalyser          = null;   // AnalyserNode for visual UI
 let dgAudioCtx          = null;   // AudioContext for analyser
-const _apexAudio        = new Audio(); // Single persistent audio element for all TTS playback
+let _apexAudio          = null;   // Persistent Audio element, created + unlocked on first touch
+let _apexBlobUrl        = null;   // Current blob URL so we can revoke before setting next
+let _speakSafetyTimer   = null;   // 30-second watchdog to force-reset stuck speaking state
 let dgSilenceTimer      = null;   // setInterval for conversation silence tracking
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
@@ -1568,17 +1570,21 @@ function _speakUtterance(phrase, { onStart, onEnd } = {}) {
     window.speechSynthesis.speak(utt);
 }
 
-// Unlock audio session on first user gesture (required by iOS Safari)
-const _SILENT_MP3 = 'data:audio/mpeg;base64,//MkxAAHiAICWABElBeKPL/RANb2w+yiT1g/gTok//lP/W/l3h8QO/OCdCqCW2Cm//MkxAQHkAIWUAhEmAQXWUOFW2dxPu//9mr60ElY5sseQ+xxesmHKtZr7bsqqX2L//MkxAgFwAYiQAhEAC2hq22d3///9FTV6tA36JdgBJooBaRQkHgb/AKc1MAAA';
-_apexAudio.src = _SILENT_MP3;
-_apexAudio.load();
+// Create and unlock the persistent Audio element on the first user gesture.
+// Calling .play() inside a touchstart handler (even if it fails) satisfies iOS Safari's
+// user-gesture requirement so all subsequent programmatic .play() calls succeed.
 document.addEventListener('touchstart', () => {
-    _apexAudio.play().then(() => _apexAudio.pause()).catch(() => {});
+    if (_apexAudio) return;
+    _apexAudio = new Audio();
+    _apexAudio.play().catch(() => {});
 }, { once: true });
 
 async function speakWithElevenLabs(text) {
     const phrase = summariseForSpeech(text);
     if (!phrase) return false;
+
+    // On desktop _apexAudio may not be created yet (no touchstart fired) — create it now.
+    if (!_apexAudio) _apexAudio = new Audio();
 
     try {
         console.log(`[LATENCY] +${Date.now() - _t0Voice}ms ElevenLabs request sent`);
@@ -1593,19 +1599,38 @@ async function speakWithElevenLabs(text) {
         });
         if (!fetchRes.ok) return false;
 
-        const blob    = await fetchRes.blob();
-        const blobUrl = URL.createObjectURL(blob);
+        // arrayBuffer → Blob approach is the only path that reliably works on iOS Safari
+        const buf  = await fetchRes.arrayBuffer();
+        const blob = new Blob([buf], { type: "audio/mpeg" });
 
-        _apexAudio.src          = blobUrl;
+        // Revoke the previous blob URL before creating the new one
+        if (_apexBlobUrl) { try { URL.revokeObjectURL(_apexBlobUrl); } catch (_) {} }
+        _apexBlobUrl = URL.createObjectURL(blob);
+
+        _apexAudio.src          = _apexBlobUrl;
         _apexAudio.playbackRate = voiceSpeed;
         currentAudio = _apexAudio;
         console.log(`[LATENCY] +${Date.now() - _t0Voice}ms audio playing`);
+
         await new Promise((res2, rej) => {
             const cleanup = () => { _apexAudio.onended = _apexAudio.onerror = _apexAudio.onpause = null; };
-            _apexAudio.onended = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; res2(true);  };
-            _apexAudio.onerror = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; rej();       };
-            _apexAudio.onpause = () => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; res2(false); };
-            _apexAudio.play().catch(e => { cleanup(); URL.revokeObjectURL(blobUrl); currentAudio = null; rej(e); });
+            _apexAudio.onended = () => {
+                cleanup();
+                currentAudio = null;
+                // iOS safety: if the speaking state is still set ensure we return to standby
+                if (isSpeakingNow && !speakQueue.length) {
+                    isSpeakingNow = false;
+                    clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
+                    dgMuted = false;
+                    if (Date.now() - lastSpeechMs > CONV_SILENCE_MS) dgMode = "wake";
+                    unmuteDeepgram();
+                }
+                res2(true);
+            };
+            _apexAudio.onerror = () => { cleanup(); currentAudio = null; rej(); };
+            _apexAudio.onpause = () => { cleanup(); currentAudio = null; res2(false); };
+            _apexAudio.load();
+            _apexAudio.play().catch(e => { cleanup(); currentAudio = null; rej(e); });
         });
         return true;
 
@@ -1661,18 +1686,37 @@ async function _speakInternal(text, useFiller) {
 async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
-    if (srec) { try { srec.stop(); } catch (_) {} }
+    // SR stays running — never stop recognition while speaking so user can interrupt at any time
+
+    // Safety watchdog: force-reset speaking state after 30 seconds
+    _speakSafetyTimer = setTimeout(() => {
+        if (!isSpeakingNow) return;
+        console.warn("[Speak] 30s safety timeout — forcing reset");
+        speakQueue.length = 0;
+        isSpeakingNow = false;
+        _speakSafetyTimer = null;
+        if (currentAbort) { currentAbort.abort(); currentAbort = null; }
+        if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
+        dgMuted = false;
+        if (Date.now() - lastSpeechMs > CONV_SILENCE_MS) dgMode = "wake";
+        unmuteDeepgram();
+        setOrbState(autoListen && isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
+    }, 30000);
+
     while (speakQueue.length) {
         const { text, useFiller } = speakQueue.shift();
         await _speakInternal(text, useFiller);
     }
+
+    clearTimeout(_speakSafetyTimer);
+    _speakSafetyTimer = null;
     isSpeakingNow = false;
+    if (Date.now() - lastSpeechMs > CONV_SILENCE_MS) dgMode = "wake";
     if (autoListen) {
         unmuteDeepgram();
         if (!srec) {
             startVoicePipeline();
         } else {
-            try { srec.start(); } catch (_) {}
             setOrbState(dgMode === "conversation" ? "listening" : "waiting");
         }
     } else {
@@ -1720,6 +1764,7 @@ function stopVAD() {
 
 function interruptSpeech() {
     console.log("Interrupted");
+    clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
     stopVAD();
     if (currentAbort) { currentAbort.abort(); currentAbort = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -1728,7 +1773,7 @@ function interruptSpeech() {
     isSpeakingNow = false;
     dgMuted = false;
     unmuteDeepgram();
-    if (srec && autoListen) { try { srec.start(); } catch (_) {} }
+    // SR is always running — no need to restart it here
     setOrbState(isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
 }
 
@@ -1809,7 +1854,6 @@ async function startVoicePipeline() {
     srec.lang = "en-GB";
 
     srec.onresult = e => {
-        if (dgMuted) return;
         const transcript = Array.from(e.results)
             .slice(e.resultIndex)
             .map(r => r[0].transcript)
@@ -1818,6 +1862,7 @@ async function startVoicePipeline() {
         if (!transcript) return;
         lastSpeechMs = Date.now();
         if (dgMode === "wake") {
+            if (dgMuted) return; // ignore wake word while Apex is speaking
             console.log(`[Wake] transcript: "${transcript}"`);
             if (/\bapex\b/i.test(transcript)) {
                 console.log("[Wake] wake word matched → conversation mode");
@@ -1833,7 +1878,12 @@ async function startVoicePipeline() {
             console.log(`[SR] conversation: "${transcript}"`);
             document.getElementById("chatInput").value = transcript;
             lastSendWasVoice = true;
-            dgMuted = true;
+            // If Apex is mid-sentence, interrupt immediately then send
+            if (isSpeakingNow) {
+                console.log("[SR] interrupting Apex to handle new input");
+                interruptSpeech();
+            }
+            dgMuted = true; // prevent further transcripts until this one is processed
             sendVoiceChatCommand(transcript);
         }
     };
@@ -1842,7 +1892,8 @@ async function startVoicePipeline() {
         if (e.error === "not-allowed") {
             _showBanner("banner-micdenied", "Microphone access denied.");
         } else if (e.error === "no-speech" || e.error === "audio-capture") {
-            if (autoListen && srec && !isSpeakingNow && isListening) {
+            // Restart even while Apex is speaking — continuous listening
+            if (autoListen && srec && isListening) {
                 setTimeout(() => { try { srec.start(); } catch (_) {} }, 500);
             }
         } else if (e.error !== "no-speech") {
@@ -1852,7 +1903,8 @@ async function startVoicePipeline() {
 
     srec.onend = () => {
         console.log("[SR] ended — restarting");
-        if (autoListen && srec && !isSpeakingNow && isListening) {
+        // Restart even while Apex is speaking — continuous listening
+        if (autoListen && srec && isListening) {
             try { srec.start(); } catch (_) {}
         }
     };
