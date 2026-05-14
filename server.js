@@ -7305,7 +7305,7 @@ wss.on("connection", (browserSocket) => {
 
     dgWs.on("message", (data) => {
         const text = data.toString();
-        console.log("DG proxy: Deepgram sent:", text.slice(0, 200));
+        console.log("DG proxy: Deepgram raw response:", text.slice(0, 500));
         if (browserSocket.readyState === 1) browserSocket.send(text);
     });
 

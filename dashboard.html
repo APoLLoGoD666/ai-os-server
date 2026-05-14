@@ -1677,7 +1677,9 @@ async function initDeepgram() {
 
         dgSocket.onmessage = e => {
             try {
+                console.log("[Deepgram] raw e.data:", String(e.data).slice(0, 300));
                 const msg = JSON.parse(e.data);
+                console.log("[Deepgram] parsed keys:", Object.keys(msg));
                 if (msg.type === "Connected") {
                     console.log("[Deepgram] SDK connected");
                     return;
