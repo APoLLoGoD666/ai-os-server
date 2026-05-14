@@ -1270,7 +1270,7 @@ let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
 let dgDbLogTs           = 0;
 const CONV_SILENCE_MS   = 5000;  // silence before returning to wake mode
-const CHUNK_MS          = 50;    // MediaRecorder timeslice ms
+const CHUNK_MS          = 250;   // MediaRecorder timeslice ms
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 const voiceSpeed        = 1.3;
@@ -1729,8 +1729,14 @@ async function startVoicePipeline() {
         dgRecorder = new MediaRecorder(dgStream);
         dgRecorder.ondataavailable = e => {
             if (!e.data.size) return;
-            if (dgSocket && dgSocket.readyState === WebSocket.OPEN) dgSocket.send(e.data);
+            if (dgSocket && dgSocket.readyState === 1) {
+                dgSocket.send(e.data);
+                console.log(`[Recorder] chunk sent: ${e.data.size}bytes`);
+            } else {
+                console.log(`[Recorder] chunk skipped — WS not open (state:${dgSocket ? dgSocket.readyState : "null"})`);
+            }
         };
+        console.log("[Voice] starting MediaRecorder with timeslice", CHUNK_MS, "ms");
         dgRecorder.start(CHUNK_MS);
 
         dgMode = "wake";
