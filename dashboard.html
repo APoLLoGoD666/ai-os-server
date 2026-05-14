@@ -2190,7 +2190,7 @@ async function startVoicePipeline() {
                     console.log(`[Voice] dB: ${db === -Infinity ? "-∞" : db.toFixed(1)} | mode: ${dgMode}`);
                 }
                 if (dgMode === "conversation" && !dgMuted) {
-                    if (db > -45) lastSpeechMs = now;
+                    if (db > -30) lastSpeechMs = now;
                     else if (now - lastSpeechMs > CONV_SILENCE_MS) {
                         console.log(`[Voice] ${now - lastSpeechMs}ms silence → returning to standby (wake mode)`);
                         dgMode = "wake";
