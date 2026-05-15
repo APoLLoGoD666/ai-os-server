@@ -7260,6 +7260,72 @@ app.post("/api/speak", async (req, res) => {
     }
 });
 
+// ── APEX MEMORY (pgvector + Voyage AI) ────────────────────────────────────
+
+async function getVoyageEmbedding(text) {
+    try {
+        const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`
+            },
+            body: JSON.stringify({
+                input: [text],
+                model: 'voyage-3-lite',
+                input_type: 'document'
+            })
+        });
+        const data = await res.json();
+        return data?.data?.[0]?.embedding || null;
+    } catch (err) {
+        console.error('[MEMORY] Voyage embedding error:', err.message);
+        return null;
+    }
+}
+
+async function saveMemory(role, content) {
+    try {
+        const embedding = await getVoyageEmbedding(content);
+        const row = { role, content };
+        if (embedding) row.embedding = JSON.stringify(embedding);
+        const { error } = await supabase.from('apex_memories').insert(row);
+        if (error) console.error('[MEMORY] Save error:', error.message);
+    } catch (err) {
+        console.error('[MEMORY] saveMemory error:', err.message);
+    }
+}
+
+async function recallMemories(query, count = 5) {
+    try {
+        const embedding = await getVoyageEmbedding(query);
+        if (!embedding) {
+            const { data, error } = await supabase
+                .from('apex_memories')
+                .select('role, content, created_at')
+                .ilike('content', `%${query.slice(0, 50)}%`)
+                .order('created_at', { ascending: false })
+                .limit(count);
+            if (error) return [];
+            return data || [];
+        }
+        const { data, error } = await supabase.rpc('match_apex_memories', {
+            query_embedding: JSON.stringify(embedding),
+            match_count: count
+        });
+        if (error) {
+            console.error('[MEMORY] Recall error:', error.message);
+            return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.error('[MEMORY] recallMemories error:', err.message);
+        return [];
+    }
+}
+
+// ── END APEX MEMORY ────────────────────────────────────────────────────────
+
 // ── APEX TOOLS ──────────────────────────────────────────────────────────────
 
 async function toolWebSearch(query) {
