@@ -7460,6 +7460,20 @@ const APEX_TOOLS = [
             properties: {},
             required: []
         }
+    },
+    {
+        name: 'get_notifications',
+        description: 'Get recent alerts, notifications, and proactive messages from Apex — including routine briefings, email alerts, and system notifications. Use when asked about alerts, notifications, updates, briefings, or what Apex has flagged.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                unread_only: {
+                    type: 'boolean',
+                    description: 'If true, return only unread notifications. Defaults to true.'
+                }
+            },
+            required: []
+        }
     }
 ];
 
@@ -7485,12 +7499,27 @@ async function toolCheckEmails() {
     }
 }
 
+async function toolGetNotifications(unreadOnly = true) {
+    try {
+        const all = await pgListNotifications(20);
+        const items = unreadOnly ? all.filter(n => !n.read) : all;
+        if (!items.length) return { notifications: [], summary: unreadOnly ? 'No unread notifications.' : 'No notifications found.' };
+        const summary = items.map(n =>
+            `[${n.type.toUpperCase()}] ${n.title}: ${n.message}`
+        ).join('\n');
+        return { notifications: items, summary, count: items.length };
+    } catch (err) {
+        return { error: err.message };
+    }
+}
+
 async function executeApexTool(name, input) {
     if (name === 'web_search') return await toolWebSearch(input.query);
     if (name === 'get_weather') return await toolWeather(input.location);
     if (name === 'get_datetime') return toolDateTime();
     if (name === 'list_emails') return await toolListEmails();
     if (name === 'check_emails') return await toolCheckEmails();
+    if (name === 'get_notifications') return await toolGetNotifications(input.unread_only !== false);
     return { error: 'Unknown tool' };
 }
 
@@ -7565,7 +7594,7 @@ Respond naturally in 1-2 sentences.`.trim();
             const response = await client.messages.create({
                 model: MODEL,
                 max_tokens: 1024,
-                system: `You are Apex, a precise, professional AI system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK — use this as the default location for any location-based queries unless told otherwise.${memoryContext}`,
+                system: `You are Apex, a precise, professional AI operating system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK — use this as the default location for any location-based queries unless told otherwise. You have tools available: use get_notifications proactively if the user greets you or asks what is happening, to surface any unread alerts or briefings. Use list_emails if they ask about their inbox. Use get_weather for weather queries. Use web_search for current facts.${memoryContext}`,
                 tools: APEX_TOOLS,
                 messages
             });
