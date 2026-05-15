@@ -1338,6 +1338,7 @@ const REFRESH_INTERVAL_MS = 18000;
 
 // ══ STATE ═════════════════════════════════════════════════════════════
 let isListening         = false;
+let _manualStart        = false;
 const _isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 let autoListen          = _isTouchDevice;
 let lastSendWasVoice    = false;
@@ -2397,7 +2398,9 @@ function _rms(buf) {
 
 async function startVoicePipeline() {
     if (isIOSPWA) { if (false) { await _iosPWAStartPipeline(); } return; }
-    if (srec || !autoListen) return;
+    if (srec) return;
+    if (!autoListen && !_manualStart) return;
+    _manualStart = false;
 
     // ── 1. Web Speech API (desktop — SR manages its own mic internally) ──
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2611,6 +2614,7 @@ function unmuteDeepgram() {
 }
 
 function startListening() {
+    _manualStart = true;
     startVoicePipeline();
 }
 
