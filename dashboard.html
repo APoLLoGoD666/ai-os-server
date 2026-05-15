@@ -1389,6 +1389,7 @@ let _iosPWAActiveRecorder  = null;  // current iOSRecorder ref for stop function
 let _iosPWALastStopTs      = 0;     // timestamp of last recorder.stop() call (Bug 5)
 let _iosPWAWatchdogInterval = null; // watchdog setInterval for missed onstop (Bug 5)
 let _iosPWASpeaking         = false; // true while iOS speech is active — suppresses recorder restart in onstop
+let _iosPWASavedMode        = null;  // dgMode saved on page-hide so pipeline restart can restore it
 
 // ══ UTILITIES ═════════════════════════════════════════════════════════
 function buildApiUrl(path) {
@@ -1758,7 +1759,7 @@ async function _processSpeak() {
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
         if (!isSpeakingNow) return;
-        console.warn('[Speak] 30s safety timeout — forcing isSpeakingNow reset');
+        console.warn('[Speak] safety timeout — forcing isSpeakingNow reset');
         speakQueue.length = 0;
         isSpeakingNow = false;
         _speakSafetyTimer = null;
@@ -1768,7 +1769,7 @@ async function _processSpeak() {
         console.log('[Speak] safety timer → unmuteDeepgram, 3s silence countdown begins');
         unmuteDeepgram();
         setOrbState(autoListen && isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
-    }, (isIOSPWA ? Math.min(8000, Math.max(2500, (speakQueue[0] && speakQueue[0].text || '').trim().split(/\s+/).length * 500 + 2000)) : 30000));
+    }, isIOSPWA ? Math.min(8000, Math.max(2500, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(' ').length : 3) * 500) + 2000)) : 30000);
 
     while (speakQueue.length) {
         const { text, useFiller } = speakQueue.shift();
@@ -1966,6 +1967,7 @@ async function _iosPWAStartPipeline() {
             }
         }
 
+        if (_iosPWASpeaking) { console.log('[APEX iOS] onstop — speaking active, skipping recorder restart'); return; }
         // Always restart — even on empty or error — to keep the cycle alive
         try {
             if (iOSRecorder.state === "inactive") {
@@ -2000,6 +2002,7 @@ async function _iosPWAStartPipeline() {
     }, 4000);
 
     _iosPWAWatchdogInterval = setInterval(() => {
+        if (_iosPWASpeaking) return;
         if (_iosPWALastStopTs !== 0 && Date.now() - _iosPWALastStopTs > 5500 && _iosPWAActiveRecorder && _iosPWARunning && _iosPWAActiveRecorder.state !== "recording") {
             console.log("[APEX iOS] watchdog: onstop did not fire — restarting recorder");
             iOSChunks = [];
@@ -2010,7 +2013,8 @@ async function _iosPWAStartPipeline() {
 
     _iosPWARunning = true;
     isListening    = true;
-    dgMode         = (dgMode === "conversation") ? "conversation" : "wake";
+    dgMode         = (_iosPWASavedMode === 'conversation' || dgMode === 'conversation') ? 'conversation' : 'wake';
+    _iosPWASavedMode = null;
     lastSpeechMs   = Date.now();
     if (dgMode === "conversation") lastSpeechMs = Date.now() + 4000;
     setOrbState("waiting");
@@ -2312,6 +2316,7 @@ function stopVoicePipeline() {
 
 // ── Background / foreground mic lifecycle ─────────────────────────────
 function _pauseVoiceForBackground() {
+    _iosPWASavedMode = dgMode;
     console.log("[Voice] page hidden — releasing mic");
     if (currentAudio) { try { currentAudio.pause(); } catch (_) {} }
     if (isIOSPWA) {
@@ -2354,6 +2359,7 @@ function muteDeepgram() {
     if (isIOSPWA && _iosPWAActiveRecorder && _iosPWAActiveRecorder.state === 'recording') {
         _iosPWASpeaking = true;
         if (_iosPWACycleInterval) { clearInterval(_iosPWACycleInterval); _iosPWACycleInterval = null; }
+        if (_iosPWAWatchdogInterval) { clearInterval(_iosPWAWatchdogInterval); _iosPWAWatchdogInterval = null; }
         if (_iosPWAActiveRecorder) {
             try { _iosPWAActiveRecorder.onstop = null; _iosPWAActiveRecorder.stop(); } catch(_) {}
             _iosPWAActiveRecorder = null;
@@ -2559,6 +2565,7 @@ async function sendVoiceChatCommand(msg) {
             lat.className = "apex-latency";
             lat.textContent = `${ms}ms`;
             log.appendChild(lat);
+            log.scrollTop = log.scrollHeight;
         }
         setOrbState("speaking");
         console.log("[Voice] passing to ElevenLabs / speak queue");
