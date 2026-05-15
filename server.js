@@ -7507,6 +7507,8 @@ async function toolGetNotifications(unreadOnly = true) {
         const summary = items.map(n =>
             `[${n.type.toUpperCase()}] ${n.title}: ${n.message}`
         ).join('\n');
+        // Mark all surfaced notifications as read asynchronously
+        items.forEach(n => pgMarkNotificationRead(n.id).catch(() => {}));
         return { notifications: items, summary, count: items.length };
     } catch (err) {
         return { error: err.message };
