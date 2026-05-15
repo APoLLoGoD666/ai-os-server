@@ -1392,6 +1392,170 @@ let _iosPWAWatchdogInterval = null; // watchdog setInterval for missed onstop (B
 let _iosPWASpeaking         = false; // true while iOS speech is active — suppresses recorder restart in onstop
 let _iosPWASavedMode        = null;  // dgMode saved on page-hide so pipeline restart can restore it
 
+// ── HOLD-TO-TALK PIPELINE (iOS) ──────────────────────────────────────────
+let _httStream    = null;
+let _httRecorder  = null;
+let _httChunks    = [];
+let _httActive    = false;
+
+async function _httBegin() {
+    // Interrupt any current speech immediately
+    try { speechSynthesis.cancel(); } catch(_) {}
+    isSpeakingNow = false;
+    speakQueue.length = 0;
+    if (_speakSafetyTimer) { clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null; }
+
+    if (_httActive) return;
+    _httActive = true;
+    _httChunks = [];
+
+    setOrbState('listening');
+    console.log('[HTT] press — starting recording');
+
+    try {
+        if (navigator.audioSession) navigator.audioSession.type = 'play-and-record';
+        _httStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+
+        const mime = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm';
+        _httRecorder = new MediaRecorder(_httStream, { mimeType: mime });
+
+        _httRecorder.ondataavailable = ev => {
+            if (ev.data && ev.data.size > 0) _httChunks.push(ev.data);
+        };
+
+        _httRecorder.onstop = async () => {
+            // Step 1: stop ALL tracks immediately — releases AVAudioSession
+            if (_httStream) {
+                _httStream.getTracks().forEach(t => t.stop());
+                _httStream = null;
+            }
+
+            if (!_httChunks.length) {
+                setOrbState('waiting');
+                console.log('[HTT] nothing recorded');
+                return;
+            }
+
+            setOrbState('thinking');
+
+            try {
+                const blob = new Blob(_httChunks, { type: _httRecorder.mimeType });
+                _httChunks = [];
+
+                // Transcribe via Deepgram
+                const fd = new FormData();
+                fd.append('audio', blob, 'recording.mp4');
+                fd.append('mimeType', _httRecorder.mimeType);
+
+                const tRes  = await fetch(buildApiUrl('/api/transcribe'), { method: 'POST', body: fd });
+                const tData = await tRes.json();
+                const transcript = (tData.transcript || '').trim();
+
+                console.log('[HTT] transcript:', transcript);
+
+                if (!transcript) {
+                    setOrbState('waiting');
+                    return;
+                }
+
+                renderChatMessage('user', transcript);
+
+                // Get AI reply
+                const aRes  = await fetch(buildApiUrl('/api/voice-chat'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: transcript })
+                });
+                const aData = await aRes.json();
+                const reply = (aData.reply || '').trim();
+
+                if (!reply) { setOrbState('waiting'); return; }
+
+                renderChatMessage('ai', reply);
+
+                // Step 2: wait 600ms for iOS to fully release AVAudioSession before speaking
+                await new Promise(r => setTimeout(r, 600));
+
+                _httSpeak(reply);
+
+            } catch (err) {
+                console.error('[HTT] pipeline error:', err);
+                setOrbState('waiting');
+            }
+        };
+
+        _httRecorder.start();
+        console.log('[HTT] MediaRecorder started, mime:', mime);
+
+    } catch (err) {
+        console.error('[HTT] getUserMedia error:', err);
+        _httActive = false;
+        setOrbState('waiting');
+    }
+}
+
+function _httEnd() {
+    if (!_httActive) return;
+    _httActive = false;
+    console.log('[HTT] release — stopping recording');
+
+    if (_httRecorder && _httRecorder.state === 'recording') {
+        try { _httRecorder.stop(); } catch(_) {}
+    } else if (_httStream) {
+        _httStream.getTracks().forEach(t => t.stop());
+        _httStream = null;
+        setOrbState('waiting');
+    }
+}
+
+function _httSpeak(text) {
+    if (!text) return;
+    isSpeakingNow = true;
+    setOrbState('speaking');
+
+    try { speechSynthesis.cancel(); } catch(_) {}
+
+    setTimeout(() => {
+        const utter = new SpeechSynthesisUtterance(text);
+        const voices = speechSynthesis.getVoices();
+        const voice  = voices.find(v => v.name === 'Daniel') ||
+                       voices.find(v => v.lang && v.lang.startsWith('en-GB')) ||
+                       voices.find(v => v.lang && v.lang.startsWith('en')) ||
+                       voices[0];
+        if (voice) utter.voice = voice;
+        utter.lang  = 'en-GB';
+        utter.rate  = 1.0;
+        utter.pitch = 1.0;
+
+        const words   = text.trim().split(/\s+/).length;
+        const safetyMs = Math.min(10000, Math.max(2500, words * 500 + 2000));
+
+        const timer = setTimeout(() => {
+            isSpeakingNow = false;
+            setOrbState('waiting');
+            console.log('[HTT] speech safety timeout fired');
+        }, safetyMs);
+
+        utter.onend = () => {
+            clearTimeout(timer);
+            isSpeakingNow = false;
+            setOrbState('waiting');
+            console.log('[HTT] speech finished naturally');
+        };
+        utter.onerror = () => {
+            clearTimeout(timer);
+            isSpeakingNow = false;
+            setOrbState('waiting');
+        };
+
+        speechSynthesis.speak(utter);
+        console.log('[HTT] speaking:', text.substring(0, 60));
+    }, 100);
+}
+// ── END HOLD-TO-TALK ──────────────────────────────────────────────────────
+
 // ══ UTILITIES ═════════════════════════════════════════════════════════
 function buildApiUrl(path) {
     if (!APP_KEY) return `${API_BASE}${path}`;
@@ -1631,7 +1795,7 @@ document.addEventListener('touchstart', async () => {
     }
     // ── iOS PWA: start voice pipeline on first gesture (getUserMedia requires gesture) ──
     if (isIOSPWA && !_iosPWARunning && autoListen) {
-        await _iosPWAStartPipeline();
+        if (false) { await _iosPWAStartPipeline(); }
     }
 }, { once: true });
 
@@ -3351,6 +3515,39 @@ if ('serviceWorker' in navigator) {
   });
 }
 initSupabaseRealtime();
+
+// iOS hold-to-talk button wiring
+(function() {
+    const ua = navigator.userAgent;
+    if (!/iPad|iPhone|iPod/.test(ua)) return;
+
+    const btn = document.getElementById('httBtn');
+    if (!btn) return;
+    btn.style.display = 'block';
+
+    btn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        btn.style.background = 'linear-gradient(135deg, #ff3333, #cc0000)';
+        btn.textContent = '● LISTENING';
+        _httBegin();
+    }, { passive: false });
+
+    btn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        btn.style.background = 'linear-gradient(135deg, #00d4ff, #0055ff)';
+        btn.textContent = 'HOLD TO TALK';
+        _httEnd();
+    }, { passive: false });
+
+    btn.addEventListener('touchcancel', function(e) {
+        e.preventDefault();
+        btn.style.background = 'linear-gradient(135deg, #00d4ff, #0055ff)';
+        btn.textContent = 'HOLD TO TALK';
+        _httEnd();
+    }, { passive: false });
+
+    console.log('[HTT] hold-to-talk button ready');
+})();
 </script>
 <div class="email-draft-modal" id="emailDraftModal" onclick="if(event.target===this)closeEmailDraftModal()">
     <div class="email-draft-box">
@@ -3378,5 +3575,27 @@ initSupabaseRealtime();
         </div>
     </div>
 </div>
+<button id="httBtn" style="
+    display: none;
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 72px;
+    border-radius: 36px;
+    border: none;
+    background: linear-gradient(135deg, #00d4ff, #0055ff);
+    color: white;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    box-shadow: 0 6px 32px rgba(0, 212, 255, 0.45);
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+    z-index: 99999;
+">HOLD TO TALK</button>
 </body>
 </html>
