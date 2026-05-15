@@ -1407,6 +1407,7 @@ let _httStream    = null;
 let _httRecorder  = null;
 let _httChunks    = [];
 let _httActive    = false;
+let _httUtter     = null;
 
 async function _httBegin() {
     // Interrupt any current speech immediately
@@ -1485,9 +1486,15 @@ async function _httBegin() {
 
                 renderChatMessage('ai', reply);
 
-                // Step 2: wait 600ms for iOS to fully release AVAudioSession before speaking
-                await new Promise(r => setTimeout(r, 600));
-
+                // Reset audio session from play-and-record to playback.
+                // iOS keeps the session in play-and-record after getUserMedia
+                // even after all tracks are stopped. speechSynthesis cannot
+                // acquire the loudspeaker while the session is play-and-record.
+                if (navigator.audioSession) {
+                    try { navigator.audioSession.type = 'playback'; } catch(_) {}
+                }
+                // Wait 1000ms for iOS to fully release the audio session.
+                await new Promise(r => setTimeout(r, 1000));
                 _httSpeak(reply);
 
             } catch (err) {
@@ -1525,55 +1532,57 @@ function _httSpeak(text) {
     isSpeakingNow = true;
     setOrbState('speaking');
 
-    // Cancel any priming utterance, wait one frame, then speak.
-    // The 200ms gap gives iOS time to release the audio session
-    // cleanly after the microphone tracks were stopped.
-    try { speechSynthesis.cancel(); } catch(_) {}
+    // Build utterance and store at MODULE LEVEL to prevent iOS
+    // garbage collecting it before onstart fires.
+    // Confirmed bug: local SpeechSynthesisUtterance variables
+    // are GC'd by iOS Safari before playback completes.
+    const voices = speechSynthesis.getVoices();
+    const voice  = voices.find(v => v.name === 'Daniel') ||
+                   voices.find(v => v.lang && v.lang.startsWith('en-GB')) ||
+                   voices.find(v => v.lang && v.lang.startsWith('en')) ||
+                   voices[0];
 
-    setTimeout(() => {
-        try { speechSynthesis.cancel(); } catch(_) {}
-        setTimeout(() => {
-            const utter = new SpeechSynthesisUtterance(text);
-            const voices = speechSynthesis.getVoices();
-            const voice = voices.find(v => v.name === 'Daniel') ||
-                          voices.find(v => v.lang && v.lang.startsWith('en-GB')) ||
-                          voices.find(v => v.lang && v.lang.startsWith('en')) ||
-                          voices[0];
-            if (voice) utter.voice = voice;
-            utter.lang  = 'en-GB';
-            utter.rate  = 1.0;
-            utter.pitch = 1.0;
-            utter.volume = 1.0;
+    _httUtter = new SpeechSynthesisUtterance(text);
+    if (voice) _httUtter.voice = voice;
+    _httUtter.lang   = 'en-GB';
+    _httUtter.rate   = 1.0;
+    _httUtter.pitch  = 1.0;
+    _httUtter.volume = 1.0;
 
-            const words = text.trim().split(/\s+/).length;
-            const safetyMs = Math.min(12000, Math.max(3000, words * 600 + 2500));
+    const words    = text.trim().split(/\s+/).length;
+    const safetyMs = Math.min(15000, Math.max(4000, words * 700 + 3000));
 
-            const safetyTimer = setTimeout(() => {
-                isSpeakingNow = false;
-                setOrbState('waiting');
-                console.log('[HTT] speech safety timeout');
-            }, safetyMs);
+    const safetyTimer = setTimeout(() => {
+        isSpeakingNow = false;
+        _httUtter     = null;
+        setOrbState('waiting');
+        console.log('[HTT] safety timeout — onstart never fired');
+    }, safetyMs);
 
-            utter.onstart = () => {
-                console.log('[HTT] speech started audibly');
-            };
-            utter.onend = () => {
-                clearTimeout(safetyTimer);
-                isSpeakingNow = false;
-                setOrbState('waiting');
-                console.log('[HTT] speech ended naturally');
-            };
-            utter.onerror = (ev) => {
-                clearTimeout(safetyTimer);
-                isSpeakingNow = false;
-                setOrbState('waiting');
-                console.error('[HTT] speech error:', ev.error);
-            };
+    _httUtter.onstart = () => {
+        clearTimeout(safetyTimer);
+        console.log('[HTT] speech started audibly');
+    };
+    _httUtter.onend = () => {
+        clearTimeout(safetyTimer);
+        isSpeakingNow = false;
+        _httUtter     = null;
+        setOrbState('waiting');
+        console.log('[HTT] speech ended naturally');
+    };
+    _httUtter.onerror = (ev) => {
+        clearTimeout(safetyTimer);
+        isSpeakingNow = false;
+        _httUtter     = null;
+        setOrbState('waiting');
+        console.error('[HTT] speech error:', ev.error);
+    };
 
-            speechSynthesis.speak(utter);
-            console.log('[HTT] speechSynthesis.speak called for:', text.substring(0, 50));
-        }, 150);
-    }, 100);
+    // Do NOT call speechSynthesis.cancel() immediately before speak()
+    // on iOS — this causes the speak to be silently dropped on some
+    // iOS versions. Queue the utterance directly.
+    speechSynthesis.speak(_httUtter);
+    console.log('[HTT] speak queued for:', text.substring(0, 60));
 }
 // ── END HOLD-TO-TALK ──────────────────────────────────────────────────────
 
@@ -3571,18 +3580,6 @@ initSupabaseRealtime();
 
     orb.addEventListener('touchstart', function(e) {
         e.preventDefault();
-        // Prime speechSynthesis synchronously on user gesture.
-        // iOS expires the gesture context after any await/fetch.
-        // Speaking a near-silent utterance NOW unlocks the API
-        // for all subsequent speak() calls in this session,
-        // including after async Deepgram + AI network calls.
-        try {
-            speechSynthesis.cancel();
-            const prime = new SpeechSynthesisUtterance('​');
-            prime.volume = 0.01;
-            prime.rate = 2;
-            speechSynthesis.speak(prime);
-        } catch(_) {}
         _httBegin();
     }, { passive: false });
 
