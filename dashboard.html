@@ -1362,9 +1362,8 @@ const inFlightRefreshes = {};
 const renderSigs        = {};
 const SLOW_REFRESH_MS   = 60000;
 
-// Detect iOS standalone PWA — gates all iOS-specific code paths; desktop is untouched
-const isIOSPWA = (/iPad|iPhone|iPod/.test(navigator.userAgent)) &&
-                 (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches);
+// Detect iOS — activates on all iOS devices; desktop is untouched
+const isIOSPWA = /iPad|iPhone|iPod/.test(navigator.userAgent);
 console.log(`[iOS] isIOSPWA:${isIOSPWA} | standalone:${window.navigator.standalone} | displayMode:${window.matchMedia('(display-mode: standalone)').matches} | UA:${navigator.userAgent}`);
 
 if (new URLSearchParams(window.location.search).get('debug') === '1') {
@@ -1691,8 +1690,8 @@ async function speakWithElevenLabs(text) {
 }
 
 function _speakFallback(phrase, { onEnd } = {}) {
-    if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
     window.speechSynthesis.cancel();
+    if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
     const utt = new SpeechSynthesisUtterance(phrase);
     utt.rate = 1.08; utt.pitch = 0.95; utt.volume = 1;
     const voice = _selectedVoice || _pickVoice();
@@ -1707,7 +1706,8 @@ function _speakFallback(phrase, { onEnd } = {}) {
         console.warn('[Speak] speechSynthesis error:', ev.error);
         if (onEnd) onEnd();
     };
-    window.speechSynthesis.speak(utt);
+    if (isIOSPWA) console.log(`[iOS] speechSynthesis speaking: "${phrase.slice(0, 60)}"`);
+    setTimeout(() => window.speechSynthesis.speak(utt), 100);
 }
 
 function showTypingIndicator() {
