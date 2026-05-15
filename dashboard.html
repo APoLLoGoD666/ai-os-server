@@ -1689,7 +1689,8 @@ function setOrbState(state) {
     micBtn.classList.remove("listening");
     if (orbEl) orbEl.classList.remove("orb-recording");
 
-    const labels = { ready: "Ready", waiting: "Standby", listening: "Hold To Talk", processing: "Processing…", thinking: "Thinking…", speaking: "Speaking…" };
+    const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    const labels = { ready: "Ready", waiting: "Standby", listening: isTouchDevice ? "Hold To Talk" : "Listening…", processing: "Processing…", thinking: "Thinking…", speaking: "Speaking…" };
     statusEl.textContent = labels[state] || "Ready";
 
     if (state === "listening") {
