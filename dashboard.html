@@ -1768,7 +1768,7 @@ async function _processSpeak() {
         console.log('[Speak] safety timer → unmuteDeepgram, 3s silence countdown begins');
         unmuteDeepgram();
         setOrbState(autoListen && isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
-    }, 30000);
+    }, (isIOSPWA ? Math.min(8000, Math.max(2500, (speakQueue[0] && speakQueue[0].text || '').trim().split(/\s+/).length * 500 + 2000)) : 30000));
 
     while (speakQueue.length) {
         const { text, useFiller } = speakQueue.shift();
@@ -2124,7 +2124,14 @@ async function _iosPWATranscribeAndProcess(blob, mimeType) {
 }
 
 function _iosPWAHandleTranscript(transcript) {
-    if (dgMuted || isSpeakingNow) return;
+    if (!transcript) return;
+    if (isSpeakingNow) {
+        console.log('[APEX iOS] transcript received while speaking — interrupting speech:', transcript);
+        window.speechSynthesis.cancel();
+        isSpeakingNow = false;
+        dgMuted = false;
+    }
+    if (dgMuted) return;
     lastSpeechMs = Date.now();
     if (dgMode === "wake") {
         console.log(`[iOS] wake check: "${transcript}" — matched: ${/\bapex\b/i.test(transcript)}`);
@@ -2349,6 +2356,11 @@ function muteDeepgram() {
         try { _iosPWAActiveRecorder.stop(); } catch(_) {}
         console.log('[APEX iOS] muteDeepgram — recorder stopped, releasing audio session for speech');
     }
+    if (isIOSPWA && _iosPWAStream) {
+        _iosPWAStream.getTracks().forEach(t => t.stop());
+        _iosPWAStream = null;
+        console.log('[APEX iOS] muteDeepgram — mic tracks stopped, loudspeaker now active');
+    }
 }
 
 function unmuteDeepgram() {
@@ -2360,34 +2372,9 @@ function unmuteDeepgram() {
     // iOS: VAD timer handles silence tracking — nothing extra needed here
     if (isIOSPWA) {
         _iosPWASpeaking = false;
-        console.log('[APEX iOS] unmuteDeepgram — restarting recorder after speech');
-        if (_iosPWAActiveRecorder && _iosPWAActiveRecorder.state === 'inactive') {
-            try {
-                _iosPWAActiveRecorder.start();
-                _iosPWACycleInterval = setInterval(() => {
-                    if (_iosPWAActiveRecorder && _iosPWAActiveRecorder.state === 'recording') {
-                        _iosPWAActiveRecorder.stop();
-                        _iosPWALastStopTs = Date.now();
-                    }
-                }, 4000);
-                console.log('[APEX iOS] recorder restarted with fresh cycle');
-            } catch(e) {
-                console.log('[APEX iOS] recorder restart failed:', e.message);
-                _iosPWARunning = false;
-                setTimeout(() => _iosPWAStartPipeline(), 800);
-            }
-        } else if (!_iosPWAActiveRecorder) {
-            console.log('[APEX iOS] no active recorder — restarting full pipeline');
-            _iosPWARunning = false;
-            setTimeout(() => _iosPWAStartPipeline(), 800);
-        }
-        const track = _iosPWAStream && _iosPWAStream.getAudioTracks()[0];
-        if (track && track.muted) {
-            console.log('[APEX iOS] mic track muted — restarting full pipeline');
-            _iosPWARunning = false;
-            _iosPWAStopPipeline();
-            setTimeout(() => _iosPWAStartPipeline(), 800);
-        }
+        _iosPWARunning = false;
+        console.log('[APEX iOS] unmuteDeepgram — restarting full pipeline with fresh getUserMedia');
+        setTimeout(() => _iosPWAStartPipeline(), 600);
     }
 }
 
