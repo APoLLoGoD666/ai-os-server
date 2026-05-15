@@ -7442,13 +7442,55 @@ const APEX_TOOLS = [
             properties: {},
             required: []
         }
+    },
+    {
+        name: 'list_emails',
+        description: 'List the current email queue — subjects, senders, summaries, and priorities. Use when asked about emails, inbox, messages, or what emails are waiting.',
+        input_schema: {
+            type: 'object',
+            properties: {},
+            required: []
+        }
+    },
+    {
+        name: 'check_emails',
+        description: 'Fetch new emails from Gmail right now and process them. Use when asked to check email, refresh inbox, or get latest messages.',
+        input_schema: {
+            type: 'object',
+            properties: {},
+            required: []
+        }
     }
 ];
+
+async function toolListEmails() {
+    try {
+        const emails = await pgListEmailQueue(10);
+        if (!emails || emails.length === 0) return { emails: [], summary: 'No emails in queue.' };
+        const summary = emails.map(e =>
+            `[${e.priority?.toUpperCase() || 'NORMAL'}] From: ${e.sender} | Subject: ${e.subject} | ${e.summary || ''}`
+        ).join('\n');
+        return { emails: emails.slice(0, 10), summary };
+    } catch (err) {
+        return { error: err.message };
+    }
+}
+
+async function toolCheckEmails() {
+    try {
+        const count = await checkEmails(client);
+        return { checked: true, new_emails: count, message: `Checked inbox. Found ${count} new message${count !== 1 ? 's' : ''}.` };
+    } catch (err) {
+        return { error: err.message };
+    }
+}
 
 async function executeApexTool(name, input) {
     if (name === 'web_search') return await toolWebSearch(input.query);
     if (name === 'get_weather') return await toolWeather(input.location);
     if (name === 'get_datetime') return toolDateTime();
+    if (name === 'list_emails') return await toolListEmails();
+    if (name === 'check_emails') return await toolCheckEmails();
     return { error: 'Unknown tool' };
 }
 
