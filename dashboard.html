@@ -1525,43 +1525,54 @@ function _httSpeak(text) {
     isSpeakingNow = true;
     setOrbState('speaking');
 
+    // Cancel any priming utterance, wait one frame, then speak.
+    // The 200ms gap gives iOS time to release the audio session
+    // cleanly after the microphone tracks were stopped.
     try { speechSynthesis.cancel(); } catch(_) {}
 
     setTimeout(() => {
-        const utter = new SpeechSynthesisUtterance(text);
-        const voices = speechSynthesis.getVoices();
-        const voice  = voices.find(v => v.name === 'Daniel') ||
-                       voices.find(v => v.lang && v.lang.startsWith('en-GB')) ||
-                       voices.find(v => v.lang && v.lang.startsWith('en')) ||
-                       voices[0];
-        if (voice) utter.voice = voice;
-        utter.lang  = 'en-GB';
-        utter.rate  = 1.0;
-        utter.pitch = 1.0;
+        try { speechSynthesis.cancel(); } catch(_) {}
+        setTimeout(() => {
+            const utter = new SpeechSynthesisUtterance(text);
+            const voices = speechSynthesis.getVoices();
+            const voice = voices.find(v => v.name === 'Daniel') ||
+                          voices.find(v => v.lang && v.lang.startsWith('en-GB')) ||
+                          voices.find(v => v.lang && v.lang.startsWith('en')) ||
+                          voices[0];
+            if (voice) utter.voice = voice;
+            utter.lang  = 'en-GB';
+            utter.rate  = 1.0;
+            utter.pitch = 1.0;
+            utter.volume = 1.0;
 
-        const words   = text.trim().split(/\s+/).length;
-        const safetyMs = Math.min(10000, Math.max(2500, words * 500 + 2000));
+            const words = text.trim().split(/\s+/).length;
+            const safetyMs = Math.min(12000, Math.max(3000, words * 600 + 2500));
 
-        const timer = setTimeout(() => {
-            isSpeakingNow = false;
-            setOrbState('waiting');
-            console.log('[HTT] speech safety timeout fired');
-        }, safetyMs);
+            const safetyTimer = setTimeout(() => {
+                isSpeakingNow = false;
+                setOrbState('waiting');
+                console.log('[HTT] speech safety timeout');
+            }, safetyMs);
 
-        utter.onend = () => {
-            clearTimeout(timer);
-            isSpeakingNow = false;
-            setOrbState('waiting');
-            console.log('[HTT] speech finished naturally');
-        };
-        utter.onerror = () => {
-            clearTimeout(timer);
-            isSpeakingNow = false;
-            setOrbState('waiting');
-        };
+            utter.onstart = () => {
+                console.log('[HTT] speech started audibly');
+            };
+            utter.onend = () => {
+                clearTimeout(safetyTimer);
+                isSpeakingNow = false;
+                setOrbState('waiting');
+                console.log('[HTT] speech ended naturally');
+            };
+            utter.onerror = (ev) => {
+                clearTimeout(safetyTimer);
+                isSpeakingNow = false;
+                setOrbState('waiting');
+                console.error('[HTT] speech error:', ev.error);
+            };
 
-        speechSynthesis.speak(utter);
-        console.log('[HTT] speaking:', text.substring(0, 60));
+            speechSynthesis.speak(utter);
+            console.log('[HTT] speechSynthesis.speak called for:', text.substring(0, 50));
+        }, 150);
     }, 100);
 }
 // ── END HOLD-TO-TALK ──────────────────────────────────────────────────────
@@ -3560,6 +3571,18 @@ initSupabaseRealtime();
 
     orb.addEventListener('touchstart', function(e) {
         e.preventDefault();
+        // Prime speechSynthesis synchronously on user gesture.
+        // iOS expires the gesture context after any await/fetch.
+        // Speaking a near-silent utterance NOW unlocks the API
+        // for all subsequent speak() calls in this session,
+        // including after async Deepgram + AI network calls.
+        try {
+            speechSynthesis.cancel();
+            const prime = new SpeechSynthesisUtterance('​');
+            prime.volume = 0.01;
+            prime.rate = 2;
+            speechSynthesis.speak(prime);
+        } catch(_) {}
         _httBegin();
     }, { passive: false });
 
