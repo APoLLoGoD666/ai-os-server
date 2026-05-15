@@ -7377,6 +7377,39 @@ app.post("/api/transcribe", requireAppAccess, multerUpload.single("audio"), asyn
     }
 });
 
+app.post('/api/tts', async (req, res) => {
+    try {
+        const text = (req.body?.text || '').trim();
+        if (!text) return res.status(400).json({ error: 'No text provided' });
+        const dgRes = await fetch(
+            'https://api.deepgram.com/v1/speak?model=aura-asteria-en',
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
+                    'Content-Type': 'text/plain'
+                },
+                body: text
+            }
+        );
+        if (!dgRes.ok) {
+            const errText = await dgRes.text();
+            console.error('[TTS] Deepgram error:', dgRes.status, errText);
+            return res.status(502).json({ error: 'TTS failed', detail: errText });
+        }
+        const arrayBuffer = await dgRes.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        res.set('Content-Type', 'audio/mpeg');
+        res.set('Content-Length', buffer.length);
+        res.set('Cache-Control', 'no-store');
+        res.send(buffer);
+        console.log('[TTS] sent', buffer.length, 'bytes for:', text.substring(0, 50));
+    } catch (err) {
+        console.error('[TTS] error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post("/api/mastra/run", requireAppAccess, async (req, res) => {
     try {
         const { agent: agentName, message, workflow: workflowName, input } = req.body || {};

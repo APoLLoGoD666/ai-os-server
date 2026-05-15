@@ -1403,11 +1403,13 @@ let _iosPWASpeaking         = false; // true while iOS speech is active — supp
 let _iosPWASavedMode        = null;  // dgMode saved on page-hide so pipeline restart can restore it
 
 // ── HOLD-TO-TALK PIPELINE (iOS) ──────────────────────────────────────────
-let _httStream    = null;
-let _httRecorder  = null;
-let _httChunks    = [];
-let _httActive    = false;
-let _httUtter     = null;
+let _httStream      = null;
+let _httRecorder    = null;
+let _httChunks      = [];
+let _httActive      = false;
+let _httUtter       = null;
+let _httAudio       = null;
+let _httSafetyTimer = null;
 
 async function _httBegin() {
     // Interrupt any current speech immediately
@@ -1531,58 +1533,58 @@ function _httSpeak(text) {
     if (!text) return;
     isSpeakingNow = true;
     setOrbState('speaking');
-
-    // Build utterance and store at MODULE LEVEL to prevent iOS
-    // garbage collecting it before onstart fires.
-    // Confirmed bug: local SpeechSynthesisUtterance variables
-    // are GC'd by iOS Safari before playback completes.
-    const voices = speechSynthesis.getVoices();
-    const voice  = voices.find(v => v.name === 'Daniel') ||
-                   voices.find(v => v.lang && v.lang.startsWith('en-GB')) ||
-                   voices.find(v => v.lang && v.lang.startsWith('en')) ||
-                   voices[0];
-
-    _httUtter = new SpeechSynthesisUtterance(text);
-    if (voice) _httUtter.voice = voice;
-    _httUtter.lang   = 'en-GB';
-    _httUtter.rate   = 1.0;
-    _httUtter.pitch  = 1.0;
-    _httUtter.volume = 1.0;
-
-    const words    = text.trim().split(/\s+/).length;
-    const safetyMs = Math.min(15000, Math.max(4000, words * 700 + 3000));
-
-    const safetyTimer = setTimeout(() => {
-        isSpeakingNow = false;
-        _httUtter     = null;
-        setOrbState('waiting');
-        console.log('[HTT] safety timeout — onstart never fired');
-    }, safetyMs);
-
-    _httUtter.onstart = () => {
-        clearTimeout(safetyTimer);
-        console.log('[HTT] speech started audibly');
-    };
-    _httUtter.onend = () => {
-        clearTimeout(safetyTimer);
-        isSpeakingNow = false;
-        _httUtter     = null;
-        setOrbState('waiting');
-        console.log('[HTT] speech ended naturally');
-    };
-    _httUtter.onerror = (ev) => {
-        clearTimeout(safetyTimer);
-        isSpeakingNow = false;
-        _httUtter     = null;
-        setOrbState('waiting');
-        console.error('[HTT] speech error:', ev.error);
-    };
-
-    // Do NOT call speechSynthesis.cancel() immediately before speak()
-    // on iOS — this causes the speak to be silently dropped on some
-    // iOS versions. Queue the utterance directly.
-    speechSynthesis.speak(_httUtter);
-    console.log('[HTT] speak queued for:', text.substring(0, 60));
+    console.log('[HTT] fetching TTS audio for:', text.substring(0, 60));
+    if (_httAudio) { try { _httAudio.pause(); } catch(_) {} _httAudio = null; }
+    if (_httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
+    const wordCount = text.trim().split(/\s+/).length;
+    const safetyMs  = Math.min(20000, Math.max(5000, wordCount * 700 + 4000));
+    fetch(buildApiUrl('/api/tts'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('TTS request failed: ' + res.status);
+        return res.blob();
+    })
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+        _httAudio = new Audio(url);
+        _httSafetyTimer = setTimeout(() => {
+            console.warn('[HTT] audio safety timeout — cleaning up');
+            if (_httAudio) { try { _httAudio.pause(); } catch(_) {} _httAudio = null; }
+            URL.revokeObjectURL(url);
+            isSpeakingNow = false;
+            setOrbState('waiting');
+        }, safetyMs);
+        _httAudio.oncanplaythrough = () => { console.log('[HTT] audio can play — starting'); };
+        _httAudio.onplay = () => { console.log('[HTT] audio playing audibly'); };
+        _httAudio.onended = () => {
+            clearTimeout(_httSafetyTimer); _httSafetyTimer = null;
+            URL.revokeObjectURL(url); _httAudio = null;
+            isSpeakingNow = false; setOrbState('waiting');
+            console.log('[HTT] audio ended naturally');
+        };
+        _httAudio.onerror = (e) => {
+            clearTimeout(_httSafetyTimer); _httSafetyTimer = null;
+            URL.revokeObjectURL(url); _httAudio = null;
+            isSpeakingNow = false; setOrbState('waiting');
+            console.error('[HTT] audio element error:', e);
+        };
+        _httAudio.play().then(() => {
+            console.log('[HTT] play() promise resolved');
+        }).catch(err => {
+            console.error('[HTT] play() rejected:', err.message);
+            clearTimeout(_httSafetyTimer); _httSafetyTimer = null;
+            URL.revokeObjectURL(url); _httAudio = null;
+            isSpeakingNow = false; setOrbState('waiting');
+        });
+    })
+    .catch(err => {
+        console.error('[HTT] TTS fetch error:', err.message);
+        if (_httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
+        isSpeakingNow = false; setOrbState('waiting');
+    });
 }
 // ── END HOLD-TO-TALK ──────────────────────────────────────────────────────
 
