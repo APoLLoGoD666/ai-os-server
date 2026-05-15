@@ -7351,19 +7351,51 @@ async function toolWebSearch(query) {
 
 async function toolWeather(location) {
     try {
-        // Open-Meteo is completely free, no API key required
-        // First geocode the location
-        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
-        const geoData = await geoRes.json();
-        if (!geoData.results?.length) return { error: 'Location not found' };
-        const { latitude, longitude, name, country } = geoData.results[0];
-        // Then get weather
-        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m&temperature_unit=celsius&windspeed_unit=mph&timezone=auto`);
+        const locationKey = location.toLowerCase().trim().replace(/\s+/g, ' ');
+        const UK_LOCATIONS = {
+            'leamington': { latitude: 52.2920, longitude: -1.5367, name: 'Royal Leamington Spa', country: 'GB' },
+            'leamington spa': { latitude: 52.2920, longitude: -1.5367, name: 'Royal Leamington Spa', country: 'GB' },
+            'royal leamington spa': { latitude: 52.2920, longitude: -1.5367, name: 'Royal Leamington Spa', country: 'GB' },
+            'warwick': { latitude: 52.2853, longitude: -1.5849, name: 'Warwick', country: 'GB' },
+            'warwick uk': { latitude: 52.2853, longitude: -1.5849, name: 'Warwick', country: 'GB' },
+            'warwickshire': { latitude: 52.2853, longitude: -1.5849, name: 'Warwick', country: 'GB' },
+            'warwick warwickshire': { latitude: 52.2853, longitude: -1.5849, name: 'Warwick', country: 'GB' },
+            'coventry': { latitude: 52.4081, longitude: -1.5106, name: 'Coventry', country: 'GB' },
+            'birmingham': { latitude: 52.4862, longitude: -1.8904, name: 'Birmingham', country: 'GB' },
+            'stratford': { latitude: 52.1928, longitude: -1.7077, name: 'Stratford-upon-Avon', country: 'GB' },
+            'stratford upon avon': { latitude: 52.1928, longitude: -1.7077, name: 'Stratford-upon-Avon', country: 'GB' },
+        };
+        let latitude, longitude, name, country;
+        if (UK_LOCATIONS[locationKey]) {
+            ({ latitude, longitude, name, country } = UK_LOCATIONS[locationKey]);
+        } else {
+            // Open-Meteo geocoding fallback — no API key required
+            const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
+            const geoData = await geoRes.json();
+            if (!geoData.results?.length) return { error: 'Location not found' };
+            ({ latitude, longitude, name, country } = geoData.results[0]);
+        }
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max&temperature_unit=celsius&windspeed_unit=mph&timezone=auto`);
         const weatherData = await weatherRes.json();
         const c = weatherData.current;
+        const d = weatherData.daily;
         const codes = { 0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast', 45:'Foggy', 48:'Icy fog', 51:'Light drizzle', 61:'Light rain', 63:'Moderate rain', 65:'Heavy rain', 71:'Light snow', 80:'Rain showers', 95:'Thunderstorm' };
         const description = codes[c.weathercode] || `Weather code ${c.weathercode}`;
-        return { location: `${name}, ${country}`, temperature_c: c.temperature_2m, description, wind_mph: c.windspeed_10m, humidity_percent: c.relative_humidity_2m };
+        const forecast = d ? d.time.slice(0, 3).map((date, i) => ({
+            date,
+            max_c: d.temperature_2m_max[i],
+            min_c: d.temperature_2m_min[i],
+            description: codes[d.weathercode[i]] || `Code ${d.weathercode[i]}`,
+            rain_chance_pct: d.precipitation_probability_max[i]
+        })) : [];
+        return {
+            location: `${name}, ${country}`,
+            temperature_c: c.temperature_2m,
+            description,
+            wind_mph: c.windspeed_10m,
+            humidity_percent: c.relative_humidity_2m,
+            forecast_3day: forecast
+        };
     } catch (err) {
         return { error: err.message };
     }
