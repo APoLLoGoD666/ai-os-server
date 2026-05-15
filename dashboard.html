@@ -1384,6 +1384,10 @@ let _iosPWARecording    = false;  // true while MediaRecorder is capturing
 let _iosPWASilenceTimer = null;   // setTimeout — 1.5s end-of-speech countdown
 let _iosPWARunning      = false;  // true when iOS pipeline is active
 let _iosVadLogTs        = 0;      // last timestamp a periodic VAD dB log was emitted
+let _iosPWACycleInterval   = null;  // setInterval ref for 4s stop cycle (Bug 2)
+let _iosPWAActiveRecorder  = null;  // current iOSRecorder ref for stop functions (Bug 3)
+let _iosPWALastStopTs      = 0;     // timestamp of last recorder.stop() call (Bug 5)
+let _iosPWAWatchdogInterval = null; // watchdog setInterval for missed onstop (Bug 5)
 
 // ══ UTILITIES ═════════════════════════════════════════════════════════
 function buildApiUrl(path) {
@@ -1914,8 +1918,9 @@ async function _iosPWAStartPipeline() {
     console.log("[APEX iOS] Selected mimeType:", iOSMimeType);
 
     let iOSChunks = [];
-    let iOSCycleInterval = null;
+    _iosPWACycleInterval = null;
     const iOSRecorder = new MediaRecorder(_iosPWAStream, { mimeType: iOSMimeType });
+    _iosPWAActiveRecorder = iOSRecorder;
 
     iOSRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -1952,11 +1957,13 @@ async function _iosPWAStartPipeline() {
         try {
             if (iOSRecorder.state === "inactive") {
                 iOSRecorder.start();
+                _iosPWAActiveRecorder = iOSRecorder;
                 console.log("[APEX iOS] Recorder restarted");
             }
         } catch (startErr) {
             console.log("[APEX iOS] Restart error:", startErr.message);
-            if (iOSCycleInterval) clearInterval(iOSCycleInterval);
+            if (_iosPWACycleInterval) clearInterval(_iosPWACycleInterval);
+            _iosPWARunning = false;
             setTimeout(() => _iosPWAStartPipeline(), 2000);
         }
     };
@@ -1964,18 +1971,29 @@ async function _iosPWAStartPipeline() {
     iOSRecorder.onerror = (err) => {
         console.log("[APEX iOS] Recorder error:", err.error ? err.error.message : String(err));
         iOSChunks = [];
-        if (iOSCycleInterval) clearInterval(iOSCycleInterval);
+        if (_iosPWACycleInterval) clearInterval(_iosPWACycleInterval);
+        _iosPWARunning = false;
         setTimeout(() => _iosPWAStartPipeline(), 2000);
     };
 
     iOSRecorder.start();
     console.log("[APEX iOS] Recorder started, beginning 4 second cycle");
 
-    iOSCycleInterval = setInterval(() => {
+    _iosPWACycleInterval = setInterval(() => {
         if (iOSRecorder.state === "recording") {
             iOSRecorder.stop();
+            _iosPWALastStopTs = Date.now();
         }
     }, 4000);
+
+    _iosPWAWatchdogInterval = setInterval(() => {
+        if (_iosPWALastStopTs !== 0 && Date.now() - _iosPWALastStopTs > 5500 && _iosPWAActiveRecorder && _iosPWARunning && _iosPWAActiveRecorder.state !== "recording") {
+            console.log("[APEX iOS] watchdog: onstop did not fire — restarting recorder");
+            iOSChunks = [];
+            _iosPWALastStopTs = 0;
+            try { iOSRecorder.start(); } catch (_) {}
+        }
+    }, 6000);
 
     _iosPWARunning = true;
     isListening    = true;
@@ -1990,6 +2008,8 @@ function _iosPWAStopPipeline() {
     _iosPWARunning  = false;
     isListening     = false;
     clearInterval(_iosPWAVadTimer);     _iosPWAVadTimer     = null;
+    if (_iosPWACycleInterval) { clearInterval(_iosPWACycleInterval); _iosPWACycleInterval = null; }
+    if (_iosPWAWatchdogInterval) { clearInterval(_iosPWAWatchdogInterval); _iosPWAWatchdogInterval = null; }
     clearTimeout(_iosPWASilenceTimer);  _iosPWASilenceTimer = null;
     if (_iosPWARecorder && _iosPWARecording) {
         _iosPWARecorder.onstop = null; // discard in-flight audio
@@ -1998,6 +2018,10 @@ function _iosPWAStopPipeline() {
     _iosPWARecorder  = null;
     _iosPWARecording = false;
     _iosPWAChunks    = [];
+    if (_iosPWAActiveRecorder) {
+        try { _iosPWAActiveRecorder.onstop = null; _iosPWAActiveRecorder.stop(); } catch (_) {}
+        _iosPWAActiveRecorder = null;
+    }
     if (_iosPWAStream) {
         try { _iosPWAStream.getTracks().forEach(t => t.stop()); } catch (_) {}
         _iosPWAStream = null;
@@ -2050,6 +2074,11 @@ function _iosPWAStopRecording() {
 }
 
 function _iosPWAStopRecordingImmediate() {
+    if (_iosPWAActiveRecorder && _iosPWAActiveRecorder.state === "recording") {
+        _iosPWAActiveRecorder.onstop = null;
+        try { _iosPWAActiveRecorder.stop(); } catch (_) {}
+        _iosPWAActiveRecorder = null;
+    }
     clearTimeout(_iosPWASilenceTimer); _iosPWASilenceTimer = null;
     if (!_iosPWARecorder || !_iosPWARecording) return;
     _iosPWARecorder.onstop = null; // discard — AI is about to speak
