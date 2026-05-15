@@ -1338,7 +1338,8 @@ const REFRESH_INTERVAL_MS = 18000;
 
 // ══ STATE ═════════════════════════════════════════════════════════════
 let isListening         = false;
-let autoListen          = true;
+const _isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+let autoListen          = _isTouchDevice;
 let lastSendWasVoice    = false;
 let cachedTasks         = [];
 let cachedNotifications = [];
@@ -1547,7 +1548,7 @@ function _httSpeak(text) {
     if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
     if (_httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
     const wordCount = text.trim().split(/\s+/).length;
-    const safetyMs  = Math.min(20000, Math.max(5000, wordCount * 700 + 4000));
+    const safetyMs  = Math.min(60000, Math.max(8000, wordCount * 1000 + 6000));
     fetch(buildApiUrl('/api/tts'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
