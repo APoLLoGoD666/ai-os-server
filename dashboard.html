@@ -2150,7 +2150,7 @@ async function _iosPWAStartPipeline() {
             console.log("[APEX iOS] Restart error:", startErr.message);
             if (_iosPWACycleInterval) clearInterval(_iosPWACycleInterval);
             _iosPWARunning = false;
-            setTimeout(() => _iosPWAStartPipeline(), 2000);
+            setTimeout(() => { if (false) { _iosPWAStartPipeline(); } }, 2000);
         }
     };
 
@@ -2159,7 +2159,7 @@ async function _iosPWAStartPipeline() {
         iOSChunks = [];
         if (_iosPWACycleInterval) clearInterval(_iosPWACycleInterval);
         _iosPWARunning = false;
-        setTimeout(() => _iosPWAStartPipeline(), 2000);
+        setTimeout(() => { if (false) { _iosPWAStartPipeline(); } }, 2000);
     };
 
     iOSRecorder.start();
@@ -2345,7 +2345,7 @@ function _rms(buf) {
 }
 
 async function startVoicePipeline() {
-    if (isIOSPWA) { await _iosPWAStartPipeline(); return; }
+    if (isIOSPWA) { if (false) { await _iosPWAStartPipeline(); } return; }
     if (srec || !autoListen) return;
 
     // ── 1. Web Speech API (desktop — SR manages its own mic internally) ──
@@ -2517,7 +2517,7 @@ async function _restoreVoiceFromBackground() {
     console.log("[Voice] page visible — restoring mic");
     if (!autoListen) return;
     if (isIOSPWA) {
-        if (!_iosPWARunning) await _iosPWAStartPipeline();
+        if (!_iosPWARunning) { if (false) { await _iosPWAStartPipeline(); } }
         return;
     }
     if (srec) return;
@@ -2555,7 +2555,7 @@ function unmuteDeepgram() {
         _iosPWASpeaking = false;
         _iosPWARunning = false;
         console.log('[APEX iOS] unmuteDeepgram — restarting full pipeline with fresh getUserMedia');
-        setTimeout(() => _iosPWAStartPipeline(), 600);
+        setTimeout(() => { if (false) { _iosPWAStartPipeline(); } }, 600);
     }
 }
 
@@ -3519,7 +3519,7 @@ initSupabaseRealtime();
 // iOS hold-to-talk button wiring
 (function() {
     const ua = navigator.userAgent;
-    if (!/iPad|iPhone|iPod/.test(ua)) return;
+    if (window.innerWidth > 768 && !('ontouchstart' in window)) return;
 
     const btn = document.getElementById('httBtn');
     if (!btn) return;
