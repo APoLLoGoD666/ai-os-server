@@ -7260,6 +7260,102 @@ app.post("/api/speak", async (req, res) => {
     }
 });
 
+// ── APEX TOOLS ──────────────────────────────────────────────────────────────
+
+async function toolWebSearch(query) {
+    try {
+        const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5`;
+        const res = await fetch(url, {
+            headers: { 'Accept': 'application/json', 'X-Subscription-Token': process.env.BRAVE_API_KEY || '' }
+        });
+        if (!res.ok) {
+            // Fallback: use DuckDuckGo instant answer API (no key required)
+            const ddg = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+            const data = await ddg.json();
+            const answer = data.AbstractText || data.Answer || data.RelatedTopics?.[0]?.Text || 'No results found.';
+            return { results: [{ title: 'Search result', snippet: answer }] };
+        }
+        const data = await res.json();
+        const results = (data.web?.results || []).slice(0, 3).map(r => ({ title: r.title, snippet: r.description, url: r.url }));
+        return { results };
+    } catch (err) {
+        return { error: err.message };
+    }
+}
+
+async function toolWeather(location) {
+    try {
+        // Open-Meteo is completely free, no API key required
+        // First geocode the location
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
+        const geoData = await geoRes.json();
+        if (!geoData.results?.length) return { error: 'Location not found' };
+        const { latitude, longitude, name, country } = geoData.results[0];
+        // Then get weather
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m&temperature_unit=celsius&windspeed_unit=mph&timezone=auto`);
+        const weatherData = await weatherRes.json();
+        const c = weatherData.current;
+        const codes = { 0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast', 45:'Foggy', 48:'Icy fog', 51:'Light drizzle', 61:'Light rain', 63:'Moderate rain', 65:'Heavy rain', 71:'Light snow', 80:'Rain showers', 95:'Thunderstorm' };
+        const description = codes[c.weathercode] || `Weather code ${c.weathercode}`;
+        return { location: `${name}, ${country}`, temperature_c: c.temperature_2m, description, wind_mph: c.windspeed_10m, humidity_percent: c.relative_humidity_2m };
+    } catch (err) {
+        return { error: err.message };
+    }
+}
+
+function toolDateTime() {
+    const now = new Date();
+    return {
+        date: now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+        time: now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        iso: now.toISOString()
+    };
+}
+
+const APEX_TOOLS = [
+    {
+        name: 'web_search',
+        description: 'Search the web for current information, news, facts, or anything that requires up-to-date knowledge. Use this when asked about recent events, specific facts, or anything you are uncertain about.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                query: { type: 'string', description: 'The search query' }
+            },
+            required: ['query']
+        }
+    },
+    {
+        name: 'get_weather',
+        description: 'Get the current weather for any location. Use when asked about weather, temperature, or conditions anywhere.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                location: { type: 'string', description: 'City name or location, e.g. "Leamington Spa" or "London"' }
+            },
+            required: ['location']
+        }
+    },
+    {
+        name: 'get_datetime',
+        description: 'Get the current date and time. Use when asked what time or date it is.',
+        input_schema: {
+            type: 'object',
+            properties: {},
+            required: []
+        }
+    }
+];
+
+async function executeApexTool(name, input) {
+    if (name === 'web_search') return await toolWebSearch(input.query);
+    if (name === 'get_weather') return await toolWeather(input.location);
+    if (name === 'get_datetime') return toolDateTime();
+    return { error: 'Unknown tool' };
+}
+
+// ── END APEX TOOLS ───────────────────────────────────────────────────────────
+
 app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
     try {
         const rawMessage = req.body?.message;
@@ -7306,31 +7402,50 @@ Respond naturally in 1-2 sentences.`.trim();
         const needsTools = /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment/i.test(userMessage);
         console.log(`[LATENCY] +${Date.now() - t0}ms calling Anthropic model:claude-haiku-4-5-20251001 tools:${needsTools}`);
 
-        const response = await client.messages.create({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 80,
-            ...(needsTools ? { tools: TOOLS } : {}),
-            messages: [{ role: "user", content: voicePrompt }]
-        });
+        // Agentic tool-use loop
+        const messages = [{ role: 'user', content: userMessage }];
+        let finalReply = '';
+        let loopCount = 0;
+        const maxLoops = 5;
 
-        console.log(`[LATENCY] +${Date.now() - t0}ms Anthropic response complete`);
+        while (loopCount < maxLoops) {
+            loopCount++;
+            const response = await client.messages.create({
+                model: MODEL,
+                max_tokens: 1024,
+                system: `You are Apex, a precise, professional AI system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.`,
+                tools: APEX_TOOLS,
+                messages
+            });
 
-        const toolUseBlock = (response.content || []).find(part => part.type === "tool_use");
-
-        if (toolUseBlock) {
-            const command = toolUseInputToCommand(toolUseBlock.name, toolUseBlock.input || {});
-            if (command) {
-                const result = await handleCommand(command);
-                addToMemory("ai", result.reply);
-                return res.status(result.ok ? 200 : 404).json(result);
+            if (response.stop_reason === 'tool_use') {
+                // Execute all tool calls
+                const assistantMessage = { role: 'assistant', content: response.content };
+                messages.push(assistantMessage);
+                const toolResults = [];
+                for (const block of response.content) {
+                    if (block.type === 'tool_use') {
+                        console.log(`[APEX] Tool call: ${block.name}`, block.input);
+                        const result = await executeApexTool(block.name, block.input);
+                        console.log(`[APEX] Tool result:`, result);
+                        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
+                    }
+                }
+                messages.push({ role: 'user', content: toolResults });
+                continue;
             }
+
+            // stop_reason === 'end_turn' — extract final text
+            finalReply = response.content
+                .filter(b => b.type === 'text')
+                .map(b => b.text)
+                .join(' ')
+                .trim();
+            break;
         }
 
-        const reply = (response.content || [])
-            .filter(part => part.type === "text")
-            .map(part => part.text || "")
-            .join(" ")
-            .trim() || "Done.";
+        if (!finalReply) finalReply = 'I was unable to complete that request, sir.';
+        const reply = finalReply;
 
         addToMemory("ai", reply);
         return res.status(200).json({ ok: true, reply });
