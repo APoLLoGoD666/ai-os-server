@@ -1690,6 +1690,7 @@ async function speakWithElevenLabs(text) {
 }
 
 function _speakFallback(phrase, { onEnd } = {}) {
+    if (isIOSPWA) console.log("[APEX iOS] _speakFallback called, text:", phrase.slice(0, 50));
     window.speechSynthesis.cancel();
     if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
     const utt = new SpeechSynthesisUtterance(phrase);
@@ -1707,7 +1708,7 @@ function _speakFallback(phrase, { onEnd } = {}) {
         if (onEnd) onEnd();
     };
     if (isIOSPWA) console.log(`[iOS] speechSynthesis speaking: "${phrase.slice(0, 60)}"`);
-    setTimeout(() => window.speechSynthesis.speak(utt), 100);
+    setTimeout(() => { console.log("[APEX iOS] speechSynthesis.speak fired"); window.speechSynthesis.speak(utt); }, 100);
 }
 
 function showTypingIndicator() {
@@ -1891,6 +1892,7 @@ function _showBanner(id, html) {
 
 async function _iosPWAStartPipeline() {
     if (_iosPWARunning || !autoListen) return;
+    console.log("[APEX iOS] _iosPWAStartPipeline started");
     console.log('[iOS PWA] pipeline starting');
     try {
         _iosPWAStream = await navigator.mediaDevices.getUserMedia({
@@ -1899,16 +1901,19 @@ async function _iosPWAStartPipeline() {
         });
     } catch (e) {
         console.error('[iOS PWA] getUserMedia failed:', e.message);
+        console.log("[APEX iOS] ERROR:", e.message);
         _showBanner("banner-micdenied", "Microphone access denied.");
         return;
     }
     console.log(`[iOS PWA] getUserMedia granted — tracks: ${_iosPWAStream.getTracks().length}`);
+    console.log("[APEX iOS] getUserMedia granted, stream active");
     _iosPWAAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (_iosPWAAudioCtx.state === "suspended") await _iosPWAAudioCtx.resume().catch(() => {});
     _iosPWAAnalyser = _iosPWAAudioCtx.createAnalyser();
     _iosPWAAnalyser.fftSize = 256;
     _iosPWAAudioCtx.createMediaStreamSource(_iosPWAStream).connect(_iosPWAAnalyser);
     console.log('[iOS PWA] AnalyserNode created');
+    console.log("[APEX iOS] AnalyserNode created");
 
     const buf = new Float32Array(_iosPWAAnalyser.fftSize);
     _iosPWAVadTimer = setInterval(() => {
@@ -1944,7 +1949,7 @@ async function _iosPWAStartPipeline() {
         if (dgMuted) return;
         if (db > -55) {
             lastSpeechMs = now;
-            if (!_iosPWARecording) { console.log(`[iOS VAD] speech detected — ${db.toFixed(1)}dB — starting MediaRecorder`); _iosPWAStartRecording(); }
+            if (!_iosPWARecording) { console.log(`[iOS VAD] speech detected — ${db.toFixed(1)}dB — starting MediaRecorder`); console.log("[APEX iOS] VAD speech detected, volume:", db.toFixed(1)); _iosPWAStartRecording(); }
             clearTimeout(_iosPWASilenceTimer); _iosPWASilenceTimer = null;
         } else if (_iosPWARecording && !_iosPWASilenceTimer) {
             _iosPWASilenceTimer = setTimeout(() => {
@@ -1993,7 +1998,7 @@ function _iosPWAStartRecording() {
     try {
         _iosPWARecorder = mime ? new MediaRecorder(_iosPWAStream, { mimeType: mime })
                                 : new MediaRecorder(_iosPWAStream);
-    } catch (e) { console.warn("[iOS PWA] MediaRecorder init failed:", e.message); return; }
+    } catch (e) { console.warn("[iOS PWA] MediaRecorder init failed:", e.message); console.log("[APEX iOS] ERROR:", e.message); return; }
 
     _iosPWARecorder.ondataavailable = ev => {
         if (ev.data && ev.data.size > 0) _iosPWAChunks.push(ev.data);
@@ -2005,14 +2010,17 @@ function _iosPWAStartRecording() {
         _iosPWAChunks = [];
         if (blob.size < 1000) { console.log("[iOS PWA] blob too small, skipping"); return; }
         console.log(`[iOS] recording stopped — blob size: ${blob.size}B — sending to /transcribe`);
+        console.log("[APEX iOS] Sending blob to Deepgram, size:", blob.size);
         await _iosPWATranscribeAndProcess(blob, mimeType);
     };
     try {
         _iosPWARecorder.start(100);
         _iosPWARecording = true;
         console.log("[iOS PWA] recording started");
+        console.log("[APEX iOS] MediaRecorder started");
     } catch (e) {
         console.warn("[iOS PWA] MediaRecorder.start failed:", e.message);
+        console.log("[APEX iOS] ERROR:", e.message);
         _iosPWARecorder = null;
     }
 }
@@ -2048,9 +2056,11 @@ async function _iosPWATranscribeAndProcess(blob, mimeType) {
         const transcript = (data.transcript || "").trim();
         if (!transcript) { console.log("[iOS PWA] empty transcript, ignoring"); return; }
         console.log(`[iOS] transcribe response: "${transcript}"`);
+        console.log("[APEX iOS] Transcript received:", transcript);
         _iosPWAHandleTranscript(transcript);
     } catch (e) {
         console.error("[iOS PWA] transcribe error:", e.message);
+        console.log("[APEX iOS] ERROR:", e.message);
     }
 }
 
@@ -2061,6 +2071,7 @@ function _iosPWAHandleTranscript(transcript) {
         console.log(`[iOS] wake check: "${transcript}" — matched: ${/\bapex\b/i.test(transcript)}`);
         if (/\bapex\b/i.test(transcript)) {
             console.log("[iOS Wake] wake word matched → conversation");
+            console.log("[APEX iOS] Wake word APEX detected");
             dgMode = "conversation";
             lastSpeechMs = Date.now();
             setOrbState("listening");
