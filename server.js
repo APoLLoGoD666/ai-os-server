@@ -7382,7 +7382,7 @@ app.post('/api/tts', async (req, res) => {
         const text = (req.body?.text || '').trim();
         if (!text) return res.status(400).json({ error: 'No text provided' });
         const dgRes = await fetch(
-            'https://api.deepgram.com/v1/speak?model=aura-asteria-en',
+            'https://api.deepgram.com/v1/speak?model=aura-helios-en',
             {
                 method: 'POST',
                 headers: {
