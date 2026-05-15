@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="apex-version" content="v8" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <title>APEX</title>
+    <title>APEX AI OS v8</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#00d4ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1742,11 +1743,17 @@ async function _speakInternal(text, useFiller) {
 
         if (filler) {
             const fillerOk = await speakWithElevenLabs(filler);
-            if (!fillerOk && isSpeakingNow) await new Promise(r => _speakFallback(filler, { onEnd: r }));
+            if (!fillerOk && isSpeakingNow) {
+                if (isIOSPWA) await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => _speakFallback(filler, { onEnd: r }));
+            }
         }
 
         const ok = await speakWithElevenLabs(phrase);
-        if (!ok && isSpeakingNow) await new Promise(r => _speakFallback(phrase, { onEnd: r }));
+        if (!ok && isSpeakingNow) {
+            if (isIOSPWA) await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => _speakFallback(phrase, { onEnd: r }));
+        }
     } catch (_) {}
 }
 
