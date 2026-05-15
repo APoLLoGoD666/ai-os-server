@@ -2423,7 +2423,20 @@ async function startVoicePipeline() {
         if (!transcript) return;
         lastSpeechMs = Date.now();
 
-        if (isSpeakingNow) return; // dedicated _vadInterruptSR handles interrupt; discard main SR residuals
+        if (isSpeakingNow) {
+            if (!_isTouchDevice) {
+                // Desktop: main SR handles interrupt directly — stop audio and send transcript
+                const wordCount = transcript.split(/\s+/).filter(Boolean).length;
+                if (wordCount >= 2) {
+                    interruptSpeech();
+                    document.getElementById("chatInput").value = transcript;
+                    lastSendWasVoice = true;
+                    dgMuted = true;
+                    sendVoiceChatCommand(transcript);
+                }
+            }
+            return;
+        }
         if (dgMuted) return; // block transcripts during thinking phase
         if (dgMode === "wake") {
             console.log(`[Wake] transcript: "${transcript}"`);
@@ -2500,6 +2513,7 @@ async function startVoicePipeline() {
                 const db = _rms(buf);
 
                 if (isSpeakingNow) {
+                    if (!_isTouchDevice) return; // desktop: main SR handles interrupts
                     if (_vadInterruptSR) return; // already capturing
                     if (db > -55) {
                         console.log("[VAD] above -55dB — starting interrupt SR");
