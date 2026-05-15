@@ -1180,6 +1180,15 @@
             font-weight: 600;
             letter-spacing: 0.04em;
         }
+        #httBtn { display: none !important; }
+        .orb-recording {
+            box-shadow: 0 0 0 6px rgba(255, 60, 60, 0.8), 0 0 40px rgba(255, 60, 60, 0.5) !important;
+            animation: orbPulseRed 0.8s ease-in-out infinite alternate !important;
+        }
+        @keyframes orbPulseRed {
+            from { box-shadow: 0 0 0 4px rgba(255, 60, 60, 0.7), 0 0 30px rgba(255, 60, 60, 0.4); }
+            to   { box-shadow: 0 0 0 10px rgba(255, 60, 60, 0.9), 0 0 60px rgba(255, 60, 60, 0.7); }
+        }
     </style>
 </head>
 <body>
@@ -1247,6 +1256,7 @@
         </div>
 
         <div class="orb-status" id="orbStatus">Ready</div>
+        <div id="orbHint" style="display:none; color:rgba(0,212,255,0.5); font-size:12px; letter-spacing:2px; text-transform:uppercase; margin-top:8px; text-align:center;">HOLD ORB TO SPEAK</div>
 
         <div class="chat-status-bar" id="chatStatusBar">Apex · Connecting…</div>
 
@@ -1636,18 +1646,21 @@ function setOrbState(state) {
     const statusEl = document.getElementById("orbStatus");
     const waveform = document.getElementById("waveform");
     const micBtn   = document.getElementById("micBtn");
+    const orbEl    = document.getElementById("orb");
 
     shell.classList.remove("active", "listening", "waiting");
     waveform.classList.remove("active");
     micBtn.classList.remove("listening");
+    if (orbEl) orbEl.classList.remove("orb-recording");
 
-    const labels = { ready: "Ready", waiting: "Standby", listening: "Listening…", processing: "Processing…", thinking: "Thinking…", speaking: "Speaking…" };
+    const labels = { ready: "Ready", waiting: "Standby", listening: "Hold To Talk", processing: "Processing…", thinking: "Thinking…", speaking: "Speaking…" };
     statusEl.textContent = labels[state] || "Ready";
 
     if (state === "listening") {
         shell.classList.add("listening");
         waveform.classList.add("active");
         micBtn.classList.add("listening");
+        if (orbEl) orbEl.classList.add("orb-recording");
     } else if (state === "processing" || state === "speaking") {
         shell.classList.add("active");
     } else if (state === "waiting") {
@@ -3518,35 +3531,52 @@ initSupabaseRealtime();
 
 // iOS hold-to-talk button wiring
 (function() {
-    const ua = navigator.userAgent;
-    if (window.innerWidth > 768 && !('ontouchstart' in window)) return;
+    // Show HTT button on no device — orb is the trigger now
+    const floatingBtn = document.getElementById('httBtn');
+    if (floatingBtn) floatingBtn.style.display = 'none';
 
-    const btn = document.getElementById('httBtn');
-    if (!btn) return;
-    btn.style.display = 'block';
+    // Only wire on touch devices
+    if (!('ontouchstart' in window)) return;
 
-    btn.addEventListener('touchstart', function(e) {
+    // Find the orb — try common selectors
+    const orb = document.getElementById('apexOrb') ||
+                 document.querySelector('.orb-container') ||
+                 document.querySelector('.apex-orb') ||
+                 document.querySelector('.orb') ||
+                 document.querySelector('[class*="orb"]') ||
+                 document.querySelector('.main-circle') ||
+                 document.querySelector('.center-circle');
+
+    if (!orb) {
+        console.warn('[HTT] orb element not found — cannot wire hold-to-talk');
+        return;
+    }
+
+    // Make orb touchable
+    orb.style.cursor = 'pointer';
+    orb.style.userSelect = 'none';
+    orb.style.webkitUserSelect = 'none';
+    orb.style.touchAction = 'none';
+
+    orb.addEventListener('touchstart', function(e) {
         e.preventDefault();
-        btn.style.background = 'linear-gradient(135deg, #ff3333, #cc0000)';
-        btn.textContent = '● LISTENING';
         _httBegin();
     }, { passive: false });
 
-    btn.addEventListener('touchend', function(e) {
+    orb.addEventListener('touchend', function(e) {
         e.preventDefault();
-        btn.style.background = 'linear-gradient(135deg, #00d4ff, #0055ff)';
-        btn.textContent = 'HOLD TO TALK';
         _httEnd();
     }, { passive: false });
 
-    btn.addEventListener('touchcancel', function(e) {
+    orb.addEventListener('touchcancel', function(e) {
         e.preventDefault();
-        btn.style.background = 'linear-gradient(135deg, #00d4ff, #0055ff)';
-        btn.textContent = 'HOLD TO TALK';
         _httEnd();
     }, { passive: false });
 
-    console.log('[HTT] hold-to-talk button ready');
+    const hint = document.getElementById('orbHint');
+    if (hint) hint.style.display = 'block';
+
+    console.log('[HTT] orb wired as hold-to-talk trigger:', orb.tagName, orb.className || orb.id);
 })();
 </script>
 <div class="email-draft-modal" id="emailDraftModal" onclick="if(event.target===this)closeEmailDraftModal()">
