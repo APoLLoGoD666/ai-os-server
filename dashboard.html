@@ -1552,6 +1552,7 @@ function _httSpeak(text) {
         _httAudio = _apexAudio;
         _httAudio.src = url;
         _httAudio.load();
+        _httAudio.playbackRate = 1.75;
         _httSafetyTimer = setTimeout(() => {
             console.warn('[HTT] audio safety timeout — cleaning up');
             if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
