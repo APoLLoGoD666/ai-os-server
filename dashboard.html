@@ -1909,56 +1909,73 @@ async function _iosPWAStartPipeline() {
     console.log("[APEX iOS] getUserMedia granted, stream active");
     _iosPWAAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (_iosPWAAudioCtx.state === "suspended") await _iosPWAAudioCtx.resume().catch(() => {});
-    _iosPWAAnalyser = _iosPWAAudioCtx.createAnalyser();
-    _iosPWAAnalyser.fftSize = 256;
-    _iosPWAAudioCtx.createMediaStreamSource(_iosPWAStream).connect(_iosPWAAnalyser);
-    console.log('[iOS PWA] AnalyserNode created');
-    console.log("[APEX iOS] AnalyserNode created");
 
-    const buf = new Float32Array(_iosPWAAnalyser.fftSize);
-    _iosPWAVadTimer = setInterval(() => {
-        if (!_iosPWAAnalyser || !autoListen) return;
-        _iosPWAAnalyser.getFloatTimeDomainData(buf);
-        const db  = _rms(buf);
-        const now = Date.now();
+    const iOSMimeType = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm'].find(t => MediaRecorder.isTypeSupported(t)) || 'audio/mp4';
+    console.log("[APEX iOS] Selected mimeType:", iOSMimeType);
 
-        // Periodic dB log every 2 seconds so we can confirm AnalyserNode is picking up audio
-        if (now - _iosVadLogTs >= 2000) { _iosVadLogTs = now; console.log(`[iOS VAD] dB: ${db === -Infinity ? '-∞' : db.toFixed(1)} | mode:${dgMode} | recording:${_iosPWARecording} | muted:${dgMuted}`); }
+    let iOSChunks = [];
+    let iOSCycleInterval = null;
+    const iOSRecorder = new MediaRecorder(_iosPWAStream, { mimeType: iOSMimeType });
 
-        // ── Interrupt during playback ──────────────────────────────────
-        if (isSpeakingNow) {
-            if (db > -45) {
-                console.log('[iOS VAD] interrupt — vol:', db.toFixed(1), 'dB');
-                interruptSpeech(); // sets isSpeakingNow=false, dgMuted=false
-                if (!_iosPWARecording) _iosPWAStartRecording();
+    iOSRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+            iOSChunks.push(event.data);
+            console.log("[APEX iOS] chunk accumulated, size:", event.data.size, "total:", iOSChunks.length);
+        }
+    };
+
+    iOSRecorder.onstop = async () => {
+        console.log("[APEX iOS] onstop fired, chunks:", iOSChunks.length);
+        const chunksToSend = iOSChunks.slice();
+        iOSChunks = [];
+
+        if (chunksToSend.length > 0) {
+            const blob = new Blob(chunksToSend, { type: iOSMimeType });
+            console.log("[APEX iOS] Sending complete blob, size:", blob.size, "type:", iOSMimeType);
+            try {
+                const fd = new FormData();
+                fd.append("audio", blob, "audio.mp4");
+                fd.append("mimeType", iOSMimeType);
+                const res = await fetch("/api/transcribe", { method: "POST", body: fd });
+                const data = await res.json();
+                const transcript = (data.transcript || "").trim();
+                console.log("[APEX iOS] Transcript:", transcript);
+                if (transcript) {
+                    _iosPWAHandleTranscript(transcript);
+                }
+            } catch (err) {
+                console.log("[APEX iOS] Transcribe error:", err.message);
             }
-            return;
         }
 
-        // ── Conversation silence → wake mode ────────────────────────────
-        if (dgMode === "conversation" && !dgMuted) {
-            if (db > -65) lastSpeechMs = now;
-            else if (now - lastSpeechMs > CONV_SILENCE_MS) {
-                console.log('[iOS VAD] 3s silence → standby');
-                dgMode = "wake";
-                setOrbState("waiting");
+        // Always restart — even on empty or error — to keep the cycle alive
+        try {
+            if (iOSRecorder.state === "inactive") {
+                iOSRecorder.start();
+                console.log("[APEX iOS] Recorder restarted");
             }
+        } catch (startErr) {
+            console.log("[APEX iOS] Restart error:", startErr.message);
+            if (iOSCycleInterval) clearInterval(iOSCycleInterval);
+            setTimeout(() => _iosPWAStartPipeline(), 2000);
         }
+    };
 
-        // ── Speech start/stop detection ─────────────────────────────────
-        if (dgMuted) return;
-        if (db > -55) {
-            lastSpeechMs = now;
-            if (!_iosPWARecording) { console.log(`[iOS VAD] speech detected — ${db.toFixed(1)}dB — starting MediaRecorder`); console.log("[APEX iOS] VAD speech detected, volume:", db.toFixed(1)); _iosPWAStartRecording(); }
-            clearTimeout(_iosPWASilenceTimer); _iosPWASilenceTimer = null;
-        } else if (_iosPWARecording && !_iosPWASilenceTimer) {
-            _iosPWASilenceTimer = setTimeout(() => {
-                _iosPWASilenceTimer = null;
-                _iosPWAStopRecording();
-            }, 1500);
+    iOSRecorder.onerror = (err) => {
+        console.log("[APEX iOS] Recorder error:", err.error ? err.error.message : String(err));
+        iOSChunks = [];
+        if (iOSCycleInterval) clearInterval(iOSCycleInterval);
+        setTimeout(() => _iosPWAStartPipeline(), 2000);
+    };
+
+    iOSRecorder.start();
+    console.log("[APEX iOS] Recorder started, beginning 4 second cycle");
+
+    iOSCycleInterval = setInterval(() => {
+        if (iOSRecorder.state === "recording") {
+            iOSRecorder.stop();
         }
-    }, 80);
-    console.log('[iOS PWA] VAD interval started');
+    }, 4000);
 
     _iosPWARunning = true;
     isListening    = true;

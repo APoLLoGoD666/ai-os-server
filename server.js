@@ -12,6 +12,8 @@ const rateLimit = require("express-rate-limit");
 const Anthropic = require("@anthropic-ai/sdk");
 const { createClient: createDeepgramClient } = require("@deepgram/sdk");
 const axios = require("axios");
+const multer = require("multer");
+const multerUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 const db = require("./database");
 const pool = require("./pg_database");
@@ -7329,24 +7331,25 @@ Respond naturally in 1-2 sentences.`.trim();
     }
 });
 
-app.post("/api/transcribe", requireAppAccess, express.raw({ type: "*/*", limit: "25mb" }), async (req, res) => {
+app.post("/api/transcribe", requireAppAccess, multerUpload.single("audio"), async (req, res) => {
     try {
         const key = process.env.DEEPGRAM_API_KEY;
         if (!key) return res.status(503).json({ ok: false, transcript: "", error: "Deepgram not configured." });
 
-        const audioBuffer = req.body;
+        const audioBuffer = req.file ? req.file.buffer : req.body;
         if (!audioBuffer || !audioBuffer.length) {
             return res.status(400).json({ ok: false, transcript: "", error: "No audio data received." });
         }
 
-        const contentType = req.headers["content-type"] || "audio/webm";
+        const mimeType = (req.body && req.body.mimeType) || req.headers["content-type"] || "audio/mp4";
+        console.log("[APEX transcribe] mimeType:", mimeType, "size:", audioBuffer.length);
         const dgRes = await axios.post(
             "https://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true",
             audioBuffer,
             {
                 headers: {
                     "Authorization": `Token ${key}`,
-                    "Content-Type": contentType
+                    "Content-Type": mimeType
                 },
                 maxBodyLength: 25 * 1024 * 1024,
                 responseType: "json"
