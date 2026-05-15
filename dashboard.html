@@ -1712,6 +1712,7 @@ function _speakFallback(phrase, { onEnd } = {}) {
         if (onEnd) onEnd();
     };
     if (isIOSPWA) console.log(`[iOS] speechSynthesis speaking: "${phrase.slice(0, 60)}"`);
+    if (isIOSPWA && 'audioSession' in navigator) navigator.audioSession.type = 'play-and-record';
     setTimeout(() => { console.log("[APEX iOS] speechSynthesis.speak fired"); window.speechSynthesis.speak(utt); }, 100);
 }
 
@@ -1901,6 +1902,10 @@ async function _iosPWAStartPipeline() {
     console.log("[APEX iOS] _iosPWAStartPipeline started");
     console.log('[iOS PWA] pipeline starting');
     try {
+        if ('audioSession' in navigator) {
+            navigator.audioSession.type = 'play-and-record';
+            console.log('[APEX iOS] audioSession set to play-and-record');
+        }
         _iosPWAStream = await navigator.mediaDevices.getUserMedia({
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
             video: false
@@ -2332,7 +2337,6 @@ async function _restoreVoiceFromBackground() {
 function muteDeepgram() {
     dgMuted = true;
     setOrbState("thinking");
-    if (isIOSPWA) _iosPWAStopRecordingImmediate(); // discard stale audio before AI speaks
 }
 
 function unmuteDeepgram() {
@@ -2342,6 +2346,19 @@ function unmuteDeepgram() {
     console.log(`[Voice] unmuteDeepgram — mode:${dgMode} isListening:${isListening}`);
     if (isListening) setOrbState(dgMode === "conversation" ? "listening" : "waiting");
     // iOS: VAD timer handles silence tracking — nothing extra needed here
+    if (isIOSPWA) {
+        console.log('[APEX iOS] unmuteDeepgram — recorder state:', _iosPWAActiveRecorder ? _iosPWAActiveRecorder.state : 'null');
+        if (_iosPWAActiveRecorder && _iosPWAActiveRecorder.state === 'inactive') {
+            try { _iosPWAActiveRecorder.start(); console.log('[APEX iOS] recorder restarted in unmuteDeepgram'); } catch(e) { console.log('[APEX iOS] recorder restart failed:', e.message); }
+        }
+        const track = _iosPWAStream && _iosPWAStream.getAudioTracks()[0];
+        if (track && track.muted) {
+            console.log('[APEX iOS] mic track muted after speech — restarting pipeline');
+            _iosPWARunning = false;
+            _iosPWAStopPipeline();
+            setTimeout(() => _iosPWAStartPipeline(), 800);
+        }
+    }
 }
 
 function startListening() {
