@@ -2458,7 +2458,7 @@ async function startVoicePipeline() {
         if (e.error === "not-allowed") {
             _showBanner("banner-micdenied", "Microphone access denied.");
         } else if (e.error === "no-speech" || e.error === "audio-capture") {
-            if (autoListen && srec && !isSpeakingNow && isListening && document.visibilityState !== "hidden") {
+            if (srec && !isSpeakingNow && isListening && document.visibilityState !== "hidden") {
                 setTimeout(() => { try { srec.start(); } catch (_) {} }, 500);
             }
         } else if (e.error !== "no-speech") {
@@ -2468,7 +2468,7 @@ async function startVoicePipeline() {
 
     srec.onend = () => {
         console.log("[SR] ended — restarting");
-        if (autoListen && srec && !isSpeakingNow && isListening && document.visibilityState !== "hidden") {
+        if (srec && !isSpeakingNow && isListening && document.visibilityState !== "hidden") {
             try { srec.start(); } catch (_) {}
         }
     };
@@ -3536,7 +3536,7 @@ fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
 // iOS PWA: pipeline starts on first touchstart (getUserMedia requires a user gesture)
-setTimeout(() => { if (autoListen && !isIOSPWA) startVoicePipeline(); }, 1000);
+setTimeout(() => { if (!isIOSPWA) { _manualStart = true; startVoicePipeline(); } }, 1000);
 
 // Release mic when the page is hidden (tab switch, app background, lock screen)
 document.addEventListener("visibilitychange", () => {
