@@ -1564,7 +1564,7 @@ function _httSpeak(text) {
         _httAudio = _apexAudio;
         _httAudio.src = url;
         _httAudio.load();
-        _httAudio.playbackRate = 1.5;
+        _httAudio.playbackRate = _isTouchDevice ? 1.3 : 1.5;
         _httSafetyTimer = setTimeout(() => {
             console.warn('[HTT] audio safety timeout — cleaning up');
             if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
@@ -1880,7 +1880,7 @@ async function speakWithElevenLabs(text) {
         _apexBlobUrl = URL.createObjectURL(blob);
 
         _apexAudio.src          = _apexBlobUrl;
-        _apexAudio.playbackRate = voiceSpeed;
+        _apexAudio.playbackRate = _isTouchDevice ? 1.3 : voiceSpeed;
         currentAudio = _apexAudio;
         console.log(`[LATENCY] +${Date.now() - _t0Voice}ms audio playing`);
 
