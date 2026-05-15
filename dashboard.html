@@ -3206,7 +3206,7 @@ fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
 // iOS PWA: pipeline starts on first touchstart (getUserMedia requires a user gesture)
-if (!isIOSPWA) setTimeout(() => { if (autoListen) startVoicePipeline(); }, 1000);
+setTimeout(() => { if (autoListen && !isIOSPWA) startVoicePipeline(); }, 1000);
 
 // Release mic when the page is hidden (tab switch, app background, lock screen)
 document.addEventListener("visibilitychange", () => {
