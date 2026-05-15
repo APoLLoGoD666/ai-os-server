@@ -7468,6 +7468,18 @@ Respond naturally in 1-2 sentences.`.trim();
         const needsTools = /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment/i.test(userMessage);
         console.log(`[LATENCY] +${Date.now() - t0}ms calling Anthropic model:claude-haiku-4-5-20251001 tools:${needsTools}`);
 
+        // Recall semantically relevant memories
+        let memoryContext = '';
+        try {
+            const memories = await recallMemories(userMessage, 5);
+            if (memories.length > 0) {
+                memoryContext = '\n\nRelevant memories from past conversations:\n' +
+                    memories.map(m => `[${m.role.toUpperCase()}]: ${m.content}`).join('\n');
+            }
+        } catch (e) {
+            console.error('[MEMORY] recall failed:', e.message);
+        }
+
         // Agentic tool-use loop
         const messages = [{ role: 'user', content: userMessage }];
         let finalReply = '';
@@ -7479,7 +7491,7 @@ Respond naturally in 1-2 sentences.`.trim();
             const response = await client.messages.create({
                 model: MODEL,
                 max_tokens: 1024,
-                system: `You are Apex, a precise, professional AI system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.`,
+                system: `You are Apex, a precise, professional AI system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK — use this as the default location for any location-based queries unless told otherwise.${memoryContext}`,
                 tools: APEX_TOOLS,
                 messages
             });
@@ -7512,6 +7524,10 @@ Respond naturally in 1-2 sentences.`.trim();
 
         if (!finalReply) finalReply = 'I was unable to complete that request, sir.';
         const reply = finalReply;
+
+        // Save this exchange to memory asynchronously — never block the response
+        saveMemory('user', userMessage).catch(() => {});
+        saveMemory('assistant', reply).catch(() => {});
 
         addToMemory("ai", reply);
         return res.status(200).json({ ok: true, reply });
