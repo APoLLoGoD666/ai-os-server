@@ -1534,7 +1534,7 @@ function _httSpeak(text) {
     isSpeakingNow = true;
     setOrbState('speaking');
     console.log('[HTT] fetching TTS audio for:', text.substring(0, 60));
-    if (_httAudio) { try { _httAudio.pause(); } catch(_) {} _httAudio = null; }
+    if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
     if (_httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
     const wordCount = text.trim().split(/\s+/).length;
     const safetyMs  = Math.min(20000, Math.max(5000, wordCount * 700 + 4000));
@@ -1549,10 +1549,12 @@ function _httSpeak(text) {
     })
     .then(blob => {
         const url = URL.createObjectURL(blob);
-        _httAudio = new Audio(url);
+        _httAudio = _apexAudio;
+        _httAudio.src = url;
+        _httAudio.load();
         _httSafetyTimer = setTimeout(() => {
             console.warn('[HTT] audio safety timeout — cleaning up');
-            if (_httAudio) { try { _httAudio.pause(); } catch(_) {} _httAudio = null; }
+            if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
             URL.revokeObjectURL(url);
             isSpeakingNow = false;
             setOrbState('waiting');
