@@ -1896,6 +1896,8 @@ function _showBanner(id, html) {
 
 async function _iosPWAStartPipeline() {
     if (_iosPWARunning || !autoListen) return;
+    if (_iosPWACycleInterval) { clearInterval(_iosPWACycleInterval); _iosPWACycleInterval = null; }
+    if (_iosPWAWatchdogInterval) { clearInterval(_iosPWAWatchdogInterval); _iosPWAWatchdogInterval = null; }
     console.log("[APEX iOS] _iosPWAStartPipeline started");
     console.log('[iOS PWA] pipeline starting');
     try {
