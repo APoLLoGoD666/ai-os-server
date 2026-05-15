@@ -1,4 +1,4 @@
-const CACHE = "apex-v1";
+const CACHE = "apex-v9";
 const SHELL = ["/dashboard.html", "/manifest.json"];
 
 self.addEventListener("install", e => {
@@ -16,6 +16,10 @@ self.addEventListener("activate", e => {
 });
 
 self.addEventListener("fetch", e => {
+    if (e.request.url.includes('dashboard.html') || new URL(e.request.url).pathname === '/') {
+        e.respondWith(fetch(e.request));
+        return;
+    }
     if (e.request.method !== "GET") return;
     const url = new URL(e.request.url);
     if (url.pathname.startsWith("/api/") || url.pathname === "/chat") return;
