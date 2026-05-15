@@ -1412,12 +1412,22 @@ let _httAudio       = null;
 let _httSafetyTimer = null;
 
 async function _httBegin() {
-    // Interrupt any current speech immediately
-    try { speechSynthesis.cancel(); } catch(_) {}
+    // Force reset any leftover state from previous session
+    _httActive = false;
+    _httChunks = [];
+    if (_httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
+    if (_httRecorder && _httRecorder.state !== 'inactive') {
+        try { _httRecorder.onstop = null; _httRecorder.stop(); } catch(_) {}
+    }
+    _httRecorder = null;
+    if (_httStream) {
+        try { _httStream.getTracks().forEach(t => t.stop()); } catch(_) {}
+        _httStream = null;
+    }
+    if (_apexAudio) {
+        try { _apexAudio.pause(); _apexAudio.onended = null; _apexAudio.onerror = null; } catch(_) {}
+    }
     isSpeakingNow = false;
-    speakQueue.length = 0;
-    if (_speakSafetyTimer) { clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null; }
-
     if (_httActive) return;
     _httActive = true;
     _httChunks = [];
@@ -1558,6 +1568,7 @@ function _httSpeak(text) {
             if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
             URL.revokeObjectURL(url);
             isSpeakingNow = false;
+            _httActive = false;
             setOrbState('waiting');
         }, safetyMs);
         _httAudio.oncanplaythrough = () => { console.log('[HTT] audio can play — starting'); };
@@ -1565,13 +1576,13 @@ function _httSpeak(text) {
         _httAudio.onended = () => {
             clearTimeout(_httSafetyTimer); _httSafetyTimer = null;
             URL.revokeObjectURL(url); _httAudio = null;
-            isSpeakingNow = false; setOrbState('waiting');
+            isSpeakingNow = false; _httActive = false; setOrbState('waiting');
             console.log('[HTT] audio ended naturally');
         };
         _httAudio.onerror = (e) => {
             clearTimeout(_httSafetyTimer); _httSafetyTimer = null;
             URL.revokeObjectURL(url); _httAudio = null;
-            isSpeakingNow = false; setOrbState('waiting');
+            isSpeakingNow = false; _httActive = false; setOrbState('waiting');
             console.error('[HTT] audio element error:', e);
         };
         _httAudio.play().then(() => {
