@@ -2010,8 +2010,9 @@ async function _iosPWAStartPipeline() {
 
     _iosPWARunning = true;
     isListening    = true;
-    dgMode         = "wake";
+    dgMode         = (dgMode === "conversation") ? "conversation" : "wake";
     lastSpeechMs   = Date.now();
+    if (dgMode === "conversation") lastSpeechMs = Date.now() + 4000;
     setOrbState("waiting");
     console.log('[iOS PWA] pipeline ready — listening for "apex"');
 }
@@ -2353,7 +2354,10 @@ function muteDeepgram() {
     if (isIOSPWA && _iosPWAActiveRecorder && _iosPWAActiveRecorder.state === 'recording') {
         _iosPWASpeaking = true;
         if (_iosPWACycleInterval) { clearInterval(_iosPWACycleInterval); _iosPWACycleInterval = null; }
-        try { _iosPWAActiveRecorder.stop(); } catch(_) {}
+        if (_iosPWAActiveRecorder) {
+            try { _iosPWAActiveRecorder.onstop = null; _iosPWAActiveRecorder.stop(); } catch(_) {}
+            _iosPWAActiveRecorder = null;
+        }
         console.log('[APEX iOS] muteDeepgram — recorder stopped, releasing audio session for speech');
     }
     if (isIOSPWA && _iosPWAStream) {
