@@ -2069,11 +2069,9 @@ function _startInterruptSR() {
     _vadInterruptSR = r;
 
     r.onresult = ev => {
-        const transcript = Array.from(ev.results)
-            .map(res => res[0].transcript)
-            .join(" ")
-            .trim();
-        const wordCount = transcript.split(/\s+/).filter(Boolean).length;
+        if (!ev.results[ev.resultIndex].isFinal) return;
+        const transcript = ev.results[ev.resultIndex][0].transcript.trim();
+        const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
         console.log(`[VAD] interrupt SR: ${wordCount} words — "${transcript}"`);
         if (wordCount >= 2 && isSpeakingNow) {
             _vadInterruptSR = null;
@@ -2416,18 +2414,15 @@ async function startVoicePipeline() {
     srec.lang = "en-GB";
 
     srec.onresult = e => {
-        const transcript = Array.from(e.results)
-            .slice(e.resultIndex)
-            .map(r => r[0].transcript)
-            .join(" ")
-            .trim();
+        if (!e.results[e.resultIndex].isFinal) return;
+        const transcript = e.results[e.resultIndex][0].transcript.trim();
         if (!transcript) return;
         lastSpeechMs = Date.now();
 
         if (isSpeakingNow) {
             if (!_isTouchDevice) {
                 // Desktop: main SR handles interrupt directly — stop audio and send transcript
-                const wordCount = transcript.split(/\s+/).filter(Boolean).length;
+                const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
                 if (wordCount >= 2) {
                     interruptSpeech();
                     document.getElementById("chatInput").value = transcript;
