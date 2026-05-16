@@ -2005,9 +2005,10 @@ async function _processSpeak() {
     isSpeakingNow = false;
     console.log('[Speak] queue empty — speaking ended, unmuteDeepgram');
     // dgSilenceTimer owns standby transitions — do not set dgMode here
-    if (autoListen) {
+    if (isListening) {
         unmuteDeepgram();
         if (!srec) {
+            _manualStart = true;
             startVoicePipeline();
         } else {
             try { srec.start(); } catch (_) {}
@@ -2508,7 +2509,7 @@ async function startVoicePipeline() {
 
             const buf = new Float32Array(dgAnalyser.fftSize);
             dgSilenceTimer = setInterval(() => {
-                if (!autoListen) return;
+                if (!isListening) return;
                 dgAnalyser.getFloatTimeDomainData(buf);
                 const db = _rms(buf);
 
