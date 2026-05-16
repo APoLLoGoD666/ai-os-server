@@ -3577,21 +3577,24 @@ if (_isTouchDevice) {
 // Release mic when the page is hidden (tab switch, app background, lock screen)
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
-        if (_isTouchDevice) {
-            clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
-            if (window.speechSynthesis) window.speechSynthesis.cancel();
-            if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
-            speakQueue.length = 0;
-            isSpeakingNow = false;
-        }
+        clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
+        speakQueue.length = 0;
+        isSpeakingNow = false;
         _pauseVoiceForBackground();
     } else {
         _restoreVoiceFromBackground();
     }
 });
 
-// pagehide fires on iOS when the user swipes away — release mic tracks immediately
+// pagehide fires on iOS when the user swipes away — release mic tracks and stop audio immediately
 window.addEventListener("pagehide", () => {
+    clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
+    speakQueue.length = 0;
+    isSpeakingNow = false;
     if (isIOSPWA) {
         _iosPWAStopPipeline();
         return;
