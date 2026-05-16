@@ -3579,6 +3579,9 @@ document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
         clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
         if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (typeof _httSafetyTimer !== 'undefined' && _httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
+        if (typeof _apexAudio !== 'undefined' && _apexAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} }
+        _httAudio = null;
         if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
         speakQueue.length = 0;
         isSpeakingNow = false;
@@ -3592,6 +3595,9 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("pagehide", () => {
     clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (typeof _httSafetyTimer !== 'undefined' && _httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
+    if (typeof _apexAudio !== 'undefined' && _apexAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} }
+    _httAudio = null;
     if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
     speakQueue.length = 0;
     isSpeakingNow = false;
