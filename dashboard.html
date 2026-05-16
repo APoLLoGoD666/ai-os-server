@@ -3551,12 +3551,32 @@ setInterval(refreshSlow, SLOW_REFRESH_MS);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
-// iOS PWA: pipeline starts on first touchstart (getUserMedia requires a user gesture)
-setTimeout(() => { if (!isIOSPWA) { _manualStart = true; startVoicePipeline(); } }, 1000);
+// Desktop: start voice pipeline automatically. Touch devices need a gesture first.
+setTimeout(() => { if (!isIOSPWA && !_isTouchDevice) { _manualStart = true; startVoicePipeline(); } }, 1000);
+
+// iOS / touch: show tap-to-begin overlay on first visit; skip on return if already granted
+if (_isTouchDevice) {
+    if (localStorage.getItem('apex_mic_granted')) {
+        setTimeout(() => { _manualStart = true; startVoicePipeline(); }, 1000);
+    } else {
+        const _tapOverlay = document.createElement('div');
+        _tapOverlay.id = 'tapBeginOverlay';
+        _tapOverlay.style.cssText = 'position:fixed;inset:0;background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;cursor:pointer;';
+        _tapOverlay.innerHTML = '<div style="color:#00d4ff;font-size:1.4rem;font-weight:600;letter-spacing:0.05em;">Tap to Begin</div><div style="color:#666;font-size:0.85rem;margin-top:0.75rem;">Apex AI</div>';
+        document.body.appendChild(_tapOverlay);
+        _tapOverlay.addEventListener('click', () => {
+            localStorage.setItem('apex_mic_granted', '1');
+            _tapOverlay.remove();
+            _manualStart = true;
+            startVoicePipeline();
+        }, { once: true });
+    }
+}
 
 // Release mic when the page is hidden (tab switch, app background, lock screen)
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
+        if (_isTouchDevice) interruptSpeech();
         _pauseVoiceForBackground();
     } else {
         _restoreVoiceFromBackground();
