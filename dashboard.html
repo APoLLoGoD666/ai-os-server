@@ -1365,7 +1365,7 @@ let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
 let _postSpeakLockUntil = 0;
 let dgDbLogTs           = 0;
-const CONV_SILENCE_MS   = 8000;   // ms of silence before returning to wake mode
+const CONV_SILENCE_MS   = 3000;   // ms of silence before returning to wake mode
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 let _emailCache         = {};
@@ -1797,8 +1797,8 @@ function summariseForSpeech(raw) {
         return _firstTwoSentences(clean);
     }
 
-    // 100-299 chars
-    return _firstSentence(clean);
+    // 100-299 chars — short enough to speak in full
+    return clean;
 }
 
 const FILLERS = [
@@ -2004,7 +2004,7 @@ async function _processSpeak() {
     _speakSafetyTimer = null;
     _vadDebounceStart = null;
     isSpeakingNow = false;
-    _postSpeakLockUntil = Date.now() + 2500;
+    _postSpeakLockUntil = Date.now() + 800;
     console.log('[Speak] queue empty — speaking ended, unmuteDeepgram');
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
