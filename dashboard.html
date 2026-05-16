@@ -1363,6 +1363,7 @@ let _vadInterruptSR     = null;   // dedicated fresh SR instance used only for i
 let dgSilenceTimer      = null;   // setInterval for conversation silence tracking
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
+let _postSpeakLockUntil = 0;
 let dgDbLogTs           = 0;
 const CONV_SILENCE_MS   = 8000;   // ms of silence before returning to wake mode
 let cachedEmailCount    = 0;
@@ -2003,6 +2004,7 @@ async function _processSpeak() {
     _speakSafetyTimer = null;
     _vadDebounceStart = null;
     isSpeakingNow = false;
+    _postSpeakLockUntil = Date.now() + 2500;
     console.log('[Speak] queue empty — speaking ended, unmuteDeepgram');
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
@@ -2447,6 +2449,10 @@ async function startVoicePipeline() {
                 console.log(`[Wake] wake word not matched: "${transcript}"`);
             }
         } else {
+            if (Date.now() < _postSpeakLockUntil) {
+                console.log('[SR] post-speak echo discarded:', transcript);
+                return;
+            }
             console.log(`[SR] conversation: "${transcript}"`);
             // Standby voice commands — cancel audio and return to wake mode immediately
             if (/\bstand\s*by\b|\bgo\s+to\s+sleep\b|\bstop\s+listening\b/i.test(transcript)) {
