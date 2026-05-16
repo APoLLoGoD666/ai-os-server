@@ -3554,29 +3554,36 @@ fetch(API_BASE + "/api/ping")
 // Desktop: start voice pipeline automatically. Touch devices need a gesture first.
 setTimeout(() => { if (!isIOSPWA && !_isTouchDevice) { _manualStart = true; startVoicePipeline(); } }, 1000);
 
-// iOS / touch: show tap-to-begin overlay on first visit; skip on return if already granted
+// Touch devices: always show tap-to-begin overlay — getUserMedia must be called within a user gesture on iOS
 if (_isTouchDevice) {
-    if (localStorage.getItem('apex_mic_granted')) {
-        setTimeout(() => { _manualStart = true; startVoicePipeline(); }, 1000);
-    } else {
-        const _tapOverlay = document.createElement('div');
-        _tapOverlay.id = 'tapBeginOverlay';
-        _tapOverlay.style.cssText = 'position:fixed;inset:0;background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;cursor:pointer;';
-        _tapOverlay.innerHTML = '<div style="color:#00d4ff;font-size:1.4rem;font-weight:600;letter-spacing:0.05em;">Tap to Begin</div><div style="color:#666;font-size:0.85rem;margin-top:0.75rem;">Apex AI</div>';
-        document.body.appendChild(_tapOverlay);
-        _tapOverlay.addEventListener('click', () => {
-            localStorage.setItem('apex_mic_granted', '1');
-            _tapOverlay.remove();
-            _manualStart = true;
-            startVoicePipeline();
-        }, { once: true });
-    }
+    const _tapOverlay = document.createElement('div');
+    _tapOverlay.id = 'tapBeginOverlay';
+    _tapOverlay.style.cssText = 'position:fixed;inset:0;background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;cursor:pointer;';
+    _tapOverlay.innerHTML = '<div style="color:#00d4ff;font-size:1.4rem;font-weight:600;letter-spacing:0.05em;">Tap to Begin</div><div style="color:#666;font-size:0.85rem;margin-top:0.75rem;">Apex AI</div>';
+    document.body.appendChild(_tapOverlay);
+    _tapOverlay.addEventListener('click', async () => {
+        _tapOverlay.remove();
+        try {
+            const _s = await navigator.mediaDevices.getUserMedia({ audio: true });
+            _s.getTracks().forEach(t => t.stop());
+        } catch (e) {
+            console.warn('[Tap] mic permission denied:', e.message);
+        }
+        _manualStart = true;
+        startVoicePipeline();
+    }, { once: true });
 }
 
 // Release mic when the page is hidden (tab switch, app background, lock screen)
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
-        if (_isTouchDevice) interruptSpeech();
+        if (_isTouchDevice) {
+            clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
+            speakQueue.length = 0;
+            isSpeakingNow = false;
+        }
         _pauseVoiceForBackground();
     } else {
         _restoreVoiceFromBackground();
