@@ -285,6 +285,49 @@ async function pgLoadMemory() {
     return result.rows.reverse();
 }
 
+async function pgLoadFacts() {
+    const result = await pool.query(`
+        SELECT message, created_at AS time
+        FROM memory
+        WHERE role = 'fact'
+        ORDER BY id DESC
+        LIMIT 15
+    `);
+    return result.rows;
+}
+
+async function pgCreateVoiceTask(description) {
+    await ensureAgentTasksTable();
+    const result = await pool.query(
+        `INSERT INTO agent_tasks (goal, status, plan, context_json)
+         VALUES ($1, 'pending', '', $2::jsonb)
+         RETURNING id, goal, status, created_at`,
+        [description, JSON.stringify({ type: 'voice_task' })]
+    );
+    return result.rows[0] || null;
+}
+
+async function pgListVoiceTasks() {
+    await ensureAgentTasksTable();
+    const result = await pool.query(`
+        SELECT id, goal, status, created_at
+        FROM agent_tasks
+        WHERE context_json->>'type' = 'voice_task'
+          AND status != 'done'
+        ORDER BY created_at DESC
+        LIMIT 20
+    `);
+    return result.rows;
+}
+
+async function pgCompleteVoiceTask(id) {
+    await ensureAgentTasksTable();
+    await pool.query(
+        `UPDATE agent_tasks SET status = 'done', updated_at = NOW() WHERE id = $1`,
+        [id]
+    );
+}
+
 async function pgLogAgentAction(
     actionType,
     status,
@@ -1076,6 +1119,10 @@ module.exports = {
     pgUpdateDocumentSummary,
     pgAddMemory,
     pgLoadMemory,
+    pgLoadFacts,
+    pgCreateVoiceTask,
+    pgListVoiceTasks,
+    pgCompleteVoiceTask,
     pgLogAgentAction,
     pgGetRecentAgentActions,
     pgGetLastUndoableAgentAction,

@@ -27,6 +27,7 @@ const {
     pgUpdateDocumentSummary,
     pgAddMemory,
     pgLoadMemory,
+    pgLoadFacts,
     pgLogAgentAction,
     pgGetRecentAgentActions,
     pgGetLastUndoableAgentAction,
@@ -68,6 +69,7 @@ const { checkEmails, sendEmailReply, initEmailAgent } = require("./email_agent")
 const { initMastra, getMastraStatus } = require("./mastra_agents");
 const { categoriseTransaction, checkBudgetAlerts, parseCsvTransactions, FINANCE_CATEGORIES } = require("./finance_agent");
 const { initRoutineAgent } = require("./routine_agent");
+const { runReflectionCheck } = require("./reflection_agent");
 const {
     pgListEmailQueue,
     pgUpdateEmailQueueStatus,
@@ -79,7 +81,9 @@ const {
     pgCreateRoutine,
     pgListRoutines,
     pgUpdateRoutine,
-    pgDeleteRoutine
+    pgDeleteRoutine,
+    pgCreateVoiceTask,
+    pgListVoiceTasks
 } = require("./pg_helpers");
 
 const app = express();
@@ -7326,6 +7330,51 @@ async function recallMemories(query, count = 5) {
 
 // ── END APEX MEMORY ────────────────────────────────────────────────────────
 
+// ── UPGRADE 1: Structured Memory Extraction ─────────────────────────────────
+async function extractAndSaveFacts(userMessage, apexReply) {
+    try {
+        const prompt = `Extract up to 5 persistent facts about Alex from this conversation exchange. Each fact must start with "Alex" and be a concise single sentence. Only extract facts that reveal preferences, habits, people mentioned, goals, or decisions. If there are no clear facts, respond with NO_FACTS.
+
+User said: ${userMessage}
+Apex replied: ${apexReply}
+
+Respond with one fact per line, each starting with "Alex".`;
+
+        const res = await client.messages.create({
+            model: HAIKU_MODEL,
+            max_tokens: 200,
+            messages: [{ role: 'user', content: prompt }]
+        });
+
+        const text = (res.content[0]?.text || '').trim();
+        if (!text || text === 'NO_FACTS') return;
+
+        const facts = text.split('\n')
+            .map(l => l.trim())
+            .filter(l => l.startsWith('Alex'))
+            .slice(0, 5);
+
+        for (const fact of facts) {
+            await pgAddMemory('fact', fact);
+        }
+        if (facts.length) console.log(`[FACTS] Extracted ${facts.length} fact(s).`);
+    } catch (err) {
+        console.error('[FACTS] extractAndSaveFacts error:', err.message);
+    }
+}
+
+// ── UPGRADE 2: Alex Context Builder ─────────────────────────────────────────
+async function buildAlexContext() {
+    try {
+        const facts = await pgLoadFacts();
+        if (!facts || !facts.length) return '';
+        const factLines = facts.map(f => `• ${f.message}`).join('\n');
+        return `\n\nKnown facts about Alex:\n${factLines}`;
+    } catch {
+        return '';
+    }
+}
+
 // ── APEX TOOLS ──────────────────────────────────────────────────────────────
 
 async function toolWebSearch(query) {
@@ -7501,6 +7550,22 @@ const APEX_TOOLS = [
             },
             required: ['keyword']
         }
+    },
+    {
+        name: 'create_task',
+        description: 'Save a task or reminder when Alex asks you to remember something, follow up on something, or do something later. Use for any "remind me", "remember to", "follow up on", or "make a note" requests.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                description: { type: 'string', description: 'What to remember or follow up on.' }
+            },
+            required: ['description']
+        }
+    },
+    {
+        name: 'list_tasks',
+        description: 'Read back all pending tasks and reminders Alex has asked Apex to track. Use when asked what tasks are pending, what to follow up on, or what reminders exist.',
+        input_schema: { type: 'object', properties: {}, required: [] }
     }
 ];
 
@@ -7576,6 +7641,26 @@ async function toolSearchDocuments(keyword) {
     }
 }
 
+async function toolCreateTask(description) {
+    try {
+        const task = await pgCreateVoiceTask(description);
+        return { ok: true, task_id: task.id, message: `Task saved: "${description}"` };
+    } catch (err) {
+        return { error: err.message };
+    }
+}
+
+async function toolListTasks() {
+    try {
+        const tasks = await pgListVoiceTasks();
+        if (!tasks.length) return { tasks: [], summary: 'No pending tasks or reminders.' };
+        const summary = tasks.map((t, i) => `${i + 1}. ${t.goal}`).join('\n');
+        return { tasks, summary, count: tasks.length };
+    } catch (err) {
+        return { error: err.message };
+    }
+}
+
 async function executeApexTool(name, input) {
     if (name === 'web_search') return await toolWebSearch(input.query);
     if (name === 'get_weather') return await toolWeather(input.location);
@@ -7586,6 +7671,8 @@ async function executeApexTool(name, input) {
     if (name === 'list_files') return await toolListFiles();
     if (name === 'read_file') return await toolReadFile(input.filename);
     if (name === 'search_documents') return await toolSearchDocuments(input.keyword);
+    if (name === 'create_task') return await toolCreateTask(input.description);
+    if (name === 'list_tasks') return await toolListTasks();
     return { error: 'Unknown tool' };
 }
 
@@ -7634,13 +7721,18 @@ USER: ${userMessage}
 Respond naturally in 1-2 sentences.`.trim();
 
         // Only include tools if the message looks like an action request
-        const needsTools = /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment/i.test(userMessage);
+        const needsTools = /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment|remember|follow.?up|what.*task|pending/i.test(userMessage);
         console.log(`[LATENCY] +${Date.now() - t0}ms calling Anthropic model:claude-haiku-4-5-20251001 tools:${needsTools}`);
 
-        // Recall semantically relevant memories
+        // Recall semantically relevant memories + Alex context (Upgrades 1 & 2)
         let memoryContext = '';
+        let alexContext = '';
         try {
-            const memories = await recallMemories(userMessage, 5);
+            const [memories, alexCtx] = await Promise.all([
+                recallMemories(userMessage, 5),
+                buildAlexContext()
+            ]);
+            alexContext = alexCtx;
             if (memories.length > 0) {
                 memoryContext = '\n\nRelevant memories from past conversations:\n' +
                     memories.map(m => `[${m.role.toUpperCase()}]: ${m.content}`).join('\n');
@@ -7660,7 +7752,7 @@ Respond naturally in 1-2 sentences.`.trim();
             const response = await client.messages.create({
                 model: MODEL,
                 max_tokens: 1024,
-                system: `You are Apex, a precise, professional AI operating system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK — use this as the default location for any location-based queries unless told otherwise. You have tools available: use get_notifications proactively if the user greets you or asks what is happening, to surface any unread alerts or briefings. Use list_emails if they ask about their inbox. Use get_weather for weather queries. Use web_search for current facts.${memoryContext} Respond in plain spoken English only. No markdown, no bullet points, no dashes, no numbered lists, no asterisks. All responses will be read aloud — format as natural speech.`,
+                system: `You are Apex, a precise, professional AI operating system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK — use this as the default location for any location-based queries unless told otherwise. You have tools available: use get_notifications proactively if the user greets you or asks what is happening, to surface any unread alerts or briefings. Use list_emails if they ask about their inbox. Use get_weather for weather queries. Use web_search for current facts. Use create_task when Alex asks you to remember or follow up on something. Use list_tasks when asked about pending tasks or reminders.${alexContext}${memoryContext} Respond in plain spoken English only. No markdown, no bullet points, no dashes, no numbered lists, no asterisks. All responses will be read aloud — format as natural speech.`,
                 tools: APEX_TOOLS,
                 messages
             });
@@ -7699,6 +7791,8 @@ Respond naturally in 1-2 sentences.`.trim();
         saveMemory('assistant', reply).catch(() => {});
 
         addToMemory("ai", reply);
+        // Upgrade 1: fire-and-forget fact extraction — never blocks response
+        setImmediate(() => extractAndSaveFacts(userMessage, reply).catch(() => {}));
         return res.status(200).json({ ok: true, reply });
     } catch (error) {
         console.error("VOICE CHAT ERROR:", error);
@@ -7914,6 +8008,8 @@ server.listen(PORT, () => {
     // Phase 2 agents
     initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
     initRoutineAgent(client).catch(err => console.error("ROUTINE AGENT INIT ERROR:", err.message));
+    // Upgrade 3: Proactive reflection agent — runs every 30 minutes
+    setInterval(() => runReflectionCheck(client).catch(err => console.error("REFLECTION ERROR:", err.message)), 30 * 60 * 1000);
 
     // Mastra agent framework
     try {
