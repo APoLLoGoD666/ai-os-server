@@ -1364,7 +1364,7 @@ let dgSilenceTimer      = null;   // setInterval for conversation silence tracki
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
 let dgDbLogTs           = 0;
-const CONV_SILENCE_MS   = 3000;   // ms of silence before returning to wake mode
+const CONV_SILENCE_MS   = 8000;   // ms of silence before returning to wake mode
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 let _emailCache         = {};
@@ -2616,7 +2616,7 @@ function muteDeepgram() {
 function unmuteDeepgram() {
     stopVAD();
     dgMuted = false;
-    lastSpeechMs = Date.now();
+    lastSpeechMs = _isTouchDevice ? Date.now() : Date.now() + 2000;
     console.log(`[Voice] unmuteDeepgram — mode:${dgMode} isListening:${isListening}`);
     if (isListening) setOrbState(dgMode === "conversation" ? "listening" : "waiting");
     // iOS: VAD timer handles silence tracking — nothing extra needed here
