@@ -1977,7 +1977,7 @@ async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
     console.log('[Speak] speaking started');
-    if (srec) { try { srec.stop(); } catch (_) {} }
+    if (srec && _isTouchDevice) { try { srec.stop(); } catch (_) {} }
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
