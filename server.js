@@ -7474,6 +7474,33 @@ const APEX_TOOLS = [
             },
             required: []
         }
+    },
+    {
+        name: 'list_files',
+        description: 'List all files and documents in the workspace. Use when asked what files exist, what documents are saved, or what is in the workspace.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'read_file',
+        description: 'Read the contents of a specific file from the workspace by filename. Use when asked to read, open, or show the contents of a file or document.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                filename: { type: 'string', description: 'The filename to read.' }
+            },
+            required: ['filename']
+        }
+    },
+    {
+        name: 'search_documents',
+        description: 'Search saved documents and workspace files by keyword. Use when asked to find, search, or look for documents containing specific content.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                keyword: { type: 'string', description: 'Keyword to search for.' }
+            },
+            required: ['keyword']
+        }
     }
 ];
 
@@ -7515,6 +7542,40 @@ async function toolGetNotifications(unreadOnly = true) {
     }
 }
 
+async function toolListFiles() {
+    try {
+        const files = await listWorkspaceFiles();
+        const docs = await pgListDocuments().catch(() => []);
+        const docNames = docs.map(d => d.filename);
+        const allNames = [...new Set([...files, ...docNames])].sort();
+        if (!allNames.length) return { files: [], summary: 'No files in workspace.' };
+        return { files: allNames, summary: `Workspace contains ${allNames.length} file${allNames.length !== 1 ? 's' : ''}: ${allNames.join(', ')}` };
+    } catch (err) {
+        return { error: err.message };
+    }
+}
+
+async function toolReadFile(filename) {
+    try {
+        const file = await readWorkspaceFile(filename);
+        if (!file) return { error: `File not found: ${filename}` };
+        return { filename: file.filename, content: file.content, summary: `Contents of ${file.filename}: ${file.content.slice(0, 500)}` };
+    } catch (err) {
+        return { error: err.message };
+    }
+}
+
+async function toolSearchDocuments(keyword) {
+    try {
+        const docs = await pgSearchDocuments(keyword.toLowerCase()).catch(() => []);
+        if (!docs.length) return { results: [], summary: `No documents found matching "${keyword}".` };
+        const summary = docs.map(d => `${d.filename}: ${d.summary || d.content?.slice(0, 100) || 'No preview'}`).join('\n');
+        return { results: docs, summary };
+    } catch (err) {
+        return { error: err.message };
+    }
+}
+
 async function executeApexTool(name, input) {
     if (name === 'web_search') return await toolWebSearch(input.query);
     if (name === 'get_weather') return await toolWeather(input.location);
@@ -7522,6 +7583,9 @@ async function executeApexTool(name, input) {
     if (name === 'list_emails') return await toolListEmails();
     if (name === 'check_emails') return await toolCheckEmails();
     if (name === 'get_notifications') return await toolGetNotifications(input.unread_only !== false);
+    if (name === 'list_files') return await toolListFiles();
+    if (name === 'read_file') return await toolReadFile(input.filename);
+    if (name === 'search_documents') return await toolSearchDocuments(input.keyword);
     return { error: 'Unknown tool' };
 }
 
