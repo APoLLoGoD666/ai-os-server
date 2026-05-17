@@ -1977,6 +1977,7 @@ async function _speakInternal(text, useFiller) {
 async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
+    const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
     if (srec) { try { srec.stop(); } catch (_) {} } // stop on all platforms — desktop mic must not hear Apex speak
 
@@ -2004,8 +2005,10 @@ async function _processSpeak() {
     _speakSafetyTimer = null;
     _vadDebounceStart = null;
     isSpeakingNow = false;
-    _postSpeakLockUntil = Date.now() + 2000; // 2 s — enough for audio tail + browser SR buffer to clear
-    console.log('[Speak] queue empty — speaking ended, unmuteDeepgram');
+    const _speakDurationMs = Date.now() - _speakStartMs;
+    const _echoLockMs = Math.min(5000, Math.max(2000, _speakDurationMs + 1500));
+    _postSpeakLockUntil = Date.now() + _echoLockMs;
+    console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${_echoLockMs}ms, unmuteDeepgram`);
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
         unmuteDeepgram();
@@ -2013,8 +2016,8 @@ async function _processSpeak() {
             _manualStart = true;
             startVoicePipeline();
         } else {
-            // Delay restart to let the 2 s post-speak echo window expire before mic opens again
-            setTimeout(() => { if (!isSpeakingNow && isListening && srec) { try { srec.start(); } catch (_) {} } }, 2000);
+            // Delay restart to match the scaled echo lock window so mic opens only after echo clears
+            setTimeout(() => { if (!isSpeakingNow && isListening && srec) { try { srec.start(); } catch (_) {} } }, _echoLockMs);
             setOrbState(dgMode === "conversation" ? "listening" : "waiting");
         }
     } else {
@@ -2483,6 +2486,7 @@ async function startVoicePipeline() {
     };
 
     srec.onend = () => {
+        if (isSpeakingNow) return; // never restart while Apex is speaking — _processSpeak owns the restart
         console.log("[SR] ended — restarting");
         if (srec && !isSpeakingNow && isListening && document.visibilityState !== "hidden") {
             try { srec.start(); } catch (_) {}
