@@ -1978,7 +1978,7 @@ async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
     console.log('[Speak] speaking started');
-    if (srec && _isTouchDevice) { try { srec.stop(); } catch (_) {} }
+    if (srec) { try { srec.stop(); } catch (_) {} } // stop on all platforms — desktop mic must not hear Apex speak
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
@@ -2004,7 +2004,7 @@ async function _processSpeak() {
     _speakSafetyTimer = null;
     _vadDebounceStart = null;
     isSpeakingNow = false;
-    _postSpeakLockUntil = Date.now() + 800;
+    _postSpeakLockUntil = Date.now() + 2000; // 2 s — enough for audio tail + browser SR buffer to clear
     console.log('[Speak] queue empty — speaking ended, unmuteDeepgram');
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
@@ -2013,7 +2013,8 @@ async function _processSpeak() {
             _manualStart = true;
             startVoicePipeline();
         } else {
-            try { srec.start(); } catch (_) {}
+            // Delay restart to let the 2 s post-speak echo window expire before mic opens again
+            setTimeout(() => { if (!isSpeakingNow && isListening && srec) { try { srec.start(); } catch (_) {} } }, 2000);
             setOrbState(dgMode === "conversation" ? "listening" : "waiting");
         }
     } else {
