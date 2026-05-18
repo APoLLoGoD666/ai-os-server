@@ -1365,7 +1365,7 @@ let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
 let _postSpeakLockUntil = 0;
 let dgDbLogTs           = 0;
-const CONV_SILENCE_MS   = 3000;   // ms of silence before returning to wake mode
+const CONV_SILENCE_MS   = 8000;   // ms of silence before returning to wake mode
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 let _emailCache         = {};
@@ -2013,6 +2013,7 @@ async function _processSpeak() {
     if (isListening) {
         unmuteDeepgram();
         if (!srec) {
+            if (dgMode === "conversation") lastSpeechMs = Date.now() + _echoLockMs + 2000;
             _manualStart = true;
             startVoicePipeline();
         } else {
