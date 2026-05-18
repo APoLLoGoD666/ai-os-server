@@ -2010,6 +2010,7 @@ async function _processSpeak() {
     const _speakDurationMs = Date.now() - _speakStartMs;
     const _echoLockMs = 600;
     _postSpeakLockUntil = Date.now() + _echoLockMs;
+    if (dgMode === 'conversation') _postSpeakLockUntil = 0;
     console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${_echoLockMs}ms, unmuteDeepgram`);
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
@@ -2551,6 +2552,24 @@ async function startVoicePipeline() {
                 if (!isListening) return;
                 dgAnalyser.getFloatTimeDomainData(buf);
                 const db = _rms(buf);
+
+                if (isSpeakingNow && dgMode === 'conversation') {
+                    const _now = Date.now();
+                    if (!window._vadSpeechStart) window._vadSpeechStart = 0;
+                    if (db > -45) {
+                        if (!window._vadSpeechStart) window._vadSpeechStart = _now;
+                        if (_now - window._vadSpeechStart > 500) {
+                            console.log('[VAD] dB interrupt:', db);
+                            window._vadSpeechStart = 0;
+                            interruptSpeech();
+                            lastSpeechMs = Date.now() + 2000;
+                        }
+                    } else {
+                        window._vadSpeechStart = 0;
+                    }
+                } else {
+                    if (!isSpeakingNow) window._vadSpeechStart = 0;
+                }
 
                 if (isSpeakingNow) {
                     if (!_isTouchDevice) return; // desktop: main SR handles interrupts
