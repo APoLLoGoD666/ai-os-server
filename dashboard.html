@@ -2008,7 +2008,7 @@ async function _processSpeak() {
     _vadDebounceStart = null;
     isSpeakingNow = false;
     const _speakDurationMs = Date.now() - _speakStartMs;
-    const _echoLockMs = Math.min(2000, Math.max(1000, _speakDurationMs + 500));
+    const _echoLockMs = 600;
     _postSpeakLockUntil = Date.now() + _echoLockMs;
     console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${_echoLockMs}ms, unmuteDeepgram`);
     // dgSilenceTimer owns standby transitions — do not set dgMode here
@@ -2661,17 +2661,9 @@ function stopListening() {
 }
 
 function toggleListening() {
-    if (!_isTouchDevice && isSpeakingNow) {
-        window.speechSynthesis.cancel();
-        isSpeakingNow = false;
-        speakQueue.length = 0;
-        unmuteDeepgram();
-        lastSpeechMs = Date.now() + 3000;
-        console.log('[Speak] interrupted by user');
-        return;
-    }
     if (isSpeakingNow || currentAudio) {
         interruptSpeech();
+        if (dgMode === "conversation") lastSpeechMs = Date.now() + 3000;
         return;
     }
     if (isListening || srec) stopListening(); else startListening();
