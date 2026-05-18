@@ -1935,7 +1935,7 @@ function _speakFallback(phrase, { onEnd } = {}) {
     };
     if (isIOSPWA) console.log(`[iOS] speechSynthesis speaking: "${phrase.slice(0, 60)}"`);
     if (isIOSPWA && 'audioSession' in navigator) navigator.audioSession.type = 'play-and-record';
-    setTimeout(() => { console.log("[APEX iOS] speechSynthesis.speak fired"); window.speechSynthesis.speak(utt); }, 100);
+    setTimeout(() => { if (isIOSPWA) console.log("[APEX iOS] speechSynthesis.speak fired"); window.speechSynthesis.speak(utt); }, 100);
 }
 
 function showTypingIndicator() {
@@ -1981,7 +1981,7 @@ async function _processSpeak() {
     isSpeakingNow = true;
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
-    if (srec) { try { srec.stop(); } catch (_) {} } // stop on all platforms — desktop mic must not hear Apex speak
+    if (srec && dgMode !== 'conversation') { try { srec.stop(); } catch (_) {} } // keep alive in conversation mode for VAD interrupt
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
