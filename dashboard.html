@@ -1935,7 +1935,7 @@ function _speakFallback(phrase, { onEnd } = {}) {
     };
     if (isIOSPWA) console.log(`[iOS] speechSynthesis speaking: "${phrase.slice(0, 60)}"`);
     if (isIOSPWA && 'audioSession' in navigator) navigator.audioSession.type = 'play-and-record';
-    setTimeout(() => { console.log("[APEX iOS] speechSynthesis.speak fired"); window.speechSynthesis.speak(utt); }, 100);
+    setTimeout(() => { console.log("[APEX iOS] speechSynthesis.speak fired"); window.speechSynthesis.speak(utt); console.log('[DEBUG speak] utterance spoken — synth speaking:', window.speechSynthesis.speaking); }, 100);
 }
 
 function showTypingIndicator() {
@@ -2099,6 +2099,7 @@ function _startInterruptSR() {
 }
 
 function interruptSpeech() {
+    console.log('[DEBUG interruptSpeech] called — will cancel speechSynthesis and pause audio');
     console.log("Interrupted");
     clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
     _vadDebounceStart = null;
@@ -2106,7 +2107,9 @@ function interruptSpeech() {
     stopVAD();
     if (currentAbort) { currentAbort.abort(); currentAbort = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    console.log('[DEBUG interruptSpeech] speechSynthesis.cancel() fired');
     if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
+    console.log('[DEBUG interruptSpeech] audio paused');
     speakQueue.length = 0;
     isSpeakingNow = false;
     dgMuted = false;
@@ -2661,6 +2664,7 @@ function stopListening() {
 }
 
 function toggleListening() {
+    console.log('[DEBUG toggleListening] isSpeakingNow:', isSpeakingNow, '| currentAudio:', !!currentAudio, '| _isTouchDevice:', _isTouchDevice);
     if (isSpeakingNow || currentAudio) {
         interruptSpeech();
         if (dgMode === "conversation") lastSpeechMs = Date.now() + 3000;
