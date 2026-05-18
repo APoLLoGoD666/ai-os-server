@@ -2018,6 +2018,7 @@ async function _processSpeak() {
         } else {
             // Delay restart to match the scaled echo lock window so mic opens only after echo clears
             setTimeout(() => { if (!isSpeakingNow && isListening && srec) { try { srec.start(); } catch (_) {} } }, _echoLockMs);
+            if (dgMode === "conversation") lastSpeechMs = Date.now() + _echoLockMs + 2000;
             setOrbState(dgMode === "conversation" ? "listening" : "waiting");
         }
     } else {
