@@ -1917,11 +1917,13 @@ function _speakFallback(phrase, { onEnd } = {}) {
     if (isIOSPWA) console.log("[APEX iOS] _speakFallback called, text:", phrase.slice(0, 50));
     window.speechSynthesis.cancel();
     if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
-    const utt = new SpeechSynthesisUtterance(phrase);
+    const _truncated = (phrase.split(/[.!?]/)[0] || phrase).slice(0, 160).trim();
+    console.log('[Speak] speechSynthesis truncated to:', _truncated);
+    const utt = new SpeechSynthesisUtterance(_truncated);
     utt.rate = 1.08; utt.pitch = 0.95; utt.volume = 1;
     const voice = _selectedVoice || _pickVoice();
     if (voice) utt.voice = voice;
-    console.log(`[Speak] speechSynthesis fallback — voice:"${voice ? voice.name : 'default'}" phrase:"${phrase.slice(0, 60)}"`);
+    console.log(`[Speak] speechSynthesis fallback — voice:"${voice ? voice.name : 'default'}" phrase:"${_truncated.slice(0, 60)}"`);
     utt.onstart = () => { console.log('[Speak] speechSynthesis started'); };
     utt.onend   = () => {
         console.log('[Speak] speechSynthesis ended');
@@ -2006,7 +2008,7 @@ async function _processSpeak() {
     _vadDebounceStart = null;
     isSpeakingNow = false;
     const _speakDurationMs = Date.now() - _speakStartMs;
-    const _echoLockMs = Math.min(5000, Math.max(2000, _speakDurationMs + 1500));
+    const _echoLockMs = Math.min(2000, Math.max(1000, _speakDurationMs + 500));
     _postSpeakLockUntil = Date.now() + _echoLockMs;
     console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${_echoLockMs}ms, unmuteDeepgram`);
     // dgSilenceTimer owns standby transitions — do not set dgMode here
@@ -2445,12 +2447,21 @@ async function startVoicePipeline() {
         if (dgMode === "wake") {
             console.log(`[Wake] transcript: "${transcript}"`);
             if (/\bapex\b/i.test(transcript)) {
-                console.log("[Wake] wake word matched → conversation mode");
-                dgMode = "conversation";
-                lastSpeechMs = Date.now();
-                setOrbState("listening");
-                speak("Yes?");
-                renderChatMessage("system", "Listening…");
+                const _wakeTranscript = transcript.trim().toLowerCase();
+                const _wakeIdx = _wakeTranscript.indexOf('apex');
+                const _inlineCmd = _wakeTranscript.slice(_wakeIdx + 4).trim();
+                if (_inlineCmd.length > 2) {
+                    console.log('[Wake] inline command extracted:', _inlineCmd);
+                    dgMode = "conversation";
+                    sendVoiceChatCommand(_inlineCmd);
+                } else {
+                    console.log("[Wake] wake word matched → conversation mode");
+                    dgMode = "conversation";
+                    lastSpeechMs = Date.now();
+                    setOrbState("listening");
+                    speak("Yes?");
+                    renderChatMessage("system", "Listening…");
+                }
             } else {
                 console.log(`[Wake] wake word not matched: "${transcript}"`);
             }
@@ -2650,6 +2661,15 @@ function stopListening() {
 }
 
 function toggleListening() {
+    if (!_isTouchDevice && isSpeakingNow) {
+        window.speechSynthesis.cancel();
+        isSpeakingNow = false;
+        speakQueue.length = 0;
+        unmuteDeepgram();
+        lastSpeechMs = Date.now() + 3000;
+        console.log('[Speak] interrupted by user');
+        return;
+    }
     if (isSpeakingNow || currentAudio) {
         interruptSpeech();
         return;
