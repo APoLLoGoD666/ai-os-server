@@ -2500,6 +2500,11 @@ async function startVoicePipeline() {
                 setOrbState("waiting");
                 return;
             }
+            const _convWords = transcript.split(/\s+/).filter(Boolean).length;
+            if (_convWords < 3) {
+                console.log('[SR] conversation: too short, ignoring:', transcript);
+                return;
+            }
             document.getElementById("chatInput").value = transcript;
             lastSendWasVoice = true;
             dgMuted = true;
@@ -2556,7 +2561,7 @@ async function startVoicePipeline() {
                 if (isSpeakingNow && dgMode === 'conversation') {
                     const _now = Date.now();
                     if (!window._vadSpeechStart) window._vadSpeechStart = 0;
-                    if (db > -45) {
+                    if (db > -35) {
                         if (!window._vadSpeechStart) window._vadSpeechStart = _now;
                         if (_now - window._vadSpeechStart > 500) {
                             console.log('[VAD] dB interrupt:', db);
