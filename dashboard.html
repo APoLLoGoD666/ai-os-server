@@ -1906,6 +1906,7 @@ async function speakWithElevenLabs(text) {
             };
             _apexAudio.onerror = () => { cleanup(); currentAudio = null; rej(); };
             _apexAudio.onpause = () => { cleanup(); currentAudio = null; res2(false); };
+            if (dgAudioCtx) dgAudioCtx.resume().catch(() => {});
             _apexAudio.load();
             if (isIOSPWA) console.log('[iOS] audio playing');
             _apexAudio.play().catch(e => { if (isIOSPWA) console.error('[iOS] play() error:', e.message || String(e)); cleanup(); currentAudio = null; rej(e); });
@@ -2572,6 +2573,7 @@ async function startVoicePipeline() {
 
             const buf = new Float32Array(dgAnalyser.fftSize);
             dgSilenceTimer = setInterval(() => {
+                if (dgAudioCtx && dgAudioCtx.state !== 'running') { dgAudioCtx.resume().catch(() => {}); }
                 if (!isListening) return;
                 dgAnalyser.getFloatTimeDomainData(buf);
                 const db = _rms(buf);
@@ -2579,6 +2581,10 @@ async function startVoicePipeline() {
                 if (isSpeakingNow && dgMode === 'conversation') {
                     const _now = Date.now();
                     if (!window._vadSpeechStart) window._vadSpeechStart = 0;
+                    if (_now - dgDbLogTs >= 2000) {
+                        dgDbLogTs = _now;
+                        console.log('[VAD] dB during speech: ' + (db === -Infinity ? '-∞' : db.toFixed(1)) + ' ctx:' + (dgAudioCtx ? dgAudioCtx.state : 'null'));
+                    }
                     if (db > -22) {
                         if (!window._vadSpeechStart) window._vadSpeechStart = _now;
                         if (_now - window._vadSpeechStart > 800
