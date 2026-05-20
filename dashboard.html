@@ -1361,12 +1361,13 @@ let _speakSafetyTimer   = null;   // 30-second watchdog to force-reset stuck spe
 let _vadDebounceStart   = null;   // timestamp when vol first exceeded threshold during playback
 let _vadInterruptSR     = null;   // dedicated fresh SR instance used only for interrupt capture
 let _apexSpeakStartMs   = 0;      // timestamp when Apex TTS started, for VAD onset guard
+let _lastPartialTranscript = '';  // most recent srec transcript, used by dB VAD 2-word guard
 let dgSilenceTimer      = null;   // setInterval for conversation silence tracking
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
 let _postSpeakLockUntil = 0;
 let dgDbLogTs           = 0;
-const CONV_SILENCE_MS   = 8000;   // ms of silence before returning to wake mode
+const CONV_SILENCE_MS   = 3000;   // ms of silence before returning to wake mode
 let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 let _emailCache         = {};
@@ -2428,6 +2429,7 @@ async function startVoicePipeline() {
 
     srec.onresult = e => {
         const _transcript = (e.results[e.results.length - 1][0].transcript || '').trim();
+        _lastPartialTranscript = _transcript;
         const _wordCount = _transcript.split(/\s+/).filter(Boolean).length;
 
         if (isSpeakingNow && _wordCount > 2) {
@@ -2563,10 +2565,12 @@ async function startVoicePipeline() {
                 if (isSpeakingNow && dgMode === 'conversation') {
                     const _now = Date.now();
                     if (!window._vadSpeechStart) window._vadSpeechStart = 0;
-                    if (db > -28) {
+                    if (db > -22) {
                         if (!window._vadSpeechStart) window._vadSpeechStart = _now;
                         if (_now - window._vadSpeechStart > 500 && Date.now() - _apexSpeakStartMs > 1500) {
-                            console.log('[VAD] dB interrupt:', db);
+                            const _vadWords = _lastPartialTranscript.trim().split(/\s+/).filter(Boolean);
+                            if (_vadWords.length < 2) { window._vadSpeechStart = 0; return; }
+                            console.log('[VAD] dB interrupt:', db, '—', _vadWords.length, 'words');
                             window._vadSpeechStart = 0;
                             interruptSpeech();
                             lastSpeechMs = Date.now() + 2000;
