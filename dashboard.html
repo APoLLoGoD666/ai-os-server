@@ -2027,14 +2027,14 @@ async function _processSpeak() {
             _manualStart = true;
             startVoicePipeline();
         } else {
-            // Delay restart until echo lock expires (1200ms) so mic opens only after echo clears
+            // Delay restart until echo lock expires so mic opens only after echo clears
             setTimeout(() => {
                 if (!isSpeakingNow && isListening && srec) {
                     try { srec.start(); } catch (_) {}
                     if (dgMode === 'conversation') console.log('[Voice] srec restarted after speech in conversation mode');
                 }
-            }, 1200);
-            if (dgMode === "conversation") lastSpeechMs = Date.now() + 1200 + 2000;
+            }, 800);
+            if (dgMode === "conversation") lastSpeechMs = Date.now() + 800 + 2000;
             setOrbState(dgMode === "conversation" ? "listening" : "waiting");
         }
     } else {
@@ -2585,11 +2585,11 @@ async function startVoicePipeline() {
                         dgDbLogTs = _now;
                         console.log('[VAD] dB during speech: ' + (db === -Infinity ? '-∞' : db.toFixed(1)) + ' ctx:' + (dgAudioCtx ? dgAudioCtx.state : 'null'));
                     }
-                    if (db > -22) {
+                    if (db > -26) {
                         if (!window._vadSpeechStart) window._vadSpeechStart = _now;
-                        if (_now - window._vadSpeechStart > 800
+                        if (_now - window._vadSpeechStart > 200
                                 && Date.now() - _apexSpeakStartMs > 1500) {
-                            console.log('[VAD] dB interrupt: db=' + db.toFixed(1) + ' sustained 800ms');
+                            console.log('[VAD] dB interrupt: db=' + db.toFixed(1) + ' sustained 200ms');
                             window._vadSpeechStart = 0;
                             interruptSpeech();
                             lastSpeechMs = Date.now() + 2000;
@@ -2618,7 +2618,7 @@ async function startVoicePipeline() {
                     console.log(`[Voice] dB: ${db === -Infinity ? "-∞" : db.toFixed(1)} | mode: ${dgMode}`);
                 }
                 if (dgMode === "conversation" && !dgMuted) {
-                    if (db > -30) lastSpeechMs = now;
+                    if (db > -42) lastSpeechMs = now;
                     else if (now - lastSpeechMs > CONV_SILENCE_MS) {
                         console.log(`[Voice] ${now - lastSpeechMs}ms silence → returning to standby (wake mode)`);
                         dgMode = "wake";
