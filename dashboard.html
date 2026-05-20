@@ -1355,6 +1355,7 @@ let vadAnalyser         = null;
 let vadInterval         = null;
 let dgAnalyser          = null;   // AnalyserNode for visual UI
 let dgAudioCtx          = null;   // AudioContext for analyser
+let dgSource            = null;   // MediaStreamSourceNode — kept to prevent GC disconnecting mic
 let _apexAudio          = null;   // Persistent Audio element, created + unlocked on first touch
 let _apexBlobUrl        = null;   // Current blob URL so we can revoke before setting next
 let _speakSafetyTimer   = null;   // 30-second watchdog to force-reset stuck speaking state
@@ -2024,9 +2025,14 @@ async function _processSpeak() {
             _manualStart = true;
             startVoicePipeline();
         } else {
-            // Delay restart to match the scaled echo lock window so mic opens only after echo clears
-            setTimeout(() => { if (!isSpeakingNow && isListening && srec) { try { srec.start(); } catch (_) {} } }, _echoLockMs);
-            if (dgMode === "conversation") lastSpeechMs = Date.now() + _echoLockMs + 2000;
+            // Delay restart until echo lock expires (1200ms) so mic opens only after echo clears
+            setTimeout(() => {
+                if (!isSpeakingNow && isListening && srec) {
+                    try { srec.start(); } catch (_) {}
+                    if (dgMode === 'conversation') console.log('[Voice] srec restarted after speech in conversation mode');
+                }
+            }, 1200);
+            if (dgMode === "conversation") lastSpeechMs = Date.now() + 1200 + 2000;
             setOrbState(dgMode === "conversation" ? "listening" : "waiting");
         }
     } else {
@@ -2426,7 +2432,7 @@ async function startVoicePipeline() {
 
     srec = new SR();
     srec.continuous = true;
-    srec.interimResults = false;
+    srec.interimResults = true;
     srec.lang = "en-GB";
 
     srec.onresult = e => {
@@ -2476,9 +2482,10 @@ async function startVoicePipeline() {
             if (/\bapex\b/i.test(transcript)) {
                 const _wakeTranscript = transcript.trim().toLowerCase();
                 const _wakeIdx = _wakeTranscript.indexOf('apex');
-                const _inlineCmd = _wakeTranscript.slice(_wakeIdx + 4).trim();
-                if (_inlineCmd.length > 2) {
-                    console.log('[Wake] inline command extracted:', _inlineCmd);
+                const _inlineCmd = _wakeTranscript.slice(_wakeIdx + 4).replace(/^[\s,;.!?]+/, '').trim();
+                const _inlineWords = _inlineCmd.split(/\s+/).filter(Boolean);
+                if (_inlineWords.length >= 2) {
+                    console.log(`[Wake] inline command: "${_inlineCmd}" — routing direct`);
                     dgMode = "conversation";
                     sendVoiceChatCommand(_inlineCmd);
                 } else {
@@ -2554,9 +2561,11 @@ async function startVoicePipeline() {
                 console.log('[Voice] mic granted (desktop)');
             }
             dgAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (dgAudioCtx.state === 'suspended') { dgAudioCtx.resume().catch(() => {}); }
             dgAnalyser = dgAudioCtx.createAnalyser();
             dgAnalyser.fftSize = 256;
-            dgAudioCtx.createMediaStreamSource(dgStream).connect(dgAnalyser);
+            dgSource = dgAudioCtx.createMediaStreamSource(dgStream);
+            dgSource.connect(dgAnalyser);
 
             const buf = new Float32Array(dgAnalyser.fftSize);
             dgSilenceTimer = setInterval(() => {
@@ -2690,8 +2699,9 @@ function muteDeepgram() {
 function unmuteDeepgram() {
     stopVAD();
     dgMuted = false;
+    if (dgAudioCtx && dgAudioCtx.state !== 'running') { dgAudioCtx.resume().catch(() => {}); }
     lastSpeechMs = _isTouchDevice ? Date.now() : Date.now() + 2000;
-    console.log(`[Voice] unmuteDeepgram — mode:${dgMode} isListening:${isListening}`);
+    console.log(`[Voice] unmuteDeepgram — mode:${dgMode} isListening:${isListening} audioCtx:${dgAudioCtx ? dgAudioCtx.state : 'none'}`);
     if (isListening) setOrbState(dgMode === "conversation" ? "listening" : "waiting");
     // iOS: VAD timer handles silence tracking — nothing extra needed here
     if (isIOSPWA) {
