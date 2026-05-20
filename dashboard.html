@@ -1360,6 +1360,7 @@ let _apexBlobUrl        = null;   // Current blob URL so we can revoke before se
 let _speakSafetyTimer   = null;   // 30-second watchdog to force-reset stuck speaking state
 let _vadDebounceStart   = null;   // timestamp when vol first exceeded threshold during playback
 let _vadInterruptSR     = null;   // dedicated fresh SR instance used only for interrupt capture
+let _apexSpeakStartMs   = 0;      // timestamp when Apex TTS started, for VAD onset guard
 let dgSilenceTimer      = null;   // setInterval for conversation silence tracking
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
@@ -1979,6 +1980,7 @@ async function _speakInternal(text, useFiller) {
 async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
+    _apexSpeakStartMs = Date.now();
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
     if (srec && dgMode !== 'conversation') { try { srec.stop(); } catch (_) {} } // keep alive in conversation mode for VAD interrupt
@@ -2561,9 +2563,9 @@ async function startVoicePipeline() {
                 if (isSpeakingNow && dgMode === 'conversation') {
                     const _now = Date.now();
                     if (!window._vadSpeechStart) window._vadSpeechStart = 0;
-                    if (db > -35) {
+                    if (db > -28) {
                         if (!window._vadSpeechStart) window._vadSpeechStart = _now;
-                        if (_now - window._vadSpeechStart > 500) {
+                        if (_now - window._vadSpeechStart > 500 && Date.now() - _apexSpeakStartMs > 1500) {
                             console.log('[VAD] dB interrupt:', db);
                             window._vadSpeechStart = 0;
                             interruptSpeech();
