@@ -1985,9 +1985,10 @@ async function _processSpeak() {
     isSpeakingNow = true;
     _apexSpeakStartMs = Date.now();
     _lastPartialTranscript = '';
+    window._vadSpeechStart = 0;
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
-    if (srec && dgMode !== 'conversation') { try { srec.stop(); } catch (_) {} } // keep alive in conversation mode for VAD interrupt
+    if (srec) { try { srec.stop(); } catch (_) {} } // stop in all modes — dB VAD handles interrupts independently of srec
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
@@ -2111,6 +2112,8 @@ function _startInterruptSR() {
 
 function interruptSpeech() {
     _lastPartialTranscript = '';
+    window._vadSpeechStart = 0;
+    _apexSpeakStartMs = 0;
     console.log("Interrupted");
     clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
     _vadDebounceStart = null;
@@ -2123,7 +2126,7 @@ function interruptSpeech() {
     isSpeakingNow = false;
     dgMuted = false;
     unmuteDeepgram();
-    if (srec && autoListen) { try { srec.start(); } catch (_) {} }
+    if (srec && isListening && dgMode === 'conversation') { try { srec.start(); } catch (_) {} }
     setOrbState(isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
 }
 
@@ -2432,7 +2435,7 @@ async function startVoicePipeline() {
 
     srec = new SR();
     srec.continuous = true;
-    srec.interimResults = true;
+    srec.interimResults = false;
     srec.lang = "en-GB";
 
     srec.onresult = e => {
@@ -2440,7 +2443,7 @@ async function startVoicePipeline() {
         _lastPartialTranscript = _transcript;
         const _wordCount = _transcript.split(/\s+/).filter(Boolean).length;
 
-        if (isSpeakingNow && _wordCount > 2) {
+        if (false && isSpeakingNow && _wordCount > 2) {
             console.log('[VAD] user spoke during speech — interrupting:', _transcript);
             window.speechSynthesis.cancel();
             if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
@@ -2578,19 +2581,15 @@ async function startVoicePipeline() {
                     if (!window._vadSpeechStart) window._vadSpeechStart = 0;
                     if (db > -22) {
                         if (!window._vadSpeechStart) window._vadSpeechStart = _now;
-                        if (!window._vadSnapshot) window._vadSnapshot = _lastPartialTranscript;
-                        if (_now - window._vadSpeechStart > 500 && Date.now() - _apexSpeakStartMs > 1500) {
-                            const _vadWords = (window._vadSnapshot || '').trim().split(/\s+/).filter(Boolean);
-                            if (_vadWords.length < 2) { window._vadSpeechStart = 0; window._vadSnapshot = ''; return; }
-                            console.log('[VAD] dB interrupt:', db, '—', _vadWords.length, 'words');
+                        if (_now - window._vadSpeechStart > 800
+                                && Date.now() - _apexSpeakStartMs > 1500) {
+                            console.log('[VAD] dB interrupt: db=' + db.toFixed(1) + ' sustained 800ms');
                             window._vadSpeechStart = 0;
-                            window._vadSnapshot = '';
                             interruptSpeech();
                             lastSpeechMs = Date.now() + 2000;
                         }
                     } else {
                         window._vadSpeechStart = 0;
-                        window._vadSnapshot = '';
                     }
                 } else {
                     if (!isSpeakingNow) window._vadSpeechStart = 0;
