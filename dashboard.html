@@ -1547,6 +1547,7 @@ function _httEnd() {
 function _httSpeak(text) {
     if (!text) return;
     isSpeakingNow = true;
+    _apexSpeakStartMs = Date.now();
     setOrbState('speaking');
     console.log('[HTT] fetching TTS audio for:', text.substring(0, 60));
     if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
@@ -1865,7 +1866,7 @@ async function speakWithElevenLabs(text) {
         console.log(`[LATENCY] +${Date.now() - _t0Voice}ms ElevenLabs request sent`);
         const ac = new AbortController();
         currentAbort = ac;
-        const fetchRes = await fetch(buildApiUrl("/api/speak"), {
+        const fetchRes = await fetch(buildApiUrl("/api/tts"), {
             method: "POST",
             headers: buildApiHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ text: phrase }),
@@ -1982,6 +1983,7 @@ async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
     _apexSpeakStartMs = Date.now();
+    _lastPartialTranscript = '';
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
     if (srec && dgMode !== 'conversation') { try { srec.stop(); } catch (_) {} } // keep alive in conversation mode for VAD interrupt
@@ -2012,8 +2014,7 @@ async function _processSpeak() {
     isSpeakingNow = false;
     const _speakDurationMs = Date.now() - _speakStartMs;
     const _echoLockMs = 600;
-    _postSpeakLockUntil = Date.now() + _echoLockMs;
-    if (dgMode === 'conversation') _postSpeakLockUntil = 0;
+    _postSpeakLockUntil = Date.now() + 1200;
     console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${_echoLockMs}ms, unmuteDeepgram`);
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
@@ -2103,6 +2104,7 @@ function _startInterruptSR() {
 }
 
 function interruptSpeech() {
+    _lastPartialTranscript = '';
     console.log("Interrupted");
     clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
     _vadDebounceStart = null;
@@ -2567,16 +2569,19 @@ async function startVoicePipeline() {
                     if (!window._vadSpeechStart) window._vadSpeechStart = 0;
                     if (db > -22) {
                         if (!window._vadSpeechStart) window._vadSpeechStart = _now;
+                        if (!window._vadSnapshot) window._vadSnapshot = _lastPartialTranscript;
                         if (_now - window._vadSpeechStart > 500 && Date.now() - _apexSpeakStartMs > 1500) {
-                            const _vadWords = _lastPartialTranscript.trim().split(/\s+/).filter(Boolean);
-                            if (_vadWords.length < 2) { window._vadSpeechStart = 0; return; }
+                            const _vadWords = (window._vadSnapshot || '').trim().split(/\s+/).filter(Boolean);
+                            if (_vadWords.length < 2) { window._vadSpeechStart = 0; window._vadSnapshot = ''; return; }
                             console.log('[VAD] dB interrupt:', db, '—', _vadWords.length, 'words');
                             window._vadSpeechStart = 0;
+                            window._vadSnapshot = '';
                             interruptSpeech();
                             lastSpeechMs = Date.now() + 2000;
                         }
                     } else {
                         window._vadSpeechStart = 0;
+                        window._vadSnapshot = '';
                     }
                 } else {
                     if (!isSpeakingNow) window._vadSpeechStart = 0;
@@ -3663,6 +3668,7 @@ document.addEventListener("visibilitychange", () => {
 // pagehide fires on iOS when the user swipes away — release mic tracks and stop audio immediately
 window.addEventListener("pagehide", () => {
     clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
+    if (dgSilenceTimer) { clearInterval(dgSilenceTimer); dgSilenceTimer = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (typeof _httSafetyTimer !== 'undefined' && _httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
     if (typeof _apexAudio !== 'undefined' && _apexAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} }
