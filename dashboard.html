@@ -1977,13 +1977,6 @@ function _speakDesktop(phrase, { onEnd } = {}) {
     utt.onstart = () => { console.log('[Speak] _speakDesktop started'); };
     utt.onend   = () => {
         console.log('[Speak] _speakDesktop ended');
-        if (isSpeakingNow && !speakQueue.length) {
-            isSpeakingNow = false;
-            clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
-            dgMuted = false;
-            console.log('[Speak] _speakDesktop ended → unmuteDeepgram');
-            unmuteDeepgram();
-        }
         if (onEnd) onEnd();
     };
     utt.onerror = (ev) => {
@@ -2094,22 +2087,22 @@ async function _processSpeak() {
     clearTimeout(_speakSafetyTimer);
     _speakSafetyTimer = null;
     _vadDebounceStart = null;
+    // Echo lock set before isSpeakingNow is cleared — lock is in place the instant isSpeakingNow goes false.
+    // Skip lock when interrupted (_apexSpeakStartMs=0) so the captured command is not blocked.
+    _postSpeakLockUntil = (_apexSpeakStartMs === 0) ? 0 : (isIOSPWA ? Date.now() + 1200 : Date.now() + 800);
     isSpeakingNow = false;
     const _speakDurationMs = Date.now() - _speakStartMs;
-    const _echoLockMs = 600;
-    // Skip post-speak echo lock when speech was interrupted (_apexSpeakStartMs cleared to 0
-    // by interruptSpeech) so the user's captured interrupt command is not blocked.
-    _postSpeakLockUntil = (_apexSpeakStartMs === 0) ? 0 : (isIOSPWA ? Date.now() + 1200 : Date.now() + 2500);
-    console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${_echoLockMs}ms, unmuteDeepgram`);
+    console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${isIOSPWA ? 1200 : 800}ms desktop, unmuteDeepgram`);
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
         unmuteDeepgram();
         if (!srec) {
-            if (dgMode === "conversation") lastSpeechMs = Date.now() + _echoLockMs + 2000;
+            if (dgMode === "conversation") lastSpeechMs = Date.now() + 2000;
             _manualStart = true;
             startVoicePipeline();
         } else {
-            if (dgMode === "conversation") lastSpeechMs = Date.now() + 1200;
+            // Start the 3-second silence countdown immediately after TTS ends
+            if (dgMode === "conversation") lastSpeechMs = Date.now();
             _currentSpeakPhrase = '';
             if (srec && !_srecActive) { _srecActive = true; try { srec.start(); } catch (_) { _srecActive = false; } }
             setOrbState(dgMode === "conversation" ? "listening" : "waiting");
@@ -2694,7 +2687,7 @@ async function startVoicePipeline() {
     if (!dgAudioCtx) {
         try {
             if (!dgStream) {
-                dgStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                dgStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
                 console.log('[Voice] mic granted (desktop)');
             }
             dgAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
