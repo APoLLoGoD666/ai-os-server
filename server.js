@@ -171,8 +171,9 @@ app.post('/auth/login', (req, res) => {
     const token = jwt.sign({ apex: true }, secret, { expiresIn: '1h' });
     res.cookie('apex_token', token, {
         httpOnly: false,
-        secure: true,
-        sameSite: 'Lax'
+        secure: false,
+        sameSite: 'Lax',
+        maxAge: 60 * 60 * 1000
     });
     return res.json({ ok: true });
 });
@@ -505,6 +506,7 @@ function requireAuth(req, res, next) {
     if (hasAppAccess(req)) return next();
 
     const cookies = parseCookies(req);
+    console.log('[Auth] cookie present:', !!cookies.apex_token);
     const token = cookies.apex_token;
     if (token) {
         try {
