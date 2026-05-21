@@ -1995,7 +1995,7 @@ async function _processSpeak() {
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
     if (srec) { try { srec.stop(); _srecActive = false; } catch (_) {} }
-    // srec.onend is the single restart path — no separate timer to avoid race conditions
+    startVAD(); // volume-based interrupt detection on AEC stream while SR is silent
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
@@ -2051,24 +2051,34 @@ function speak(text, { useFiller = false } = {}) {
 function startVAD() {
     stopVAD();
     if (!dgStream || !dgAudioCtx) return;
+    if (dgAudioCtx.state !== 'running') { dgAudioCtx.resume().catch(() => {}); }
     try {
         const source = dgAudioCtx.createMediaStreamSource(dgStream);
         vadAnalyser  = dgAudioCtx.createAnalyser();
         vadAnalyser.fftSize = 256;
         source.connect(vadAnalyser);
         const buf = new Float32Array(vadAnalyser.fftSize);
+        const _vadStart = Date.now();
 
         vadInterval = setInterval(() => {
             if (!isSpeakingNow) { stopVAD(); return; }
+            // 500 ms onset guard: ignore the first burst of AEC transient when audio starts
+            if (Date.now() - _vadStart < 500) return;
             vadAnalyser.getFloatTimeDomainData(buf);
             let sum = 0;
             for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
             const rms = Math.sqrt(sum / buf.length);
             const db  = rms > 0 ? 20 * Math.log10(rms) : -Infinity;
-            if (db > -50) {
-                console.log("User interrupt detected — stopping audio", db.toFixed(1), "dB");
+            // -38 dB: above typical AEC residual, below normal speech — no word filter needed
+            if (db > -38) {
+                console.log('[VAD] user voice detected', db.toFixed(1), 'dB — interrupting');
                 stopVAD();
                 interruptSpeech();
+                // Restart SR immediately so it captures the user's words (TTS is now stopped)
+                if (srec && isListening && !_srecActive) {
+                    _srecActive = true;
+                    try { srec.start(); } catch (_) { _srecActive = false; }
+                }
             }
         }, 80);
     } catch (e) {
@@ -2461,23 +2471,8 @@ async function startVoicePipeline() {
         lastSpeechMs = Date.now();
 
         if (isSpeakingNow) {
-            // Echo filter: Apex's own AEC leakage overlaps heavily with _currentSpeakPhrase.
-            // Threshold 30% — real user words have low overlap; echo has near-100%.
-            const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
-            if (wordCount < 2) return; // too short to be a meaningful interrupt
-            const tWords = transcript.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
-            const aWords = new Set((_currentSpeakPhrase || '').toLowerCase().split(/\s+/).filter(w => w.length >= 2));
-            if (aWords.size === 0) return; // no phrase to compare — discard to be safe
-            const overlap = tWords.filter(w => aWords.has(w)).length;
-            if (tWords.length > 0 && overlap / tWords.length > 0.3) {
-                console.log('[SR] echo discarded (' + overlap + '/' + tWords.length + ' words match Apex speech)');
-                return;
-            }
-            console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
-            interruptSpeech();
-            _interruptAccum = transcript;
-            clearTimeout(_interruptSendTimer);
-            _interruptSendTimer = setTimeout(_flushInterruptAccum, 300);
+            // SR is stopped during TTS — any result here is a stale AEC echo, discard it
+            console.log('[SR] stale echo discarded during TTS:', transcript.substring(0, 60));
             return;
         }
         if (dgMuted) return; // block transcripts during thinking phase
@@ -2551,13 +2546,13 @@ async function startVoicePipeline() {
         _srecActive = false;
         console.log("[SR] ended");
         if (!isListening || document.visibilityState === "hidden") return;
-        const delay = isSpeakingNow ? 100 : 0;
+        if (isSpeakingNow) return; // VAD handles interrupt detection; startVAD restarts SR on trigger
         setTimeout(() => {
-            if (srec && isListening && !_srecActive) {
+            if (srec && isListening && !_srecActive && !isSpeakingNow) {
                 _srecActive = true;
                 try { srec.start(); } catch (_) { _srecActive = false; }
             }
-        }, delay);
+        }, 0);
     };
 
     dgMode = "wake";
