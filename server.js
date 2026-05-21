@@ -10,6 +10,7 @@ const cors = require("cors");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
 const Anthropic = require("@anthropic-ai/sdk");
+const jwt = require("jsonwebtoken");
 const { createClient: createDeepgramClient } = require("@deepgram/sdk");
 const axios = require("axios");
 const multer = require("multer");
@@ -125,19 +126,46 @@ app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
-app.get('/', (req, res) => {
+app.get('/', requireAuth, (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
-app.get('/dashboard.html', (req, res) => {
+app.get('/dashboard.html', requireAuth, (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 app.use(express.static(__dirname));
+
+app.post('/auth/login', (req, res) => {
+    const secret = process.env.JWT_SECRET;
+    const correctPw = process.env.DASHBOARD_PASSWORD;
+    if (!secret || !correctPw) {
+        return res.status(500).json({ ok: false, reply: 'Auth not configured.' });
+    }
+    const { password } = req.body || {};
+    if (!password || password !== correctPw) {
+        return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
+    }
+    const token = jwt.sign({ apex: true }, secret, { expiresIn: '24h' });
+    res.cookie('apex_token', token, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Strict',
+        maxAge: 24 * 60 * 60 * 1000
+    });
+    return res.json({ ok: true });
+});
+
+app.post('/auth/logout', (req, res) => {
+    res.clearCookie('apex_token', { path: '/' });
+    return res.json({ ok: true });
+});
+
+app.use('/api', requireAuth);
 
 const chatLimiter = rateLimit({ windowMs: 60000, max: 30, message: { ok: false, reply: "Too many requests, slow down." } });
 app.use("/chat", chatLimiter);
@@ -391,6 +419,80 @@ function requireCronAccess(req, res, next) {
         ok: false,
         error: "Unauthorized cron request"
     });
+}
+
+function parseCookies(req) {
+    return Object.fromEntries(
+        (req.headers.cookie || '').split(';')
+            .map(c => c.trim().split('='))
+            .filter(([k]) => k)
+            .map(([k, ...v]) => [k.trim(), decodeURIComponent(v.join('=').trim())])
+    );
+}
+
+const LOGIN_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Apex</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#0a0a0a;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+    .card{background:#111;border:1px solid #222;border-radius:14px;padding:44px 40px;width:340px}
+    h1{color:#fff;font-size:22px;font-weight:600;margin-bottom:6px}
+    p{color:#555;font-size:13px;margin-bottom:28px}
+    input{width:100%;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:12px 14px;color:#fff;font-size:15px;outline:none;transition:border .15s}
+    input:focus{border-color:#444}
+    button{margin-top:14px;width:100%;background:#fff;color:#000;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+    button:hover{background:#e8e8e8}
+    .err{margin-top:12px;color:#f55;font-size:13px;display:none;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Apex</h1>
+    <p>Enter your password to continue.</p>
+    <input type="password" id="pw" placeholder="Password" autofocus />
+    <button id="btn" onclick="login()">Sign in</button>
+    <div class="err" id="err">Incorrect password.</div>
+  </div>
+  <script>
+    document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+    async function login(){
+      const pw=document.getElementById('pw').value;
+      const btn=document.getElementById('btn');
+      btn.disabled=true;btn.textContent='Signing in…';
+      try{
+        const r=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw}),credentials:'include'});
+        if(r.ok){window.location.reload();}
+        else{document.getElementById('err').style.display='block';btn.disabled=false;btn.textContent='Sign in';}
+      }catch(e){document.getElementById('err').style.display='block';btn.disabled=false;btn.textContent='Sign in';}
+    }
+  </script>
+</body>
+</html>`;
+
+function requireAuth(req, res, next) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return next();
+
+    if (hasAppAccess(req)) return next();
+
+    const cookies = parseCookies(req);
+    const token = cookies.apex_token;
+    if (token) {
+        try {
+            jwt.verify(token, secret);
+            return next();
+        } catch (_) {}
+    }
+
+    const accepts = req.headers.accept || '';
+    if (accepts.includes('text/html')) {
+        return res.status(401).send(LOGIN_HTML);
+    }
+    return res.status(401).json({ ok: false, reply: 'Authentication required.' });
 }
 
 async function createAgentNotification(type, title, message, relatedType = null, relatedId = null) {
