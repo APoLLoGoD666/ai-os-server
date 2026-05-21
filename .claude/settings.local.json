@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check server.js)",
+      "Bash(node --check storage.js)",
+      "Bash(node *)",
+      "Bash(curl -s http://localhost:3000/dashboard.html)",
+      "Bash(dir *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit *)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(cp dashboard.html dashboard.html.bak)",
+      "Read(//c/c/Users/arwwo/Desktop/AI Scripts/Scripts/**)"
+    ]
+  },
+  "enabledPlugins": {
+    "code-review@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true
+  }
+}

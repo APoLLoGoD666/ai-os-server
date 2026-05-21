@@ -2,6 +2,14 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.77",
     "@anthropic-ai/sdk": "^0.90.0",
+    "@claude-flow/claims": "^3.0.0-alpha.8",
+    "@claude-flow/embeddings": "^3.0.0-alpha.45",
+    "@claude-flow/neural": "^3.0.0-alpha.9",
+    "@claude-flow/performance": "^3.0.0-alpha.6",
+    "@claude-flow/plugin-agent-federation": "^1.0.0-alpha.16",
+    "@claude-flow/plugin-financial-risk": "^3.0.0-alpha.1",
+    "@claude-flow/plugins": "^3.0.0-alpha.7",
+    "@claude-flow/security": "^3.0.0-alpha.8",
     "@deepgram/sdk": "^5.2.0",
     "@mastra/core": "^1.33.1",
     "@mastra/memory": "^1.18.0",
@@ -20,6 +28,7 @@
     "multer": "^2.1.1",
     "path": "^0.12.7",
     "pg": "^8.20.0",
+    "ruflo": "^3.7.0-alpha.72",
     "ws": "^8.20.1",
     "zod": "^3.25.76"
   }

@@ -4,3 +4,17 @@ ai_pipeline.db
 local_ai_backups
 local_ai_proposals
 ai_pipeline.dbget_gmail_token.js
+
+# Ruflo runtime databases and ephemeral state
+ruvector.db
+.swarm/*.db
+.swarm/*.db-shm
+.swarm/*.db-wal
+.claude/memory.db
+.claude-flow/logs/
+.claude-flow/data/
+.claude-flow/sessions/
+.claude-flow/metrics/
+.claude-flow/learning/
+.claude-flow/daemon-state.json
+.claude-flow/daemon.pid

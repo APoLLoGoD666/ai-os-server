@@ -53,3 +53,26 @@ Never auto-delete.
 Never auto-rename.
 Never change environment variables from agent actions.
 Never allow agent to edit code without explicit approval.
+
+## Ruflo Agent Orchestration (installed 2026-05-21)
+
+Ruflo v3.7.0-alpha.72 is installed as the agent orchestration backbone.
+
+### Key paths
+- `.claude/` — 23 agent definitions, 10 command groups, hooks, helpers
+- `.claude-flow/` — runtime config, sessions, logs, daemon state
+- `.swarm/memory.db` — hybrid vector + SQLite memory store
+- `.mcp.json` — MCP server config (ruflo, ruv-swarm, flow-nexus)
+
+### Ruflo CLI (via local binary)
+- `node_modules/.bin/ruflo status` — check system state
+- `node_modules/.bin/ruflo swarm start` — start agent swarm
+- `node_modules/.bin/ruflo daemon start/stop` — background workers
+- `node_modules/.bin/ruflo memory search -q "query"` — search memory
+- `node_modules/.bin/ruflo task spawn --agent <name> --task "<desc>"` — dispatch task
+
+### Integration rules
+- Ruflo runs on port 3001 (MCP) — no conflict with server.js (port 3000).
+- Do not start the ruflo swarm automatically on Render — trigger on demand only.
+- Ruflo agents must respect the same approval/safety rules as all other agents.
+- Do not expose Ruflo API endpoints publicly without auth middleware.
