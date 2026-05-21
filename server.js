@@ -7238,9 +7238,9 @@ app.get("/auth/gmail/callback", requireAppAccess, async (req, res) => {
         await pgSaveGmailToken(tokens.refresh_token);
         console.log("[Gmail] New refresh token saved to database — re-auth complete");
         return res.send("Gmail re-authorisation complete. New refresh token saved. You can close this tab.");
-    } catch (error) {
-        console.error("[Gmail] OAuth callback error:", error.message);
-        return res.status(500).send(`OAuth callback failed: ${error.message}`);
+    } catch (err) {
+        console.error('[Gmail OAuth] callback failed:', err.message, err.stack);
+        return res.status(500).send(`OAuth callback failed: ${err.message}<br><pre>${err.stack}</pre>`);
     }
 });
 

@@ -1128,9 +1128,15 @@ function ensureGmailTokensTable() {
 }
 
 async function pgSaveGmailToken(refreshToken) {
-    await ensureGmailTokensTable();
-    await pool.query(`DELETE FROM gmail_tokens`);
-    await pool.query(`INSERT INTO gmail_tokens (refresh_token) VALUES ($1)`, [refreshToken]);
+    try {
+        await ensureGmailTokensTable();
+        await pool.query(`DELETE FROM gmail_tokens`);
+        await pool.query(`INSERT INTO gmail_tokens (refresh_token) VALUES ($1)`, [refreshToken]);
+        console.log('[Gmail] Token saved to database successfully');
+    } catch (err) {
+        console.error('[Gmail] Failed to save token to database:', err.message, err.stack);
+        throw err;
+    }
 }
 
 async function pgGetGmailToken() {
