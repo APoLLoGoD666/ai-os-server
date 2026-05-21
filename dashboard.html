@@ -3853,8 +3853,8 @@ setInterval(pollTaskNotifications, 10000);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
-// Desktop: start voice pipeline automatically. Touch devices need a gesture first.
-setTimeout(() => { if (!isIOSPWA && !_isTouchDevice) { _manualStart = true; startVoicePipeline(); } }, 1000);
+// Desktop: start voice pipeline automatically once authenticated.
+setTimeout(() => { if (!isIOSPWA && !_isTouchDevice && typeof hasCookie === 'function' && hasCookie()) { _manualStart = true; startVoicePipeline(); } }, 1000);
 
 // Touch devices: always show tap-to-begin overlay — getUserMedia must be called within a user gesture on iOS
 if (_isTouchDevice) {
@@ -3922,6 +3922,9 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       console.log('[SW] Controller changed — new version active');
     });
+  });
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
   });
 }
 initSupabaseRealtime();
@@ -4026,11 +4029,11 @@ initSupabaseRealtime();
 ">HOLD TO TALK</button>
 
 <script>
-// ── Login overlay — shown mid-session when apex_token cookie is absent ──
+// ── Login overlay — shown when apex_token cookie is absent ──
+function hasCookie(){return document.cookie.split(';').some(c=>c.trim().startsWith('apex_token='));}
 (function(){
-  function hasCookie(){return document.cookie.split(';').some(c=>c.trim().startsWith('apex_token='));}
   var overlay=document.getElementById('apexLoginOverlay');
-  if(overlay){overlay.style.display='flex';}
+  if(overlay){overlay.style.display=hasCookie()?'none':'flex';}
   var pw=document.getElementById('apexLoginPw');
   if(pw){pw.addEventListener('keydown',function(e){if(e.key==='Enter')apexDoLogin();});}
 })();
@@ -4042,7 +4045,7 @@ async function apexDoLogin(){
   btn.disabled=true;btn.textContent='Signing in…';err.style.display='none';
   try{
     var r=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw}),credentials:'include'});
-    if(r.ok){window.location.reload();}
+    if(r.ok){window.location.href='/';}
     else{err.style.display='block';btn.disabled=false;btn.textContent='Sign in';}
   }catch(e){err.style.display='block';btn.disabled=false;btn.textContent='Sign in';}
 }

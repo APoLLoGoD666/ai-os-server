@@ -156,6 +156,10 @@ app.get('/dashboard.html', requireAuth, (req, res) => {
   res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
+app.get('/sw.js', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.sendFile(path.join(__dirname, 'sw.js'));
+});
 app.use(express.static(__dirname));
 
 app.post('/auth/login', (req, res) => {
@@ -169,9 +173,10 @@ app.post('/auth/login', (req, res) => {
         return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
     }
     const token = jwt.sign({ apex: true }, secret, { expiresIn: '1h' });
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('apex_token', token, {
         httpOnly: false,
-        secure: false,
+        secure: isSecure,
         sameSite: 'Lax',
         maxAge: 60 * 60 * 1000
     });
@@ -188,7 +193,7 @@ app.use('/api', requireAuth);
 const chatLimiter = rateLimit({ windowMs: 60000, max: 30, message: { ok: false, reply: "Too many requests, slow down." } });
 app.use("/chat", chatLimiter);
 
-const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Too many requests, please try again later." } });
+const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Too many requests, please try again later." } });
 app.use(generalLimiter);
 
 const voiceLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Voice chat rate limit reached, slow down." } });
@@ -452,7 +457,10 @@ function parseCookies(req) {
         (req.headers.cookie || '').split(';')
             .map(c => c.trim().split('='))
             .filter(([k]) => k)
-            .map(([k, ...v]) => [k.trim(), decodeURIComponent(v.join('=').trim())])
+            .map(([k, ...v]) => {
+                try { return [k.trim(), decodeURIComponent(v.join('=').trim())]; }
+                catch (_) { return [k.trim(), v.join('=').trim()]; }
+            })
     );
 }
 
@@ -491,7 +499,7 @@ const LOGIN_HTML = `<!DOCTYPE html>
       btn.disabled=true;btn.textContent='Signing in…';
       try{
         const r=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw}),credentials:'include'});
-        if(r.ok){window.location.reload();}
+        if(r.ok){window.location.href='/';}
         else{document.getElementById('err').style.display='block';btn.disabled=false;btn.textContent='Sign in';}
       }catch(e){document.getElementById('err').style.display='block';btn.disabled=false;btn.textContent='Sign in';}
     }
@@ -512,11 +520,14 @@ function requireAuth(req, res, next) {
         try {
             jwt.verify(token, secret);
             return next();
-        } catch (_) {}
+        } catch (err) {
+            console.warn('[Auth] jwt.verify failed:', err.message);
+        }
     }
 
     const accepts = req.headers.accept || '';
     if (accepts.includes('text/html')) {
+        res.setHeader('Clear-Site-Data', '"cache", "cookies"');
         return res.status(401).send(LOGIN_HTML);
     }
     return res.status(401).json({ ok: false, reply: 'Authentication required.' });
