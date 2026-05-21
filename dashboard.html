@@ -2089,10 +2089,10 @@ async function _processSpeak() {
     _vadDebounceStart = null;
     // Echo lock set before isSpeakingNow is cleared — lock is in place the instant isSpeakingNow goes false.
     // Skip lock when interrupted (_apexSpeakStartMs=0) so the captured command is not blocked.
-    _postSpeakLockUntil = (_apexSpeakStartMs === 0) ? 0 : (isIOSPWA ? Date.now() + 1200 : Date.now() + 800);
+    _postSpeakLockUntil = (_apexSpeakStartMs === 0) ? 0 : (isIOSPWA ? Date.now() + 1200 : Date.now() + 350);
     isSpeakingNow = false;
     const _speakDurationMs = Date.now() - _speakStartMs;
-    console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${isIOSPWA ? 1200 : 800}ms desktop, unmuteDeepgram`);
+    console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${isIOSPWA ? 1200 : 350}ms desktop, unmuteDeepgram`);
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
         unmuteDeepgram();
