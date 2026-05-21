@@ -2443,17 +2443,14 @@ async function startVoicePipeline() {
 
         if (isSpeakingNow) {
             // SR interrupt: 2+ real words required — filters background noise and single-word echoes
-            // 800ms onset guard lets Chrome AEC adapt before we trust any transcript
-            if (Date.now() - _apexSpeakStartMs > 800) {
-                const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
-                if (wordCount >= 2) {
-                    console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
-                    interruptSpeech();
-                    document.getElementById("chatInput").value = transcript;
-                    lastSendWasVoice = true;
-                    dgMuted = true;
-                    sendVoiceChatCommand(transcript);
-                }
+            const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
+            if (wordCount >= 2) {
+                console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
+                interruptSpeech();
+                document.getElementById("chatInput").value = transcript;
+                lastSendWasVoice = true;
+                dgMuted = true;
+                sendVoiceChatCommand(transcript);
             }
             return;
         }
