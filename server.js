@@ -7795,12 +7795,25 @@ Respond naturally in 1-2 sentences.`.trim();
         let loopCount = 0;
         const maxLoops = 5;
 
+        let obsidianContext = '';
+        try {
+            const obsResults = await obsidianSearch(userMessage);
+            if (obsResults && obsResults.length > 0) {
+                const top = obsResults.slice(0, 3);
+                obsidianContext = top.map(r =>
+                    `[From Obsidian — ${r.filename}]:\n${r.context}`
+                ).join('\n\n');
+            }
+        } catch (e) {
+            console.warn('[Obsidian] search failed:', e.message);
+        }
+
         while (loopCount < maxLoops) {
             loopCount++;
             const response = await client.messages.create({
                 model: MODEL,
                 max_tokens: 1024,
-                system: `You are Apex, a precise, professional AI operating system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK — use this as the default location for any location-based queries unless told otherwise. You have tools available: use get_notifications proactively if the user greets you or asks what is happening, to surface any unread alerts or briefings. Use list_emails if they ask about their inbox. Use get_weather for weather queries. Use web_search for current facts. Use create_task when Alex asks you to remember or follow up on something. Use list_tasks when asked about pending tasks or reminders.${alexContext}${memoryContext} Respond in plain spoken English only. No markdown, no bullet points, no dashes, no numbered lists, no asterisks. All responses will be read aloud — format as natural speech.`,
+                system: `${obsidianContext ? 'Relevant context from the Apex knowledge base:\n\n' + obsidianContext + '\n\n---\n\n' : ''}You are Apex, a precise, professional AI operating system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK — use this as the default location for any location-based queries unless told otherwise. You have tools available: use get_notifications proactively if the user greets you or asks what is happening, to surface any unread alerts or briefings. Use list_emails if they ask about their inbox. Use get_weather for weather queries. Use web_search for current facts. Use create_task when Alex asks you to remember or follow up on something. Use list_tasks when asked about pending tasks or reminders.${alexContext}${memoryContext} Respond in plain spoken English only. No markdown, no bullet points, no dashes, no numbered lists, no asterisks. All responses will be read aloud — format as natural speech.`,
                 tools: APEX_TOOLS,
                 messages
             });
