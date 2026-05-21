@@ -1369,7 +1369,7 @@ let dgSilenceTimer      = null;   // setInterval for conversation silence tracki
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
 let _postSpeakLockUntil = 0;
-let _peakMicDbDuringTTS = -Infinity; // rolling max dB on AEC stream while Apex speaks
+let _vadHoldCount       = 0;         // consecutive 80ms ticks above -38 dB during TTS (desktop VAD)
 let _interruptAccum     = null;  // accumulated transcript during interrupt collection window
 let _interruptSendTimer = null;
 let dgDbLogTs           = 0;
@@ -1991,7 +1991,7 @@ async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
     _apexSpeakStartMs = Date.now();
-    _peakMicDbDuringTTS = -Infinity;
+    _vadHoldCount = 0;
     _lastPartialTranscript = '';
     window._vadSpeechStart = 0;
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
@@ -2024,7 +2024,9 @@ async function _processSpeak() {
     isSpeakingNow = false;
     const _speakDurationMs = Date.now() - _speakStartMs;
     const _echoLockMs = 600;
-    _postSpeakLockUntil = Date.now() + 1200;
+    // Skip post-speak echo lock when speech was interrupted (_apexSpeakStartMs cleared to 0
+    // by interruptSpeech) so the user's captured interrupt command is not blocked.
+    _postSpeakLockUntil = (_apexSpeakStartMs === 0) ? 0 : Date.now() + 1200;
     console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${_echoLockMs}ms, unmuteDeepgram`);
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
@@ -2472,23 +2474,8 @@ async function startVoicePipeline() {
         lastSpeechMs = Date.now();
 
         if (isSpeakingNow) {
-            const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
-            if (wordCount >= 2) {
-                // Use the AEC-processed dgAnalyser to verify the source is the user.
-                // AEC cancels Apex's own speaker output so it reads low; the user's voice is not
-                // cancelled and reads high. No word comparison needed.
-                // _peakMicDbDuringTTS is the max dB seen on the AEC stream since TTS started.
-                // User voice spikes it above -38 dB; Apex's own echo (cancelled by AEC) never does.
-                if (_peakMicDbDuringTTS > -38) {
-                    console.log('[SR] interrupt: ' + wordCount + ' words (peak ' + _peakMicDbDuringTTS.toFixed(1) + ' dB) — "' + transcript + '"');
-                    interruptSpeech();
-                    _interruptAccum = transcript;
-                    clearTimeout(_interruptSendTimer);
-                    _interruptSendTimer = setTimeout(_flushInterruptAccum, 300);
-                } else {
-                    console.log('[SR] echo discarded — peak AEC dB ' + _peakMicDbDuringTTS.toFixed(1));
-                }
-            }
+            // SR is stopped during TTS — this is a stale buffered result, discard it.
+            console.log('[SR] stale result during TTS discarded:', transcript.substring(0, 60));
             return;
         }
         if (dgMuted) return; // block transcripts during thinking phase
@@ -2562,13 +2549,13 @@ async function startVoicePipeline() {
         _srecActive = false;
         console.log("[SR] ended");
         if (!isListening || document.visibilityState === "hidden") return;
-        const delay = isSpeakingNow ? 100 : 0;
+        if (isSpeakingNow) return; // dgSilenceTimer VAD owns interrupt; _processSpeak restarts SR when TTS ends
         setTimeout(() => {
-            if (srec && isListening && !_srecActive) {
+            if (srec && isListening && !_srecActive && !isSpeakingNow) {
                 _srecActive = true;
                 try { srec.start(); } catch (_) { _srecActive = false; }
             }
-        }, delay);
+        }, 0);
     };
 
     dgMode = "wake";
@@ -2601,7 +2588,16 @@ async function startVoicePipeline() {
                 dgAnalyser.getFloatTimeDomainData(buf);
                 const db = _rms(buf);
 
-                if (isSpeakingNow) { if (db > _peakMicDbDuringTTS) _peakMicDbDuringTTS = db; return; }
+                if (isSpeakingNow) {
+                    // Desktop VAD: 3 consecutive ticks above -38 dB = sustained user speech.
+                    // 500ms onset guard skips AEC transient at playback start.
+                    if (Date.now() - _apexSpeakStartMs > 500 && db > -38) {
+                        if (++_vadHoldCount >= 3) { _vadHoldCount = 0; interruptSpeech(); }
+                    } else {
+                        _vadHoldCount = 0;
+                    }
+                    return;
+                }
 
                 const now = Date.now();
                 if (now - dgDbLogTs >= 2000) {
