@@ -1993,14 +1993,14 @@ async function _processSpeak() {
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
     if (srec) { try { srec.stop(); _srecActive = false; } catch (_) {} }
-    // Restart srec after AEC adaptation window — by 500ms Chrome has cancelled Apex's voice from mic
+    // Restart srec after AEC adaptation window — 100ms gives Chrome enough time to cancel Apex's voice
     setTimeout(() => {
         if (isSpeakingNow && srec && !_srecActive) {
             _srecActive = true;
             try { srec.start(); } catch (_) { _srecActive = false; }
             console.log('[SR] restarted after AEC window — interrupt now live');
         }
-    }, 500);
+    }, 100);
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
