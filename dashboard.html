@@ -2095,16 +2095,15 @@ async function _processSpeak() {
     isSpeakingNow = false;
     const _speakDurationMs = Date.now() - _speakStartMs;
     console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${isIOSPWA ? 1200 : 500}ms desktop, unmuteDeepgram`);
-    // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
         unmuteDeepgram();
         if (!srec) {
-            if (dgMode === "conversation") lastSpeechMs = Date.now() + 2000;
+            if (!isIOSPWA && _apexSpeakStartMs !== 0) { dgMode = "conversation"; lastSpeechMs = Date.now() + 2000; }
             _manualStart = true;
             startVoicePipeline();
         } else {
-            // Start the 3-second silence countdown immediately after TTS ends
-            if (dgMode === "conversation") lastSpeechMs = Date.now();
+            // TTS ended normally — force conversation mode and start fresh 3s silence window
+            if (!isIOSPWA && _apexSpeakStartMs !== 0) { dgMode = "conversation"; lastSpeechMs = Date.now(); }
             _currentSpeakPhrase = '';
             if (srec && !_srecActive) { _srecActive = true; try { srec.start(); } catch (_) { _srecActive = false; } }
             setOrbState(dgMode === "conversation" ? "listening" : "waiting");
