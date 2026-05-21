@@ -114,6 +114,12 @@ async function obsidianWrite(notePath, markdownContent) {
   });
 }
 
+async function obsidianAppend(notePath, markdownContent) {
+    const existing = await obsidianRead(notePath).catch(() => null);
+    const updated = existing ? existing + '\n\n---\n\n' + markdownContent : markdownContent;
+    await obsidianWrite(notePath, updated);
+}
+
 async function obsidianSearch(query) {
   const res = await fetch(
     `${process.env.OBSIDIAN_URL}/search/simple/?query=${encodeURIComponent(query)}&contextLength=200`,
@@ -8021,9 +8027,10 @@ Respond naturally in 1-2 sentences.`.trim();
         } catch {}
 
         const today = new Date().toISOString().split('T')[0];
-        const noteTitle = `Tasks/${today}-conversation.md`;
-        const noteContent = `# Conversation — ${new Date().toLocaleString()}\n\n**User:** ${userMessage}\n\n**Apex:** ${reply}\n`;
-        obsidianWrite(noteTitle, noteContent).catch(e =>
+        const noteTitle = `Conversations/${today}.md`;
+        const timestamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        const noteContent = `## ${timestamp}\n\n**You:** ${userMessage}\n\n**Apex:** ${reply}\n`;
+        obsidianAppend(noteTitle, noteContent).catch(e =>
             console.warn('[Obsidian] write failed:', e.message)
         );
 
