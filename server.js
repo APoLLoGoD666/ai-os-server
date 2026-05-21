@@ -7874,6 +7874,13 @@ Respond naturally in 1-2 sentences.`.trim();
             }
         } catch {}
 
+        const today = new Date().toISOString().split('T')[0];
+        const noteTitle = `Tasks/${today}-conversation.md`;
+        const noteContent = `# Conversation — ${new Date().toLocaleString()}\n\n**User:** ${userMessage}\n\n**Apex:** ${reply}\n`;
+        obsidianWrite(noteTitle, noteContent).catch(e =>
+            console.warn('[Obsidian] write failed:', e.message)
+        );
+
         return res.status(200).json({ ok: true, reply });
     } catch (error) {
         console.error("VOICE CHAT ERROR:", error);
