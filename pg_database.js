@@ -8,4 +8,8 @@ const pool = new Pool({
     connectionTimeoutMillis: 10000
 });
 
+pool.query('SELECT 1')
+    .then(() => console.log('[DB] PostgreSQL connected successfully'))
+    .catch(err => console.error('[DB] PostgreSQL connection FAILED:', err.message));
+
 module.exports = pool;
