@@ -1369,6 +1369,7 @@ let dgSilenceTimer      = null;   // setInterval for conversation silence tracki
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
 let _postSpeakLockUntil = 0;
+let _peakMicDbDuringTTS = -Infinity; // rolling max dB on AEC stream while Apex speaks
 let _interruptAccum     = null;  // accumulated transcript during interrupt collection window
 let _interruptSendTimer = null;
 let dgDbLogTs           = 0;
@@ -1990,6 +1991,7 @@ async function _processSpeak() {
     if (isSpeakingNow || !speakQueue.length) return;
     isSpeakingNow = true;
     _apexSpeakStartMs = Date.now();
+    _peakMicDbDuringTTS = -Infinity;
     _lastPartialTranscript = '';
     window._vadSpeechStart = 0;
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
@@ -2475,20 +2477,16 @@ async function startVoicePipeline() {
                 // Use the AEC-processed dgAnalyser to verify the source is the user.
                 // AEC cancels Apex's own speaker output so it reads low; the user's voice is not
                 // cancelled and reads high. No word comparison needed.
-                let _isUser = false;
-                if (dgAnalyser) {
-                    const _cbuf = new Float32Array(dgAnalyser.fftSize);
-                    dgAnalyser.getFloatTimeDomainData(_cbuf);
-                    _isUser = _rms(_cbuf) > -38;
-                }
-                if (_isUser) {
-                    console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
+                // _peakMicDbDuringTTS is the max dB seen on the AEC stream since TTS started.
+                // User voice spikes it above -38 dB; Apex's own echo (cancelled by AEC) never does.
+                if (_peakMicDbDuringTTS > -38) {
+                    console.log('[SR] interrupt: ' + wordCount + ' words (peak ' + _peakMicDbDuringTTS.toFixed(1) + ' dB) — "' + transcript + '"');
                     interruptSpeech();
                     _interruptAccum = transcript;
                     clearTimeout(_interruptSendTimer);
                     _interruptSendTimer = setTimeout(_flushInterruptAccum, 300);
                 } else {
-                    console.log('[SR] echo discarded — AEC stream below -38 dB');
+                    console.log('[SR] echo discarded — peak AEC dB ' + _peakMicDbDuringTTS.toFixed(1));
                 }
             }
             return;
@@ -2603,7 +2601,7 @@ async function startVoicePipeline() {
                 dgAnalyser.getFloatTimeDomainData(buf);
                 const db = _rms(buf);
 
-                if (isSpeakingNow) return;
+                if (isSpeakingNow) { if (db > _peakMicDbDuringTTS) _peakMicDbDuringTTS = db; return; }
 
                 const now = Date.now();
                 if (now - dgDbLogTs >= 2000) {
