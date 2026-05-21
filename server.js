@@ -150,12 +150,12 @@ app.post('/auth/login', (req, res) => {
     if (!password || password !== correctPw) {
         return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
     }
-    const token = jwt.sign({ apex: true }, secret, { expiresIn: '24h' });
+    const token = jwt.sign({ apex: true }, secret, { expiresIn: '30d' });
     res.cookie('apex_token', token, {
         httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Strict',
-        maxAge: 24 * 60 * 60 * 1000
+        secure: true,
+        sameSite: 'Lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000
     });
     return res.json({ ok: true });
 });
