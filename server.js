@@ -90,6 +90,10 @@ const {
     pgClearGmailToken
 } = require("./pg_helpers");
 
+if (!process.env.OBSIDIAN_URL || !process.env.OBSIDIAN_API_KEY) {
+    console.warn('[Obsidian] WARNING — OBSIDIAN_URL or OBSIDIAN_API_KEY not set. Obsidian integration disabled.');
+}
+
 async function obsidianRead(notePath) {
   const res = await fetch(`${process.env.OBSIDIAN_URL}/vault/${encodeURIComponent(notePath)}`, {
     headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` }
