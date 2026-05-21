@@ -17,7 +17,8 @@ const multer = require("multer");
 const multerUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 const db = require("./database");
-const pool = require("./pg_database");
+const { createClient: _sbAdmin } = require('@supabase/supabase-js');
+const sbAdmin = _sbAdmin(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const {
     pgListDocuments,
     pgSaveDocument,
@@ -965,10 +966,7 @@ async function embedAndStoreDocument(filename, content) {
     try {
         const embedding = await embedText(`${filename}\n${content}`);
         if (!embedding) return;
-        await pool.query(
-            "UPDATE documents SET embedding = $1::vector WHERE filename = $2",
-            [`[${embedding.join(",")}]`, filename]
-        );
+        await sbAdmin.from('documents').update({ embedding: `[${embedding.join(",")}]` }).eq('filename', filename);
     } catch (err) {
         console.error("EMBED STORE ERROR:", err.message);
     }
@@ -987,15 +985,8 @@ async function getRelevantDocuments(question) {
         try {
             const embedding = await embedText(q);
             if (embedding) {
-                const result = await pool.query(
-                    `SELECT filename, classification, summary, content, created_at
-                     FROM documents
-                     WHERE embedding IS NOT NULL
-                     ORDER BY embedding <=> $1::vector
-                     LIMIT 5`,
-                    [`[${embedding.join(",")}]`]
-                );
-                if (result.rows.length > 0) return result.rows;
+                // Vector cosine search requires raw SQL (<=> operator) — not available via Supabase JS client
+                // Falling through to keyword search
             }
         } catch (err) {
             console.error("VECTOR SEARCH ERROR:", err.message);
@@ -3165,22 +3156,14 @@ function isAgentCleanupTestGoal(goal) {
 }
 
 async function fetchAgentCleanupRows() {
-    const [tasksResult, schedulesResult] = await Promise.all([
-        pool.query(`
-            SELECT id, goal, status, current_step, result, error, created_at, updated_at
-            FROM agent_tasks
-            ORDER BY id DESC
-        `),
-        pool.query(`
-            SELECT id, name, goal, frequency, enabled, last_run_at, created_at
-            FROM agent_schedules
-            ORDER BY id DESC
-        `)
+    const [{ data: tasks }, { data: schedules }] = await Promise.all([
+        sbAdmin.from('agent_tasks').select('id,goal,status,current_step,result,error,created_at,updated_at').order('id', { ascending: false }),
+        sbAdmin.from('agent_schedules').select('id,name,goal,frequency,enabled,last_run_at,created_at').order('id', { ascending: false })
     ]);
 
     return {
-        tasks: tasksResult.rows,
-        schedules: schedulesResult.rows
+        tasks: tasks || [],
+        schedules: schedules || []
     };
 }
 
@@ -3614,30 +3597,16 @@ async function applyAgentCleanupPreview(preview) {
         };
     }
 
-    await pool.query("BEGIN");
-
     try {
         if (taskIds.length) {
-            await pool.query(
-                `
-                DELETE FROM agent_tasks
-                WHERE id = ANY($1::int[])
-                `,
-                [taskIds]
-            );
+            const { error: tErr } = await sbAdmin.from('agent_tasks').delete().in('id', taskIds);
+            if (tErr) throw new Error(tErr.message);
         }
 
         if (scheduleIds.length) {
-            await pool.query(
-                `
-                DELETE FROM agent_schedules
-                WHERE id = ANY($1::int[])
-                `,
-                [scheduleIds]
-            );
+            const { error: sErr } = await sbAdmin.from('agent_schedules').delete().in('id', scheduleIds);
+            if (sErr) throw new Error(sErr.message);
         }
-
-        await pool.query("COMMIT");
 
         return {
             ok: true,
@@ -3649,7 +3618,6 @@ Deleted task IDs: ${taskIds.length ? taskIds.join(", ") : "None"}
 Deleted schedule IDs: ${scheduleIds.length ? scheduleIds.join(", ") : "None"}`
         };
     } catch (error) {
-        await pool.query("ROLLBACK");
         throw error;
     }
 }
@@ -6653,17 +6621,12 @@ app.get("/test", (req, res) => {
 
 app.get("/test-db", async (req, res) => {
     try {
-        const result = await pool.query("SELECT NOW() AS now");
-        res.json({
-            ok: true,
-            time: result.rows[0]
-        });
+        const { data, error } = await sbAdmin.from('agent_tasks').select('id').limit(1);
+        if (error) throw new Error(error.message);
+        res.json({ ok: true, time: new Date().toISOString(), supabase: 'connected' });
     } catch (err) {
-        console.error("POSTGRES TEST ERROR:", err);
-        res.status(500).json({
-            ok: false,
-            error: err.message
-        });
+        console.error("DB TEST ERROR:", err);
+        res.status(500).json({ ok: false, error: err.message });
     }
 });
 
@@ -8487,24 +8450,8 @@ const server = require("http").createServer(app);
 server.listen(PORT, () => {
     ensureSetup();
 
-    // One-time backfill: mark existing payment failure emails as urgent
-    pool.query(
-        `UPDATE email_queue SET priority = 'urgent'
-         WHERE LOWER(subject) LIKE '%payment%'
-           AND (LOWER(subject) LIKE '%unsuccessful%' OR LOWER(subject) LIKE '%failed%')
-           AND priority != 'urgent'`
-    ).then(r => { if (r.rowCount > 0) console.log(`EMAIL BACKFILL: Marked ${r.rowCount} payment email(s) as urgent.`); })
-     .catch(err => console.error("EMAIL BACKFILL ERROR:", err.message));
-
-    // pgvector setup
-    pool.query("CREATE EXTENSION IF NOT EXISTS vector")
-        .then(() => pool.query("ALTER TABLE documents ADD COLUMN IF NOT EXISTS embedding vector(512)"))
-        .then(() => pool.query(`
-            CREATE INDEX IF NOT EXISTS documents_embedding_idx
-            ON documents USING hnsw (embedding vector_cosine_ops)
-        `))
-        .then(() => console.log("pgvector: extension + index ready."))
-        .catch(err => console.error("PGVECTOR SETUP ERROR:", err.message));
+    console.log('[Email] Backfill skipped — using Supabase client');
+    console.log('[PGVector] Skipping — managed via Supabase dashboard');
 
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🤖 Model: ${MODEL}`);

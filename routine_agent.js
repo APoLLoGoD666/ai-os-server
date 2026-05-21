@@ -10,7 +10,8 @@ const {
     pgAddMemory
 } = require("./pg_helpers");
 
-const pool = require("./pg_database");
+const { createClient: _sbRoutine } = require('@supabase/supabase-js');
+const _sbr = _sbRoutine(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const HAIKU = "claude-haiku-4-5-20251001";
 
 const DEFAULT_ROUTINES = [
@@ -129,18 +130,24 @@ async function runDueRoutines(anthropicClient) {
 // Pattern learning: after 7 days of usage, suggest personalised routine
 async function analyseUsagePatterns(anthropicClient) {
     try {
-        const r = await pool.query(`
-            SELECT EXTRACT(HOUR FROM created_at)::INT AS hour, COUNT(*) AS cnt
-            FROM memory
-            WHERE role = 'user'
-              AND created_at >= NOW() - INTERVAL '7 days'
-            GROUP BY hour
-            ORDER BY cnt DESC
-            LIMIT 5
-        `);
-        if (!r.rows.length) return;
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: rows } = await _sbr.from('memory')
+            .select('created_at')
+            .eq('role', 'user')
+            .gte('created_at', sevenDaysAgo);
+        if (!rows || !rows.length) return;
 
-        const topHours = r.rows.map(row => `${row.hour}:00 (${row.cnt} msgs)`).join(", ");
+        const hourCounts = {};
+        for (const row of rows) {
+            const h = new Date(row.created_at).getHours();
+            hourCounts[h] = (hourCounts[h] || 0) + 1;
+        }
+        const sorted = Object.entries(hourCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+        if (!sorted.length) return;
+
+        const topHours = sorted.map(([h, cnt]) => `${h}:00 (${cnt} msgs)`).join(", ");
         const prompt = `Based on this user activity pattern: ${topHours}, suggest one short personalised daily routine schedule in 1 sentence. Be specific about timing.`;
 
         const res = await anthropicClient.messages.create({
