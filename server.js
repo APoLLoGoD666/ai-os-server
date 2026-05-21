@@ -126,6 +126,19 @@ app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+        const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+        console.log(`[REQUEST] ${req.method} ${req.path} — ${ip} — ${new Date().toISOString()}`);
+    }
+    next();
+});
+
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', uptime: process.uptime(), timestamp: Date.now() });
+});
+
 app.get('/', requireAuth, (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -8543,3 +8556,8 @@ server.listen(PORT, () => {
     } catch {}
     process.exit(0);
 }));
+
+app.use((err, req, res, next) => {
+    console.error(`[ERROR] ${new Date().toISOString()} — ${err.message}\n${err.stack}`);
+    res.status(500).json({ ok: false, reply: 'Internal server error.' });
+});
