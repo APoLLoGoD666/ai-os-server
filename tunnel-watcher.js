@@ -14,45 +14,41 @@ function log(msg) {
     console.log(`[${ts()}] ${msg}`);
 }
 
-async function updateRenderEnvVar(url) {
+async function updateRender(url) {
     if (!RENDER_API_KEY || !RENDER_SERVICE_ID) {
         log("[Tunnel] RENDER_API_KEY or RENDER_SERVICE_ID not set — skipping Render update.");
         return;
     }
 
-    const body = JSON.stringify([{ key: "OBSIDIAN_URL", value: url }]);
-    const options = {
-        hostname: "api.render.com",
-        path: `/v1/services/${RENDER_SERVICE_ID}/env-vars`,
-        method: "PATCH",
-        headers: {
-            "Authorization": `Bearer ${RENDER_API_KEY}`,
-            "Content-Type": "application/json",
-            "Content-Length": Buffer.byteLength(body)
-        }
-    };
-
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
+        const body = JSON.stringify([{ key: "OBSIDIAN_URL", value: url }]);
+        const options = {
+            hostname: "api.render.com",
+            path: `/v1/services/${RENDER_SERVICE_ID}/env-vars`,
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${RENDER_API_KEY}`,
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(body)
+            }
+        };
         const req = https.request(options, (res) => {
             let data = "";
-            res.on("data", chunk => { data += chunk; });
+            res.on("data", chunk => data += chunk);
             res.on("end", () => {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
-                    log(`[Tunnel] OBSIDIAN_URL updated on Render: ${url}`);
                     resolve();
                 } else {
-                    log(`[Tunnel] Render API error ${res.statusCode}: ${data}`);
-                    reject(new Error(`Render API returned ${res.statusCode}`));
+                    reject(new Error(`Render API error ${res.statusCode}: ${data}`));
                 }
             });
         });
-        req.on("error", (err) => {
-            log(`[Tunnel] Render API request failed: ${err.message}`);
-            reject(err);
-        });
+        req.on("error", reject);
         req.write(body);
         req.end();
     });
+
+    log(`[Tunnel] OBSIDIAN_URL updated on Render: ${url}`);
 }
 
 function startTunnel() {
@@ -77,7 +73,7 @@ function startTunnel() {
                     const tunnelUrl = match[0];
                     urlFound = true;
                     log(`[Tunnel] Detected URL: ${tunnelUrl}`);
-                    updateRenderEnvVar(tunnelUrl).catch(() => {});
+                    updateRender(tunnelUrl).catch(err => log(`[Tunnel] Render update failed: ${err.message}`));
                 }
             }
         }
