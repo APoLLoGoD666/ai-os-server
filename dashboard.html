@@ -4030,7 +4030,7 @@ initSupabaseRealtime();
 (function(){
   function hasCookie(){return document.cookie.split(';').some(c=>c.trim().startsWith('apex_token='));}
   var overlay=document.getElementById('apexLoginOverlay');
-  if(!hasCookie()&&overlay){overlay.style.display='flex';}
+  if(overlay){overlay.style.display='flex';}
   var pw=document.getElementById('apexLoginPw');
   if(pw){pw.addEventListener('keydown',function(e){if(e.key==='Enter')apexDoLogin();});}
 })();
