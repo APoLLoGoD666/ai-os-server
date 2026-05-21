@@ -2390,10 +2390,8 @@ async function _iosPWATranscribeAndProcess(blob, mimeType) {
 function _iosPWAHandleTranscript(transcript) {
     if (!transcript) return;
     if (isSpeakingNow) {
-        console.log('[APEX iOS] transcript received while speaking — interrupting speech:', transcript);
-        window.speechSynthesis.cancel();
-        isSpeakingNow = false;
-        dgMuted = false;
+        console.log('[APEX iOS] transcript discarded — Apex is speaking (AEC leakage):', transcript.substring(0, 60));
+        return;
     }
     if (dgMuted) return;
     lastSpeechMs = Date.now();
@@ -2461,23 +2459,8 @@ async function startVoicePipeline() {
         lastSpeechMs = Date.now();
 
         if (isSpeakingNow) {
-            // SR interrupt: 2+ real words, not Apex's own voice echoing through mic
-            const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
-            if (wordCount >= 2) {
-                // Echo filter: if >60% of transcript words appear in what Apex is saying, it's AEC leakage
-                const tWords = transcript.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
-                const aWords = new Set((_currentSpeakPhrase || '').toLowerCase().split(/\s+/).filter(w => w.length >= 2));
-                const overlap = tWords.filter(w => aWords.has(w)).length;
-                if (tWords.length > 0 && overlap / tWords.length > 0.6) {
-                    console.log('[SR] echo discarded (' + overlap + '/' + tWords.length + ' words match Apex speech)');
-                    return;
-                }
-                console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
-                interruptSpeech();
-                _interruptAccum = transcript;
-                clearTimeout(_interruptSendTimer);
-                _interruptSendTimer = setTimeout(_flushInterruptAccum, 300);
-            }
+            // SR must not be running during TTS — discard as AEC leakage
+            console.log('[SR] discarded during TTS (isSpeakingNow):', transcript.substring(0, 60));
             return;
         }
         if (dgMuted) return; // block transcripts during thinking phase
@@ -2551,13 +2534,13 @@ async function startVoicePipeline() {
         _srecActive = false;
         console.log("[SR] ended");
         if (!isListening || document.visibilityState === "hidden") return;
-        const delay = isSpeakingNow ? 100 : 0;
+        if (isSpeakingNow) return; // _processSpeak restarts srec when TTS ends
         setTimeout(() => {
-            if (srec && isListening && !_srecActive) {
+            if (srec && isListening && !_srecActive && !isSpeakingNow) {
                 _srecActive = true;
                 try { srec.start(); } catch (_) { _srecActive = false; }
             }
-        }, delay);
+        }, 0);
     };
 
     dgMode = "wake";
