@@ -2472,11 +2472,24 @@ async function startVoicePipeline() {
         if (isSpeakingNow) {
             const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
             if (wordCount >= 2) {
-                console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
-                interruptSpeech();
-                _interruptAccum = transcript;
-                clearTimeout(_interruptSendTimer);
-                _interruptSendTimer = setTimeout(_flushInterruptAccum, 300);
+                // Use the AEC-processed dgAnalyser to verify the source is the user.
+                // AEC cancels Apex's own speaker output so it reads low; the user's voice is not
+                // cancelled and reads high. No word comparison needed.
+                let _isUser = false;
+                if (dgAnalyser) {
+                    const _cbuf = new Float32Array(dgAnalyser.fftSize);
+                    dgAnalyser.getFloatTimeDomainData(_cbuf);
+                    _isUser = _rms(_cbuf) > -38;
+                }
+                if (_isUser) {
+                    console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
+                    interruptSpeech();
+                    _interruptAccum = transcript;
+                    clearTimeout(_interruptSendTimer);
+                    _interruptSendTimer = setTimeout(_flushInterruptAccum, 300);
+                } else {
+                    console.log('[SR] echo discarded — AEC stream below -38 dB');
+                }
             }
             return;
         }
