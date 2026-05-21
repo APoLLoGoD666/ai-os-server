@@ -1411,6 +1411,7 @@ let dgSilenceTimer      = null;   // setInterval for conversation silence tracki
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
 let _postSpeakLockUntil = 0;
+let _postSpeakSkipOne   = false;     // discard first main SR result after TTS — tail-echo safety (desktop)
 let _lastHighDbMs       = 0;         // last timestamp AEC stream exceeded -38 dB during TTS (desktop)
 let _interruptAccum     = null;  // accumulated transcript during interrupt collection window
 let _interruptSendTimer = null;
@@ -2063,6 +2064,7 @@ async function _processSpeak() {
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
     if (srec) { try { srec.stop(); _srecActive = false; } catch (_) {} }
+    if (!isIOSPWA) _startInterruptListener();
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
@@ -2087,9 +2089,11 @@ async function _processSpeak() {
     clearTimeout(_speakSafetyTimer);
     _speakSafetyTimer = null;
     _vadDebounceStart = null;
+    _stopInterruptListener();
     // Echo lock set before isSpeakingNow is cleared — lock is in place the instant isSpeakingNow goes false.
     // Skip lock when interrupted (_apexSpeakStartMs=0) so the captured command is not blocked.
     _postSpeakLockUntil = (_apexSpeakStartMs === 0) ? 0 : (isIOSPWA ? Date.now() + 1200 : Date.now() + 350);
+    _postSpeakSkipOne = !isIOSPWA && (_apexSpeakStartMs !== 0);
     isSpeakingNow = false;
     const _speakDurationMs = Date.now() - _speakStartMs;
     console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${isIOSPWA ? 1200 : 350}ms desktop, unmuteDeepgram`);
@@ -2160,35 +2164,47 @@ function stopVAD() {
     if (vadAnalyser) { try { vadAnalyser.disconnect(); } catch (_) {} vadAnalyser = null; }
 }
 
-function _startInterruptSR() {
-    if (_vadInterruptSR) return;
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR || !isSpeakingNow) return;
-    console.log("[VAD] starting dedicated interrupt SR");
-    const r = new SR();
-    r.continuous   = false;
-    r.interimResults = false;
-    r.lang         = "en-GB";
-    _vadInterruptSR = r;
+function _stopInterruptListener() {
+    if (_vadInterruptSR) { try { _vadInterruptSR.abort(); } catch (_) {} _vadInterruptSR = null; }
+}
 
+function _startInterruptListener() {
+    if (isIOSPWA) return;
+    _stopInterruptListener();
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    console.log("[Interrupt] starting interrupt-only SR during TTS");
+    const r = new SR();
+    r.continuous     = false;
+    r.interimResults = false;
+    r.lang           = "en-GB";
+    _vadInterruptSR  = r;
     r.onresult = ev => {
         if (!ev.results[ev.resultIndex].isFinal) return;
-        const transcript = ev.results[ev.resultIndex][0].transcript.trim();
-        const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
-        console.log(`[VAD] interrupt SR: ${wordCount} words — "${transcript}"`);
-        if (wordCount >= 2 && isSpeakingNow) {
+        const res        = ev.results[ev.resultIndex][0];
+        const transcript = res.transcript.trim();
+        const confidence = res.confidence;
+        const wordCount  = transcript.split(/\s+/).filter(w => w.length >= 2).length;
+        console.log(`[Interrupt] "${transcript}" — words:${wordCount} conf:${confidence.toFixed(2)}`);
+        if (!isSpeakingNow) { _stopInterruptListener(); return; }
+        if (wordCount >= 2 && confidence > 0.7) {
             _vadInterruptSR = null;
             interruptSpeech();
             document.getElementById("chatInput").value = transcript;
             lastSendWasVoice = true;
             dgMuted = true;
             sendVoiceChatCommand(transcript);
+        } else {
+            console.log("[Interrupt] discarded (too short or low confidence) — Apex keeps speaking");
         }
-        // < 2 words: discard — Apex keeps speaking
     };
     r.onerror = () => { _vadInterruptSR = null; };
-    r.onend   = () => { _vadInterruptSR = null; };
-    try { r.start(); } catch (e) { _vadInterruptSR = null; console.warn("[VAD] interrupt SR start failed:", e.message); }
+    r.onend   = () => {
+        if (_vadInterruptSR === r) _vadInterruptSR = null;
+        // Restart interrupt listener while TTS is still running (SR is non-continuous)
+        if (isSpeakingNow && !isIOSPWA) setTimeout(_startInterruptListener, 50);
+    };
+    try { r.start(); } catch (e) { _vadInterruptSR = null; console.warn("[Interrupt] SR start failed:", e.message); }
 }
 
 function interruptSpeech() {
@@ -2540,19 +2556,8 @@ async function startVoicePipeline() {
         lastSpeechMs = Date.now();
 
         if (isSpeakingNow) {
-            // Interrupt requires 2+ words AND the AEC stream must have read above -38 dB within
-            // the last 1.5s — meaning the user was audibly speaking. AEC cancels Apex's own TTS
-            // so its echo never updates _lastHighDbMs and always fails this check.
-            const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
-            if (wordCount >= 2 && Date.now() - _lastHighDbMs < 1500) {
-                console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
-                interruptSpeech();
-                _interruptAccum = transcript;
-                clearTimeout(_interruptSendTimer);
-                _interruptSendTimer = setTimeout(_flushInterruptAccum, 300);
-            } else {
-                console.log('[SR] discarded during TTS (words:' + wordCount + ' lastHighDb:' + Math.round(Date.now() - _lastHighDbMs) + 'ms ago)');
-            }
+            // Interrupt is handled exclusively by _startInterruptListener(); discard here.
+            console.log('[SR] main SR discarded during TTS (interrupt listener handles this):', transcript);
             return;
         }
         if (dgMuted) return; // block transcripts during thinking phase
@@ -2587,6 +2592,11 @@ async function startVoicePipeline() {
             }
             if (Date.now() < _postSpeakLockUntil) {
                 console.log('[SR] post-speak echo discarded:', transcript);
+                return;
+            }
+            if (_postSpeakSkipOne) {
+                _postSpeakSkipOne = false;
+                console.log('[SR] post-speak skip-one discarded (tail-echo safety):', transcript);
                 return;
             }
             console.log(`[SR] conversation: "${transcript}"`);
@@ -2665,13 +2675,13 @@ async function startVoicePipeline() {
         _srecActive = false;
         console.log("[SR] ended");
         if (!isListening || document.visibilityState === "hidden") return;
-        const delay = isSpeakingNow ? 100 : 0;
+        if (isSpeakingNow) return; // TTS in progress — _processSpeak restarts srec after speak ends
         setTimeout(() => {
             if (srec && isListening && !_srecActive) {
                 _srecActive = true;
                 try { srec.start(); } catch (_) { _srecActive = false; }
             }
-        }, delay);
+        }, 0);
     };
 
     dgMode = "wake";
