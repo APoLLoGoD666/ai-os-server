@@ -1966,6 +1966,33 @@ async function speakWithElevenLabs(text) {
     }
 }
 
+function _speakDesktop(phrase, { onEnd } = {}) {
+    window.speechSynthesis.cancel();
+    if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
+    const utt = new SpeechSynthesisUtterance(phrase);
+    utt.rate = 1.08; utt.pitch = 0.95; utt.volume = 1;
+    const voice = _selectedVoice || _pickVoice();
+    if (voice) utt.voice = voice;
+    console.log(`[Speak] _speakDesktop — voice:"${voice ? voice.name : 'default'}" phrase:"${phrase.slice(0, 60)}"`);
+    utt.onstart = () => { console.log('[Speak] _speakDesktop started'); };
+    utt.onend   = () => {
+        console.log('[Speak] _speakDesktop ended');
+        if (isSpeakingNow && !speakQueue.length) {
+            isSpeakingNow = false;
+            clearTimeout(_speakSafetyTimer); _speakSafetyTimer = null;
+            dgMuted = false;
+            console.log('[Speak] _speakDesktop ended → unmuteDeepgram');
+            unmuteDeepgram();
+        }
+        if (onEnd) onEnd();
+    };
+    utt.onerror = (ev) => {
+        console.warn('[Speak] _speakDesktop error:', ev.error);
+        if (onEnd) onEnd();
+    };
+    window.speechSynthesis.speak(utt);
+}
+
 function _speakFallback(phrase, { onEnd } = {}) {
     if (isIOSPWA) console.log("[APEX iOS] _speakFallback called, text:", phrase.slice(0, 50));
     window.speechSynthesis.cancel();
@@ -2013,18 +2040,22 @@ async function _speakInternal(text, useFiller) {
         setOrbState("speaking");
         const filler = useFiller ? _pickFiller() : null;
 
-        if (filler) {
-            const fillerOk = await speakWithElevenLabs(filler);
-            if (!fillerOk && isSpeakingNow) {
-                if (isIOSPWA) await new Promise(r => setTimeout(r, 500));
-                await new Promise(r => _speakFallback(filler, { onEnd: r }));
+        if (isIOSPWA) {
+            if (filler) {
+                const fillerOk = await speakWithElevenLabs(filler);
+                if (!fillerOk && isSpeakingNow) {
+                    await new Promise(r => setTimeout(r, 500));
+                    await new Promise(r => _speakFallback(filler, { onEnd: r }));
+                }
             }
-        }
-
-        const ok = await speakWithElevenLabs(phrase);
-        if (!ok && isSpeakingNow) {
-            if (isIOSPWA) await new Promise(r => setTimeout(r, 500));
-            await new Promise(r => _speakFallback(phrase, { onEnd: r }));
+            const ok = await speakWithElevenLabs(phrase);
+            if (!ok && isSpeakingNow) {
+                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => _speakFallback(phrase, { onEnd: r }));
+            }
+        } else {
+            if (filler) await new Promise(r => _speakDesktop(filler, { onEnd: r }));
+            await new Promise(r => _speakDesktop(phrase, { onEnd: r }));
         }
     } catch (_) {}
 }
@@ -2068,7 +2099,7 @@ async function _processSpeak() {
     const _echoLockMs = 600;
     // Skip post-speak echo lock when speech was interrupted (_apexSpeakStartMs cleared to 0
     // by interruptSpeech) so the user's captured interrupt command is not blocked.
-    _postSpeakLockUntil = (_apexSpeakStartMs === 0) ? 0 : Date.now() + 1200;
+    _postSpeakLockUntil = (_apexSpeakStartMs === 0) ? 0 : (isIOSPWA ? Date.now() + 1200 : Date.now() + 2500);
     console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${_echoLockMs}ms, unmuteDeepgram`);
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
@@ -2114,8 +2145,8 @@ function startVAD() {
             for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
             const rms = Math.sqrt(sum / buf.length);
             const db  = rms > 0 ? 20 * Math.log10(rms) : -Infinity;
-            // -28 dB: raised from -38 to prevent TTS echo self-interrupt on desktop speakers (AEC residual ~-35 dB)
-            if (db > -28) {
+            // -20 dB: raised from -28 to prevent speechSynthesis AEC residual from triggering VAD
+            if (db > -20) {
                 console.log('[VAD] user voice detected', db.toFixed(1), 'dB — interrupting');
                 stopVAD();
                 interruptSpeech();
@@ -2683,8 +2714,8 @@ async function startVoicePipeline() {
                 if (isSpeakingNow) {
                     // Record when user voice was last detected on the AEC-processed stream.
                     // 500ms onset guard absorbs AEC transient at playback start.
-                    // Threshold raised to -28 dB to prevent TTS echo on desktop speakers from updating this.
-                    if (Date.now() - _apexSpeakStartMs > 500 && db > -28) _lastHighDbMs = Date.now();
+                    // Threshold raised to -20 dB to prevent speechSynthesis AEC residual from updating this.
+                    if (Date.now() - _apexSpeakStartMs > 500 && db > -20) _lastHighDbMs = Date.now();
                     return;
                 }
 
