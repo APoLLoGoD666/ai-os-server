@@ -86,6 +86,34 @@ const {
     pgListVoiceTasks
 } = require("./pg_helpers");
 
+async function obsidianRead(notePath) {
+  const res = await fetch(`${process.env.OBSIDIAN_URL}/vault/${encodeURIComponent(notePath)}`, {
+    headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` }
+  });
+  if (!res.ok) return null;
+  return await res.text();
+}
+
+async function obsidianWrite(notePath, markdownContent) {
+  await fetch(`${process.env.OBSIDIAN_URL}/vault/${encodeURIComponent(notePath)}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}`,
+      'Content-Type': 'text/markdown'
+    },
+    body: markdownContent
+  });
+}
+
+async function obsidianSearch(query) {
+  const res = await fetch(
+    `${process.env.OBSIDIAN_URL}/search/simple/?query=${encodeURIComponent(query)}&contextLength=200`,
+    { headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` } }
+  );
+  if (!res.ok) return [];
+  return await res.json();
+}
+
 const app = express();
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
