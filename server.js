@@ -7724,6 +7724,19 @@ Respond naturally in 1-2 sentences.`.trim();
         const needsTools = /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment|remember|follow.?up|what.*task|pending/i.test(userMessage);
         console.log(`[LATENCY] +${Date.now() - t0}ms calling Anthropic model:claude-haiku-4-5-20251001 tools:${needsTools}`);
 
+        // Ruflo agent routing hint — maps voice command to best agent
+        const _rufloAgent = (() => {
+            const _lc = (userMessage || '').toLowerCase();
+            if (/email|inbox|gmail|send|reply|draft|unread|message/.test(_lc)) return 'apex-email-agent';
+            if (/finance|budget|spending|balance|money|transaction|expense|bank/.test(_lc)) return 'apex-finance-agent';
+            if (/routine|briefing|morning|evening|weekly|schedule|cron/.test(_lc)) return 'apex-routine-agent';
+            if (/reflect|insight|notification|review|pattern/.test(_lc)) return 'apex-reflection-agent';
+            if (/autopilot|github|PR|proposal|code improvement/.test(_lc)) return 'apex-autopilot-agent';
+            if (/search|research|find|look up|what is|who is|news/.test(_lc)) return 'apex-research-agent';
+            return 'apex-system-agent';
+        })();
+        console.log('[Ruflo] routing hint:', _rufloAgent, '| needsTools:', needsTools);
+
         // Recall semantically relevant memories + Alex context (Upgrades 1 & 2)
         let memoryContext = '';
         let alexContext = '';
@@ -7949,6 +7962,35 @@ app.post("/api/upload-file", requireAppAccess, async (req, res) => {
     } catch (error) {
         console.error("UPLOAD FILE ERROR:", error);
         return res.status(500).json({ ok: false, reply: error.message || "Upload failed." });
+    }
+});
+
+/*
+ * POST /api/ruflo/task
+ * Dispatches a task to a named Ruflo agent via the CLI.
+ * Body: { agent: string, task: string, context?: string }
+ * Returns: { ok: true, output: string } or { ok: false, error }
+ */
+app.post('/api/ruflo/task', requireAppAccess, async (req, res) => {
+    try {
+        const { agent, task, context } = req.body;
+        if (!agent || !task) {
+            return res.status(400).json({ ok: false, error: 'agent and task are required' });
+        }
+        const safeAgent = agent.replace(/[^a-zA-Z0-9_-]/g, '');
+        const safeTask  = task.replace(/['"\\`$]/g, ' ').slice(0, 500);
+        const safeCtx   = context ? context.replace(/['"\\`$]/g, ' ').slice(0, 500) : '';
+
+        const { execSync } = require('child_process');
+        const cmd = safeCtx
+            ? `node node_modules/.bin/ruflo task spawn --agent ${safeAgent} --task "${safeTask}" --context "${safeCtx}"`
+            : `node node_modules/.bin/ruflo task spawn --agent ${safeAgent} --task "${safeTask}"`;
+
+        const output = execSync(cmd, { cwd: __dirname, timeout: 30000, encoding: 'utf8' });
+        res.json({ ok: true, output: output.trim() });
+    } catch (err) {
+        console.error('[Ruflo] task dispatch error:', err.message);
+        res.status(500).json({ ok: false, error: err.message || 'task dispatch failed' });
     }
 });
 
