@@ -168,7 +168,15 @@ app.use('/api', requireAuth);
 
 const chatLimiter = rateLimit({ windowMs: 60000, max: 30, message: { ok: false, reply: "Too many requests, slow down." } });
 app.use("/chat", chatLimiter);
-app.use("/api/voice-chat", chatLimiter);
+
+const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Too many requests, please try again later." } });
+app.use(generalLimiter);
+
+const voiceLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Voice chat rate limit reached, slow down." } });
+app.use("/api/voice-chat", voiceLimiter);
+
+const authLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Too many login attempts, try again later." } });
+app.use("/auth/login", authLimiter);
 
 const client = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY
