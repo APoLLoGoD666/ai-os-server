@@ -6,17 +6,25 @@ const {
     pgGetEmailQueueItemByGmailId,
     pgUpdateEmailQueueStatus,
     pgCreateAgentTask,
-    pgCreateNotification
+    pgCreateNotification,
+    pgGetGmailToken,
+    pgSaveGmailToken,
+    pgClearGmailToken
 } = require("./pg_helpers");
 
 const HAIKU = "claude-haiku-4-5-20251001";
 
-function getGmailClient() {
-    const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN } = process.env;
-    if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET || !GMAIL_REFRESH_TOKEN) return null;
+async function getGmailClient() {
+    const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET } = process.env;
+    if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET) return null;
+
+    // Prefer DB-stored token (written by re-auth flow), fall back to env var
+    const dbToken = await pgGetGmailToken().catch(() => null);
+    const refreshToken = dbToken || process.env.GMAIL_REFRESH_TOKEN;
+    if (!refreshToken) return null;
 
     const oauth2 = new google.auth.OAuth2(GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET);
-    oauth2.setCredentials({ refresh_token: GMAIL_REFRESH_TOKEN });
+    oauth2.setCredentials({ refresh_token: refreshToken });
     return google.gmail({ version: "v1", auth: oauth2 });
 }
 
@@ -80,7 +88,7 @@ Body: ${email.body}`;
 }
 
 async function checkEmails(anthropicClient) {
-    const gmail = getGmailClient();
+    const gmail = await getGmailClient();
     if (!gmail) {
         console.log("EMAIL AGENT: Gmail not configured, skipping.");
         return 0;
@@ -154,11 +162,12 @@ async function checkEmails(anthropicClient) {
     } catch (error) {
         console.error("EMAIL CHECK ERROR:", error.message);
         if (/invalid_grant/i.test(error.message)) {
-            console.error("EMAIL AGENT: Gmail refresh token expired or revoked. Re-authorise and update GMAIL_REFRESH_TOKEN.");
+            console.error("[Gmail] OAuth refresh failed — re-authorisation required");
+            await pgClearGmailToken().catch(() => {});
             await pgCreateNotification(
                 "email",
-                "⚠️ Gmail auth expired",
-                "Gmail OAuth refresh token is invalid. Re-authorise via Google and update GMAIL_REFRESH_TOKEN in environment variables.",
+                "Gmail auth expired",
+                "Gmail OAuth refresh token is invalid. Visit /auth/gmail/reauthorise to re-connect.",
                 null, null
             ).catch(() => {});
         }
@@ -167,7 +176,7 @@ async function checkEmails(anthropicClient) {
 }
 
 async function sendEmailReply(gmailId, to, subject, replyText) {
-    const gmail = getGmailClient();
+    const gmail = await getGmailClient();
     if (!gmail) throw new Error("Gmail not configured.");
 
     const replySubject = subject.startsWith("Re:") ? subject : `Re: ${subject}`;
@@ -186,10 +195,18 @@ async function sendEmailReply(gmailId, to, subject, replyText) {
         .replace(/\//g, "_")
         .replace(/=+$/, "");
 
-    await gmail.users.messages.send({
-        userId: "me",
-        requestBody: { raw: encoded }
-    });
+    try {
+        await gmail.users.messages.send({
+            userId: "me",
+            requestBody: { raw: encoded }
+        });
+    } catch (error) {
+        if (/invalid_grant/i.test(error.message)) {
+            console.error("[Gmail] OAuth refresh failed — re-authorisation required");
+            await pgClearGmailToken().catch(() => {});
+        }
+        throw error;
+    }
 }
 
 async function initEmailAgent(anthropicClient) {

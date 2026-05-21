@@ -83,7 +83,10 @@ const {
     pgUpdateRoutine,
     pgDeleteRoutine,
     pgCreateVoiceTask,
-    pgListVoiceTasks
+    pgListVoiceTasks,
+    pgSaveGmailToken,
+    pgGetGmailToken,
+    pgClearGmailToken
 } = require("./pg_helpers");
 
 async function obsidianRead(notePath) {
@@ -7071,6 +7074,47 @@ app.post("/api/send-reply", requireAppAccess, async (req, res) => {
         return res.json({ ok: true, reply: `Reply sent to ${to}.` });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
+    }
+});
+
+app.get("/auth/gmail/reauthorise", requireAppAccess, (req, res) => {
+    const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET } = process.env;
+    if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET) {
+        return res.status(500).send("GMAIL_CLIENT_ID or GMAIL_CLIENT_SECRET not set in environment.");
+    }
+    const { google } = require("googleapis");
+    const redirectUri = `${req.protocol}://${req.get("host")}/auth/gmail/callback`;
+    const oauth2 = new google.auth.OAuth2(GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, redirectUri);
+    const url = oauth2.generateAuthUrl({
+        access_type: "offline",
+        prompt: "consent",
+        scope: [
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.send"
+        ]
+    });
+    console.log("[Gmail] Re-auth flow started — redirecting to Google consent screen");
+    return res.redirect(url);
+});
+
+app.get("/auth/gmail/callback", requireAppAccess, async (req, res) => {
+    const { code } = req.query;
+    if (!code) return res.status(400).send("Missing OAuth code.");
+    const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET } = process.env;
+    const { google } = require("googleapis");
+    const redirectUri = `${req.protocol}://${req.get("host")}/auth/gmail/callback`;
+    const oauth2 = new google.auth.OAuth2(GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, redirectUri);
+    try {
+        const { tokens } = await oauth2.getToken(code);
+        if (!tokens.refresh_token) {
+            return res.status(400).send("No refresh_token returned. Ensure prompt=consent and access_type=offline were set. Try visiting /auth/gmail/reauthorise again.");
+        }
+        await pgSaveGmailToken(tokens.refresh_token);
+        console.log("[Gmail] New refresh token saved to database — re-auth complete");
+        return res.send("Gmail re-authorisation complete. New refresh token saved. You can close this tab.");
+    } catch (error) {
+        console.error("[Gmail] OAuth callback error:", error.message);
+        return res.status(500).send(`OAuth callback failed: ${error.message}`);
     }
 });
 

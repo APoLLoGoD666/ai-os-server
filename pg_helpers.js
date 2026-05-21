@@ -1109,6 +1109,41 @@ async function pgMarkRoutineRun(id) {
     return r.rows[0] || null;
 }
 
+let gmailTokensTableReadyPromise = null;
+
+function ensureGmailTokensTable() {
+    if (!gmailTokensTableReadyPromise) {
+        gmailTokensTableReadyPromise = pool.query(`
+            CREATE TABLE IF NOT EXISTS gmail_tokens (
+                id SERIAL PRIMARY KEY,
+                refresh_token TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        `).catch(error => {
+            gmailTokensTableReadyPromise = null;
+            throw error;
+        });
+    }
+    return gmailTokensTableReadyPromise;
+}
+
+async function pgSaveGmailToken(refreshToken) {
+    await ensureGmailTokensTable();
+    await pool.query(`DELETE FROM gmail_tokens`);
+    await pool.query(`INSERT INTO gmail_tokens (refresh_token) VALUES ($1)`, [refreshToken]);
+}
+
+async function pgGetGmailToken() {
+    await ensureGmailTokensTable();
+    const result = await pool.query(`SELECT refresh_token FROM gmail_tokens ORDER BY id DESC LIMIT 1`);
+    return result.rows[0]?.refresh_token || null;
+}
+
+async function pgClearGmailToken() {
+    await ensureGmailTokensTable();
+    await pool.query(`DELETE FROM gmail_tokens`);
+}
+
 module.exports = {
     pgSaveDocument,
     pgListDocuments,
@@ -1164,5 +1199,8 @@ module.exports = {
     pgListRoutines,
     pgUpdateRoutine,
     pgDeleteRoutine,
-    pgMarkRoutineRun
+    pgMarkRoutineRun,
+    pgSaveGmailToken,
+    pgGetGmailToken,
+    pgClearGmailToken
 };
