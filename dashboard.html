@@ -1369,6 +1369,8 @@ let dgSilenceTimer      = null;   // setInterval for conversation silence tracki
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
 let _postSpeakLockUntil = 0;
+let _interruptAccum     = null;  // accumulated transcript during interrupt collection window
+let _interruptSendTimer = null;
 let dgDbLogTs           = 0;
 const CONV_SILENCE_MS   = 3000;   // ms of silence before returning to wake mode
 let cachedEmailCount    = 0;
@@ -1993,14 +1995,7 @@ async function _processSpeak() {
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
     if (srec) { try { srec.stop(); _srecActive = false; } catch (_) {} }
-    // Restart srec after AEC adaptation window — 100ms gives Chrome enough time to cancel Apex's voice
-    setTimeout(() => {
-        if (isSpeakingNow && srec && !_srecActive) {
-            _srecActive = true;
-            try { srec.start(); } catch (_) { _srecActive = false; }
-            console.log('[SR] restarted after AEC window — interrupt now live');
-        }
-    }, 100);
+    // srec.onend is the single restart path — no separate timer to avoid race conditions
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
@@ -2134,6 +2129,17 @@ function interruptSpeech() {
     dgMuted = false;
     unmuteDeepgram();
     setOrbState(isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
+}
+
+function _flushInterruptAccum() {
+    const msg = (_interruptAccum || '').trim();
+    _interruptAccum = null;
+    _interruptSendTimer = null;
+    if (!msg) return;
+    document.getElementById("chatInput").value = msg;
+    lastSendWasVoice = true;
+    dgMuted = true;
+    sendVoiceChatCommand(msg);
 }
 
 // ══ VOICE INPUT ═══════════════════════════════════════════════════════
@@ -2468,10 +2474,9 @@ async function startVoicePipeline() {
                 }
                 console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
                 interruptSpeech();
-                document.getElementById("chatInput").value = transcript;
-                lastSendWasVoice = true;
-                dgMuted = true;
-                sendVoiceChatCommand(transcript);
+                _interruptAccum = transcript;
+                clearTimeout(_interruptSendTimer);
+                _interruptSendTimer = setTimeout(_flushInterruptAccum, 300);
             }
             return;
         }
@@ -2499,6 +2504,12 @@ async function startVoicePipeline() {
                 console.log(`[Wake] wake word not matched: "${transcript}"`);
             }
         } else {
+            if (_interruptAccum !== null) {
+                _interruptAccum = (_interruptAccum + ' ' + transcript).trim();
+                clearTimeout(_interruptSendTimer);
+                _interruptSendTimer = setTimeout(_flushInterruptAccum, 300);
+                return;
+            }
             if (Date.now() < _postSpeakLockUntil) {
                 console.log('[SR] post-speak echo discarded:', transcript);
                 return;
@@ -2539,11 +2550,14 @@ async function startVoicePipeline() {
     srec.onend = () => {
         _srecActive = false;
         console.log("[SR] ended");
-        if (isSpeakingNow) return; // dgSilenceTimer will restart srec when user voice is detected
-        if (srec && isListening && document.visibilityState !== "hidden") {
-            _srecActive = true;
-            try { srec.start(); } catch (_) { _srecActive = false; }
-        }
+        if (!isListening || document.visibilityState === "hidden") return;
+        const delay = isSpeakingNow ? 100 : 0;
+        setTimeout(() => {
+            if (srec && isListening && !_srecActive) {
+                _srecActive = true;
+                try { srec.start(); } catch (_) { _srecActive = false; }
+            }
+        }, delay);
     };
 
     dgMode = "wake";
