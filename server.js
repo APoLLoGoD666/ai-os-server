@@ -7266,6 +7266,13 @@ app.post("/api/speak", async (req, res) => {
 
 // ── APEX MEMORY (pgvector + Voyage AI) ────────────────────────────────────
 
+// Supabase client — used by saveMemory / recallMemories for vector storage
+const { createClient: _createSupabaseClient } = require('@supabase/supabase-js');
+const supabase = _createSupabaseClient(
+    process.env.SUPABASE_URL || '',
+    process.env.SUPABASE_ANON_KEY || ''
+);
+
 async function getVoyageEmbedding(text) {
     try {
         const res = await fetch('https://api.voyageai.com/v1/embeddings', {
@@ -8078,6 +8085,164 @@ app.get('/api/ruflo/memory/search', requireAppAccess, async (req, res) => {
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
     }
+});
+
+// ── TASK MANAGEMENT ─────────────────────────────────────────────────────────
+
+const TASKS_FILE = path.join(__dirname, 'TASKS.md');
+const NOTIF_FILE = path.join(__dirname, 'notifications.json');
+
+function _parseTasks() {
+    if (!fs.existsSync(TASKS_FILE)) return { pending: [], inProgress: [], completed: [], failed: [] };
+    const raw = fs.readFileSync(TASKS_FILE, 'utf8');
+    const sections = { pending: [], inProgress: [], completed: [], failed: [] };
+    let cur = null;
+    for (const line of raw.split('\n')) {
+        if (/^## Pending/i.test(line))     { cur = 'pending';    continue; }
+        if (/^## In Progress/i.test(line)) { cur = 'inProgress'; continue; }
+        if (/^## Completed/i.test(line))   { cur = 'completed';  continue; }
+        if (/^## Failed/i.test(line))      { cur = 'failed';     continue; }
+        if (/^#/.test(line)) { cur = null; continue; }
+        if (!cur) continue;
+        const m = line.match(/^- \[([ x])\] (TASK-\d+): (.+)/);
+        if (m) sections[cur].push({ id: m[2], title: m[3].trim(), status: m[1] === 'x' ? 'done' : cur });
+    }
+    return sections;
+}
+
+function _writeTasks(sections) {
+    const L = ['# Apex Task Queue', ''];
+    const _block = (header, items, check) => {
+        L.push(header);
+        if (items.length) items.forEach(t => L.push(`- [${check ? 'x' : ' '}] ${t.id}: ${t.title}`));
+        else L.push('(none)');
+        L.push('');
+    };
+    _block('## Pending',     sections.pending,    false);
+    _block('## In Progress', sections.inProgress, false);
+    _block('## Completed',   sections.completed,  true);
+    _block('## Failed',      sections.failed,     true);
+    fs.writeFileSync(TASKS_FILE, L.join('\n'), 'utf8');
+}
+
+function _nextTaskId(sections) {
+    const all = [...sections.pending, ...sections.inProgress, ...sections.completed, ...sections.failed];
+    const max = all.reduce((m, t) => { const n = parseInt((t.id || '').replace('TASK-', ''), 10); return isNaN(n) ? m : Math.max(m, n); }, 0);
+    return `TASK-${String(max + 1).padStart(3, '0')}`;
+}
+
+function _appendNotif(message, type) {
+    let notifs = [];
+    try { notifs = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); } catch {}
+    notifs.push({ id: `notif-${Date.now()}`, message, type: type || 'info', timestamp: new Date().toISOString(), read: false });
+    fs.writeFileSync(NOTIF_FILE, JSON.stringify(notifs, null, 2), 'utf8');
+}
+
+async function _runTask(taskId, res) {
+    const sections = _parseTasks();
+    const idx = sections.pending.findIndex(t => t.id === taskId);
+    if (idx === -1) return res.status(404).json({ ok: false, error: `${taskId} not found in pending` });
+
+    const task = sections.pending[idx];
+    sections.pending.splice(idx, 1);
+    sections.inProgress.push(task);
+    _writeTasks(sections);
+
+    // Backup before any changes
+    const _bkSrv = fs.existsSync(path.join(__dirname, 'server.js'))
+        ? fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8') : null;
+    const _bkDash = fs.existsSync(path.join(__dirname, 'dashboard.html'))
+        ? fs.readFileSync(path.join(__dirname, 'dashboard.html'), 'utf8') : null;
+
+    const _restore = () => {
+        if (_bkSrv)  fs.writeFileSync(path.join(__dirname, 'server.js'),      _bkSrv,  'utf8');
+        if (_bkDash) fs.writeFileSync(path.join(__dirname, 'dashboard.html'), _bkDash, 'utf8');
+    };
+    const _markFailed = (reason) => {
+        const s = _parseTasks();
+        const i = s.inProgress.findIndex(t => t.id === taskId);
+        if (i !== -1) { s.inProgress.splice(i, 1); s.failed.push(task); _writeTasks(s); }
+        _appendNotif(`❌ ${taskId} failed: ${reason}`, 'error');
+    };
+
+    try {
+        await previewCloudAutopilot(task.title);
+        await applyLatestCloudProposal();
+
+        // Syntax check
+        const { spawnSync: _spSync } = require('child_process');
+        const chk = _spSync(process.execPath, ['--check', 'server.js'], { cwd: __dirname, encoding: 'utf8' });
+        if (chk.status !== 0) {
+            _restore();
+            _markFailed('syntax check failed');
+            return res.status(500).json({ ok: false, error: 'syntax check failed — restored backup' });
+        }
+
+        // Git commit + push fallback (if GitHub API push didn't happen)
+        _spSync('git', ['add', '-A'], { cwd: __dirname });
+        _spSync('git', ['commit', '-m', `fix(task): ${task.title} (${taskId})`], { cwd: __dirname, encoding: 'utf8' });
+        _spSync('git', ['push', 'origin', 'main'], { cwd: __dirname, encoding: 'utf8', timeout: 30000 });
+
+        const s = _parseTasks();
+        const i = s.inProgress.findIndex(t => t.id === taskId);
+        if (i !== -1) { s.inProgress.splice(i, 1); s.completed.push(task); _writeTasks(s); }
+        _appendNotif(`✅ ${taskId} completed: ${task.title}`, 'success');
+        return res.json({ ok: true, taskId, message: `${taskId} completed` });
+
+    } catch (err) {
+        _restore();
+        _markFailed(err.message);
+        return res.status(500).json({ ok: false, error: err.message });
+    }
+}
+
+app.get('/api/tasks', requireAppAccess, (req, res) => {
+    try { res.json({ ok: true, ..._parseTasks() }); }
+    catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+});
+
+app.post('/api/tasks/add', requireAppAccess, (req, res) => {
+    try {
+        const { title } = req.body || {};
+        if (!title || !title.trim()) return res.status(400).json({ ok: false, error: 'title required' });
+        const sections = _parseTasks();
+        const id = _nextTaskId(sections);
+        sections.pending.push({ id, title: title.trim() });
+        _writeTasks(sections);
+        res.json({ ok: true, task: { id, title: title.trim() } });
+    } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+});
+
+app.post('/api/tasks/run', requireAppAccess, async (req, res) => {
+    const { taskId } = req.body || {};
+    if (!taskId) return res.status(400).json({ ok: false, error: 'taskId required' });
+    return _runTask(taskId, res);
+});
+
+app.post('/api/tasks/notify', requireAppAccess, (req, res) => {
+    try {
+        const { message, type } = req.body || {};
+        if (!message) return res.status(400).json({ ok: false, error: 'message required' });
+        _appendNotif(message, type || 'info');
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+});
+
+app.get('/api/notifications', requireAppAccess, (req, res) => {
+    try {
+        let notifs = [];
+        try { notifs = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); } catch {}
+        const unread = notifs.filter(n => !n.read);
+        notifs.forEach(n => { n.read = true; });
+        fs.writeFileSync(NOTIF_FILE, JSON.stringify(notifs, null, 2), 'utf8');
+        res.json({ ok: true, notifications: unread });
+    } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+});
+
+app.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
+    const { taskId } = req.body || {};
+    if (!taskId) return res.status(400).json({ ok: false, error: 'taskId required' });
+    return _runTask(taskId, res);
 });
 
 app.use((req, res) => {

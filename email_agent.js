@@ -153,6 +153,15 @@ async function checkEmails(anthropicClient) {
         return processed;
     } catch (error) {
         console.error("EMAIL CHECK ERROR:", error.message);
+        if (/invalid_grant/i.test(error.message)) {
+            console.error("EMAIL AGENT: Gmail refresh token expired or revoked. Re-authorise and update GMAIL_REFRESH_TOKEN.");
+            await pgCreateNotification(
+                "email",
+                "⚠️ Gmail auth expired",
+                "Gmail OAuth refresh token is invalid. Re-authorise via Google and update GMAIL_REFRESH_TOKEN in environment variables.",
+                null, null
+            ).catch(() => {});
+        }
         return 0;
     }
 }

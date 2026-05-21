@@ -1012,6 +1012,35 @@
 
         .routine-toggle.on::after { left: 17px; background: var(--accent); }
 
+        /* ══ TASK QUEUE ═════════════════════════════════════════════════ */
+        .task-item {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 8px; border-radius: 8px; margin-bottom: 3px;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.02); font-size: 11px;
+        }
+        .task-item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .task-item-run   { flex-shrink: 0; }
+        .task-inprogress { border-color: rgba(0,212,255,0.25); color: rgba(0,212,255,0.85); }
+        .task-completed  { color: rgba(0,255,128,0.7); }
+        .task-failed     { color: rgba(255,90,90,0.8); }
+        .task-add-row    { display: flex; gap: 4px; margin-bottom: 5px; }
+        .task-add-input  {
+            flex: 1; min-width: 0; font-size: 11px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(0,212,255,0.2);
+            border-radius: 6px; padding: 4px 8px; color: inherit; outline: none;
+        }
+        .task-toast {
+            position: fixed; bottom: 24px; right: 24px;
+            padding: 10px 18px; border-radius: 10px; font-size: 13px;
+            font-weight: 600; z-index: 9999; pointer-events: none;
+            animation: _taskToastIn 0.25s ease;
+        }
+        .task-toast.success { background: rgba(0,200,100,0.92); color:#fff; }
+        .task-toast.error   { background: rgba(220,50,50,0.92);  color:#fff; }
+        .task-toast.info    { background: rgba(0,140,210,0.92);  color:#fff; }
+        @keyframes _taskToastIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+
         /* ══ UTILITY ════════════════════════════════════════════════════ */
         .empty-note {
             font-size: 11px;
@@ -1306,6 +1335,19 @@
                 <button class="subpanel-btn" onclick="addRoutineQuick()">+ Add</button>
             </div>
             <div id="routinesPanel"><div class="empty-note">Loading…</div></div>
+        </div>
+
+        <!-- Task Queue Panel -->
+        <div class="subpanel">
+            <div class="subpanel-header">
+                <span class="subpanel-label">Task Queue</span>
+                <button class="subpanel-btn" onclick="toggleTaskAddRow()">+ Add</button>
+            </div>
+            <div id="taskAddRow" class="task-add-row" style="display:none;">
+                <input id="taskAddInput" class="task-add-input" placeholder="Task description…">
+                <button class="subpanel-btn" onclick="addTaskFromInput()">Save</button>
+            </div>
+            <div id="taskQueuePanel"><div class="empty-note">Loading…</div></div>
         </div>
 
     </aside>
@@ -2072,8 +2114,8 @@ function startVAD() {
             for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
             const rms = Math.sqrt(sum / buf.length);
             const db  = rms > 0 ? 20 * Math.log10(rms) : -Infinity;
-            // -38 dB: above typical AEC residual, below normal speech — no word filter needed
-            if (db > -38) {
+            // -28 dB: raised from -38 to prevent TTS echo self-interrupt on desktop speakers (AEC residual ~-35 dB)
+            if (db > -28) {
                 console.log('[VAD] user voice detected', db.toFixed(1), 'dB — interrupting');
                 stopVAD();
                 interruptSpeech();
@@ -2537,6 +2579,45 @@ async function startVoicePipeline() {
                 console.log('[SR] conversation: too short, ignoring:', transcript);
                 return;
             }
+            // ── Task voice commands — intercept before voice-chat ─────────────────────
+            const _addTaskMatch = transcript.match(/^add task\s+(.+)/i);
+            if (_addTaskMatch) {
+                const _tt = _addTaskMatch[1].trim();
+                fetchJson('/api/tasks/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: _tt }) })
+                    .then(d => { speak(d.ok ? `Added task ${d.task.id}.` : 'Failed to add task.'); refreshTaskQueuePanel(); })
+                    .catch(() => speak('Failed to add task.'));
+                dgMuted = false;
+                return;
+            }
+            if (/\b(show tasks?|task list)\b/i.test(transcript)) {
+                fetchJson('/api/tasks').then(d => {
+                    const _p = d.pending?.length || 0, _r = d.inProgress?.length || 0;
+                    speak(_p + _r === 0 ? 'No tasks pending.' : `${_p} pending${_r ? `, ${_r} running` : ''}. ${_p ? 'Next: ' + d.pending[0].title + '.' : ''}`);
+                    refreshTaskQueuePanel();
+                }).catch(() => speak('Could not load tasks.'));
+                dgMuted = false;
+                return;
+            }
+            if (/\brun next task\b/i.test(transcript)) {
+                fetchJson('/api/tasks').then(async d => {
+                    if (!d.pending?.length) { speak('No pending tasks.'); return; }
+                    const _nt = d.pending[0];
+                    speak(`Running task ${_nt.id}.`);
+                    const _r = await fetchJson('/api/tasks/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId: _nt.id }) });
+                    speak(_r.ok ? `Task ${_nt.id} completed.` : `Task ${_nt.id} failed.`);
+                    refreshTaskQueuePanel();
+                }).catch(() => speak('Could not run task.'));
+                dgMuted = false;
+                return;
+            }
+            if (/\btask status\b/i.test(transcript)) {
+                fetchJson('/api/tasks').then(d => {
+                    speak(`${d.pending?.length || 0} pending, ${d.inProgress?.length || 0} running, ${d.completed?.length || 0} done, ${d.failed?.length || 0} failed.`);
+                }).catch(() => speak('Could not get status.'));
+                dgMuted = false;
+                return;
+            }
+            // ─────────────────────────────────────────────────────────────────────────
             document.getElementById("chatInput").value = transcript;
             lastSendWasVoice = true;
             dgMuted = true;
@@ -2602,8 +2683,8 @@ async function startVoicePipeline() {
                 if (isSpeakingNow) {
                     // Record when user voice was last detected on the AEC-processed stream.
                     // 500ms onset guard absorbs AEC transient at playback start.
-                    // Apex's own TTS is cancelled by AEC so it never updates this timestamp.
-                    if (Date.now() - _apexSpeakStartMs > 500 && db > -38) _lastHighDbMs = Date.now();
+                    // Threshold raised to -28 dB to prevent TTS echo on desktop speakers from updating this.
+                    if (Date.now() - _apexSpeakStartMs > 500 && db > -28) _lastHighDbMs = Date.now();
                     return;
                 }
 
@@ -3625,13 +3706,102 @@ async function initSupabaseRealtime() {
     }
 }
 
+// ══ TASK QUEUE JS ═════════════════════════════════════════════════════
+
+async function refreshTaskQueuePanel() {
+    const el = document.getElementById('taskQueuePanel');
+    if (!el) return;
+    try {
+        const data = await fetchJson('/api/tasks');
+        if (!data.ok) { el.innerHTML = '<div class="empty-note">Error loading tasks</div>'; return; }
+        const frag = [];
+        (data.pending || []).forEach(t => {
+            frag.push(`<div class="task-item" data-taskid="${escapeHtml(t.id)}">
+                <span class="task-item-title">${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span>
+                <button class="subpanel-btn task-item-run" onclick="runTaskById('${escapeHtml(t.id)}')">▶ Run</button>
+            </div>`);
+        });
+        (data.inProgress || []).forEach(t => {
+            frag.push(`<div class="task-item task-inprogress"><span class="task-item-title">⟳ ${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span></div>`);
+        });
+        (data.completed || []).slice(-5).reverse().forEach(t => {
+            frag.push(`<div class="task-item task-completed"><span class="task-item-title">✓ ${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span></div>`);
+        });
+        (data.failed || []).forEach(t => {
+            frag.push(`<div class="task-item task-failed"><span class="task-item-title">✗ ${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span></div>`);
+        });
+        el.innerHTML = frag.length ? frag.join('') : '<div class="empty-note">No tasks</div>';
+    } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
+}
+
+async function runTaskById(taskId) {
+    const btn = document.querySelector(`[data-taskid="${taskId}"] .task-item-run`);
+    if (btn) { btn.disabled = true; btn.textContent = '⟳'; }
+    try {
+        const data = await fetchJson('/api/tasks/run', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskId })
+        });
+        showTaskToast(data.ok ? `✓ ${taskId} complete` : `✗ ${taskId}: ${data.error || 'failed'}`, data.ok ? 'success' : 'error');
+        speak(data.ok ? `Task ${taskId} completed.` : `Task ${taskId} failed.`);
+    } catch (e) {
+        showTaskToast(`✗ ${taskId}: ${e.message}`, 'error');
+    }
+    await refreshTaskQueuePanel();
+}
+
+function toggleTaskAddRow() {
+    const row = document.getElementById('taskAddRow');
+    if (!row) return;
+    const shown = row.style.display !== 'none';
+    row.style.display = shown ? 'none' : 'flex';
+    if (!shown) setTimeout(() => document.getElementById('taskAddInput')?.focus(), 50);
+}
+
+async function addTaskFromInput() {
+    const inp = document.getElementById('taskAddInput');
+    const title = (inp?.value || '').trim();
+    if (!title) return;
+    try {
+        const data = await fetchJson('/api/tasks/add', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title })
+        });
+        if (data.ok) { if (inp) inp.value = ''; toggleTaskAddRow(); speak(`Task ${data.task.id} added.`); await refreshTaskQueuePanel(); }
+    } catch (e) { speak('Failed to add task.'); }
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.activeElement?.id === 'taskAddInput') { e.preventDefault(); addTaskFromInput(); }
+});
+
+function showTaskToast(message, type) {
+    const t = document.createElement('div');
+    t.className = `task-toast ${type || 'info'}`;
+    t.textContent = message;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
+}
+
+async function pollTaskNotifications() {
+    try {
+        const data = await fetchJson('/api/notifications');
+        if (data.ok && data.notifications.length) {
+            data.notifications.forEach(n => showTaskToast(n.message, n.type));
+            await refreshTaskQueuePanel();
+        }
+    } catch (_) {}
+}
+
 // ══ INIT ══════════════════════════════════════════════════════════════
 setOrbState("waiting");
 updateStatusBar();
 refreshFast();
 refreshSlow();
+refreshTaskQueuePanel();
 setInterval(refreshFast, REFRESH_INTERVAL_MS);
 setInterval(refreshSlow, SLOW_REFRESH_MS);
+setInterval(pollTaskNotifications, 10000);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
