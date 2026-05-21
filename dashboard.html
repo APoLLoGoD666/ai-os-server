@@ -1861,7 +1861,7 @@ document.addEventListener('touchstart', async () => {
 async function speakWithElevenLabs(text) {
     const phrase = summariseForSpeech(text);
     if (!phrase) return false;
-    _currentSpeakPhrase = phrase;
+    _currentSpeakPhrase = (_currentSpeakPhrase + ' ' + phrase).trim();
 
     // On desktop _apexAudio may not be created yet (no touchstart fired) — create it now.
     if (!_apexAudio) _apexAudio = new Audio();
@@ -1993,6 +1993,14 @@ async function _processSpeak() {
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
     if (srec) { try { srec.stop(); _srecActive = false; } catch (_) {} }
+    // Restart srec after AEC adaptation window — by 500ms Chrome has cancelled Apex's voice from mic
+    setTimeout(() => {
+        if (isSpeakingNow && srec && !_srecActive) {
+            _srecActive = true;
+            try { srec.start(); } catch (_) { _srecActive = false; }
+            console.log('[SR] restarted after AEC window — interrupt now live');
+        }
+    }, 500);
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
@@ -2568,15 +2576,7 @@ async function startVoicePipeline() {
                 dgAnalyser.getFloatTimeDomainData(buf);
                 const db = _rms(buf);
 
-                if (isSpeakingNow) {
-                    // Mic stream is echo-cancelled — user voice rises above ambient even during Apex's speech
-                    if (srec && !_srecActive && db > -42) {
-                        console.log('[VAD] user voice during speech (db=' + db.toFixed(1) + ') — starting SR');
-                        _srecActive = true;
-                        try { srec.start(); } catch (_) { _srecActive = false; }
-                    }
-                    return;
-                }
+                if (isSpeakingNow) return;
 
                 const now = Date.now();
                 if (now - dgDbLogTs >= 2000) {
