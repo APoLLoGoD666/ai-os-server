@@ -3,8 +3,8 @@
 const { spawn } = require("child_process");
 const https = require("https");
 
-const RENDER_API_KEY = process.env.RENDER_API_KEY;
-const RENDER_SERVICE_ID = process.env.RENDER_SERVICE_ID;
+const RENDER_API_KEY = process.env.RENDER_API_KEY || "rnd_iMcUEW4InprhDdkaLV6mlNT79qRG";
+const RENDER_SERVICE_ID = process.env.RENDER_SERVICE_ID || "srv-d7idj1gsfn5c738hpsc0";
 
 function ts() {
     return new Date().toISOString();
