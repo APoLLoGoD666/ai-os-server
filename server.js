@@ -8146,4 +8146,34 @@ server.listen(PORT, () => {
     } catch (err) {
         console.error("MASTRA INIT ERROR:", err.message);
     }
+
+    // Ruflo: auto-start daemon on server boot (non-blocking; child exits ~7.5s after daemon forks)
+    try {
+        const { spawn: rfSpawnDaemon } = require('child_process');
+        const rfDaemon = rfSpawnDaemon(process.execPath, [
+            'node_modules/ruflo/bin/ruflo.js', 'daemon', 'start'
+        ], { cwd: __dirname, stdio: 'pipe' });
+        rfDaemon.stdout.on('data', d => console.log('[Ruflo daemon]', d.toString().trim()));
+        rfDaemon.stderr.on('data', d => console.log('[Ruflo daemon warn]', d.toString().trim()));
+        rfDaemon.on('close', code => console.log(`[Ruflo daemon] start exited (code ${code})`));
+    } catch (err) {
+        console.error('[Ruflo daemon] auto-start failed (non-fatal):', err.message);
+    }
 });
+
+// Ruflo: clean daemon stop on server shutdown via PID file (faster than CLI stop)
+['SIGTERM', 'SIGINT'].forEach(sig => process.once(sig, () => {
+    try {
+        const _fs = require('fs');
+        const _pidFile = require('path').join(__dirname, '.claude-flow', 'daemon.pid');
+        if (_fs.existsSync(_pidFile)) {
+            const _pid = parseInt(_fs.readFileSync(_pidFile, 'utf8').trim(), 10);
+            if (_pid > 0) {
+                process.kill(_pid, 'SIGTERM');
+                _fs.unlinkSync(_pidFile);
+                console.log(`[Ruflo daemon] killed PID ${_pid} on ${sig}`);
+            }
+        }
+    } catch {}
+    process.exit(0);
+}));
