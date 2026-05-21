@@ -7806,6 +7806,26 @@ Respond naturally in 1-2 sentences.`.trim();
         addToMemory("ai", reply);
         // Upgrade 1: fire-and-forget fact extraction — never blocks response
         setImmediate(() => extractAndSaveFacts(userMessage, reply).catch(() => {}));
+
+        // Ruflo: bridge this exchange into swarm memory + create task when tools ran
+        try {
+            const rfSpawn = require('child_process').spawn;
+            const memVal = `user: ${userMessage.slice(0,200)} | apex: ${reply.slice(0,200)}`;
+            rfSpawn(process.execPath, [
+                'node_modules/ruflo/bin/ruflo.js', 'memory', 'store',
+                '-k', `apex-conv-${Date.now()}`,
+                '-v', memVal
+            ], { cwd: __dirname, detached: true, stdio: 'ignore' }).unref();
+            if (needsTools) {
+                rfSpawn(process.execPath, [
+                    'node_modules/ruflo/bin/ruflo.js', 'task', 'create',
+                    '-t', 'custom',
+                    '-d', userMessage.slice(0, 400).replace(/['"]/g, ' '),
+                    '--tags', _rufloAgent
+                ], { cwd: __dirname, detached: true, stdio: 'ignore' }).unref();
+            }
+        } catch {}
+
         return res.status(200).json({ ok: true, reply });
     } catch (error) {
         console.error("VOICE CHAT ERROR:", error);
@@ -7969,7 +7989,7 @@ app.post("/api/upload-file", requireAppAccess, async (req, res) => {
  * POST /api/ruflo/task
  * Dispatches a task to a named Ruflo agent via the CLI.
  * Body: { agent: string, task: string, context?: string }
- * Returns: { ok: true, output: string } or { ok: false, error }
+ * Returns: { ok: true, taskId, output } or { ok: false, error }
  */
 app.post('/api/ruflo/task', requireAppAccess, async (req, res) => {
     try {
@@ -7978,19 +7998,85 @@ app.post('/api/ruflo/task', requireAppAccess, async (req, res) => {
             return res.status(400).json({ ok: false, error: 'agent and task are required' });
         }
         const safeAgent = agent.replace(/[^a-zA-Z0-9_-]/g, '');
-        const safeTask  = task.replace(/['"\\`$]/g, ' ').slice(0, 500);
-        const safeCtx   = context ? context.replace(/['"\\`$]/g, ' ').slice(0, 500) : '';
+        const safeTask  = task.replace(/['"\\`$]/g, ' ').slice(0, 400);
+        const safeCtx   = context ? context.replace(/['"\\`$]/g, ' ').slice(0, 200) : '';
+        const description = safeCtx ? `${safeTask} | context: ${safeCtx}` : safeTask;
 
-        const { execSync } = require('child_process');
-        const cmd = safeCtx
-            ? `node node_modules/.bin/ruflo task spawn --agent ${safeAgent} --task "${safeTask}" --context "${safeCtx}"`
-            : `node node_modules/.bin/ruflo task spawn --agent ${safeAgent} --task "${safeTask}"`;
+        const { spawnSync } = require('child_process');
+        const result = spawnSync(process.execPath, [
+            'node_modules/ruflo/bin/ruflo.js',
+            'task', 'create',
+            '-t', 'custom',
+            '-d', description,
+            '--tags', safeAgent
+        ], { cwd: __dirname, timeout: 30000, encoding: 'utf8' });
 
-        const output = execSync(cmd, { cwd: __dirname, timeout: 30000, encoding: 'utf8' });
-        res.json({ ok: true, output: output.trim() });
+        const stdout = (result.stdout || '').trim();
+        const stderr = (result.stderr || '').trim();
+
+        if (result.status !== 0) {
+            const errMsg = stderr || result.error?.message || 'task create failed';
+            console.error('[Ruflo] task create failed:', errMsg);
+            return res.status(500).json({ ok: false, error: errMsg });
+        }
+
+        const taskIdMatch = stdout.match(/task-[\w-]+/);
+        const taskId = taskIdMatch ? taskIdMatch[0] : null;
+        console.log(`[Ruflo] task created: ${taskId} for agent: ${safeAgent}`);
+        res.json({ ok: true, taskId, output: stdout });
     } catch (err) {
         console.error('[Ruflo] task dispatch error:', err.message);
         res.status(500).json({ ok: false, error: err.message || 'task dispatch failed' });
+    }
+});
+
+/*
+ * GET /api/ruflo/status
+ * Returns the current Ruflo system status (swarm, agents, tasks, memory).
+ */
+app.get('/api/ruflo/status', requireAppAccess, async (req, res) => {
+    try {
+        const { spawnSync } = require('child_process');
+        const r = spawnSync(process.execPath,
+            ['node_modules/ruflo/bin/ruflo.js', 'status'],
+            { cwd: __dirname, timeout: 10000, encoding: 'utf8' });
+        res.json({ ok: true, output: (r.stdout || r.stderr || '').trim() });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+/*
+ * GET /api/ruflo/tasks
+ * Lists all Ruflo tasks.
+ */
+app.get('/api/ruflo/tasks', requireAppAccess, async (req, res) => {
+    try {
+        const { spawnSync } = require('child_process');
+        const r = spawnSync(process.execPath,
+            ['node_modules/ruflo/bin/ruflo.js', 'task', 'list', '--all'],
+            { cwd: __dirname, timeout: 10000, encoding: 'utf8' });
+        res.json({ ok: true, output: (r.stdout || r.stderr || '').trim() });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+/*
+ * GET /api/ruflo/memory/search?q=<query>
+ * Semantic search across Ruflo's memory (conversation history + stored context).
+ */
+app.get('/api/ruflo/memory/search', requireAppAccess, async (req, res) => {
+    try {
+        const query = (req.query.q || '').slice(0, 200).replace(/['"\\]/g, ' ');
+        if (!query) return res.status(400).json({ ok: false, error: 'q is required' });
+        const { spawnSync } = require('child_process');
+        const r = spawnSync(process.execPath,
+            ['node_modules/ruflo/bin/ruflo.js', 'memory', 'search', '-q', query],
+            { cwd: __dirname, timeout: 15000, encoding: 'utf8' });
+        res.json({ ok: true, output: (r.stdout || r.stderr || '').trim() });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
     }
 });
 
