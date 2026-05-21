@@ -2461,8 +2461,23 @@ async function startVoicePipeline() {
         lastSpeechMs = Date.now();
 
         if (isSpeakingNow) {
-            // SR must not be running during TTS — discard as AEC leakage
-            console.log('[SR] discarded during TTS (isSpeakingNow):', transcript.substring(0, 60));
+            // Echo filter: Apex's own AEC leakage overlaps heavily with _currentSpeakPhrase.
+            // Threshold 30% — real user words have low overlap; echo has near-100%.
+            const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
+            if (wordCount < 2) return; // too short to be a meaningful interrupt
+            const tWords = transcript.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+            const aWords = new Set((_currentSpeakPhrase || '').toLowerCase().split(/\s+/).filter(w => w.length >= 2));
+            if (aWords.size === 0) return; // no phrase to compare — discard to be safe
+            const overlap = tWords.filter(w => aWords.has(w)).length;
+            if (tWords.length > 0 && overlap / tWords.length > 0.3) {
+                console.log('[SR] echo discarded (' + overlap + '/' + tWords.length + ' words match Apex speech)');
+                return;
+            }
+            console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
+            interruptSpeech();
+            _interruptAccum = transcript;
+            clearTimeout(_interruptSendTimer);
+            _interruptSendTimer = setTimeout(_flushInterruptAccum, 300);
             return;
         }
         if (dgMuted) return; // block transcripts during thinking phase
@@ -2536,13 +2551,13 @@ async function startVoicePipeline() {
         _srecActive = false;
         console.log("[SR] ended");
         if (!isListening || document.visibilityState === "hidden") return;
-        if (isSpeakingNow) return; // _processSpeak restarts srec when TTS ends
+        const delay = isSpeakingNow ? 100 : 0;
         setTimeout(() => {
-            if (srec && isListening && !_srecActive && !isSpeakingNow) {
+            if (srec && isListening && !_srecActive) {
                 _srecActive = true;
                 try { srec.start(); } catch (_) { _srecActive = false; }
             }
-        }, 0);
+        }, delay);
     };
 
     dgMode = "wake";
