@@ -1411,8 +1411,7 @@ let dgSilenceTimer      = null;   // setInterval for conversation silence tracki
 let dgMode              = "wake"; // "wake" | "conversation"
 let lastSpeechMs        = 0;
 let _postSpeakLockUntil = 0;
-let _postSpeakSkipOne   = false;     // discard first main SR result after TTS — tail-echo safety (desktop)
-let _lastHighDbMs       = 0;         // last timestamp AEC stream exceeded -38 dB during TTS (desktop)
+let _lastHighDbMs       = 0;         // last timestamp AEC stream exceeded -20 dB during TTS (desktop)
 let _interruptAccum     = null;  // accumulated transcript during interrupt collection window
 let _interruptSendTimer = null;
 let dgDbLogTs           = 0;
@@ -2092,11 +2091,10 @@ async function _processSpeak() {
     _stopInterruptListener();
     // Echo lock set before isSpeakingNow is cleared — lock is in place the instant isSpeakingNow goes false.
     // Skip lock when interrupted (_apexSpeakStartMs=0) so the captured command is not blocked.
-    _postSpeakLockUntil = (_apexSpeakStartMs === 0) ? 0 : (isIOSPWA ? Date.now() + 1200 : Date.now() + 350);
-    _postSpeakSkipOne = !isIOSPWA && (_apexSpeakStartMs !== 0);
+    _postSpeakLockUntil = (_apexSpeakStartMs === 0) ? 0 : (isIOSPWA ? Date.now() + 1200 : Date.now() + 500);
     isSpeakingNow = false;
     const _speakDurationMs = Date.now() - _speakStartMs;
-    console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${isIOSPWA ? 1200 : 350}ms desktop, unmuteDeepgram`);
+    console.log(`[Speak] queue empty — speaking ended (${_speakDurationMs}ms), echo lock ${isIOSPWA ? 1200 : 500}ms desktop, unmuteDeepgram`);
     // dgSilenceTimer owns standby transitions — do not set dgMode here
     if (isListening) {
         unmuteDeepgram();
@@ -2183,11 +2181,11 @@ function _startInterruptListener() {
         if (!ev.results[ev.resultIndex].isFinal) return;
         const res        = ev.results[ev.resultIndex][0];
         const transcript = res.transcript.trim();
-        const confidence = res.confidence;
         const wordCount  = transcript.split(/\s+/).filter(w => w.length >= 2).length;
-        console.log(`[Interrupt] "${transcript}" — words:${wordCount} conf:${confidence.toFixed(2)}`);
+        const msSinceVoice = Date.now() - _lastHighDbMs;
+        console.log(`[Interrupt] "${transcript}" — words:${wordCount} lastHighDb:${msSinceVoice}ms ago`);
         if (!isSpeakingNow) { _stopInterruptListener(); return; }
-        if (wordCount >= 2 && confidence > 0.7) {
+        if (wordCount >= 2 && msSinceVoice < 1500) {
             _vadInterruptSR = null;
             interruptSpeech();
             document.getElementById("chatInput").value = transcript;
@@ -2594,11 +2592,6 @@ async function startVoicePipeline() {
                 console.log('[SR] post-speak echo discarded:', transcript);
                 return;
             }
-            if (_postSpeakSkipOne) {
-                _postSpeakSkipOne = false;
-                console.log('[SR] post-speak skip-one discarded (tail-echo safety):', transcript);
-                return;
-            }
             console.log(`[SR] conversation: "${transcript}"`);
             // Standby voice commands — cancel audio and return to wake mode immediately
             if (/\bstand\s*by\b|\bgo\s+to\s+sleep\b|\bstop\s+listening\b/i.test(transcript)) {
@@ -2727,7 +2720,8 @@ async function startVoicePipeline() {
                     dgDbLogTs = now;
                     console.log(`[Voice] dB: ${db === -Infinity ? "-∞" : db.toFixed(1)} | mode: ${dgMode}`);
                 }
-                if (dgMode === "conversation" && !dgMuted) {
+                if (dgMode === "conversation") {
+                    if (dgMuted) { lastSpeechMs = Date.now(); return; }
                     if (db > -42) lastSpeechMs = now;
                     else if (now - lastSpeechMs > CONV_SILENCE_MS) {
                         console.log(`[Voice] ${now - lastSpeechMs}ms silence → returning to standby (wake mode)`);
@@ -3009,7 +3003,7 @@ async function sendVoiceChatCommand(msg) {
             log.scrollTop = log.scrollHeight;
         }
         setOrbState("speaking");
-        console.log("[Voice] passing to ElevenLabs / speak queue");
+        console.log("[Voice] passing to speak queue");
         speak(reply, { useFiller: true });
 
         setConnStatus(true);
