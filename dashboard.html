@@ -1989,7 +1989,6 @@ async function _processSpeak() {
     window._vadSpeechStart = 0;
     const _speakStartMs = Date.now(); // used below to scale post-speak echo lock to speech duration
     console.log('[Speak] speaking started');
-    if (srec) { try { srec.stop(); } catch (_) {} } // stop in all modes — dB VAD handles interrupts independently of srec
 
     // Safety watchdog: force-reset speaking state after 30 seconds
     _speakSafetyTimer = setTimeout(() => {
@@ -2027,14 +2026,7 @@ async function _processSpeak() {
             _manualStart = true;
             startVoicePipeline();
         } else {
-            // Delay restart until echo lock expires so mic opens only after echo clears
-            setTimeout(() => {
-                if (!isSpeakingNow && isListening && srec) {
-                    try { srec.start(); } catch (_) {}
-                    if (dgMode === 'conversation') console.log('[Voice] srec restarted after speech in conversation mode');
-                }
-            }, 800);
-            if (dgMode === "conversation") lastSpeechMs = Date.now() + 800 + 2000;
+            if (dgMode === "conversation") lastSpeechMs = Date.now() + 1200;
             setOrbState(dgMode === "conversation" ? "listening" : "waiting");
         }
     } else {
@@ -2127,7 +2119,7 @@ function interruptSpeech() {
     isSpeakingNow = false;
     dgMuted = false;
     unmuteDeepgram();
-    if (srec && isListening && dgMode === 'conversation') { try { srec.start(); } catch (_) {} }
+    if (srec && isListening) { try { srec.start(); } catch (_) {} }
     setOrbState(isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
 }
 
@@ -2444,33 +2436,18 @@ async function startVoicePipeline() {
         _lastPartialTranscript = _transcript;
         const _wordCount = _transcript.split(/\s+/).filter(Boolean).length;
 
-        if (false && isSpeakingNow && _wordCount > 2) {
-            console.log('[VAD] user spoke during speech — interrupting:', _transcript);
-            window.speechSynthesis.cancel();
-            if (currentAudio) { try { currentAudio.pause(); } catch (_) {} currentAudio = null; }
-            isSpeakingNow = false;
-            speakQueue.length = 0;
-            dgMuted = false;
-            lastSpeechMs = Date.now() + 2000;
-            if (dgMode === 'conversation') {
-                sendVoiceChatCommand(_transcript);
-            } else {
-                dgMode = 'conversation';
-                sendVoiceChatCommand(_transcript);
-            }
-            return;
-        }
-
         if (!e.results[e.resultIndex].isFinal) return;
         const transcript = e.results[e.resultIndex][0].transcript.trim();
         if (!transcript) return;
         lastSpeechMs = Date.now();
 
         if (isSpeakingNow) {
-            if (!_isTouchDevice) {
-                // Desktop: main SR handles interrupt directly — stop audio and send transcript
+            // SR interrupt: 2+ real words required — filters background noise and single-word echoes
+            // 800ms onset guard lets Chrome AEC adapt before we trust any transcript
+            if (Date.now() - _apexSpeakStartMs > 800) {
                 const wordCount = transcript.trim().split(/\s+/).filter(w => w.length >= 2).length;
                 if (wordCount >= 2) {
+                    console.log('[SR] interrupt: ' + wordCount + ' words — "' + transcript + '"');
                     interruptSpeech();
                     document.getElementById("chatInput").value = transcript;
                     lastSendWasVoice = true;
@@ -2518,7 +2495,7 @@ async function startVoicePipeline() {
                 return;
             }
             const _convWords = transcript.split(/\s+/).filter(Boolean).length;
-            if (_convWords < 3) {
+            if (_convWords < 2) {
                 console.log('[SR] conversation: too short, ignoring:', transcript);
                 return;
             }
@@ -2533,7 +2510,7 @@ async function startVoicePipeline() {
         if (e.error === "not-allowed") {
             _showBanner("banner-micdenied", "Microphone access denied.");
         } else if (e.error === "no-speech" || e.error === "audio-capture") {
-            if (srec && !isSpeakingNow && isListening && document.visibilityState !== "hidden") {
+            if (srec && isListening && document.visibilityState !== "hidden") {
                 setTimeout(() => { try { srec.start(); } catch (_) {} }, 500);
             }
         } else if (e.error !== "no-speech") {
@@ -2542,9 +2519,8 @@ async function startVoicePipeline() {
     };
 
     srec.onend = () => {
-        if (isSpeakingNow) return; // never restart while Apex is speaking — _processSpeak owns the restart
         console.log("[SR] ended — restarting");
-        if (srec && !isSpeakingNow && isListening && document.visibilityState !== "hidden") {
+        if (srec && isListening && document.visibilityState !== "hidden") {
             try { srec.start(); } catch (_) {}
         }
     };
@@ -2574,43 +2550,9 @@ async function startVoicePipeline() {
             const buf = new Float32Array(dgAnalyser.fftSize);
             dgSilenceTimer = setInterval(() => {
                 if (dgAudioCtx && dgAudioCtx.state !== 'running') { dgAudioCtx.resume().catch(() => {}); }
-                if (!isListening) return;
+                if (!isListening || isSpeakingNow) return;
                 dgAnalyser.getFloatTimeDomainData(buf);
                 const db = _rms(buf);
-
-                if (isSpeakingNow && dgMode === 'conversation') {
-                    const _now = Date.now();
-                    if (!window._vadSpeechStart) window._vadSpeechStart = 0;
-                    if (_now - dgDbLogTs >= 2000) {
-                        dgDbLogTs = _now;
-                        console.log('[VAD] dB during speech: ' + (db === -Infinity ? '-∞' : db.toFixed(1)) + ' ctx:' + (dgAudioCtx ? dgAudioCtx.state : 'null'));
-                    }
-                    if (db > -26) {
-                        if (!window._vadSpeechStart) window._vadSpeechStart = _now;
-                        if (_now - window._vadSpeechStart > 200
-                                && Date.now() - _apexSpeakStartMs > 1500) {
-                            console.log('[VAD] dB interrupt: db=' + db.toFixed(1) + ' sustained 200ms');
-                            window._vadSpeechStart = 0;
-                            interruptSpeech();
-                            lastSpeechMs = Date.now() + 2000;
-                        }
-                    } else {
-                        window._vadSpeechStart = 0;
-                    }
-                } else {
-                    if (!isSpeakingNow) window._vadSpeechStart = 0;
-                }
-
-                if (isSpeakingNow) {
-                    if (!_isTouchDevice) return; // desktop: main SR handles interrupts
-                    if (_vadInterruptSR) return; // already capturing
-                    if (db > -55) {
-                        console.log("[VAD] above -55dB — starting interrupt SR");
-                        _vadDebounceStart = null;
-                        _startInterruptSR();
-                    }
-                    return;
-                }
 
                 const now = Date.now();
                 if (now - dgDbLogTs >= 2000) {
