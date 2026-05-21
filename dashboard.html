@@ -2390,8 +2390,10 @@ async function _iosPWATranscribeAndProcess(blob, mimeType) {
 function _iosPWAHandleTranscript(transcript) {
     if (!transcript) return;
     if (isSpeakingNow) {
-        console.log('[APEX iOS] transcript discarded — Apex is speaking (AEC leakage):', transcript.substring(0, 60));
-        return;
+        console.log('[APEX iOS] transcript received while speaking — interrupting speech:', transcript);
+        window.speechSynthesis.cancel();
+        isSpeakingNow = false;
+        dgMuted = false;
     }
     if (dgMuted) return;
     lastSpeechMs = Date.now();
