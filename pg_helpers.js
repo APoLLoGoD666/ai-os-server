@@ -1,151 +1,14 @@
-const pool = require("./pg_database");
+"use strict";
 
-let agentActionsTableReadyPromise = null;
-let agentTasksTableReadyPromise = null;
-let agentSchedulesTableReadyPromise = null;
-let notificationsTableReadyPromise = null;
-let agentReflectionsTableReadyPromise = null;
-let standingApprovalsTableReadyPromise = null;
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-function ensureAgentActionsTable() {
-    if (!agentActionsTableReadyPromise) {
-        agentActionsTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS agent_actions (
-                id SERIAL PRIMARY KEY,
-                action_type TEXT,
-                status TEXT,
-                request TEXT,
-                plan TEXT,
-                actions_json JSONB,
-                undo_json JSONB,
-                result TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `).catch(error => {
-            agentActionsTableReadyPromise = null;
-            throw error;
-        });
-    }
-
-    return agentActionsTableReadyPromise;
-}
-
-function ensureAgentTasksTable() {
-    if (!agentTasksTableReadyPromise) {
-        agentTasksTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS agent_tasks (
-                id SERIAL PRIMARY KEY,
-                goal TEXT,
-                status TEXT,
-                current_step INTEGER DEFAULT 0,
-                plan TEXT,
-                context_json JSONB,
-                actions_json JSONB,
-                result TEXT,
-                error TEXT,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
-            )
-        `).catch(error => {
-            agentTasksTableReadyPromise = null;
-            throw error;
-        });
-    }
-
-    return agentTasksTableReadyPromise;
-}
-
-function ensureAgentSchedulesTable() {
-    if (!agentSchedulesTableReadyPromise) {
-        agentSchedulesTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS agent_schedules (
-                id SERIAL PRIMARY KEY,
-                name TEXT,
-                goal TEXT,
-                frequency TEXT,
-                enabled BOOLEAN DEFAULT true,
-                last_run_at TIMESTAMP,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `).catch(error => {
-            agentSchedulesTableReadyPromise = null;
-            throw error;
-        });
-    }
-
-    return agentSchedulesTableReadyPromise;
-}
-
-function ensureNotificationsTable() {
-    if (!notificationsTableReadyPromise) {
-        notificationsTableReadyPromise = (async () => {
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS notifications (
-                    id SERIAL PRIMARY KEY,
-                    type TEXT,
-                    title TEXT,
-                    message TEXT,
-                    read BOOLEAN DEFAULT false,
-                    related_type TEXT,
-                    related_id INTEGER,
-                    event_key TEXT,
-                    created_at TIMESTAMP DEFAULT NOW()
-                )
-            `);
-
-            await pool.query(`
-                ALTER TABLE notifications
-                ADD COLUMN IF NOT EXISTS event_key TEXT
-            `);
-        })().catch(error => {
-            notificationsTableReadyPromise = null;
-            throw error;
-        });
-    }
-
-    return notificationsTableReadyPromise;
-}
-
-function ensureAgentReflectionsTable() {
-    if (!agentReflectionsTableReadyPromise) {
-        agentReflectionsTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS agent_reflections (
-                id SERIAL PRIMARY KEY,
-                source_type TEXT,
-                source_id INTEGER,
-                lesson TEXT,
-                category TEXT,
-                confidence INTEGER DEFAULT 50,
-                approved BOOLEAN DEFAULT false,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `).catch(error => {
-            agentReflectionsTableReadyPromise = null;
-            throw error;
-        });
-    }
-
-    return agentReflectionsTableReadyPromise;
-}
-
-function ensureStandingApprovalsTable() {
-    if (!standingApprovalsTableReadyPromise) {
-        standingApprovalsTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS standing_approvals (
-                id SERIAL PRIMARY KEY,
-                name TEXT,
-                action_type TEXT,
-                pattern TEXT,
-                enabled BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `).catch(error => {
-            standingApprovalsTableReadyPromise = null;
-            throw error;
-        });
-    }
-
-    return standingApprovalsTableReadyPromise;
+function check({ data, error }, label) {
+    if (error) throw new Error(`[DB] ${label}: ${error.message}`);
+    return data;
 }
 
 /* =========================
@@ -153,101 +16,69 @@ function ensureStandingApprovalsTable() {
 ========================= */
 
 async function pgSaveDocument(filename, content, classification = "personal", summary = "") {
-    await pool.query(
-        `
-        INSERT INTO documents (filename, content, classification, summary)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (filename)
-        DO UPDATE SET
-            content = EXCLUDED.content,
-            classification = EXCLUDED.classification,
-            summary = EXCLUDED.summary
-        `,
-        [filename, content, classification, summary]
+    check(
+        await supabase.from('documents')
+            .upsert({ filename, content, classification, summary }, { onConflict: 'filename' }),
+        'pgSaveDocument'
     );
 }
 
 async function pgListDocuments() {
-    const result = await pool.query(`
-        SELECT id, filename, classification, summary, created_at
-        FROM documents
-        ORDER BY created_at DESC
-        LIMIT 20
-    `);
-
-    return result.rows;
+    const data = check(
+        await supabase.from('documents')
+            .select('id,filename,classification,summary,created_at')
+            .order('created_at', { ascending: false })
+            .limit(20),
+        'pgListDocuments'
+    );
+    return data || [];
 }
 
 async function pgGetDocument(filename) {
-    const result = await pool.query(
-        `
-        SELECT id, filename, classification, summary, content, created_at
-        FROM documents
-        WHERE filename = $1
-        LIMIT 1
-        `,
-        [filename]
+    const data = check(
+        await supabase.from('documents')
+            .select('id,filename,classification,summary,content,created_at')
+            .eq('filename', filename)
+            .limit(1),
+        'pgGetDocument'
     );
-
-    return result.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgSearchDocuments(keyword) {
-    const k = `%${String(keyword || "").toLowerCase()}%`;
-
-    const result = await pool.query(
-        `
-        SELECT filename, classification, summary, content, created_at
-        FROM documents
-        WHERE
-            LOWER(filename) LIKE $1
-            OR LOWER(classification) LIKE $1
-            OR LOWER(summary) LIKE $1
-            OR LOWER(content) LIKE $1
-        ORDER BY created_at DESC
-        LIMIT 5
-        `,
-        [k]
+    const k = String(keyword || '').toLowerCase();
+    const data = check(
+        await supabase.from('documents')
+            .select('filename,classification,summary,content,created_at')
+            .or(`filename.ilike.%${k}%,classification.ilike.%${k}%,summary.ilike.%${k}%,content.ilike.%${k}%`)
+            .order('created_at', { ascending: false })
+            .limit(5),
+        'pgSearchDocuments'
     );
-
-    return result.rows;
+    return data || [];
 }
 
 async function pgDeleteDocument(filename) {
-    await pool.query(
-        `
-        DELETE FROM documents
-        WHERE filename = $1
-        `,
-        [filename]
+    check(
+        await supabase.from('documents').delete().eq('filename', filename),
+        'pgDeleteDocument'
     );
-
     return true;
 }
 
 async function pgRenameDocument(oldName, newName) {
-    await pool.query(
-        `
-        UPDATE documents
-        SET filename = $1
-        WHERE filename = $2
-        `,
-        [newName, oldName]
+    check(
+        await supabase.from('documents').update({ filename: newName }).eq('filename', oldName),
+        'pgRenameDocument'
     );
-
     return true;
 }
 
 async function pgUpdateDocumentSummary(filename, summary) {
-    await pool.query(
-        `
-        UPDATE documents
-        SET summary = $1
-        WHERE filename = $2
-        `,
-        [summary, filename]
+    check(
+        await supabase.from('documents').update({ summary }).eq('filename', filename),
+        'pgUpdateDocumentSummary'
     );
-
     return true;
 }
 
@@ -256,328 +87,218 @@ async function pgUpdateDocumentSummary(filename, summary) {
 ========================= */
 
 async function pgAddMemory(role, message) {
-    await pool.query(
-        `
-        INSERT INTO memory (role, message)
-        VALUES ($1, $2)
-        `,
-        [role, message]
+    check(
+        await supabase.from('memory').insert({ role, message }),
+        'pgAddMemory insert'
     );
-
-    await pool.query(`
-        DELETE FROM memory
-        WHERE id NOT IN (
-            SELECT id FROM memory
-            ORDER BY id DESC
-            LIMIT 20
-        )
-    `);
+    const all = check(
+        await supabase.from('memory').select('id').order('id', { ascending: false }),
+        'pgAddMemory select'
+    );
+    if (all && all.length > 20) {
+        const toDelete = all.slice(20).map(r => r.id);
+        check(
+            await supabase.from('memory').delete().in('id', toDelete),
+            'pgAddMemory trim'
+        );
+    }
 }
 
 async function pgLoadMemory() {
-    const result = await pool.query(`
-        SELECT role, message, created_at AS time
-        FROM memory
-        ORDER BY id DESC
-        LIMIT 20
-    `);
-
-    return result.rows.reverse();
+    const data = check(
+        await supabase.from('memory')
+            .select('role,message,created_at')
+            .order('id', { ascending: false })
+            .limit(20),
+        'pgLoadMemory'
+    );
+    return (data || []).reverse();
 }
 
 async function pgLoadFacts() {
-    const result = await pool.query(`
-        SELECT message, created_at AS time
-        FROM memory
-        WHERE role = 'fact'
-        ORDER BY id DESC
-        LIMIT 15
-    `);
-    return result.rows;
+    const data = check(
+        await supabase.from('memory')
+            .select('message,created_at')
+            .eq('role', 'fact')
+            .order('id', { ascending: false })
+            .limit(15),
+        'pgLoadFacts'
+    );
+    return data || [];
 }
 
+/* =========================
+   VOICE TASKS
+========================= */
+
 async function pgCreateVoiceTask(description) {
-    await ensureAgentTasksTable();
-    const result = await pool.query(
-        `INSERT INTO agent_tasks (goal, status, plan, context_json)
-         VALUES ($1, 'pending', '', $2::jsonb)
-         RETURNING id, goal, status, created_at`,
-        [description, JSON.stringify({ type: 'voice_task' })]
+    const data = check(
+        await supabase.from('agent_tasks')
+            .insert({ goal: description, status: 'pending', plan: '', context_json: { type: 'voice_task' } })
+            .select('id,goal,status,created_at'),
+        'pgCreateVoiceTask'
     );
-    return result.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgListVoiceTasks() {
-    await ensureAgentTasksTable();
-    const result = await pool.query(`
-        SELECT id, goal, status, created_at
-        FROM agent_tasks
-        WHERE context_json->>'type' = 'voice_task'
-          AND status != 'done'
-        ORDER BY created_at DESC
-        LIMIT 20
-    `);
-    return result.rows;
+    const data = check(
+        await supabase.from('agent_tasks')
+            .select('id,goal,status,created_at')
+            .filter('context_json->>type', 'eq', 'voice_task')
+            .neq('status', 'done')
+            .order('created_at', { ascending: false })
+            .limit(20),
+        'pgListVoiceTasks'
+    );
+    return data || [];
 }
 
 async function pgCompleteVoiceTask(id) {
-    await ensureAgentTasksTable();
-    await pool.query(
-        `UPDATE agent_tasks SET status = 'done', updated_at = NOW() WHERE id = $1`,
-        [id]
+    check(
+        await supabase.from('agent_tasks')
+            .update({ status: 'done', updated_at: new Date().toISOString() })
+            .eq('id', id),
+        'pgCompleteVoiceTask'
     );
 }
 
+/* =========================
+   AGENT ACTIONS
+========================= */
+
 async function pgLogAgentAction(
-    actionType,
-    status,
-    request = "",
-    plan = "",
-    actionsJson = null,
-    undoJson = null,
-    result = ""
+    actionType, status, request = "", plan = "",
+    actionsJson = null, undoJson = null, result = ""
 ) {
-    await ensureAgentActionsTable();
-
-    const queryResult = await pool.query(
-        `
-        INSERT INTO agent_actions (
-            action_type,
-            status,
-            request,
-            plan,
-            actions_json,
-            undo_json,
-            result
-        )
-        VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7)
-        RETURNING id, action_type, status, request, plan, actions_json, undo_json, result, created_at
-        `,
-        [
-            actionType,
-            status,
-            request,
-            plan,
-            actionsJson ? JSON.stringify(actionsJson) : null,
-            undoJson ? JSON.stringify(undoJson) : null,
-            result
-        ]
+    const data = check(
+        await supabase.from('agent_actions')
+            .insert({ action_type: actionType, status, request, plan, actions_json: actionsJson, undo_json: undoJson, result })
+            .select(),
+        'pgLogAgentAction'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgGetRecentAgentActions(limit = 10) {
-    await ensureAgentActionsTable();
-
-    const queryResult = await pool.query(
-        `
-        SELECT id, action_type, status, request, plan, actions_json, undo_json, result, created_at
-        FROM agent_actions
-        ORDER BY id DESC
-        LIMIT $1
-        `,
-        [limit]
+    const data = check(
+        await supabase.from('agent_actions')
+            .select()
+            .order('id', { ascending: false })
+            .limit(limit),
+        'pgGetRecentAgentActions'
     );
-
-    return queryResult.rows;
+    return data || [];
 }
 
 async function pgGetLastUndoableAgentAction() {
-    await ensureAgentActionsTable();
-
-    const queryResult = await pool.query(`
-        SELECT id, action_type, status, request, plan, actions_json, undo_json, result, created_at
-        FROM agent_actions
-        WHERE status = 'applied'
-        ORDER BY id DESC
-        LIMIT 1
-    `);
-
-    return queryResult.rows[0] || null;
+    const data = check(
+        await supabase.from('agent_actions')
+            .select()
+            .eq('status', 'applied')
+            .order('id', { ascending: false })
+            .limit(1),
+        'pgGetLastUndoableAgentAction'
+    );
+    return data?.[0] || null;
 }
 
 async function pgMarkAgentActionUndone(id) {
-    await ensureAgentActionsTable();
-
-    const queryResult = await pool.query(
-        `
-        UPDATE agent_actions
-        SET status = 'undone'
-        WHERE id = $1
-        RETURNING id, action_type, status, request, plan, actions_json, undo_json, result, created_at
-        `,
-        [id]
+    const data = check(
+        await supabase.from('agent_actions')
+            .update({ status: 'undone' })
+            .eq('id', id)
+            .select(),
+        'pgMarkAgentActionUndone'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
+/* =========================
+   AGENT TASKS
+========================= */
+
 async function pgCreateAgentTask(goal, status, plan = "", contextJson = null, actionsJson = null) {
-    await ensureAgentTasksTable();
-
-    const queryResult = await pool.query(
-        `
-        INSERT INTO agent_tasks (
-            goal,
-            status,
-            plan,
-            context_json,
-            actions_json
-        )
-        VALUES ($1, $2, $3, $4::jsonb, $5::jsonb)
-        RETURNING id, goal, status, current_step, plan, context_json, actions_json, result, error, created_at, updated_at
-        `,
-        [
-            goal,
-            status,
-            plan,
-            contextJson ? JSON.stringify(contextJson) : null,
-            actionsJson ? JSON.stringify(actionsJson) : null
-        ]
+    const data = check(
+        await supabase.from('agent_tasks')
+            .insert({ goal, status, plan: plan || '', context_json: contextJson, actions_json: actionsJson })
+            .select(),
+        'pgCreateAgentTask'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgUpdateAgentTask(id, updates) {
-    await ensureAgentTasksTable();
-
-    const keys = Object.keys(updates || {}).filter(key => updates[key] !== undefined);
-
-    if (!keys.length) {
-        return pgGetAgentTask(id);
-    }
-
-    const assignments = [];
-    const values = [];
-    let paramIndex = 1;
-
-    for (const key of keys) {
-        let value = updates[key];
-
-        if (key === "context_json" || key === "actions_json") {
-            value = value === null ? null : JSON.stringify(value);
-            assignments.push(`${key} = $${paramIndex}::jsonb`);
-        } else {
-            assignments.push(`${key} = $${paramIndex}`);
-        }
-
-        values.push(value);
-        paramIndex += 1;
-    }
-
-    assignments.push("updated_at = NOW()");
-    values.push(id);
-
-    const queryResult = await pool.query(
-        `
-        UPDATE agent_tasks
-        SET ${assignments.join(", ")}
-        WHERE id = $${paramIndex}
-        RETURNING id, goal, status, current_step, plan, context_json, actions_json, result, error, created_at, updated_at
-        `,
-        values
+    const keys = Object.keys(updates || {}).filter(k => updates[k] !== undefined);
+    if (!keys.length) return pgGetAgentTask(id);
+    const patch = { ...updates, updated_at: new Date().toISOString() };
+    const data = check(
+        await supabase.from('agent_tasks').update(patch).eq('id', id).select(),
+        'pgUpdateAgentTask'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgGetAgentTask(id) {
-    await ensureAgentTasksTable();
-
-    const queryResult = await pool.query(
-        `
-        SELECT id, goal, status, current_step, plan, context_json, actions_json, result, error, created_at, updated_at
-        FROM agent_tasks
-        WHERE id = $1
-        LIMIT 1
-        `,
-        [id]
+    const data = check(
+        await supabase.from('agent_tasks').select().eq('id', id).limit(1),
+        'pgGetAgentTask'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgGetRecentAgentTasks(limit = 10) {
-    await ensureAgentTasksTable();
-
-    const queryResult = await pool.query(
-        `
-        SELECT id, goal, status, current_step, plan, context_json, actions_json, result, error, created_at, updated_at
-        FROM agent_tasks
-        ORDER BY id DESC
-        LIMIT $1
-        `,
-        [limit]
+    const data = check(
+        await supabase.from('agent_tasks')
+            .select()
+            .order('id', { ascending: false })
+            .limit(limit),
+        'pgGetRecentAgentTasks'
     );
-
-    return queryResult.rows;
+    return data || [];
 }
 
 async function pgGetLatestWaitingAgentTask() {
-    await ensureAgentTasksTable();
-
-    const queryResult = await pool.query(`
-        SELECT id, goal, status, current_step, plan, context_json, actions_json, result, error, created_at, updated_at
-        FROM agent_tasks
-        WHERE status IN ('waiting_approval', 'planned', 'approved', 'running')
-        ORDER BY id DESC
-        LIMIT 1
-    `);
-
-    return queryResult.rows[0] || null;
+    const data = check(
+        await supabase.from('agent_tasks')
+            .select()
+            .in('status', ['waiting_approval', 'planned', 'approved', 'running'])
+            .order('id', { ascending: false })
+            .limit(1),
+        'pgGetLatestWaitingAgentTask'
+    );
+    return data?.[0] || null;
 }
 
+/* =========================
+   AGENT SCHEDULES
+========================= */
+
 async function pgCreateAgentSchedule(name, goal, frequency) {
-    await ensureAgentSchedulesTable();
-
-    const queryResult = await pool.query(
-        `
-        INSERT INTO agent_schedules (
-            name,
-            goal,
-            frequency
-        )
-        VALUES ($1, $2, $3)
-        RETURNING id, name, goal, frequency, enabled, last_run_at, created_at
-        `,
-        [name, goal, frequency]
+    const data = check(
+        await supabase.from('agent_schedules').insert({ name, goal, frequency }).select(),
+        'pgCreateAgentSchedule'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgGetAgentSchedule(id) {
-    await ensureAgentSchedulesTable();
-
-    const queryResult = await pool.query(
-        `
-        SELECT id, name, goal, frequency, enabled, last_run_at, created_at
-        FROM agent_schedules
-        WHERE id = $1
-        LIMIT 1
-        `,
-        [id]
+    const data = check(
+        await supabase.from('agent_schedules').select().eq('id', id).limit(1),
+        'pgGetAgentSchedule'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgListAgentSchedules(limit = 50) {
-    await ensureAgentSchedulesTable();
-
-    const queryResult = await pool.query(
-        `
-        SELECT id, name, goal, frequency, enabled, last_run_at, created_at
-        FROM agent_schedules
-        ORDER BY id DESC
-        LIMIT $1
-        `,
-        [limit]
+    const data = check(
+        await supabase.from('agent_schedules')
+            .select()
+            .order('id', { ascending: false })
+            .limit(limit),
+        'pgListAgentSchedules'
     );
-
-    return queryResult.rows;
+    return data || [];
 }
 
 async function pgGetAgentSchedules(limit = 50) {
@@ -585,553 +306,363 @@ async function pgGetAgentSchedules(limit = 50) {
 }
 
 async function pgDisableAgentSchedule(id) {
-    await ensureAgentSchedulesTable();
-
-    const queryResult = await pool.query(
-        `
-        UPDATE agent_schedules
-        SET enabled = false
-        WHERE id = $1
-        RETURNING id, name, goal, frequency, enabled, last_run_at, created_at
-        `,
-        [id]
+    const data = check(
+        await supabase.from('agent_schedules').update({ enabled: false }).eq('id', id).select(),
+        'pgDisableAgentSchedule'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgUpdateAgentScheduleLastRun(id) {
-    await ensureAgentSchedulesTable();
-
-    const queryResult = await pool.query(
-        `
-        UPDATE agent_schedules
-        SET last_run_at = NOW()
-        WHERE id = $1
-        RETURNING id, name, goal, frequency, enabled, last_run_at, created_at
-        `,
-        [id]
+    const data = check(
+        await supabase.from('agent_schedules')
+            .update({ last_run_at: new Date().toISOString() })
+            .eq('id', id)
+            .select(),
+        'pgUpdateAgentScheduleLastRun'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgGetDueAgentSchedules() {
-    await ensureAgentSchedulesTable();
-
-    const queryResult = await pool.query(
-        `
-        SELECT id, name, goal, frequency, enabled, last_run_at, created_at
-        FROM agent_schedules
-        WHERE enabled = true
-          AND (
-            last_run_at IS NULL
-            OR (frequency = 'daily' AND last_run_at < NOW() - INTERVAL '24 hours')
-            OR (frequency = 'weekly' AND last_run_at < NOW() - INTERVAL '7 days')
-          )
-        ORDER BY id ASC
-        `
+    const data = check(
+        await supabase.from('agent_schedules').select().eq('enabled', true),
+        'pgGetDueAgentSchedules'
     );
-
-    return queryResult.rows;
+    const now = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
+    const WEEK = 7 * DAY;
+    return (data || []).filter(s => {
+        if (!s.last_run_at) return true;
+        const lastRun = new Date(s.last_run_at).getTime();
+        if (s.frequency === 'daily' && lastRun < now - DAY) return true;
+        if (s.frequency === 'weekly' && lastRun < now - WEEK) return true;
+        return false;
+    });
 }
 
+/* =========================
+   NOTIFICATIONS
+========================= */
+
 async function pgCreateNotification(type, title, message, relatedType = null, relatedId = null) {
-    await ensureNotificationsTable();
-    const eventKey = `${type}:${relatedType || "none"}:${relatedId || "none"}:${title || "untitled"}`;
-    const existingResult = await pool.query(
-        `
-        SELECT id, type, title, message, read, related_type, related_id, event_key, created_at
-        FROM notifications
-        WHERE type = $1
-          AND title = $2
-          AND COALESCE(related_type, '') = COALESCE($3, '')
-          AND COALESCE(related_id, -1) = COALESCE($4, -1)
-          AND created_at >= NOW() - INTERVAL '60 seconds'
-        ORDER BY id DESC
-        LIMIT 1
-        `,
-        [type, title, relatedType, relatedId]
+    const eventKey = `${type}:${relatedType || 'none'}:${relatedId || 'none'}:${title || 'untitled'}`;
+    const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
+
+    const byKey = check(
+        await supabase.from('notifications')
+            .select()
+            .eq('event_key', eventKey)
+            .gte('created_at', sixtySecondsAgo)
+            .order('id', { ascending: false })
+            .limit(1),
+        'pgCreateNotification dedup'
     );
+    if (byKey?.[0]) return byKey[0];
 
-    if (existingResult.rows[0]) {
-        return existingResult.rows[0];
-    }
-
-    const eventKeyResult = await pool.query(
-        `
-        SELECT id, type, title, message, read, related_type, related_id, event_key, created_at
-        FROM notifications
-        WHERE event_key = $1
-          AND created_at >= NOW() - INTERVAL '60 seconds'
-        ORDER BY id DESC
-        LIMIT 1
-        `,
-        [eventKey]
+    const data = check(
+        await supabase.from('notifications')
+            .insert({ type, title, message, related_type: relatedType, related_id: relatedId, event_key: eventKey })
+            .select(),
+        'pgCreateNotification insert'
     );
-
-    if (eventKeyResult.rows[0]) {
-        return eventKeyResult.rows[0];
-    }
-
-    const queryResult = await pool.query(
-        `
-        INSERT INTO notifications (
-            type,
-            title,
-            message,
-            related_type,
-            related_id,
-            event_key
-        )
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, type, title, message, read, related_type, related_id, event_key, created_at
-        `,
-        [type, title, message, relatedType, relatedId, eventKey]
-    );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgListNotifications(limit = 20) {
-    await ensureNotificationsTable();
-
-    const queryResult = await pool.query(
-        `
-        SELECT id, type, title, message, read, related_type, related_id, event_key, created_at
-        FROM notifications
-        ORDER BY id DESC
-        LIMIT $1
-        `,
-        [limit]
+    const data = check(
+        await supabase.from('notifications')
+            .select()
+            .order('id', { ascending: false })
+            .limit(limit),
+        'pgListNotifications'
     );
-
-    return queryResult.rows;
+    return data || [];
 }
 
 async function pgMarkNotificationRead(id) {
-    await ensureNotificationsTable();
-
-    const queryResult = await pool.query(
-        `
-        UPDATE notifications
-        SET read = true
-        WHERE id = $1
-        RETURNING id, type, title, message, read, related_type, related_id, event_key, created_at
-        `,
-        [id]
+    const data = check(
+        await supabase.from('notifications').update({ read: true }).eq('id', id).select(),
+        'pgMarkNotificationRead'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
+/* =========================
+   AGENT REFLECTIONS
+========================= */
+
 async function pgCreateAgentReflection(sourceType, sourceId, lesson, category, confidence = 50) {
-    await ensureAgentReflectionsTable();
-
-    const queryResult = await pool.query(
-        `
-        INSERT INTO agent_reflections (
-            source_type,
-            source_id,
-            lesson,
-            category,
-            confidence
-        )
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, source_type, source_id, lesson, category, confidence, approved, created_at
-        `,
-        [sourceType, sourceId, lesson, category, confidence]
+    const data = check(
+        await supabase.from('agent_reflections')
+            .insert({ source_type: sourceType, source_id: sourceId, lesson, category, confidence })
+            .select(),
+        'pgCreateAgentReflection'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgListAgentReflections(limit = 20) {
-    await ensureAgentReflectionsTable();
-
-    const queryResult = await pool.query(
-        `
-        SELECT id, source_type, source_id, lesson, category, confidence, approved, created_at
-        FROM agent_reflections
-        ORDER BY id DESC
-        LIMIT $1
-        `,
-        [limit]
+    const data = check(
+        await supabase.from('agent_reflections')
+            .select()
+            .order('id', { ascending: false })
+            .limit(limit),
+        'pgListAgentReflections'
     );
-
-    return queryResult.rows;
+    return data || [];
 }
 
 async function pgGetApprovedReflections(limit = 20) {
-    await ensureAgentReflectionsTable();
-
-    const queryResult = await pool.query(
-        `
-        SELECT id, source_type, source_id, lesson, category, confidence, approved, created_at
-        FROM agent_reflections
-        WHERE approved = true
-        ORDER BY id DESC
-        LIMIT $1
-        `,
-        [limit]
+    const data = check(
+        await supabase.from('agent_reflections')
+            .select()
+            .eq('approved', true)
+            .order('id', { ascending: false })
+            .limit(limit),
+        'pgGetApprovedReflections'
     );
-
-    return queryResult.rows;
+    return data || [];
 }
 
 async function pgApproveAgentReflection(id) {
-    await ensureAgentReflectionsTable();
-
-    const queryResult = await pool.query(
-        `
-        UPDATE agent_reflections
-        SET approved = true
-        WHERE id = $1
-        RETURNING id, source_type, source_id, lesson, category, confidence, approved, created_at
-        `,
-        [id]
+    const data = check(
+        await supabase.from('agent_reflections').update({ approved: true }).eq('id', id).select(),
+        'pgApproveAgentReflection'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
+/* =========================
+   STANDING APPROVALS
+========================= */
+
 async function pgCreateStandingApproval(name, actionType, pattern) {
-    await ensureStandingApprovalsTable();
-
-    const queryResult = await pool.query(
-        `
-        INSERT INTO standing_approvals (
-            name,
-            action_type,
-            pattern
-        )
-        VALUES ($1, $2, $3)
-        RETURNING id, name, action_type, pattern, enabled, created_at
-        `,
-        [name, actionType, pattern]
+    const data = check(
+        await supabase.from('standing_approvals')
+            .insert({ name, action_type: actionType, pattern })
+            .select(),
+        'pgCreateStandingApproval'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgListStandingApprovals(limit = 50) {
-    await ensureStandingApprovalsTable();
-
-    const queryResult = await pool.query(
-        `
-        SELECT id, name, action_type, pattern, enabled, created_at
-        FROM standing_approvals
-        ORDER BY id DESC
-        LIMIT $1
-        `,
-        [limit]
+    const data = check(
+        await supabase.from('standing_approvals')
+            .select()
+            .order('id', { ascending: false })
+            .limit(limit),
+        'pgListStandingApprovals'
     );
-
-    return queryResult.rows;
+    return data || [];
 }
 
 async function pgDisableStandingApproval(id) {
-    await ensureStandingApprovalsTable();
-
-    const queryResult = await pool.query(
-        `
-        UPDATE standing_approvals
-        SET enabled = false
-        WHERE id = $1
-        RETURNING id, name, action_type, pattern, enabled, created_at
-        `,
-        [id]
+    const data = check(
+        await supabase.from('standing_approvals').update({ enabled: false }).eq('id', id).select(),
+        'pgDisableStandingApproval'
     );
-
-    return queryResult.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgGetEnabledStandingApprovals(actionType = null) {
-    await ensureStandingApprovalsTable();
-
-    const queryResult = actionType
-        ? await pool.query(
-            `
-            SELECT id, name, action_type, pattern, enabled, created_at
-            FROM standing_approvals
-            WHERE enabled = true
-              AND action_type = $1
-            ORDER BY id DESC
-            `,
-            [actionType]
-        )
-        : await pool.query(
-            `
-            SELECT id, name, action_type, pattern, enabled, created_at
-            FROM standing_approvals
-            WHERE enabled = true
-            ORDER BY id DESC
-            `
-        );
-
-    return queryResult.rows;
+    let q = supabase.from('standing_approvals')
+        .select()
+        .eq('enabled', true)
+        .order('id', { ascending: false });
+    if (actionType) q = q.eq('action_type', actionType);
+    const data = check(await q, 'pgGetEnabledStandingApprovals');
+    return data || [];
 }
 
 /* =========================
    EMAIL QUEUE
 ========================= */
 
-let emailQueueTableReadyPromise = null;
-
-function ensureEmailQueueTable() {
-    if (!emailQueueTableReadyPromise) {
-        emailQueueTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS email_queue (
-                id SERIAL PRIMARY KEY,
-                gmail_id TEXT UNIQUE,
-                sender TEXT,
-                subject TEXT,
-                summary TEXT,
-                priority TEXT DEFAULT 'normal',
-                category TEXT DEFAULT 'personal',
-                suggested_reply TEXT,
-                status TEXT DEFAULT 'pending_approval',
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `).catch(err => { emailQueueTableReadyPromise = null; throw err; });
-    }
-    return emailQueueTableReadyPromise;
-}
-
 async function pgSaveEmailQueueItem(gmailId, sender, subject, summary, priority, category, suggestedReply) {
-    await ensureEmailQueueTable();
-    const r = await pool.query(
-        `INSERT INTO email_queue (gmail_id, sender, subject, summary, priority, category, suggested_reply)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)
-         ON CONFLICT (gmail_id) DO NOTHING
-         RETURNING *`,
-        [gmailId, sender, subject, summary, priority, category, suggestedReply]
+    const data = check(
+        await supabase.from('email_queue')
+            .upsert(
+                { gmail_id: gmailId, sender, subject, summary, priority, category, suggested_reply: suggestedReply },
+                { onConflict: 'gmail_id', ignoreDuplicates: true }
+            )
+            .select(),
+        'pgSaveEmailQueueItem'
     );
-    return r.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgGetEmailQueueItemByGmailId(gmailId) {
-    await ensureEmailQueueTable();
-    const r = await pool.query(`SELECT * FROM email_queue WHERE gmail_id = $1 LIMIT 1`, [gmailId]);
-    return r.rows[0] || null;
+    const data = check(
+        await supabase.from('email_queue').select().eq('gmail_id', gmailId).limit(1),
+        'pgGetEmailQueueItemByGmailId'
+    );
+    return data?.[0] || null;
 }
 
 async function pgListEmailQueue(limit = 20) {
-    await ensureEmailQueueTable();
-    const r = await pool.query(
-        `SELECT * FROM email_queue ORDER BY created_at DESC LIMIT $1`, [limit]
+    const data = check(
+        await supabase.from('email_queue')
+            .select()
+            .order('created_at', { ascending: false })
+            .limit(limit),
+        'pgListEmailQueue'
     );
-    return r.rows;
+    return data || [];
 }
 
 async function pgUpdateEmailQueueStatus(id, status) {
-    await ensureEmailQueueTable();
-    const r = await pool.query(
-        `UPDATE email_queue SET status = $1 WHERE id = $2 RETURNING *`, [status, id]
+    const data = check(
+        await supabase.from('email_queue').update({ status }).eq('id', id).select(),
+        'pgUpdateEmailQueueStatus'
     );
-    return r.rows[0] || null;
+    return data?.[0] || null;
 }
 
 /* =========================
    FINANCE — TRANSACTIONS
 ========================= */
 
-let transactionsTableReadyPromise = null;
-
-function ensureTransactionsTable() {
-    if (!transactionsTableReadyPromise) {
-        transactionsTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS transactions (
-                id SERIAL PRIMARY KEY,
-                date DATE DEFAULT CURRENT_DATE,
-                description TEXT,
-                amount NUMERIC(12,2),
-                type TEXT DEFAULT 'expense',
-                category TEXT DEFAULT 'other',
-                source TEXT DEFAULT 'manual',
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `).catch(err => { transactionsTableReadyPromise = null; throw err; });
-    }
-    return transactionsTableReadyPromise;
-}
-
 async function pgSaveTransaction(date, description, amount, type, category, source = "manual") {
-    await ensureTransactionsTable();
-    const r = await pool.query(
-        `INSERT INTO transactions (date, description, amount, type, category, source)
-         VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-        [date || new Date().toISOString().split("T")[0], description, amount, type, category, source]
+    const data = check(
+        await supabase.from('transactions')
+            .insert({ date: date || new Date().toISOString().split('T')[0], description, amount, type, category, source })
+            .select(),
+        'pgSaveTransaction'
     );
-    return r.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgListTransactions(limit = 30) {
-    await ensureTransactionsTable();
-    const r = await pool.query(
-        `SELECT * FROM transactions ORDER BY date DESC, created_at DESC LIMIT $1`, [limit]
+    const data = check(
+        await supabase.from('transactions')
+            .select()
+            .order('date', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(limit),
+        'pgListTransactions'
     );
-    return r.rows;
+    return data || [];
 }
 
 async function pgGetFinanceSummaryCurrentMonth() {
-    await ensureTransactionsTable();
-    const r = await pool.query(`
-        SELECT category, type, COALESCE(SUM(amount), 0)::NUMERIC AS total
-        FROM transactions
-        WHERE date >= DATE_TRUNC('month', CURRENT_DATE)
-          AND date <  DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
-        GROUP BY category, type
-        ORDER BY total DESC
-    `);
-    return r.rows;
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
+    const data = check(
+        await supabase.from('transactions')
+            .select('category,type,amount')
+            .gte('date', monthStart)
+            .lt('date', nextMonthStart),
+        'pgGetFinanceSummaryCurrentMonth'
+    );
+    const groups = {};
+    for (const row of data || []) {
+        const key = `${row.category}:${row.type}`;
+        if (!groups[key]) groups[key] = { category: row.category, type: row.type, total: 0 };
+        groups[key].total += parseFloat(row.amount) || 0;
+    }
+    return Object.values(groups).sort((a, b) => b.total - a.total);
 }
 
 /* =========================
    FINANCE — BUDGETS
 ========================= */
 
-let budgetsTableReadyPromise = null;
-
-function ensureBudgetsTable() {
-    if (!budgetsTableReadyPromise) {
-        budgetsTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS budgets (
-                id SERIAL PRIMARY KEY,
-                category TEXT,
-                monthly_limit NUMERIC(12,2),
-                month INTEGER,
-                year INTEGER,
-                created_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(category, month, year)
-            )
-        `).catch(err => { budgetsTableReadyPromise = null; throw err; });
-    }
-    return budgetsTableReadyPromise;
-}
-
 async function pgSaveBudget(category, monthlyLimit, month, year) {
-    await ensureBudgetsTable();
-    const r = await pool.query(
-        `INSERT INTO budgets (category, monthly_limit, month, year)
-         VALUES ($1,$2,$3,$4)
-         ON CONFLICT (category, month, year)
-         DO UPDATE SET monthly_limit = EXCLUDED.monthly_limit
-         RETURNING *`,
-        [category, monthlyLimit, month, year]
+    const data = check(
+        await supabase.from('budgets')
+            .upsert({ category, monthly_limit: monthlyLimit, month, year }, { onConflict: 'category,month,year' })
+            .select(),
+        'pgSaveBudget'
     );
-    return r.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgListBudgets(month, year) {
-    await ensureBudgetsTable();
-    const r = await pool.query(
-        `SELECT * FROM budgets WHERE month = $1 AND year = $2 ORDER BY category`, [month, year]
+    const data = check(
+        await supabase.from('budgets').select().eq('month', month).eq('year', year).order('category'),
+        'pgListBudgets'
     );
-    return r.rows;
+    return data || [];
 }
 
 async function pgGetBudgetByCategory(category, month, year) {
-    await ensureBudgetsTable();
-    const r = await pool.query(
-        `SELECT * FROM budgets WHERE category = $1 AND month = $2 AND year = $3 LIMIT 1`,
-        [category, month, year]
+    const data = check(
+        await supabase.from('budgets')
+            .select()
+            .eq('category', category)
+            .eq('month', month)
+            .eq('year', year)
+            .limit(1),
+        'pgGetBudgetByCategory'
     );
-    return r.rows[0] || null;
+    return data?.[0] || null;
 }
 
 /* =========================
    ROUTINES
 ========================= */
 
-let routinesTableReadyPromise = null;
-
-function ensureRoutinesTable() {
-    if (!routinesTableReadyPromise) {
-        routinesTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS routines (
-                id SERIAL PRIMARY KEY,
-                name TEXT,
-                description TEXT,
-                schedule_cron TEXT,
-                last_run TIMESTAMP,
-                active BOOLEAN DEFAULT true,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `).catch(err => { routinesTableReadyPromise = null; throw err; });
-    }
-    return routinesTableReadyPromise;
-}
-
 async function pgCreateRoutine(name, description, scheduleCron) {
-    await ensureRoutinesTable();
-    const r = await pool.query(
-        `INSERT INTO routines (name, description, schedule_cron)
-         VALUES ($1,$2,$3) RETURNING *`,
-        [name, description, scheduleCron]
+    const data = check(
+        await supabase.from('routines')
+            .insert({ name, description, schedule_cron: scheduleCron })
+            .select(),
+        'pgCreateRoutine'
     );
-    return r.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgListRoutines() {
-    await ensureRoutinesTable();
-    const r = await pool.query(`SELECT * FROM routines ORDER BY id ASC`);
-    return r.rows;
+    const data = check(
+        await supabase.from('routines').select().order('id', { ascending: true }),
+        'pgListRoutines'
+    );
+    return data || [];
 }
 
 async function pgUpdateRoutine(id, updates) {
-    await ensureRoutinesTable();
     const keys = Object.keys(updates || {}).filter(k => updates[k] !== undefined);
     if (!keys.length) return null;
-
-    const assignments = keys.map((k, i) => `${k} = $${i + 1}`);
-    const values = keys.map(k => updates[k]);
-    values.push(id);
-
-    const r = await pool.query(
-        `UPDATE routines SET ${assignments.join(", ")} WHERE id = $${values.length} RETURNING *`,
-        values
+    const data = check(
+        await supabase.from('routines').update(updates).eq('id', id).select(),
+        'pgUpdateRoutine'
     );
-    return r.rows[0] || null;
+    return data?.[0] || null;
 }
 
 async function pgDeleteRoutine(id) {
-    await ensureRoutinesTable();
-    await pool.query(`DELETE FROM routines WHERE id = $1`, [id]);
+    check(
+        await supabase.from('routines').delete().eq('id', id),
+        'pgDeleteRoutine'
+    );
     return true;
 }
 
 async function pgMarkRoutineRun(id) {
-    await ensureRoutinesTable();
-    const r = await pool.query(
-        `UPDATE routines SET last_run = NOW() WHERE id = $1 RETURNING *`, [id]
+    const data = check(
+        await supabase.from('routines')
+            .update({ last_run: new Date().toISOString() })
+            .eq('id', id)
+            .select(),
+        'pgMarkRoutineRun'
     );
-    return r.rows[0] || null;
+    return data?.[0] || null;
 }
 
-let gmailTokensTableReadyPromise = null;
-
-function ensureGmailTokensTable() {
-    if (!gmailTokensTableReadyPromise) {
-        gmailTokensTableReadyPromise = pool.query(`
-            CREATE TABLE IF NOT EXISTS gmail_tokens (
-                id SERIAL PRIMARY KEY,
-                refresh_token TEXT NOT NULL,
-                updated_at TIMESTAMP DEFAULT NOW()
-            )
-        `).catch(error => {
-            gmailTokensTableReadyPromise = null;
-            throw error;
-        });
-    }
-    return gmailTokensTableReadyPromise;
-}
+/* =========================
+   GMAIL TOKENS
+========================= */
 
 async function pgSaveGmailToken(refreshToken) {
     try {
-        await ensureGmailTokensTable();
-        await pool.query(`DELETE FROM gmail_tokens`);
-        await pool.query(`INSERT INTO gmail_tokens (refresh_token) VALUES ($1)`, [refreshToken]);
+        await supabase.from('gmail_tokens').delete().not('id', 'is', null);
+        check(
+            await supabase.from('gmail_tokens').insert({ refresh_token: refreshToken }),
+            'pgSaveGmailToken insert'
+        );
         console.log('[Gmail] Token saved to database successfully');
     } catch (err) {
         console.error('[Gmail] Failed to save token to database:', err.message, err.stack);
@@ -1140,14 +671,21 @@ async function pgSaveGmailToken(refreshToken) {
 }
 
 async function pgGetGmailToken() {
-    await ensureGmailTokensTable();
-    const result = await pool.query(`SELECT refresh_token FROM gmail_tokens ORDER BY id DESC LIMIT 1`);
-    return result.rows[0]?.refresh_token || null;
+    const data = check(
+        await supabase.from('gmail_tokens')
+            .select('refresh_token')
+            .order('id', { ascending: false })
+            .limit(1),
+        'pgGetGmailToken'
+    );
+    return data?.[0]?.refresh_token || null;
 }
 
 async function pgClearGmailToken() {
-    await ensureGmailTokensTable();
-    await pool.query(`DELETE FROM gmail_tokens`);
+    check(
+        await supabase.from('gmail_tokens').delete().not('id', 'is', null),
+        'pgClearGmailToken'
+    );
 }
 
 module.exports = {
