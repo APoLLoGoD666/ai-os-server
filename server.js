@@ -8549,14 +8549,51 @@ app.get('/api/master/roadmap', requireAppAccess, async (req, res) => {
     }
 });
 
+async function checkPendingMasterTasks() {
+    try {
+        const { data, error } = await sbAdmin
+            .from('apex_notifications')
+            .select('*')
+            .in('type', ['master_task', 'master_run'])
+            .eq('read', false)
+            .order('created_at', { ascending: true });
+        if (error) { console.error('[Master] checkPending query error:', error.message); return; }
+        if (!data || !data.length) return;
+        console.log(`[Master] checkPendingMasterTasks: ${data.length} pending task(s)`);
+        for (const row of data) {
+            // Mark read immediately to prevent double-execution across restarts
+            await sbAdmin.from('apex_notifications').update({ read: true }).eq('id', row.id);
+            let info = {};
+            try { info = JSON.parse(row.message); } catch (_) {}
+            if (row.type === 'master_task') {
+                const featureId = info.featureId;
+                if (!featureId) continue;
+                console.log(`[Master] Executing queued feature: ${featureId}`);
+                runFeatureWithPermission(featureId)
+                    .catch(e => console.error(`[Master] queued ${featureId} error:`, e.message));
+            } else if (row.type === 'master_run') {
+                const workstreams = info.workstreams || null;
+                console.log('[Master] Executing queued master run');
+                runMasterOrchestrator(workstreams)
+                    .catch(e => console.error('[Master] queued master run error:', e.message));
+            }
+        }
+    } catch (e) {
+        console.error('[Master] checkPendingMasterTasks error:', e.message);
+    }
+}
+
 app.post('/api/master/run', requireAppAccess, async (req, res) => {
     const { workstreams } = req.body || {};
-    res.json({ ok: true, status: 'running',
-        message: 'Master orchestrator started' });
-    setImmediate(() =>
-        runMasterOrchestrator(workstreams || null)
-            .catch(e => console.error('[Master] unhandled:', e.message))
-    );
+    await sbAdmin.from('apex_notifications').insert({
+        id: `master-run-${Date.now()}`,
+        message: JSON.stringify({ workstreams: workstreams || null, status: 'queued' }),
+        type: 'master_run',
+        read: false
+    });
+    res.json({ ok: true, status: 'queued',
+        message: 'Master orchestrator queued' });
+    setImmediate(() => checkPendingMasterTasks());
 });
 
 app.post('/api/master/feature', requireAppAccess, async (req, res) => {
@@ -8564,18 +8601,20 @@ app.post('/api/master/feature', requireAppAccess, async (req, res) => {
     if (!featureId) return res.status(400).json({ ok: false,
         error: 'featureId required' });
     const roadmap = parseRoadmap();
-    let found = null, foundWs = null;
-    for (const [wsName, ws] of Object.entries(roadmap)) {
-        const f = ws.pending.find(f => f.id === featureId);
-        if (f) { found = f; foundWs = wsName; break; }
+    let found = false;
+    for (const [, ws] of Object.entries(roadmap)) {
+        if (ws.pending.find(f => f.id === featureId)) { found = true; break; }
     }
     if (!found) return res.status(404).json({ ok: false,
         error: `${featureId} not found or already complete` });
-    res.json({ ok: true, status: 'running', featureId });
-    setImmediate(() =>
-        runFeature(found, foundWs)
-            .catch(e => console.error('[Master] feature error:', e.message))
-    );
+    await sbAdmin.from('apex_notifications').insert({
+        id: `master-task-${featureId}-${Date.now()}`,
+        message: JSON.stringify({ featureId, status: 'queued' }),
+        type: 'master_task',
+        read: false
+    });
+    res.json({ ok: true, status: 'queued', featureId });
+    setImmediate(() => checkPendingMasterTasks());
 });
 
 app.get('/api/master/permissions', requireAppAccess, async (req, res) => {
@@ -8668,6 +8707,9 @@ server.listen(PORT, () => {
         const mem = process.memoryUsage();
         console.log(`[HEALTH] uptime=${Math.floor(process.uptime())}s rss=${Math.round(mem.rss/1024/1024)}MB heap=${Math.round(mem.heapUsed/1024/1024)}MB ts=${new Date().toISOString()}`);
     }, 300000);
+
+    // Pick up any master tasks that were queued before a cold-start restart
+    setTimeout(() => checkPendingMasterTasks(), 10000);
 
     // Phase 2 agents
     initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
