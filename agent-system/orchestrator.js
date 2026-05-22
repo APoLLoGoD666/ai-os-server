@@ -3,6 +3,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const memory = require('./obsidian-memory');
 
 const ROOT = path.join(__dirname, '..');
 const MODEL = 'claude-sonnet-4-6';
@@ -40,7 +41,7 @@ async function _architect(client, spec) {
     }).join('\n\n');
 
     const res = await _callClaude(client, SYSTEM,
-        `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE CONTENTS:\n${archFileContents}`,
+        `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE CONTENTS:\n${archFileContents}\n\nSYSTEM MEMORY:\n${obsidianContext}`,
         1500
     );
     const text = res.content[0]?.text?.trim();
@@ -240,6 +241,10 @@ async function runAgentTeam(spec, taskId) {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const agentLogs = [];
 
+    // Read Obsidian context before starting
+    const obsidianContext = memory.getFullContext();
+    console.log('[Orchestrator] Obsidian context loaded');
+
     createBackup(taskId);
 
     const _fail = (error) => ({ success: false, commitHash: null, agentLogs, error });
@@ -296,6 +301,7 @@ async function runAgentTeam(spec, taskId) {
     } catch (err) {
         console.error('[Orchestrator] pipeline error:', err.message);
         restoreBackup(taskId);
+        memory.logLesson(`Task ${taskId} failed: ${err.message}`);
         return _fail(err.message);
     }
 }

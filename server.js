@@ -8531,6 +8531,53 @@ app.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
     return _runTask(taskId, res);
 });
 
+// ── Master Orchestrator Routes ────────────────────────────────────
+const { runMasterOrchestrator, runFeature, parseRoadmap } =
+    require('./agent-system/master-orchestrator');
+
+app.get('/api/master/roadmap', requireAppAccess, async (req, res) => {
+    try {
+        const roadmap = parseRoadmap();
+        const total = Object.values(roadmap)
+            .reduce((a, ws) => a + ws.pending.length + ws.completed.length, 0);
+        const completed = Object.values(roadmap)
+            .reduce((a, ws) => a + ws.completed.length, 0);
+        res.json({ ok: true, roadmap, total, completed,
+            remaining: total - completed });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.post('/api/master/run', requireAppAccess, async (req, res) => {
+    const { workstreams } = req.body || {};
+    res.json({ ok: true, status: 'running',
+        message: 'Master orchestrator started' });
+    setImmediate(() =>
+        runMasterOrchestrator(workstreams || null)
+            .catch(e => console.error('[Master] unhandled:', e.message))
+    );
+});
+
+app.post('/api/master/feature', requireAppAccess, async (req, res) => {
+    const { featureId } = req.body || {};
+    if (!featureId) return res.status(400).json({ ok: false,
+        error: 'featureId required' });
+    const roadmap = parseRoadmap();
+    let found = null, foundWs = null;
+    for (const [wsName, ws] of Object.entries(roadmap)) {
+        const f = ws.pending.find(f => f.id === featureId);
+        if (f) { found = f; foundWs = wsName; break; }
+    }
+    if (!found) return res.status(404).json({ ok: false,
+        error: `${featureId} not found or already complete` });
+    res.json({ ok: true, status: 'running', featureId });
+    setImmediate(() =>
+        runFeature(found, foundWs)
+            .catch(e => console.error('[Master] feature error:', e.message))
+    );
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,

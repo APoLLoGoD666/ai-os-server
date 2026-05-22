@@ -1,5 +1,6 @@
 "use strict";
 const Anthropic = require('@anthropic-ai/sdk');
+const memory = require('./obsidian-memory');
 
 const MODEL = 'claude-sonnet-4-6';
 
@@ -38,11 +39,17 @@ Output format (strict JSON, no other text):
 async function expandPrompt(simplePrompt) {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+    const northStar = memory.getNorthStar();
+    const lessons = memory.getLessons();
+    const memoryContext = northStar || lessons
+        ? `\n\nSYSTEM MEMORY:\n${northStar}\n\nLESSONS LEARNED:\n${lessons}`
+        : '';
+
     const res = await client.messages.create({
         model: MODEL,
         max_tokens: 4000,
         system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: `Task: ${simplePrompt}` }]
+        messages: [{ role: 'user', content: `Task: ${simplePrompt}${memoryContext}` }]
     });
 
     const text = res.content.map(i => i.text || '').filter(Boolean).join('').trim();

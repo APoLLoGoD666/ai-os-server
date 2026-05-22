@@ -1385,6 +1385,23 @@
             <div id="timelinePanel"><div class="empty-note">Loading…</div></div>
         </div>
 
+        <!-- Roadmap Panel -->
+        <div class="subpanel">
+            <div class="subpanel-header">
+                <span class="subpanel-label">Roadmap</span>
+                <button class="subpanel-btn" onclick="refreshRoadmapPanel()">↻</button>
+            </div>
+            <div id="roadmapProgress" style="margin-bottom:8px"></div>
+            <div id="roadmapPanel"><div class="empty-note">Loading…</div></div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+                <button class="subpanel-btn" style="flex:1" onclick="masterRunAll()">Run All</button>
+                <input id="roadmapFeatureInput" type="text" placeholder="FEAT-C001"
+                    style="flex:2;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);
+                    color:#fff;padding:3px 6px;border-radius:4px;font-size:11px"/>
+                <button class="subpanel-btn" onclick="masterRunFeature()">Run</button>
+            </div>
+        </div>
+
     </aside>
 
     <!-- ══ NOTIFICATION STRIP ══ -->
@@ -3936,6 +3953,54 @@ async function refreshTimelinePanel() {
     } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
 }
 
+// ══ ROADMAP ═══════════════════════════════════════════════════════════
+async function refreshRoadmapPanel() {
+    const el = document.getElementById('roadmapPanel');
+    const prog = document.getElementById('roadmapProgress');
+    try {
+        const data = await fetchJson('/api/master/roadmap');
+        if (!data.ok) { el.innerHTML = '<div class="empty-note">—</div>'; return; }
+        const pct = data.total ? Math.round((data.completed / data.total) * 100) : 0;
+        prog.innerHTML = `<div style="font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:3px">${data.completed} / ${data.total} features (${pct}%)</div>
+            <div style="background:rgba(255,255,255,0.1);border-radius:3px;height:5px">
+                <div style="background:#00d4ff;width:${pct}%;height:5px;border-radius:3px;transition:width .4s"></div>
+            </div>`;
+        const rows = Object.entries(data.roadmap).map(([name, ws]) => {
+            const total = ws.pending.length + ws.completed.length;
+            const done = ws.completed.length;
+            return `<div class="task-item" style="display:block">
+                <div class="task-item-title">${escapeHtml(name)}</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.45)">${done}/${total} complete</div>
+            </div>`;
+        });
+        el.innerHTML = rows.join('') || '<div class="empty-note">No workstreams</div>';
+    } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
+}
+
+async function masterRunAll() {
+    try {
+        await fetchJson('/api/master/run', { method: 'POST', body: '{}',
+            headers: { 'Content-Type': 'application/json' } });
+        alert('Master orchestrator started — all workstreams running in parallel');
+    } catch (e) { alert('Failed: ' + e.message); }
+}
+
+async function masterRunFeature() {
+    const featureId = document.getElementById('roadmapFeatureInput').value.trim();
+    if (!featureId) return alert('Enter a feature ID, e.g. FEAT-C001');
+    try {
+        const data = await fetchJson('/api/master/feature', { method: 'POST',
+            body: JSON.stringify({ featureId }),
+            headers: { 'Content-Type': 'application/json' } });
+        if (data.ok) {
+            alert(`${featureId} pipeline started`);
+            document.getElementById('roadmapFeatureInput').value = '';
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (e) { alert('Failed: ' + e.message); }
+}
+
 // ══ INIT ══════════════════════════════════════════════════════════════
 setOrbState("waiting");
 updateStatusBar();
@@ -3947,6 +4012,8 @@ setInterval(refreshFast, REFRESH_INTERVAL_MS);
 setInterval(refreshSlow, SLOW_REFRESH_MS);
 setInterval(pollTaskNotifications, 10000);
 setInterval(refreshTimelinePanel, 30000);
+refreshRoadmapPanel();
+setInterval(refreshRoadmapPanel, 60000);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
