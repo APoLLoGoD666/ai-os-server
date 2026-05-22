@@ -136,25 +136,56 @@ async function _reviewer(client, spec, developerLog) {
     const t0 = Date.now();
     const filesModified = developerLog.result.applied || [];
     console.log('[Reviewer] starting review of', filesModified.length, 'files');
-    const SYSTEM = `You are the REVIEWER agent for Apex AI OS. Check whether the DEVELOPER's changes are safe.
-Protected systems that must NOT be modified: iOS HTT pipeline (touchstart/touchend/getUserMedia), /api/transcribe, /api/tts, requireAppAccess middleware, database schema, .env / environment variables.
-Output JSON: { "passed": boolean, "issues": string[] }`;
 
-    const response = await Promise.race([
-        client.messages.create({
-            model: MODEL,
-            max_tokens: 3000,
-            system: SYSTEM,
-            messages: [{ role: 'user', content: `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nDEVELOPER RESULT:\n${JSON.stringify(developerLog.result, null, 2)}` }]
-        }),
-        new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('REVIEWER timeout after 120s')), 120000)
-        )
-    ]);
-    const text = response.content[0]?.text?.trim();
-    let result;
-    try { result = _parseJSON(text); } catch { result = { passed: true, issues: [] }; }
-    return { role: 'REVIEWER', result, duration: Date.now() - t0 };
+    if (filesModified.length === 0) {
+        return { role: 'REVIEWER', result: { passed: true, issues: [] }, duration: Date.now() - t0 };
+    }
+
+    const SYSTEM = `You are the REVIEWER agent for Apex AI OS. Review the provided file for correctness, security issues, missing error handling, and consistency with the spec.
+Protected systems that must NOT be modified: iOS HTT pipeline (touchstart/touchend/getUserMedia), /api/transcribe, /api/tts, requireAppAccess middleware, database schema, .env / environment variables.
+Reply JSON only: {"file":"name","passed":true,"issues":["list"]}`;
+
+    const allIssues = [];
+    let allPassed = true;
+
+    for (const entry of filesModified) {
+        const filename = entry.file || entry;
+        let fileContent = '';
+        try {
+            fileContent = fs.readFileSync(path.join(ROOT, filename), 'utf8');
+        } catch {
+            fileContent = '(file not found on disk)';
+        }
+
+        console.log(`[Reviewer] checking ${filename}`);
+
+        let fileResult;
+        try {
+            const response = await Promise.race([
+                client.messages.create({
+                    model: MODEL,
+                    max_tokens: 1000,
+                    system: SYSTEM,
+                    messages: [{ role: 'user', content: `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE: ${filename}\n\`\`\`\n${fileContent.slice(0, 8000)}\n\`\`\`` }]
+                }),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error(`REVIEWER timeout on ${filename} after 45s`)), 45000)
+                )
+            ]);
+            const text = response.content[0]?.text?.trim();
+            try { fileResult = _parseJSON(text); }
+            catch { fileResult = { file: filename, passed: true, issues: [] }; }
+        } catch (e) {
+            fileResult = { file: filename, passed: false, issues: [e.message] };
+        }
+
+        if (!fileResult.passed) {
+            allPassed = false;
+            (fileResult.issues || []).forEach(issue => allIssues.push(`${filename}: ${issue}`));
+        }
+    }
+
+    return { role: 'REVIEWER', result: { passed: allPassed, issues: allIssues }, duration: Date.now() - t0 };
 }
 
 // ── Agent: TESTER ─────────────────────────────────────────────────────────────
