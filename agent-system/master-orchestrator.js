@@ -128,6 +128,29 @@ async function runFeature(feature, workstream) {
 
     if (plan.permissionRequired) {
         console.log(`[Master] ${feature.id} requires permission: ${plan.permissionReason}`);
+        // Write permission request to Supabase notifications
+        const { createClient } = require('@supabase/supabase-js');
+        const _sb = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
+        );
+        await _sb.from('apex_notifications').insert({
+            id: `perm-${feature.id}-${Date.now()}`,
+            message: JSON.stringify({
+                type: 'permissionRequest',
+                featureId: feature.id,
+                featureTitle: feature.title,
+                reason: plan.permissionReason,
+                plan: {
+                    approach: plan.approach,
+                    externalServices: plan.externalServices,
+                    estimatedComplexity: plan.estimatedComplexity
+                }
+            }),
+            type: 'permission',
+            read: false
+        });
+        console.log(`[Master] Permission request written to dashboard for ${feature.id}`);
         return {
             success: false,
             pendingPermission: true,
@@ -236,4 +259,33 @@ async function runMasterOrchestrator(workstreamFilter = null) {
     return summary;
 }
 
-module.exports = { runMasterOrchestrator, runFeature, parseRoadmap };
+// ── Run feature with explicit permission override ─────────────────
+async function runFeatureWithPermission(featureId) {
+    const runAgentTeam = require('./orchestrator');
+    const roadmap = parseRoadmap();
+    for (const [wsName, ws] of Object.entries(roadmap)) {
+        const feature = ws.pending.find(f => f.id === featureId);
+        if (feature) {
+            const plan = await planFeature(feature, wsName);
+            plan.permissionRequired = false; // override — user approved
+            const spec = {
+                objective: `${feature.id}: ${feature.title}`,
+                filesToRead: plan.filesToRead || [],
+                filesToModify: [...(plan.filesToModify || []),
+                               ...(plan.filesToCreate || [])],
+                steps: plan.steps || [],
+                safetyChecks: [
+                    'node --check server.js must pass',
+                    'Do not touch /api/transcribe or /api/tts',
+                    'Do not modify requireAppAccess',
+                    'Do not touch iOS HTT pipeline'
+                ],
+                successCriteria: [`${feature.id} implemented and committed`]
+            };
+            return await runAgentTeam(spec, feature.id);
+        }
+    }
+    throw new Error(`${featureId} not found in roadmap`);
+}
+
+module.exports = { runMasterOrchestrator, runFeature, parseRoadmap, runFeatureWithPermission };

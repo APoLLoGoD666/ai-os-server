@@ -1363,6 +1363,9 @@
             <div id="routinesPanel"><div class="empty-note">Loading…</div></div>
         </div>
 
+        <!-- Permission Gate Cards -->
+        <div id="permissionCards"></div>
+
         <!-- Task Queue Panel -->
         <div class="subpanel">
             <div class="subpanel-header">
@@ -3891,6 +3894,59 @@ async function pollTaskNotifications() {
     } catch (_) {}
 }
 
+async function pollPermissions() {
+    try {
+        const data = await fetchJson('/api/master/permissions');
+        const container = document.getElementById('permissionCards');
+        if (!container) return;
+        if (!data.ok || !data.permissions.length) { container.innerHTML = ''; return; }
+        const cards = data.permissions.map(n => {
+            let info = {};
+            try { info = JSON.parse(n.message); } catch { return ''; }
+            if (info.type !== 'permissionRequest') return '';
+            const fid = escapeHtml(info.featureId || '');
+            const ftitle = escapeHtml(info.featureTitle || '');
+            const reason = escapeHtml(info.reason || '');
+            const approach = escapeHtml((info.plan && info.plan.approach) || '');
+            const complexity = escapeHtml((info.plan && info.plan.estimatedComplexity) || '');
+            return `<div class="subpanel" style="border-left:3px solid #f5a623;margin-bottom:8px">
+                <div class="subpanel-header">
+                    <span class="subpanel-label" style="color:#f5a623">Permission Required</span>
+                </div>
+                <div style="font-size:11px;font-weight:600;margin-bottom:4px">${fid}: ${ftitle}</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:4px">${reason}</div>
+                ${approach ? `<div style="font-size:10px;color:rgba(255,255,255,0.45);margin-bottom:6px;font-style:italic">${approach}</div>` : ''}
+                ${complexity ? `<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px">Complexity: ${complexity}</div>` : ''}
+                <div style="display:flex;gap:6px">
+                    <button class="subpanel-btn" style="flex:1;background:rgba(39,174,96,0.25);border-color:rgba(39,174,96,0.5)"
+                        onclick="approveFeature('${fid}', true)">Approve</button>
+                    <button class="subpanel-btn" style="flex:1;background:rgba(231,76,60,0.25);border-color:rgba(231,76,60,0.5)"
+                        onclick="approveFeature('${fid}', false)">Deny</button>
+                </div>
+            </div>`;
+        }).filter(Boolean);
+        container.innerHTML = cards.join('');
+    } catch (_) {}
+}
+
+async function approveFeature(featureId, approved) {
+    try {
+        await fetchJson('/api/master/approve', {
+            method: 'POST',
+            body: JSON.stringify({ featureId, approved }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+        showTaskToast(
+            approved ? `${featureId} approved — pipeline started` : `${featureId} denied — skipped`,
+            approved ? 'success' : 'info'
+        );
+        await pollPermissions();
+        await refreshRoadmapPanel();
+    } catch (e) {
+        showTaskToast('Approval failed: ' + e.message, 'error');
+    }
+}
+
 // ══ TIMELINE JS ════════════════════════════════════════════════════════════════
 
 function _timeAgo(iso) {
@@ -4011,6 +4067,8 @@ refreshTimelinePanel();
 setInterval(refreshFast, REFRESH_INTERVAL_MS);
 setInterval(refreshSlow, SLOW_REFRESH_MS);
 setInterval(pollTaskNotifications, 10000);
+pollPermissions();
+setInterval(pollPermissions, 15000);
 setInterval(refreshTimelinePanel, 30000);
 refreshRoadmapPanel();
 setInterval(refreshRoadmapPanel, 60000);

@@ -8502,7 +8502,7 @@ app.get('/api/notifications', requireAppAccess, async (req, res) => {
         const { data } = await sbAdmin.from('apex_notifications')
             .select('*').eq('read', false).order('created_at', { ascending: false });
         const notifs = data || [];
-        await sbAdmin.from('apex_notifications').update({ read: true }).eq('read', false);
+        await sbAdmin.from('apex_notifications').update({ read: true }).eq('read', false).neq('type', 'permission');
         res.json({ ok: true, notifications: notifs });
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
@@ -8532,7 +8532,7 @@ app.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
 });
 
 // ── Master Orchestrator Routes ────────────────────────────────────
-const { runMasterOrchestrator, runFeature, parseRoadmap } =
+const { runMasterOrchestrator, runFeature, parseRoadmap, runFeatureWithPermission } =
     require('./agent-system/master-orchestrator');
 
 app.get('/api/master/roadmap', requireAppAccess, async (req, res) => {
@@ -8576,6 +8576,60 @@ app.post('/api/master/feature', requireAppAccess, async (req, res) => {
         runFeature(found, foundWs)
             .catch(e => console.error('[Master] feature error:', e.message))
     );
+});
+
+app.get('/api/master/permissions', requireAppAccess, async (req, res) => {
+    try {
+        const { data, error } = await sbAdmin
+            .from('apex_notifications')
+            .select('*')
+            .eq('type', 'permission')
+            .eq('read', false)
+            .order('created_at', { ascending: false });
+        if (error) throw new Error(error.message);
+        res.json({ ok: true, permissions: data || [] });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.post('/api/master/approve', requireAppAccess, async (req, res) => {
+    const { featureId, approved } = req.body || {};
+    if (!featureId) return res.status(400).json({ ok: false, error: 'featureId required' });
+
+    // Remove the permission notification so card disappears
+    await sbAdmin.from('apex_notifications')
+        .delete()
+        .eq('type', 'permission')
+        .like('message', `%"featureId":"${featureId}"%`);
+
+    if (approved) {
+        res.json({ ok: true, status: 'running', featureId });
+        setImmediate(() =>
+            runFeatureWithPermission(featureId)
+                .catch(e => console.error('[Master] approve error:', e.message))
+        );
+    } else {
+        const _roadmapPath = require('path').join(__dirname, 'ROADMAP.md');
+        try {
+            const _fs = require('fs');
+            let _content = _fs.readFileSync(_roadmapPath, 'utf8');
+            _content = _content.replace(
+                new RegExp(`^- \\[ \\] (${featureId}: .+)$`, 'm'),
+                '- [-] $1 *(skipped)*'
+            );
+            _fs.writeFileSync(_roadmapPath, _content, 'utf8');
+        } catch (e) {
+            console.warn('[Master] ROADMAP.md skip failed:', e.message);
+        }
+        await sbAdmin.from('apex_notifications').insert({
+            id: `skip-${featureId}-${Date.now()}`,
+            message: `${featureId} denied — skipped by user`,
+            type: 'info',
+            read: false
+        });
+        res.json({ ok: true, status: 'skipped', featureId });
+    }
 });
 
 app.use((req, res) => {
