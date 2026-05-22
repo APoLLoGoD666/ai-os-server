@@ -30,19 +30,17 @@ async function _architect(client, spec) {
     const t0 = Date.now();
     const SYSTEM = `You are the ARCHITECT agent for Apex AI OS. Read the provided file contents and summarise: what already exists relevant to this task, what functions/routes are involved, what must not be touched. Output JSON: { "summary": string, "relevantFunctions": string[], "warnings": string[] }`;
 
-    let fileContents = '';
-    for (const f of (spec.filesToRead || [])) {
+    const archFileContents = (spec.filesToRead || []).map(f => {
         try {
-            const fp = path.join(ROOT, f);
-            if (fs.existsSync(fp)) {
-                const content = fs.readFileSync(fp, 'utf8');
-                fileContents += `\n\n=== ${f} ===\n${content.slice(0, 3000)}`;
-            }
-        } catch {}
-    }
+            const content = fs.readFileSync(path.join(ROOT, f), 'utf8');
+            return `FILE: ${f}\n\`\`\`\n${content.slice(0, 6000)}\n\`\`\``;
+        } catch {
+            return `FILE: ${f}\n(not found)`;
+        }
+    }).join('\n\n');
 
     const res = await _callClaude(client, SYSTEM,
-        `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE CONTENTS:${fileContents || '\n(none readable)'}`,
+        `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE CONTENTS:\n${archFileContents}`,
         1500
     );
     const text = res.content[0]?.text?.trim();
@@ -54,21 +52,38 @@ async function _architect(client, spec) {
 // ── Agent: DEVELOPER ─────────────────────────────────────────────────────────
 async function _developer(client, spec, architectLog) {
     const t0 = Date.now();
-    const SYSTEM = `You are the DEVELOPER agent for Apex AI OS. Implement the spec by producing surgical file edits.
-Output ONLY valid JSON — no markdown, no preamble:
+    const SYSTEM = `You are the DEVELOPER agent for Apex AI OS autonomous pipeline.
+You will receive a full technical spec AND the current file contents you need.
+You MUST output ONLY a raw JSON object. No prose. No markdown. No explanation.
+If you output anything other than a JSON object starting with { your output will be rejected.
+Start your response with { and end with }. Nothing before or after.
+
+Output this exact structure:
 {
-  "analysis": "what you understood and planned",
+  "analysis": "one sentence summary of what you changed",
   "fileEdits": [
-    { "file": "relative/path", "oldContent": "exact string to replace", "newContent": "replacement string" }
+    { "file": "relative/path/to/file", "oldContent": "exact string to find and replace", "newContent": "replacement string" }
   ]
 }
-Rules:
-- Each oldContent must be a unique, exact substring of that file.
-- Keep edits minimal. Do NOT touch: iOS HTT pipeline (touchstart/touchend/getUserMedia), /api/transcribe, /api/tts, requireAppAccess, database schema, env vars.
-- If a file does not exist, create it by using "" as oldContent and the full file content as newContent — the orchestrator will handle creation.`;
 
-    const userContent = `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT ANALYSIS:\n${JSON.stringify(architectLog.result, null, 2)}`;
-    const res = await _callClaude(client, SYSTEM, userContent, 4000);
+Rules:
+- oldContent must be an exact unique substring of the current file content provided to you.
+- If creating a new file use empty string "" as oldContent and full file as newContent.
+- Keep edits minimal and surgical.
+- NEVER touch: touchstart, touchend, getUserMedia, _httStream, _httRecorder, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.
+- If you cannot make the change safely output: {"analysis":"unsafe — skipped","fileEdits":[]}`;
+
+    const devFileContents = (spec.filesToModify || []).map(f => {
+        try {
+            const content = fs.readFileSync(path.join(ROOT, f), 'utf8');
+            return `FILE: ${f}\n\`\`\`\n${content.slice(0, 8000)}\n\`\`\``;
+        } catch {
+            return `FILE: ${f}\n(does not exist yet — create it)`;
+        }
+    }).join('\n\n');
+
+    const devUserContent = `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT NOTES:\n${architectLog.result.summary}\n\nCURRENT FILE CONTENTS:\n${devFileContents}\n\nOutput only JSON. Start with {`;
+    const res = await _callClaude(client, SYSTEM, devUserContent, 4000);
     const text = res.content[0]?.text?.trim();
 
     let parsed;
