@@ -41,7 +41,7 @@ async function _architect(client, spec) {
     }).join('\n\n');
 
     const res = await _callClaude(client, SYSTEM,
-        `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE CONTENTS:\n${archFileContents}\n\nSYSTEM MEMORY:\n${obsidianContext}`,
+        `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE CONTENTS:\n${archFileContents}${obsidianContext ? '\n\nSYSTEM MEMORY:\n' + obsidianContext : ''}`,
         1500
     );
     const text = res.content[0]?.text?.trim();
@@ -243,7 +243,7 @@ async function runAgentTeam(spec, taskId) {
 
     // Read Obsidian context before starting
     const obsidianContext = memory.getFullContext();
-    console.log('[Orchestrator] Obsidian context loaded');
+    console.log('[Orchestrator] Obsidian context loaded:', obsidianContext ? obsidianContext.length + ' chars' : 'empty (Render environment)');
 
     createBackup(taskId);
 

@@ -108,6 +108,7 @@ async function runFeature(feature, workstream) {
     const runAgentTeam = require('./orchestrator');
 
     console.log(`[Master] Starting ${feature.id}: ${feature.title}`);
+    console.log(`[Master] Planning ${feature.id} via Claude...`);
     memory.logDecision(
         `Starting ${feature.id}`,
         `Workstream: ${workstream}`
@@ -122,6 +123,8 @@ async function runFeature(feature, workstream) {
         memory.logLesson(`Planning failed for ${feature.id}: ${e.message}. Check API response format.`);
         return { success: false, error: msg };
     }
+
+    console.log(`[Master] Plan ready for ${feature.id} — complexity: ${plan.estimatedComplexity}, permissionRequired: ${plan.permissionRequired}`);
 
     if (plan.permissionRequired) {
         console.log(`[Master] ${feature.id} requires permission: ${plan.permissionReason}`);
@@ -150,6 +153,7 @@ async function runFeature(feature, workstream) {
     };
 
     const result = await runAgentTeam(spec, feature.id);
+    console.log(`[Master] Agent team finished ${feature.id} — success: ${result.success}`);
 
     if (result.success) {
         markFeatureComplete(feature.id);

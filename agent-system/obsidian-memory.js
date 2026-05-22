@@ -15,18 +15,26 @@ module.exports = {
     },
 
     write(notePath, content) {
-        const full = path.join(VAULT, notePath);
-        fs.mkdirSync(path.dirname(full), { recursive: true });
-        fs.writeFileSync(full, content, 'utf8');
+        try {
+            const full = path.join(VAULT, notePath);
+            fs.mkdirSync(path.dirname(full), { recursive: true });
+            fs.writeFileSync(full, content, 'utf8');
+        } catch (e) {
+            console.warn('[ObsidianMemory] write failed (non-fatal):', e.message);
+        }
     },
 
     append(notePath, content) {
-        const full = path.join(VAULT, notePath);
-        fs.mkdirSync(path.dirname(full), { recursive: true });
-        const existing = fs.existsSync(full)
-            ? fs.readFileSync(full, 'utf8') : '';
-        fs.writeFileSync(full,
-            existing + '\n\n---\n\n' + content, 'utf8');
+        try {
+            const full = path.join(VAULT, notePath);
+            fs.mkdirSync(path.dirname(full), { recursive: true });
+            const existing = fs.existsSync(full)
+                ? fs.readFileSync(full, 'utf8') : '';
+            fs.writeFileSync(full,
+                existing + '\n\n---\n\n' + content, 'utf8');
+        } catch (e) {
+            console.warn('[ObsidianMemory] append failed (non-fatal):', e.message);
+        }
     },
 
     logLesson(lesson) {
@@ -67,11 +75,13 @@ module.exports = {
     },
 
     getFullContext() {
-        return [
-            '# NORTH STAR\n' + this.getNorthStar(),
-            '# LESSONS LEARNED\n' + this.getLessons(),
-            '# COMPLETED FEATURES\n' +
-                (this.read('System/Features.md') || 'none yet')
-        ].join('\n\n---\n\n');
+        const northStar = this.read('System/North-Star.md');
+        const lessons = this.read('System/Lessons.md');
+        const features = this.read('System/Features.md');
+        const parts = [];
+        if (northStar) parts.push('# NORTH STAR\n' + northStar);
+        if (lessons) parts.push('# LESSONS LEARNED\n' + lessons);
+        if (features) parts.push('# COMPLETED FEATURES\n' + features);
+        return parts.length ? parts.join('\n\n---\n\n') : '';
     }
 };
