@@ -8671,6 +8671,27 @@ app.post('/api/master/approve', requireAppAccess, async (req, res) => {
     }
 });
 
+// ── Capture Classifier ────────────────────────────────────────────
+const { classifyCapture } = require('./agent-system/capture-classifier');
+
+app.post('/api/capture', requireAppAccess, async (req, res) => {
+    const { type, content, source } = req.body || {};
+    if (!content) return res.status(400).json({ ok: false, error: 'content required' });
+    try {
+        const result = await classifyCapture({ type: type || 'note', content, source: source || 'manual' });
+        await sbAdmin.from('apex_notifications').insert({
+            id: `capture-${Date.now()}`,
+            message: JSON.stringify({ type, content: content.slice(0, 200), source, classification: result }),
+            type: result.confidence > 0.8 ? 'capture_auto' : 'capture_review',
+            read: false
+        });
+        console.log(`[Capture] ${type} → ${result.workstream} (${result.confidence})`);
+        res.json({ ok: true, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,
