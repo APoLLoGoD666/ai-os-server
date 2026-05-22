@@ -52,73 +52,83 @@ async function _architect(client, spec) {
     return { role: 'ARCHITECT', result, duration: Date.now() - t0 };
 }
 
-// ── Agent: DEVELOPER ─────────────────────────────────────────────────────────
+// ── Agent: DEVELOPER (per-file write) ────────────────────────────────────────
+async function _developerWriteFile(client, spec, filename, architectAnalysis) {
+    const fp = path.join(ROOT, filename);
+    let currentContent = null;
+    let isNew = false;
+    try {
+        currentContent = fs.readFileSync(fp, 'utf8');
+    } catch {
+        isNew = true;
+    }
+
+    const SYSTEM = `You are the DEVELOPER agent for Apex AI OS.
+You will receive a task spec, architect analysis, and ${isNew ? 'a request to create a new file' : 'the current content of a file to update'}.
+Return ONLY the complete ${isNew ? 'new' : 'updated'} file content. Nothing else.
+No JSON wrapping. No markdown code fences. No explanation. No preamble. No trailing commentary.
+Your entire response IS the file content — it will be written to disk exactly as you return it.
+NEVER touch: touchstart, touchend, getUserMedia, _httStream, _httRecorder, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.`;
+
+    const userContent = isNew
+        ? `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT NOTES:\n${architectAnalysis}\n\nCreate new file: ${filename}\nReturn the complete file content only.`
+        : `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT NOTES:\n${architectAnalysis}\n\nFile to update: ${filename}\n\nCURRENT CONTENT:\n${currentContent}\n\nReturn the complete updated file content only.`;
+
+    const res = await _callClaude(client, SYSTEM, userContent, 8000);
+    const newContent = res.content[0]?.text || '';
+
+    const dir = path.dirname(fp);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(fp, newContent, 'utf8');
+
+    return { file: filename, status: isNew ? 'created' : 'written' };
+}
+
 async function _developer(client, spec, architectLog) {
     const t0 = Date.now();
     const SYSTEM = `You are the DEVELOPER agent for Apex AI OS autonomous pipeline.
-You will receive a full technical spec AND the current file contents you need.
-You MUST output ONLY a raw JSON object. No prose. No markdown. No explanation.
-If you output anything other than a JSON object starting with { your output will be rejected.
+You will receive a task spec, architect analysis, and a list of files available to modify.
+Decide which files actually need changes to complete the task.
+Output ONLY a raw JSON object. No prose. No markdown. No explanation.
 Start your response with { and end with }. Nothing before or after.
 
 Output this exact structure:
 {
-  "analysis": "one sentence summary of what you changed",
-  "fileEdits": [
-    { "file": "relative/path/to/file", "oldContent": "exact string to find and replace", "newContent": "replacement string" }
-  ]
+  "filesModified": ["relative/path/to/file1", "relative/path/to/file2"],
+  "summary": "one sentence describing what was changed"
 }
 
 Rules:
-- oldContent must be an exact unique substring of the current file content provided to you.
-- If creating a new file use empty string "" as oldContent and full file as newContent.
-- Keep edits minimal and surgical.
-- NEVER touch: touchstart, touchend, getUserMedia, _httStream, _httRecorder, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.
-- If you cannot make the change safely output: {"analysis":"unsafe — skipped","fileEdits":[]}`;
+- Only list files that genuinely need modification to complete the task.
+- filesModified must be a subset of the available files listed in the spec.
+- NEVER include files that touch: touchstart, touchend, getUserMedia, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.
+- If no safe changes are possible output: {"filesModified":[],"summary":"unsafe — skipped"}`;
 
-    const devFileContents = (spec.filesToModify || []).map(f => {
-        try {
-            const content = fs.readFileSync(path.join(ROOT, f), 'utf8');
-            return `FILE: ${f}\n\`\`\`\n${content.slice(0, 8000)}\n\`\`\``;
-        } catch {
-            return `FILE: ${f}\n(does not exist yet — create it)`;
-        }
-    }).join('\n\n');
+    const fileList = (spec.filesToModify || []).join('\n');
+    const userContent = `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT NOTES:\n${architectLog.result.summary}\n\nAVAILABLE FILES TO MODIFY:\n${fileList}\n\nOutput only JSON. Start with {`;
 
-    const devUserContent = `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT NOTES:\n${architectLog.result.summary}\n\nCURRENT FILE CONTENTS:\n${devFileContents}\n\nOutput only JSON. Start with {`;
-    const res = await _callClaude(client, SYSTEM, devUserContent, 4000);
+    const res = await _callClaude(client, SYSTEM, userContent, 500);
     const text = res.content[0]?.text?.trim();
 
     let parsed;
     try { parsed = _parseJSON(text); }
     catch (e) { throw new Error(`DEVELOPER output not valid JSON: ${e.message} — raw: ${text.slice(0, 200)}`); }
 
-    // Apply edits
+    const allowed = new Set(spec.filesToModify || []);
+    const filesToWrite = (parsed.filesModified || []).filter(f => allowed.has(f));
+
     const applied = [];
-    for (const edit of (parsed.fileEdits || [])) {
-        const fp = path.join(ROOT, edit.file);
+    for (const filename of filesToWrite) {
         try {
-            if (edit.oldContent === '' || !fs.existsSync(fp)) {
-                // Create new file
-                const dir = path.dirname(fp);
-                fs.mkdirSync(dir, { recursive: true });
-                fs.writeFileSync(fp, edit.newContent, 'utf8');
-                applied.push({ file: edit.file, status: 'created' });
-            } else {
-                const current = fs.readFileSync(fp, 'utf8');
-                if (!current.includes(edit.oldContent)) {
-                    applied.push({ file: edit.file, status: 'skipped — oldContent not found' });
-                    continue;
-                }
-                fs.writeFileSync(fp, current.replace(edit.oldContent, edit.newContent), 'utf8');
-                applied.push({ file: edit.file, status: 'patched' });
-            }
+            const r = await _developerWriteFile(client, spec, filename, architectLog.result.summary);
+            applied.push(r);
+            console.log(`[DEVELOPER] wrote ${filename} (${r.status})`);
         } catch (e) {
-            applied.push({ file: edit.file, status: `error — ${e.message}` });
+            applied.push({ file: filename, status: `error — ${e.message}` });
         }
     }
 
-    return { role: 'DEVELOPER', result: { analysis: parsed.analysis, applied }, duration: Date.now() - t0 };
+    return { role: 'DEVELOPER', result: { analysis: parsed.summary, applied }, duration: Date.now() - t0 };
 }
 
 // ── Agent: REVIEWER ───────────────────────────────────────────────────────────
