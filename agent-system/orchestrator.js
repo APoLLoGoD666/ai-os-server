@@ -146,6 +146,7 @@ Protected systems that must NOT be modified: iOS HTT pipeline (touchstart/touche
 Reply JSON only: {"file":"name","passed":true,"issues":["list"]}`;
 
     const allIssues = [];
+    const reviewResults = [];
     let allPassed = true;
 
     for (const entry of filesModified) {
@@ -179,11 +180,16 @@ Reply JSON only: {"file":"name","passed":true,"issues":["list"]}`;
             fileResult = { file: filename, passed: false, issues: [e.message] };
         }
 
+        reviewResults.push(fileResult);
+
         if (!fileResult.passed) {
             allPassed = false;
             (fileResult.issues || []).forEach(issue => allIssues.push(`${filename}: ${issue}`));
         }
     }
+
+    console.log('[Reviewer] review results:', JSON.stringify(reviewResults, null, 2));
+    console.log('[Reviewer] decision: passed=', allPassed);
 
     return { role: 'REVIEWER', result: { passed: allPassed, issues: allIssues }, duration: Date.now() - t0 };
 }
@@ -322,6 +328,7 @@ async function runAgentTeam(spec, taskId) {
         agentLogs.push(reviewerLog);
         console.log(`[Orchestrator] REVIEWER done (${reviewerLog.duration}ms)`);
         if (!reviewerLog.result.passed) {
+            console.log('[Reviewer] ROLLBACK triggered — issues:', JSON.stringify(reviewerLog.result.issues));
             restoreBackup(taskId);
             return _fail(`REVIEWER blocked: ${(reviewerLog.result.issues || []).join('; ')}`);
         }
