@@ -132,7 +132,7 @@ async function runFeature(feature, workstream) {
         const { createClient } = require('@supabase/supabase-js');
         const _sb = createClient(
             process.env.SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
+            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
         );
         await _sb.from('apex_notifications').insert({
             id: `perm-${feature.id}-${Date.now()}`,
