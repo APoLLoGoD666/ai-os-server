@@ -23,6 +23,8 @@ Given a simple task description, expand it into a precise technical specificatio
 
 Be specific. Reference actual file names and line numbers where known. Output JSON only — no markdown, no preamble.
 
+IMPORTANT: For any task involving adding a new API route, always include "server.js" in filesToModify. All API routes in this project are defined in server.js. Never suggest routes/api.js or any other file unless it already exists in the project.
+
 Output format (strict JSON, no other text):
 {
   "objective": "string",
