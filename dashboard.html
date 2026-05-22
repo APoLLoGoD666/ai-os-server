@@ -3981,24 +3981,24 @@ async function masterRunAll() {
     try {
         await fetchJson('/api/master/run', { method: 'POST', body: '{}',
             headers: { 'Content-Type': 'application/json' } });
-        alert('Master orchestrator started — all workstreams running in parallel');
-    } catch (e) { alert('Failed: ' + e.message); }
+        showTaskToast('Master orchestrator started — all workstreams running in parallel', 'info');
+    } catch (e) { showTaskToast('Failed: ' + e.message, 'error'); }
 }
 
 async function masterRunFeature() {
     const featureId = document.getElementById('roadmapFeatureInput').value.trim();
-    if (!featureId) return alert('Enter a feature ID, e.g. FEAT-C001');
+    if (!featureId) return showTaskToast('Enter a feature ID, e.g. FEAT-C001', 'error');
     try {
         const data = await fetchJson('/api/master/feature', { method: 'POST',
             body: JSON.stringify({ featureId }),
             headers: { 'Content-Type': 'application/json' } });
         if (data.ok) {
-            alert(`${featureId} pipeline started`);
+            showTaskToast(`${featureId} pipeline started`, 'info');
             document.getElementById('roadmapFeatureInput').value = '';
         } else {
-            alert('Error: ' + data.error);
+            showTaskToast('Error: ' + data.error, 'error');
         }
-    } catch (e) { alert('Failed: ' + e.message); }
+    } catch (e) { showTaskToast('Failed: ' + e.message, 'error'); }
 }
 
 // ══ INIT ══════════════════════════════════════════════════════════════
