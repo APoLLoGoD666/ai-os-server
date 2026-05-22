@@ -46,18 +46,17 @@ async function expandPrompt(simplePrompt) {
     const text = res.content.map(i => i.text || '').filter(Boolean).join('').trim();
     if (!text) throw new Error('Empty response from expansion API');
 
-    let parsed;
-    try {
-        const cleaned = text
-            .replace(/^[\s\S]*?```json\s*/i, '')
-            .replace(/^[\s\S]*?```\s*/i, '')
-            .replace(/```[\s\S]*$/g, '')
-            .trim();
-        const jsonStr = cleaned.startsWith('{') ? cleaned : text.trim();
-        parsed = JSON.parse(jsonStr);
-    } catch (e) {
-        throw new Error(`Failed to parse spec JSON: ${e.message} — raw: ${text.slice(0, 300)}`);
-    }
+        let parsed;
+        try {
+            const first = text.indexOf('{');
+            const last  = text.lastIndexOf('}');
+            if (first === -1 || last === -1 || last < first) {
+                throw new Error('No JSON object found in response');
+            }
+            parsed = JSON.parse(text.slice(first, last + 1));
+        } catch (e) {
+            throw new Error(`Failed to parse spec JSON: ${e.message} — raw: ${text.slice(0, 300)}`);
+        }
 
     return {
         objective:       String(parsed.objective       || parsed.OBJECTIVE               || simplePrompt),
