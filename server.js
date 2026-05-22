@@ -8550,6 +8550,7 @@ app.get('/api/master/roadmap', requireAppAccess, async (req, res) => {
 });
 
 async function checkPendingMasterTasks() {
+    console.log('[Master] checkPendingMasterTasks() called');
     try {
         const { data, error } = await sbAdmin
             .from('apex_notifications')
@@ -8557,6 +8558,7 @@ async function checkPendingMasterTasks() {
             .in('type', ['master_task', 'master_run'])
             .eq('read', false)
             .order('created_at', { ascending: true });
+        console.log('[Master] pending task query result:', JSON.stringify(data));
         if (error) { console.error('[Master] checkPending query error:', error.message); return; }
         if (!data || !data.length) return;
         console.log(`[Master] checkPendingMasterTasks: ${data.length} pending task(s)`);
@@ -8607,12 +8609,14 @@ app.post('/api/master/feature', requireAppAccess, async (req, res) => {
     }
     if (!found) return res.status(404).json({ ok: false,
         error: `${featureId} not found or already complete` });
-    await sbAdmin.from('apex_notifications').insert({
+    const payload = {
         id: `master-task-${featureId}-${Date.now()}`,
         message: JSON.stringify({ featureId, status: 'queued' }),
         type: 'master_task',
         read: false
-    });
+    };
+    console.log('[Master] queuing task:', JSON.stringify(payload));
+    await sbAdmin.from('apex_notifications').insert(payload);
     res.json({ ok: true, status: 'queued', featureId });
     setImmediate(() => checkPendingMasterTasks());
 });
