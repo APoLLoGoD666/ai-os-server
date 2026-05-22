@@ -3,7 +3,11 @@ node_modules
 ai_pipeline.db
 local_ai_backups
 local_ai_proposals
-ai_pipeline.dbget_gmail_token.js
+ai_pipeline.db
+get_gmail_token.js
+*.bak
+temp-*
+backups/
 
 # Ruflo runtime databases and ephemeral state
 ruvector.db

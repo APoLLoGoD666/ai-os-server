@@ -17,6 +17,9 @@ const multer = require("multer");
 const multerUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 const db = require("./database");
+const expandPrompt = require('./agent-system/prompt-expander');
+const runAgentTeam = require('./agent-system/orchestrator');
+const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { createClient: _sbAdmin } = require('@supabase/supabase-js');
 const sbAdmin = _sbAdmin(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const {
@@ -8290,8 +8293,9 @@ app.get('/api/ruflo/memory/search', requireAppAccess, async (req, res) => {
 
 // ── TASK MANAGEMENT ─────────────────────────────────────────────────────────
 
-const TASKS_FILE = path.join(__dirname, 'TASKS.md');
-const NOTIF_FILE = path.join(__dirname, 'notifications.json');
+const TASKS_FILE    = path.join(__dirname, 'TASKS.md');
+const NOTIF_FILE    = path.join(__dirname, 'notifications.json');
+const TIMELINE_FILE = path.join(__dirname, 'timeline.json');
 
 function _parseTasks() {
     if (!fs.existsSync(TASKS_FILE)) return { pending: [], inProgress: [], completed: [], failed: [] };
@@ -8337,6 +8341,74 @@ function _appendNotif(message, type) {
     try { notifs = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); } catch {}
     notifs.push({ id: `notif-${Date.now()}`, message, type: type || 'info', timestamp: new Date().toISOString(), read: false });
     fs.writeFileSync(NOTIF_FILE, JSON.stringify(notifs, null, 2), 'utf8');
+}
+
+function _appendTimeline(entry) {
+    let tl = [];
+    try { tl = JSON.parse(fs.readFileSync(TIMELINE_FILE, 'utf8')); } catch {}
+    tl.unshift(entry);
+    if (tl.length > 100) tl = tl.slice(0, 100);
+    fs.writeFileSync(TIMELINE_FILE, JSON.stringify(tl, null, 2), 'utf8');
+}
+
+// ── Autonomous pipeline — runs in background after /api/tasks/run responds ────
+async function _startAutoPipeline(taskId) {
+    const sections = _parseTasks();
+    const task = sections.inProgress.find(t => t.id === taskId);
+    if (!task) { console.warn(`[AutoPipeline] ${taskId} not found in inProgress`); return; }
+
+    const _markFailed = (reason) => {
+        try {
+            const s = _parseTasks();
+            const i = s.inProgress.findIndex(t => t.id === taskId);
+            if (i !== -1) { s.inProgress.splice(i, 1); s.failed.push(task); _writeTasks(s); }
+            _appendNotif(`❌ ${taskId} failed: ${reason}`, 'error');
+        } catch {}
+    };
+
+    try {
+        const t0 = Date.now();
+        console.log(`[AutoPipeline] ${taskId} — expanding prompt: "${task.title}"`);
+        const spec = await expandPrompt(task.title);
+        console.log(`[AutoPipeline] ${taskId} — spec ready, running agent team`);
+        const result = await runAgentTeam(spec, taskId);
+        const duration = Date.now() - t0;
+
+        if (result.success) {
+            const s = _parseTasks();
+            const i = s.inProgress.findIndex(t => t.id === taskId);
+            if (i !== -1) { s.inProgress.splice(i, 1); s.completed.push(task); _writeTasks(s); }
+            _appendNotif(`✅ ${taskId} completed — ${spec.objective}. Commit: ${result.commitHash}`, 'success');
+            _appendTimeline({
+                taskId,
+                objective:    spec.objective,
+                commitHash:   result.commitHash,
+                filesChanged: spec.filesToModify,
+                duration,
+                completedAt:  new Date().toISOString(),
+                agentLogs:    result.agentLogs,
+                success:      true
+            });
+            console.log(`[AutoPipeline] ${taskId} done — commit ${result.commitHash}`);
+        } else {
+            _markFailed(result.error || 'pipeline failed');
+            _appendTimeline({
+                taskId,
+                objective:    spec.objective || task.title,
+                commitHash:   null,
+                filesChanged: [],
+                duration,
+                completedAt:  new Date().toISOString(),
+                agentLogs:    result.agentLogs,
+                success:      false,
+                error:        result.error
+            });
+        }
+    } catch (err) {
+        console.error(`[AutoPipeline] ${taskId} fatal:`, err.message);
+        try { restoreBackup(taskId); } catch {}
+        _markFailed(err.message);
+    }
 }
 
 async function _runTask(taskId, res) {
@@ -8414,10 +8486,18 @@ app.post('/api/tasks/add', requireAppAccess, (req, res) => {
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
-app.post('/api/tasks/run', requireAppAccess, async (req, res) => {
+app.post('/api/tasks/run', requireAppAccess, (req, res) => {
     const { taskId } = req.body || {};
     if (!taskId) return res.status(400).json({ ok: false, error: 'taskId required' });
-    return _runTask(taskId, res);
+    const sections = _parseTasks();
+    const idx = sections.pending.findIndex(t => t.id === taskId);
+    if (idx === -1) return res.status(404).json({ ok: false, error: `${taskId} not found in pending` });
+    const task = sections.pending[idx];
+    sections.pending.splice(idx, 1);
+    sections.inProgress.push(task);
+    _writeTasks(sections);
+    res.json({ ok: true, status: 'running', taskId });
+    setImmediate(() => _startAutoPipeline(taskId).catch(e => console.error('[AutoPipeline] unhandled:', e.message)));
 });
 
 app.post('/api/tasks/notify', requireAppAccess, (req, res) => {
@@ -8437,6 +8517,15 @@ app.get('/api/notifications', requireAppAccess, (req, res) => {
         notifs.forEach(n => { n.read = true; });
         fs.writeFileSync(NOTIF_FILE, JSON.stringify(notifs, null, 2), 'utf8');
         res.json({ ok: true, notifications: unread });
+    } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+});
+
+app.get('/api/timeline', requireAppAccess, (req, res) => {
+    try {
+        let tl = [];
+        try { tl = JSON.parse(fs.readFileSync(TIMELINE_FILE, 'utf8')); } catch {}
+        tl.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+        res.json({ ok: true, timeline: tl.slice(0, 20) });
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 

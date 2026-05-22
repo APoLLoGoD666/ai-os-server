@@ -1,0 +1,33 @@
+{
+  "tasks": {
+    "task-1779355788127-guh134": {
+      "taskId": "task-1779355788127-guh134",
+      "type": "custom",
+      "description": "test task from apex",
+      "priority": "normal",
+      "status": "pending",
+      "progress": 0,
+      "assignedTo": [],
+      "tags": [],
+      "createdAt": "2026-05-21T09:29:48.127Z",
+      "startedAt": null,
+      "completedAt": null
+    },
+    "task-1779356073216-do62za": {
+      "taskId": "task-1779356073216-do62za",
+      "type": "custom",
+      "description": "check unread emails",
+      "priority": "normal",
+      "status": "pending",
+      "progress": 0,
+      "assignedTo": [],
+      "tags": [
+        "apex-email-agent"
+      ],
+      "createdAt": "2026-05-21T09:34:33.216Z",
+      "startedAt": null,
+      "completedAt": null
+    }
+  },
+  "version": "3.0.0"
+}
