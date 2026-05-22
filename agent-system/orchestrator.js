@@ -182,7 +182,8 @@ async function _committer(spec) {
         };
     }
 
-    const push = spawnSync('git', ['push', 'origin', 'main'],
+    const repoUrl = `https://apex-autopilot:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
+    const push = spawnSync('git', ['push', repoUrl, 'main'],
         { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
 
     if (push.status !== 0) {
