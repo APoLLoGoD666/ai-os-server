@@ -157,6 +157,8 @@ async function _tester(spec) {
 async function _committer(spec) {
     const t0 = Date.now();
 
+    spawnSync('git', ['config', 'user.email', 'apex@ai-os.local'], { cwd: ROOT, encoding: 'utf8' });
+    spawnSync('git', ['config', 'user.name', 'Apex AutoPilot'], { cwd: ROOT, encoding: 'utf8' });
     spawnSync('git', ['add', '-A'], { cwd: ROOT, encoding: 'utf8' });
 
     const beforeHash = spawnSync('git', ['rev-parse', '--short', 'HEAD'],
