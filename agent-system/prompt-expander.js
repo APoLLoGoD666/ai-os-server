@@ -57,18 +57,23 @@ async function expandPrompt(simplePrompt) {
 
     const res = await client.messages.create({
         model: MODEL,
-        max_tokens: 1000,
+        max_tokens: 2000,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: `Task: ${simplePrompt}${codebaseContext}` }]
     });
 
-    const text = res.content[0]?.text?.trim();
+    const text = res.content.map(i => i.text || '').filter(Boolean).join('').trim();
     if (!text) throw new Error('Empty response from expansion API');
 
     let parsed;
     try {
-        const cleaned = text.replace(/^```json\s*/m, '').replace(/^```\s*/m, '').replace(/\s*```$/m, '').trim();
-        parsed = JSON.parse(cleaned);
+        const cleaned = text
+            .replace(/^[\s\S]*?```json\s*/i, '')
+            .replace(/^[\s\S]*?```\s*/i, '')
+            .replace(/```[\s\S]*$/g, '')
+            .trim();
+        const jsonStr = cleaned.startsWith('{') ? cleaned : text.trim();
+        parsed = JSON.parse(jsonStr);
     } catch (e) {
         throw new Error(`Failed to parse spec JSON: ${e.message} — raw: ${text.slice(0, 300)}`);
     }
