@@ -26,6 +26,8 @@ function _parseJSON(text) {
     return JSON.parse(cleaned);
 }
 
+let obsidianContext = '';
+
 // ── Agent: ARCHITECT ──────────────────────────────────────────────────────────
 async function _architect(client, spec) {
     const t0 = Date.now();
@@ -242,7 +244,12 @@ async function runAgentTeam(spec, taskId) {
     const agentLogs = [];
 
     // Read Obsidian context before starting
-    const obsidianContext = memory.getFullContext();
+    try {
+        obsidianContext = memory.getFullContext() || '';
+    } catch (e) {
+        console.warn('[Orchestrator] memory read failed:', e.message);
+        obsidianContext = '';
+    }
     console.log('[Orchestrator] Obsidian context loaded:', obsidianContext ? obsidianContext.length + ' chars' : 'empty (Render environment)');
 
     createBackup(taskId);
