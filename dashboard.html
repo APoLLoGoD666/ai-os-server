@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta name="apex-version" content="v8" />
+    <meta name="apex-version" content="v9" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <title>APEX AI OS v8</title>
+    <title>APEX AI OS</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#00d4ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,19 +17,25 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --bg:           #0a0a0a;
-            --glass:        rgba(255,255,255,0.03);
-            --glass-border: rgba(0,212,255,0.12);
-            --accent:       #00d4ff;
-            --accent-dim:   rgba(0,212,255,0.18);
-            --accent-glow:  rgba(0,212,255,0.35);
-            --text:         #eef2ff;
-            --muted:        rgba(238,242,255,0.4);
+            --bg:           #03060f;
+            --bg2:          #060c18;
+            --glass:        rgba(255,255,255,0.04);
+            --glass2:       rgba(0,212,255,0.05);
+            --border:       rgba(0,212,255,0.16);
+            --border-dim:   rgba(0,212,255,0.08);
+            --primary:      #00d4ff;
+            --primary-dim:  rgba(0,212,255,0.18);
+            --primary-glow: rgba(0,212,255,0.4);
+            --secondary:    #0066ff;
+            --accent:       #7b2fff;
+            --text:         #e8f4ff;
+            --muted:        rgba(232,244,255,0.45);
+            --muted2:       rgba(232,244,255,0.25);
             --danger:       #ff4d6d;
-            --topbar-h:     60px;
-            --strip-h:      54px;
-            --input-h:      76px;
-            --panel-w:      272px;
+            --success:      #27ae60;
+            --topbar-h:     52px;
+            --input-h:      54px;
+            --nav-h:        60px;
         }
 
         html, body {
@@ -41,1184 +47,1241 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ══ APP GRID ══════════════════════════════════════════════════ */
+        /* ══ APP SHELL ════════════════════════════════════════════════ */
         .app {
-            display: grid;
-            width: 100vw; height: 100vh;
-            grid-template-rows: var(--topbar-h) 1fr var(--strip-h) var(--input-h);
-            grid-template-columns: var(--panel-w) 1fr var(--panel-w);
-            grid-template-areas:
-                "topbar topbar topbar"
-                "left   centre right"
-                "strip  strip  strip"
-                "inputz inputz inputz";
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            background:
+                radial-gradient(ellipse 80% 55% at 50% 0%, rgba(0,102,255,0.07) 0%, transparent 65%),
+                radial-gradient(ellipse 55% 45% at 90% 90%, rgba(123,47,255,0.05) 0%, transparent 55%),
+                var(--bg);
         }
 
-        /* ══ TOP BAR ═══════════════════════════════════════════════════ */
+        /* ══ TOP BAR ══════════════════════════════════════════════════ */
         .topbar {
-            grid-area: topbar;
+            height: var(--topbar-h);
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 26px;
-            border-bottom: 1px solid var(--glass-border);
-            background: rgba(8,8,10,0.92);
+            padding: 0 14px;
+            background: rgba(3,6,15,0.92);
+            border-bottom: 1px solid var(--border-dim);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             z-index: 20;
+            gap: 8px;
         }
 
         .brand {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 9px;
+            flex-shrink: 0;
         }
 
         .brand-ring {
-            width: 36px; height: 36px;
+            width: 28px; height: 28px;
             border-radius: 50%;
-            border: 1.5px solid var(--accent);
+            border: 1.5px solid var(--primary);
             display: grid; place-items: center;
-            box-shadow: 0 0 12px var(--accent-glow), inset 0 0 10px rgba(0,212,255,0.05);
+            box-shadow: 0 0 10px var(--primary-glow), inset 0 0 8px rgba(0,212,255,0.05);
             animation: brand-pulse 3s ease-in-out infinite;
         }
 
         @keyframes brand-pulse {
-            0%,100% { box-shadow: 0 0 12px var(--accent-glow), inset 0 0 10px rgba(0,212,255,0.05); }
-            50%      { box-shadow: 0 0 22px var(--accent-glow), inset 0 0 18px rgba(0,212,255,0.1);  }
+            0%,100% { box-shadow: 0 0 10px var(--primary-glow); }
+            50%      { box-shadow: 0 0 22px var(--primary-glow), 0 0 40px rgba(0,212,255,0.15); }
         }
 
         .brand-ring-dot {
-            width: 10px; height: 10px;
+            width: 7px; height: 7px;
             border-radius: 50%;
-            background: var(--accent);
-            box-shadow: 0 0 8px var(--accent);
+            background: var(--primary);
+            box-shadow: 0 0 5px var(--primary);
         }
 
         .brand-copy strong {
             display: block;
-            font-size: 16px;
+            font-size: 12px;
             font-weight: 800;
-            letter-spacing: 0.28em;
-            color: var(--accent);
+            letter-spacing: 0.26em;
+            color: var(--primary);
         }
 
         .brand-copy span {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 500;
-            letter-spacing: 0.18em;
+            letter-spacing: 0.15em;
             text-transform: uppercase;
             color: var(--muted);
         }
 
-        .topbar-clock {
+        .topbar-center {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
+            gap: 1px;
         }
 
         .clock-time {
-            font-size: 22px;
-            font-weight: 300;
-            letter-spacing: 0.1em;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.07em;
             color: var(--text);
             font-variant-numeric: tabular-nums;
         }
 
         .clock-date {
-            font-size: 10px;
-            font-weight: 500;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
+            font-size: 8px;
+            letter-spacing: 0.12em;
             color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .chat-status-bar {
+            font-size: 9px;
+            color: var(--muted2);
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 110px;
         }
 
         .topbar-status {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: var(--accent);
+            gap: 5px;
         }
 
         .status-dot {
-            width: 8px; height: 8px;
+            width: 7px; height: 7px;
             border-radius: 50%;
-            background: var(--accent);
-            box-shadow: 0 0 7px var(--accent);
+            background: var(--danger);
             transition: background 0.3s, box-shadow 0.3s;
         }
 
-        .status-dot.offline {
-            background: var(--danger);
-            box-shadow: 0 0 7px var(--danger);
+        .status-dot.on {
+            background: var(--primary);
+            box-shadow: 0 0 5px var(--primary);
         }
 
-        /* ══ SIDE PANELS ═══════════════════════════════════════════════ */
-        .side-panel {
+        /* ══ LAYOUT: mobile-first flex column ═════════════════════════ */
+        .page-and-input {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ══ PAGE WRAP ════════════════════════════════════════════════ */
+        .page-wrap {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page {
+            position: absolute;
+            inset: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(18px);
+            transition: opacity 0.22s ease, transform 0.22s ease;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            padding: 18px 14px;
-            overflow: hidden;
-            background: rgba(0,212,255,0.016);
         }
 
-        .left-panel  { grid-area: left;  border-right:  1px solid var(--glass-border); }
-        .right-panel { grid-area: right; border-left:   1px solid var(--glass-border); }
+        .page.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+        }
 
-        .panel-label {
-            font-size: 9px;
+        /* ══ BOTTOM NAV ═══════════════════════════════════════════════ */
+        .bottom-nav {
+            height: var(--nav-h);
+            flex-shrink: 0;
+            display: flex;
+            align-items: stretch;
+            background: rgba(3,6,15,0.98);
+            border-top: 1px solid var(--border-dim);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        .nav-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--muted);
+            transition: color 0.2s;
+            padding: 6px 2px;
+            position: relative;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .nav-btn:hover { color: rgba(232,244,255,0.7); }
+        .nav-btn.active { color: var(--primary); }
+
+        .nav-btn.active::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 22%;
+            right: 22%;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 0 0 2px 2px;
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        .nav-icon {
+            font-size: 17px;
+            line-height: 1;
+        }
+
+        .nav-label {
+            font-size: 8px;
             font-weight: 700;
-            letter-spacing: 0.22em;
+            letter-spacing: 0.13em;
             text-transform: uppercase;
-            color: var(--accent);
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--glass-border);
+        }
+
+        /* ══ DESKTOP OVERRIDE ═════════════════════════════════════════ */
+        @media (min-width: 900px) {
+            .app {
+                display: grid;
+                grid-template-rows: var(--topbar-h) 1fr;
+                grid-template-columns: 180px 1fr;
+                grid-template-areas:
+                    "topbar  topbar"
+                    "sidenav content";
+            }
+
+            .topbar { grid-area: topbar; }
+
+            .bottom-nav {
+                grid-area: sidenav;
+                height: auto;
+                flex-direction: column;
+                align-items: stretch;
+                border-top: none;
+                border-right: 1px solid var(--border-dim);
+                padding-bottom: 0;
+            }
+
+            .nav-btn {
+                flex: none;
+                height: 52px;
+                flex-direction: row;
+                justify-content: flex-start;
+                gap: 10px;
+                padding: 0 16px;
+            }
+
+            .nav-btn.active::after { display: none; }
+
+            .nav-btn.active::before {
+                content: '';
+                position: absolute;
+                top: 15%;
+                bottom: 15%;
+                left: 0;
+                width: 3px;
+                background: var(--primary);
+                border-radius: 0 2px 2px 0;
+                box-shadow: 0 0 8px var(--primary-glow);
+            }
+
+            .nav-icon { font-size: 18px; }
+            .nav-label { font-size: 11px; letter-spacing: 0.09em; }
+
+            .page-and-input {
+                grid-area: content;
+                min-height: 0;
+            }
+
+            .page { padding: 14px; gap: 12px; }
+        }
+
+        /* ══ INPUT ZONE ════════════════════════════════════════════════ */
+        .input-zone {
+            height: var(--input-h);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 10px;
+            background: rgba(3,6,15,0.95);
+            border-top: 1px solid var(--border-dim);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .chat-input {
+            flex: 1;
+            height: 36px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 18px;
+            padding: 0 14px;
+            font-size: 13px;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s, background 0.2s;
+            font-family: inherit;
+            min-width: 0;
+        }
+
+        .chat-input:focus {
+            border-color: rgba(0,212,255,0.4);
+            background: rgba(255,255,255,0.09);
+        }
+
+        .chat-input::placeholder { color: var(--muted2); }
+
+        .mic-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--glass);
+            color: var(--text);
+            font-size: 15px;
+            cursor: pointer;
+            display: grid; place-items: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mic-btn:hover, .mic-btn.listening {
+            background: rgba(255,77,109,0.15);
+            border-color: rgba(255,77,109,0.5);
+        }
+
+        .send-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            display: grid; place-items: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px var(--primary-dim);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .send-btn:hover { box-shadow: 0 0 18px var(--primary-glow); transform: scale(1.05); }
+
+        .clear-chat-btn {
+            font-size: 9px;
+            padding: 4px 7px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            flex-shrink: 0;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .clear-chat-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+        .auto-listen-btn {
+            font-size: 9px;
+            padding: 4px 7px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            flex-shrink: 0;
+            white-space: nowrap;
+            transition: all 0.2s;
+            letter-spacing: 0.03em;
+        }
+
+        .auto-listen-btn.on {
+            border-color: rgba(0,212,255,0.3);
+            background: rgba(0,212,255,0.07);
+            color: var(--primary);
+        }
+
+        /* ══ ORB ══════════════════════════════════════════════════════ */
+        .orb-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 0 6px;
             flex-shrink: 0;
         }
 
-        /* ── Memory list ── */
-        .memory-scroll {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding-right: 2px;
-        }
-
-        .memory-scroll::-webkit-scrollbar { width: 2px; }
-        .memory-scroll::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 2px; }
-
-        .mem-item {
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.05);
-            background: rgba(255,255,255,0.025);
-            transition: border-color 0.2s;
-        }
-
-        .mem-role {
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            color: var(--accent);
-            margin-bottom: 5px;
-        }
-
-        .mem-role.user { color: rgba(238,242,255,0.45); }
-
-        .mem-time {
-            font-size: 9px;
-            color: var(--muted);
-            margin-top: 3px;
-        }
-
-        .mem-text {
-            font-size: 12px;
-            line-height: 1.55;
-            color: rgba(238,242,255,0.82);
-            word-break: break-word;
-        }
-
-        /* ── Approval queue ── */
-        .queue-scroll {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .queue-scroll::-webkit-scrollbar { width: 2px; }
-        .queue-scroll::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 2px; }
-
-        .queue-card {
-            padding: 12px 13px;
-            border-radius: 12px;
-            border: 1px solid rgba(0,212,255,0.18);
-            background: rgba(0,212,255,0.045);
-        }
-
-        .queue-card-goal {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text);
-            margin-bottom: 4px;
-            line-height: 1.45;
-        }
-
-        .queue-card-summary {
-            font-size: 11px;
-            color: var(--muted);
-            margin: 3px 0 5px;
-            line-height: 1.4;
-        }
-
-        .queue-card-meta {
-            font-size: 10px;
-            color: var(--muted);
-            margin-bottom: 10px;
-        }
-
-        .queue-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .queue-btn {
-            flex: 1;
-            height: 32px;
-            border-radius: 8px;
-            border: none;
-            font-family: inherit;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            cursor: pointer;
-            transition: transform 0.14s, opacity 0.14s;
-        }
-
-        .queue-btn:hover { transform: translateY(-1px); }
-        .queue-btn:active { transform: translateY(1px); }
-        .queue-btn:disabled { opacity: 0.45; cursor: default; transform: none; }
-
-        .queue-btn.yes {
-            background: rgba(0,212,255,0.14);
-            border: 1px solid rgba(0,212,255,0.35);
-            color: var(--accent);
-        }
-
-        .queue-btn.no {
-            background: rgba(255,77,109,0.1);
-            border: 1px solid rgba(255,77,109,0.28);
-            color: #ff7a92;
-        }
-
-        .queue-empty {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            color: var(--muted);
-        }
-
-        .queue-empty-icon { font-size: 26px; opacity: 0.35; }
-        .queue-empty-text { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
-
-        /* ══ CENTRE ════════════════════════════════════════════════════ */
-        .centre {
-            grid-area: centre;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 22px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Grid background */
-        .centre::before {
-            content: "";
-            position: absolute; inset: 0;
-            background-image:
-                linear-gradient(rgba(0,212,255,0.028) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,212,255,0.028) 1px, transparent 1px);
-            background-size: 44px 44px;
-            pointer-events: none;
-        }
-
-        /* Radial halo */
-        .centre-halo {
-            position: absolute;
-            width: 460px; height: 460px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(0,212,255,0.055) 0%, transparent 68%);
-            pointer-events: none;
-        }
-
-        /* ── Orb ── */
         .orb-shell {
             position: relative;
-            display: grid;
-            place-items: center;
-            z-index: 2;
+            width: 130px; height: 130px;
+            display: grid; place-items: center;
         }
 
         .pulse-ring {
             position: absolute;
             border-radius: 50%;
-            border: 1px solid var(--accent);
-            opacity: 0;
+            border: 1px solid var(--primary-dim);
+            animation: pulse-expand 3s ease-out infinite;
             pointer-events: none;
         }
 
-        .pr1 { width: 258px; height: 258px; }
-        .pr2 { width: 318px; height: 318px; }
-        .pr3 { width: 378px; height: 378px; }
+        .pr1 { width: 100%; height: 100%; animation-delay: 0s; }
+        .pr2 { width: 132%; height: 132%; animation-delay: 1s; }
+        .pr3 { width: 164%; height: 164%; animation-delay: 2s; }
 
-        .orb-shell.active   .pr1 { animation: pulse-out 2s ease-out infinite 0s;    }
-        .orb-shell.active   .pr2 { animation: pulse-out 2s ease-out infinite 0.38s; }
-        .orb-shell.active   .pr3 { animation: pulse-out 2s ease-out infinite 0.76s; }
-        .orb-shell.listening .pr1 { animation: pulse-out 0.85s ease-out infinite 0s;    }
-        .orb-shell.listening .pr2 { animation: pulse-out 0.85s ease-out infinite 0.14s; }
-        .orb-shell.listening .pr3 { animation: pulse-out 0.85s ease-out infinite 0.28s; }
-        .orb-shell.waiting .pr1 { animation: pulse-wait 3s ease-out infinite 0s;   }
-        .orb-shell.waiting .pr2 { animation: pulse-wait 3s ease-out infinite 1s;   }
-        .orb-shell.waiting .pr3 { animation: pulse-wait 3s ease-out infinite 2s;   }
-
-        @keyframes pulse-wait {
-            0%   { transform: scale(0.90); opacity: 0.18; }
-            100% { transform: scale(1.10); opacity: 0;    }
-        }
-
-        @keyframes pulse-out {
-            0%   { transform: scale(0.88); opacity: 0.65; }
-            100% { transform: scale(1.18); opacity: 0;    }
+        @keyframes pulse-expand {
+            0%   { opacity: 0.5; transform: scale(0.93); }
+            70%  { opacity: 0.1; transform: scale(1.05); }
+            100% { opacity: 0; transform: scale(1.08); }
         }
 
         .orb {
-            width: 196px; height: 196px;
+            position: relative;
+            width: 88px; height: 88px;
             border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%,
+                rgba(0,212,255,0.22), rgba(0,102,255,0.12) 55%, rgba(0,0,0,0) 80%),
+                rgba(5,10,26,0.96);
+            border: 1.5px solid rgba(0,212,255,0.38);
+            box-shadow: 0 0 22px rgba(0,212,255,0.18), inset 0 0 18px rgba(0,212,255,0.07);
+            cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 5px;
-            cursor: pointer;
-            position: relative;
-            background: radial-gradient(circle at 36% 34%, rgba(0,212,255,0.14), rgba(0,0,0,0.82));
-            border: 1.5px solid rgba(0,212,255,0.38);
-            box-shadow:
-                0 0 40px rgba(0,212,255,0.18),
-                0 0 80px rgba(0,212,255,0.07),
-                inset 0 0 42px rgba(0,212,255,0.04);
-            animation: orb-breathe 4.5s ease-in-out infinite;
-            transition: box-shadow 0.3s;
+            transition: box-shadow 0.35s ease, border-color 0.35s ease;
             user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
         }
 
         .orb:hover {
-            box-shadow:
-                0 0 58px rgba(0,212,255,0.3),
-                0 0 100px rgba(0,212,255,0.12),
-                inset 0 0 42px rgba(0,212,255,0.07);
-        }
-
-        @keyframes orb-breathe {
-            0%,100% { box-shadow: 0 0 40px rgba(0,212,255,0.18), 0 0 80px rgba(0,212,255,0.07), inset 0 0 42px rgba(0,212,255,0.04); }
-            50%      { box-shadow: 0 0 56px rgba(0,212,255,0.26), 0 0 110px rgba(0,212,255,0.1), inset 0 0 56px rgba(0,212,255,0.06); }
+            box-shadow: 0 0 34px rgba(0,212,255,0.32), inset 0 0 22px rgba(0,212,255,0.1);
+            border-color: rgba(0,212,255,0.6);
         }
 
         .orb-name {
-            font-size: 20px;
+            font-size: 10px;
             font-weight: 800;
-            letter-spacing: 0.26em;
-            color: var(--accent);
-            text-shadow: 0 0 18px var(--accent);
+            letter-spacing: 0.24em;
+            color: var(--primary);
         }
 
         .orb-sub {
             font-size: 8px;
-            font-weight: 500;
-            letter-spacing: 0.22em;
+            letter-spacing: 0.14em;
+            color: rgba(0,212,255,0.48);
             text-transform: uppercase;
-            color: rgba(0,212,255,0.52);
         }
 
-        /* ── Waveform ── */
+        /* Orb state: listening */
+        #orbShell.listening .pulse-ring { border-color: rgba(255,77,109,0.3); }
+        #orbShell.listening .orb, .orb.orb-recording {
+            border-color: rgba(255,77,109,0.7) !important;
+            animation: orbListen 0.55s ease-in-out infinite alternate;
+        }
+
+        @keyframes orbListen {
+            from { box-shadow: 0 0 0 3px rgba(255,77,109,0.4), 0 0 28px rgba(255,77,109,0.3); }
+            to   { box-shadow: 0 0 0 8px rgba(255,77,109,0.6), 0 0 48px rgba(255,77,109,0.45); }
+        }
+
+        /* Orb state: active (processing / speaking) */
+        #orbShell.active .orb {
+            border-color: rgba(0,212,255,0.7) !important;
+            animation: orbActive 0.6s ease-in-out infinite alternate;
+        }
+
+        @keyframes orbActive {
+            from { box-shadow: 0 0 10px rgba(0,212,255,0.4), 0 0 24px rgba(0,212,255,0.2); }
+            to   { box-shadow: 0 0 24px rgba(0,212,255,0.8), 0 0 52px rgba(0,212,255,0.4), inset 0 0 20px rgba(0,212,255,0.1); }
+        }
+
+        /* Orb state: waiting */
+        #orbShell.waiting .orb {
+            animation: orbWait 4s ease-in-out infinite;
+        }
+
+        @keyframes orbWait {
+            0%,100% { box-shadow: 0 0 12px rgba(0,212,255,0.12), inset 0 0 10px rgba(0,212,255,0.04); }
+            50%      { box-shadow: 0 0 28px rgba(0,212,255,0.28), inset 0 0 16px rgba(0,212,255,0.08); }
+        }
+
+        .orb-status {
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+
+        /* ══ WAVEFORM ═════════════════════════════════════════════════ */
         .waveform {
             display: flex;
             align-items: center;
             gap: 3px;
-            height: 28px;
+            height: 26px;
+            margin-top: 5px;
             opacity: 0;
-            transition: opacity 0.25s;
-            z-index: 2;
+            transition: opacity 0.3s;
         }
 
         .waveform.active { opacity: 1; }
 
         .wb {
             width: 3px;
+            background: var(--primary);
             border-radius: 2px;
-            background: var(--accent);
-            box-shadow: 0 0 5px var(--accent);
-            height: 14px;
-            will-change: transform;
-            transform-origin: center;
+            height: 5px;
         }
 
-        .waveform.active .wb:nth-child(1) { animation: wb 0.75s ease-in-out infinite 0.00s; }
-        .waveform.active .wb:nth-child(2) { animation: wb 0.75s ease-in-out infinite 0.10s; }
-        .waveform.active .wb:nth-child(3) { animation: wb 0.75s ease-in-out infinite 0.20s; }
-        .waveform.active .wb:nth-child(4) { animation: wb 0.75s ease-in-out infinite 0.15s; }
-        .waveform.active .wb:nth-child(5) { animation: wb 0.75s ease-in-out infinite 0.05s; }
-        .waveform.active .wb:nth-child(6) { animation: wb 0.75s ease-in-out infinite 0.25s; }
-        .waveform.active .wb:nth-child(7) { animation: wb 0.75s ease-in-out infinite 0.12s; }
+        .waveform.active .wb:nth-child(1) { animation: wb 0.48s ease-in-out 0.00s infinite alternate; }
+        .waveform.active .wb:nth-child(2) { animation: wb 0.48s ease-in-out 0.07s infinite alternate; }
+        .waveform.active .wb:nth-child(3) { animation: wb 0.48s ease-in-out 0.14s infinite alternate; }
+        .waveform.active .wb:nth-child(4) { animation: wb 0.48s ease-in-out 0.21s infinite alternate; }
+        .waveform.active .wb:nth-child(5) { animation: wb 0.48s ease-in-out 0.28s infinite alternate; }
+        .waveform.active .wb:nth-child(6) { animation: wb 0.48s ease-in-out 0.35s infinite alternate; }
+        .waveform.active .wb:nth-child(7) { animation: wb 0.48s ease-in-out 0.42s infinite alternate; }
 
         @keyframes wb {
-            0%,100% { transform: scaleY(0.29); }
-            50%      { transform: scaleY(1.57); }
+            from { height: 4px; }
+            to   { height: 18px; }
         }
 
-        /* ── Orb status text ── */
-        .orb-status {
-            font-size: 11px;
-            font-weight: 500;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            color: rgba(0,212,255,0.6);
-            z-index: 2;
-        }
-
-        /* ── Chat log ── */
+        /* ══ CHAT LOG ═════════════════════════════════════════════════ */
         .chat-log {
-            width: 100%;
-            max-width: 540px;
-            max-height: 188px;
+            flex: 1;
+            min-height: 0;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             display: flex;
             flex-direction: column;
-            gap: 7px;
-            padding: 0 20px;
-            z-index: 2;
+            gap: 8px;
+            padding: 2px 2px 4px;
         }
 
-        .chat-log::-webkit-scrollbar { width: 2px; }
-        .chat-log::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 2px; }
-
-        .chat-bubble {
+        .chat-msg {
             max-width: 84%;
-            padding: 9px 14px;
-            border-radius: 14px;
+            padding: 9px 13px;
+            border-radius: 12px;
             font-size: 13px;
             line-height: 1.55;
             word-break: break-word;
-            user-select: text;
         }
 
-        .apex-latency {
-            font-size: 10px;
-            color: var(--muted);
+        .chat-msg.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, rgba(0,102,255,0.3), rgba(0,212,255,0.18));
+            border: 1px solid rgba(0,212,255,0.22);
+            border-bottom-right-radius: 3px;
+        }
+
+        .chat-msg.ai {
             align-self: flex-start;
-            padding-left: 4px;
-            margin-top: -4px;
+            background: var(--glass);
+            border: 1px solid var(--border-dim);
+            border-bottom-left-radius: 3px;
+        }
+
+        .chat-msg.system {
+            align-self: center;
+            max-width: 94%;
+            font-size: 11px;
+            color: var(--muted);
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            font-style: italic;
+            padding: 5px 10px;
         }
 
         .typing-indicator {
             display: none;
             align-self: flex-start;
             gap: 4px;
-            padding: 10px 14px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.07);
-            border-radius: 14px;
+            padding: 8px 14px;
+            background: var(--glass);
+            border: 1px solid var(--border-dim);
+            border-radius: 12px;
+            border-bottom-left-radius: 3px;
         }
+
         .typing-indicator.active { display: flex; }
+
         .typing-dot {
             width: 6px; height: 6px;
             border-radius: 50%;
-            background: var(--accent);
-            opacity: 0.4;
-            animation: tdot 1.2s ease-in-out infinite;
+            background: var(--muted);
+            animation: typing 1.4s ease-in-out infinite;
         }
+
         .typing-dot:nth-child(2) { animation-delay: 0.2s; }
         .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes tdot { 0%,80%,100% { opacity:0.2; transform:scale(0.8); } 40% { opacity:1; transform:scale(1); } }
 
-        .chat-status-bar {
-            width: 100%;
-            max-width: 540px;
-            font-size: 10px;
-            color: var(--muted);
-            letter-spacing: 0.08em;
-            text-align: center;
-            z-index: 2;
-            padding: 0 20px;
+        @keyframes typing {
+            0%,60%,100% { transform: translateY(0); opacity: 0.35; }
+            30%          { transform: translateY(-4px); opacity: 1; }
         }
 
-        .clear-chat-btn {
-            flex-shrink: 0;
-            height: 32px;
-            padding: 0 10px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.08);
+        .empty-note {
+            font-size: 11px;
+            color: var(--muted2);
+            font-style: italic;
+            padding: 4px 0;
+        }
+
+        /* ══ GLASS PANEL ══════════════════════════════════════════════ */
+        .glass-panel {
+            background: var(--glass);
+            border: 1px solid var(--border-dim);
+            border-radius: 12px;
+            padding: 12px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .panel-title {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-title-btn {
+            font-size: 9px;
+            padding: 3px 7px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
             background: transparent;
-            color: var(--muted);
-            font-family: inherit;
-            font-size: 10px;
+            color: var(--primary);
             cursor: pointer;
-            white-space: nowrap;
-            transition: border-color 0.2s, color 0.2s;
-        }
-        .clear-chat-btn:hover { border-color: rgba(255,77,109,0.4); color: #ff4d6d; }
-
-        .chat-bubble.user {
-            align-self: flex-end;
-            background: rgba(0,212,255,0.11);
-            border: 1px solid rgba(0,212,255,0.2);
-            color: var(--text);
+            letter-spacing: 0.04em;
+            transition: all 0.2s;
         }
 
-        .chat-bubble.ai {
-            align-self: flex-start;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.07);
-            color: rgba(238,242,255,0.86);
+        .panel-title-btn:hover { background: var(--primary-dim); }
+
+        /* ══ MEMORY ═══════════════════════════════════════════════════ */
+        .memory-scroll {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 280px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
-        .chat-bubble.system {
-            align-self: flex-start;
-            background: rgba(255,212,0,0.06);
-            border: 1px solid rgba(255,212,0,0.14);
-            color: rgba(255,220,80,0.8);
+        .memory-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 7px;
+            padding: 8px 10px;
             font-size: 11px;
+            line-height: 1.5;
+            color: rgba(232,244,255,0.75);
         }
 
-        /* ── Inline approval card (centre) ── */
-        .centre-approval {
-            width: 100%;
-            max-width: 420px;
-            padding: 16px 18px;
-            border-radius: 14px;
-            background: rgba(0,212,255,0.07);
-            border: 1px solid rgba(0,212,255,0.24);
-            z-index: 2;
-        }
-
-        .capp-label {
+        .memory-tag {
+            display: inline-block;
             font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--accent);
-            margin-bottom: 8px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            background: var(--primary-dim);
+            color: var(--primary);
+            border: 1px solid rgba(0,212,255,0.18);
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            margin-right: 4px;
         }
 
-        .capp-text {
-            font-size: 13px;
-            line-height: 1.55;
-            color: var(--text);
-            margin-bottom: 14px;
-        }
-
-        .capp-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .capp-btn {
-            flex: 1;
-            height: 38px;
-            border-radius: 10px;
-            border: none;
-            font-family: inherit;
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            cursor: pointer;
-            transition: transform 0.14s, opacity 0.14s;
-        }
-
-        .capp-btn:hover { transform: translateY(-1px); }
-        .capp-btn:active { transform: translateY(1px); }
-
-        .capp-btn.yes {
-            background: rgba(0,212,255,0.16);
-            border: 1px solid rgba(0,212,255,0.38);
-            color: var(--accent);
-        }
-
-        .capp-btn.no {
-            background: rgba(255,77,109,0.12);
-            border: 1px solid rgba(255,77,109,0.3);
-            color: #ff7a92;
-        }
-
-        /* ══ NOTIFICATION STRIP ════════════════════════════════════════ */
-        .notif-strip {
-            grid-area: strip;
-            display: flex;
-            align-items: center;
-            border-top: 1px solid var(--glass-border);
-            border-bottom: 1px solid var(--glass-border);
-            background: rgba(5,5,7,0.6);
-            overflow: hidden;
-        }
-
-        .notif-label {
-            flex-shrink: 0;
-            padding: 0 14px;
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--accent);
-            border-right: 1px solid var(--glass-border);
-            height: 100%;
-            display: flex;
-            align-items: center;
-        }
-
+        /* ══ NOTIFICATIONS ════════════════════════════════════════════ */
         .notif-scroll {
-            flex: 1;
             display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 0 14px;
-            overflow-x: auto;
-            overflow-y: hidden;
-            scrollbar-width: none;
-            height: 100%;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 220px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
-        .notif-scroll::-webkit-scrollbar { display: none; }
-
-        .notif-chip {
-            flex-shrink: 0;
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            padding: 5px 12px;
-            border-radius: 999px;
-            border: 1px solid rgba(0,212,255,0.14);
+        .notif-item {
             background: rgba(0,212,255,0.04);
+            border: 1px solid rgba(0,212,255,0.1);
+            border-radius: 7px;
+            padding: 7px 10px;
             font-size: 11px;
-            color: var(--text);
-            white-space: nowrap;
-            cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
-        }
-
-        .notif-chip:hover {
-            border-color: rgba(0,212,255,0.3);
-            background: rgba(0,212,255,0.09);
-        }
-
-        .notif-chip.unread {
-            border-color: rgba(0,212,255,0.28);
-            color: var(--accent);
-        }
-
-        .notif-pip {
-            width: 5px; height: 5px;
-            border-radius: 50%;
-            background: var(--accent);
-            box-shadow: 0 0 4px var(--accent);
+            color: rgba(232,244,255,0.8);
+            line-height: 1.4;
         }
 
         .notif-none {
             font-size: 11px;
-            color: var(--muted);
+            color: var(--muted2);
+            font-style: italic;
+            padding: 2px 0;
         }
 
-        /* ══ INPUT AREA ════════════════════════════════════════════════ */
-        .input-area {
-            grid-area: inputz;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 0 22px;
-            background: rgba(8,8,10,0.96);
-            border-top: 1px solid var(--glass-border);
-        }
-
-        .mic-btn {
-            width: 46px; height: 46px;
-            flex-shrink: 0;
-            border-radius: 50%;
-            border: 1.5px solid rgba(0,212,255,0.32);
-            background: rgba(0,212,255,0.07);
-            color: var(--accent);
-            font-size: 19px;
-            cursor: pointer;
-            display: grid; place-items: center;
-            transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .mic-btn:hover {
-            background: rgba(0,212,255,0.14);
-            border-color: rgba(0,212,255,0.5);
-            box-shadow: 0 0 14px rgba(0,212,255,0.2);
-        }
-
-        .mic-btn.listening {
-            background: rgba(0,212,255,0.18);
-            border-color: var(--accent);
-            box-shadow: 0 0 22px rgba(0,212,255,0.4);
-            animation: mic-glow 0.9s ease-in-out infinite;
-        }
-
-        @keyframes mic-glow {
-            0%,100% { box-shadow: 0 0 22px rgba(0,212,255,0.4); }
-            50%      { box-shadow: 0 0 38px rgba(0,212,255,0.7); }
-        }
-
-        .chat-input {
-            flex: 1;
-            height: 46px;
-            padding: 0 18px;
-            border-radius: 23px;
-            border: 1px solid rgba(255,255,255,0.07);
-            background: rgba(255,255,255,0.03);
-            color: var(--text);
-            font-family: inherit;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .chat-input:focus {
-            border-color: rgba(0,212,255,0.28);
-            box-shadow: 0 0 0 1px rgba(0,212,255,0.08);
-        }
-
-        .chat-input::placeholder { color: rgba(238,242,255,0.18); }
-
-        .send-btn {
-            width: 46px; height: 46px;
-            flex-shrink: 0;
-            border-radius: 50%;
-            border: 1.5px solid rgba(0,212,255,0.38);
-            background: rgba(0,212,255,0.1);
-            color: var(--accent);
-            font-size: 17px;
-            cursor: pointer;
-            display: grid; place-items: center;
-            transition: background 0.2s, box-shadow 0.2s, transform 0.14s;
-        }
-
-        .send-btn:hover {
-            background: rgba(0,212,255,0.18);
-            box-shadow: 0 0 18px rgba(0,212,255,0.28);
-            transform: scale(1.06);
-        }
-
-        .send-btn:active { transform: scale(0.96); }
-
-        .auto-listen-btn {
-            flex-shrink: 0;
-            height: 32px;
-            padding: 0 13px;
-            border-radius: 16px;
-            border: 1px solid rgba(0,212,255,0.22);
-            background: transparent;
-            color: var(--muted);
-            font-family: inherit;
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 0.06em;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background 0.2s, color 0.2s, border-color 0.2s;
-        }
-
-        .auto-listen-btn.on {
-            border-color: rgba(0,212,255,0.55);
-            color: var(--accent);
-            background: rgba(0,212,255,0.08);
-        }
-
-        .apex-banner {
-            position: fixed;
-            top: 68px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 999;
-            background: rgba(255,77,109,0.14);
-            border: 1px solid rgba(255,77,109,0.4);
-            border-radius: 10px;
-            padding: 9px 18px;
-            font-size: 12px;
-            color: #ff8099;
-            backdrop-filter: blur(12px);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .apex-banner-close {
-            cursor: pointer;
-            opacity: 0.6;
-            font-size: 14px;
-        }
-
-        /* ══ PHASE 2 PANELS ════════════════════════════════════════════ */
-        .right-panel { overflow-y: auto !important; }
-
-        .subpanel {
-            flex-shrink: 0;
+        /* ══ APPROVAL QUEUE ═══════════════════════════════════════════ */
+        .queue-scroll {
             display: flex;
             flex-direction: column;
-            gap: 7px;
-            border-top: 1px solid var(--glass-border);
-            padding-top: 14px;
-            margin-top: 4px;
+            gap: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .queue-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 0;
+        }
+
+        .queue-empty-icon {
+            font-size: 18px;
+            color: var(--primary);
+            opacity: 0.45;
+        }
+
+        .queue-empty-text {
+            font-size: 11px;
+            color: var(--muted2);
+        }
+
+        /* ══ SUBPANELS ════════════════════════════════════════════════ */
+        .subpanel {
+            background: var(--glass);
+            border: 1px solid var(--border-dim);
+            border-radius: 10px;
+            padding: 10px;
         }
 
         .subpanel-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 2px;
+            margin-bottom: 8px;
         }
 
         .subpanel-label {
             font-size: 9px;
             font-weight: 700;
-            letter-spacing: 0.22em;
+            letter-spacing: 0.2em;
             text-transform: uppercase;
-            color: var(--accent);
+            color: var(--muted);
         }
 
         .subpanel-btn {
-            font-size: 10px;
-            font-weight: 600;
-            padding: 3px 9px;
-            border-radius: 8px;
-            border: 1px solid rgba(0,212,255,0.28);
+            font-size: 9px;
+            padding: 3px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
             background: transparent;
-            color: var(--accent);
+            color: var(--primary);
             cursor: pointer;
-            transition: background 0.18s;
+            letter-spacing: 0.03em;
+            transition: all 0.2s;
+            white-space: nowrap;
         }
 
-        .subpanel-btn:hover { background: rgba(0,212,255,0.1); }
+        .subpanel-btn:hover { background: var(--primary-dim); }
+        .subpanel-btn:disabled { opacity: 0.38; cursor: not-allowed; }
 
-        /* Email items */
+        /* ══ EMAIL ════════════════════════════════════════════════════ */
         .email-item {
-            padding: 9px 11px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.05);
             background: rgba(255,255,255,0.02);
-            font-size: 11px;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 5px;
         }
 
-        .email-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .email-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 3px;
+        }
 
         .email-priority {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 700;
-            letter-spacing: 0.1em;
-            padding: 2px 6px;
-            border-radius: 4px;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            padding: 1px 5px;
+            border-radius: 3px;
         }
 
-        .email-priority.urgent  { background: rgba(255,77,109,0.22); color: #ff4d6d; }
-        .email-priority.normal  { background: rgba(0,212,255,0.12);  color: var(--accent); }
-        .email-priority.low     { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .email-priority.urgent { background: rgba(255,77,109,0.2);   color: #ff4d6d; }
+        .email-priority.high   { background: rgba(255,159,67,0.18);  color: #ff9f43; }
+        .email-priority.normal { background: rgba(0,212,255,0.09);   color: var(--muted); }
+        .email-priority.low    { background: rgba(255,255,255,0.05); color: var(--muted2); }
 
-        .email-sender { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
-        .email-subject { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 3px; line-height: 1.35; }
+        .email-sender  { font-size: 10px; font-weight: 600; color: var(--text); }
+        .email-subject { font-size: 11px; font-weight: 600; margin-bottom: 2px; color: rgba(232,244,255,0.9); }
         .email-summary { font-size: 10px; color: var(--muted); line-height: 1.4; }
-        .email-actions { display: flex; gap: 6px; margin-top: 6px; }
+        .email-actions { margin-top: 6px; }
+        .email-reply-row { margin-top: 4px; }
 
         .email-btn {
-            flex: 1;
-            font-size: 10px;
-            font-weight: 600;
-            padding: 4px 0;
-            border-radius: 6px;
-            border: 1px solid;
+            font-size: 9px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: transparent;
+            color: var(--muted);
             cursor: pointer;
-            transition: opacity 0.15s;
+            margin-right: 4px;
+            transition: all 0.2s;
         }
 
-        .email-btn.approve { border-color: rgba(0,212,255,0.4); color: var(--accent); background: rgba(0,212,255,0.06); }
-        .email-btn.reject  { border-color: rgba(255,77,109,0.3); color: #ff4d6d;      background: rgba(255,77,109,0.04); }
-        .email-btn:hover   { opacity: 0.75; }
+        .email-btn.approve { border-color: rgba(39,174,96,0.38); color: #27ae60; }
+        .email-btn.approve:hover { background: rgba(39,174,96,0.12); }
+        .email-btn.reject  { border-color: rgba(255,77,109,0.38); color: var(--danger); }
+        .email-btn.reject:hover  { background: rgba(255,77,109,0.12); }
+        .email-btn.reply   { border-color: rgba(0,212,255,0.28); color: var(--primary); }
+        .email-btn.reply:hover   { background: var(--primary-dim); }
 
-        /* Finance items */
-        .finance-bar-row {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .finance-cat-row { display: flex; flex-direction: column; gap: 2px; }
+        /* ══ FINANCE ══════════════════════════════════════════════════ */
+        .finance-cat-row { margin-bottom: 8px; }
+        .finance-bar-row {}
 
         .finance-cat-label {
             display: flex;
             justify-content: space-between;
             font-size: 10px;
-            color: var(--muted);
+            color: rgba(232,244,255,0.7);
+            margin-bottom: 3px;
         }
 
-        .finance-cat-label span:last-child { color: var(--text); font-weight: 600; }
-
         .finance-bar-bg {
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
             height: 4px;
-            border-radius: 2px;
-            background: rgba(255,255,255,0.07);
             overflow: hidden;
         }
 
         .finance-bar-fill {
-            height: 100%;
-            border-radius: 2px;
-            background: var(--accent);
-            transition: width 0.4s ease;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            border-radius: 3px;
+            transition: width 0.45s;
         }
 
-        .finance-bar-fill.over { background: #ff4d6d; }
+        .finance-bar-fill.over { background: linear-gradient(90deg, #ff9f43, var(--danger)); }
 
-        /* Routine items */
+        /* ══ ROUTINES ═════════════════════════════════════════════════ */
         .routine-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 10px;
-            border-radius: 9px;
-            border: 1px solid rgba(255,255,255,0.05);
-            background: rgba(255,255,255,0.02);
-            font-size: 11px;
+            padding: 7px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
         }
 
-        .routine-name { font-size: 11px; font-weight: 600; color: var(--text); }
-        .routine-cron { font-size: 9px; color: var(--muted); margin-top: 2px; }
+        .routine-item:last-child { border-bottom: none; }
+        .routine-name { font-size: 11px; font-weight: 600; color: rgba(232,244,255,0.85); }
+
+        .routine-cron {
+            font-size: 9px;
+            color: var(--muted2);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            margin-top: 1px;
+        }
 
         .routine-toggle {
-            width: 32px;
-            height: 17px;
+            width: 32px; height: 18px;
             border-radius: 9px;
-            border: 1px solid rgba(0,212,255,0.3);
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
             cursor: pointer;
             position: relative;
+            transition: all 0.25s;
             flex-shrink: 0;
-            transition: background 0.2s;
         }
-
-        .routine-toggle.on { background: rgba(0,212,255,0.25); border-color: var(--accent); }
 
         .routine-toggle::after {
-            content: "";
+            content: '';
             position: absolute;
-            top: 2px; left: 2px;
-            width: 11px; height: 11px;
+            width: 12px; height: 12px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.35);
-            transition: left 0.2s, background 0.2s;
+            background: rgba(232,244,255,0.4);
+            top: 2px; left: 2px;
+            transition: all 0.25s;
         }
 
-        .routine-toggle.on::after { left: 17px; background: var(--accent); }
+        .routine-toggle.on { background: rgba(0,212,255,0.18); border-color: var(--primary); }
+        .routine-toggle.on::after { left: 16px; background: var(--primary); box-shadow: 0 0 5px var(--primary); }
 
-        /* ══ TASK QUEUE ═════════════════════════════════════════════════ */
-        .task-item {
-            display: flex; align-items: center; gap: 6px;
-            padding: 6px 8px; border-radius: 8px; margin-bottom: 3px;
-            border: 1px solid rgba(255,255,255,0.05);
-            background: rgba(255,255,255,0.02); font-size: 11px;
+        /* ══ TASKS ════════════════════════════════════════════════════ */
+        .task-add-row {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 8px;
         }
-        .task-item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .task-item-run   { flex-shrink: 0; }
-        .task-inprogress { border-color: rgba(0,212,255,0.25); color: rgba(0,212,255,0.85); }
-        .task-completed  { color: rgba(0,255,128,0.7); }
-        .task-failed     { color: rgba(255,90,90,0.8); }
-        .timeline-meta   { font-size: 10px; color: rgba(255,255,255,0.45); margin-top: 2px; }
-        .timeline-commit { color: rgba(0,212,255,0.8); text-decoration: none; }
-        .timeline-commit:hover { text-decoration: underline; }
-        .timeline-logs   { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.08); }
-        .agent-log-item  { padding: 1px 0; }
-        .task-add-row    { display: flex; gap: 4px; margin-bottom: 5px; }
-        .task-add-input  {
-            flex: 1; min-width: 0; font-size: 11px;
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(0,212,255,0.2);
-            border-radius: 6px; padding: 4px 8px; color: inherit; outline: none;
-        }
-        .task-toast {
-            position: fixed; bottom: 24px; right: 24px;
-            padding: 10px 18px; border-radius: 10px; font-size: 13px;
-            font-weight: 600; z-index: 9999; pointer-events: none;
-            animation: _taskToastIn 0.25s ease;
-        }
-        .task-toast.success { background: rgba(0,200,100,0.92); color:#fff; }
-        .task-toast.error   { background: rgba(220,50,50,0.92);  color:#fff; }
-        .task-toast.info    { background: rgba(0,140,210,0.92);  color:#fff; }
-        @keyframes _taskToastIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
 
-        /* ══ UTILITY ════════════════════════════════════════════════════ */
-        .empty-note {
+        .task-add-input {
+            flex: 1;
+            height: 28px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            padding: 0 10px;
             font-size: 11px;
+            color: var(--text);
+            outline: none;
+            font-family: inherit;
+        }
+
+        .task-add-input:focus { border-color: var(--border); }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            padding: 7px 8px;
+            border-radius: 7px;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.02);
+            margin-bottom: 4px;
+        }
+
+        .task-item-title {
+            font-size: 11px;
+            color: rgba(232,244,255,0.8);
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .task-item-run { flex-shrink: 0; }
+
+        .task-inprogress { border-left: 2px solid var(--secondary); background: rgba(0,102,255,0.04); }
+        .task-completed  { border-left: 2px solid var(--success);   background: rgba(39,174,96,0.03); }
+        .task-failed     { border-left: 2px solid var(--danger);     background: rgba(255,77,109,0.03); }
+
+        /* ══ TIMELINE ═════════════════════════════════════════════════ */
+        .timeline-meta { font-size: 9px; color: var(--muted2); margin-top: 2px; }
+
+        .timeline-commit {
+            color: var(--primary);
+            text-decoration: none;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 9px;
+        }
+
+        .timeline-commit:hover { text-decoration: underline; }
+
+        .timeline-logs {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .agent-log-item {
+            font-size: 10px;
             color: var(--muted);
-            text-align: center;
-            padding: 14px 0;
+            padding: 2px 0;
         }
 
-        /* ══ RESPONSIVE ════════════════════════════════════════════════ */
-        @media (max-width: 960px) {
-            :root { --panel-w: 220px; }
+        /* ══ TOAST ════════════════════════════════════════════════════ */
+        .task-toast {
+            position: fixed;
+            bottom: calc(var(--nav-h) + var(--input-h) + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(5,12,28,0.97);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 9px 16px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            color: var(--text);
+            z-index: 5000;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            white-space: nowrap;
+            max-width: 88vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
 
-        @media (max-width: 700px) {
-            :root {
-                --topbar-h: 52px;
-                --strip-h:  40px;
-                --input-h:  68px;
-            }
+        .task-toast.success { border-color: rgba(39,174,96,0.45); color: #4ade80; }
+        .task-toast.error   { border-color: rgba(255,77,109,0.45); color: var(--danger); }
+        .task-toast.info    { border-color: rgba(0,212,255,0.35);  color: var(--primary); }
 
-            html, body {
-                overflow: hidden;
-                overflow-x: hidden;
-                max-width: 100vw;
-                height: 100%;
-            }
-
-            .app {
-                width: 100vw;
-                max-width: 100vw;
-                overflow-x: hidden;
-                height: 100dvh; /* dynamic viewport height — accounts for iOS browser chrome */
-                grid-template-columns: 1fr;
-                grid-template-rows: var(--topbar-h) 1fr var(--strip-h) var(--input-h);
-                grid-template-areas:
-                    "topbar"
-                    "centre"
-                    "strip"
-                    "inputz";
-            }
-
-            .left-panel, .right-panel { display: none; }
-
-            /* Topbar — constrain to screen width */
-            .topbar { padding: 0 16px; overflow: hidden; max-width: 100vw; }
-            .clock-time { font-size: 17px; }
-            .clock-date { font-size: 9px; }
-            .brand-copy strong { font-size: 14px; }
-
-            /* Orb — shrink to fit narrower screen */
-            .orb { width: 148px; height: 148px; }
-            .orb-name { font-size: 17px; }
-            .pr1 { width: 190px; height: 190px; }
-            .pr2 { width: 238px; height: 238px; }
-            .pr3 { width: 284px; height: 284px; }
-            .centre-halo { width: 300px; height: 300px; }
-
-            /* Chat log */
-            .chat-log { max-height: 40vh; padding: 0 12px; max-width: 100%; }
-            .chat-status-bar { padding: 0 12px; font-size: 9px; }
-            .chat-bubble { font-size: 12px; max-width: 92%; }
-
-            /* Input bar — hide auxiliary buttons to prevent overflow */
-            .input-area { padding: 0 12px; gap: 8px; overflow: hidden; max-width: 100vw; }
-            .chat-input { font-size: 16px; min-width: 0; } /* 16px prevents iOS zoom; min-width:0 allows shrink */
-            .clear-chat-btn { display: none; }
-            .auto-listen-btn { display: none; }
-
-            /* Notification strip */
-            .notif-label { padding: 0 10px; font-size: 8px; }
-            .notif-strip { overflow: hidden; max-width: 100vw; }
-
-            /* Banner — prevent overflow on narrow screens */
-            .apex-banner { max-width: calc(100vw - 32px); left: 16px; right: 16px; transform: none; }
-
-            /* Modals full-width on mobile */
-            .email-draft-box { width: 96vw; max-width: 96vw; }
-            .cmd-box { width: 96vw; }
-        }
-
-        /* ══ COMMAND PALETTE ═══════════════════════════════════════════ */
+        /* ══ COMMAND PALETTE ══════════════════════════════════════════ */
         .cmd-palette {
-            display: none;
-            position: fixed; inset: 0; z-index: 9999;
-            background: rgba(0,0,0,0.6);
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
             backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 9000;
+            display: none;
             align-items: flex-start;
             justify-content: center;
-            padding-top: 120px;
+            padding-top: 14vh;
         }
+
         .cmd-palette.open { display: flex; }
+
         .cmd-box {
-            width: min(560px, 92vw);
-            background: rgba(10,10,16,0.96);
-            border: 1px solid rgba(0,212,255,0.25);
+            width: min(520px, 92vw);
+            background: rgba(5,10,26,0.97);
+            border: 1px solid var(--border);
             border-radius: 14px;
-            box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,212,255,0.08);
             overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.04);
         }
+
         .cmd-input {
             width: 100%;
+            height: 50px;
+            padding: 0 16px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text);
             background: transparent;
             border: none;
-            border-bottom: 1px solid rgba(0,212,255,0.12);
-            color: var(--text);
-            font-size: 16px;
-            font-family: inherit;
-            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
             outline: none;
         }
-        .cmd-input::placeholder { color: var(--muted); }
-        .cmd-list { max-height: 340px; overflow-y: auto; padding: 6px; }
+
+        .cmd-input::placeholder { color: var(--muted2); }
+
+        .cmd-list { max-height: 320px; overflow-y: auto; }
+
         .cmd-item {
-            display: flex; align-items: center; gap: 12px;
-            padding: 10px 14px;
-            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
             cursor: pointer;
-            font-size: 14px;
-            color: var(--text);
             transition: background 0.12s;
         }
-        .cmd-item:hover, .cmd-item.active { background: rgba(0,212,255,0.1); }
-        .cmd-item .cmd-icon { font-size: 18px; width: 24px; text-align: center; }
-        .cmd-item .cmd-label { flex: 1; }
-        .cmd-item .cmd-hint { font-size: 11px; color: var(--muted); }
 
-        /* ══ DROP OVERLAY ══════════════════════════════════════════════ */
+        .cmd-item:hover, .cmd-item.active { background: rgba(0,212,255,0.07); }
+
+        .cmd-icon  { font-size: 15px; flex-shrink: 0; }
+        .cmd-label { font-size: 13px; font-weight: 500; flex: 1; }
+        .cmd-hint  { font-size: 11px; color: var(--muted); }
+
+        /* ══ DROP OVERLAY ═════════════════════════════════════════════ */
         .drop-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,212,255,0.06);
+            border: 2px dashed var(--primary);
+            z-index: 8000;
             display: none;
-            position: fixed; inset: 0; z-index: 8888;
-            background: rgba(0,212,255,0.08);
-            border: 2px dashed rgba(0,212,255,0.5);
-            border-radius: 12px;
             align-items: center;
             justify-content: center;
-            pointer-events: none;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
         }
+
         .drop-overlay.active { display: flex; }
-        /* ── Email draft confirmation modal ── */
-        .email-draft-modal { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; }
-        .email-draft-modal.active { display:flex; }
-        .email-draft-box { background:#0f0f1a; border:1px solid rgba(0,212,255,0.35); border-radius:14px; padding:24px; width:min(540px,92vw); max-height:82vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
-        .email-draft-title { font-size:13px; font-weight:700; color:#ff9f43; letter-spacing:0.1em; text-transform:uppercase; }
-        .email-draft-not-sent { font-size:11px; color:#ff4d6d; font-weight:700; padding:5px 10px; background:rgba(255,77,109,0.12); border-radius:6px; border-left:3px solid #ff4d6d; }
-        .email-draft-label { font-size:10px; color:var(--muted,#888); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:3px; }
-        .email-draft-value { font-size:13px; color:#e0e0e0; padding:8px 10px; background:rgba(255,255,255,0.05); border-radius:7px; white-space:pre-wrap; word-break:break-word; line-height:1.5; }
-        .email-draft-actions { display:flex; gap:10px; margin-top:4px; }
-        .email-draft-btn { flex:1; padding:11px; border-radius:9px; border:none; cursor:pointer; font-size:13px; font-weight:700; transition:background 0.15s; }
-        .email-draft-btn.send { background:#c0392b; color:#fff; }
-        .email-draft-btn.send:hover { background:#e74c3c; }
-        .email-draft-btn.cancel { background:rgba(255,255,255,0.08); color:#ccc; }
-        .email-draft-btn.cancel:hover { background:rgba(255,255,255,0.15); }
-        .email-draft-prompt-row { display:flex; gap:8px; margin-top:8px; }
-        .email-draft-prompt-input { flex:1; padding:8px 10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:7px; color:#e0e0e0; font-size:12px; font-family:inherit; outline:none; }
-        .email-draft-prompt-input:focus { border-color:rgba(0,212,255,0.4); }
-        .email-draft-btn.regenerate { flex:0 0 auto; background:rgba(0,212,255,0.12); color:var(--accent); border:1px solid rgba(0,212,255,0.25); padding:8px 14px; font-size:12px; border-radius:9px; cursor:pointer; font-weight:600; transition:background 0.15s; }
-        .email-draft-btn.regenerate:hover { background:rgba(0,212,255,0.22); }
-        textarea.email-draft-value { resize:vertical; min-height:120px; font-family:inherit; font-size:13px; color:#e0e0e0; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:8px 10px; line-height:1.5; width:100%; box-sizing:border-box; outline:none; }
-        textarea.email-draft-value:focus { border-color:rgba(0,212,255,0.4); }
-        .email-reply-row { margin-top:6px; }
-        .email-btn.reply { background:rgba(0,212,255,0.12); color:var(--accent,#00d4ff); border:1px solid rgba(0,212,255,0.25); font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; }
-        .email-btn.reply:hover { background:rgba(0,212,255,0.22); }
+
         .drop-label {
-            font-size: 20px;
-            color: var(--accent);
-            font-weight: 600;
-            letter-spacing: 0.04em;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: var(--primary);
+            text-transform: uppercase;
         }
-        #httBtn { display: none !important; }
-        .orb-recording {
-            box-shadow: 0 0 0 6px rgba(255, 60, 60, 0.8), 0 0 40px rgba(255, 60, 60, 0.5) !important;
+
+        /* ══ EMAIL DRAFT MODAL ════════════════════════════════════════ */
+        .email-draft-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.76);
+            z-index: 7000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+
+        .email-draft-modal.active { display: flex; }
+
+        .email-draft-box {
+            width: min(520px, 94vw);
+            background: rgba(5,10,26,0.98);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .email-draft-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: 0.03em;
+        }
+
+        .email-draft-not-sent {
+            font-size: 11px;
+            color: #ff9f43;
+            background: rgba(255,159,67,0.09);
+            border: 1px solid rgba(255,159,67,0.22);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-weight: 600;
+        }
+
+        .email-draft-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--muted2);
+            margin-bottom: 3px;
+        }
+
+        .email-draft-value {
+            font-size: 12px;
+            color: var(--text);
+            padding: 6px 10px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 6px;
+            width: 100%;
+        }
+
+        textarea.email-draft-value {
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .email-draft-prompt-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .email-draft-prompt-input {
+            flex: 1;
+            height: 32px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            padding: 0 10px;
+            font-size: 11px;
+            color: var(--text);
+            outline: none;
+            font-family: inherit;
+        }
+
+        .email-draft-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .email-draft-btn {
+            font-size: 12px;
+            padding: 7px 16px;
+            border-radius: 7px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .email-draft-btn.send {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            color: #fff;
+            box-shadow: 0 0 12px var(--primary-dim);
+        }
+
+        .email-draft-btn.send:hover { box-shadow: 0 0 20px var(--primary-glow); }
+
+        .email-draft-btn.cancel {
+            background: transparent;
+            color: var(--muted);
+            border-color: rgba(255,255,255,0.1);
+        }
+
+        .email-draft-btn.cancel:hover { border-color: var(--danger); color: var(--danger); }
+
+        .email-draft-btn.regenerate {
+            background: transparent;
+            color: var(--primary);
+            border-color: var(--border);
+            font-size: 10px;
+            padding: 5px 10px;
+        }
+
+        /* ══ SCROLLBARS ═══════════════════════════════════════════════ */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.18); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.38); }
+
+        /* ══ ORB ERROR STATE ══════════════════════════════════════════ */
+        .orb.error {
             animation: orbPulseRed 0.8s ease-in-out infinite alternate !important;
         }
+
         @keyframes orbPulseRed {
             from { box-shadow: 0 0 0 4px rgba(255, 60, 60, 0.7), 0 0 30px rgba(255, 60, 60, 0.4); }
             to   { box-shadow: 0 0 0 10px rgba(255, 60, 60, 0.9), 0 0 60px rgba(255, 60, 60, 0.7); }
@@ -1230,19 +1293,19 @@
 <!-- ══ LOGIN OVERLAY ══ -->
 <div id="apexLoginOverlay" style="
   display:none;position:fixed;inset:0;z-index:999999;
-  background:#0a0a0a;align-items:center;justify-content:center;
+  background:#03060f;align-items:center;justify-content:center;
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 ">
-  <div style="background:#111;border:1px solid #222;border-radius:14px;padding:44px 40px;width:340px;max-width:90vw;">
-    <h1 style="color:#fff;font-size:22px;font-weight:600;margin:0 0 6px">Apex</h1>
-    <p style="color:#555;font-size:13px;margin:0 0 28px">Enter your password to continue.</p>
+  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,212,255,0.18);border-radius:14px;padding:44px 40px;width:340px;max-width:90vw;backdrop-filter:blur(20px);">
+    <h1 style="color:#e8f4ff;font-size:20px;font-weight:700;margin:0 0 4px;letter-spacing:0.2em;">APEX</h1>
+    <p style="color:rgba(232,244,255,0.4);font-size:12px;margin:0 0 26px;letter-spacing:0.06em;">Enter your password to continue.</p>
     <input type="password" id="apexLoginPw" placeholder="Password" autofocus
-      style="width:100%;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:12px 14px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;" />
+      style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:12px 14px;color:#e8f4ff;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;" />
     <button id="apexLoginBtn" onclick="apexDoLogin()"
-      style="margin-top:14px;width:100%;background:#fff;color:#000;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;">
-      Sign in
+      style="margin-top:12px;width:100%;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.1em;">
+      SIGN IN
     </button>
-    <div id="apexLoginErr" style="margin-top:12px;color:#f55;font-size:13px;display:none;text-align:center;">
+    <div id="apexLoginErr" style="margin-top:10px;color:#ff4d6d;font-size:12px;display:none;text-align:center;">
       Incorrect password.
     </div>
   </div>
@@ -1270,162 +1333,227 @@
                 <span>Autonomous AI</span>
             </div>
         </div>
-
-        <div class="topbar-clock">
+        <div class="topbar-center">
             <div class="clock-time" id="clockTime">--:--:--</div>
             <div class="clock-date" id="clockDate">--</div>
         </div>
-
-        <div class="topbar-status">
-            <div class="status-dot" id="connDot"></div>
-            <span id="connLabel">Online</span>
+        <div class="topbar-right">
+            <div class="chat-status-bar" id="chatStatusBar">Apex</div>
+            <div class="topbar-status">
+                <div class="status-dot" id="connDot"></div>
+                <span id="connLabel" style="font-size:10px;color:var(--muted);">Online</span>
+            </div>
         </div>
     </header>
 
-    <!-- ══ LEFT: Memory ══ -->
-    <aside class="side-panel left-panel">
-        <div class="panel-label">Memory</div>
-        <div class="memory-scroll" id="memoryList">
-            <div class="empty-note">Loading…</div>
-        </div>
-    </aside>
+    <!-- ══ PAGE + INPUT WRAPPER ══ -->
+    <div class="page-and-input">
 
-    <!-- ══ CENTRE: Orb + Chat ══ -->
-    <main class="centre">
-        <div class="centre-halo"></div>
+        <div class="page-wrap" id="pageWrap">
 
-        <div class="orb-shell" id="orbShell">
-            <div class="pulse-ring pr1"></div>
-            <div class="pulse-ring pr2"></div>
-            <div class="pulse-ring pr3"></div>
-            <div class="orb" id="orb" onclick="toggleListening()" title="Click to speak">
-                <div class="orb-name">APEX</div>
-                <div class="orb-sub">AI System</div>
+            <!-- ══ PAGE: COMMAND ══ -->
+            <div class="page active" id="page-command">
+                <div class="orb-area">
+                    <div class="orb-shell" id="orbShell">
+                        <div class="pulse-ring pr1"></div>
+                        <div class="pulse-ring pr2"></div>
+                        <div class="pulse-ring pr3"></div>
+                        <div class="orb" id="orb" onclick="toggleListening()" title="Click to speak">
+                            <div class="orb-name">APEX</div>
+                            <div class="orb-sub">AI System</div>
+                        </div>
+                    </div>
+                    <div class="waveform" id="waveform">
+                        <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+                        <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+                        <div class="wb"></div>
+                    </div>
+                    <div class="orb-status" id="orbStatus">Ready</div>
+                    <div id="orbHint" style="display:none;color:rgba(0,212,255,0.5);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-top:6px;text-align:center;">HOLD ORB TO SPEAK</div>
+                </div>
+                <div class="chat-log" id="chatLog">
+                    <div class="typing-indicator" id="typingIndicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="waveform" id="waveform">
-            <div class="wb"></div><div class="wb"></div><div class="wb"></div>
-            <div class="wb"></div><div class="wb"></div><div class="wb"></div>
-            <div class="wb"></div>
-        </div>
-
-        <div class="orb-status" id="orbStatus">Ready</div>
-        <div id="orbHint" style="display:none; color:rgba(0,212,255,0.5); font-size:12px; letter-spacing:2px; text-transform:uppercase; margin-top:8px; text-align:center;">HOLD ORB TO SPEAK</div>
-
-        <div class="chat-status-bar" id="chatStatusBar">Apex · Connecting…</div>
-
-        <div class="chat-log" id="chatLog">
-            <div class="typing-indicator" id="typingIndicator">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
+            <!-- ══ PAGE: INTELLIGENCE ══ -->
+            <div class="page" id="page-intelligence">
+                <div class="glass-panel">
+                    <div class="panel-title">
+                        Memory
+                        <button class="panel-title-btn" onclick="refreshMemory()">↻ Refresh</button>
+                    </div>
+                    <div class="memory-scroll" id="memoryList">
+                        <div class="empty-note">Loading…</div>
+                    </div>
+                </div>
+                <div class="glass-panel">
+                    <div class="panel-title">Notifications</div>
+                    <div class="notif-scroll" id="notifScroll">
+                        <span class="notif-none">Loading…</span>
+                    </div>
+                </div>
+                <div class="glass-panel">
+                    <div class="panel-title">Approval Queue</div>
+                    <div class="queue-scroll" id="approvalQueue">
+                        <div class="queue-empty">
+                            <div class="queue-empty-icon">✓</div>
+                            <div class="queue-empty-text">No pending</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </main>
 
-    <!-- ══ RIGHT: Approval Queue + Phase 2 Panels ══ -->
-    <aside class="side-panel right-panel">
-
-        <!-- Approval Queue -->
-        <div class="panel-label">Approval Queue</div>
-        <div class="queue-scroll" id="approvalQueue" style="max-height:200px">
-            <div class="queue-empty">
-                <div class="queue-empty-icon">✓</div>
-                <div class="queue-empty-text">No pending</div>
+            <!-- ══ PAGE: FINANCE ══ -->
+            <div class="page" id="page-finance">
+                <div class="subpanel">
+                    <div class="subpanel-header">
+                        <span class="subpanel-label">Email</span>
+                        <button class="subpanel-btn" onclick="checkEmailNow()">Check</button>
+                    </div>
+                    <div id="emailList"><div class="empty-note">Loading…</div></div>
+                </div>
+                <div class="subpanel">
+                    <div class="subpanel-header">
+                        <span class="subpanel-label">Finance</span>
+                        <button class="subpanel-btn" onclick="logExpenseQuick()">+ Expense</button>
+                    </div>
+                    <div id="financePanel"><div class="empty-note">Loading…</div></div>
+                </div>
             </div>
+
+            <!-- ══ PAGE: OPERATIONS ══ -->
+            <div class="page" id="page-operations">
+                <div id="permissionCards"></div>
+                <div class="subpanel">
+                    <div class="subpanel-header">
+                        <span class="subpanel-label">Task Queue</span>
+                        <button class="subpanel-btn" onclick="toggleTaskAddRow()">+ Add</button>
+                    </div>
+                    <div id="taskAddRow" class="task-add-row" style="display:none;">
+                        <input id="taskAddInput" class="task-add-input" placeholder="Task description…">
+                        <button class="subpanel-btn" onclick="addTaskFromInput()">Save</button>
+                    </div>
+                    <div id="taskQueuePanel"><div class="empty-note">Loading…</div></div>
+                </div>
+                <div class="subpanel">
+                    <div class="subpanel-header">
+                        <span class="subpanel-label">Routines</span>
+                        <button class="subpanel-btn" onclick="addRoutineQuick()">+ Add</button>
+                    </div>
+                    <div id="routinesPanel"><div class="empty-note">Loading…</div></div>
+                </div>
+                <div class="subpanel">
+                    <div class="subpanel-header">
+                        <span class="subpanel-label">Timeline</span>
+                        <button class="subpanel-btn" onclick="refreshTimelinePanel()">↻</button>
+                    </div>
+                    <div id="timelinePanel"><div class="empty-note">Loading…</div></div>
+                </div>
+                <div class="subpanel">
+                    <div class="subpanel-header">
+                        <span class="subpanel-label">Roadmap</span>
+                        <button class="subpanel-btn" onclick="refreshRoadmapPanel()">↻</button>
+                    </div>
+                    <div id="roadmapProgress" style="margin-bottom:8px"></div>
+                    <div id="roadmapPanel"><div class="empty-note">Loading…</div></div>
+                    <div style="display:flex;gap:6px;margin-top:8px">
+                        <button class="subpanel-btn" style="flex:1" onclick="masterRunAll()">Run All</button>
+                        <input id="roadmapFeatureInput" type="text" placeholder="FEAT-C001"
+                            style="flex:2;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);
+                            color:#fff;padding:3px 6px;border-radius:4px;font-size:11px;outline:none;"/>
+                        <button class="subpanel-btn" onclick="masterRunFeature()">Run</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ PAGE: LIFE ══ -->
+            <div class="page" id="page-life">
+                <div class="glass-panel">
+                    <div class="panel-title">Life</div>
+                    <div class="empty-note" style="padding:24px 0;text-align:center;color:var(--muted2);">
+                        Coming soon — Health, Fitness &amp; Wellbeing
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- .page-wrap -->
+
+        <!-- ══ INPUT ZONE ══ -->
+        <div class="input-zone">
+            <button class="mic-btn" id="micBtn" onclick="toggleListening()" title="Voice input">🎤</button>
+            <input class="chat-input" id="chatInput" type="text" placeholder="Ask APEX anything…" autocomplete="off" />
+            <button class="clear-chat-btn" onclick="clearChat()" title="Clear chat">Clear</button>
+            <button class="auto-listen-btn on" id="autoListenBtn" onclick="toggleAutoListen()" title="Toggle auto-listen">Auto</button>
+            <button class="send-btn" onclick="sendChatCommand()" title="Send">&#10148;</button>
         </div>
 
-        <!-- Email Panel -->
-        <div class="subpanel">
-            <div class="subpanel-header">
-                <span class="subpanel-label">Email</span>
-                <button class="subpanel-btn" onclick="checkEmailNow()">Check</button>
-            </div>
-            <div id="emailList"><div class="empty-note">Loading…</div></div>
-        </div>
+    </div><!-- .page-and-input -->
 
-        <!-- Finance Panel -->
-        <div class="subpanel">
-            <div class="subpanel-header">
-                <span class="subpanel-label">Finance</span>
-                <button class="subpanel-btn" onclick="logExpenseQuick()">+ Expense</button>
-            </div>
-            <div id="financePanel"><div class="empty-note">Loading…</div></div>
-        </div>
-
-        <!-- Routines Panel -->
-        <div class="subpanel">
-            <div class="subpanel-header">
-                <span class="subpanel-label">Routines</span>
-                <button class="subpanel-btn" onclick="addRoutineQuick()">+ Add</button>
-            </div>
-            <div id="routinesPanel"><div class="empty-note">Loading…</div></div>
-        </div>
-
-        <!-- Permission Gate Cards -->
-        <div id="permissionCards"></div>
-
-        <!-- Task Queue Panel -->
-        <div class="subpanel">
-            <div class="subpanel-header">
-                <span class="subpanel-label">Task Queue</span>
-                <button class="subpanel-btn" onclick="toggleTaskAddRow()">+ Add</button>
-            </div>
-            <div id="taskAddRow" class="task-add-row" style="display:none;">
-                <input id="taskAddInput" class="task-add-input" placeholder="Task description…">
-                <button class="subpanel-btn" onclick="addTaskFromInput()">Save</button>
-            </div>
-            <div id="taskQueuePanel"><div class="empty-note">Loading…</div></div>
-        </div>
-
-        <!-- Timeline Panel -->
-        <div class="subpanel">
-            <div class="subpanel-header">
-                <span class="subpanel-label">Timeline</span>
-                <button class="subpanel-btn" onclick="refreshTimelinePanel()">↻</button>
-            </div>
-            <div id="timelinePanel"><div class="empty-note">Loading…</div></div>
-        </div>
-
-        <!-- Roadmap Panel -->
-        <div class="subpanel">
-            <div class="subpanel-header">
-                <span class="subpanel-label">Roadmap</span>
-                <button class="subpanel-btn" onclick="refreshRoadmapPanel()">↻</button>
-            </div>
-            <div id="roadmapProgress" style="margin-bottom:8px"></div>
-            <div id="roadmapPanel"><div class="empty-note">Loading…</div></div>
-            <div style="display:flex;gap:6px;margin-top:8px">
-                <button class="subpanel-btn" style="flex:1" onclick="masterRunAll()">Run All</button>
-                <input id="roadmapFeatureInput" type="text" placeholder="FEAT-C001"
-                    style="flex:2;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);
-                    color:#fff;padding:3px 6px;border-radius:4px;font-size:11px"/>
-                <button class="subpanel-btn" onclick="masterRunFeature()">Run</button>
-            </div>
-        </div>
-
-    </aside>
-
-    <!-- ══ NOTIFICATION STRIP ══ -->
-    <div class="notif-strip">
-        <div class="notif-label">Alerts</div>
-        <div class="notif-scroll" id="notifScroll">
-            <span class="notif-none">Loading…</span>
-        </div>
-    </div>
-
-    <!-- ══ INPUT ══ -->
-    <div class="input-area">
-        <button class="mic-btn" id="micBtn" onclick="toggleListening()" title="Voice input">🎤</button>
-        <input class="chat-input" id="chatInput" type="text" placeholder="Ask APEX anything…" autocomplete="off" />
-        <button class="clear-chat-btn" onclick="clearChat()" title="Clear chat">Clear</button>
-        <button class="auto-listen-btn on" id="autoListenBtn" onclick="toggleAutoListen()" title="Toggle auto-listen">Auto-listen: ON</button>
-        <button class="send-btn" onclick="sendChatCommand()" title="Send">&#10148;</button>
-    </div>
+    <!-- ══ BOTTOM NAV ══ -->
+    <nav class="bottom-nav">
+        <button class="nav-btn active" id="nav-command" onclick="switchPage('command')">
+            <span class="nav-icon">⬡</span>
+            <span class="nav-label">Command</span>
+        </button>
+        <button class="nav-btn" id="nav-intelligence" onclick="switchPage('intelligence')">
+            <span class="nav-icon">◈</span>
+            <span class="nav-label">Intel</span>
+        </button>
+        <button class="nav-btn" id="nav-finance" onclick="switchPage('finance')">
+            <span class="nav-icon">◎</span>
+            <span class="nav-label">Finance</span>
+        </button>
+        <button class="nav-btn" id="nav-operations" onclick="switchPage('operations')">
+            <span class="nav-icon">⊞</span>
+            <span class="nav-label">Ops</span>
+        </button>
+        <button class="nav-btn" id="nav-life" onclick="switchPage('life')">
+            <span class="nav-icon">◑</span>
+            <span class="nav-label">Life</span>
+        </button>
+    </nav>
 
 </div><!-- .app -->
 
+<script>
+(function() {
+    var pages = ['command', 'intelligence', 'finance', 'operations', 'life'];
+    var activePage = 'command';
+
+    window.switchPage = function(name) {
+        document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+        document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+        var page = document.getElementById('page-' + name);
+        var btn  = document.getElementById('nav-' + name);
+        if (page) page.classList.add('active');
+        if (btn)  btn.classList.add('active');
+        activePage = name;
+    };
+
+    var startX = 0, startY = 0;
+    var pw = document.getElementById('pageWrap');
+    if (pw) {
+        pw.addEventListener('touchstart', function(e) {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+        pw.addEventListener('touchend', function(e) {
+            var dx = e.changedTouches[0].clientX - startX;
+            var dy = e.changedTouches[0].clientY - startY;
+            if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                var idx = pages.indexOf(activePage);
+                if (dx < 0 && idx < pages.length - 1) window.switchPage(pages[idx + 1]);
+                else if (dx > 0 && idx > 0) window.switchPage(pages[idx - 1]);
+            }
+        }, { passive: true });
+    }
+})();
+</script>
 <script>
 // ══ CONFIG ════════════════════════════════════════════════════════════
 const API_BASE = "https://ai-os-server-jx20.onrender.com";
