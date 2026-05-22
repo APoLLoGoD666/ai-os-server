@@ -156,19 +156,74 @@ async function _tester(spec) {
 // ── Agent: COMMITTER ──────────────────────────────────────────────────────────
 async function _committer(spec) {
     const t0 = Date.now();
+
     spawnSync('git', ['add', '-A'], { cwd: ROOT, encoding: 'utf8' });
 
+    const beforeHash = spawnSync('git', ['rev-parse', '--short', 'HEAD'],
+        { cwd: ROOT, encoding: 'utf8' }).stdout?.trim();
+
     const msg = `[Apex Auto] ${spec.objective.slice(0, 72)}`;
-    const commit = spawnSync('git', ['commit', '-m', msg], { cwd: ROOT, encoding: 'utf8' });
-    const push   = spawnSync('git', ['push', 'origin', 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+    const commit = spawnSync('git', ['commit', '-m', msg],
+        { cwd: ROOT, encoding: 'utf8' });
 
-    const hashRes = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
-    const commitHash = hashRes.stdout?.trim() || null;
+    const afterHash = spawnSync('git', ['rev-parse', '--short', 'HEAD'],
+        { cwd: ROOT, encoding: 'utf8' }).stdout?.trim();
 
+    if (afterHash === beforeHash) {
+        console.warn('[COMMITTER] no new commit — nothing changed or commit failed');
+        console.warn('[COMMITTER] commit stdout:', commit.stdout);
+        console.warn('[COMMITTER] commit stderr:', commit.stderr);
+        return {
+            role: 'COMMITTER',
+            result: { commitHash: null, error: 'nothing to commit — DEVELOPER made no file changes' },
+            duration: Date.now() - t0
+        };
+    }
+
+    const push = spawnSync('git', ['push', 'origin', 'main'],
+        { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+
+    if (push.status !== 0) {
+        console.error('[COMMITTER] push failed:', push.stderr);
+        return {
+            role: 'COMMITTER',
+            result: { commitHash: afterHash, error: `push failed: ${push.stderr}` },
+            duration: Date.now() - t0
+        };
+    }
+
+    // Trigger Render deploy via API after successful push
+    if (process.env.RENDER_API_KEY && process.env.RENDER_SERVICE_ID) {
+        try {
+            const https = require('https');
+            const body = JSON.stringify({ clearCache: 'do_not_clear' });
+            const options = {
+                hostname: 'api.render.com',
+                path: `/v1/services/${process.env.RENDER_SERVICE_ID}/deploys`,
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${process.env.RENDER_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(body)
+                }
+            };
+            await new Promise((resolve) => {
+                const req = https.request(options, resolve);
+                req.on('error', () => resolve());
+                req.write(body);
+                req.end();
+            });
+            console.log('[COMMITTER] Render deploy triggered');
+        } catch (e) {
+            console.warn('[COMMITTER] Render deploy trigger failed:', e.message);
+        }
+    }
+
+    console.log(`[COMMITTER] pushed commit ${afterHash}`);
     return {
         role: 'COMMITTER',
         result: {
-            commitHash,
+            commitHash: afterHash,
             commitOutput: (commit.stdout || '').trim(),
             pushOutput:   (push.stdout   || '').trim()
         },
@@ -223,6 +278,10 @@ async function runAgentTeam(spec, taskId) {
         const committerLog = await _committer(spec);
         agentLogs.push(committerLog);
         console.log(`[Orchestrator] COMMITTER done (${committerLog.duration}ms) — ${committerLog.result.commitHash}`);
+
+        if (!committerLog.result.commitHash) {
+            throw new Error(committerLog.result.error || 'COMMITTER produced no commit');
+        }
 
         return {
             success:    true,
