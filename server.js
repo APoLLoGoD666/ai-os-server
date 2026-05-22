@@ -8293,76 +8293,64 @@ app.get('/api/ruflo/memory/search', requireAppAccess, async (req, res) => {
 
 // ── TASK MANAGEMENT ─────────────────────────────────────────────────────────
 
-const TASKS_FILE    = path.join(__dirname, 'TASKS.md');
-const NOTIF_FILE    = path.join(__dirname, 'notifications.json');
-const TIMELINE_FILE = path.join(__dirname, 'timeline.json');
-
-function _parseTasks() {
-    if (!fs.existsSync(TASKS_FILE)) return { pending: [], inProgress: [], completed: [], failed: [] };
-    const raw = fs.readFileSync(TASKS_FILE, 'utf8');
-    const sections = { pending: [], inProgress: [], completed: [], failed: [] };
-    let cur = null;
-    for (const line of raw.split('\n')) {
-        if (/^## Pending/i.test(line))     { cur = 'pending';    continue; }
-        if (/^## In Progress/i.test(line)) { cur = 'inProgress'; continue; }
-        if (/^## Completed/i.test(line))   { cur = 'completed';  continue; }
-        if (/^## Failed/i.test(line))      { cur = 'failed';     continue; }
-        if (/^#/.test(line)) { cur = null; continue; }
-        if (!cur) continue;
-        const m = line.match(/^- \[([ x])\] (TASK-\d+): (.+)/);
-        if (m) sections[cur].push({ id: m[2], title: m[3].trim(), status: m[1] === 'x' ? 'done' : cur });
+async function _parseTasks() {
+    try {
+        const { data } = await sbAdmin.from('apex_tasks').select('*').order('created_at');
+        const tasks = data || [];
+        return {
+            pending:    tasks.filter(t => t.status === 'pending'),
+            inProgress: tasks.filter(t => t.status === 'in_progress'),
+            completed:  tasks.filter(t => t.status === 'completed'),
+            failed:     tasks.filter(t => t.status === 'failed')
+        };
+    } catch (err) {
+        console.error('[Tasks] _parseTasks error:', err.message);
+        return { pending: [], inProgress: [], completed: [], failed: [] };
     }
-    return sections;
 }
 
-function _writeTasks(sections) {
-    const L = ['# Apex Task Queue', ''];
-    const _block = (header, items, check) => {
-        L.push(header);
-        if (items.length) items.forEach(t => L.push(`- [${check ? 'x' : ' '}] ${t.id}: ${t.title}`));
-        else L.push('(none)');
-        L.push('');
-    };
-    _block('## Pending',     sections.pending,    false);
-    _block('## In Progress', sections.inProgress, false);
-    _block('## Completed',   sections.completed,  true);
-    _block('## Failed',      sections.failed,     true);
-    fs.writeFileSync(TASKS_FILE, L.join('\n'), 'utf8');
+async function _appendNotif(message, type = 'info') {
+    try {
+        const id = `notif-${Date.now()}`;
+        await sbAdmin.from('apex_notifications').insert({ id, message, type });
+    } catch (err) {
+        console.error('[Tasks] _appendNotif error:', err.message);
+    }
 }
 
-function _nextTaskId(sections) {
-    const all = [...sections.pending, ...sections.inProgress, ...sections.completed, ...sections.failed];
-    const max = all.reduce((m, t) => { const n = parseInt((t.id || '').replace('TASK-', ''), 10); return isNaN(n) ? m : Math.max(m, n); }, 0);
-    return `TASK-${String(max + 1).padStart(3, '0')}`;
-}
-
-function _appendNotif(message, type) {
-    let notifs = [];
-    try { notifs = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); } catch {}
-    notifs.push({ id: `notif-${Date.now()}`, message, type: type || 'info', timestamp: new Date().toISOString(), read: false });
-    fs.writeFileSync(NOTIF_FILE, JSON.stringify(notifs, null, 2), 'utf8');
-}
-
-function _appendTimeline(entry) {
-    let tl = [];
-    try { tl = JSON.parse(fs.readFileSync(TIMELINE_FILE, 'utf8')); } catch {}
-    tl.unshift(entry);
-    if (tl.length > 100) tl = tl.slice(0, 100);
-    fs.writeFileSync(TIMELINE_FILE, JSON.stringify(tl, null, 2), 'utf8');
+async function _appendTimeline(entry) {
+    try {
+        const id = `tl-${Date.now()}`;
+        await sbAdmin.from('apex_timeline').insert({
+            id,
+            task_id:       entry.taskId,
+            objective:     entry.objective,
+            commit_hash:   entry.commitHash,
+            files_changed: JSON.stringify(entry.filesChanged || []),
+            duration:      entry.duration,
+            completed_at:  entry.completedAt,
+            agent_logs:    JSON.stringify(entry.agentLogs || []),
+            success:       entry.success,
+            error:         entry.error || null
+        });
+    } catch (err) {
+        console.error('[Tasks] _appendTimeline error:', err.message);
+    }
 }
 
 // ── Autonomous pipeline — runs in background after /api/tasks/run responds ────
 async function _startAutoPipeline(taskId) {
-    const sections = _parseTasks();
-    const task = sections.inProgress.find(t => t.id === taskId);
-    if (!task) { console.warn(`[AutoPipeline] ${taskId} not found in inProgress`); return; }
+    const { data: taskRow } = await sbAdmin.from('apex_tasks')
+        .select('*').eq('id', taskId).eq('status', 'in_progress').single();
+    if (!taskRow) { console.warn(`[AutoPipeline] ${taskId} not found in in_progress`); return; }
+    const task = taskRow;
 
-    const _markFailed = (reason) => {
+    const _markFailed = async (reason) => {
         try {
-            const s = _parseTasks();
-            const i = s.inProgress.findIndex(t => t.id === taskId);
-            if (i !== -1) { s.inProgress.splice(i, 1); s.failed.push(task); _writeTasks(s); }
-            _appendNotif(`❌ ${taskId} failed: ${reason}`, 'error');
+            await sbAdmin.from('apex_tasks')
+                .update({ status: 'failed', updated_at: new Date().toISOString() })
+                .eq('id', taskId);
+            await _appendNotif(`❌ ${taskId} failed: ${reason}`, 'error');
         } catch {}
     };
 
@@ -8375,11 +8363,11 @@ async function _startAutoPipeline(taskId) {
         const duration = Date.now() - t0;
 
         if (result.success) {
-            const s = _parseTasks();
-            const i = s.inProgress.findIndex(t => t.id === taskId);
-            if (i !== -1) { s.inProgress.splice(i, 1); s.completed.push(task); _writeTasks(s); }
-            _appendNotif(`✅ ${taskId} completed — ${spec.objective}. Commit: ${result.commitHash}`, 'success');
-            _appendTimeline({
+            await sbAdmin.from('apex_tasks')
+                .update({ status: 'completed', updated_at: new Date().toISOString() })
+                .eq('id', taskId);
+            await _appendNotif(`✅ ${taskId} completed — ${spec.objective}. Commit: ${result.commitHash}`, 'success');
+            await _appendTimeline({
                 taskId,
                 objective:    spec.objective,
                 commitHash:   result.commitHash,
@@ -8391,8 +8379,8 @@ async function _startAutoPipeline(taskId) {
             });
             console.log(`[AutoPipeline] ${taskId} done — commit ${result.commitHash}`);
         } else {
-            _markFailed(result.error || 'pipeline failed');
-            _appendTimeline({
+            await _markFailed(result.error || 'pipeline failed');
+            await _appendTimeline({
                 taskId,
                 objective:    spec.objective || task.title,
                 commitHash:   null,
@@ -8407,19 +8395,19 @@ async function _startAutoPipeline(taskId) {
     } catch (err) {
         console.error(`[AutoPipeline] ${taskId} fatal:`, err.message);
         try { restoreBackup(taskId); } catch {}
-        _markFailed(err.message);
+        await _markFailed(err.message);
     }
 }
 
 async function _runTask(taskId, res) {
-    const sections = _parseTasks();
-    const idx = sections.pending.findIndex(t => t.id === taskId);
-    if (idx === -1) return res.status(404).json({ ok: false, error: `${taskId} not found in pending` });
+    const { data: taskRow } = await sbAdmin.from('apex_tasks')
+        .select('*').eq('id', taskId).eq('status', 'pending').single();
+    if (!taskRow) return res.status(404).json({ ok: false, error: `${taskId} not found in pending` });
 
-    const task = sections.pending[idx];
-    sections.pending.splice(idx, 1);
-    sections.inProgress.push(task);
-    _writeTasks(sections);
+    const task = taskRow;
+    await sbAdmin.from('apex_tasks')
+        .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+        .eq('id', taskId);
 
     // Backup before any changes
     const _bkSrv = fs.existsSync(path.join(__dirname, 'server.js'))
@@ -8431,11 +8419,11 @@ async function _runTask(taskId, res) {
         if (_bkSrv)  fs.writeFileSync(path.join(__dirname, 'server.js'),      _bkSrv,  'utf8');
         if (_bkDash) fs.writeFileSync(path.join(__dirname, 'dashboard.html'), _bkDash, 'utf8');
     };
-    const _markFailed = (reason) => {
-        const s = _parseTasks();
-        const i = s.inProgress.findIndex(t => t.id === taskId);
-        if (i !== -1) { s.inProgress.splice(i, 1); s.failed.push(task); _writeTasks(s); }
-        _appendNotif(`❌ ${taskId} failed: ${reason}`, 'error');
+    const _markFailed = async (reason) => {
+        await sbAdmin.from('apex_tasks')
+            .update({ status: 'failed', updated_at: new Date().toISOString() })
+            .eq('id', taskId);
+        await _appendNotif(`❌ ${taskId} failed: ${reason}`, 'error');
     };
 
     try {
@@ -8447,7 +8435,7 @@ async function _runTask(taskId, res) {
         const chk = _spSync(process.execPath, ['--check', 'server.js'], { cwd: __dirname, encoding: 'utf8' });
         if (chk.status !== 0) {
             _restore();
-            _markFailed('syntax check failed');
+            await _markFailed('syntax check failed');
             return res.status(500).json({ ok: false, error: 'syntax check failed — restored backup' });
         }
 
@@ -8456,76 +8444,84 @@ async function _runTask(taskId, res) {
         _spSync('git', ['commit', '-m', `fix(task): ${task.title} (${taskId})`], { cwd: __dirname, encoding: 'utf8' });
         _spSync('git', ['push', 'origin', 'main'], { cwd: __dirname, encoding: 'utf8', timeout: 30000 });
 
-        const s = _parseTasks();
-        const i = s.inProgress.findIndex(t => t.id === taskId);
-        if (i !== -1) { s.inProgress.splice(i, 1); s.completed.push(task); _writeTasks(s); }
-        _appendNotif(`✅ ${taskId} completed: ${task.title}`, 'success');
+        await sbAdmin.from('apex_tasks')
+            .update({ status: 'completed', updated_at: new Date().toISOString() })
+            .eq('id', taskId);
+        await _appendNotif(`✅ ${taskId} completed: ${task.title}`, 'success');
         return res.json({ ok: true, taskId, message: `${taskId} completed` });
 
     } catch (err) {
         _restore();
-        _markFailed(err.message);
+        await _markFailed(err.message);
         return res.status(500).json({ ok: false, error: err.message });
     }
 }
 
-app.get('/api/tasks', requireAppAccess, (req, res) => {
-    try { res.json({ ok: true, ..._parseTasks() }); }
+app.get('/api/tasks', requireAppAccess, async (req, res) => {
+    try { res.json({ ok: true, ...(await _parseTasks()) }); }
     catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
-app.post('/api/tasks/add', requireAppAccess, (req, res) => {
+app.post('/api/tasks/add', requireAppAccess, async (req, res) => {
     try {
         const { title } = req.body || {};
         if (!title || !title.trim()) return res.status(400).json({ ok: false, error: 'title required' });
-        const sections = _parseTasks();
-        const id = _nextTaskId(sections);
-        sections.pending.push({ id, title: title.trim() });
-        _writeTasks(sections);
-        res.json({ ok: true, task: { id, title: title.trim() } });
+        const newId = `TASK-${String(Date.now()).slice(-6)}`;
+        await sbAdmin.from('apex_tasks').insert({ id: newId, title: title.trim(), status: 'pending' });
+        res.json({ ok: true, task: { id: newId, title: title.trim() } });
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
-app.post('/api/tasks/run', requireAppAccess, (req, res) => {
+app.post('/api/tasks/run', requireAppAccess, async (req, res) => {
     const { taskId } = req.body || {};
     if (!taskId) return res.status(400).json({ ok: false, error: 'taskId required' });
-    const sections = _parseTasks();
-    const idx = sections.pending.findIndex(t => t.id === taskId);
-    if (idx === -1) return res.status(404).json({ ok: false, error: `${taskId} not found in pending` });
-    const task = sections.pending[idx];
-    sections.pending.splice(idx, 1);
-    sections.inProgress.push(task);
-    _writeTasks(sections);
+    const { data: tasks } = await sbAdmin.from('apex_tasks').select('*').eq('id', taskId).single();
+    if (!tasks) return res.status(404).json({ ok: false, error: `${taskId} not found` });
+    await sbAdmin.from('apex_tasks')
+        .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+        .eq('id', taskId);
     res.json({ ok: true, status: 'running', taskId });
     setImmediate(() => _startAutoPipeline(taskId).catch(e => console.error('[AutoPipeline] unhandled:', e.message)));
 });
 
-app.post('/api/tasks/notify', requireAppAccess, (req, res) => {
+app.post('/api/tasks/notify', requireAppAccess, async (req, res) => {
     try {
         const { message, type } = req.body || {};
         if (!message) return res.status(400).json({ ok: false, error: 'message required' });
-        _appendNotif(message, type || 'info');
+        await sbAdmin.from('apex_notifications').insert({
+            id: `notif-${Date.now()}`,
+            message,
+            type: type || 'info'
+        });
         res.json({ ok: true });
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
-app.get('/api/notifications', requireAppAccess, (req, res) => {
+app.get('/api/notifications', requireAppAccess, async (req, res) => {
     try {
-        let notifs = [];
-        try { notifs = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); } catch {}
-        const unread = notifs.filter(n => !n.read);
-        notifs.forEach(n => { n.read = true; });
-        fs.writeFileSync(NOTIF_FILE, JSON.stringify(notifs, null, 2), 'utf8');
-        res.json({ ok: true, notifications: unread });
+        const { data } = await sbAdmin.from('apex_notifications')
+            .select('*').eq('read', false).order('created_at', { ascending: false });
+        const notifs = data || [];
+        await sbAdmin.from('apex_notifications').update({ read: true }).eq('read', false);
+        res.json({ ok: true, notifications: notifs });
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
-app.get('/api/timeline', requireAppAccess, (req, res) => {
+app.get('/api/timeline', requireAppAccess, async (req, res) => {
     try {
-        let tl = [];
-        try { tl = JSON.parse(fs.readFileSync(TIMELINE_FILE, 'utf8')); } catch {}
-        tl.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
-        res.json({ ok: true, timeline: tl.slice(0, 20) });
+        const { data } = await sbAdmin.from('apex_timeline')
+            .select('*').order('completed_at', { ascending: false }).limit(20);
+        res.json({ ok: true, timeline: (data || []).map(r => ({
+            taskId:       r.task_id,
+            objective:    r.objective,
+            commitHash:   r.commit_hash,
+            filesChanged: r.files_changed,
+            duration:     r.duration,
+            completedAt:  r.completed_at,
+            agentLogs:    r.agent_logs,
+            success:      r.success,
+            error:        r.error
+        })) });
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
