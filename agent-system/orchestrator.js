@@ -134,15 +134,24 @@ Rules:
 // ── Agent: REVIEWER ───────────────────────────────────────────────────────────
 async function _reviewer(client, spec, developerLog) {
     const t0 = Date.now();
+    const filesModified = developerLog.result.applied || [];
+    console.log('[Reviewer] starting review of', filesModified.length, 'files');
     const SYSTEM = `You are the REVIEWER agent for Apex AI OS. Check whether the DEVELOPER's changes are safe.
 Protected systems that must NOT be modified: iOS HTT pipeline (touchstart/touchend/getUserMedia), /api/transcribe, /api/tts, requireAppAccess middleware, database schema, .env / environment variables.
 Output JSON: { "passed": boolean, "issues": string[] }`;
 
-    const res = await _callClaude(client, SYSTEM,
-        `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nDEVELOPER RESULT:\n${JSON.stringify(developerLog.result, null, 2)}`,
-        500
-    );
-    const text = res.content[0]?.text?.trim();
+    const response = await Promise.race([
+        client.messages.create({
+            model: MODEL,
+            max_tokens: 3000,
+            system: SYSTEM,
+            messages: [{ role: 'user', content: `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nDEVELOPER RESULT:\n${JSON.stringify(developerLog.result, null, 2)}` }]
+        }),
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('REVIEWER timeout after 120s')), 120000)
+        )
+    ]);
+    const text = response.content[0]?.text?.trim();
     let result;
     try { result = _parseJSON(text); } catch { result = { passed: true, issues: [] }; }
     return { role: 'REVIEWER', result, duration: Date.now() - t0 };
