@@ -2,19 +2,36 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawnSync, execSync } = require('child_process');
 const memory = require('./obsidian-memory');
 
 const ROOT = path.join(__dirname, '..');
 const MODEL = 'claude-sonnet-4-6';
 
+async function callWithBackoff(fn, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await fn();
+        } catch (e) {
+            if (e.status === 429 || e.message?.includes('rate')) {
+                const wait = (i + 1) * 15000;
+                console.log(`[Backoff] rate limited, waiting ${wait}ms`);
+                await new Promise(r => setTimeout(r, wait));
+            } else {
+                throw e;
+            }
+        }
+    }
+    throw new Error('Max retries exceeded');
+}
+
 function _callClaude(client, systemPrompt, userContent, maxTokens) {
-    return client.messages.create({
+    return callWithBackoff(() => client.messages.create({
         model: MODEL,
         max_tokens: maxTokens || 2000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }]
-    });
+    }));
 }
 
 function _parseJSON(text) {
@@ -55,6 +72,7 @@ async function _architect(client, spec) {
 // ── Agent: DEVELOPER (per-file write) ────────────────────────────────────────
 async function _developerWriteFile(client, spec, filename, architectAnalysis) {
     const fp = path.join(ROOT, filename);
+    console.log('[Developer] reading current:', filename, 'exists:', fs.existsSync(fp));
     let currentContent = null;
     let isNew = false;
     try {
@@ -163,12 +181,12 @@ Reply JSON only: {"file":"name","passed":true,"issues":["list"]}`;
         let fileResult;
         try {
             const response = await Promise.race([
-                client.messages.create({
+                callWithBackoff(() => client.messages.create({
                     model: MODEL,
                     max_tokens: 1000,
                     system: SYSTEM,
                     messages: [{ role: 'user', content: `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE: ${filename}\n\`\`\`\n${fileContent.slice(0, 8000)}\n\`\`\`` }]
-                }),
+                })),
                 new Promise((_, reject) =>
                     setTimeout(() => reject(new Error(`REVIEWER timeout on ${filename} after 45s`)), 45000)
                 )
@@ -195,21 +213,27 @@ Reply JSON only: {"file":"name","passed":true,"issues":["list"]}`;
 }
 
 // ── Agent: TESTER ─────────────────────────────────────────────────────────────
-async function _tester(spec) {
+async function _tester(filesModified) {
     const t0 = Date.now();
-    const checks = [];
+    const allFiles = [...new Set([...(filesModified || []), 'server.js'])];
+    console.log('[Tester] running syntax checks on', allFiles.length, 'files');
+    const failures = [];
 
-    const filesToCheck = [...new Set([...(spec.filesToModify || []), 'server.js'])];
-    for (const file of filesToCheck) {
-        if (!file.endsWith('.js')) continue;
-        const fp = path.join(ROOT, file);
+    for (const f of allFiles) {
+        if (!f.endsWith('.js')) continue;
+        const fp = path.join(ROOT, f);
         if (!fs.existsSync(fp)) continue;
-        const chk = spawnSync(process.execPath, ['--check', fp], { cwd: ROOT, encoding: 'utf8' });
-        checks.push({ file, passed: chk.status === 0, output: (chk.stderr || '').trim() });
+        try {
+            execSync(`node --check "${fp}"`, { cwd: ROOT, stdio: 'pipe' });
+            console.log('[Tester] syntax OK:', f);
+        } catch (e) {
+            console.log('[Tester] syntax FAIL:', f, e.stderr?.toString());
+            failures.push({ file: f, error: e.stderr?.toString() });
+        }
     }
 
-    const allPassed = checks.every(c => c.passed);
-    return { role: 'TESTER', result: { passed: allPassed, checks }, duration: Date.now() - t0 };
+    const passed = failures.length === 0;
+    return { role: 'TESTER', result: { passed, failures }, duration: Date.now() - t0 };
 }
 
 // ── Agent: COMMITTER ──────────────────────────────────────────────────────────
@@ -219,6 +243,17 @@ async function _committer(spec) {
     spawnSync('git', ['config', 'user.email', 'apex@ai-os.local'], { cwd: ROOT, encoding: 'utf8' });
     spawnSync('git', ['config', 'user.name', 'Apex AutoPilot'], { cwd: ROOT, encoding: 'utf8' });
     spawnSync('git', ['add', '-A'], { cwd: ROOT, encoding: 'utf8' });
+
+    const serverCheck = spawnSync(process.execPath, ['--check', path.join(ROOT, 'server.js')], { cwd: ROOT, encoding: 'utf8' });
+    if (serverCheck.status !== 0) {
+        console.error('[COMMITTER] server.js syntax check failed:', serverCheck.stderr);
+        return {
+            role: 'COMMITTER',
+            result: { commitHash: null, error: `server.js syntax check failed: ${serverCheck.stderr}` },
+            duration: Date.now() - t0
+        };
+    }
+    console.log('[COMMITTER] server.js syntax OK');
 
     const beforeHash = spawnSync('git', ['rev-parse', '--short', 'HEAD'],
         { cwd: ROOT, encoding: 'utf8' }).stdout?.trim();
@@ -313,37 +348,56 @@ async function runAgentTeam(spec, taskId) {
     const _fail = (error) => ({ success: false, commitHash: null, agentLogs, error });
 
     try {
-        // Step 1 — ARCHITECT
+        // Step 1 — ARCHITECT (runs once; analysis is reused across retries)
         const architectLog = await _architect(client, spec);
         agentLogs.push(architectLog);
         console.log(`[Orchestrator] ARCHITECT done (${architectLog.duration}ms)`);
 
-        // Step 2 — DEVELOPER
-        const developerLog = await _developer(client, spec, architectLog);
-        agentLogs.push(developerLog);
-        console.log(`[Orchestrator] DEVELOPER done (${developerLog.duration}ms)`);
+        const MAX_ATTEMPTS = 3;
+        let lastFailure = null;
+        let developerLog, reviewerLog, testerLog;
 
-        // Step 3 — REVIEWER
-        const reviewerLog = await _reviewer(client, spec, developerLog);
-        agentLogs.push(reviewerLog);
-        console.log(`[Orchestrator] REVIEWER done (${reviewerLog.duration}ms)`);
-        if (!reviewerLog.result.passed) {
-            console.log('[Reviewer] ROLLBACK triggered — issues:', JSON.stringify(reviewerLog.result.issues));
-            restoreBackup(taskId);
-            return _fail(`REVIEWER blocked: ${(reviewerLog.result.issues || []).join('; ')}`);
-        }
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            console.log(`[Orchestrator] pipeline attempt ${attempt}/${MAX_ATTEMPTS}`);
 
-        // Step 4 — TESTER
-        const testerLog = await _tester(spec);
-        agentLogs.push(testerLog);
-        console.log(`[Orchestrator] TESTER done (${testerLog.duration}ms)`);
-        if (!testerLog.result.passed) {
-            restoreBackup(taskId);
-            const failures = testerLog.result.checks
-                .filter(c => !c.passed)
-                .map(c => `${c.file}: ${c.output}`)
-                .join('\n');
-            return _fail(`Syntax check failed:\n${failures}`);
+            // Step 2 — DEVELOPER
+            developerLog = await _developer(client, spec, architectLog);
+            agentLogs.push(developerLog);
+            console.log(`[Orchestrator] DEVELOPER done (${developerLog.duration}ms)`);
+
+            // Step 3 — REVIEWER
+            reviewerLog = await _reviewer(client, spec, developerLog);
+            agentLogs.push(reviewerLog);
+            console.log(`[Orchestrator] REVIEWER done (${reviewerLog.duration}ms)`);
+            if (!reviewerLog.result.passed) {
+                console.log('[Reviewer] ROLLBACK triggered — issues:', JSON.stringify(reviewerLog.result.issues));
+                restoreBackup(taskId);
+                lastFailure = `REVIEWER blocked: ${(reviewerLog.result.issues || []).join('; ')}`;
+                if (attempt < MAX_ATTEMPTS) {
+                    console.log(`[Orchestrator] retrying (attempt ${attempt + 1})...`);
+                    continue;
+                }
+                return _fail(lastFailure);
+            }
+
+            // Step 4 — TESTER
+            const filesModified = (developerLog.result.applied || []).map(e => e.file || e);
+            testerLog = await _tester(filesModified);
+            agentLogs.push(testerLog);
+            console.log(`[Orchestrator] TESTER done (${testerLog.duration}ms)`);
+            if (!testerLog.result.passed) {
+                restoreBackup(taskId);
+                const failDesc = (testerLog.result.failures || []).map(f => `${f.file}: ${f.error}`).join('\n');
+                lastFailure = `Syntax check failed:\n${failDesc}`;
+                if (attempt < MAX_ATTEMPTS) {
+                    console.log(`[Orchestrator] retrying after tester failure (attempt ${attempt + 1})...`);
+                    continue;
+                }
+                return _fail(lastFailure);
+            }
+
+            lastFailure = null;
+            break;
         }
 
         // Step 5 — COMMITTER

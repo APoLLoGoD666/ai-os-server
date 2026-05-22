@@ -8561,6 +8561,7 @@ async function checkPendingMasterTasks() {
         console.log('[Master] pending task query result:', JSON.stringify(data));
         if (error) { console.error('[Master] checkPending query error:', error.message); return; }
         if (!data || !data.length) return;
+        _lastPipelineActivity = Date.now();
         console.log(`[Master] checkPendingMasterTasks: ${data.length} pending task(s)`);
         for (const row of data) {
             // Mark read immediately to prevent double-execution across restarts
@@ -8714,6 +8715,8 @@ app.use((err, req, res, next) => {
     if (!res.headersSent) res.status(500).json({ ok: false, reply: "Something went wrong." });
 });
 
+let _lastPipelineActivity = Date.now();
+
 const server = require("http").createServer(app);
 
 
@@ -8735,6 +8738,15 @@ server.listen(PORT, () => {
 
     // Pick up any master tasks that were queued before a cold-start restart
     setTimeout(() => checkPendingMasterTasks(), 10000);
+
+    // Pipeline health monitor — if no activity for 30+ min, check for stuck tasks
+    setInterval(() => {
+        const staleMins = (Date.now() - _lastPipelineActivity) / 60000;
+        if (staleMins > 30) {
+            console.warn(`[Pipeline] WARNING — no activity for ${staleMins.toFixed(0)} minutes`);
+            checkPendingMasterTasks();
+        }
+    }, 600000);
 
     // Phase 2 agents
     initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
