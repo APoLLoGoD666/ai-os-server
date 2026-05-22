@@ -1,9 +1,6 @@
 "use strict";
 const Anthropic = require('@anthropic-ai/sdk');
-const fs = require('fs');
-const path = require('path');
 
-const ROOT = path.join(__dirname, '..');
 const MODEL = 'claude-sonnet-4-6';
 
 const SYSTEM_PROMPT = `You are a senior developer working on Apex AI OS — a Node.js/Express voice-first AI operating system on Render. The stack is: Node.js, Express, Supabase JS client, Anthropic Claude API, Deepgram STT/TTS, Gmail OAuth2, Ruflo agent orchestration.
@@ -39,27 +36,11 @@ Output format (strict JSON, no other text):
 async function expandPrompt(simplePrompt) {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    let codebaseContext = '';
-    try {
-        const pkgJson = fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8');
-        const serverLines = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8')
-            .split('\n').slice(0, 100).join('\n');
-        const fileList = fs.readdirSync(ROOT)
-            .filter(f => !f.startsWith('.') && !f.startsWith('node_modules'))
-            .join(', ');
-        const claudeMd = fs.existsSync(path.join(ROOT, 'CLAUDE.md'))
-            ? fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8') : '';
-
-        codebaseContext = `\n\nCODEBASE CONTEXT:\nProject files: ${fileList}\n\npackage.json:\n${pkgJson}\n\nserver.js (first 100 lines):\n${serverLines}\n\nARCHITECTURE (CLAUDE.md):\n${claudeMd}`;
-    } catch (e) {
-        console.warn('[PromptExpander] context read failed:', e.message);
-    }
-
     const res = await client.messages.create({
         model: MODEL,
-        max_tokens: 2000,
+        max_tokens: 4000,
         system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: `Task: ${simplePrompt}${codebaseContext}` }]
+        messages: [{ role: 'user', content: `Task: ${simplePrompt}` }]
     });
 
     const text = res.content.map(i => i.text || '').filter(Boolean).join('').trim();
