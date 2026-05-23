@@ -8865,6 +8865,23 @@ app.post('/api/wiki/ingest', requireAppAccess, async (req, res) => {
     }
 });
 
+// Auto-load agent-created route files from routes/ directory
+(function _loadAgentRoutes() {
+    const _rdir = path.join(__dirname, 'routes');
+    if (!fs.existsSync(_rdir)) return;
+    fs.readdirSync(_rdir)
+        .filter(f => f.endsWith('.js'))
+        .sort()
+        .forEach(f => {
+            try {
+                app.use('/api', require(path.join(_rdir, f)));
+                console.log('[Routes] loaded:', f);
+            } catch (e) {
+                console.warn('[Routes] load failed:', f, e.message);
+            }
+        });
+})();
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,

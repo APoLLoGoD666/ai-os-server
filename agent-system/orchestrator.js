@@ -8,8 +8,13 @@ const memory = require('./obsidian-memory');
 const ROOT = path.join(__dirname, '..');
 const MODEL = 'claude-haiku-4-5-20251001';
 const OPENROUTER_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
+const MAX_FILE_BYTES = 20 * 1024; // 20KB — refuse larger files to prevent runaway token cost
 
+// analyzeModel/Client: used for ARCHITECT, DEVELOPER routing, REVIEWER (cheap/free)
+// writeModel/Client:   used for DEVELOPER write only (quality-critical)
 let activeModel = MODEL;
+let writeModel  = MODEL;
+let writeClient = null;
 
 async function callWithBackoff(fn, retries = 3) {
     for (let i = 0; i < retries; i++) {
@@ -31,7 +36,16 @@ async function callWithBackoff(fn, retries = 3) {
 function _callClaude(client, systemPrompt, userContent, maxTokens) {
     return callWithBackoff(() => client.messages.create({
         model: activeModel,
-        max_tokens: maxTokens || 2000,
+        max_tokens: maxTokens || 800,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userContent }]
+    }));
+}
+
+function _callWrite(systemPrompt, userContent) {
+    return callWithBackoff(() => writeClient.messages.create({
+        model: writeModel,
+        max_tokens: 2000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }]
     }));
@@ -62,18 +76,18 @@ async function _architect(client, spec) {
         }
     }).join('\n\n');
 
-    // Graphify knowledge graph query — best-effort, never blocks
+    // Graphify knowledge graph query — best-effort, 3s hard cap
     let graphContext = '';
     try {
         const gq = spawnSync('graphify', ['query', spec.objective], {
-            cwd: ROOT, encoding: 'utf8', timeout: 8000
+            cwd: ROOT, encoding: 'utf8', timeout: 3000
         });
-        if (gq.status === 0 && gq.stdout) graphContext = gq.stdout.trim().slice(0, 2000);
+        if (gq.status === 0 && gq.stdout) graphContext = gq.stdout.trim().slice(0, 1000);
     } catch {}
 
     const res = await _callClaude(client, SYSTEM,
         `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE CONTENTS:\n${archFileContents}${graphContext ? '\n\nKNOWLEDGE GRAPH:\n' + graphContext : ''}${obsidianContext ? '\n\nSYSTEM MEMORY:\n' + obsidianContext : ''}`,
-        1500
+        800
     );
     const text = res.content[0]?.text?.trim();
     let result;
@@ -93,18 +107,27 @@ async function _developerWriteFile(client, spec, filename, architectAnalysis) {
         isNew = true;
     }
 
+    // Hard size guard — refuse to read/write files too large for 2000-token output
+    if (currentContent && currentContent.length > MAX_FILE_BYTES) {
+        throw new Error(
+            `${filename} is ${Math.round(currentContent.length / 1024)}KB — too large for agent write. ` +
+            `New features must go in routes/<domain>.js (Express Router). Do not modify large existing files.`
+        );
+    }
+
     const SYSTEM = `You are the DEVELOPER agent for Apex AI OS.
 You will receive a task spec, architect analysis, and ${isNew ? 'a request to create a new file' : 'the current content of a file to update'}.
 Return ONLY the complete ${isNew ? 'new' : 'updated'} file content. Nothing else.
 No JSON wrapping. No markdown code fences. No explanation. No preamble. No trailing commentary.
 Your entire response IS the file content — it will be written to disk exactly as you return it.
+New API routes go in routes/<domain>.js using Express.Router — never add routes to server.js.
 NEVER touch: touchstart, touchend, getUserMedia, _httStream, _httRecorder, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.`;
 
     const userContent = isNew
         ? `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT NOTES:\n${architectAnalysis}\n\nCreate new file: ${filename}\nReturn the complete file content only.`
         : `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT NOTES:\n${architectAnalysis}\n\nFile to update: ${filename}\n\nCURRENT CONTENT:\n${currentContent}\n\nReturn the complete updated file content only.`;
 
-    const res = await _callClaude(client, SYSTEM, userContent, 2000);
+    const res = await _callWrite(SYSTEM, userContent);
     const newContent = res.content[0]?.text || '';
 
     const dir = path.dirname(fp);
@@ -137,7 +160,7 @@ Rules:
     const fileList = (spec.filesToModify || []).join('\n');
     const userContent = `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT NOTES:\n${architectLog.result.summary}\n\nAVAILABLE FILES TO MODIFY:\n${fileList}\n\nOutput only JSON. Start with {`;
 
-    const res = await _callClaude(client, SYSTEM, userContent, 500);
+    const res = await _callClaude(client, SYSTEM, userContent, 200);
     const text = res.content[0]?.text?.trim();
 
     let parsed;
@@ -195,9 +218,9 @@ Reply JSON only: {"file":"name","passed":true,"issues":["list"]}`;
             const response = await Promise.race([
                 callWithBackoff(() => client.messages.create({
                     model: activeModel,
-                    max_tokens: 1000,
+                    max_tokens: 400,
                     system: SYSTEM,
-                    messages: [{ role: 'user', content: `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE: ${filename}\n\`\`\`\n${fileContent.slice(0, 8000)}\n\`\`\`` }]
+                    messages: [{ role: 'user', content: `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE: ${filename}\n\`\`\`\n${fileContent.slice(0, 4000)}\n\`\`\`` }]
                 })),
                 new Promise((_, reject) =>
                     setTimeout(() => reject(new Error(`REVIEWER timeout on ${filename} after 45s`)), 45000)
@@ -345,28 +368,33 @@ async function runAgentTeam(spec, taskId) {
     const { createBackup, restoreBackup } = require('./backup-manager');
     let client;
     if (process.env.OPENROUTER_API_KEY) {
+        // Analyze steps (architect, routing, review) use free OpenRouter
         activeModel = OPENROUTER_MODEL;
-        client = new Anthropic({
-            apiKey: process.env.OPENROUTER_API_KEY,
-            baseURL: 'https://openrouter.ai/api/v1'
-        });
-        console.log('[Orchestrator] Provider: OpenRouter —', activeModel);
+        client = new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' });
+        // Write step uses Haiku — quality-critical, but only a few hundred tokens per feature
+        writeModel  = MODEL;
+        writeClient = process.env.ANTHROPIC_API_KEY
+            ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+            : client; // fallback to OR if no Haiku key
+        console.log('[Orchestrator] Analyze: OpenRouter (free), Write: Haiku');
     } else {
         activeModel = MODEL;
-        client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-        console.log('[Orchestrator] Provider: Anthropic —', activeModel);
+        writeModel  = MODEL;
+        client      = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        writeClient = client;
+        console.log('[Orchestrator] Provider: Anthropic Haiku (both)');
     }
     const agentLogs = [];
 
-    // Read wiki context before starting
+    // Read wiki context — cap at 1500 chars to keep prompt small
     try {
         const { getWikiContext } = require('./wiki-reader');
-        obsidianContext = await getWikiContext(spec.objective) || '';
+        obsidianContext = ((await getWikiContext(spec.objective)) || '').slice(0, 1500);
     } catch (e) {
         console.warn('[Orchestrator] wiki read failed:', e.message);
         obsidianContext = '';
     }
-    console.log('[Orchestrator] Wiki context loaded:', obsidianContext ? obsidianContext.length + ' chars' : 'empty');
+    console.log('[Orchestrator] Wiki context:', obsidianContext ? obsidianContext.length + ' chars' : 'empty');
 
     createBackup(taskId);
 

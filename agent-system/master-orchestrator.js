@@ -82,12 +82,22 @@ PROTECTED — never modify:
 - requireAppAccess middleware
 - Database schema
 - .env or environment variables
+- server.js (large file — auto-loads routes, must not be touched for new features)
+
+ROUTING RULE — CRITICAL:
+New API routes MUST go in routes/<domain>.js using Express.Router().
+server.js auto-loads everything in routes/ automatically.
+Use these domain files (create if missing):
+  routes/communications.js, routes/finance.js, routes/health.js,
+  routes/intelligence.js, routes/life.js, routes/operations.js
+filesToModify must NOT include server.js for new-route features.
+filesToCreate should list the routes/<domain>.js file instead.
+
+FILE SIZE LIMIT: Never put a file > 20KB in filesToModify — the agent cannot rewrite it.
 
 PRINCIPLES:
-- Plan before building — write spec for any 3+ step task
 - Minimal code impact — touch only what is necessary
 - No temporary fixes — find root causes
-- Verify before done — prove it works
 - Ask: would a staff engineer approve this?
 
 Output ONLY a JSON object with no markdown:

@@ -3,6 +3,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const memory = require('./obsidian-memory');
 
 const MODEL = 'claude-haiku-4-5-20251001';
+const OPENROUTER_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
 
 const SYSTEM_PROMPT = `You are a senior developer working on Apex AI OS — a Node.js/Express voice-first AI operating system on Render. The stack is: Node.js, Express, Supabase JS client, Anthropic Claude API, Deepgram STT/TTS, Gmail OAuth2, Ruflo agent orchestration.
 
@@ -14,17 +15,20 @@ PROTECTED — never modify these:
 - Database schema
 - .env or environment variables
 
+ROUTING: New API routes MUST go in routes/<domain>.js using Express.Router().
+server.js auto-loads all files from the routes/ directory — never add routes directly to server.js.
+Existing route files: routes/communications.js, routes/finance.js, routes/health.js, routes/intelligence.js, routes/life.js, routes/operations.js
+Only modify server.js for non-route logic changes to existing features.
+
 Given a simple task description, expand it into a precise technical specification including:
 1. OBJECTIVE — what exactly needs to be built or fixed
 2. FILES TO READ — which files to examine first
-3. FILES TO MODIFY — which files will change
+3. FILES TO MODIFY — which files will change (prefer routes/<domain>.js over server.js)
 4. IMPLEMENTATION STEPS — numbered, precise, actionable
 5. SAFETY CHECKS — what to verify before committing
 6. SUCCESS CRITERIA — how to confirm it worked
 
 Be specific. Reference actual file names and line numbers where known. Output JSON only — no markdown, no preamble.
-
-IMPORTANT: For any task involving adding a new API route, always include "server.js" in filesToModify. All API routes in this project are defined in server.js. Never suggest routes/api.js or any other file unless it already exists in the project.
 
 Output format (strict JSON, no other text):
 {
@@ -37,7 +41,10 @@ Output format (strict JSON, no other text):
 }`;
 
 async function expandPrompt(simplePrompt) {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = process.env.OPENROUTER_API_KEY
+        ? new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' })
+        : new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const model = process.env.OPENROUTER_API_KEY ? OPENROUTER_MODEL : MODEL;
 
     const northStar = memory.getNorthStar();
     const lessons = memory.getLessons();
@@ -46,8 +53,8 @@ async function expandPrompt(simplePrompt) {
         : '';
 
     const res = await client.messages.create({
-        model: MODEL,
-        max_tokens: 2000,
+        model,
+        max_tokens: 800,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: `Task: ${simplePrompt}${memoryContext}` }]
     });

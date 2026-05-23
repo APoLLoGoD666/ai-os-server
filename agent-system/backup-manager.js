@@ -15,6 +15,15 @@ function createBackup(taskId) {
             fs.copyFileSync(src, path.join(dir, file));
         }
     }
+    // Backup all agent-created route files
+    const routesDir = path.join(ROOT, 'routes');
+    if (fs.existsSync(routesDir)) {
+        const backupRoutes = path.join(dir, 'routes');
+        fs.mkdirSync(backupRoutes, { recursive: true });
+        fs.readdirSync(routesDir).filter(f => f.endsWith('.js')).forEach(f => {
+            fs.copyFileSync(path.join(routesDir, f), path.join(backupRoutes, f));
+        });
+    }
     console.log(`[Backup] Created backup for ${taskId} at ${dir}`);
     return dir;
 }
@@ -31,6 +40,16 @@ function restoreBackup(taskId) {
             fs.copyFileSync(src, path.join(ROOT, file));
             console.log(`[Backup] Restored ${file} from ${taskId}`);
         }
+    }
+    // Restore route files
+    const backupRoutes = path.join(dir, 'routes');
+    if (fs.existsSync(backupRoutes)) {
+        const routesDir = path.join(ROOT, 'routes');
+        fs.mkdirSync(routesDir, { recursive: true });
+        fs.readdirSync(backupRoutes).forEach(f => {
+            fs.copyFileSync(path.join(backupRoutes, f), path.join(routesDir, f));
+            console.log(`[Backup] Restored routes/${f} from ${taskId}`);
+        });
     }
 }
 
