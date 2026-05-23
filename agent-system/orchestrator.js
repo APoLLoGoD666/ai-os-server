@@ -81,6 +81,14 @@ function _parseJSON(text) {
     return JSON.parse(cleaned);
 }
 
+// Detect whether a task touches frontend files — gates UI/UX prompt injection
+function _isFrontendTask(spec) {
+    const files = (spec.filesToModify || []).concat(spec.filesToRead || []).join(' ').toLowerCase();
+    const obj   = (spec.objective || '').toLowerCase();
+    return /\.html|\.css|dashboard/.test(files) ||
+        /\b(ui|ux|design|style|color|button|layout|font|theme|dashboard|frontend|interface|panel|modal|card)\b/.test(obj);
+}
+
 // Build a compact map of existing routes — prevents agents creating duplicate endpoints
 function _buildRoutesMap() {
     try {
@@ -118,6 +126,23 @@ Output JSON: { "summary": string, "relevantFunctions": string[], "warnings": str
             "Missing API key returns 503 with {ok:false,error:string}"
             "Route validates required body fields and returns 400 if missing"`;
 
+    const uiMandate = _isFrontendTask(spec) ? `\n\nUI/UX DESIGN MANDATE (this task touches frontend files):
+Design priorities in strict order:
+1. ACCESSIBILITY (CRITICAL) — 4.5:1 contrast, ≥44px touch targets, :focus-visible on all interactive elements, aria-labels on icon buttons, full keyboard nav
+2. INTERACTION (CRITICAL) — loading state for every async op, visible error messages, :active pressed state on buttons
+3. PERFORMANCE (HIGH) — CSS animations <300ms, transform/opacity only, lazy-load images
+4. STYLE (HIGH) — all colors/spacing via CSS custom properties; no hardcoded hex values
+5. LAYOUT (HIGH) — mobile-first 375px→768px→1024px, no horizontal scroll, safe-area insets for iOS
+6. TYPOGRAPHY (MEDIUM) — line-height 1.5–1.75, max-width 65ch, no font-size <16px on mobile inputs
+7. ANIMATION (MEDIUM) — 150–300ms micro-interactions, respect prefers-reduced-motion media query
+8. FORMS (MEDIUM) — visible <label> per input (not placeholder-only), errors below fields as role=alert
+9. NAVIGATION (HIGH) — max 5 primary nav items, preserve scroll position, no broken back button
+10. DATA (LOW) — accessible color palettes for charts, table fallback for screen readers
+
+Frontend testCases MUST include:
+- "renders without horizontal scroll at 375px viewport width"
+- "all interactive elements have visible :focus-visible outline when tabbed to"` : '';
+
     const archFileContents = (spec.filesToRead || []).map(f => {
         try {
             const content = fs.readFileSync(path.join(_worktreeRoot, f), 'utf8');
@@ -137,7 +162,7 @@ Output JSON: { "summary": string, "relevantFunctions": string[], "warnings": str
 
     const routesMap = _buildRoutesMap();
 
-    const res = await _callClaude(client, SYSTEM,
+    const res = await _callClaude(client, SYSTEM + uiMandate,
         `SPEC:\n${JSON.stringify(spec, null, 2)}\n\n` +
         (routesMap ? routesMap + '\n\n' : '') +
         `FILE CONTENTS:\n${archFileContents}` +
@@ -234,11 +259,18 @@ async function _reviewer(client, spec, developerLog) {
         return { role: 'REVIEWER', result: { passed: true, issues: [] }, duration: Date.now() - t0 };
     }
 
+    const uiAudit = _isFrontendTask(spec) ? `\nUI/UX AUDIT (frontend task):
+CRITICAL issues: color contrast <4.5:1, touch targets <44px, interactive elements without :focus-visible
+HIGH issues: missing loading state for async ops, no error message display, placeholder-only labels (no <label>), no :active state on buttons
+MEDIUM issues: no aria-label on icon-only buttons, CSS animations not checking prefers-reduced-motion, hardcoded hex colors instead of CSS variables, font-size <16px on mobile inputs
+LOW issues: horizontal scroll risk at 375px, z-index >100 without comment
+Anti-patterns (flag as issues): emoji as navigation icons, hover-only interactions, outline:none without replacement, animating width/height/top/left` : '';
+
     const SYSTEM = `You are the REVIEWER and SECURITY AUDITOR for Apex AI OS.
 Review for: spec correctness, missing error handling, proper HTTP status codes.
 Security (OWASP Top 10): injection vectors, broken auth, sensitive data exposure, XSS, missing input validation, secrets hardcoded in code, unvalidated external input.
 Also check: no duplicate route paths, try/catch on async DB calls, no raw secrets in code.
-Protected (report as CRITICAL if touched): iOS HTT pipeline, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.
+Protected (report as CRITICAL if touched): iOS HTT pipeline, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.${uiAudit}
 Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}`;
 
     const allIssues = [];
