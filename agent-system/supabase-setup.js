@@ -188,6 +188,7 @@ async function createAllTables() {
             objective TEXT,
             success BOOLEAN DEFAULT FALSE,
             cost_usd NUMERIC(10,6) DEFAULT 0,
+            complexity TEXT DEFAULT 'moderate',
             agent_summary JSONB DEFAULT '[]',
             created_at TIMESTAMPTZ DEFAULT NOW()
         )`,

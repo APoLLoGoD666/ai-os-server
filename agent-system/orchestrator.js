@@ -586,7 +586,7 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
 }
 
 // ── Audit log — records each pipeline run to Supabase for cost tracking ────────
-async function _auditLog(taskId, spec, success, agentLogs, cost) {
+async function _auditLog(taskId, spec, success, agentLogs, cost, complexity) {
     try {
         const { createClient } = require('@supabase/supabase-js');
         const sb = createClient(
@@ -602,6 +602,7 @@ async function _auditLog(taskId, spec, success, agentLogs, cost) {
             objective:     (spec.objective || '').slice(0, 255),
             success,
             cost_usd:      parseFloat(cost) || 0,
+            complexity:    complexity || 'moderate',
             agent_summary: JSON.stringify(agentSummary),
             created_at:    new Date().toISOString()
         }, { onConflict: 'task_id' });
@@ -697,7 +698,7 @@ async function runAgentTeam(spec, taskId) {
         _cleanup();
         const cost = _costUsd.toFixed(5);
         setImmediate(() => _reflector(spec, agentLogs, false));
-        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost));
+        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity));
         return { success: false, commitHash: null, agentLogs, error, complexity, models: _agentModels };
     };
 
@@ -791,7 +792,7 @@ async function runAgentTeam(spec, taskId) {
         console.log(`[Orchestrator] ── ${taskId} COMPLETE — ${committerLog.result.commitHash} ──`);
 
         setImmediate(() => _reflector(spec, agentLogs, true));
-        setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost));
+        setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity));
 
         return {
             success:    true,
@@ -809,7 +810,7 @@ async function runAgentTeam(spec, taskId) {
         const cost = _costUsd.toFixed(5);
         memory.logLesson(`Task ${taskId} failed: ${err.message}`);
         setImmediate(() => _reflector(spec, agentLogs, false));
-        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost));
+        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity));
         return { success: false, commitHash: null, agentLogs, error: err.message, complexity, models: _agentModels };
     }
 }

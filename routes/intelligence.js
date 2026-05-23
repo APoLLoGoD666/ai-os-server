@@ -73,7 +73,7 @@ router.get('/agent-runs', async (req, res) => {
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const { data, error } = await sb()
             .from('apex_agent_runs')
-            .select('task_id,objective,success,cost_usd,created_at')
+            .select('task_id,objective,success,cost_usd,complexity,created_at')
             .order('created_at', { ascending: false })
             .limit(limit);
         if (error) return res.json({ ok: false, error: error.message, runs: [] });
