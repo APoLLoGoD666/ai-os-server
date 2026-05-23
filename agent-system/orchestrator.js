@@ -349,14 +349,15 @@ async function runAgentTeam(spec, taskId) {
     }
     const agentLogs = [];
 
-    // Read Obsidian context before starting
+    // Read wiki context before starting
     try {
-        obsidianContext = memory.getFullContext() || '';
+        const { getWikiContext } = require('./wiki-reader');
+        obsidianContext = await getWikiContext(spec.objective) || '';
     } catch (e) {
-        console.warn('[Orchestrator] memory read failed:', e.message);
+        console.warn('[Orchestrator] wiki read failed:', e.message);
         obsidianContext = '';
     }
-    console.log('[Orchestrator] Obsidian context loaded:', obsidianContext ? obsidianContext.length + ' chars' : 'empty (Render environment)');
+    console.log('[Orchestrator] Wiki context loaded:', obsidianContext ? obsidianContext.length + ' chars' : 'empty');
 
     createBackup(taskId);
 

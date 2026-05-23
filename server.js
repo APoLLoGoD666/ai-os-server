@@ -7950,17 +7950,12 @@ Respond naturally in 1-2 sentences.`.trim();
         let loopCount = 0;
         const maxLoops = 5;
 
-        let obsidianContext = '';
+        let wikiContext = '';
         try {
-            const obsResults = await obsidianSearch(userMessage);
-            if (obsResults && obsResults.length > 0) {
-                const top = obsResults.slice(0, 3);
-                obsidianContext = top.map(r =>
-                    `[From Obsidian — ${r.filename}]:\n${r.context}`
-                ).join('\n\n');
-            }
+            const { getWikiContext } = require('./agent-system/wiki-reader');
+            wikiContext = await getWikiContext(userMessage).catch(() => '');
         } catch (e) {
-            console.warn('[Obsidian] search failed:', e.message);
+            console.warn('[Wiki] context read failed:', e.message);
         }
 
         while (loopCount < maxLoops) {
@@ -7968,7 +7963,7 @@ Respond naturally in 1-2 sentences.`.trim();
             const response = await client.messages.create({
                 model: MODEL,
                 max_tokens: 1024,
-                system: `${obsidianContext ? 'Relevant context from the Apex knowledge base:\n\n' + obsidianContext + '\n\n---\n\n' : ''}You are Apex, a precise, professional AI operating system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK — use this as the default location for any location-based queries unless told otherwise. You have tools available: use get_notifications proactively if the user greets you or asks what is happening, to surface any unread alerts or briefings. Use list_emails if they ask about their inbox. Use get_weather for weather queries. Use web_search for current facts. Use create_task when Alex asks you to remember or follow up on something. Use list_tasks when asked about pending tasks or reminders.${alexContext}${memoryContext} Respond in plain spoken English only. No markdown, no bullet points, no dashes, no numbered lists, no asterisks. All responses will be read aloud — format as natural speech.`,
+                system: `${wikiContext ? 'KNOWLEDGE BASE:\n' + wikiContext + '\n\n---\n\n' : ''}You are Apex, a precise, professional AI operating system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK — use this as the default location for any location-based queries unless told otherwise. You have tools available: use get_notifications proactively if the user greets you or asks what is happening, to surface any unread alerts or briefings. Use list_emails if they ask about their inbox. Use get_weather for weather queries. Use web_search for current facts. Use create_task when Alex asks you to remember or follow up on something. Use list_tasks when asked about pending tasks or reminders.${alexContext}${memoryContext} Respond in plain spoken English only. No markdown, no bullet points, no dashes, no numbered lists, no asterisks. All responses will be read aloud — format as natural speech.`,
                 tools: APEX_TOOLS,
                 messages
             });
@@ -8378,6 +8373,12 @@ async function _startAutoPipeline(taskId) {
                 success:      true
             });
             console.log(`[AutoPipeline] ${taskId} done — commit ${result.commitHash}`);
+            try {
+                const { updateWikiAfterTask } = require('./agent-system/wiki-reader');
+                await updateWikiAfterTask(taskId, spec.objective, 'completed — ' + result.commitHash);
+            } catch (e) {
+                console.warn('[AutoPipeline] wiki update failed:', e.message);
+            }
         } else {
             await _markFailed(result.error || 'pipeline failed');
             await _appendTimeline({
@@ -8782,6 +8783,32 @@ app.post('/api/setup/run-sql', requireAppAccess, async (req, res) => {
     try {
         const result = await supabaseSetup.runSQL(sql);
         res.json({ ok: true, result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ── Wiki Ingest Route ────────────────────────────────────────────
+app.post('/api/wiki/ingest', requireAppAccess, async (req, res) => {
+    const { content, source, type } = req.body || {};
+    if (!content) return res.status(400).json({ ok: false, error: 'content required' });
+    try {
+        const wikiClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const { obsidianRead, obsidianWrite } = require('./agent-system/obsidian-client');
+        const classifyRes = await wikiClient.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 100,
+            messages: [{
+                role: 'user',
+                content: `Classify this content into exactly one of these wiki pages:\nSystem/North-Star.md\nSystem/Decisions.md\nProjects/Apex-AI-OS.md\nPeople/Alex.md\nSystem/WIKI.md\n\nContent: ${content.slice(0, 500)}\n\nReply with ONLY the page path, nothing else.`
+            }]
+        });
+        const page = classifyRes.content[0]?.text?.trim() || 'System/Decisions.md';
+        const existing = await obsidianRead(page) || '';
+        const today = new Date().toISOString().split('T')[0];
+        const entry = `\n\n---\n*Ingested ${today} from ${source || 'unknown'}*\n\n${content}`;
+        await obsidianWrite(page, existing + entry);
+        res.json({ ok: true, page });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
     }
