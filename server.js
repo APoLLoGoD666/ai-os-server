@@ -8739,6 +8739,54 @@ app.post('/api/browser/click', requireAppAccess, async (req, res) => {
     res.json({ ok: true, ...result });
 });
 
+// ── Setup Agent Routes ────────────────────────────────────────────
+const supabaseSetup = require('./agent-system/supabase-setup');
+
+app.post('/api/setup/database', requireAppAccess, async (req, res) => {
+    res.json({ ok: true, status: 'running',
+        message: 'Creating all database tables — this takes 30-60 seconds' });
+    setImmediate(async () => {
+        try {
+            const results = await supabaseSetup.createAllTables();
+            const succeeded = results.filter(r => r.success).length;
+            const failed = results.filter(r => !r.success).length;
+            await sbAdmin.from('apex_notifications').insert({
+                id: `setup-db-${Date.now()}`,
+                message: `Database setup complete — ${succeeded} tables created, ${failed} failed`,
+                type: failed > 0 ? 'info' : 'success',
+                read: false
+            });
+            console.log(`[Setup] Database: ${succeeded} OK, ${failed} failed`);
+        } catch (e) {
+            console.error('[Setup] database error:', e.message);
+        }
+    });
+});
+
+app.post('/api/setup/env-var', requireAppAccess, async (req, res) => {
+    const { key, value } = req.body || {};
+    if (!key || !value) return res.status(400).json({
+        ok: false, error: 'key and value required'
+    });
+    try {
+        const result = await supabaseSetup.addRenderEnvVar(key, value);
+        res.json({ ok: result.statusCode < 400, statusCode: result.statusCode });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.post('/api/setup/run-sql', requireAppAccess, async (req, res) => {
+    const { sql } = req.body || {};
+    if (!sql) return res.status(400).json({ ok: false, error: 'sql required' });
+    try {
+        const result = await supabaseSetup.runSQL(sql);
+        res.json({ ok: true, result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,

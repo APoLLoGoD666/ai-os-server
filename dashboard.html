@@ -1463,6 +1463,7 @@
                     <div id="roadmapPanel"><div class="empty-note">Loading…</div></div>
                     <div style="display:flex;gap:6px;margin-top:8px">
                         <button class="subpanel-btn" style="flex:1" onclick="masterRunAll()">Run All</button>
+                        <button class="subpanel-btn" style="flex:1;background:rgba(155,89,182,0.25);border-color:rgba(155,89,182,0.5)" onclick="setupDatabase()">Setup DB</button>
                         <input id="roadmapFeatureInput" type="text" placeholder="FEAT-C001"
                             style="flex:2;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);
                             color:#fff;padding:3px 6px;border-radius:4px;font-size:11px;outline:none;"/>
@@ -4183,6 +4184,20 @@ async function masterRunAll() {
             headers: { 'Content-Type': 'application/json' } });
         showTaskToast('Master orchestrator started — all workstreams running in parallel', 'info');
     } catch (e) { showTaskToast('Failed: ' + e.message, 'error'); }
+}
+
+async function setupDatabase() {
+    showTaskToast('Creating all database tables — please wait...', 'info');
+    try {
+        await fetchJson('/api/setup/database', {
+            method: 'POST',
+            body: '{}',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        showTaskToast('Database setup started — check notifications in 60s', 'info');
+    } catch (e) {
+        showTaskToast('Setup failed: ' + e.message, 'error');
+    }
 }
 
 async function masterRunFeature() {

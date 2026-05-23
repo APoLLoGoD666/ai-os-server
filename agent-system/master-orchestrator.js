@@ -134,6 +134,30 @@ async function runFeature(feature, workstream) {
 
     console.log(`[Master] Plan ready for ${feature.id} — complexity: ${plan.estimatedComplexity}, permissionRequired: ${plan.permissionRequired}`);
 
+    // Auto-approve if permission is only needed for DB tables
+    // (tables are now created by setup agent upfront)
+    const _dbOnlyReasons = [
+        'database', 'table', 'migration', 'schema', 'supabase'
+    ];
+    const _reason = (plan.permissionReason || '').toLowerCase();
+    const _isDbOnly = _dbOnlyReasons.some(w => _reason.includes(w))
+        && !_reason.includes('api key')
+        && !_reason.includes('oauth')
+        && !_reason.includes('terms of service')
+        && !_reason.includes('environment variable')
+        && !_reason.includes('plaid')
+        && !_reason.includes('whatsapp')
+        && !_reason.includes('linkedin');
+
+    if (plan.permissionRequired && _isDbOnly) {
+        console.log(`[Master] Auto-approving ${feature.id} — DB-only permission, tables pre-created`);
+        plan.permissionRequired = false;
+        memory.logDecision(
+            `Auto-approved ${feature.id}`,
+            'DB-only permission gate — tables pre-created by setup agent'
+        );
+    }
+
     if (plan.permissionRequired) {
         console.log(`[Master] ${feature.id} requires permission: ${plan.permissionReason}`);
         // Write permission request to Supabase notifications
