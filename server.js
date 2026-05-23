@@ -8697,6 +8697,48 @@ app.post('/api/capture', requireAppAccess, async (req, res) => {
     }
 });
 
+// ── Browser Agent Routes ──────────────────────────────────────────
+const browserAgent = require('./agent-system/browser-agent');
+
+app.post('/api/browser/research', requireAppAccess, async (req, res) => {
+    const { objective, url, maxPages } = req.body || {};
+    if (!objective || !url) return res.status(400).json({
+        ok: false, error: 'objective and url required'
+    });
+    res.json({ ok: true, status: 'running', message: 'Research started' });
+    setImmediate(async () => {
+        try {
+            const result = await browserAgent.research(objective, url, { maxPages: maxPages || 3 });
+            await sbAdmin.from('apex_notifications').insert({
+                id: `browser-${Date.now()}`,
+                message: `Research complete: ${result.summary.slice(0, 200)}`,
+                type: 'success',
+                read: false
+            });
+        } catch (e) {
+            console.error('[Browser] research route error:', e.message);
+        }
+    });
+});
+
+app.post('/api/browser/fill-form', requireAppAccess, async (req, res) => {
+    const { url, fields, submitSelector } = req.body || {};
+    if (!url || !fields) return res.status(400).json({
+        ok: false, error: 'url and fields required'
+    });
+    const result = await browserAgent.fillForm(url, fields, submitSelector);
+    res.json({ ok: true, ...result });
+});
+
+app.post('/api/browser/click', requireAppAccess, async (req, res) => {
+    const { url, selector } = req.body || {};
+    if (!url || !selector) return res.status(400).json({
+        ok: false, error: 'url and selector required'
+    });
+    const result = await browserAgent.clickAndExtract(url, selector);
+    res.json({ ok: true, ...result });
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,

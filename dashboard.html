@@ -2844,6 +2844,22 @@ async function startVoicePipeline() {
                 dgMuted = false;
                 return;
             }
+            // ── Research voice commands ───────────────────────────────────────────────
+            const _researchMatch = transcript.match(/\bresearch\b(.+)/i)
+                || transcript.match(/\blook up\b(.+)/i)
+                || transcript.match(/\bfind out\b(.+)/i);
+            if (_researchMatch) {
+                const _topic = _researchMatch[1].trim();
+                const _searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(_topic);
+                speak('Researching that now, sir. I will notify you when I have results.');
+                fetchJson('/api/browser/research', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ objective: _topic, url: _searchUrl, maxPages: 3 })
+                }).catch(e => console.warn('[Research cmd]', e));
+                dgMuted = false;
+                return;
+            }
             // ─────────────────────────────────────────────────────────────────────────
             document.getElementById("chatInput").value = transcript;
             lastSendWasVoice = true;
