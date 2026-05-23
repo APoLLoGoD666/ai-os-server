@@ -8,9 +8,38 @@ const memory = require('./obsidian-memory');
 const { z } = require('zod');
 
 const ROOT = path.join(__dirname, '..');
-const MODEL = 'claude-haiku-4-5-20251001';
-const OPENROUTER_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
 const MAX_FILE_BYTES = 20 * 1024;
+
+// ── Model IDs ─────────────────────────────────────────────────────────────────
+const M = {
+    FREE:    'meta-llama/llama-3.1-8b-instruct:free',  // OpenRouter only, $0
+    HAIKU:   'claude-haiku-4-5-20251001',               // $0.80/$4 per 1M
+    SONNET:  'claude-sonnet-4-6',                       // $3/$15 per 1M
+    OPUS:    'claude-opus-4-7'                          // $15/$75 per 1M
+};
+// Kept for backwards compat in prompt-expander / obsidian-memory imports
+const MODEL = M.HAIKU;
+const OPENROUTER_MODEL = M.FREE;
+
+// ── Pricing ($ per 1M tokens) ─────────────────────────────────────────────────
+const PRICE = {
+    [M.FREE]:   { in: 0,     out: 0     },
+    [M.HAIKU]:  { in: 0.80,  out: 4.00  },
+    [M.SONNET]: { in: 3.00,  out: 15.00 },
+    [M.OPUS]:   { in: 15.00, out: 75.00 }
+};
+
+// ── Complexity → model tier per agent ────────────────────────────────────────
+// simple   = 1 file, config/stub, no business logic
+// moderate = multi-file, normal feature work
+// complex  = architecture changes, multi-system, many files
+// critical = auth, payment, security, database schema
+const ROUTING = {
+    simple:   { architect: M.FREE,   developer: M.HAIKU,  reviewer: M.HAIKU,  validator: M.FREE   },
+    moderate: { architect: M.HAIKU,  developer: M.HAIKU,  reviewer: M.HAIKU,  validator: M.HAIKU  },
+    complex:  { architect: M.SONNET, developer: M.SONNET, reviewer: M.SONNET, validator: M.HAIKU  },
+    critical: { architect: M.SONNET, developer: M.SONNET, reviewer: M.OPUS,   validator: M.SONNET }
+};
 
 // ── Circuit breaker — opens after 5 consecutive API failures, resets after 60s ──
 const _cb = {
@@ -27,16 +56,50 @@ const ArchitectSchema = z.object({
     testCases:         z.array(z.string()).default([])
 });
 
-// analyzeModel/Client: ARCHITECT, DEVELOPER routing, REVIEWER, VALIDATOR (cheap/free)
-// writeModel/Client:   DEVELOPER write only (quality-critical, paid)
-let activeModel = MODEL;
-let writeModel  = MODEL;
-let writeClient = null;
+// Per-run clients — set in runAgentTeam based on env
+let _freeClient  = null;   // OpenRouter or Anthropic fallback (analysis)
+let _paidClient  = null;   // Always Anthropic (writes + paid model calls)
+
+// Per-run agent model assignments — set by _classifyComplexity each run
+let _agentModels = { architect: M.HAIKU, developer: M.HAIKU, reviewer: M.HAIKU, validator: M.HAIKU };
 
 // Per-run state — reset at start of each runAgentTeam call
 let _worktreeRoot = ROOT;
-let _paidTokens   = { input: 0, output: 0 };
+let _costUsd      = 0;     // running dollar cost (model-aware)
 let obsidianContext = '';
+
+// ── Complexity classifier — rule-based, no API call needed ───────────────────
+function _classifyComplexity(spec) {
+    const obj   = (spec.objective   || '').toLowerCase();
+    const files = (spec.filesToModify || []).length;
+    const steps = (spec.steps        || []).length;
+
+    // critical: anything touching auth, secrets, payments, database schema, security
+    if (/\b(auth(?:entication|oriz)?|password|secret|api.?key|jwt|oauth|stripe|payment|billing|sql.?inject|xss|csrf|rls|rbac|permiss|encrypt|hash|salt|session.?token)\b/.test(obj))
+        return 'critical';
+
+    // complex: many files, orchestration, refactors, AI/ML
+    if (files >= 4 || steps >= 7 || /\b(refactor|architect|orchestrat|embed|vector|agent.pipeline|rebuild|rewrit|multi.?step|integrat)\b/.test(obj))
+        return 'complex';
+
+    // simple: single file, small additions, config, typo fixes
+    if (files <= 1 && steps <= 3 && /\b(add.?route|fix.?typo|update.?text|config|stub|rename|delete.?comment|format)\b/.test(obj))
+        return 'simple';
+
+    return 'moderate';
+}
+
+// ── Cost-aware API callers ────────────────────────────────────────────────────
+function _clientFor(model) {
+    // Free models → OpenRouter client; paid models → Anthropic client
+    return (model === M.FREE && _freeClient) ? _freeClient : _paidClient;
+}
+
+function _trackCost(usage, model) {
+    if (!usage) return;
+    const p = PRICE[model] || PRICE[M.HAIKU];
+    _costUsd += ((usage.input_tokens || 0) * p.in + (usage.output_tokens || 0) * p.out) / 1_000_000;
+}
 
 // ── Clean up orphaned worktrees from crashed previous runs ────────────────────
 (function _cleanOrphanedWorktrees() {
@@ -79,27 +142,28 @@ async function callWithBackoff(fn, retries = 3) {
     throw new Error('Max retries exceeded');
 }
 
-// Analyze calls use OpenRouter (free) — no token accumulation needed
-async function _callClaude(client, systemPrompt, userContent, maxTokens) {
-    return callWithBackoff(() => client.messages.create({
-        model: activeModel,
+// Model-aware API call — uses correct client for the model, tracks cost
+async function _callClaude(model, systemPrompt, userContent, maxTokens) {
+    const client = _clientFor(model);
+    const res = await callWithBackoff(() => client.messages.create({
+        model,
         max_tokens: maxTokens || 800,
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }]
     }));
+    _trackCost(res.usage, model);
+    return res;
 }
 
-// Write calls use Haiku (paid) — accumulate for cost reporting
-// cache_control on system prompt enables Anthropic prompt caching (up to 90% cost reduction on cache hits)
-async function _callWrite(systemPrompt, userContent) {
-    const res = await callWithBackoff(() => writeClient.messages.create({
-        model: writeModel,
+// Write call — always uses paid client, prompt-cached system, tracks cost
+async function _callWrite(model, systemPrompt, userContent) {
+    const res = await callWithBackoff(() => _paidClient.messages.create({
+        model,
         max_tokens: 2000,
         system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: userContent }]
     }));
-    _paidTokens.input  += res.usage?.input_tokens  || 0;
-    _paidTokens.output += res.usage?.output_tokens || 0;
+    _trackCost(res.usage, model);
     return res;
 }
 
@@ -136,7 +200,7 @@ function _buildRoutesMap() {
 }
 
 // ── Agent: ARCHITECT ──────────────────────────────────────────────────────────
-async function _architect(client, spec) {
+async function _architect(spec) {
     const t0 = Date.now();
     const SYSTEM = `You are the ARCHITECT agent for Apex AI OS.
 
@@ -190,7 +254,7 @@ Frontend testCases MUST include:
 
     const routesMap = _buildRoutesMap();
 
-    const res = await _callClaude(client, SYSTEM + uiMandate,
+    const res = await _callClaude(_agentModels.architect, SYSTEM + uiMandate,
         `SPEC:\n${JSON.stringify(spec, null, 2)}\n\n` +
         (routesMap ? routesMap + '\n\n' : '') +
         `FILE CONTENTS:\n${archFileContents}` +
@@ -213,7 +277,7 @@ Frontend testCases MUST include:
 }
 
 // ── Agent: DEVELOPER (per-file write) ────────────────────────────────────────
-async function _developerWriteFile(client, spec, filename, architectAnalysis) {
+async function _developerWriteFile(spec, filename, architectAnalysis) {
     const fp = path.join(_worktreeRoot, filename);
     let currentContent = null;
     let isNew = false;
@@ -247,7 +311,7 @@ ${architectAnalysis}`;
         ? `Create file: ${filename}`
         : `Update file: ${filename}\n\nCURRENT FILE CONTENT:\n${currentContent}`;
 
-    const res = await _callWrite(SYSTEM, userContent);
+    const res = await _callWrite(_agentModels.developer, SYSTEM, userContent);
     const newContent = res.content[0]?.text || '';
 
     fs.mkdirSync(path.dirname(fp), { recursive: true });
@@ -255,7 +319,7 @@ ${architectAnalysis}`;
     return { file: filename, status: isNew ? 'created' : 'written' };
 }
 
-async function _developer(client, spec, architectLog) {
+async function _developer(spec, architectLog) {
     const t0 = Date.now();
     const SYSTEM = `You are the DEVELOPER routing agent for Apex AI OS.
 Decide which files actually need changes to complete the task.
@@ -266,7 +330,8 @@ Rules:
 - Never include files touching: touchstart, getUserMedia, /api/transcribe, /api/tts, requireAppAccess, .env.
 - If no safe changes possible: {"filesModified":[],"summary":"unsafe — skipped"}`;
 
-    const res = await _callClaude(client, SYSTEM,
+    // Routing decision uses architect-level model (same tier — it's a reasoning call)
+    const res = await _callClaude(_agentModels.architect, SYSTEM,
         `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT:\n${architectLog.result.summary}\n\nFILES:\n${(spec.filesToModify || []).join('\n')}\n\nOutput JSON starting with {`,
         200
     );
@@ -281,7 +346,7 @@ Rules:
     const applied = [];
     for (const filename of filesToWrite) {
         try {
-            const r = await _developerWriteFile(client, spec, filename, architectLog.result.summary);
+            const r = await _developerWriteFile(spec, filename, architectLog.result.summary);
             applied.push(r);
             console.log(`[DEVELOPER] wrote ${filename} (${r.status})`);
         } catch (e) {
@@ -292,7 +357,7 @@ Rules:
 }
 
 // ── Agent: REVIEWER + SECURITY AUDITOR (wshobson/agents pattern) ──────────────
-async function _reviewer(client, spec, developerLog) {
+async function _reviewer(spec, developerLog) {
     const t0 = Date.now();
     const filesModified = developerLog.result.applied || [];
     if (!filesModified.length) {
@@ -323,15 +388,17 @@ Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}
 
         let fileResult;
         try {
+            const reviewerClient = _clientFor(_agentModels.reviewer);
             const response = await Promise.race([
-                callWithBackoff(() => client.messages.create({
-                    model: activeModel, max_tokens: 400,
+                callWithBackoff(() => reviewerClient.messages.create({
+                    model: _agentModels.reviewer, max_tokens: 500,
                     system: SYSTEM,
                     messages: [{ role: 'user', content:
                         `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE: ${filename}\n\`\`\`\n${fileContent.slice(0, 4000)}\n\`\`\`` }]
                 })),
                 new Promise((_, reject) => setTimeout(() => reject(new Error(`REVIEWER timeout: ${filename}`)), 45000))
             ]);
+            _trackCost(response.usage, _agentModels.reviewer);
             const text = response.content[0]?.text?.trim();
             try { fileResult = _parseJSON(text); }
             catch { fileResult = { file: filename, passed: true, issues: [] }; }
@@ -350,7 +417,7 @@ Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}
 }
 
 // ── Agent: VALIDATOR (tdd-guard pattern) ──────────────────────────────────────
-async function _validator(client, spec, architectLog, developerLog) {
+async function _validator(spec, architectLog, developerLog) {
     const t0 = Date.now();
     const testCases = architectLog.result.testCases || [];
     const filesApplied = developerLog.result.applied || [];
@@ -371,7 +438,7 @@ Reply JSON: {"passed":bool,"failedCases":["what failed and why"]}`;
 
     let result;
     try {
-        const res = await _callClaude(client, SYSTEM,
+        const res = await _callClaude(_agentModels.validator, SYSTEM,
             `EXPECTED BEHAVIORS:\n${testCases.map((tc, i) => `${i + 1}. ${tc}`).join('\n')}\n\nIMPLEMENTED CODE:\n${codeSnapshot}`,
             300
         );
@@ -490,7 +557,7 @@ async function _committer(spec, branchName) {
 // ── Agent: REFLECTOR (Reflexion pattern — verbal self-reflection after each run) ──
 // Generates a one-sentence lesson, stored in Obsidian/Lessons.md.
 // Future tasks read this via obsidianContext, making agents smarter over time.
-async function _reflector(client, spec, agentLogs, success) {
+async function _reflector(spec, agentLogs, success) {
     const SYSTEM = `You are the REFLECTOR for Apex AI OS. After each pipeline run, extract ONE concrete actionable lesson.
 Rules: Be specific — name the pattern, file type, or error. One sentence only. No filler words.
 Examples: "Agents must check for existing routes before adding new ones to avoid 404 on duplicate paths."
@@ -502,7 +569,9 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
     ).join('\n');
 
     try {
-        const res = await _callClaude(client, SYSTEM,
+        // Always use the cheapest available model for reflexion — it's post-run, non-critical
+        const reflexModel = _freeClient ? M.FREE : M.HAIKU;
+        const res = await _callClaude(reflexModel, SYSTEM,
             `Task: ${spec.objective}\nOutcome: ${success ? 'SUCCESS' : 'FAILURE'}\nPipeline:\n${summary}`,
             100
         );
@@ -543,25 +612,35 @@ async function _auditLog(taskId, spec, success, agentLogs, cost) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 async function runAgentTeam(spec, taskId) {
-    _paidTokens   = { input: 0, output: 0 };
+    _costUsd      = 0;
     _worktreeRoot = ROOT;
-    let client;
 
-    if (process.env.OPENROUTER_API_KEY) {
-        activeModel = OPENROUTER_MODEL;
-        client      = new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' });
-        writeModel  = MODEL;
-        writeClient = process.env.ANTHROPIC_API_KEY
-            ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-            : client;
-        console.log('[Orchestrator] Analyze: OpenRouter (free)  Write: Haiku');
-    } else {
-        activeModel = MODEL;
-        writeModel  = MODEL;
-        client      = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-        writeClient = client;
-        console.log('[Orchestrator] Provider: Anthropic Haiku');
-    }
+    // ── Client setup ──────────────────────────────────────────────────────────
+    _paidClient = process.env.ANTHROPIC_API_KEY
+        ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+        : null;
+    _freeClient = process.env.OPENROUTER_API_KEY
+        ? new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' })
+        : null;
+    if (!_paidClient && !_freeClient) throw new Error('No API key configured — set ANTHROPIC_API_KEY or OPENROUTER_API_KEY');
+    if (!_paidClient) _paidClient = _freeClient; // fallback: all calls through OpenRouter
+
+    // ── Complexity classification → per-agent model routing ──────────────────
+    const complexity  = _classifyComplexity(spec);
+    const route       = ROUTING[complexity];
+    // If a model requires Anthropic and no paid client, fall back to best available
+    const _resolve = (m) => (m !== M.FREE && !process.env.ANTHROPIC_API_KEY) ? M.FREE : m;
+    _agentModels = {
+        architect: _resolve(route.architect),
+        developer: _resolve(route.developer),
+        reviewer:  _resolve(route.reviewer),
+        validator: _resolve(route.validator),
+    };
+    console.log(`[Orchestrator] Complexity: ${complexity.toUpperCase()}`);
+    console.log(`[Orchestrator] Models — ARCH:${_agentModels.architect.split('/').pop()} DEV:${_agentModels.developer.split('/').pop()} REV:${_agentModels.reviewer.split('/').pop()} VAL:${_agentModels.validator.split('/').pop()}`);
+    // Estimated cost ceiling for this tier (rough guide logged before run)
+    const ceilByTier = { simple: '$0.01', moderate: '$0.15', complex: '$0.80', critical: '$2.50' };
+    console.log(`[Orchestrator] Expected cost ceiling: ~${ceilByTier[complexity]}`);
 
     // Wiki context — capped at 1500 chars
     try {
@@ -616,17 +695,17 @@ async function runAgentTeam(spec, taskId) {
     const agentLogs = [];
     const _fail = (error) => {
         _cleanup();
-        const _cost = ((_paidTokens.input * 0.80 + _paidTokens.output * 4.00) / 1_000_000).toFixed(5);
-        setImmediate(() => _reflector(client, spec, agentLogs, false));
-        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, _cost));
-        return { success: false, commitHash: null, agentLogs, error };
+        const cost = _costUsd.toFixed(5);
+        setImmediate(() => _reflector(spec, agentLogs, false));
+        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost));
+        return { success: false, commitHash: null, agentLogs, error, complexity, models: _agentModels };
     };
 
     try {
         console.log(`[Orchestrator] ── Starting ${taskId} ──`);
 
         // Step 1 — ARCHITECT
-        const architectLog = await _architect(client, spec);
+        const architectLog = await _architect(spec);
         agentLogs.push(architectLog);
         console.log(`[Orchestrator] ARCHITECT (${architectLog.duration}ms) — ${architectLog.result.testCases?.length || 0} test cases`);
 
@@ -638,12 +717,12 @@ async function runAgentTeam(spec, taskId) {
             console.log(`[Orchestrator] ── Attempt ${attempt}/${MAX_ATTEMPTS} ──`);
 
             // Step 2 — DEVELOPER
-            developerLog = await _developer(client, spec, architectLog);
+            developerLog = await _developer(spec, architectLog);
             agentLogs.push(developerLog);
             console.log(`[Orchestrator] DEVELOPER (${developerLog.duration}ms) — ${developerLog.result.applied?.length || 0} files written`);
 
             // Step 3 — REVIEWER + SECURITY AUDIT
-            reviewerLog = await _reviewer(client, spec, developerLog);
+            reviewerLog = await _reviewer(spec, developerLog);
             agentLogs.push(reviewerLog);
             console.log(`[Orchestrator] REVIEWER (${reviewerLog.duration}ms) — passed=${reviewerLog.result.passed}`);
             if (!reviewerLog.result.passed) {
@@ -654,7 +733,7 @@ async function runAgentTeam(spec, taskId) {
             }
 
             // Step 3.5 — VALIDATOR (tdd-guard)
-            validatorLog = await _validator(client, spec, architectLog, developerLog);
+            validatorLog = await _validator(spec, architectLog, developerLog);
             agentLogs.push(validatorLog);
             console.log(`[Orchestrator] VALIDATOR (${validatorLog.duration}ms) — passed=${validatorLog.result.passed}`);
             if (!validatorLog.result.passed && (validatorLog.result.failedCases || []).length > 0) {
@@ -664,7 +743,7 @@ async function runAgentTeam(spec, taskId) {
                 return _fail(lastFailure);
             }
 
-            // Step 4 — TESTER (syntax)
+            // Step 4 — TESTER (syntax check, no model needed)
             const filesModified = (developerLog.result.applied || []).map(e => e.file || e);
             testerLog = await _tester(filesModified);
             agentLogs.push(testerLog);
@@ -707,30 +786,31 @@ async function runAgentTeam(spec, taskId) {
             });
         }
 
-        const _cost = ((_paidTokens.input * 0.80 + _paidTokens.output * 4.00) / 1_000_000).toFixed(5);
-        console.log(`[Cost] ${taskId}: $${_cost} (${_paidTokens.input}in / ${_paidTokens.output}out paid tokens)`);
+        const cost = _costUsd.toFixed(5);
+        console.log(`[Cost] ${taskId}: $${cost} (complexity=${complexity}, arch=${_agentModels.architect.split('/').pop()} dev=${_agentModels.developer.split('/').pop()} rev=${_agentModels.reviewer.split('/').pop()})`);
         console.log(`[Orchestrator] ── ${taskId} COMPLETE — ${committerLog.result.commitHash} ──`);
 
-        // Fire-and-forget: Reflexion lesson + Supabase audit log
-        setImmediate(() => _reflector(client, spec, agentLogs, true));
-        setImmediate(() => _auditLog(taskId, spec, true, agentLogs, _cost));
+        setImmediate(() => _reflector(spec, agentLogs, true));
+        setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost));
 
         return {
             success:    true,
             commitHash: committerLog.result.commitHash,
             agentLogs,
             error:      null,
-            cost:       _cost
+            cost,
+            complexity,
+            models:     _agentModels
         };
 
     } catch (err) {
         console.error('[Orchestrator] pipeline error:', err.message);
         _cleanup();
-        const _cost = ((_paidTokens.input * 0.80 + _paidTokens.output * 4.00) / 1_000_000).toFixed(5);
+        const cost = _costUsd.toFixed(5);
         memory.logLesson(`Task ${taskId} failed: ${err.message}`);
-        setImmediate(() => _reflector(client, spec, agentLogs, false));
-        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, _cost));
-        return { success: false, commitHash: null, agentLogs, error: err.message };
+        setImmediate(() => _reflector(spec, agentLogs, false));
+        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost));
+        return { success: false, commitHash: null, agentLogs, error: err.message, complexity, models: _agentModels };
     }
 }
 
