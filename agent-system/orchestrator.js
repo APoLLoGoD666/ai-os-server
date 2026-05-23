@@ -7,6 +7,9 @@ const memory = require('./obsidian-memory');
 
 const ROOT = path.join(__dirname, '..');
 const MODEL = 'claude-haiku-4-5-20251001';
+const OPENROUTER_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
+
+let activeModel = MODEL;
 
 async function callWithBackoff(fn, retries = 3) {
     for (let i = 0; i < retries; i++) {
@@ -27,7 +30,7 @@ async function callWithBackoff(fn, retries = 3) {
 
 function _callClaude(client, systemPrompt, userContent, maxTokens) {
     return callWithBackoff(() => client.messages.create({
-        model: MODEL,
+        model: activeModel,
         max_tokens: maxTokens || 2000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }]
@@ -182,7 +185,7 @@ Reply JSON only: {"file":"name","passed":true,"issues":["list"]}`;
         try {
             const response = await Promise.race([
                 callWithBackoff(() => client.messages.create({
-                    model: MODEL,
+                    model: activeModel,
                     max_tokens: 1000,
                     system: SYSTEM,
                     messages: [{ role: 'user', content: `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE: ${filename}\n\`\`\`\n${fileContent.slice(0, 8000)}\n\`\`\`` }]
@@ -331,7 +334,19 @@ async function _committer(spec) {
 // ── Main export ───────────────────────────────────────────────────────────────
 async function runAgentTeam(spec, taskId) {
     const { createBackup, restoreBackup } = require('./backup-manager');
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    let client;
+    if (process.env.OPENROUTER_API_KEY) {
+        activeModel = OPENROUTER_MODEL;
+        client = new Anthropic({
+            apiKey: process.env.OPENROUTER_API_KEY,
+            baseURL: 'https://openrouter.ai/api/v1'
+        });
+        console.log('[Orchestrator] Provider: OpenRouter —', activeModel);
+    } else {
+        activeModel = MODEL;
+        client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        console.log('[Orchestrator] Provider: Anthropic —', activeModel);
+    }
     const agentLogs = [];
 
     // Read Obsidian context before starting
