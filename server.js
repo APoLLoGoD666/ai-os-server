@@ -8841,25 +8841,69 @@ app.post('/api/setup/run-sql', requireAppAccess, async (req, res) => {
 
 // ── Wiki Ingest Route ────────────────────────────────────────────
 app.post('/api/wiki/ingest', requireAppAccess, async (req, res) => {
-    const { content, source, type } = req.body || {};
+    const { content, source } = req.body || {};
     if (!content) return res.status(400).json({ ok: false, error: 'content required' });
     try {
-        const wikiClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const wikiClient = process.env.OPENROUTER_API_KEY
+            ? new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' })
+            : new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const wikiModel = process.env.OPENROUTER_API_KEY
+            ? 'meta-llama/llama-3.1-8b-instruct:free' : 'claude-haiku-4-5-20251001';
         const { obsidianRead, obsidianWrite } = require('./agent-system/obsidian-client');
+        const today = new Date().toISOString().split('T')[0];
+
+        // Classify — extended taxonomy: System, Projects, People, Entities, Concepts
         const classifyRes = await wikiClient.messages.create({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 100,
-            messages: [{
-                role: 'user',
-                content: `Classify this content into exactly one of these wiki pages:\nSystem/North-Star.md\nSystem/Decisions.md\nProjects/Apex-AI-OS.md\nPeople/Alex.md\nSystem/WIKI.md\n\nContent: ${content.slice(0, 500)}\n\nReply with ONLY the page path, nothing else.`
+            model: wikiModel, max_tokens: 80,
+            messages: [{ role: 'user', content:
+                `Classify this content into the best wiki page path. Options:\n` +
+                `System/North-Star.md\nSystem/Decisions.md\nProjects/Apex-AI-OS.md\n` +
+                `People/Alex.md\nSystem/WIKI.md\n` +
+                `Entities/<Name>.md  (tools, services, companies, APIs)\n` +
+                `Concepts/<Name>.md  (ideas, patterns, techniques)\n` +
+                `People/<Name>.md    (other people)\n\n` +
+                `Content: ${content.slice(0, 400)}\n\n` +
+                `Reply with ONLY the page path. Replace <Name> with the actual name.`
             }]
         });
         const page = classifyRes.content[0]?.text?.trim() || 'System/Decisions.md';
-        const existing = await obsidianRead(page) || '';
-        const today = new Date().toISOString().split('T')[0];
-        const entry = `\n\n---\n*Ingested ${today} from ${source || 'unknown'}*\n\n${content}`;
-        await obsidianWrite(page, existing + entry);
-        res.json({ ok: true, page });
+
+        // Read existing — if no page exists, create it with structure
+        const existing = await obsidianRead(page).catch(() => null);
+        let merged;
+        if (!existing) {
+            const pageName = page.split('/').pop().replace('.md', '');
+            merged = `# ${pageName}\n*Created ${today} — source: ${source || 'ingest'}*\n\n${content}`;
+        } else {
+            // Merge: update existing sections, never just append
+            const mergeRes = await wikiClient.messages.create({
+                model: wikiModel, max_tokens: 2000,
+                system: `You maintain a living knowledge base. Merge new information into the page.
+Rules:
+- Update existing sections with new info rather than duplicating
+- Add new sections only for genuinely new topics
+- Remove redundant or superseded content
+- Keep the page concise and structured for AI retrieval
+- Return ONLY the complete merged markdown. No explanation.`,
+                messages: [{ role: 'user', content:
+                    `PAGE: ${page}  TODAY: ${today}\n\nEXISTING:\n${existing.slice(0, 3000)}\n\n` +
+                    `NEW INFO (source: ${source || 'unknown'}):\n${content.slice(0, 1200)}\n\nReturn merged page only.`
+                }]
+            });
+            merged = mergeRes.content[0]?.text?.trim() || (existing + '\n\n' + content);
+        }
+
+        await obsidianWrite(page, merged);
+        res.json({ ok: true, page, action: existing ? 'merged' : 'created' });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.post('/api/wiki/consolidate', requireAppAccess, async (req, res) => {
+    try {
+        await require('./agent-system/wiki-reader').consolidateWiki();
+        res.json({ ok: true, message: 'Wiki consolidated' });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
     }
@@ -8934,6 +8978,22 @@ server.listen(PORT, () => {
             checkPendingMasterTasks();
         }
     }, 600000);
+
+    // Nightly wiki consolidation at 3am
+    (function _scheduleWikiConsolidation() {
+        const _now = new Date(), _3am = new Date(_now);
+        _3am.setHours(3, 0, 0, 0);
+        if (_3am <= _now) _3am.setDate(_3am.getDate() + 1);
+        const _delay = _3am.getTime() - _now.getTime();
+        setTimeout(function _nightlyWiki() {
+            require('./agent-system/wiki-reader').consolidateWiki()
+                .catch(e => console.warn('[Wiki] nightly consolidation error:', e.message));
+            setInterval(() => require('./agent-system/wiki-reader').consolidateWiki()
+                .catch(e => console.warn('[Wiki] nightly consolidation error:', e.message)),
+                24 * 60 * 60 * 1000);
+        }, _delay);
+        console.log(`[Wiki] Nightly consolidation in ${Math.round(_delay / 60000)}min`);
+    })();
 
     // Phase 2 agents
     initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
