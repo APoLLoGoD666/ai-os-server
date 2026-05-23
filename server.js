@@ -136,7 +136,24 @@ const app = express();
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+    origin: (origin, cb) => {
+        const ok = !origin ||
+            origin.endsWith('.onrender.com') ||
+            origin.startsWith('http://localhost') ||
+            origin.startsWith('http://127.0.0.1');
+        cb(null, ok);
+    },
+    credentials: true
+}));
+const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { ok: false, reply: 'Rate limit exceeded — try again shortly.' }
+});
+app.use('/api/', apiLimiter);
 app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -8005,6 +8022,20 @@ Respond naturally in 1-2 sentences.`.trim();
         // Upgrade 1: fire-and-forget fact extraction — never blocks response
         setImmediate(() => extractAndSaveFacts(userMessage, reply).catch(() => {}));
 
+        // Voice-to-task: detect action intent and log to apex_tasks
+        setImmediate(() => {
+            const actionWords = /\b(remind|add|schedule|book|create|set|buy|order|call|email|text|send|check|research|find|draft|write|plan|note|do|make)\b/i;
+            if (actionWords.test(userMessage)) {
+                sbAdmin.from('apex_tasks').insert({
+                    id: `voice-task-${Date.now()}`,
+                    title: userMessage.slice(0, 200),
+                    status: 'pending',
+                    source: 'voice',
+                    created_at: new Date().toISOString()
+                }).catch(() => {});
+            }
+        });
+
         // Ruflo: bridge this exchange into swarm memory + create task when tools ran
         try {
             const rfSpawn = require('child_process').spawn;
@@ -8545,6 +8576,26 @@ app.get('/api/master/roadmap', requireAppAccess, async (req, res) => {
             .reduce((a, ws) => a + ws.completed.length, 0);
         res.json({ ok: true, roadmap, total, completed,
             remaining: total - completed });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
+    try {
+        const roadmap = parseRoadmap();
+        const total = Object.values(roadmap).reduce((a, ws) => a + ws.pending.length + ws.completed.length, 0);
+        const completed = Object.values(roadmap).reduce((a, ws) => a + ws.completed.length, 0);
+        const [taskRes, timelineRes] = await Promise.all([
+            sbAdmin.from('apex_tasks').select('id', { count: 'exact', head: true }),
+            sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true })
+        ]);
+        res.json({
+            ok: true,
+            roadmap: { total, completed, pending: total - completed, pct: total ? Math.round(completed / total * 100) : 0 },
+            tasks: taskRes.count || 0,
+            pipelineRuns: timelineRes.count || 0
+        });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
     }

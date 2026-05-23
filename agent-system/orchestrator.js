@@ -62,8 +62,17 @@ async function _architect(client, spec) {
         }
     }).join('\n\n');
 
+    // Graphify knowledge graph query — best-effort, never blocks
+    let graphContext = '';
+    try {
+        const gq = spawnSync('graphify', ['query', spec.objective], {
+            cwd: ROOT, encoding: 'utf8', timeout: 8000
+        });
+        if (gq.status === 0 && gq.stdout) graphContext = gq.stdout.trim().slice(0, 2000);
+    } catch {}
+
     const res = await _callClaude(client, SYSTEM,
-        `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE CONTENTS:\n${archFileContents}${obsidianContext ? '\n\nSYSTEM MEMORY:\n' + obsidianContext : ''}`,
+        `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE CONTENTS:\n${archFileContents}${graphContext ? '\n\nKNOWLEDGE GRAPH:\n' + graphContext : ''}${obsidianContext ? '\n\nSYSTEM MEMORY:\n' + obsidianContext : ''}`,
         1500
     );
     const text = res.content[0]?.text?.trim();
@@ -423,6 +432,24 @@ async function runAgentTeam(spec, taskId) {
 
         if (!committerLog.result.commitHash) {
             throw new Error(committerLog.result.error || 'COMMITTER produced no commit');
+        }
+
+        // Smoke-tester: health-check 90s after deploy — fire-and-forget
+        if (process.env.RENDER_HEALTH_URL) {
+            setImmediate(async () => {
+                await new Promise(r => setTimeout(r, 90000));
+                try {
+                    const https = require('https');
+                    const url = new URL(process.env.RENDER_HEALTH_URL);
+                    const ok = await new Promise(resolve => {
+                        https.get(url, r => resolve(r.statusCode < 400)).on('error', () => resolve(false));
+                    });
+                    if (!ok) memory.logLesson(`[SmokeTester] health check FAILED for ${taskId} — deploy may be broken`);
+                    else console.log(`[SmokeTester] ${taskId} — health OK`);
+                } catch (e) {
+                    memory.logLesson(`[SmokeTester] health check error for ${taskId}: ${e.message}`);
+                }
+            });
         }
 
         return {

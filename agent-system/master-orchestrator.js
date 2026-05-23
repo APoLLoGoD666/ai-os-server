@@ -60,11 +60,16 @@ function markFeatureComplete(featureId) {
 
 // ── Plan a feature using Claude ──────────────────────────────────
 async function planFeature(feature, workstream) {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = process.env.OPENROUTER_API_KEY
+        ? new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' })
+        : new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const planModel = process.env.OPENROUTER_API_KEY
+        ? 'meta-llama/llama-3.1-8b-instruct:free'
+        : MODEL;
     const context = memory.getFullContext();
 
     const res = await client.messages.create({
-        model: MODEL,
+        model: planModel,
         max_tokens: 2000,
         system: `You are a senior architect planning features for Apex AI OS.
 Apex is a Node.js/Express voice-first AI OS on Render.
@@ -159,6 +164,25 @@ async function runFeature(feature, workstream) {
             `Auto-approved ${feature.id}`,
             'DB-only permission gate — tables pre-created by setup agent'
         );
+    }
+
+    // Check standing approvals table before blocking on permission
+    if (plan.permissionRequired) {
+        try {
+            const { data: standing } = await _sbClient()
+                .from('apex_standing_approvals')
+                .select('id')
+                .eq('feature_pattern', feature.id)
+                .eq('active', true)
+                .limit(1);
+            if (standing && standing.length > 0) {
+                console.log(`[Master] ${feature.id} — standing approval found, auto-approving`);
+                plan.permissionRequired = false;
+                memory.logDecision(`Standing approval used for ${feature.id}`, 'apex_standing_approvals table');
+            }
+        } catch (e) {
+            console.warn('[Master] standing approvals check failed:', e.message);
+        }
     }
 
     if (plan.permissionRequired) {

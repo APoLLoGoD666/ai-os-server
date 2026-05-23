@@ -1470,6 +1470,13 @@
                         <button class="subpanel-btn" onclick="masterRunFeature()">Run</button>
                     </div>
                 </div>
+                <div class="subpanel">
+                    <div class="subpanel-header">
+                        <span class="subpanel-label">Pipeline Stats</span>
+                        <button class="subpanel-btn" onclick="refreshMetrics()">↻</button>
+                    </div>
+                    <div id="metricsPanel"><div class="empty-note">Loading…</div></div>
+                </div>
             </div>
 
             <!-- ══ PAGE: LIFE ══ -->
@@ -4200,6 +4207,20 @@ async function setupDatabase() {
     }
 }
 
+async function refreshMetrics() {
+    const el = document.getElementById('metricsPanel');
+    if (!el) return;
+    try {
+        const data = await fetchJson('/api/master/metrics');
+        if (!data.ok) { el.innerHTML = '<div class="empty-note">—</div>'; return; }
+        el.innerHTML = [
+            `<div class="task-item" style="display:block"><div class="task-item-title">Roadmap</div><div style="font-size:10px;color:rgba(255,255,255,0.45)">${data.roadmap.completed}/${data.roadmap.total} features (${data.roadmap.pct}%)</div></div>`,
+            `<div class="task-item" style="display:block"><div class="task-item-title">Tasks logged</div><div style="font-size:10px;color:rgba(255,255,255,0.45)">${data.tasks}</div></div>`,
+            `<div class="task-item" style="display:block"><div class="task-item-title">Pipeline runs</div><div style="font-size:10px;color:rgba(255,255,255,0.45)">${data.pipelineRuns}</div></div>`
+        ].join('');
+    } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
+}
+
 async function masterRunFeature() {
     const featureId = document.getElementById('roadmapFeatureInput').value.trim();
     if (!featureId) return showTaskToast('Enter a feature ID, e.g. FEAT-C001', 'error');
@@ -4231,6 +4252,8 @@ setInterval(pollPermissions, 15000);
 setInterval(refreshTimelinePanel, 30000);
 refreshRoadmapPanel();
 setInterval(refreshRoadmapPanel, 60000);
+refreshMetrics();
+setInterval(refreshMetrics, 60000);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
