@@ -82,7 +82,12 @@ async function _architect(client, spec) {
         const gq = spawnSync('graphify', ['query', spec.objective], {
             cwd: ROOT, encoding: 'utf8', timeout: 3000
         });
-        if (gq.status === 0 && gq.stdout) graphContext = gq.stdout.trim().slice(0, 1000);
+        if (gq.status === 0 && gq.stdout) {
+            // Strip ANSI codes and deduplicate repeated lines before injecting into LLM context
+            const raw = gq.stdout.replace(/\x1b\[[0-9;]*m/g, '').trim();
+            const deduped = [...new Set(raw.split('\n'))].join('\n');
+            graphContext = deduped.slice(0, 1000);
+        }
     } catch {}
 
     const res = await _callClaude(client, SYSTEM,
