@@ -350,4 +350,69 @@ async function runFeatureWithPermission(featureId) {
     throw new Error(`${featureId} not found in roadmap`);
 }
 
-module.exports = { runMasterOrchestrator, runFeature, parseRoadmap, runFeatureWithPermission };
+// ── Auto-approve safe permission requests on startup ─────────────
+async function autoApproveStandardPermissions() {
+    let data, error;
+    try {
+        ({ data, error } = await _sbClient()
+            .from('apex_notifications')
+            .select('*')
+            .eq('type', 'permission')
+            .eq('read', false));
+    } catch (e) {
+        console.error('[AutoApprove] query error:', e.message);
+        return;
+    }
+    if (error) { console.error('[AutoApprove] query error:', error.message); return; }
+    if (!data || !data.length) {
+        console.log('[AutoApprove] no pending permission requests');
+        return;
+    }
+
+    console.log(`[AutoApprove] checking ${data.length} pending permission request(s)`);
+
+    const BLOCK_PATTERNS = [
+        /oauth scope change/i,
+        /linkedin/i,
+        /whatsapp\s*tos/i,
+        /plaid/i,
+        /clinical/i,
+        /crisis/i
+    ];
+
+    for (const row of data) {
+        let info = {};
+        try { info = JSON.parse(row.message); } catch (_) {}
+        const featureId = info.featureId || row.id;
+        const reason = (info.reason || '').toString();
+
+        if (BLOCK_PATTERNS.some(p => p.test(reason))) {
+            console.log(`[AutoApprove] SKIP ${featureId} — manual review required: "${reason}"`);
+            continue;
+        }
+
+        const r = reason.toLowerCase();
+        const isSafe = (
+            r.includes('new table') ||
+            r.includes('new supabase table') ||
+            r.includes('additive migration') ||
+            (r.includes('new dependency') && (r.includes('node-cron') || r.includes('express-rate-limit')))
+        );
+
+        if (!isSafe) {
+            console.log(`[AutoApprove] SKIP ${featureId} — reason not in safe list: "${reason}"`);
+            continue;
+        }
+
+        console.log(`[AutoApprove] AUTO-APPROVING ${featureId} — reason: "${reason}"`);
+        try {
+            await _sbClient().from('apex_notifications').update({ read: true }).eq('id', row.id);
+            runFeatureWithPermission(featureId)
+                .catch(e => console.error(`[AutoApprove] ${featureId} run error:`, e.message));
+        } catch (e) {
+            console.error(`[AutoApprove] failed to approve ${featureId}:`, e.message);
+        }
+    }
+}
+
+module.exports = { runMasterOrchestrator, runFeature, parseRoadmap, runFeatureWithPermission, autoApproveStandardPermissions };

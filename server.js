@@ -8532,7 +8532,7 @@ app.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
 });
 
 // ── Master Orchestrator Routes ────────────────────────────────────
-const { runMasterOrchestrator, runFeature, parseRoadmap, runFeatureWithPermission } =
+const { runMasterOrchestrator, runFeature, parseRoadmap, runFeatureWithPermission, autoApproveStandardPermissions } =
     require('./agent-system/master-orchestrator');
 
 app.get('/api/master/roadmap', requireAppAccess, async (req, res) => {
@@ -8738,6 +8738,8 @@ server.listen(PORT, () => {
 
     // Pick up any master tasks that were queued before a cold-start restart
     setTimeout(() => checkPendingMasterTasks(), 10000);
+    // Auto-approve safe permission requests — runs after task check settles
+    setTimeout(() => autoApproveStandardPermissions(), 15000);
 
     // Pipeline health monitor — if no activity for 30+ min, check for stuck tasks
     setInterval(() => {
