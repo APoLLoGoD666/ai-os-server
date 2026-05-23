@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "render-build": "npm install && npx playwright install chromium --with-deps"
+  },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.77",
     "@anthropic-ai/sdk": "^0.90.0",
