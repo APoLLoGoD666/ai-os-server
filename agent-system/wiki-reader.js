@@ -1,5 +1,6 @@
 "use strict";
 const { obsidianRead, obsidianWrite } = require('./obsidian-client');
+const localMemory = require('./obsidian-memory');
 
 const CORE_PAGES = [
     'System/WIKI.md',
@@ -37,6 +38,10 @@ async function getWikiContext(taskTitle) {
             }
         }
     }
+
+    // Append recent auto-reflexion lessons (last 12, capped at 800 chars)
+    const recentLessons = localMemory.getRecentLessons(12);
+    if (recentLessons) pages.push(`## Recent Agent Lessons\n${recentLessons.slice(0, 800)}`);
 
     return pages.join('\n\n---\n\n');
 }

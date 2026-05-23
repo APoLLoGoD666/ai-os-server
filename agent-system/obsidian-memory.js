@@ -74,6 +74,13 @@ module.exports = {
         return this.read('System/Lessons.md') || '';
     },
 
+    // Returns the last N lessons — prevents injecting an unbounded file into prompts
+    getRecentLessons(n = 12) {
+        const raw = this.read('System/Lessons.md') || '';
+        const sections = raw.split(/\n---\n/).filter(Boolean);
+        return sections.slice(-n).join('\n---\n');
+    },
+
     getFullContext() {
         const northStar = this.read('System/North-Star.md');
         const lessons = this.read('System/Lessons.md');

@@ -182,6 +182,15 @@ async function createAllTables() {
             status TEXT DEFAULT 'draft', created_at TIMESTAMPTZ DEFAULT NOW(),
             updated_at TIMESTAMPTZ DEFAULT NOW()
         )`,
+        // Agent pipeline audit log
+        `CREATE TABLE IF NOT EXISTS apex_agent_runs (
+            task_id TEXT PRIMARY KEY,
+            objective TEXT,
+            success BOOLEAN DEFAULT FALSE,
+            cost_usd NUMERIC(10,6) DEFAULT 0,
+            agent_summary JSONB DEFAULT '[]',
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )`,
         // Daily Briefing
         `CREATE TABLE IF NOT EXISTS briefing_history (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

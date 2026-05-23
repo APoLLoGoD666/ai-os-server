@@ -8586,15 +8586,23 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
         const roadmap = parseRoadmap();
         const total = Object.values(roadmap).reduce((a, ws) => a + ws.pending.length + ws.completed.length, 0);
         const completed = Object.values(roadmap).reduce((a, ws) => a + ws.completed.length, 0);
-        const [taskRes, timelineRes] = await Promise.all([
+        const [taskRes, timelineRes, runRes] = await Promise.all([
             sbAdmin.from('apex_tasks').select('id', { count: 'exact', head: true }),
-            sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true })
+            sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true }),
+            sbAdmin.from('apex_agent_runs').select('success,cost_usd').catch(() => ({ data: null }))
         ]);
+        const runs     = runRes.data || [];
+        const runCount = runs.length;
+        const succeded = runs.filter(r => r.success).length;
+        const spend    = runs.reduce((s, r) => s + (r.cost_usd || 0), 0);
         res.json({
             ok: true,
-            roadmap: { total, completed, pending: total - completed, pct: total ? Math.round(completed / total * 100) : 0 },
-            tasks: taskRes.count || 0,
-            pipelineRuns: timelineRes.count || 0
+            roadmap:     { total, completed, pending: total - completed, pct: total ? Math.round(completed / total * 100) : 0 },
+            tasks:       taskRes.count || 0,
+            pipelineRuns: timelineRes.count || runCount,
+            agentRuns:   runCount,
+            successRate: runCount ? Math.round(succeded / runCount * 100) : null,
+            totalCostUsd: spend.toFixed(4)
         });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });

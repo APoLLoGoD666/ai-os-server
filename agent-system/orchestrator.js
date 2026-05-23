@@ -5,11 +5,27 @@ const path = require('path');
 const os = require('os');
 const { spawnSync, execSync } = require('child_process');
 const memory = require('./obsidian-memory');
+const { z } = require('zod');
 
 const ROOT = path.join(__dirname, '..');
 const MODEL = 'claude-haiku-4-5-20251001';
 const OPENROUTER_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
 const MAX_FILE_BYTES = 20 * 1024;
+
+// ── Circuit breaker — opens after 5 consecutive API failures, resets after 60s ──
+const _cb = {
+    failures: 0, lastFailure: 0, threshold: 5, cooldown: 60000,
+    isOpen()  { return this.failures >= this.threshold && (Date.now() - this.lastFailure) < this.cooldown; },
+    record(ok) { if (ok) { this.failures = 0; } else { this.failures++; this.lastFailure = Date.now(); } }
+};
+
+// ── Zod schema for ARCHITECT output — prevents downstream parse failures ────────
+const ArchitectSchema = z.object({
+    summary:           z.string().min(1),
+    relevantFunctions: z.array(z.string()).default([]),
+    warnings:          z.array(z.string()).default([]),
+    testCases:         z.array(z.string()).default([])
+});
 
 // analyzeModel/Client: ARCHITECT, DEVELOPER routing, REVIEWER, VALIDATOR (cheap/free)
 // writeModel/Client:   DEVELOPER write only (quality-critical, paid)
@@ -39,14 +55,25 @@ let obsidianContext = '';
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 async function callWithBackoff(fn, retries = 3) {
+    if (_cb.isOpen()) {
+        console.warn('[CircuitBreaker] OPEN — API failure threshold reached; skipping call');
+        throw new Error('Circuit breaker open — too many consecutive API failures');
+    }
     for (let i = 0; i < retries; i++) {
-        try { return await fn(); }
-        catch (e) {
+        try {
+            const result = await fn();
+            _cb.record(true);
+            return result;
+        } catch (e) {
             if (e.status === 429 || e.message?.includes('rate')) {
                 const wait = (i + 1) * 15000;
                 console.log(`[Backoff] rate limited — waiting ${wait}ms`);
                 await new Promise(r => setTimeout(r, wait));
-            } else { throw e; }
+            } else {
+                _cb.record(false);
+                if (_cb.isOpen()) console.error(`[CircuitBreaker] opened after ${_cb.threshold} failures`);
+                throw e;
+            }
         }
     }
     throw new Error('Max retries exceeded');
@@ -63,11 +90,12 @@ async function _callClaude(client, systemPrompt, userContent, maxTokens) {
 }
 
 // Write calls use Haiku (paid) — accumulate for cost reporting
+// cache_control on system prompt enables Anthropic prompt caching (up to 90% cost reduction on cache hits)
 async function _callWrite(systemPrompt, userContent) {
     const res = await callWithBackoff(() => writeClient.messages.create({
         model: writeModel,
         max_tokens: 2000,
-        system: systemPrompt,
+        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: userContent }]
     }));
     _paidTokens.input  += res.usage?.input_tokens  || 0;
@@ -173,9 +201,13 @@ Frontend testCases MUST include:
 
     const text = res.content[0]?.text?.trim();
     let result;
-    try { result = _parseJSON(text); }
-    catch { result = { summary: text, relevantFunctions: [], warnings: [], testCases: [] }; }
-    if (!Array.isArray(result.testCases)) result.testCases = [];
+    try {
+        const raw = _parseJSON(text);
+        result = ArchitectSchema.parse(raw);
+    } catch {
+        try { result = ArchitectSchema.parse({ summary: text || 'no summary', relevantFunctions: [], warnings: [], testCases: [] }); }
+        catch { result = { summary: text || 'parse failed', relevantFunctions: [], warnings: [], testCases: [] }; }
+    }
 
     return { role: 'ARCHITECT', result, duration: Date.now() - t0 };
 }
@@ -194,6 +226,7 @@ async function _developerWriteFile(client, spec, filename, architectAnalysis) {
 
     console.log(`[Developer] ${isNew ? 'creating' : 'updating'}: ${filename} (worktree=${_worktreeRoot !== ROOT})`);
 
+    // Stable prefix (system + spec + architect analysis) — cached by Anthropic when ≥1024 tokens
     const SYSTEM = `You are the DEVELOPER agent for Apex AI OS — expert Node.js/Express backend engineer.
 Return ONLY the complete ${isNew ? 'new' : 'updated'} file content. No markdown fences, no explanation, no preamble.
 Your entire response IS the file, written to disk exactly as returned.
@@ -201,11 +234,18 @@ Your entire response IS the file, written to disk exactly as returned.
 PRINCIPLES: Simplicity First. Surgical Changes — preserve all existing code, add only what the spec requires. Goal-Driven.
 PATTERNS: Validate inputs at route level. Use proper HTTP codes (400/401/403/404/503). Wrap in try/catch with meaningful errors. Never log secrets.
 ROUTING: New API routes go in routes/<domain>.js using Express.Router(). Never modify server.js.
-NEVER touch: touchstart, touchend, getUserMedia, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.`;
+NEVER touch: touchstart, touchend, getUserMedia, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.
 
+SPEC:
+${JSON.stringify(spec, null, 2)}
+
+ARCHITECT ANALYSIS:
+${architectAnalysis}`;
+
+    // Variable part (just the file) goes in user message — kept separate so system stays cacheable
     const userContent = isNew
-        ? `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT:\n${architectAnalysis}\n\nCreate: ${filename}`
-        : `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT:\n${architectAnalysis}\n\nUpdate: ${filename}\n\nCURRENT:\n${currentContent}`;
+        ? `Create file: ${filename}`
+        : `Update file: ${filename}\n\nCURRENT FILE CONTENT:\n${currentContent}`;
 
     const res = await _callWrite(SYSTEM, userContent);
     const newContent = res.content[0]?.text || '';
@@ -447,6 +487,60 @@ async function _committer(spec, branchName) {
     return { role: 'COMMITTER', result: { commitHash: finalHash }, duration: Date.now() - t0 };
 }
 
+// ── Agent: REFLECTOR (Reflexion pattern — verbal self-reflection after each run) ──
+// Generates a one-sentence lesson, stored in Obsidian/Lessons.md.
+// Future tasks read this via obsidianContext, making agents smarter over time.
+async function _reflector(client, spec, agentLogs, success) {
+    const SYSTEM = `You are the REFLECTOR for Apex AI OS. After each pipeline run, extract ONE concrete actionable lesson.
+Rules: Be specific — name the pattern, file type, or error. One sentence only. No filler words.
+Examples: "Agents must check for existing routes before adding new ones to avoid 404 on duplicate paths."
+          "Files over 15KB should be split into domain-specific routes/ files before attempting edits."
+          "REVIEWER correctly caught missing try/catch on async DB calls — always wrap supabase queries."`;
+
+    const summary = agentLogs.slice(-4).map(l =>
+        `${l.role}: ${JSON.stringify(l.result || {}).slice(0, 150)}`
+    ).join('\n');
+
+    try {
+        const res = await _callClaude(client, SYSTEM,
+            `Task: ${spec.objective}\nOutcome: ${success ? 'SUCCESS' : 'FAILURE'}\nPipeline:\n${summary}`,
+            100
+        );
+        const lesson = res.content[0]?.text?.trim();
+        if (lesson && lesson.length > 10) {
+            memory.logLesson(`[Auto-Reflexion] ${lesson}`);
+            console.log('[Reflector] lesson:', lesson.slice(0, 80));
+        }
+    } catch (e) {
+        console.warn('[Reflector] skipped (non-fatal):', e.message);
+    }
+}
+
+// ── Audit log — records each pipeline run to Supabase for cost tracking ────────
+async function _auditLog(taskId, spec, success, agentLogs, cost) {
+    try {
+        const { createClient } = require('@supabase/supabase-js');
+        const sb = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+        );
+        const agentSummary = agentLogs.map(l => ({
+            role: l.role, duration: l.duration,
+            passed: l.result?.passed, error: l.result?.error || l.result?.commitHash
+        }));
+        await sb.from('apex_agent_runs').upsert({
+            task_id:       taskId,
+            objective:     (spec.objective || '').slice(0, 255),
+            success,
+            cost_usd:      parseFloat(cost) || 0,
+            agent_summary: JSON.stringify(agentSummary),
+            created_at:    new Date().toISOString()
+        }, { onConflict: 'task_id' });
+    } catch (e) {
+        console.warn('[Audit] log skipped (non-fatal):', e.message);
+    }
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 async function runAgentTeam(spec, taskId) {
     _paidTokens   = { input: 0, output: 0 };
@@ -520,7 +614,13 @@ async function runAgentTeam(spec, taskId) {
     };
 
     const agentLogs = [];
-    const _fail = (error) => { _cleanup(); return { success: false, commitHash: null, agentLogs, error }; };
+    const _fail = (error) => {
+        _cleanup();
+        const _cost = ((_paidTokens.input * 0.80 + _paidTokens.output * 4.00) / 1_000_000).toFixed(5);
+        setImmediate(() => _reflector(client, spec, agentLogs, false));
+        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, _cost));
+        return { success: false, commitHash: null, agentLogs, error };
+    };
 
     try {
         console.log(`[Orchestrator] ── Starting ${taskId} ──`);
@@ -611,6 +711,10 @@ async function runAgentTeam(spec, taskId) {
         console.log(`[Cost] ${taskId}: $${_cost} (${_paidTokens.input}in / ${_paidTokens.output}out paid tokens)`);
         console.log(`[Orchestrator] ── ${taskId} COMPLETE — ${committerLog.result.commitHash} ──`);
 
+        // Fire-and-forget: Reflexion lesson + Supabase audit log
+        setImmediate(() => _reflector(client, spec, agentLogs, true));
+        setImmediate(() => _auditLog(taskId, spec, true, agentLogs, _cost));
+
         return {
             success:    true,
             commitHash: committerLog.result.commitHash,
@@ -622,7 +726,10 @@ async function runAgentTeam(spec, taskId) {
     } catch (err) {
         console.error('[Orchestrator] pipeline error:', err.message);
         _cleanup();
+        const _cost = ((_paidTokens.input * 0.80 + _paidTokens.output * 4.00) / 1_000_000).toFixed(5);
         memory.logLesson(`Task ${taskId} failed: ${err.message}`);
+        setImmediate(() => _reflector(client, spec, agentLogs, false));
+        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, _cost));
         return { success: false, commitHash: null, agentLogs, error: err.message };
     }
 }

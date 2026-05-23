@@ -1477,6 +1477,13 @@
                     </div>
                     <div id="metricsPanel"><div class="empty-note">Loading…</div></div>
                 </div>
+                <div class="subpanel">
+                    <div class="subpanel-header">
+                        <span class="subpanel-label">Agent Lessons</span>
+                        <button class="subpanel-btn" onclick="refreshLessons()">↻</button>
+                    </div>
+                    <div id="lessonsPanel"><div class="empty-note">Loading…</div></div>
+                </div>
             </div>
 
             <!-- ══ PAGE: LIFE ══ -->
@@ -4211,13 +4218,34 @@ async function refreshMetrics() {
     const el = document.getElementById('metricsPanel');
     if (!el) return;
     try {
-        const data = await fetchJson('/api/master/metrics');
+        const [data, cost] = await Promise.all([
+            fetchJson('/api/master/metrics'),
+            fetchJson('/api/intelligence/cost-summary').catch(() => null)
+        ]);
         if (!data.ok) { el.innerHTML = '<div class="empty-note">—</div>'; return; }
-        el.innerHTML = [
+        const rows = [
             `<div class="task-item" style="display:block"><div class="task-item-title">Roadmap</div><div style="font-size:10px;color:rgba(255,255,255,0.45)">${data.roadmap.completed}/${data.roadmap.total} features (${data.roadmap.pct}%)</div></div>`,
             `<div class="task-item" style="display:block"><div class="task-item-title">Tasks logged</div><div style="font-size:10px;color:rgba(255,255,255,0.45)">${data.tasks}</div></div>`,
             `<div class="task-item" style="display:block"><div class="task-item-title">Pipeline runs</div><div style="font-size:10px;color:rgba(255,255,255,0.45)">${data.pipelineRuns}</div></div>`
-        ].join('');
+        ];
+        if (cost && cost.ok) {
+            rows.push(`<div class="task-item" style="display:block"><div class="task-item-title">Success rate</div><div style="font-size:10px;color:rgba(255,255,255,0.45)">${cost.successRate}% (${cost.totalRuns} runs)</div></div>`);
+            rows.push(`<div class="task-item" style="display:block"><div class="task-item-title">Total cost</div><div style="font-size:10px;color:rgba(255,255,255,0.45)">$${cost.totalCostUsd}</div></div>`);
+        }
+        el.innerHTML = rows.join('');
+    } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
+}
+
+async function refreshLessons() {
+    const el = document.getElementById('lessonsPanel');
+    if (!el) return;
+    try {
+        const data = await fetchJson('/api/intelligence/lessons?n=8');
+        if (!data.ok || !data.lessons.length) { el.innerHTML = '<div class="empty-note">No lessons yet</div>'; return; }
+        el.innerHTML = data.lessons.slice(0, 6).map(l => {
+            const clean = l.replace(/^##.*\n/, '').replace(/\[Auto-Reflexion\]\s*/g, '').trim().slice(0, 120);
+            return `<div class="task-item" style="display:block;font-size:10px;color:rgba(255,255,255,0.6);line-height:1.4;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.06)">${clean}</div>`;
+        }).join('');
     } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
 }
 
@@ -4254,6 +4282,8 @@ refreshRoadmapPanel();
 setInterval(refreshRoadmapPanel, 60000);
 refreshMetrics();
 setInterval(refreshMetrics, 60000);
+refreshLessons();
+setInterval(refreshLessons, 120000);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
