@@ -137,7 +137,10 @@ async function runFeature(feature, workstream) {
     // Auto-approve if permission is only needed for DB tables
     // (tables are now created by setup agent upfront)
     const _dbOnlyReasons = [
-        'database', 'table', 'migration', 'schema', 'supabase'
+        'database', 'table', 'migration', 'schema', 'supabase',
+        'column', 'row level security', 'rls', 'schema addition',
+        'additive', 'new table', 'supabase table', 'database table',
+        'cron', 'node-cron', 'background process'
     ];
     const _reason = (plan.permissionReason || '').toLowerCase();
     const _isDbOnly = _dbOnlyReasons.some(w => _reason.includes(w))
@@ -419,7 +422,18 @@ async function autoApproveStandardPermissions() {
         const isSafe = (
             r.includes('new table') ||
             r.includes('new supabase table') ||
+            r.includes('database table') ||
+            r.includes('supabase table') ||
             r.includes('additive migration') ||
+            r.includes('additive') ||
+            r.includes('schema addition') ||
+            r.includes('column') ||
+            r.includes('row level security') ||
+            r.includes('rls') ||
+            r.includes('migration') ||
+            r.includes('cron') ||
+            r.includes('node-cron') ||
+            r.includes('background process') ||
             (r.includes('new dependency') && (r.includes('node-cron') || r.includes('express-rate-limit')))
         );
 
