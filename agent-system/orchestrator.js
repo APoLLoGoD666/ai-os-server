@@ -33,22 +33,31 @@ async function callWithBackoff(fn, retries = 3) {
     throw new Error('Max retries exceeded');
 }
 
-function _callClaude(client, systemPrompt, userContent, maxTokens) {
-    return callWithBackoff(() => client.messages.create({
+// Token cost tracking — accumulated per pipeline run
+// analyze calls use OpenRouter free; only write calls are paid (Haiku)
+let _paidTokens = { input: 0, output: 0 };
+
+async function _callClaude(client, systemPrompt, userContent, maxTokens) {
+    const res = await callWithBackoff(() => client.messages.create({
         model: activeModel,
         max_tokens: maxTokens || 800,
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }]
     }));
+    return res;
 }
 
-function _callWrite(systemPrompt, userContent) {
-    return callWithBackoff(() => writeClient.messages.create({
+async function _callWrite(systemPrompt, userContent) {
+    const res = await callWithBackoff(() => writeClient.messages.create({
         model: writeModel,
         max_tokens: 2000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }]
     }));
+    // Only write calls are paid — accumulate for cost reporting
+    _paidTokens.input  += res.usage?.input_tokens  || 0;
+    _paidTokens.output += res.usage?.output_tokens || 0;
+    return res;
 }
 
 function _parseJSON(text) {
@@ -65,7 +74,18 @@ let obsidianContext = '';
 // ── Agent: ARCHITECT ──────────────────────────────────────────────────────────
 async function _architect(client, spec) {
     const t0 = Date.now();
-    const SYSTEM = `You are the ARCHITECT agent for Apex AI OS. Read the provided file contents and summarise: what already exists relevant to this task, what functions/routes are involved, what must not be touched. Output JSON: { "summary": string, "relevantFunctions": string[], "warnings": string[] }`;
+    const SYSTEM = `You are the ARCHITECT agent for Apex AI OS.
+
+PRINCIPLES (Karpathy):
+1. Think Before Coding — articulate what exists and what must change before any code is written
+2. Simplicity First — prefer the simplest direct solution; complexity is a bug
+3. Surgical Changes — touch only what is necessary; leave everything else untouched
+4. Goal-Driven — always work toward the explicit success criteria, nothing more
+
+Read the provided file contents and output JSON:
+{ "summary": string, "relevantFunctions": string[], "warnings": string[] }
+
+In "summary": first state what ALREADY EXISTS (functions, routes, tables), then what MUST CHANGE, then what MUST NOT BE TOUCHED.`;
 
     const archFileContents = (spec.filesToRead || []).map(f => {
         try {
@@ -125,6 +145,8 @@ You will receive a task spec, architect analysis, and ${isNew ? 'a request to cr
 Return ONLY the complete ${isNew ? 'new' : 'updated'} file content. Nothing else.
 No JSON wrapping. No markdown code fences. No explanation. No preamble. No trailing commentary.
 Your entire response IS the file content — it will be written to disk exactly as you return it.
+
+PRINCIPLES (Karpathy): Simplicity First. Surgical Changes — add only what the spec requires, preserve everything else exactly. Goal-Driven — implement the success criteria, nothing more.
 New API routes go in routes/<domain>.js using Express.Router — never add routes to server.js.
 NEVER touch: touchstart, touchend, getUserMedia, _httStream, _httRecorder, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.`;
 
@@ -370,6 +392,7 @@ async function _committer(spec) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 async function runAgentTeam(spec, taskId) {
+    _paidTokens = { input: 0, output: 0 }; // reset for this run
     const { createBackup, restoreBackup } = require('./backup-manager');
     let client;
     if (process.env.OPENROUTER_API_KEY) {
@@ -485,11 +508,16 @@ async function runAgentTeam(spec, taskId) {
             });
         }
 
+        // Cost report — only write calls are paid (Haiku); analyze calls use free OpenRouter
+        const _cost = ((_paidTokens.input * 0.80 + _paidTokens.output * 4.00) / 1_000_000).toFixed(5);
+        console.log(`[Cost] ${taskId}: $${_cost} (${_paidTokens.input}in / ${_paidTokens.output}out paid tokens)`);
+
         return {
             success:    true,
             commitHash: committerLog.result.commitHash,
             agentLogs,
-            error:      null
+            error:      null,
+            cost:       _cost
         };
 
     } catch (err) {

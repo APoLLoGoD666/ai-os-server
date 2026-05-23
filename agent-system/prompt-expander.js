@@ -20,6 +20,8 @@ server.js auto-loads all files from the routes/ directory — never add routes d
 Existing route files: routes/communications.js, routes/finance.js, routes/health.js, routes/intelligence.js, routes/life.js, routes/operations.js
 Only modify server.js for non-route logic changes to existing features.
 
+PRINCIPLES (Karpathy): Think Before Coding. Simplicity First. Surgical Changes. Goal-Driven.
+
 Given a simple task description, expand it into a precise technical specification including:
 1. OBJECTIVE — what exactly needs to be built or fixed
 2. FILES TO READ — which files to examine first

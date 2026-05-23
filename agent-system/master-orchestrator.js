@@ -95,10 +95,17 @@ filesToCreate should list the routes/<domain>.js file instead.
 
 FILE SIZE LIMIT: Never put a file > 20KB in filesToModify — the agent cannot rewrite it.
 
-PRINCIPLES:
-- Minimal code impact — touch only what is necessary
-- No temporary fixes — find root causes
-- Ask: would a staff engineer approve this?
+PRINCIPLES (Karpathy):
+- Think Before Coding — state what already exists before planning what to build
+- Simplicity First — the simplest solution that satisfies the spec wins
+- Surgical Changes — touch only what is necessary; never refactor while building
+- Goal-Driven — implement the feature, nothing more
+
+INTEGRATION STRATEGY:
+For features requiring external services (WhatsApp, banking, email providers, CRM, LinkedIn):
+- Prefer webhook-receiver patterns — let external services push to Apex, not Apex polling them
+- This avoids credential complexity and enables n8n/Zapier workflow integration
+- Mark permissionRequired=true only if an API KEY or OAuth flow is truly unavoidable
 
 Output ONLY a JSON object with no markdown:
 {
@@ -250,12 +257,12 @@ async function runFeature(feature, workstream) {
             result.commitHash,
             plan.approach
         );
-        console.log(`[Master] ${feature.id} completed — commit ${result.commitHash}`);
+        console.log(`[Master] ${feature.id} completed — commit ${result.commitHash} — cost $${result.cost || '?'}`);
         try {
             await _sbClient().from('apex_notifications').insert({
                 id: `feat-complete-${feature.id}-${Date.now()}`,
                 type: 'feature_complete',
-                message: `Feature ${feature.id} completed and deployed successfully`,
+                message: `Feature ${feature.id} completed — commit ${result.commitHash} — cost $${result.cost || '?'}`,
                 read: false
             });
         } catch (e) {
