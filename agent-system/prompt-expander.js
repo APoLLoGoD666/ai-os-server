@@ -2,7 +2,7 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const memory = require('./obsidian-memory');
 
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = 'claude-haiku-4-5-20251001';
 
 const SYSTEM_PROMPT = `You are a senior developer working on Apex AI OS — a Node.js/Express voice-first AI operating system on Render. The stack is: Node.js, Express, Supabase JS client, Anthropic Claude API, Deepgram STT/TTS, Gmail OAuth2, Ruflo agent orchestration.
 
@@ -47,7 +47,7 @@ async function expandPrompt(simplePrompt) {
 
     const res = await client.messages.create({
         model: MODEL,
-        max_tokens: 4000,
+        max_tokens: 2000,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: `Task: ${simplePrompt}${memoryContext}` }]
     });

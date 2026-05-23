@@ -13,7 +13,7 @@ function _sbClient() {
 }
 
 const ROOT = path.join(__dirname, '..');
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = 'claude-haiku-4-5-20251001';
 const ROADMAP_FILE = path.join(ROOT, 'ROADMAP.md');
 
 // ── Parse ROADMAP.md into structured workstreams ──────────────────
@@ -65,7 +65,7 @@ async function planFeature(feature, workstream) {
 
     const res = await client.messages.create({
         model: MODEL,
-        max_tokens: 4000,
+        max_tokens: 2000,
         system: `You are a senior architect planning features for Apex AI OS.
 Apex is a Node.js/Express voice-first AI OS on Render.
 Stack: Node.js, Express, Supabase, Anthropic Claude API,

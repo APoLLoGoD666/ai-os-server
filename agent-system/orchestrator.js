@@ -6,7 +6,7 @@ const { spawnSync, execSync } = require('child_process');
 const memory = require('./obsidian-memory');
 
 const ROOT = path.join(__dirname, '..');
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = 'claude-haiku-4-5-20251001';
 
 async function callWithBackoff(fn, retries = 3) {
     for (let i = 0; i < retries; i++) {
@@ -92,7 +92,7 @@ NEVER touch: touchstart, touchend, getUserMedia, _httStream, _httRecorder, /api/
         ? `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT NOTES:\n${architectAnalysis}\n\nCreate new file: ${filename}\nReturn the complete file content only.`
         : `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT NOTES:\n${architectAnalysis}\n\nFile to update: ${filename}\n\nCURRENT CONTENT:\n${currentContent}\n\nReturn the complete updated file content only.`;
 
-    const res = await _callClaude(client, SYSTEM, userContent, 8000);
+    const res = await _callClaude(client, SYSTEM, userContent, 2000);
     const newContent = res.content[0]?.text || '';
 
     const dir = path.dirname(fp);
