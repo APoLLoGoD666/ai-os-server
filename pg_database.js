@@ -6,7 +6,13 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false },
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000
+    connectionTimeoutMillis: 10000,
+    // Emit error instead of crashing on idle client errors
+    allowExitOnIdle: false
+});
+
+pool.on('error', (err) => {
+    console.error('[DB] Pool idle client error (non-fatal):', err.message);
 });
 
 console.log('[DB] Connection string host:',
