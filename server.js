@@ -3,6 +3,18 @@ require("dotenv").config();
 const Sentry = require("@sentry/node");
 Sentry.init({ dsn: process.env.SENTRY_DSN || "", tracesSampleRate: 0.1 });
 
+// Fail fast if critical env vars are missing — prevents silent runtime failures
+(function _validateEnv() {
+    const required = ['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+    const missing = required.filter(k => !process.env[k]);
+    if (missing.length) {
+        console.error(`[STARTUP] FATAL — missing required env vars: ${missing.join(', ')}`);
+        process.exit(1);
+    }
+    if (!process.env.GITHUB_TOKEN) console.warn('[STARTUP] GITHUB_TOKEN not set — agent git push will fail');
+    if (!process.env.CRON_SECRET)  console.warn('[STARTUP] CRON_SECRET not set — cron endpoints are unprotected');
+})();
+
 // Prevent silent crashes from taking down the server
 process.on('uncaughtException', (err) => {
     console.error('[FATAL] uncaughtException:', err.message, err.stack);
@@ -169,14 +181,40 @@ const apiLimiter = rateLimit({
     message: { ok: false, reply: 'Rate limit exceeded — try again shortly.' }
 });
 app.use('/api/', apiLimiter);
+
+// Tighter limit on master pipeline endpoints — each call can cost $0.50-2.00 and takes minutes
+const masterLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { ok: false, reply: 'Pipeline rate limit — max 5 triggers per minute.' }
+});
+app.use('/api/master/', masterLimiter);
 app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// Request correlation ID — injected on every request, echoed in response headers
 app.use((req, res, next) => {
+    const id = req.headers['x-request-id'] || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    req.requestId = id;
+    res.setHeader('X-Request-ID', id);
     if (req.path.startsWith('/api/')) {
         const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-        console.log(`[REQUEST] ${req.method} ${req.path} — ${ip} — ${new Date().toISOString()}`);
+        console.log(`[REQUEST] ${req.method} ${req.path} — ${ip} — ${id} — ${new Date().toISOString()}`);
+    }
+    next();
+});
+
+// Content-Type guard — reject POST/PUT/PATCH without JSON content-type on /api/ routes
+app.use('/api/', (req, res, next) => {
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+        const ct = req.headers['content-type'] || '';
+        // Allow multipart (file uploads) and form data; require JSON otherwise
+        if (!ct.includes('application/json') && !ct.includes('multipart/form-data') && !ct.includes('application/x-www-form-urlencoded')) {
+            return res.status(415).json({ ok: false, reply: 'Unsupported Media Type — send application/json' });
+        }
     }
     next();
 });
@@ -8608,20 +8646,29 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
         const [taskRes, timelineRes, runRes] = await Promise.all([
             sbAdmin.from('apex_tasks').select('id', { count: 'exact', head: true }),
             sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true }),
-            sbAdmin.from('apex_agent_runs').select('success,cost_usd').catch(() => ({ data: null }))
+            sbAdmin.from('apex_agent_runs').select('task_id,success,cost_usd,duration_ms').catch(() => ({ data: null }))
         ]);
         const runs     = runRes.data || [];
         const runCount = runs.length;
         const succeded = runs.filter(r => r.success).length;
         const spend    = runs.reduce((s, r) => s + (r.cost_usd || 0), 0);
+        // Per-workstream cost breakdown — task_id starts with FEAT-X where X is the workstream prefix
+        const wsPrefix = { C: 'Communications', F: 'Finance', H: 'Health', B: 'Business', D: 'Daily', S: 'Spiritual', U: 'University', J: 'Journaling' };
+        const wsCost = {};
+        for (const run of runs) {
+            const prefix = (run.task_id || '').replace(/^FEAT-/, '')[0];
+            const ws = wsPrefix[prefix] || 'Other';
+            wsCost[ws] = (wsCost[ws] || 0) + (run.cost_usd || 0);
+        }
         res.json({
             ok: true,
-            roadmap:     { total, completed, pending: total - completed, pct: total ? Math.round(completed / total * 100) : 0 },
-            tasks:       taskRes.count || 0,
-            pipelineRuns: timelineRes.count || runCount,
-            agentRuns:   runCount,
-            successRate: runCount ? Math.round(succeded / runCount * 100) : null,
-            totalCostUsd: spend.toFixed(4)
+            roadmap:        { total, completed, pending: total - completed, pct: total ? Math.round(completed / total * 100) : 0 },
+            tasks:          taskRes.count || 0,
+            pipelineRuns:   timelineRes.count || runCount,
+            agentRuns:      runCount,
+            successRate:    runCount ? Math.round(succeded / runCount * 100) : null,
+            totalCostUsd:   spend.toFixed(4),
+            costByWorkstream: Object.fromEntries(Object.entries(wsCost).map(([k, v]) => [k, v.toFixed(4)]))
         });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
@@ -8991,6 +9038,9 @@ app.use((err, req, res, next) => {
 let _lastPipelineActivity = Date.now();
 
 const server = require("http").createServer(app);
+// Render's load balancer uses 75s idle timeout; set Node's keepAlive below that to avoid 502s
+server.keepAliveTimeout = 65000;
+server.headersTimeout   = 70000; // must be > keepAliveTimeout
 
 
 server.listen(PORT, () => {
@@ -9008,6 +9058,15 @@ server.listen(PORT, () => {
         const mem = process.memoryUsage();
         console.log(`[HEALTH] uptime=${Math.floor(process.uptime())}s rss=${Math.round(mem.rss/1024/1024)}MB heap=${Math.round(mem.heapUsed/1024/1024)}MB ts=${new Date().toISOString()}`);
     }, 300000);
+
+    // Purge old read notifications — keep table lean (cap at 200 unread + delete read > 7 days)
+    setInterval(async () => {
+        try {
+            const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('apex_notifications').delete().eq('read', true).lt('created_at', cutoff);
+            console.log('[Notifications] purged read notifications older than 7 days');
+        } catch (e) { console.warn('[Notifications] purge failed (non-fatal):', e.message); }
+    }, 6 * 60 * 60 * 1000); // every 6 hours
 
     // Pick up any master tasks that were queued before a cold-start restart
     setTimeout(() => checkPendingMasterTasks(), 10000);
