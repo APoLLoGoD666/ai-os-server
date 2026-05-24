@@ -60,12 +60,8 @@ function markFeatureComplete(featureId) {
 
 // ── Plan a feature using Claude ──────────────────────────────────
 async function planFeature(feature, workstream) {
-    const client = process.env.OPENROUTER_API_KEY
-        ? new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' })
-        : new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const planModel = process.env.OPENROUTER_API_KEY
-        ? 'meta-llama/llama-3.1-8b-instruct:free'
-        : MODEL;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const planModel = MODEL;
     const context = memory.getFullContext();
 
     const res = await client.messages.create({
