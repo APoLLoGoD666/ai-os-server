@@ -9002,6 +9002,9 @@ server.listen(PORT, () => {
         }
     }, 600000);
 
+setInterval(checkPendingMasterTasks, 10000);
+checkPendingMasterTasks();
+
     // Nightly wiki consolidation at 3am
     (function _scheduleWikiConsolidation() {
         const _now = new Date(), _3am = new Date(_now);
