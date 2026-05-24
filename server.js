@@ -181,8 +181,12 @@ app.use((req, res, next) => {
     next();
 });
 
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', uptime: process.uptime(), timestamp: Date.now() });
+app.get('/health', async (req, res) => {
+    const db = require('./pg_database');
+    let dbOk = false;
+    try { await db.query('SELECT 1'); dbOk = true; } catch {}
+    const status = dbOk ? 'ok' : 'degraded';
+    res.status(dbOk ? 200 : 503).json({ status, uptime: process.uptime(), timestamp: Date.now(), db: dbOk });
 });
 
 app.get('/', requireAuth, (req, res) => {
