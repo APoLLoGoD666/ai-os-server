@@ -2201,6 +2201,129 @@ html, body {
     padding: 3px 0;
 }
 
+/* ── Skeleton shimmer ───────────────────────────────────────────────── */
+.skel {
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 75%);
+    background-size: 200% 100%;
+    animation: skel-shimmer 1.5s infinite;
+    border-radius: 4px;
+    height: 14px;
+    display: block;
+}
+.skel-row { height: 12px; margin: 4px 0; }
+.skel-wide { width: 80%; }
+.skel-med  { width: 55%; }
+.skel-sm   { width: 30%; }
+@keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+
+/* ── Panel error bar ────────────────────────────────────────────────── */
+.panel-error {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255,77,106,0.06);
+    border-left: 2px solid #ff4d6a;
+    border-radius: 0 6px 6px 0;
+    font-size: 11px; color: #ff4d6a;
+    margin-bottom: 8px; cursor: pointer;
+}
+
+/* ── Page fade transition ───────────────────────────────────────────── */
+.page { opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
+.page.active { opacity: 1; pointer-events: auto; }
+.ds-panel { animation: panelIn 0.2s ease both; }
+@keyframes panelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Greeting bar ───────────────────────────────────────────────────── */
+.greeting-bar {
+    height: 36px;
+    background: linear-gradient(135deg, rgba(0,212,255,0.06), rgba(124,111,255,0.04));
+    border-bottom: 1px solid rgba(0,212,255,0.08);
+    display: flex; align-items: center;
+    padding: 0 16px;
+    font-size: 13px; color: var(--text-mid);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+    gap: 0;
+}
+.greeting-bar-left  { flex: 1; }
+.greeting-bar-mid   { flex: 1; text-align: center; color: var(--text-faint); font-size: 11px; }
+.greeting-bar-right { flex: 1; text-align: right; font-size: 11px; color: var(--text-faint); transition: opacity 0.5s ease; }
+
+/* ── Sparkline canvas ───────────────────────────────────────────────── */
+.sparkline-canvas { position: absolute; bottom: 8px; right: 8px; width: 80px; height: 32px; opacity: 0.6; pointer-events: none; }
+
+/* ── Stat card change indicator ─────────────────────────────────────── */
+.stat-change { font-size: 11px; display: flex; align-items: center; gap: 3px; margin-top: 2px; }
+.stat-change.up   { color: #00e5a0; }
+.stat-change.down { color: #ff4d6a; }
+.stat-change.flat { color: var(--text-faint); }
+
+/* ── Help overlay ───────────────────────────────────────────────────── */
+.help-overlay {
+    display: none; position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+}
+.help-overlay.open { display: flex; }
+.help-box {
+    background: #0d1320; border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 12px; padding: 24px; width: 480px; max-width: 95vw;
+}
+.help-box h3 { color: var(--cyan); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+.help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.help-row  { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.help-key  { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; padding: 2px 7px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--cyan); min-width: 28px; text-align: center; }
+.help-desc { font-size: 11px; color: var(--text-mid); }
+
+/* ── Orb rings ──────────────────────────────────────────────────────── */
+.apex-orb-wrap { position: relative; width: 130px; height: 130px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.orb-ring { position: absolute; border-radius: 50%; }
+.orb-ring-outer { width: 130px; height: 130px; border: 1px solid rgba(0,212,255,0.2); animation: spin-cw 20s linear infinite; }
+.orb-ring-mid   { width: 100px; height: 100px; border: 1px solid rgba(124,111,255,0.3); animation: spin-ccw 15s linear infinite; }
+.orb-inner { width: 70px; height: 70px; border-radius: 50%; background: radial-gradient(circle, rgba(0,212,255,0.15) 0%, rgba(10,12,16,0.9) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; transition: transform 0.3s ease; }
+.orb-inner-text { font-size: 11px; font-weight: 600; color: var(--cyan); letter-spacing: 0.15em; }
+.orb-inner-state { font-size: 9px; color: var(--text-mute); }
+.orb-dot-n, .orb-dot-e, .orb-dot-s, .orb-dot-w { position: absolute; width: 6px; height: 6px; border-radius: 50%; }
+.orb-dot-n { top: 0; left: 50%; transform: translateX(-50%); }
+.orb-dot-e { right: 0; top: 50%; transform: translateY(-50%); }
+.orb-dot-s { bottom: 0; left: 50%; transform: translateX(-50%); }
+.orb-dot-w { left: 0; top: 50%; transform: translateY(-50%); }
+@keyframes spin-cw  { from { transform: rotate(0deg); }   to { transform: rotate(360deg); } }
+@keyframes spin-ccw { from { transform: rotate(0deg); }   to { transform: rotate(-360deg); } }
+.orb-pulse { animation: orbPulse 1.5s ease-in-out infinite; }
+@keyframes orbPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@media (prefers-reduced-motion: reduce) { .orb-ring-outer, .orb-ring-mid { animation: none; } }
+
+/* ── Agent drawer ───────────────────────────────────────────────────── */
+.agent-drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0); z-index: 900; transition: background 0.15s ease; }
+.agent-drawer-overlay.open { display: block; background: rgba(0,0,0,0.6); }
+.agent-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 400px; max-width: 95vw; background: #0d1320; border-left: 1px solid rgba(0,212,255,0.18); z-index: 901; transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1); overflow-y: auto; }
+.agent-drawer.open { transform: translateX(0); }
+.agent-drawer-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: flex-start; }
+.agent-drawer-close { background: none; border: none; color: var(--text-mute); cursor: pointer; font-size: 18px; padding: 4px; }
+.agent-drawer-body { padding: 16px 20px; }
+.agent-run-row { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; }
+
+/* ── Mood selector ──────────────────────────────────────────────────── */
+.mood-faces { display: flex; gap: 10px; margin: 8px 0; }
+.mood-face { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: transform 0.15s ease, border-color 0.15s ease; }
+.mood-face:hover { transform: scale(1.1); }
+.mood-face.selected { border-color: var(--cyan); transform: scale(1.1); }
+
+/* ── CRM Kanban ─────────────────────────────────────────────────────── */
+.kanban-board { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.kanban-col { min-width: 140px; flex: 1; }
+.kanban-col-header { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 0; margin-bottom: 6px; border-bottom: 2px solid; }
+.kanban-card { padding: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; font-size: 11px; }
+
+/* ── Financial card visual ──────────────────────────────────────────── */
+.fin-card { width: 220px; height: 135px; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; flex-shrink: 0; }
+.fin-card-num { font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.15em; color: rgba(255,255,255,0.85); }
+.fin-card-bottom { display: flex; justify-content: space-between; align-items: flex-end; }
+.fin-card-holder { font-size: 11px; color: rgba(255,255,255,0.7); }
+.fin-card-expiry { font-size: 10px; color: rgba(255,255,255,0.5); }
+
 /* ── Typing indicator ───────────────────────────────────────────────── */
 .typing-indicator {
     background: rgba(255,255,255,0.028);
@@ -3114,6 +3237,47 @@ html, body {
         </div>
     </div>
 
+    <!-- ══ GREETING BAR ══ -->
+    <div class="greeting-bar" id="greetingBar">
+        <span class="greeting-bar-left" id="greetingText">Good morning, sir.</span>
+        <span class="greeting-bar-mid" id="greetingWeather"></span>
+        <span class="greeting-bar-right" id="greetingInsight"></span>
+    </div>
+
+    <!-- ══ HELP OVERLAY ══ -->
+    <div class="help-overlay" id="helpOverlay" onclick="if(event.target===this)toggleHelpOverlay()">
+        <div class="help-box">
+            <h3>⌨ Keyboard Shortcuts</h3>
+            <div class="help-grid">
+                <div class="help-row"><span class="help-key">1–6</span><span class="help-desc">Switch page</span></div>
+                <div class="help-row"><span class="help-key">R</span><span class="help-desc">Refresh current page</span></div>
+                <div class="help-row"><span class="help-key">A</span><span class="help-desc">Jump to approvals</span></div>
+                <div class="help-row"><span class="help-key">N</span><span class="help-desc">Jump to notifications</span></div>
+                <div class="help-row"><span class="help-key">/</span><span class="help-desc">Focus chat input</span></div>
+                <div class="help-row"><span class="help-key">?</span><span class="help-desc">Toggle this overlay</span></div>
+                <div class="help-row"><span class="help-key">ESC</span><span class="help-desc">Close overlay / drawer</span></div>
+                <div class="help-row"><span class="help-key">⇧R</span><span class="help-desc">Run next feature</span></div>
+            </div>
+            <div style="text-align:right;margin-top:14px"><button class="ds-btn grey btn--xs" onclick="toggleHelpOverlay()">Close</button></div>
+        </div>
+    </div>
+
+    <!-- ══ AGENT DRAWER ══ -->
+    <div class="agent-drawer-overlay" id="agentDrawerOverlay" onclick="closeAgentDrawer()"></div>
+    <div class="agent-drawer" id="agentDrawer">
+        <div class="agent-drawer-header">
+            <div>
+                <div class="t-h2" id="drawerAgentTitle">Agent</div>
+                <div class="t-small" style="color:var(--text-mute);margin-top:2px" id="drawerAgentModel"></div>
+            </div>
+            <button class="agent-drawer-close" onclick="closeAgentDrawer()">✕</button>
+        </div>
+        <div class="agent-drawer-body" id="drawerAgentBody">
+            <div class="skel skel-wide" style="margin-bottom:8px"></div>
+            <div class="skel skel-med"></div>
+        </div>
+    </div>
+
     <!-- ══ PAGE + INPUT WRAPPER ══ -->
     <div class="page-and-input">
 
@@ -3317,7 +3481,7 @@ html, body {
                         <!-- Pipeline stats panel -->
                         <div style="margin-top:12px">
                             <div class="t-label" style="margin-bottom:8px">Pipeline Stats</div>
-                            <div id="metricsPanel"><div class="ds-skel-row">Loading…</div></div>
+                            <div id="metricsPanel"><div class="skel skel-row skel-wide"></div></div>
                         </div>
                     </div>
                 </div>
@@ -3554,7 +3718,7 @@ html, body {
                         <table class="ds-table">
                             <thead><tr><th>Name</th><th>Company</th><th>Last</th><th>Follow-up</th></tr></thead>
                             <tbody id="contactsTbody">
-                                <tr><td colspan="4" style="color:var(--text-faint)">Loading…</td></tr>
+                                <tr><td colspan="4" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -3636,16 +3800,8 @@ html, body {
                             <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Birthdays · Anniversaries</span></div>
                             <div class="ds-panel-header-right"><span class="ds-badge purple">FEAT-C014</span></div>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px">
-                                <span class="t-small" style="color:var(--text)">Maya Okonkwo</span>
-                                <span class="t-mono" style="color:var(--purple)">in 12 days</span>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px">
-                                <span class="t-small" style="color:var(--text)">Stackline contract anniv.</span>
-                                <span class="t-mono" style="color:var(--cyan)">in 27 days</span>
-                            </div>
-                            <div class="ds-skel-row">Draft messages prepared 3 days before</div>
+                        <div id="birthdayPanel" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-wide" style="height:12px;margin:4px 0"></div>
                         </div>
                     </div>
                 </div>
@@ -3661,6 +3817,15 @@ html, body {
                         <span class="ds-page-subtitle">18 features · banking · invoices · taxes</span>
                     </div>
                     <button class="ds-btn cyan" onclick="logExpenseQuick()">+ Log expense via voice</button>
+                </div>
+
+                <!-- Bank cards visual -->
+                <div class="ds-panel" style="margin-bottom:0">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Linked accounts</span></div>
+                        <div class="ds-panel-header-right"><span class="t-mono" style="color:var(--text-mute)">FEAT-F001</span></div>
+                    </div>
+                    <div id="financeCardsRow" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:4px"></div>
                 </div>
 
                 <div class="ds-grid-stats">
@@ -3760,10 +3925,8 @@ html, body {
                         </div>
                         <table class="ds-table">
                             <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead>
-                            <tbody>
-                                <tr><td class="t-mono">24 May</td><td><span class="ds-badge cyan">Software</span></td><td>Anthropic top-up</td><td class="t-mono" style="color:var(--text)">£20.00</td></tr>
-                                <tr><td class="t-mono">23 May</td><td><span class="ds-badge green">Food</span></td><td>Lunch · Coal Office</td><td class="t-mono" style="color:var(--text)">£18.50</td></tr>
-                                <tr><td class="t-mono">22 May</td><td><span class="ds-badge amber">Transit</span></td><td>Uber to Paddington</td><td class="t-mono" style="color:var(--text)">£14.20</td></tr>
+                            <tbody id="expensesTbody">
+                                <tr><td colspan="4" class="skel skel-wide" style="height:12px;margin:8px 0"></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -3790,10 +3953,8 @@ html, body {
                         </div>
                         <table class="ds-table">
                             <thead><tr><th>Service</th><th>Monthly</th><th>Next billing</th><th>Status</th></tr></thead>
-                            <tbody>
-                                <tr><td>Anthropic API</td><td class="t-mono">£20.00</td><td class="t-mono">pay-as-you-go</td><td><span class="ds-badge green">active</span></td></tr>
-                                <tr><td>Render Pro</td><td class="t-mono">£19.00</td><td class="t-mono">15 Jun</td><td><span class="ds-badge green">active</span></td></tr>
-                                <tr><td>Supabase Pro</td><td class="t-mono">£20.00</td><td class="t-mono">15 Jun</td><td><span class="ds-badge green">active</span></td></tr>
+                            <tbody id="subscriptionsTbody">
+                                <tr><td colspan="4" style="color:var(--text-faint);padding:16px;text-align:center;font-style:italic">No subscriptions yet — import from bank or add manually</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -3917,7 +4078,7 @@ html, body {
                         </div>
                         <table class="ds-table">
                             <thead><tr><th>Client</th><th>Stage</th><th>Value</th><th>Follow-up</th></tr></thead>
-                            <tbody id="crmTbody"><tr><td colspan="4" style="color:var(--text-faint);text-align:center">Loading…</td></tr></tbody>
+                            <tbody id="crmTbody"><tr><td colspan="4" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr></tbody>
                         </table>
                     </div>
 
@@ -3926,7 +4087,7 @@ html, body {
                             <span class="ds-panel-dot" style="background:var(--cyan)"></span>
                             <span class="ds-panel-title">Projects</span>
                         </div>
-                        <div id="projectsPanel" style="display:flex;flex-direction:column;gap:8px"><div style="color:var(--text-faint);font-size:12px;padding:8px">Loading…</div></div>
+                        <div id="projectsPanel" style="display:flex;flex-direction:column;gap:8px"><div class="skel skel-row skel-wide"></div></div>
                     </div>
                 </div>
 
@@ -3945,7 +4106,7 @@ html, body {
                                 <input id="taskAddInput" class="ds-input" placeholder="Task description…">
                                 <button class="ds-btn green btn--xs" onclick="addTaskFromInput()">Save</button>
                             </div>
-                            <div id="taskQueuePanel"><div style="color:var(--text-faint);font-size:12px;padding:8px">Loading…</div></div>
+                            <div id="taskQueuePanel"><div class="skel skel-row skel-wide"></div></div>
                             <input class="ds-input" placeholder="+ Add task · or speak it" style="margin-top:4px">
                             <!-- Pipeline controls preserved for JS -->
                             <div style="display:none">
@@ -3969,7 +4130,7 @@ html, body {
                                 <button class="ds-btn cyan btn--xs">Upload</button>
                             </div>
                         </div>
-                        <div id="opsDocumentsPanel" style="display:flex;flex-direction:column;gap:6px"><div style="color:var(--text-faint);font-size:12px;padding:8px">Loading…</div></div>
+                        <div id="opsDocumentsPanel" style="display:flex;flex-direction:column;gap:6px"><div class="skel skel-row skel-wide"></div></div>
                     </div>
 
                     <div class="ds-panel">
@@ -3977,7 +4138,7 @@ html, body {
                             <span class="ds-panel-dot" style="background:var(--purple)"></span>
                             <span class="ds-panel-title">Proposals</span>
                         </div>
-                        <div id="opsProposalsPanel" style="display:flex;flex-direction:column;gap:6px"><div style="color:var(--text-faint);font-size:12px;padding:8px">Loading…</div></div>
+                        <div id="opsProposalsPanel" style="display:flex;flex-direction:column;gap:6px"><div class="skel skel-row skel-wide"></div></div>
                     </div>
                 </div>
             </div>
@@ -4079,14 +4240,15 @@ html, body {
                         </div>
                         <div class="ds-skel" style="margin-bottom:10px">Last night · — hours · quality —/10</div>
                         <div class="t-label" style="margin-bottom:6px">Last 7 nights</div>
-                        <div style="display:flex;gap:6px;align-items:flex-end;height:60px">
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:72%;width:100%;background:linear-gradient(180deg,var(--purple),rgba(124,111,255,0.3));border-radius:3px 3px 0 0;box-shadow:0 0 6px var(--purple-glow)"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">6.5h</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:80%;width:100%;background:linear-gradient(180deg,var(--purple),rgba(124,111,255,0.3));border-radius:3px 3px 0 0;box-shadow:0 0 6px var(--purple-glow)"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">7.2h</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:89%;width:100%;background:linear-gradient(180deg,var(--purple),rgba(124,111,255,0.3));border-radius:3px 3px 0 0;box-shadow:0 0 6px var(--purple-glow)"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">8.0h</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:61%;width:100%;background:linear-gradient(180deg,var(--purple),rgba(124,111,255,0.3));border-radius:3px 3px 0 0;box-shadow:0 0 6px var(--purple-glow)"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">5.5h</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:87%;width:100%;background:linear-gradient(180deg,var(--purple),rgba(124,111,255,0.3));border-radius:3px 3px 0 0;box-shadow:0 0 6px var(--purple-glow)"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">7.8h</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:67%;width:100%;background:linear-gradient(180deg,var(--purple),rgba(124,111,255,0.3));border-radius:3px 3px 0 0;box-shadow:0 0 6px var(--purple-glow)"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">6.0h</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:82%;width:100%;background:linear-gradient(180deg,var(--purple),rgba(124,111,255,0.3));border-radius:3px 3px 0 0;box-shadow:0 0 6px var(--purple-glow)"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">7.4h</span></div>
+                        <div id="sleepBarsPanel" style="display:flex;gap:6px;align-items:flex-end;height:60px">
+                            <!-- populated by refreshSleepPanel() -->
+                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
+                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
+                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
+                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
+                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
+                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
+                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
                         </div>
                     </div>
 
@@ -4183,13 +4345,17 @@ html, body {
                         </div>
                         <textarea class="ds-input" id="journalTextarea" placeholder="Today's entry — speak it or type it…" style="height:80px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box"></textarea>
                         <button class="ds-btn cyan btn--xs" style="margin-top:6px;width:100%" onclick="submitJournalEntry()">Save entry</button>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-                            <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px"><div class="t-label">Sentiment</div><div class="t-stat" style="color:var(--text-faint);font-size:18px;margin-top:4px">—/10</div></div>
-                            <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px"><div class="t-label">Mood</div><div class="t-stat" style="color:var(--text-faint);font-size:18px;margin-top:4px">—/10</div></div>
+                        <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;margin-top:8px">
+                            <div class="t-label" style="margin-bottom:6px">Mood · tap to log</div>
+                            <div class="mood-faces" id="moodFacesRow"></div>
+                            <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                                <span class="t-mono" style="color:var(--cyan)" id="moodScoreDisplay">—/10</span>
+                                <span class="t-small" style="color:var(--green);display:none" id="moodConfirm">Mood logged ✓</span>
+                            </div>
                         </div>
                         <div class="t-label" style="margin-top:12px;margin-bottom:6px">Recent entries</div>
                         <div id="journalEntriesPanel" style="display:flex;flex-direction:column;gap:4px">
-                            <div class="t-small" style="color:var(--text-faint)">Loading…</div>
+                            <div class="t-small" style="color:var(--text-faint)"><span class="skel skel-row skel-med" style="display:block"></span></div>
                         </div>
                     </div>
 
@@ -4200,18 +4366,12 @@ html, body {
                             <div class="ds-panel-right"><span class="ds-badge purple">FEAT-J004 → J014</span></div>
                         </div>
                         <div class="t-label" style="margin-bottom:6px">Mood · 7-day trend</div>
-                        <div id="moodChart" style="display:flex;gap:6px;align-items:flex-end;height:50px;margin-bottom:12px">
-                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
+                        <div id="moodChart" style="height:70px;margin-bottom:12px;position:relative">
+                            <canvas id="moodChartCanvas" style="width:100%;height:70px"></canvas>
                         </div>
                         <div class="t-label" style="margin-bottom:6px">Habit tracker · this week</div>
                         <div id="habitTrackerGrid">
-                            <div class="t-small" style="color:var(--text-faint)">Loading…</div>
+                            <div class="t-small" style="color:var(--text-faint)"><span class="skel skel-row skel-med" style="display:block"></span></div>
                         </div>
                         <div id="crisisDetectionPanel" style="margin-top:12px;padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:10px">
                             <span class="ds-dot grey"></span>
@@ -4232,7 +4392,7 @@ html, body {
                         <div>
                             <div class="t-label" style="margin-bottom:8px">Module progress</div>
                             <div id="uniModulesPanel">
-                                <div class="t-small" style="color:var(--text-faint)">Loading…</div>
+                                <div class="t-small" style="color:var(--text-faint)"><span class="skel skel-row skel-med" style="display:block"></span></div>
                             </div>
                         </div>
                         <div>
@@ -4240,7 +4400,7 @@ html, body {
                             <table class="ds-table">
                                 <thead><tr><th>Assignment</th><th>Due</th><th>Status</th></tr></thead>
                                 <tbody id="uniAssignmentsTbody">
-                                    <tr><td colspan="3" style="color:var(--text-faint)">Loading…</td></tr>
+                                    <tr><td colspan="3" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -7091,7 +7251,7 @@ async function refreshAgentLibrary() {
     const countEl = document.getElementById('agentLibCount');
     const catBar  = document.getElementById('agentCategoryBar');
     if (!listEl) return;
-    listEl.innerHTML = '<div class="empty-note">Loading…</div>';
+    listEl.innerHTML = '<div class="empty-note"><span class="skel skel-row skel-wide" style="display:block;margin:8px 0"></span></div>';
     try {
         const data = await fetchJson('/api/agents');
         _agentData = data.agents || [];
@@ -7358,17 +7518,30 @@ function denyAllApprovals() {
     }
 }
 
-// Populate workout contrib grid
-(function() {
+// Populate workout contrib grid — real data
+async function refreshWorkoutGrid() {
     var grid = document.getElementById('workoutContribGrid');
     if (!grid) return;
-    for (var i = 0; i < 91; i++) {
-        var cell = document.createElement('div');
-        var l = i % 5 === 0 ? 2 : i % 8 === 0 ? 3 : i % 3 === 0 ? 1 : 0;
-        cell.className = 'contrib-cell-ds' + (l ? ' l' + l : '');
-        grid.appendChild(cell);
+    try {
+        const d = await fetchJson('/api/health/workouts');
+        const dates = new Set();
+        if (d.ok && d.workouts) d.workouts.forEach(w => { if (w.date || w.workout_date) dates.add((w.date || w.workout_date).slice(0, 10)); });
+        grid.innerHTML = '';
+        const today = new Date();
+        for (var i = 90; i >= 0; i--) {
+            var day = new Date(today); day.setDate(day.getDate() - i);
+            var key = day.toISOString().slice(0, 10);
+            var cell = document.createElement('div');
+            cell.className = 'contrib-cell-ds' + (dates.has(key) ? ' l2' : '');
+            cell.title = key;
+            grid.appendChild(cell);
+        }
+    } catch (e) {
+        console.error('[APEX-UI] workout grid:', e);
+        grid.innerHTML = '';
+        for (var j = 0; j < 91; j++) { var c = document.createElement('div'); c.className = 'contrib-cell-ds'; grid.appendChild(c); }
     }
-})();
+}
 
 // ── CRM panel ──────────────────────────────────────────────────────────
 async function refreshCrmPanel() {
@@ -7533,20 +7706,29 @@ async function refreshPsychologyPanel() {
 
 // ── Mood chart ─────────────────────────────────────────────────────────
 async function refreshMoodChart() {
-    const chart = document.getElementById('moodChart');
-    if (!chart) return;
+    var canvas = document.getElementById('moodChartCanvas');
+    if (!canvas || typeof Chart === 'undefined') return;
     try {
-        const d = await fetchJson('/api/journal/entries');
-        if (!d.ok || !d.entries.length) return;
-        const last7 = d.entries.slice(0, 7).reverse();
-        const bars = chart.querySelectorAll('div');
-        last7.forEach((e, i) => {
-            if (!bars[i]) return;
-            const pct = e.mood_score ? Math.max(10, (e.mood_score / 10) * 100) : 10;
-            bars[i].style.height = pct + '%';
-            bars[i].style.background = 'linear-gradient(180deg,var(--cyan),rgba(0,212,255,0.3))';
+        var d = await fetchJson('/api/journal/entries');
+        var days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        var scores = [5,5,5,5,5,5,5];
+        var labels = days;
+        if (d.ok && d.entries && d.entries.length) {
+            var last7 = d.entries.slice(0, 7).reverse();
+            labels = last7.map(function(e) { return e.created_at ? new Date(e.created_at).toLocaleDateString('en-GB',{weekday:'short'}) : '—'; });
+            scores = last7.map(function(e) { return e.mood_score || 5; });
+        }
+        var ctx = canvas.getContext('2d');
+        var grad = ctx.createLinearGradient(0, 0, 0, 70);
+        grad.addColorStop(0, 'rgba(0,212,255,0.3)');
+        grad.addColorStop(1, 'transparent');
+        if (window._moodChart) { try { window._moodChart.destroy(); } catch(_) {} }
+        window._moodChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: [{ data: scores, borderColor: '#00d4ff', borderWidth: 2, fill: true, backgroundColor: grad, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#00d4ff', pointHoverRadius: 5 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { min: 1, max: 10, display: false } }, plugins: { legend: { display: false }, tooltip: { callbacks: { title: function(items) { return labels[items[0].dataIndex]; }, label: function(item) { return 'Mood: ' + item.raw + '/10'; } } } } }
         });
-    } catch (_) {}
+    } catch(e) { console.error('[APEX-UI] mood chart:', e); }
 }
 
 // ── University panel ───────────────────────────────────────────────────
@@ -7752,6 +7934,383 @@ async function apexDoLogin(){
     else{err.style.display='block';btn.disabled=false;btn.textContent='Sign in';}
   }catch(e){err.style.display='block';btn.disabled=false;btn.textContent='Sign in';}
 }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ══ V10 UPGRADE BLOCK ════════════════════════════════════════════════════
+
+// ── Interval registry & cleanup ────────────────────────────────────────
+var _intervals = [];
+function _addInterval(fn, ms) { var id = setInterval(fn, ms); _intervals.push(id); return id; }
+window.addEventListener('unload', function() { _intervals.forEach(clearInterval); });
+
+// ── Fetch deduplication ────────────────────────────────────────────────
+var _pendingFetches = {};
+function fetchJsonDeduped(url, opts) {
+    if (!opts && _pendingFetches[url]) return _pendingFetches[url];
+    var p = fetchJson(url, opts).then(function(d) { delete _pendingFetches[url]; return d; }).catch(function(e) { delete _pendingFetches[url]; throw e; });
+    if (!opts) _pendingFetches[url] = p;
+    return p;
+}
+
+// ── Safe timeout for resolving skeletons ──────────────────────────────
+function safeTimeout(fn, ms) { var id = setTimeout(fn, ms); return id; }
+
+// ── Panel error helper ────────────────────────────────────────────────
+function panelError(container, refetchFnName) {
+    container.innerHTML = '<div class="panel-error" onclick="' + refetchFnName + '()"><span class="ds-dot red"></span> Failed to load · <span style="text-decoration:underline;cursor:pointer">Retry</span></div>';
+}
+
+// ── Chart.js defaults ─────────────────────────────────────────────────
+(function() {
+    if (typeof Chart === 'undefined') return;
+    Chart.defaults.color = '#8892a4';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+    Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+    Chart.defaults.font.size = 11;
+    Chart.defaults.plugins.legend.display = false;
+    Chart.defaults.plugins.tooltip.backgroundColor = '#1a1f2e';
+    Chart.defaults.plugins.tooltip.borderColor = 'rgba(0,212,255,0.3)';
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+    Chart.defaults.plugins.tooltip.padding = 10;
+    Chart.defaults.plugins.tooltip.titleColor = '#00d4ff';
+    Chart.defaults.plugins.tooltip.bodyColor = '#e8eaf0';
+    Chart.defaults.animation.duration = 600;
+    Chart.defaults.animation.easing = 'easeInOutQuart';
+})();
+
+// ── Sparkline helper ──────────────────────────────────────────────────
+window._sparklines = {};
+function createSparkline(canvasId, data, color) {
+    if (typeof Chart === 'undefined') return;
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    if (_sparklines[canvasId]) { try { _sparklines[canvasId].destroy(); } catch(_) {} }
+    var ctx = canvas.getContext('2d');
+    var grad = ctx.createLinearGradient(0, 0, 0, 32);
+    grad.addColorStop(0, color.replace(')', ',0.3)').replace('rgb', 'rgba'));
+    grad.addColorStop(1, 'transparent');
+    _sparklines[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: { labels: data.map(function(_, i) { return i; }), datasets: [{ data: data, borderColor: color, borderWidth: 1.5, fill: true, backgroundColor: grad, tension: 0.4, pointRadius: 0, pointHoverRadius: 3 }] },
+        options: { responsive: false, animation: false, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false }, tooltip: { callbacks: { title: function() { return ''; } } } } }
+    });
+}
+
+// ── Hash string to colour ─────────────────────────────────────────────
+function hashStringToColor(str) {
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    var hue = Math.abs(hash) % 360;
+    return 'hsl(' + hue + ',55%,42%)';
+}
+
+// ── Greeting bar ──────────────────────────────────────────────────────
+var _greetingInsights = [
+    'Focus compounds.', 'Ship the thing.', 'One more feature.', 'Build the future.',
+    'Think systems.', 'Consistency wins.', 'Stay the course.', 'Relentless progress.'
+];
+var _greetingInsightIdx = 0;
+function updateGreeting() {
+    var h = new Date().getHours();
+    var salut = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    var el = document.getElementById('greetingText');
+    if (el) el.textContent = salut + ', sir.';
+}
+function rotateInsight() {
+    var el = document.getElementById('greetingInsight');
+    if (!el) return;
+    el.style.opacity = '0';
+    setTimeout(function() {
+        _greetingInsightIdx = (_greetingInsightIdx + 1) % _greetingInsights.length;
+        el.textContent = _greetingInsights[_greetingInsightIdx];
+        el.style.opacity = '1';
+    }, 500);
+}
+updateGreeting();
+_addInterval(updateGreeting, 60000);
+(function() { var el = document.getElementById('greetingInsight'); if (el) el.textContent = _greetingInsights[0]; })();
+_addInterval(rotateInsight, 30000);
+
+// ── Keyboard shortcuts (expanded) ────────────────────────────────────
+function toggleHelpOverlay() {
+    var el = document.getElementById('helpOverlay');
+    if (el) el.classList.toggle('open');
+}
+(function() {
+    var existingKbHandler = null;
+    document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        var activePage = document.querySelector('.page.active');
+        var pageId = activePage ? activePage.id.replace('page-', '') : 'command';
+        if (e.key === '?' || (e.key === '/' && e.shiftKey)) { e.preventDefault(); toggleHelpOverlay(); return; }
+        if (e.key === 'Escape') { closeAgentDrawer(); var ho = document.getElementById('helpOverlay'); if (ho) ho.classList.remove('open'); return; }
+        if (e.key === 'r' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            if (pageId === 'operations') { refreshCrmPanel(); refreshProjectsPanel(); refreshOpsDocumentsPanel(); refreshOpsProposalsPanel(); refreshTaskQueuePanel(); }
+            else if (pageId === 'life') { refreshJournalPanel(); refreshHabitTracker(); refreshPsychologyPanel(); refreshUniversityPanel(); }
+            else if (pageId === 'finance') { refreshExpensesPanel(); refreshSubscriptionsPanel(); }
+            else if (pageId === 'comms') { refreshContactsPanel(); }
+            else { refreshMetrics(); refreshRecentRuns(); }
+            return;
+        }
+        if (e.key === 'R' && e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (confirm('Run next pipeline feature?')) masterRunNext(); return; }
+        if (e.key === 'a' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('operations'); setTimeout(function() { var el = document.getElementById('permissionCards'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200); return; }
+        if (e.key === 'n' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('intelligence'); return; }
+        if (e.key === '/' && !e.shiftKey) { e.preventDefault(); var ci = document.getElementById('chatInput'); if (ci) ci.focus(); return; }
+    });
+})();
+
+// ── Page transition (fade) ────────────────────────────────────────────
+(function() {
+    var origSwitch = window.switchPage;
+    window.switchPage = function(name) {
+        var current = document.querySelector('.page.active');
+        if (current) { current.style.opacity = '0'; }
+        setTimeout(function() {
+            origSwitch(name);
+            var next = document.getElementById('page-' + name);
+            if (next) { next.style.opacity = '0'; setTimeout(function() { next.style.opacity = '1'; }, 30); }
+        }, 120);
+    };
+})();
+
+// ── Agent drawer — real data ──────────────────────────────────────────
+window.openAgentDrawer = function(role) {
+    var overlay = document.getElementById('agentDrawerOverlay');
+    var drawer  = document.getElementById('agentDrawer');
+    if (overlay) overlay.classList.add('open');
+    if (drawer)  drawer.classList.add('open');
+    var titleEl = document.getElementById('drawerAgentTitle');
+    if (titleEl) titleEl.textContent = (role.charAt(0).toUpperCase() + role.slice(1)) + ' Agent';
+    var body = document.getElementById('drawerAgentBody');
+    if (!body) return;
+    body.innerHTML = '<div class="skel skel-wide" style="margin-bottom:8px"></div><div class="skel skel-med"></div>';
+    fetchJsonDeduped('/api/intelligence/agent-runs?limit=10')
+        .then(function(d) {
+            if (!d.ok || !d.runs) { body.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No runs yet</div>'; return; }
+            var roleRuns = d.runs.filter(function(r) { return r.agent_role === role || !role; }).slice(0, 10);
+            if (!roleRuns.length) { body.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No runs for this agent yet</div>'; return; }
+            var totalCost = roleRuns.reduce(function(s, r) { return s + (r.cost_usd || 0); }, 0);
+            var successes = roleRuns.filter(function(r) { return r.status === 'committed' || r.status === 'complete'; }).length;
+            var rate = roleRuns.length ? Math.round(successes / roleRuns.length * 100) : 0;
+            var STATUS_TONE = { committed: 'green', complete: 'green', failed: 'red', running: 'cyan', pending: 'amber' };
+            body.innerHTML =
+                '<div style="display:flex;gap:16px;margin-bottom:16px">' +
+                '<div style="flex:1;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-label">Total cost</div><div class="t-stat" style="color:var(--amber);font-size:16px;margin-top:4px">$' + totalCost.toFixed(4) + '</div></div>' +
+                '<div style="flex:1;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-label">Success rate</div><div class="t-stat" style="color:var(--green);font-size:16px;margin-top:4px">' + rate + '%</div></div>' +
+                '</div>' +
+                '<div class="t-label" style="margin-bottom:8px">Last ' + roleRuns.length + ' runs</div>' +
+                roleRuns.map(function(r) {
+                    var tone = STATUS_TONE[r.status] || 'grey';
+                    var dt = r.created_at ? new Date(r.created_at).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+                    var dur = r.duration_ms ? (r.duration_ms / 1000).toFixed(1) + 's' : '';
+                    var cost = r.cost_usd ? '$' + r.cost_usd.toFixed(4) : '';
+                    var summary = (r.agent_summary && r.agent_summary.summary) ? r.agent_summary.summary.slice(0, 80) : (r.feature_id || '');
+                    return '<div class="agent-run-row">' +
+                        '<span class="ds-badge ' + tone + '">' + escapeHtml(r.status || 'pending') + '</span>' +
+                        '<div><div class="t-small" style="color:var(--text)">' + escapeHtml(summary) + '</div><div class="t-mono" style="color:var(--text-mute)">' + dt + (dur ? ' · ' + dur : '') + (cost ? ' · ' + cost : '') + '</div></div>' +
+                        '</div>';
+                }).join('');
+        })
+        .catch(function(e) { console.error('[APEX-UI] agent drawer:', e); body.innerHTML = '<div class="panel-error">Failed to load agent data</div>'; });
+};
+window.closeAgentDrawer = function() {
+    var overlay = document.getElementById('agentDrawerOverlay');
+    var drawer  = document.getElementById('agentDrawer');
+    if (overlay) overlay.classList.remove('open');
+    if (drawer)  drawer.classList.remove('open');
+};
+
+// ── Finance: Expenses panel ────────────────────────────────────────────
+async function refreshExpensesPanel() {
+    var tbody = document.getElementById('expensesTbody');
+    if (!tbody) return;
+    var t = safeTimeout(function() { if (tbody.querySelector('.skel')) tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-faint);padding:16px;text-align:center">No expenses yet — scan a receipt or log via voice</td></tr>'; }, 8000);
+    try {
+        var d = await fetchJsonDeduped('/api/finance/expenses');
+        clearTimeout(t);
+        if (!d.ok || !d.expenses || !d.expenses.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-faint);padding:16px;text-align:center;font-style:italic">No expenses yet — scan a receipt or log via voice</td></tr>'; return; }
+        var CAT_TONE = { Food: 'green', Software: 'cyan', Transit: 'amber', 'Eating out': 'purple', Subscriptions: 'grey' };
+        tbody.innerHTML = d.expenses.slice(0, 15).map(function(e) {
+            var dt = e.date ? new Date(e.date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : '—';
+            var tone = CAT_TONE[e.category] || 'grey';
+            return '<tr><td class="t-mono">' + dt + '</td><td><span class="ds-badge ' + tone + '">' + escapeHtml(e.category || '—') + '</span></td><td>' + escapeHtml(e.description || e.merchant || '—') + '</td><td class="t-mono" style="color:var(--text)">£' + (e.amount || 0).toFixed(2) + '</td></tr>';
+        }).join('');
+    } catch(e) { console.error('[APEX-UI] expenses:', e); panelError(tbody.parentElement, 'refreshExpensesPanel'); }
+}
+
+// ── Finance: Subscriptions panel ───────────────────────────────────────
+async function refreshSubscriptionsPanel() {
+    var tbody = document.getElementById('subscriptionsTbody');
+    if (!tbody) return;
+    try {
+        var d = await fetchJsonDeduped('/api/finance/subscriptions');
+        if (!d.ok || !d.subscriptions || !d.subscriptions.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-faint);padding:16px;text-align:center;font-style:italic">No subscriptions yet — import from bank or add manually</td></tr>'; return; }
+        tbody.innerHTML = d.subscriptions.map(function(s) {
+            var next = s.next_billing_date ? new Date(s.next_billing_date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : s.billing_cycle || '—';
+            return '<tr><td>' + escapeHtml(s.name) + '</td><td class="t-mono">£' + (s.amount || 0).toFixed(2) + '</td><td class="t-mono">' + next + '</td><td><span class="ds-badge green">active</span></td></tr>';
+        }).join('');
+    } catch(e) { console.error('[APEX-UI] subscriptions:', e); }
+}
+
+// ── Life: Sleep panel ─────────────────────────────────────────────────
+async function refreshSleepPanel() {
+    var panel = document.getElementById('sleepBarsPanel');
+    if (!panel) return;
+    try {
+        var d = await fetchJson('/api/health/sleep');
+        if (!d.ok || !d.sleep || !d.sleep.length) return;
+        var entries = d.sleep.slice(-7);
+        var maxH = Math.max.apply(null, entries.map(function(s) { return s.hours || 0; })) || 10;
+        var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        panel.innerHTML = entries.map(function(s) {
+            var h = s.hours || 0;
+            var pct = Math.max(10, Math.round(h / maxH * 100));
+            var day = s.date ? days[new Date(s.date).getDay()] : '—';
+            return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%">' +
+                '<div style="height:' + pct + '%;width:100%;background:linear-gradient(180deg,var(--purple),rgba(124,111,255,0.3));border-radius:3px 3px 0 0;box-shadow:0 0 6px var(--purple-glow)"></div>' +
+                '<span class="t-mono" style="color:var(--text-faint);font-size:9px">' + (h ? h.toFixed(1) + 'h' : '—') + '</span>' +
+                '</div>';
+        }).join('');
+    } catch(e) { console.error('[APEX-UI] sleep panel:', e); }
+}
+
+// ── Comms: Birthday panel ─────────────────────────────────────────────
+async function refreshBirthdayPanel() {
+    var panel = document.getElementById('birthdayPanel');
+    if (!panel) return;
+    var t = safeTimeout(function() { if (panel.querySelector('.skel')) panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No upcoming birthdays — add dates to contacts</div>'; }, 8000);
+    try {
+        var d = await fetchJsonDeduped('/api/contacts');
+        clearTimeout(t);
+        if (!d.ok || !d.contacts) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No upcoming birthdays — add dates to contacts</div>'; return; }
+        var now = new Date(); var in30 = new Date(now); in30.setDate(in30.getDate() + 30);
+        var upcoming = d.contacts.filter(function(c) {
+            if (!c.birthday) return false;
+            var b = new Date(c.birthday); b.setFullYear(now.getFullYear());
+            if (b < now) b.setFullYear(now.getFullYear() + 1);
+            return b <= in30;
+        }).sort(function(a, b) { return new Date(a.birthday) - new Date(b.birthday); });
+        if (!upcoming.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No upcoming birthdays — add dates to contacts</div>'; return; }
+        panel.innerHTML = upcoming.map(function(c) {
+            var b = new Date(c.birthday); b.setFullYear(new Date().getFullYear());
+            var diff = Math.ceil((b - new Date()) / 86400000);
+            return '<div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px"><span class="t-small" style="color:var(--text)">' + escapeHtml(c.name) + '</span><span class="t-mono" style="color:var(--purple)">in ' + diff + ' days</span></div>';
+        }).join('');
+    } catch(e) { console.error('[APEX-UI] birthday panel:', e); }
+}
+
+// ── Mood selector ─────────────────────────────────────────────────────
+var _moodFaces = ['😞','😕','😐','🙂','😊'];
+function initMoodSelector() {
+    var container = document.getElementById('moodFacesRow');
+    if (!container) return;
+    container.innerHTML = _moodFaces.map(function(f, i) {
+        return '<button class="mood-face" onclick="selectMood(' + ((i+1)*2) + ', this)" aria-label="Mood ' + ((i+1)*2) + ' out of 10">' + f + '</button>';
+    }).join('');
+}
+window.selectMood = async function(score, btn) {
+    document.querySelectorAll('.mood-face').forEach(function(b) { b.classList.remove('selected'); });
+    if (btn) btn.classList.add('selected');
+    var disp = document.getElementById('moodScoreDisplay');
+    if (disp) disp.textContent = score + '/10';
+    try {
+        await fetchJson('/api/mood', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ score: score, date: new Date().toISOString().slice(0, 10) }) });
+        var conf = document.getElementById('moodConfirm');
+        if (conf) { conf.style.display = 'block'; setTimeout(function() { conf.style.display = 'none'; }, 3000); }
+        refreshPsychologyPanel();
+        refreshMoodChart();
+    } catch(e) { console.error('[APEX-UI] mood select:', e); }
+};
+
+// ── Orb state update ──────────────────────────────────────────────────
+function updateOrbState(state) {
+    var stateEl = document.getElementById('orbStatus');
+    if (stateEl) stateEl.textContent = state;
+    var badge = document.getElementById('orbStateBadge');
+    if (badge) badge.textContent = state;
+    var core = document.querySelector('.cmd-orb-core');
+    if (core) {
+        core.classList.toggle('orb-pulse', state === 'RUNNING');
+    }
+    var r1 = document.querySelector('.cmd-orb-ring.r1');
+    if (r1) r1.style.borderColor = state === 'ERROR' ? 'rgba(255,77,106,0.4)' : '';
+}
+
+// ── Financial card visual ─────────────────────────────────────────────
+function renderFinanceCards() {
+    var panel = document.getElementById('financeCardsRow');
+    if (!panel) return;
+    var cards = [
+        { name: 'Current', type: 'VISA', grad: 'linear-gradient(135deg,#1a237e,#0d47a1)', num: '•••• •••• •••• 0000' },
+        { name: 'Savings', type: 'MC',   grad: 'linear-gradient(135deg,#1b5e20,#2e7d32)', num: '•••• •••• •••• 0000' },
+        { name: 'Business', type: 'VISA', grad: 'linear-gradient(135deg,#4a148c,#6a1b9a)', num: '•••• •••• •••• 0000' },
+    ];
+    panel.innerHTML = cards.map(function(c) {
+        return '<div class="fin-card" style="background:' + c.grad + '">' +
+            '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);letter-spacing:0.1em">' + c.name + '</span><span style="font-size:12px;color:rgba(255,255,255,0.5)">' + c.type + '</span></div>' +
+            '<div class="fin-card-num">' + c.num + '</div>' +
+            '<div class="fin-card-bottom"><span class="fin-card-holder">Alex</span><span class="fin-card-expiry">—/—</span></div>' +
+            '<div style="position:absolute;inset:0;background:rgba(0,0,0,0.3);border-radius:12px;display:flex;align-items:center;justify-content:center"><button class="ds-btn cyan btn--xs" style="pointer-events:auto">Connect via Plaid</button></div>' +
+            '</div>';
+    }).join('');
+}
+
+// ── Approval card animation on approve/deny ───────────────────────────
+(function() {
+    var origApprove = window.approveFeature;
+    if (typeof origApprove !== 'function') return;
+    window.approveFeature = async function(featureId, approved) {
+        var cards = document.querySelectorAll('#permissionCards [onclick*="' + featureId + '"]');
+        var card = cards.length ? cards[0].closest('.ds-approval') : null;
+        if (card) {
+            var btn = card.querySelector('button');
+            if (btn) btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin-cw 0.6s linear infinite"></span>';
+        }
+        await origApprove(featureId, approved);
+        if (card) {
+            card.style.transition = 'opacity 0.2s ease, transform 0.2s ease, max-height 0.2s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(-8px)';
+            setTimeout(function() { card.remove(); var countEl = document.getElementById('cmdStatApprovals'); if (countEl) { var n = parseInt(countEl.textContent, 10) - 1; countEl.textContent = Math.max(0, n); } }, 220);
+        }
+    };
+})();
+
+// ── Refresh interval audit — replace loose intervals with _addInterval ─
+// (existing intervals from older code are left; new ones use _addInterval)
+_addInterval(refreshCrmPanel, 120000);
+_addInterval(refreshProjectsPanel, 120000);
+_addInterval(refreshOpsDocumentsPanel, 60000);
+_addInterval(refreshOpsProposalsPanel, 60000);
+_addInterval(refreshJournalPanel, 90000);
+_addInterval(refreshHabitTracker, 60000);
+_addInterval(refreshPsychologyPanel, 120000);
+_addInterval(refreshUniversityPanel, 120000);
+_addInterval(refreshContactsPanel, 90000);
+_addInterval(refreshExpensesPanel, 120000);
+_addInterval(refreshSubscriptionsPanel, 120000);
+
+// ── Init calls for new panels ─────────────────────────────────────────
+refreshExpensesPanel();
+refreshSubscriptionsPanel();
+refreshSleepPanel();
+refreshBirthdayPanel();
+refreshWorkoutGrid();
+initMoodSelector();
+renderFinanceCards();
+
+// ── Chat input focus after load ───────────────────────────────────────
+setTimeout(function() { var ci = document.getElementById('chatInput'); if (ci && !document.activeElement.matches('input,textarea')) ci.focus(); }, 500);
+
+// ── iOS safe area for bottom nav ──────────────────────────────────────
+(function() {
+    var nav = document.querySelector('.bottom-nav, nav.bottom-nav');
+    if (nav) nav.style.paddingBottom = 'env(safe-area-inset-bottom, 0px)';
+})();
+
 </script>
 </body>
 </html>

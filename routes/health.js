@@ -35,4 +35,23 @@ router.get('/health/nutrition', _auth, async (req, res) => {
     } catch (e) { res.json({ ok: true, meals: [], totals: { calories: 0, protein: 0, carbs: 0, fat: 0 }, error: e.message }); }
 });
 
+router.get('/health/sleep', _auth, async (req, res) => {
+    try {
+        const since = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+        const { data, error } = await sb().from('apex_sleep_log').select('date,hours,quality_score,notes').gte('date', since).order('date', { ascending: true });
+        if (error) return res.json({ ok: true, sleep: [] });
+        res.json({ ok: true, sleep: data || [] });
+    } catch (e) { res.json({ ok: true, sleep: [], error: e.message }); }
+});
+
+router.post('/mood', _auth, async (req, res) => {
+    try {
+        const { score, date } = req.body || {};
+        if (!score) return res.status(400).json({ ok: false, error: 'score required' });
+        const { data, error } = await sb().from('apex_mood_log').upsert({ date: date || new Date().toISOString().split('T')[0], score: Number(score) }, { onConflict: 'date' }).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, mood: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;
