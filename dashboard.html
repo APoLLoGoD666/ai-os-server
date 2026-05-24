@@ -2503,11 +2503,14 @@ html, body {
   border-right: 1px solid var(--border);
 }
 .ticker-track {
-  display: flex;
+  display: inline-flex;
+  width: max-content;
   gap: 28px;
   padding-left: 154px;
   white-space: nowrap;
   animation: ticker-scroll 80s linear infinite;
+  -webkit-animation: ticker-scroll 80s linear infinite;
+  will-change: transform;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
@@ -2518,6 +2521,7 @@ html, body {
   color: var(--text-mid);
 }
 @keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@-webkit-keyframes ticker-scroll { from { -webkit-transform: translateX(0); } to { -webkit-transform: translateX(-50%); } }
 
 /* ── Sidebar / nav redesign ─────────────────────────────────────────── */
 .bottom-nav, nav.bottom-nav {
