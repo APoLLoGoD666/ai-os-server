@@ -44,6 +44,18 @@ async function runSQL(sql) {
 // ── Create all tables for all 109 roadmap features ───────────────
 async function createAllTables() {
     const tables = [
+        // Agent library
+        `CREATE TABLE IF NOT EXISTS apex_agents (
+            id          SERIAL PRIMARY KEY,
+            slug        TEXT UNIQUE NOT NULL,
+            name        TEXT NOT NULL,
+            category    TEXT NOT NULL,
+            description TEXT,
+            system_prompt TEXT NOT NULL,
+            vault_path  TEXT,
+            github_path TEXT,
+            synced_at   TIMESTAMPTZ DEFAULT NOW()
+        )`,
         // Communications
         `CREATE TABLE IF NOT EXISTS email_threads (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

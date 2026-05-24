@@ -44,6 +44,7 @@ const multerUpload = multer({ storage: multer.memoryStorage(), limits: { fileSiz
 const db = require("./database");
 const expandPrompt = require('./agent-system/prompt-expander');
 const runAgentTeam = require('./agent-system/orchestrator');
+const agentLib     = require('./agent-system/agent-library');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { createClient: _sbAdmin } = require('@supabase/supabase-js');
 const sbAdmin = _sbAdmin(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -6997,6 +6998,23 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         }, 25000);
 
         const userMessage = rawMessage.trim();
+
+        // ── Agent library intent detection ─────────────────────────────────────
+        // Intercept messages like "ask the security engineer to review this"
+        const _agentIntent = agentLib.detectAgentIntent(userMessage);
+        if (_agentIntent) {
+            try {
+                const _agentResult = await agentLib.invokeAgent(_agentIntent.slug, _agentIntent.task);
+                clearTimeout(chatTimeout);
+                const _agentReply  = `[${_agentResult.agent.name}]\n\n${_agentResult.reply}`;
+                setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
+                return res.status(200).json({ ok: true, reply: _agentReply });
+            } catch (e) {
+                console.warn('[AgentLib] intent invoke failed, falling through to normal chat:', e.message);
+            }
+        }
+        // ── End agent intent ───────────────────────────────────────────────────
+
         const memory = await loadMemory();
         setImmediate(() => addToMemory("user", userMessage));
 
@@ -9289,6 +9307,17 @@ server.headersTimeout   = 70000; // must be > keepAliveTimeout
 
 server.listen(PORT, () => {
     ensureSetup();
+
+    // Agent library — load index from Supabase on startup (fast), then background-sync from GitHub if empty
+    setImmediate(async () => {
+        try {
+            const loaded = await agentLib.loadFromSupabase(sbAdmin);
+            if (loaded === 0) {
+                console.log('[AgentLib] No cached agents found — triggering full GitHub sync in background');
+                setTimeout(() => agentLib.syncFromGitHub(sbAdmin, { obsidian: true }).catch(e => console.warn('[AgentLib] startup sync error:', e.message)), 8000);
+            }
+        } catch (e) { console.warn('[AgentLib] startup load error:', e.message); }
+    });
 
     console.log('[Email] Backfill skipped — using Supabase client');
     console.log('[PGVector] Skipping — managed via Supabase dashboard');

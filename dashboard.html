@@ -2213,6 +2213,87 @@ html, body {
     30%          { transform: translateY(-5px); opacity: 1; }
 }
 
+/* ── Agent Library ──────────────────────────────────────────────────── */
+.agent-cat-pill {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid rgba(0,212,255,0.15);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+}
+
+.agent-cat-pill:hover, .agent-cat-pill.active {
+    background: rgba(0,212,255,0.1);
+    border-color: rgba(0,212,255,0.4);
+    color: var(--primary);
+}
+
+.agent-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 9px;
+    padding: 9px 11px;
+    transition: border-color 0.18s;
+}
+
+.agent-card:hover { border-color: rgba(0,212,255,0.15); }
+
+.agent-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.agent-card-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+}
+
+.agent-card-cat {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(0,212,255,0.5);
+    margin-top: 1px;
+}
+
+.agent-card-desc {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.45;
+    margin-top: 5px;
+}
+
+.agent-invoke-btn {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 4px 10px;
+    border-radius: 5px;
+    border: 1px solid rgba(0,212,255,0.25);
+    background: rgba(0,212,255,0.06);
+    color: var(--primary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.18s;
+}
+
+.agent-invoke-btn:hover {
+    background: rgba(0,212,255,0.14);
+    box-shadow: 0 0 8px rgba(0,212,255,0.15);
+}
+
 /* ── Reduced motion ─────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -2366,6 +2447,23 @@ html, body {
                             <div class="queue-empty-icon">✓</div>
                             <div class="queue-empty-text">No pending</div>
                         </div>
+                    </div>
+                </div>
+                <div class="glass-panel" id="agentLibraryPanel">
+                    <div class="panel-title">
+                        Agent Library
+                        <div style="display:flex;gap:6px;align-items:center">
+                            <span id="agentLibCount" style="font-size:9px;color:var(--primary);letter-spacing:.08em"></span>
+                            <button class="panel-title-btn" onclick="refreshAgentLibrary()">↻</button>
+                            <button class="panel-title-btn" onclick="syncAgentLibrary()" title="Re-sync all 150+ agents from GitHub">Sync</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap" id="agentCategoryBar"></div>
+                    <input id="agentSearchInput" placeholder="Search agents…"
+                        style="width:100%;height:28px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:6px;padding:0 10px;font-size:11px;color:var(--text);outline:none;font-family:inherit;margin-bottom:8px"
+                        oninput="filterAgents(this.value)" />
+                    <div id="agentList" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto">
+                        <div class="empty-note">Click ↻ to load agents</div>
                     </div>
                 </div>
             </div>
@@ -5258,6 +5356,97 @@ async function masterRunFeature() {
             showTaskToast('Error: ' + data.error, 'error');
         }
     } catch (e) { showTaskToast('Failed: ' + e.message, 'error'); }
+}
+
+// ══ AGENT LIBRARY ═════════════════════════════════════════════════
+let _agentData = [];
+let _agentFilterCat = '';
+
+async function refreshAgentLibrary() {
+    const listEl  = document.getElementById('agentList');
+    const countEl = document.getElementById('agentLibCount');
+    const catBar  = document.getElementById('agentCategoryBar');
+    if (!listEl) return;
+    listEl.innerHTML = '<div class="empty-note">Loading…</div>';
+    try {
+        const data = await fetchJson('/api/agents');
+        _agentData = data.agents || [];
+        if (countEl) countEl.textContent = `${_agentData.length} agents`;
+        const cats = [...new Set(_agentData.map(a => a.category))].sort();
+        if (catBar) {
+            catBar.innerHTML =
+                `<button onclick="_agentSetCat('')" class="agent-cat-pill${_agentFilterCat===''?' active':''}" data-cat="">All</button>` +
+                cats.map(c => `<button onclick="_agentSetCat('${c}')" class="agent-cat-pill${_agentFilterCat===c?' active':''}" data-cat="${c}">${c}</button>`).join('');
+        }
+        _renderAgentList(_agentData);
+    } catch (e) {
+        if (listEl) listEl.innerHTML = `<div class="empty-note">${escapeHtml(e.message)}</div>`;
+    }
+}
+
+function _agentSetCat(cat) {
+    _agentFilterCat = cat;
+    document.querySelectorAll('.agent-cat-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+    filterAgents(document.getElementById('agentSearchInput')?.value || '');
+}
+
+function filterAgents(query) {
+    const q = (query || '').toLowerCase();
+    const filtered = _agentData.filter(a =>
+        (!_agentFilterCat || a.category === _agentFilterCat) &&
+        (!q || a.name.toLowerCase().includes(q) || a.category.includes(q) || (a.description||'').toLowerCase().includes(q))
+    );
+    _renderAgentList(filtered);
+}
+
+function _renderAgentList(agents) {
+    const el = document.getElementById('agentList');
+    if (!el) return;
+    if (!agents.length) { el.innerHTML = '<div class="empty-note">No agents match</div>'; return; }
+    el.innerHTML = agents.slice(0, 60).map(a => `
+        <div class="agent-card">
+            <div class="agent-card-top">
+                <div>
+                    <div class="agent-card-name">${escapeHtml(a.name)}</div>
+                    <div class="agent-card-cat">${escapeHtml(a.category)}</div>
+                </div>
+                <button class="agent-invoke-btn" onclick="invokeAgentFromDash('${escapeHtml(a.slug)}','${escapeHtml(a.name).replace(/'/g,'\\x27')}')" title="Invoke this agent">Ask</button>
+            </div>
+            ${a.description ? `<div class="agent-card-desc">${escapeHtml(a.description.slice(0,100))}${a.description.length>100?'…':''}</div>` : ''}
+        </div>`).join('');
+}
+
+async function syncAgentLibrary() {
+    showTaskToast('Syncing 150+ agents from GitHub — takes ~60s', 'info');
+    try {
+        await fetchJson('/api/agents/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        setTimeout(refreshAgentLibrary, 90000);
+    } catch (e) { showTaskToast('Sync failed: ' + e.message, 'error'); }
+}
+
+async function invokeAgentFromDash(slug, name) {
+    const task = prompt('Task for ' + name + ':');
+    if (!task) return;
+    switchPage('command');
+    renderChatMessage('user', '[' + name + '] ' + task);
+    showTypingIndicator();
+    setOrbState('thinking');
+    try {
+        const data = await fetchJson('/api/agents/invoke', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agentSlug: slug, message: task })
+        });
+        hideTypingIndicator();
+        const reply = '[' + data.agent.name + ']\n\n' + data.reply;
+        renderChatMessage('ai', reply);
+        speak(reply);
+        setOrbState('speaking');
+    } catch (e) {
+        hideTypingIndicator();
+        renderChatMessage('system', 'Agent failed: ' + e.message);
+        setOrbState('ready');
+    }
 }
 
 // ══ INIT ══════════════════════════════════════════════════════════════
