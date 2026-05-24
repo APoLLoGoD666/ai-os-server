@@ -8622,16 +8622,33 @@ async function checkPendingMasterTasks() {
         _lastPipelineActivity = Date.now();
         console.log(`[Master] checkPendingMasterTasks: ${data.length} pending task(s)`);
         for (const row of data) {
-            // Mark read immediately to prevent double-execution across restarts
-            await sbAdmin.from('apex_notifications').update({ read: true }).eq('id', row.id);
-            let info = {};
+               let info = {};
             try { info = JSON.parse(row.message); } catch (_) {}
+            // Mark as executing (not read) so restarts can retry if process dies mid-run
+            if (info.status === 'executing') {
+                console.log(`[Master] skipping already-executing task ${row.id}`);
+                continue;
+            }
+            await sbAdmin.from('apex_notifications')
+                .update({ message: JSON.stringify({ ...info, status: 'executing' }) })
+                .eq('id', row.id);
             if (row.type === 'master_task') {
                 const featureId = info.featureId;
                 if (!featureId) continue;
                 console.log(`[Master] Executing queued feature: ${featureId}`);
                 runFeatureWithPermission(featureId)
-                    .catch(e => console.error(`[Master] queued ${featureId} error:`, e.message));
+                    .then(() => {
+                        sbAdmin.from('apex_notifications')
+                            .update({ read: true })
+                            .eq('id', row.id)
+                            .then(() => console.log(`[Master] ${featureId} marked complete`));
+                    })
+                    .catch(e => {
+                        console.error(`[Master] queued ${featureId} error:`, e.message);
+                        sbAdmin.from('apex_notifications')
+                            .update({ message: JSON.stringify({ ...info, status: 'failed', error: e.message }) })
+                            .eq('id', row.id);
+                    });
             } else if (row.type === 'master_run') {
                 const workstreams = info.workstreams || null;
                 console.log('[Master] Executing queued master run');
