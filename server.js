@@ -137,13 +137,11 @@ app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: (origin, cb) => {
-        const ok = !origin ||
-            origin.endsWith('.onrender.com') ||
-            origin.startsWith('http://localhost') ||
-            origin.startsWith('http://127.0.0.1');
-        cb(null, ok);
-    },
+    origin: [
+        'https://apex-ai-os-cos.uk',
+        'https://www.apex-ai-os-cos.uk',
+        'https://ai-os-server-jx20.onrender.com'
+    ],
     credentials: true
 }));
 const apiLimiter = rateLimit({
