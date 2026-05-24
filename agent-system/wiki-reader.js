@@ -13,31 +13,33 @@ const CORE_PAGES = [
 const ENTITY_DIRS = ['Entities', 'Concepts', 'People'];
 
 async function getWikiContext(taskTitle) {
-    const pages = [];
-
-    // Always load core system pages (capped per page to keep prompt small)
-    for (const page of CORE_PAGES) {
+    // Fetch all pages in parallel rather than sequentially
+    const coreReads = CORE_PAGES.map(async page => {
         try {
             const content = await obsidianRead(page);
-            if (content) pages.push(`## ${page}\n${content.slice(0, 800)}`);
-        } catch {}
-    }
+            return content ? `## ${page}\n${content.slice(0, 800)}` : null;
+        } catch { return null; }
+    });
 
-    // Load entity/concept/people pages that match keywords in the task title
+    const entityReads = [];
     if (taskTitle) {
-        const keywords = taskTitle.toLowerCase()
-            .split(/\W+/)
-            .filter(w => w.length > 3);
+        const keywords = taskTitle.toLowerCase().split(/\W+/).filter(w => w.length > 3);
         for (const dir of ENTITY_DIRS) {
             for (const kw of keywords) {
                 const capitalized = kw.charAt(0).toUpperCase() + kw.slice(1);
-                try {
-                    const content = await obsidianRead(`${dir}/${capitalized}.md`);
-                    if (content) pages.push(`## ${dir}/${capitalized}.md\n${content.slice(0, 500)}`);
-                } catch {}
+                const notePath = `${dir}/${capitalized}.md`;
+                entityReads.push((async () => {
+                    try {
+                        const content = await obsidianRead(notePath);
+                        return content ? `## ${notePath}\n${content.slice(0, 500)}` : null;
+                    } catch { return null; }
+                })());
             }
         }
     }
+
+    const results = await Promise.all([...coreReads, ...entityReads]);
+    const pages = results.filter(Boolean);
 
     // Append recent auto-reflexion lessons (last 12, capped at 800 chars)
     const recentLessons = localMemory.getRecentLessons(12);
