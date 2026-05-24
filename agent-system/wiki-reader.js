@@ -61,6 +61,10 @@ async function updateWikiAfterTask(taskId, objective, outcome) {
 
 // Nightly consolidation — called at 3am by server.js scheduler and by POST /api/wiki/consolidate
 async function consolidateWiki() {
+    if (!process.env.ANTHROPIC_API_KEY) {
+        console.warn('[Wiki] ANTHROPIC_API_KEY not set — skipping consolidation');
+        return;
+    }
     const Anthropic = require('@anthropic-ai/sdk');
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const model = 'claude-haiku-4-5-20251001';

@@ -6,16 +6,56 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const memory = require('./obsidian-memory');
 
-function _sbClient() {
-    return createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-    );
-}
+// Module-level clients — created once, reused across all calls
+const _sb = process.env.SUPABASE_URL
+    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+    : null;
+const _anthro = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// In-memory plan cache — avoids re-planning the same feature on retries
+const _planCache = new Map();
 
 const ROOT = path.join(__dirname, '..');
 const MODEL = 'claude-haiku-4-5-20251001';
 const ROADMAP_FILE = path.join(ROOT, 'ROADMAP.md');
+
+// Escape special regex characters in featureId strings
+function _escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Run an array of async task functions with bounded concurrency
+async function _runWithConcurrency(fns, limit) {
+    const results = new Array(fns.length);
+    let next = 0;
+    async function worker() {
+        while (next < fns.length) {
+            const i = next++;
+            results[i] = await fns[i]();
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, fns.length) }, worker));
+    return results;
+}
+
+// Insert notification with dedup — skips if unread notification of same type+feature already exists
+async function _insertNotification(row) {
+    if (!_sb) return;
+    try {
+        if (row.featureId) {
+            const { data } = await _sb.from('apex_notifications')
+                .select('id').eq('type', row.type).eq('read', false)
+                .ilike('message', `%${row.featureId}%`).limit(1);
+            if (data && data.length > 0) {
+                console.log(`[Master] notification dedup — ${row.type}/${row.featureId} already pending`);
+                return;
+            }
+        }
+        await _sb.from('apex_notifications').insert(row);
+    } catch (e) {
+        console.warn('[Master] notification insert failed:', e.message);
+    }
+}
 
 // ── Parse ROADMAP.md into structured workstreams ──────────────────
 function parseRoadmap() {
@@ -53,7 +93,7 @@ function parseRoadmap() {
 function markFeatureComplete(featureId) {
     let content = fs.readFileSync(ROADMAP_FILE, 'utf8');
     content = content.replace(
-        new RegExp(`^- \\[ \\] (${featureId}: .+)$`, 'm'),
+        new RegExp(`^- \\[ \\] (${_escapeRegex(featureId)}: .+)$`, 'm'),
         '- [x] $1'
     );
     fs.writeFileSync(ROADMAP_FILE, content, 'utf8');
@@ -61,6 +101,7 @@ function markFeatureComplete(featureId) {
         const repoUrl = `https://apex-autopilot:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
         execSync('git add ROADMAP.md', { cwd: ROOT, stdio: 'pipe' });
         execSync(`git commit -m "roadmap: mark ${featureId} complete [skip ci]"`, { cwd: ROOT, stdio: 'pipe' });
+        execSync(`git pull --rebase ${repoUrl} main`, { cwd: ROOT, stdio: 'pipe' });
         execSync(`git push ${repoUrl} main`, { cwd: ROOT, stdio: 'pipe' });
         console.log(`[Master] ROADMAP.md pushed — ${featureId} marked [x]`);
     } catch (e) {
@@ -70,11 +111,16 @@ function markFeatureComplete(featureId) {
 
 // ── Plan a feature using Claude ──────────────────────────────────
 async function planFeature(feature, workstream) {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    if (_planCache.has(feature.id)) {
+        console.log(`[Master] planFeature cache hit for ${feature.id}`);
+        return _planCache.get(feature.id);
+    }
+
     const planModel = MODEL;
     const context = memory.getFullContext();
 
-    const res = await client.messages.create({
+    const res = await Promise.race([
+        _anthro.messages.create({
         model: planModel,
         max_tokens: 3000,
         system: [{ type: 'text', cache_control: { type: 'ephemeral' }, text: `You are a senior architect planning features for Apex AI OS.
@@ -130,13 +176,19 @@ Output ONLY a JSON object with no markdown:
             role: 'user',
             content: `WORKSTREAM: ${workstream}\nFEATURE: ${feature.id} — ${feature.title}\n\nSYSTEM CONTEXT:\n${context}\n\nPlan this feature.`
         }]
-    });
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('planFeature timeout after 60s')), 60000))
+    ]);
 
     const text = res.content.map(i => i.text || '').join('').trim();
     const first = text.indexOf('{');
     const last = text.lastIndexOf('}');
-    if (first === -1 || last === -1) throw new Error('No plan JSON returned');
-    return JSON.parse(text.slice(first, last + 1));
+    if (first === -1 || last === -1) throw new Error(`No plan JSON returned for ${feature.id}`);
+    let plan;
+    try { plan = JSON.parse(text.slice(first, last + 1)); }
+    catch (e) { throw new Error(`Plan JSON parse failed for ${feature.id}: ${e.message}`); }
+    _planCache.set(feature.id, plan);
+    return plan;
 }
 
 // ── Run a single feature through the agent pipeline ──────────────
@@ -192,7 +244,7 @@ async function runFeature(feature, workstream) {
     // Check standing approvals table before blocking on permission
     if (plan.permissionRequired) {
         try {
-            const { data: standing } = await _sbClient()
+            const { data: standing } = await _sb
                 .from('apex_standing_approvals')
                 .select('id')
                 .eq('feature_pattern', feature.id)
@@ -210,9 +262,9 @@ async function runFeature(feature, workstream) {
 
     if (plan.permissionRequired) {
         console.log(`[Master] ${feature.id} requires permission: ${plan.permissionReason}`);
-        // Write permission request to Supabase notifications
-        await _sbClient().from('apex_notifications').insert({
+        await _insertNotification({
             id: `perm-${feature.id}-${Date.now()}`,
+            featureId: feature.id,
             message: JSON.stringify({
                 type: 'permissionRequest',
                 featureId: feature.id,
@@ -264,16 +316,13 @@ async function runFeature(feature, workstream) {
             plan.approach
         );
         console.log(`[Master] ${feature.id} completed — commit ${result.commitHash} — cost $${result.cost || '?'}`);
-        try {
-            await _sbClient().from('apex_notifications').insert({
-                id: `feat-complete-${feature.id}-${Date.now()}`,
-                type: 'feature_complete',
-                message: `Feature ${feature.id} completed — commit ${result.commitHash} — cost $${result.cost || '?'}`,
-                read: false
-            });
-        } catch (e) {
-            console.warn(`[Master] feature_complete notification failed: ${e.message}`);
-        }
+        await _insertNotification({
+            id: `feat-complete-${feature.id}-${Date.now()}`,
+            featureId: feature.id,
+            type: 'feature_complete',
+            message: `Feature ${feature.id} completed — commit ${result.commitHash} — cost $${result.cost || '?'}`,
+            read: false
+        });
     } else {
         memory.logLesson(
             `${feature.id} failed: ${result.error}. ` +
@@ -281,16 +330,13 @@ async function runFeature(feature, workstream) {
             `Plan approach was: ${plan.approach}`
         );
         console.error(`[Master] ${feature.id} failed: ${result.error}`);
-        try {
-            await _sbClient().from('apex_notifications').insert({
-                id: `feat-failed-${feature.id}-${Date.now()}`,
-                type: 'feature_failed',
-                message: `Feature ${feature.id} failed after 3 attempts: ${result.error}`,
-                read: false
-            });
-        } catch (e) {
-            console.warn(`[Master] feature_failed notification failed: ${e.message}`);
-        }
+        await _insertNotification({
+            id: `feat-failed-${feature.id}-${Date.now()}`,
+            featureId: feature.id,
+            type: 'feature_failed',
+            message: `Feature ${feature.id} failed after 3 attempts: ${result.error}`,
+            read: false
+        });
     }
 
     return result;
@@ -303,7 +349,7 @@ async function runWorkstream(workstreamName, workstream) {
 
     for (const feature of workstream.pending) {
         if (feature.dependsOn) {
-            const { data } = await _sbClient()
+            const { data } = await _sb
                 .from('apex_notifications')
                 .select('id')
                 .eq('type', 'feature_complete')
@@ -333,6 +379,7 @@ async function runWorkstream(workstreamName, workstream) {
 
 // ── Main export — run multiple workstreams in parallel ────────────
 async function runMasterOrchestrator(workstreamFilter = null) {
+    const _masterStart = Date.now();
     const roadmap = parseRoadmap();
     console.log('[Master] North Star loaded, lessons read');
 
@@ -350,16 +397,16 @@ async function runMasterOrchestrator(workstreamFilter = null) {
         return { complete: true };
     }
 
-    console.log(`[Master] Running ${activeWorkstreams.length} workstreams in parallel`);
+    console.log(`[Master] Running ${activeWorkstreams.length} workstreams (max 3 concurrent)`);
 
-    const results = await Promise.all(
-        activeWorkstreams.map(([name, ws]) =>
-            runWorkstream(name, ws)
-                .catch(e => {
-                    memory.logLesson(`Workstream ${name} crashed: ${e.message}`);
-                    return [{ error: e.message }];
-                })
-        )
+    const results = await _runWithConcurrency(
+        activeWorkstreams.map(([name, ws]) => () =>
+            runWorkstream(name, ws).catch(e => {
+                memory.logLesson(`Workstream ${name} crashed: ${e.message}`);
+                return [{ error: e.message }];
+            })
+        ),
+        3
     );
 
     const summary = {};
@@ -367,7 +414,8 @@ async function runMasterOrchestrator(workstreamFilter = null) {
         summary[name] = results[i];
     });
 
-    console.log('[Master] All workstreams complete');
+    const totalSec = ((Date.now() - _masterStart) / 1000).toFixed(1);
+    console.log(`[Master] All workstreams complete — total time: ${totalSec}s`);
     return summary;
 }
 
@@ -396,27 +444,21 @@ async function runFeatureWithPermission(featureId) {
             };
             const result = await runAgentTeam(spec, feature.id);
             if (result.success) {
-                try {
-                    await _sbClient().from('apex_notifications').insert({
-                        id: `feat-complete-${featureId}-${Date.now()}`,
-                        type: 'feature_complete',
-                        message: `Feature ${featureId} completed and deployed successfully`,
-                        read: false
-                    });
-                } catch (e) {
-                    console.warn(`[Master] feature_complete notification failed: ${e.message}`);
-                }
+                await _insertNotification({
+                    id: `feat-complete-${featureId}-${Date.now()}`,
+                    featureId,
+                    type: 'feature_complete',
+                    message: `Feature ${featureId} completed and deployed successfully`,
+                    read: false
+                });
             } else {
-                try {
-                    await _sbClient().from('apex_notifications').insert({
-                        id: `feat-failed-${featureId}-${Date.now()}`,
-                        type: 'feature_failed',
-                        message: `Feature ${featureId} failed after 3 attempts: ${result.error}`,
-                        read: false
-                    });
-                } catch (e) {
-                    console.warn(`[Master] feature_failed notification failed: ${e.message}`);
-                }
+                await _insertNotification({
+                    id: `feat-failed-${featureId}-${Date.now()}`,
+                    featureId,
+                    type: 'feature_failed',
+                    message: `Feature ${featureId} failed after 3 attempts: ${result.error}`,
+                    read: false
+                });
             }
             return result;
         }
@@ -428,7 +470,7 @@ async function runFeatureWithPermission(featureId) {
 async function autoApproveStandardPermissions() {
     let data, error;
     try {
-        ({ data, error } = await _sbClient()
+        ({ data, error } = await _sb
             .from('apex_notifications')
             .select('*')
             .eq('type', 'permission')
@@ -491,7 +533,7 @@ async function autoApproveStandardPermissions() {
 
         console.log(`[AutoApprove] AUTO-APPROVING ${featureId} — reason: "${reason}"`);
         try {
-            await _sbClient().from('apex_notifications').update({ read: true }).eq('id', row.id);
+            await _sb.from('apex_notifications').update({ read: true }).eq('id', row.id);
             runFeatureWithPermission(featureId)
                 .catch(e => console.error(`[AutoApprove] ${featureId} run error:`, e.message));
         } catch (e) {
