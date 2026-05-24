@@ -649,6 +649,14 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity) {
     }
 }
 
+// ── Per-run cost cap — aborts pipeline if budget exceeded ─────────────────────
+const PIPELINE_BUDGET_USD = parseFloat(process.env.PIPELINE_BUDGET_USD || '2.00');
+function _checkBudget() {
+    if (_costUsd > PIPELINE_BUDGET_USD) {
+        throw new Error(`Pipeline budget exceeded: $${_costUsd.toFixed(4)} > $${PIPELINE_BUDGET_USD} cap. Set PIPELINE_BUDGET_USD env var to raise limit.`);
+    }
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 async function runAgentTeam(spec, taskId) {
     _costUsd      = 0;
@@ -741,9 +749,12 @@ async function runAgentTeam(spec, taskId) {
     try {
         console.log(`[Orchestrator] ── Starting ${taskId} ──`);
 
+        console.log(`[Orchestrator] Budget cap: $${PIPELINE_BUDGET_USD}`);
+
         // Step 1 — ARCHITECT
         const architectLog = await _architect(spec);
         agentLogs.push(architectLog);
+        _checkBudget();
         console.log(`[Orchestrator] ARCHITECT (${architectLog.duration}ms) — ${architectLog.result.testCases?.length || 0} test cases`);
 
         const MAX_ATTEMPTS = 3;
@@ -763,6 +774,7 @@ async function runAgentTeam(spec, taskId) {
                 console.log(`[Orchestrator] retry escalation: DEVELOPER → ${M.OPUS}`);
             }
 
+            _checkBudget(); // abort before expensive developer call if budget already blown
             // Step 2 — DEVELOPER (passes lastFailure as grounded feedback on retries — Reflexion pattern)
             developerLog = await _developer(spec, architectLog, attempt > 1 ? lastFailure : null);
             agentLogs.push(developerLog);
