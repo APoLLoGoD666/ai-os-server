@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const VAULT = 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
+const VAULT = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
 
 async function obsidianRead(notePath) {
     if (process.env.OBSIDIAN_URL && process.env.OBSIDIAN_API_KEY) {
