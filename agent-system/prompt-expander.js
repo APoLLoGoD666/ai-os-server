@@ -55,7 +55,7 @@ async function expandPrompt(simplePrompt) {
     const res = await client.messages.create({
         model,
         max_tokens: 800,
-        system: SYSTEM_PROMPT,
+        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: `Task: ${simplePrompt}${memoryContext}` }]
     });
 

@@ -76,8 +76,8 @@ async function planFeature(feature, workstream) {
 
     const res = await client.messages.create({
         model: planModel,
-        max_tokens: 2000,
-        system: `You are a senior architect planning features for Apex AI OS.
+        max_tokens: 3000,
+        system: [{ type: 'text', cache_control: { type: 'ephemeral' }, text: `You are a senior architect planning features for Apex AI OS.
 Apex is a Node.js/Express voice-first AI OS on Render.
 Stack: Node.js, Express, Supabase, Anthropic Claude API,
 Deepgram STT/TTS, Gmail OAuth2, Ruflo agents, Playwright browser.
@@ -125,7 +125,7 @@ Output ONLY a JSON object with no markdown:
   "permissionRequired": true/false,
   "permissionReason": "why permission needed or empty string",
   "estimatedComplexity": "simple|moderate|complex"
-}`,
+}` }],
         messages: [{
             role: 'user',
             content: `WORKSTREAM: ${workstream}\nFEATURE: ${feature.id} — ${feature.title}\n\nSYSTEM CONTEXT:\n${context}\n\nPlan this feature.`
