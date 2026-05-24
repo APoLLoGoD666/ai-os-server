@@ -64,7 +64,7 @@ async function planFeature(feature, workstream) {
         ? new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' })
         : new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const planModel = process.env.OPENROUTER_API_KEY
-        ? 'meta-llama/llama-3.1-8b-instruct:free'
+        ? 'openrouter/free'
         : MODEL;
     const context = memory.getFullContext();
 
