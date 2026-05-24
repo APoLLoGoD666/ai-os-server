@@ -45,6 +45,13 @@ async function getWikiContext(taskTitle) {
     const recentLessons = localMemory.getRecentLessons(12);
     if (recentLessons) pages.push(`## Recent Agent Lessons\n${recentLessons.slice(0, 800)}`);
 
+    // CS249R book context — injected when task objective is ML/AI related
+    try {
+        const { getBookContext } = require('./cs249r-reader');
+        const bookCtx = await getBookContext(taskTitle || '');
+        if (bookCtx) pages.push(`## CS249R Reference (mlsysbook.ai)\n${bookCtx}`);
+    } catch (e) { console.warn('[Wiki] CS249R context failed (non-fatal):', e.message); }
+
     return pages.join('\n\n---\n\n');
 }
 

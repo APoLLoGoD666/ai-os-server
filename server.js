@@ -9067,6 +9067,65 @@ app.post('/api/wiki/voice-note', requireAppAccess, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// ── CS249R ML Systems Book Routes ──────────────────────────────────
+
+const cs249r = require('./agent-system/cs249r-reader');
+
+// List all chapters with their keyword routing
+app.get('/api/wiki/cs249r', requireAppAccess, (req, res) => {
+    const chapters = Object.entries(cs249r.CHAPTERS).map(([key, ch]) => ({
+        key, vol: ch.vol, title: ch.title,
+        keywords: ch.keywords.slice(0, 5)
+    }));
+    res.json({ ok: true, total: chapters.length, chapters });
+});
+
+// Find chapters relevant to an objective (no content, just metadata)
+app.post('/api/wiki/cs249r/search', requireAppAccess, (req, res) => {
+    const { objective } = req.body || {};
+    if (!objective) return res.status(400).json({ ok: false, error: 'objective required' });
+    const matches = cs249r.findRelevantChapters(objective, 5);
+    const isMLRelated = cs249r.ML_TRIGGER.test(objective);
+    res.json({ ok: true, isMLRelated, matches });
+});
+
+// Fetch a specific chapter's cleaned content
+app.get('/api/wiki/cs249r/chapter/:name', requireAppAccess, async (req, res) => {
+    try {
+        const content = await cs249r.fetchChapter(req.params.name);
+        if (!content) return res.status(404).json({ ok: false, error: `Chapter "${req.params.name}" not found or fetch failed` });
+        const ch = cs249r.CHAPTERS[req.params.name];
+        res.json({ ok: true, key: req.params.name, title: ch?.title, vol: ch?.vol, content });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Get book context for an objective (what agents get injected)
+app.post('/api/wiki/cs249r/context', requireAppAccess, async (req, res) => {
+    const { objective } = req.body || {};
+    if (!objective) return res.status(400).json({ ok: false, error: 'objective required' });
+    try {
+        const context = await cs249r.getBookContext(objective);
+        res.json({ ok: true, context, chars: context.length, triggered: context.length > 0 });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Trigger one-time full vault ingest of all 32 chapters
+app.post('/api/wiki/ingest-cs249r', requireAppAccess, async (req, res) => {
+    res.json({ ok: true, status: 'running', message: 'Ingesting 32 CS249R chapters into vault — this takes ~3 minutes' });
+    setImmediate(async () => {
+        try {
+            const obsidianMemory = require('./agent-system/obsidian-memory');
+            const result = await cs249r.ingestAllToVault(obsidianMemory);
+            await sbAdmin.from('apex_notifications').insert({
+                id: `cs249r-ingest-${Date.now()}`, type: 'success', read: false,
+                message: `CS249R ingest complete — ${result.succeeded}/${result.total} chapters written to References/CS249R/`
+            });
+        } catch (e) {
+            console.error('[CS249R] ingest error:', e.message);
+        }
+    });
+});
+
 // ── Setup Agent Routes ────────────────────────────────────────────
 const supabaseSetup = require('./agent-system/supabase-setup');
 
