@@ -1,6 +1,7 @@
 "use strict";
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const memory = require('./obsidian-memory');
@@ -56,6 +57,14 @@ function markFeatureComplete(featureId) {
         '- [x] $1'
     );
     fs.writeFileSync(ROADMAP_FILE, content, 'utf8');
+    try {
+        execSync('git add ROADMAP.md', { cwd: ROOT, stdio: 'pipe' });
+        execSync(`git commit -m "roadmap: mark ${featureId} complete [skip ci]"`, { cwd: ROOT, stdio: 'pipe' });
+        execSync('git push', { cwd: ROOT, stdio: 'pipe' });
+        console.log(`[Master] ROADMAP.md pushed — ${featureId} marked [x]`);
+    } catch (e) {
+        console.warn(`[Master] ROADMAP.md push failed (non-fatal): ${e.message}`);
+    }
 }
 
 // ── Plan a feature using Claude ──────────────────────────────────

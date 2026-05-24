@@ -45,7 +45,7 @@
 - [ ] FEAT-H006: Supplement tracking and reminders
 - [ ] FEAT-H007: Fasting tracker — start, monitoring, end
 - [ ] FEAT-H008: Weight and body measurement logging
-- [ ] FEAT-H009: Workout logging with voice
+- [x] FEAT-H009: Workout logging with voice
 - [ ] FEAT-H010: Rest day recommendations based on training routine
 - [ ] FEAT-H011: Apple Health sync
 - [ ] FEAT-H012: Sleep quality tracking and correlation with mood
