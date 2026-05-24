@@ -518,6 +518,15 @@ async function _committer(spec, branchName) {
     }
 
     const repoUrl = `https://apex-autopilot:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
+
+    // Rebase onto latest remote before pushing to avoid non-fast-forward rejection
+    const pull = spawnSync('git', ['pull', '--rebase', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+    if (pull.status !== 0) {
+        console.warn('[COMMITTER] rebase failed, attempting push anyway:', pull.stderr?.slice(0, 200));
+    } else {
+        finalHash = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout?.trim() || finalHash;
+    }
+
     const push = spawnSync('git', ['push', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
 
     if (push.status !== 0) {
