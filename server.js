@@ -8882,6 +8882,191 @@ app.post('/api/browser/click', requireAppAccess, async (req, res) => {
     res.json({ ok: true, ...result });
 });
 
+// ── Extended Browser Routes ────────────────────────────────────────
+
+app.post('/api/browser/research-parallel', requireAppAccess, async (req, res) => {
+    const { objective, urls, sessionKey } = req.body || {};
+    if (!objective || !Array.isArray(urls) || !urls.length)
+        return res.status(400).json({ ok: false, error: 'objective and urls[] required' });
+    res.json({ ok: true, status: 'running', message: 'Parallel research started' });
+    setImmediate(async () => {
+        try {
+            const result = await browserAgent.researchParallel(objective, urls, { sessionKey });
+            await sbAdmin.from('apex_notifications').insert({
+                id: `browser-par-${Date.now()}`, type: 'success', read: false,
+                message: `Parallel research complete: ${result.summary?.slice(0, 200) || 'done'}`
+            });
+        } catch (e) { console.error('[Browser] parallel research error:', e.message); }
+    });
+});
+
+app.post('/api/browser/entity', requireAppAccess, async (req, res) => {
+    const { name, type } = req.body || {};
+    if (!name) return res.status(400).json({ ok: false, error: 'name required' });
+    res.json({ ok: true, status: 'running', message: `Researching ${type || 'company'}: ${name}` });
+    setImmediate(async () => {
+        try {
+            const result = await browserAgent.researchEntity(name, type || 'company');
+            await sbAdmin.from('apex_notifications').insert({
+                id: `browser-entity-${Date.now()}`, type: 'success', read: false,
+                message: `Entity research complete for "${name}": ${result.summary?.slice(0, 150) || 'done'}`
+            });
+        } catch (e) { console.error('[Browser] entity research error:', e.message); }
+    });
+});
+
+app.post('/api/browser/pdf', requireAppAccess, async (req, res) => {
+    const { url, waitForSelector, sessionKey } = req.body || {};
+    if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+    try {
+        const outputPath = `/tmp/apex-pdf-${Date.now()}.pdf`;
+        const result = await browserAgent.generatePDF(url, { outputPath, waitForSelector, sessionKey });
+        if (!result.success) return res.status(500).json({ ok: false, error: result.error });
+        const fileBuffer = require('fs').readFileSync(result.path);
+        res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="apex-report-${Date.now()}.pdf"` });
+        res.send(fileBuffer);
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/accessibility', requireAppAccess, async (req, res) => {
+    const { url } = req.body || {};
+    if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+    try {
+        const result = await browserAgent.auditAccessibility(url);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/monitor', requireAppAccess, async (req, res) => {
+    const { url, selector, sessionKey, screenshot } = req.body || {};
+    if (!url || !selector) return res.status(400).json({ ok: false, error: 'url and selector required' });
+    try {
+        const result = await browserAgent.monitorPage(url, selector, { sessionKey, screenshot });
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/discover-api', requireAppAccess, async (req, res) => {
+    const { url, waitMs, interactions, sessionKey } = req.body || {};
+    if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+    try {
+        const result = await browserAgent.discoverAPI(url, { waitMs, interactions, sessionKey });
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/batch-form', requireAppAccess, async (req, res) => {
+    const { submissions, delayMs, sessionKey } = req.body || {};
+    if (!Array.isArray(submissions) || !submissions.length)
+        return res.status(400).json({ ok: false, error: 'submissions[] required' });
+    res.json({ ok: true, status: 'running', message: `Batch form: ${submissions.length} submissions queued` });
+    setImmediate(async () => {
+        try {
+            const result = await browserAgent.batchFillForm(submissions, { delayMs, sessionKey });
+            await sbAdmin.from('apex_notifications').insert({
+                id: `browser-batch-${Date.now()}`, type: 'success', read: false,
+                message: `Batch form complete: ${result.succeeded}/${result.total} succeeded`
+            });
+        } catch (e) { console.error('[Browser] batch-form error:', e.message); }
+    });
+});
+
+app.post('/api/browser/screenshot', requireAppAccess, async (req, res) => {
+    const { url, fullPage, waitForSelector, sessionKey } = req.body || {};
+    if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+    try {
+        const outputPath = `/tmp/apex-screenshot-${Date.now()}.png`;
+        const result = await browserAgent.screenshot(url, outputPath, { fullPage, waitForSelector, sessionKey });
+        if (!result.success) return res.status(500).json({ ok: false, error: result.error });
+        const fileBuffer = require('fs').readFileSync(result.path);
+        res.set({ 'Content-Type': 'image/png', 'Content-Disposition': `attachment; filename="apex-screenshot-${Date.now()}.png"` });
+        res.send(fileBuffer);
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Extended Wiki Routes ────────────────────────────────────────────
+
+app.get('/api/wiki/health', requireAppAccess, async (req, res) => {
+    try {
+        const { checkVaultHealth } = require('./agent-system/wiki-reader');
+        const report = await checkVaultHealth();
+        res.json({ ok: true, ...report });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get('/api/wiki/status', requireAppAccess, async (req, res) => {
+    try {
+        const obsidianMemory = require('./agent-system/obsidian-memory');
+        const fs = require('fs');
+        const path = require('path');
+        const VAULT = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
+        let lastWrite = null;
+        let noteCount = 0;
+        try {
+            const stat = fs.statSync(path.join(VAULT, 'System/Lessons.md'));
+            lastWrite = stat.mtime.toISOString();
+        } catch {}
+        try {
+            const health = fs.readFileSync(path.join(VAULT, 'System/VaultHealth.md'), 'utf8');
+            const m = health.match(/Total notes:\*\* (\d+)/);
+            if (m) noteCount = parseInt(m[1]);
+        } catch {}
+        const recentLessons = obsidianMemory.getRecentLessons(3);
+        res.json({ ok: true, vaultConfigured: !!process.env.OBSIDIAN_VAULT_PATH, lastWrite, noteCount, recentLessons: recentLessons?.slice(0, 300) || '' });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get('/api/wiki/entity/:name', requireAppAccess, async (req, res) => {
+    try {
+        const { getEntityContext } = require('./agent-system/wiki-reader');
+        const result = await getEntityContext(req.params.name);
+        if (!result) return res.status(404).json({ ok: false, error: 'Entity not found in vault' });
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/wiki/search', requireAppAccess, async (req, res) => {
+    const { query } = req.body || {};
+    if (!query) return res.status(400).json({ ok: false, error: 'query required' });
+    try {
+        const obsidianMemory = require('./agent-system/obsidian-memory');
+        const results = obsidianMemory.searchVault(query);
+        res.json({ ok: true, results });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Voice-to-note: classify spoken text and write to correct vault note
+app.post('/api/wiki/voice-note', requireAppAccess, async (req, res) => {
+    const { text, source } = req.body || {};
+    if (!text) return res.status(400).json({ ok: false, error: 'text required' });
+    try {
+        // Detect memory intent keywords
+        const lower = text.toLowerCase();
+        const isMemoryIntent = /\b(remember|note that|keep in mind|don't forget|save this|store this|record that)\b/.test(lower);
+        if (!isMemoryIntent) return res.json({ ok: true, saved: false, reason: 'No memory intent detected' });
+
+        // Strip the trigger phrase to get the actual content
+        const content = text.replace(/^(hey apex[,.]?\s*)?(please\s+)?(remember|note that|keep in mind|don't forget|save this|store this|record that)[,:]?\s*/i, '').trim();
+        if (!content) return res.json({ ok: true, saved: false, reason: 'Empty content after stripping trigger' });
+
+        // Classify via the wiki ingest route logic (inline)
+        const wikiClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const classifyRes = await wikiClient.messages.create({
+            model: 'claude-haiku-4-5-20251001', max_tokens: 80,
+            messages: [{ role: 'user', content:
+                `Classify this spoken note into a wiki page path.\nOptions: People/User.md, System/Decisions.md, System/WIKI.md, Entities/<Name>.md, Concepts/<Name>.md\nNote: "${content.slice(0, 300)}"\nReply ONLY with the path.`
+            }]
+        });
+        const page = classifyRes.content[0]?.text?.trim() || 'People/User.md';
+        const { obsidianAppend } = require('./agent-system/obsidian-client');
+        const date = new Date().toISOString().split('T')[0];
+        const time = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        await obsidianAppend(page, `## ${date} ${time} — Voice Note\n${content}\n*Source: ${source || 'voice'}*`);
+        console.log(`[VoiceNote] Saved to ${page}: "${content.slice(0, 60)}..."`);
+        res.json({ ok: true, saved: true, page, content: content.slice(0, 100) });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // ── Setup Agent Routes ────────────────────────────────────────────
 const supabaseSetup = require('./agent-system/supabase-setup');
 
@@ -9099,6 +9284,56 @@ checkPendingMasterTasks();
                 24 * 60 * 60 * 1000);
         }, _delay);
         console.log(`[Wiki] Nightly consolidation in ${Math.round(_delay / 60000)}min`);
+    })();
+
+    // Daily briefing note at 7am
+    (function _scheduleDailyBriefing() {
+        const _now = new Date(), _7am = new Date(_now);
+        _7am.setHours(7, 0, 0, 0);
+        if (_7am <= _now) _7am.setDate(_7am.getDate() + 1);
+        setTimeout(function _dailyBriefing() {
+            try {
+                const obsidianMemory = require('./agent-system/obsidian-memory');
+                const { obsidianWrite } = require('./agent-system/obsidian-client');
+                const briefing = obsidianMemory.generateDailyBriefing();
+                if (briefing) {
+                    const date = new Date().toISOString().split('T')[0];
+                    obsidianWrite(`Daily/${date}.md`, briefing)
+                        .catch(e => console.warn('[DailyBriefing] write error:', e.message));
+                    console.log('[DailyBriefing] Written for', date);
+                }
+            } catch (e) { console.warn('[DailyBriefing] error (non-fatal):', e.message); }
+            setInterval(() => {
+                try {
+                    const obsidianMemory = require('./agent-system/obsidian-memory');
+                    const { obsidianWrite } = require('./agent-system/obsidian-client');
+                    const briefing = obsidianMemory.generateDailyBriefing();
+                    if (briefing) {
+                        const date = new Date().toISOString().split('T')[0];
+                        obsidianWrite(`Daily/${date}.md`, briefing).catch(() => {});
+                    }
+                } catch {}
+            }, 24 * 60 * 60 * 1000);
+        }, _7am.getTime() - _now.getTime());
+        console.log(`[DailyBriefing] Scheduled in ${Math.round((_7am.getTime() - _now.getTime()) / 60000)}min`);
+    })();
+
+    // Weekly vault health check — Sundays at 4am
+    (function _scheduleVaultHealthCheck() {
+        function _nextSunday4am() {
+            const d = new Date(); d.setHours(4, 0, 0, 0);
+            const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + daysUntilSunday);
+            return d;
+        }
+        const _next = _nextSunday4am();
+        setTimeout(function _vaultHealth() {
+            require('./agent-system/wiki-reader').checkVaultHealth()
+                .catch(e => console.warn('[VaultHealth] error:', e.message));
+            setInterval(() => require('./agent-system/wiki-reader').checkVaultHealth()
+                .catch(() => {}), 7 * 24 * 60 * 60 * 1000);
+        }, _next.getTime() - Date.now());
+        console.log(`[VaultHealth] Weekly check scheduled for ${_next.toDateString()}`);
     })();
 
     // Phase 2 agents
