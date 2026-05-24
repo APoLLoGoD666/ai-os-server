@@ -158,7 +158,7 @@ async function _callClaude(model, systemPrompt, userContent, maxTokens) {
 async function _callWrite(model, systemPrompt, userContent) {
     const res = await callWithBackoff(() => _paidClient.messages.create({
         model,
-        max_tokens: 2000,
+        max_tokens: 8096,
         system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: userContent }]
     }));
