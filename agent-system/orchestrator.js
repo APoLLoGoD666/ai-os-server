@@ -241,6 +241,28 @@ function _buildRoutesMap() {
     } catch { return ''; }
 }
 
+// ── Agent: RESEARCHER (optional pre-ARCHITECT step) ────────────────────────────
+// Triggered when the objective contains research-indicating keywords or spec.requiresResearch=true.
+// Fetches live web context and injects it into obsidianContext before ARCHITECT runs.
+const _RESEARCH_TRIGGER = /\b(research|look.?up|find.?info|discover|competitive|what.?is|how.?does|latest|current|price|api.?docs?|documentation)\b/i;
+async function _researcher(spec) {
+    const needsResearch = spec.requiresResearch || _RESEARCH_TRIGGER.test(spec.objective || '');
+    if (!needsResearch) return null;
+    const t0 = Date.now();
+    try {
+        const browserAgent = require('./browser-agent');
+        const result = await browserAgent.research(spec.objective, `https://www.google.com/search?q=${encodeURIComponent(spec.objective)}`, { maxPages: 2, skipCache: false });
+        if (result.success && result.summary) {
+            obsidianContext = (obsidianContext ? obsidianContext + '\n\n---\n\n' : '') + `## Web Research\n${result.summary.slice(0, 1000)}`;
+            console.log(`[Orchestrator] RESEARCHER (${Date.now() - t0}ms) — ${result.pagesVisited || 0} pages, cache=${result.cached || false}`);
+            return { role: 'RESEARCHER', result: { summary: result.summary.slice(0, 200), cached: result.cached || false }, duration: Date.now() - t0 };
+        }
+    } catch (e) {
+        console.warn('[Orchestrator] RESEARCHER skipped (non-fatal):', e.message);
+    }
+    return null;
+}
+
 // ── Agent: ARCHITECT ──────────────────────────────────────────────────────────
 async function _architect(spec) {
     const t0 = Date.now();
@@ -420,11 +442,19 @@ MEDIUM issues: no aria-label on icon-only buttons, CSS animations not checking p
 LOW issues: horizontal scroll risk at 375px, z-index >100 without comment
 Anti-patterns (flag as issues): emoji as navigation icons, hover-only interactions, outline:none without replacement, animating width/height/top/left` : '';
 
+    // Inject recent decisions so REVIEWER can flag if this change contradicts prior decisions
+    let priorDecisions = '';
+    try {
+        const { obsidianRead } = require('./obsidian-client');
+        const dec = await obsidianRead('System/Decisions.md');
+        if (dec) priorDecisions = `\n\nPRIOR DECISIONS (flag if this change contradicts these):\n${dec.slice(-1200)}`;
+    } catch {}
+
     const SYSTEM = `You are the REVIEWER and SECURITY AUDITOR for Apex AI OS.
 Review for: spec correctness, missing error handling, proper HTTP status codes.
 Security (OWASP Top 10): injection vectors, broken auth, sensitive data exposure, XSS, missing input validation, secrets hardcoded in code, unvalidated external input.
 Also check: no duplicate route paths, try/catch on async DB calls, no raw secrets in code.
-Protected (report as CRITICAL if touched): iOS HTT pipeline, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.${uiAudit}
+Protected (report as CRITICAL if touched): iOS HTT pipeline, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.${uiAudit}${priorDecisions}
 Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}`;
 
     const allIssues = [];
@@ -771,13 +801,30 @@ async function runAgentTeam(spec, taskId) {
         const cost = _costUsd.toFixed(5);
         setImmediate(() => _reflector(spec, agentLogs, false));
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity));
+        // North Star proposal — if failures cluster around a pattern, propose a constraint
+        setImmediate(async () => {
+            try {
+                const recentLessons = memory.getRecentLessons(20);
+                const keyword = (spec.objective || '').split(' ').slice(0, 3).join(' ').toLowerCase();
+                const clusterCount = (recentLessons.match(new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')) || []).length;
+                if (clusterCount >= 3) {
+                    const proposal = `[NorthStar Proposal] Repeated failures on "${keyword}" — consider adding a constraint: ${error.slice(0, 120)}`;
+                    memory.append('System/NorthStar-Proposals.md',
+                        `## ${new Date().toISOString().split('T')[0]} — ${taskId}\n${proposal}`);
+                    console.log('[Orchestrator] North Star proposal written for repeated failure pattern');
+                }
+            } catch {}
+        });
         return { success: false, commitHash: null, agentLogs, error, complexity, models: _agentModels };
     };
 
     try {
         console.log(`[Orchestrator] ── Starting ${taskId} ──`);
-
         console.log(`[Orchestrator] Budget cap: $${PIPELINE_BUDGET_USD}`);
+
+        // Step 0 — RESEARCHER (optional, pre-ARCHITECT web context fetch)
+        const researcherLog = await _researcher(spec);
+        if (researcherLog) agentLogs.push(researcherLog);
 
         // Step 1 — ARCHITECT
         const architectLog = await _architect(spec);

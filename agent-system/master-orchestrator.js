@@ -191,11 +191,50 @@ Output ONLY a JSON object with no markdown:
     return plan;
 }
 
+// ── Write a detailed post-feature retrospective ───────────────────
+function _writeRetrospective(feature, plan, result, workstream) {
+    try {
+        const date = new Date().toISOString().split('T')[0];
+        const filesChanged = (result.agentLogs || [])
+            .find(l => l.role === 'DEVELOPER')?.result?.applied?.map(e => `- ${e.file} (${e.status})`) || [];
+        const retries = (result.agentLogs || []).filter(l => l.role === 'DEVELOPER').length;
+        const content =
+            `---\nid: ${feature.id}\ntitle: ${feature.title}\nstatus: completed\n` +
+            `date: ${date}\ncommit: ${result.commitHash}\ncost: $${result.cost || '?'}\n` +
+            `workstream: ${workstream}\ncomplexity: ${result.complexity || '?'}\n---\n\n` +
+            `# ${feature.id}: ${feature.title}\n\n` +
+            `## Approach\n${plan.approach || 'N/A'}\n\n` +
+            `## Files Changed\n${filesChanged.join('\n') || 'None recorded'}\n\n` +
+            `## Metrics\n- Cost: $${result.cost || '?'}\n- Complexity: ${result.complexity || '?'}\n` +
+            `- Retries: ${retries - 1}\n- Commit: ${result.commitHash}\n\n` +
+            `## External Services\n${(plan.externalServices || []).map(s => `- ${s}`).join('\n') || 'None'}\n`;
+        memory.write(`Features/${feature.id}.md`, content);
+    } catch (e) { console.warn('[Master] retrospective write failed (non-fatal):', e.message); }
+}
+
+// ── Update workstream Kanban board in Obsidian ────────────────────
+function _updateKanban(feature, status) {
+    try {
+        const existing = memory.read('Projects/Pipeline.md') || `# Pipeline Board\n\n## Pending\n\n## In Progress\n\n## Complete\n`;
+        let board = existing;
+        const entry = `- [${feature.id}] ${feature.title}`;
+        // Remove from other sections first
+        board = board.replace(new RegExp(`^\\- \\[${feature.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\].*$`, 'gm'), '');
+        // Add to correct section
+        const section = status === 'complete' ? '## Complete' : status === 'in-progress' ? '## In Progress' : '## Pending';
+        board = board.replace(section, section + '\n' + entry);
+        // Clean up extra blank lines
+        board = board.replace(/\n{3,}/g, '\n\n');
+        memory.write('Projects/Pipeline.md', board);
+    } catch (e) { console.warn('[Master] Kanban update failed (non-fatal):', e.message); }
+}
+
 // ── Run a single feature through the agent pipeline ──────────────
 async function runFeature(feature, workstream) {
     const runAgentTeam = require('./orchestrator');
 
     console.log(`[Master] Starting ${feature.id}: ${feature.title}`);
+    _updateKanban(feature, 'in-progress');
     console.log(`[Master] Planning ${feature.id} via Claude...`);
     memory.logDecision(
         `Starting ${feature.id}`,
@@ -309,6 +348,10 @@ async function runFeature(feature, workstream) {
 
     if (result.success) {
         markFeatureComplete(feature.id);
+        // Detailed retrospective — richer than logFeature's basic entry
+        _writeRetrospective(feature, plan, result, workstream);
+        // Update Kanban board
+        _updateKanban(feature, 'complete');
         memory.logFeature(
             feature.id,
             feature.title,
