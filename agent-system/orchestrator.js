@@ -166,21 +166,36 @@ async function _callClaude(model, systemPrompt, userContent, maxTokens) {
 }
 
 // Write call — always uses paid client, prompt-cached system, tracks cost
+const _WRITE_TIMEOUT_MS = 180000; // 3 min — write calls generate large files, need more time
 async function _callWrite(model, systemPrompt, userContent) {
-    const res = await callWithBackoff(() => _paidClient.messages.create({
-        model,
-        max_tokens: 8096,
-        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-        messages: [{ role: 'user', content: userContent }]
-    }));
+    const res = await callWithBackoff(() => Promise.race([
+        _paidClient.messages.create({
+            model,
+            max_tokens: 8096,
+            system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+            messages: [{ role: 'user', content: userContent }]
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`Write timeout after ${_WRITE_TIMEOUT_MS}ms`)), _WRITE_TIMEOUT_MS))
+    ]));
     _trackCost(res.usage, model);
     return res;
 }
 
 function _parseJSON(text) {
+    // Strip markdown code fences if present
     const cleaned = text
         .replace(/^```json\s*/m, '').replace(/^```\s*/m, '').replace(/\s*```$/m, '').trim();
-    return JSON.parse(cleaned);
+    // Try direct parse first (model responded cleanly)
+    try { return JSON.parse(cleaned); } catch {}
+    // Fallback: extract first balanced JSON object
+    const first = cleaned.indexOf('{');
+    if (first === -1) throw new SyntaxError('No JSON object found');
+    let depth = 0;
+    for (let i = first; i < cleaned.length; i++) {
+        if (cleaned[i] === '{') depth++;
+        else if (cleaned[i] === '}') { depth--; if (depth === 0) return JSON.parse(cleaned.slice(first, i + 1)); }
+    }
+    throw new SyntaxError('Unbalanced JSON object');
 }
 
 // Detect whether a task touches frontend files — gates UI/UX prompt injection
