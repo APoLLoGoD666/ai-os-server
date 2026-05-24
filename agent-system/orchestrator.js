@@ -36,7 +36,7 @@ const PRICE = {
 // critical = auth, payment, security, database schema
 const ROUTING = {
     simple:   { architect: M.HAIKU,  developer: M.HAIKU,  reviewer: M.HAIKU,  validator: M.HAIKU  },
-    moderate: { architect: M.HAIKU,  developer: M.HAIKU,  reviewer: M.HAIKU,  validator: M.HAIKU  },
+    moderate: { architect: M.HAIKU,  developer: M.SONNET, reviewer: M.HAIKU,  validator: M.HAIKU  },
     complex:  { architect: M.SONNET, developer: M.SONNET, reviewer: M.SONNET, validator: M.HAIKU  },
     critical: { architect: M.SONNET, developer: M.SONNET, reviewer: M.OPUS,   validator: M.SONNET }
 };
