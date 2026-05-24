@@ -8646,7 +8646,7 @@ async function checkPendingMasterTasks() {
                     .catch(e => {
                         console.error(`[Master] queued ${featureId} error:`, e.message);
                         sbAdmin.from('apex_notifications')
-                            .update({ message: JSON.stringify({ ...info, status: 'failed', error: e.message }) })
+                            .update({ read: true, message: JSON.stringify({ ...info, status: 'failed', error: e.message }) })
                             .eq('id', row.id);
                     });
             } else if (row.type === 'master_run') {
