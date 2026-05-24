@@ -90,4 +90,92 @@ Rules:
     }
 }
 
-module.exports = { getWikiContext, updateWikiAfterTask, consolidateWiki };
+// ── Vault health check — finds orphaned notes, broken wikilinks, stale notes ──
+async function checkVaultHealth() {
+    const fs = require('fs');
+    const path = require('path');
+    const VAULT = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
+    const report = { orphaned: [], brokenLinks: [], stale: [], totalNotes: 0 };
+
+    function collectMd(dir, depth = 0) {
+        if (depth > 2) return [];
+        try {
+            return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => {
+                if (e.isDirectory() && !e.name.startsWith('.') && e.name !== 'Archives')
+                    return collectMd(path.join(dir, e.name), depth + 1);
+                if (e.isFile() && e.name.endsWith('.md'))
+                    return [path.join(dir, e.name)];
+                return [];
+            });
+        } catch { return []; }
+    }
+
+    const allFiles = collectMd(VAULT);
+    report.totalNotes = allFiles.length;
+    const allRelPaths = new Set(allFiles.map(f => path.relative(VAULT, f).replace(/\\/g, '/')));
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 3600 * 1000;
+    const backlinkCount = {};
+    allRelPaths.forEach(p => { backlinkCount[p] = 0; });
+
+    for (const file of allFiles) {
+        const rel = path.relative(VAULT, file).replace(/\\/g, '/');
+        let content = '';
+        try { content = fs.readFileSync(file, 'utf8'); } catch { continue; }
+
+        // Check stale (>30 days, no update)
+        try {
+            const stat = fs.statSync(file);
+            if (stat.mtimeMs < thirtyDaysAgo) report.stale.push(rel);
+        } catch {}
+
+        // Check for wikilinks [[Target]] — record backlinks and broken ones
+        const wikiLinks = [...content.matchAll(/\[\[([^\]]+)\]\]/g)].map(m => m[1].split('|')[0].trim());
+        for (const link of wikiLinks) {
+            const target = link.endsWith('.md') ? link : link + '.md';
+            if (allRelPaths.has(target)) {
+                backlinkCount[target] = (backlinkCount[target] || 0) + 1;
+            } else {
+                report.brokenLinks.push({ from: rel, to: target });
+            }
+        }
+    }
+
+    // Orphaned = no backlinks AND not a core/index page
+    const corePaths = new Set(['System/WIKI.md','System/North-Star.md','System/Decisions.md','System/Features.md','System/Lessons.md','Projects/Apex-AI-OS.md']);
+    for (const [rel, count] of Object.entries(backlinkCount)) {
+        if (count === 0 && !corePaths.has(rel)) report.orphaned.push(rel);
+    }
+
+    // Write health report to vault
+    const today = new Date().toISOString().split('T')[0];
+    const reportMd = `# Vault Health — ${today}\n\n` +
+        `**Total notes:** ${report.totalNotes}\n` +
+        `**Orphaned (no backlinks):** ${report.orphaned.length}\n` +
+        `**Broken wikilinks:** ${report.brokenLinks.length}\n` +
+        `**Stale (>30 days):** ${report.stale.length}\n\n` +
+        (report.orphaned.length ? `## Orphaned\n${report.orphaned.map(p => `- ${p}`).join('\n')}\n\n` : '') +
+        (report.brokenLinks.length ? `## Broken Links\n${report.brokenLinks.map(l => `- [[${l.from}]] → [[${l.to}]]`).join('\n')}\n\n` : '') +
+        (report.stale.length ? `## Stale\n${report.stale.map(p => `- ${p}`).join('\n')}` : '');
+
+    try { await obsidianWrite('System/VaultHealth.md', reportMd); } catch {}
+    console.log(`[Wiki] Health check: ${report.totalNotes} notes, ${report.orphaned.length} orphaned, ${report.brokenLinks.length} broken links`);
+    return report;
+}
+
+// ── Extract entity context for a named entity ─────────────────────────
+async function getEntityContext(name) {
+    const dirs = ['Entities', 'Concepts', 'People'];
+    const normalized = name.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+    const variants = [normalized, normalized.replace(/ /g, '-'), normalized.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-')];
+    for (const dir of dirs) {
+        for (const v of variants) {
+            try {
+                const content = await obsidianRead(`${dir}/${v}.md`);
+                if (content) return { path: `${dir}/${v}.md`, content: content.slice(0, 1000) };
+            } catch {}
+        }
+    }
+    return null;
+}
+
+module.exports = { getWikiContext, updateWikiAfterTask, consolidateWiki, checkVaultHealth, getEntityContext };
