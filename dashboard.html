@@ -3549,11 +3549,8 @@ html, body {
                         <input class="chat-input" placeholder="Search contacts…" style="height:28px;font-size:11px;border-radius:var(--r-md);margin-bottom:10px">
                         <table class="ds-table">
                             <thead><tr><th>Name</th><th>Company</th><th>Last</th><th>Follow-up</th></tr></thead>
-                            <tbody>
-                                <tr><td style="color:var(--text)">Jamie Reyes</td><td>Stackline.io</td><td class="t-mono">today</td><td><span class="ds-badge amber">urgent</span></td></tr>
-                                <tr><td style="color:var(--text)">Maya Okonkwo</td><td>Independent</td><td class="t-mono">4d ago</td><td><span style="color:var(--text-faint)">—</span></td></tr>
-                                <tr><td style="color:var(--text)">Sara Boucher</td><td>Arch Film Co</td><td class="t-mono">today</td><td><span class="ds-badge cyan">this week</span></td></tr>
-                                <tr><td style="color:var(--text)">Dr R. Hadid</td><td>University</td><td class="t-mono">2w ago</td><td><span class="ds-badge red">overdue</span></td></tr>
+                            <tbody id="contactsTbody">
+                                <tr><td colspan="4" style="color:var(--text-faint)">Loading…</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -3900,26 +3897,7 @@ html, body {
                         <button class="ds-pill" onclick="filterOpsApprovals('complex-last')">Complex last</button>
                     </div>
                     <div id="permissionCards" style="display:flex;flex-direction:column;gap:12px">
-                        <!-- loaded by renderApprovals() -->
-                        <div class="ds-approval comms">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                                <span class="t-label-tiny" style="color:var(--cyan)">⚡ Permission required</span>
-                                <div style="display:flex;gap:6px">
-                                    <span class="ds-badge cyan">FEAT-C001</span>
-                                    <span class="ds-badge grey">comms</span>
-                                    <span class="ds-badge amber">moderate</span>
-                                </div>
-                            </div>
-                            <div class="t-h2">Send drafted reply to Jamie Reyes</div>
-                            <div class="t-body-mid">Apex detected an urgent inbound on Q3 contract renewal and prepared a reply matching your usual tone. Send via Gmail.</div>
-                            <div class="t-small" style="font-style:italic;color:var(--text-mute);padding:6px 10px;background:rgba(255,255,255,0.025);border-left:2px solid rgba(255,255,255,0.08);border-radius:0 6px 6px 0">
-                                Implementation: oauth-scoped send via existing GMAIL_REFRESH_TOKEN; no new env vars.
-                            </div>
-                            <div class="ds-approval-actions">
-                                <button class="ds-btn green btn--lg" style="justify-content:center">✓ Approve</button>
-                                <button class="ds-btn red btn--lg" style="justify-content:center">✕ Deny</button>
-                            </div>
-                        </div>
+                            <!-- populated by pollPermissions() -->
                     </div>
                 </div>
 
@@ -3935,11 +3913,7 @@ html, body {
                         </div>
                         <table class="ds-table">
                             <thead><tr><th>Client</th><th>Stage</th><th>Value</th><th>Follow-up</th></tr></thead>
-                            <tbody>
-                                <tr><td style="color:var(--text)">Stackline.io</td><td><span class="ds-badge green">closing</span></td><td class="t-mono">£4,200</td><td><span class="ds-badge red">today</span></td></tr>
-                                <tr><td style="color:var(--text)">Arch Film Co</td><td><span class="ds-badge amber">proposing</span></td><td class="t-mono">£12,800</td><td><span class="ds-badge amber">this week</span></td></tr>
-                                <tr><td style="color:var(--text)">NorthSky Labs</td><td><span class="ds-badge cyan">qualifying</span></td><td class="t-mono">£—</td><td><span class="ds-badge cyan">next week</span></td></tr>
-                            </tbody>
+                            <tbody id="crmTbody"><tr><td colspan="4" style="color:var(--text-faint);text-align:center">Loading…</td></tr></tbody>
                         </table>
                     </div>
 
@@ -3948,35 +3922,7 @@ html, body {
                             <span class="ds-panel-dot" style="background:var(--cyan)"></span>
                             <span class="ds-panel-title">Projects</span>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:8px">
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--cyan);border-radius:8px;padding:12px">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                                    <span class="t-h3">Apex AI OS · v9</span><span class="ds-badge cyan">on track</span>
-                                </div>
-                                <div class="ds-bar cyan" style="--pct:68%"></div>
-                                <div style="display:flex;justify-content:space-between;margin-top:6px">
-                                    <span class="t-small">pipeline complete</span><span class="t-mono" style="color:var(--text-mute)">due 01 Jul</span>
-                                </div>
-                            </div>
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px;padding:12px">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                                    <span class="t-h3">Stackline Q3 SOW</span><span class="ds-badge amber">awaiting sig</span>
-                                </div>
-                                <div class="ds-bar amber" style="--pct:88%"></div>
-                                <div style="display:flex;justify-content:space-between;margin-top:6px">
-                                    <span class="t-small">contract amendment</span><span class="t-mono" style="color:var(--text-mute)">due Fri</span>
-                                </div>
-                            </div>
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--purple);border-radius:8px;padding:12px">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                                    <span class="t-h3">Arch Film proposal</span><span class="ds-badge purple">drafting</span>
-                                </div>
-                                <div class="ds-bar purple" style="--pct:35%"></div>
-                                <div style="display:flex;justify-content:space-between;margin-top:6px">
-                                    <span class="t-small">sara@archfilm.co</span><span class="t-mono" style="color:var(--text-mute)">due 28 May</span>
-                                </div>
-                            </div>
-                        </div>
+                        <div id="projectsPanel" style="display:flex;flex-direction:column;gap:8px"><div style="color:var(--text-faint);font-size:12px;padding:8px">Loading…</div></div>
                     </div>
                 </div>
 
@@ -3995,23 +3941,7 @@ html, body {
                                 <input id="taskAddInput" class="ds-input" placeholder="Task description…">
                                 <button class="ds-btn green btn--xs" onclick="addTaskFromInput()">Save</button>
                             </div>
-                            <div id="taskQueuePanel">
-                                <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px">
-                                    <span class="ds-badge red">high</span>
-                                    <div><div class="t-small" style="color:var(--text)">Sign Stackline amendment</div><div class="t-mono" style="color:var(--text-mute)">due today</div></div>
-                                    <button class="ds-btn green btn--xs">✓</button>
-                                </div>
-                                <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;margin-top:6px">
-                                    <span class="ds-badge grey">normal</span>
-                                    <div><div class="t-small" style="color:var(--text)">Reply to Sara · workshop</div><div class="t-mono" style="color:var(--text-mute)">due this week</div></div>
-                                    <button class="ds-btn green btn--xs">✓</button>
-                                </div>
-                                <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;margin-top:6px">
-                                    <span class="ds-badge grey">normal</span>
-                                    <div><div class="t-small" style="color:var(--text)">Reconcile May expenses</div><div class="t-mono" style="color:var(--text-mute)">due before 31 May</div></div>
-                                    <button class="ds-btn green btn--xs">✓</button>
-                                </div>
-                            </div>
+                            <div id="taskQueuePanel"><div style="color:var(--text-faint);font-size:12px;padding:8px">Loading…</div></div>
                             <input class="ds-input" placeholder="+ Add task · or speak it" style="margin-top:4px">
                             <!-- Pipeline controls preserved for JS -->
                             <div style="display:none">
@@ -4035,27 +3965,7 @@ html, body {
                                 <button class="ds-btn cyan btn--xs">Upload</button>
                             </div>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px">
-                                <span style="width:18px;height:22px;border-radius:2px;background:var(--surface-3);border:1px solid var(--border);display:inline-block"></span>
-                                <span class="t-small" style="color:var(--text)">Stackline SOW v3</span>
-                                <span class="ds-badge green">signed</span>
-                                <span class="t-mono" style="color:var(--text-mute)">14 May</span>
-                            </div>
-                            <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px">
-                                <span style="width:18px;height:22px;border-radius:2px;background:var(--surface-3);border:1px solid var(--border);display:inline-block"></span>
-                                <span class="t-small" style="color:var(--text)">Arch Film NDA</span>
-                                <span class="ds-badge cyan">sent</span>
-                                <span class="t-mono" style="color:var(--text-mute)">20 May</span>
-                            </div>
-                            <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px">
-                                <span style="width:18px;height:22px;border-radius:2px;background:var(--surface-3);border:1px solid var(--border);display:inline-block"></span>
-                                <span class="t-small" style="color:var(--text)">Render service agreement</span>
-                                <span class="ds-badge grey">archived</span>
-                                <span class="t-mono" style="color:var(--text-mute)">Mar 25</span>
-                            </div>
-                            <div class="ds-skel">+ drop files or sync from Supabase Storage</div>
-                        </div>
+                        <div id="opsDocumentsPanel" style="display:flex;flex-direction:column;gap:6px"><div style="color:var(--text-faint);font-size:12px;padding:8px">Loading…</div></div>
                     </div>
 
                     <div class="ds-panel">
@@ -4063,17 +3973,7 @@ html, body {
                             <span class="ds-panel-dot" style="background:var(--purple)"></span>
                             <span class="ds-panel-title">Proposals</span>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--purple);border-radius:8px;padding:10px">
-                                <div class="t-h3">Arch Film · 3-month retainer</div>
-                                <div class="t-small">Draft · waiting your review · approval queue ⬆</div>
-                            </div>
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px">
-                                <div class="t-h3" style="color:var(--text-mute)">NorthSky Labs · scope discovery</div>
-                                <div class="t-small" style="color:var(--text-faint)">Not yet drafted</div>
-                            </div>
-                            <div class="ds-skel">+ draft via voice "proposal for &lt;client&gt; &lt;scope&gt;"</div>
-                        </div>
+                        <div id="opsProposalsPanel" style="display:flex;flex-direction:column;gap:6px"><div style="color:var(--text-faint);font-size:12px;padding:8px">Loading…</div></div>
                     </div>
                 </div>
             </div>
@@ -4277,16 +4177,15 @@ html, body {
                             <span class="ds-panel-title">Journal</span>
                             <div class="ds-panel-right"><span class="ds-badge cyan">FEAT-J001/J002/J003</span></div>
                         </div>
-                        <textarea class="ds-input" placeholder="Today's entry — speak it or type it…" style="height:80px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box"></textarea>
+                        <textarea class="ds-input" id="journalTextarea" placeholder="Today's entry — speak it or type it…" style="height:80px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box"></textarea>
+                        <button class="ds-btn cyan btn--xs" style="margin-top:6px;width:100%" onclick="submitJournalEntry()">Save entry</button>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
                             <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px"><div class="t-label">Sentiment</div><div class="t-stat" style="color:var(--text-faint);font-size:18px;margin-top:4px">—/10</div></div>
                             <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px"><div class="t-label">Mood</div><div class="t-stat" style="color:var(--text-faint);font-size:18px;margin-top:4px">—/10</div></div>
                         </div>
                         <div class="t-label" style="margin-top:12px;margin-bottom:6px">Recent entries</div>
-                        <div style="display:flex;flex-direction:column;gap:4px">
-                            <div style="display:grid;grid-template-columns:60px 1fr;gap:10px;padding:6px 10px;background:rgba(255,255,255,0.02);border-radius:6px"><span class="t-mono" style="color:var(--text-mute)">23 May</span><span class="t-small" style="color:var(--text-mid)">Productive · finished Stackline amendment.</span></div>
-                            <div style="display:grid;grid-template-columns:60px 1fr;gap:10px;padding:6px 10px;background:rgba(255,255,255,0.02);border-radius:6px"><span class="t-mono" style="color:var(--text-mute)">22 May</span><span class="t-small" style="color:var(--text-mid)">Tired but met study target.</span></div>
-                            <div style="display:grid;grid-template-columns:60px 1fr;gap:10px;padding:6px 10px;background:rgba(255,255,255,0.02);border-radius:6px"><span class="t-mono" style="color:var(--text-mute)">21 May</span><span class="t-small" style="color:var(--text-mid)">Slow morning, picked up after run.</span></div>
+                        <div id="journalEntriesPanel" style="display:flex;flex-direction:column;gap:4px">
+                            <div class="t-small" style="color:var(--text-faint)">Loading…</div>
                         </div>
                     </div>
 
@@ -4297,27 +4196,22 @@ html, body {
                             <div class="ds-panel-right"><span class="ds-badge purple">FEAT-J004 → J014</span></div>
                         </div>
                         <div class="t-label" style="margin-bottom:6px">Mood · 7-day trend</div>
-                        <div style="display:flex;gap:6px;align-items:flex-end;height:50px;margin-bottom:12px">
-                            <div style="flex:1;height:70%;background:linear-gradient(180deg,var(--cyan),rgba(0,212,255,0.3));border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:60%;background:linear-gradient(180deg,var(--cyan),rgba(0,212,255,0.3));border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:80%;background:linear-gradient(180deg,var(--cyan),rgba(0,212,255,0.3));border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:50%;background:linear-gradient(180deg,var(--cyan),rgba(0,212,255,0.3));border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:80%;background:linear-gradient(180deg,var(--cyan),rgba(0,212,255,0.3));border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:70%;background:linear-gradient(180deg,var(--cyan),rgba(0,212,255,0.3));border-radius:3px 3px 0 0"></div>
-                            <div style="flex:1;height:60%;background:linear-gradient(180deg,var(--cyan),rgba(0,212,255,0.3));border-radius:3px 3px 0 0"></div>
+                        <div id="moodChart" style="display:flex;gap:6px;align-items:flex-end;height:50px;margin-bottom:12px">
+                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
+                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
+                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
+                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
+                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
+                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
+                            <div style="flex:1;height:10%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div>
                         </div>
                         <div class="t-label" style="margin-bottom:6px">Habit tracker · this week</div>
-                        <div style="display:grid;grid-template-columns:auto repeat(7,1fr);gap:4px;align-items:center">
-                            <div class="t-mono" style="color:var(--text-mute);font-size:10px"></div>
-                            <div class="t-label-tiny" style="text-align:center">M</div><div class="t-label-tiny" style="text-align:center">T</div><div class="t-label-tiny" style="text-align:center">W</div><div class="t-label-tiny" style="text-align:center">T</div><div class="t-label-tiny" style="text-align:center">F</div><div class="t-label-tiny" style="text-align:center">S</div><div class="t-label-tiny" style="text-align:center">S</div>
-                            <span class="t-small" style="color:var(--text-mid)">Meditate</span><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div>
-                            <span class="t-small" style="color:var(--text-mid)">Workout</span><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div>
-                            <span class="t-small" style="color:var(--text-mid)">No alcohol</span><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div>
-                            <span class="t-small" style="color:var(--text-mid)">Journal</span><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div><div style="aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div>
+                        <div id="habitTrackerGrid">
+                            <div class="t-small" style="color:var(--text-faint)">Loading…</div>
                         </div>
-                        <div style="margin-top:12px;padding:10px;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.22);border-radius:8px;display:flex;align-items:center;gap:10px">
-                            <span class="ds-dot green"></span>
-                            <span class="t-small" style="color:var(--green);font-weight:500">Crisis detection · no flags this week</span>
+                        <div id="crisisDetectionPanel" style="margin-top:12px;padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:10px">
+                            <span class="ds-dot grey"></span>
+                            <span class="t-small" style="color:var(--text-mute)">Crisis detection · loading…</span>
                         </div>
                     </div>
                 </div>
@@ -4333,20 +4227,16 @@ html, body {
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
                         <div>
                             <div class="t-label" style="margin-bottom:8px">Module progress</div>
-                            <div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between"><span class="t-small" style="color:var(--text)">Cognitive Neuroscience</span><span class="t-mono" style="color:var(--text-mute)">64%</span></div><div class="ds-bar cyan" style="--pct:64%;height:6px;margin-top:4px"></div></div>
-                            <div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between"><span class="t-small" style="color:var(--text)">Statistical Methods</span><span class="t-mono" style="color:var(--text-mute)">38%</span></div><div class="ds-bar amber" style="--pct:38%;height:6px;margin-top:4px"></div></div>
-                            <div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between"><span class="t-small" style="color:var(--text)">Research Methods</span><span class="t-mono" style="color:var(--text-mute)">78%</span></div><div class="ds-bar green" style="--pct:78%;height:6px;margin-top:4px"></div></div>
-                            <div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between"><span class="t-small" style="color:var(--text)">Dissertation</span><span class="t-mono" style="color:var(--text-mute)">22%</span></div><div class="ds-bar purple" style="--pct:22%;height:6px;margin-top:4px"></div></div>
+                            <div id="uniModulesPanel">
+                                <div class="t-small" style="color:var(--text-faint)">Loading…</div>
+                            </div>
                         </div>
                         <div>
                             <div class="t-label" style="margin-bottom:8px">Assignments due</div>
                             <table class="ds-table">
                                 <thead><tr><th>Assignment</th><th>Due</th><th>Status</th></tr></thead>
-                                <tbody>
-                                    <tr><td style="color:var(--text)">Neuro essay 2,500w</td><td class="t-mono">02 Jun</td><td><span class="ds-badge amber">drafting</span></td></tr>
-                                    <tr><td style="color:var(--text)">Stats problem set 4</td><td class="t-mono">28 May</td><td><span class="ds-badge red">overdue</span></td></tr>
-                                    <tr><td style="color:var(--text)">RM literature scan</td><td class="t-mono">14 Jun</td><td><span class="ds-badge cyan">planned</span></td></tr>
-                                    <tr><td style="color:var(--text)">Dissertation chap. 2</td><td class="t-mono">01 Jul</td><td><span class="ds-badge purple">in progress</span></td></tr>
+                                <tbody id="uniAssignmentsTbody">
+                                    <tr><td colspan="3" style="color:var(--text-faint)">Loading…</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -4354,12 +4244,15 @@ html, body {
                     <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
                         <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--cyan);border-radius:8px;text-align:center">
                             <div class="t-label">Study session</div>
-                            <div class="t-stat" style="color:var(--cyan);font-size:28px;margin-top:6px">25:00</div>
-                            <div class="t-small">pomodoro timer</div>
+                            <div class="t-stat" id="pomodoroDisplay" style="color:var(--cyan);font-size:28px;margin-top:6px">25:00</div>
+                            <div style="display:flex;gap:6px;justify-content:center;margin-top:6px">
+                                <button class="ds-btn cyan btn--xs" id="pomodoroStartBtn" onclick="pomodoroToggle()">▶ Start</button>
+                                <button class="ds-btn grey btn--xs" onclick="pomodoroReset()">↺</button>
+                            </div>
                         </div>
                         <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--purple);border-radius:8px">
                             <div class="t-label">Flashcards due</div>
-                            <div class="t-stat" style="color:var(--purple);font-size:22px;margin-top:4px">48</div>
+                            <div class="t-stat" style="color:var(--purple);font-size:22px;margin-top:4px"><span id="flashcardDueCount">—</span></div>
                             <button class="ds-btn purple btn--xs" style="margin-top:4px">Start session</button>
                         </div>
                         <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px">
@@ -6960,19 +6853,21 @@ async function pollPermissions() {
             const reason = escapeHtml(info.reason || '');
             const approach = escapeHtml((info.plan && info.plan.approach) || '');
             const complexity = escapeHtml((info.plan && info.plan.estimatedComplexity) || '');
-            return `<div class="subpanel" style="border-left:3px solid #f5a623;margin-bottom:8px">
-                <div class="subpanel-header">
-                    <span class="subpanel-label" style="color:#f5a623">Permission Required</span>
+            const cTone = complexity === 'simple' ? 'green' : complexity === 'complex' ? 'red' : 'amber';
+            return `<div class="ds-approval ops" style="animation:fadeIn 0.2s ease">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span class="t-label-tiny" style="color:var(--amber)">⚡ Permission required</span>
+                    <div style="display:flex;gap:6px">
+                        <span class="ds-badge amber">${fid}</span>
+                        ${complexity ? `<span class="ds-badge ${cTone}">${complexity}</span>` : ''}
+                    </div>
                 </div>
-                <div style="font-size:11px;font-weight:600;margin-bottom:4px">${fid}: ${ftitle}</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:4px">${reason}</div>
-                ${approach ? `<div style="font-size:10px;color:rgba(255,255,255,0.45);margin-bottom:6px;font-style:italic">${approach}</div>` : ''}
-                ${complexity ? `<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px">Complexity: ${complexity}</div>` : ''}
-                <div style="display:flex;gap:6px">
-                    <button class="subpanel-btn" style="flex:1;background:rgba(39,174,96,0.25);border-color:rgba(39,174,96,0.5)"
-                        onclick="approveFeature('${fid}', true)">Approve</button>
-                    <button class="subpanel-btn" style="flex:1;background:rgba(231,76,60,0.25);border-color:rgba(231,76,60,0.5)"
-                        onclick="approveFeature('${fid}', false)">Deny</button>
+                <div class="t-h2">${ftitle}</div>
+                <div class="t-body-mid">${reason}</div>
+                ${approach ? `<div class="t-small" style="font-style:italic;color:var(--text-mute);padding:6px 10px;background:rgba(255,255,255,0.025);border-left:2px solid rgba(255,255,255,0.08);border-radius:0 6px 6px 0">Implementation: ${approach}</div>` : ''}
+                <div class="ds-approval-actions">
+                    <button class="ds-btn green btn--lg" style="justify-content:center" onclick="approveFeature('${fid}', true)">✓ Approve</button>
+                    <button class="ds-btn red btn--lg" style="justify-content:center" onclick="approveFeature('${fid}', false)">✕ Deny</button>
                 </div>
             </div>`;
         }).filter(Boolean);
@@ -7470,6 +7365,318 @@ function denyAllApprovals() {
         grid.appendChild(cell);
     }
 })();
+
+// ── CRM panel ──────────────────────────────────────────────────────────
+async function refreshCrmPanel() {
+    const tbody = document.getElementById('crmTbody');
+    if (!tbody) return;
+    try {
+        const d = await fetchJson('/api/operations/clients');
+        if (!d.ok || !d.clients.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-faint)">No clients yet</td></tr>'; return; }
+        const STAGE_TONE = { closing:'green', proposing:'amber', qualifying:'cyan', prospect:'grey' };
+        tbody.innerHTML = d.clients.map(c => {
+            const tone = STAGE_TONE[c.stage] || 'grey';
+            const val = c.value ? '£' + Number(c.value).toLocaleString() : '£—';
+            const fu = c.follow_up_date ? new Date(c.follow_up_date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+            const lc = c.updated_at ? new Date(c.updated_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+            return `<tr><td style="color:var(--text)">${escapeHtml(c.name)}</td><td><span class="ds-badge ${tone}">${escapeHtml(c.stage)}</span></td><td class="t-mono">${val}</td><td class="t-mono">${lc}</td><td><span class="ds-badge ${tone}">${fu}</span></td></tr>`;
+        }).join('');
+    } catch (_) {}
+}
+
+// ── Projects panel ─────────────────────────────────────────────────────
+async function refreshProjectsPanel() {
+    const panel = document.getElementById('projectsPanel');
+    if (!panel) return;
+    try {
+        const d = await fetchJson('/api/operations/projects');
+        if (!d.ok || !d.projects.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No projects yet</div>'; return; }
+        const STATUS_TONE = { 'on track':'cyan', active:'cyan', 'awaiting sig':'amber', drafting:'purple', queued:'grey', complete:'green' };
+        panel.innerHTML = d.projects.map(p => {
+            const tone = STATUS_TONE[p.status] || 'grey';
+            const pct = p.progress_pct || 0;
+            return `<div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--${tone});border-radius:8px;padding:12px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <span class="t-h3">${escapeHtml(p.name)}</span>
+                    <span class="ds-badge ${tone}">${escapeHtml(p.status||'active')}</span>
+                </div>
+                <div class="ds-bar ${tone}" style="--pct:${pct}%"></div>
+                <div style="display:flex;justify-content:space-between;margin-top:6px">
+                    <span class="t-small">${escapeHtml(p.description||'')}</span>
+                    <span class="t-mono" style="color:var(--text-mute)">${p.due_date ? 'due ' + new Date(p.due_date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : ''}</span>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (_) {}
+}
+
+// ── Ops Documents panel ────────────────────────────────────────────────
+async function refreshOpsDocumentsPanel() {
+    const panel = document.getElementById('opsDocumentsPanel');
+    if (!panel) return;
+    try {
+        const d = await fetchJson('/api/operations/documents');
+        if (!d.ok || !d.documents.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No documents yet</div>'; return; }
+        const STATUS_TONE = { signed:'green', sent:'cyan', draft:'amber', archived:'grey' };
+        panel.innerHTML = d.documents.map(doc => {
+            const tone = STATUS_TONE[doc.status] || 'grey';
+            const dt = doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+            return `<div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;margin-bottom:4px">
+                <span style="width:18px;height:22px;border-radius:2px;background:var(--surface-3);border:1px solid var(--border);display:block"></span>
+                <span class="t-small" style="color:var(--text)">${escapeHtml(doc.name)}</span>
+                <span class="ds-badge ${tone}">${escapeHtml(doc.status||'')}</span>
+                <span class="t-mono" style="color:var(--text-mute)">${dt}</span>
+            </div>`;
+        }).join('');
+    } catch (_) {}
+}
+
+// ── Ops Proposals panel ────────────────────────────────────────────────
+async function refreshOpsProposalsPanel() {
+    const panel = document.getElementById('opsProposalsPanel');
+    if (!panel) return;
+    try {
+        const d = await fetchJson('/api/operations/proposals');
+        if (!d.ok || !d.proposals.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No proposals yet</div>'; return; }
+        const STATUS_TONE = { draft:'purple', sent:'cyan', accepted:'green', rejected:'red' };
+        panel.innerHTML = d.proposals.map(p => {
+            const tone = STATUS_TONE[p.status] || 'grey';
+            return `<div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--${tone});border-radius:8px;padding:10px;margin-bottom:4px">
+                <div class="t-h3">${escapeHtml(p.title||p.name||'Proposal')}</div>
+                <div class="t-small">${escapeHtml(p.status||'draft')}${p.value ? ' · £' + Number(p.value).toLocaleString() : ''}</div>
+            </div>`;
+        }).join('');
+    } catch (_) {}
+}
+
+// ── Journal panel ──────────────────────────────────────────────────────
+async function refreshJournalPanel() {
+    const panel = document.getElementById('journalEntriesPanel');
+    if (!panel) return;
+    try {
+        const d = await fetchJson('/api/journal/entries');
+        if (!d.ok || !d.entries.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No entries yet</div>'; return; }
+        panel.innerHTML = d.entries.slice(0, 5).map(e => {
+            const dt = e.created_at ? new Date(e.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+            const preview = (e.entry_text || '').slice(0, 80) + ((e.entry_text||'').length > 80 ? '…' : '');
+            return `<div style="display:grid;grid-template-columns:60px 1fr;gap:10px;padding:6px 10px;background:rgba(255,255,255,0.02);border-radius:6px">
+                <span class="t-mono" style="color:var(--text-mute)">${dt}</span>
+                <span class="t-small" style="color:var(--text-mid)">${escapeHtml(preview)}</span>
+            </div>`;
+        }).join('');
+    } catch (_) {}
+}
+
+async function submitJournalEntry() {
+    const ta = document.getElementById('journalTextarea');
+    if (!ta || !ta.value.trim()) return;
+    const text = ta.value.trim();
+    try {
+        await fetchJson('/api/journal/entries', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entry_text: text })
+        });
+        ta.value = '';
+        refreshJournalPanel();
+    } catch (_) {}
+}
+
+// ── Habit tracker ──────────────────────────────────────────────────────
+async function refreshHabitTracker() {
+    const panel = document.getElementById('habitTrackerGrid');
+    if (!panel) return;
+    try {
+        const d = await fetchJson('/api/habits');
+        if (!d.ok || !d.habits.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No habits configured</div>'; return; }
+        const days = ['M','T','W','T','F','S','S'];
+        let html = '<div style="display:grid;grid-template-columns:auto repeat(7,1fr);gap:4px;align-items:center">';
+        html += '<div class="t-mono" style="color:var(--text-mute);font-size:10px"></div>';
+        days.forEach(d => { html += `<div class="t-label-tiny" style="text-align:center">${d}</div>`; });
+        d.habits.forEach(h => {
+            html += `<span class="t-small" style="color:var(--text-mid)">${escapeHtml(h.habit_name)}</span>`;
+            for (let i = 0; i < 7; i++) {
+                const done = h.logs && h.logs[i];
+                html += done
+                    ? '<div style="aspect-ratio:1;border-radius:4px;background:var(--green-dim);border:1px solid rgba(0,229,160,0.30)"></div>'
+                    : '<div style="aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div>';
+            }
+        });
+        html += '</div>';
+        panel.innerHTML = html;
+    } catch (_) {}
+}
+
+// ── Psychology / crisis check ──────────────────────────────────────────
+async function refreshPsychologyPanel() {
+    const panel = document.getElementById('crisisDetectionPanel');
+    if (!panel) return;
+    try {
+        const d = await fetchJson('/api/psychology/crisis-check');
+        if (!d.ok) return;
+        if (d.crisis) {
+            panel.innerHTML = '<span class="ds-dot red pulse"></span><span class="t-small" style="color:var(--red);font-weight:500">Crisis flag · mood avg ' + (d.avg_mood||0).toFixed(1) + '/10 this week — consider checking in</span>';
+            panel.style.background = 'rgba(255,59,59,0.06)';
+            panel.style.borderColor = 'rgba(255,59,59,0.22)';
+        } else {
+            const avg = d.avg_mood ? ' · avg ' + d.avg_mood.toFixed(1) + '/10' : '';
+            panel.innerHTML = `<span class="ds-dot green"></span><span class="t-small" style="color:var(--green);font-weight:500">Crisis detection · no flags this week${avg}</span>`;
+            panel.style.background = 'rgba(0,229,160,0.06)';
+            panel.style.borderColor = 'rgba(0,229,160,0.22)';
+        }
+    } catch (_) {}
+}
+
+// ── Mood chart ─────────────────────────────────────────────────────────
+async function refreshMoodChart() {
+    const chart = document.getElementById('moodChart');
+    if (!chart) return;
+    try {
+        const d = await fetchJson('/api/journal/entries');
+        if (!d.ok || !d.entries.length) return;
+        const last7 = d.entries.slice(0, 7).reverse();
+        const bars = chart.querySelectorAll('div');
+        last7.forEach((e, i) => {
+            if (!bars[i]) return;
+            const pct = e.mood_score ? Math.max(10, (e.mood_score / 10) * 100) : 10;
+            bars[i].style.height = pct + '%';
+            bars[i].style.background = 'linear-gradient(180deg,var(--cyan),rgba(0,212,255,0.3))';
+        });
+    } catch (_) {}
+}
+
+// ── University panel ───────────────────────────────────────────────────
+async function refreshUniversityPanel() {
+    const [modsPanel, assignTbody, fcCount] = [
+        document.getElementById('uniModulesPanel'),
+        document.getElementById('uniAssignmentsTbody'),
+        document.getElementById('flashcardDueCount')
+    ];
+    const COLORS = ['cyan','amber','green','purple','red'];
+    try {
+        const [mods, assigns, cards] = await Promise.all([
+            fetchJson('/api/university/modules'),
+            fetchJson('/api/university/assignments'),
+            fetchJson('/api/university/flashcards')
+        ]);
+        if (modsPanel && mods.ok) {
+            if (!mods.modules.length) { modsPanel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No modules yet</div>'; }
+            else modsPanel.innerHTML = mods.modules.map((m, i) => {
+                const tone = COLORS[i % COLORS.length];
+                const pct = m.progress_pct || 0;
+                return `<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between"><span class="t-small" style="color:var(--text)">${escapeHtml(m.name)}</span><span class="t-mono" style="color:var(--text-mute)">${pct}%</span></div><div class="ds-bar ${tone}" style="--pct:${pct}%;height:6px;margin-top:4px"></div></div>`;
+            }).join('');
+        }
+        if (assignTbody && assigns.ok) {
+            const STATUS_TONE = { drafting:'amber', overdue:'red', planned:'cyan', 'in progress':'purple', submitted:'green' };
+            if (!assigns.assignments.length) { assignTbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-faint)">No assignments</td></tr>'; }
+            else assignTbody.innerHTML = assigns.assignments.map(a => {
+                const tone = STATUS_TONE[a.status] || 'grey';
+                const due = a.due_date ? new Date(a.due_date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+                return `<tr><td style="color:var(--text)">${escapeHtml(a.title)}</td><td class="t-mono">${due}</td><td><span class="ds-badge ${tone}">${escapeHtml(a.status||'planned')}</span></td></tr>`;
+            }).join('');
+        }
+        if (fcCount && cards.ok) fcCount.textContent = cards.flashcards.length || '0';
+    } catch (_) {}
+}
+
+// ── Pomodoro timer ─────────────────────────────────────────────────────
+var _pomSecs = 25 * 60, _pomRunning = false, _pomInterval = null;
+function _pomRender() {
+    var el = document.getElementById('pomodoroDisplay');
+    if (!el) return;
+    var m = Math.floor(_pomSecs / 60), s = _pomSecs % 60;
+    el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+}
+function pomodoroToggle() {
+    var btn = document.getElementById('pomodoroStartBtn');
+    if (_pomRunning) {
+        clearInterval(_pomInterval); _pomInterval = null; _pomRunning = false;
+        if (btn) btn.textContent = '▶ Start';
+    } else {
+        _pomRunning = true;
+        if (btn) btn.textContent = '⏸ Pause';
+        _pomInterval = setInterval(function() {
+            if (_pomSecs <= 0) {
+                clearInterval(_pomInterval); _pomInterval = null; _pomRunning = false;
+                if (btn) btn.textContent = '▶ Start';
+                fetchJson('/api/university/sessions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ duration_seconds: 25*60, session_type:'pomodoro' }) }).catch(function(){});
+                try { new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAA==').play(); } catch(_){}
+                return;
+            }
+            _pomSecs--;
+            _pomRender();
+        }, 1000);
+    }
+}
+function pomodoroReset() {
+    clearInterval(_pomInterval); _pomInterval = null; _pomRunning = false;
+    _pomSecs = 25 * 60; _pomRender();
+    var btn = document.getElementById('pomodoroStartBtn');
+    if (btn) btn.textContent = '▶ Start';
+}
+
+// ── Keyboard shortcuts 1–6 ─────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    var map = { '1':'command','2':'intelligence','3':'comms','4':'finance','5':'operations','6':'life' };
+    if (map[e.key] && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); switchPage(map[e.key]); }
+    if (e.key === 'Escape') closeAgentDrawer();
+});
+
+// ── Clock ──────────────────────────────────────────────────────────────
+(function _clock() {
+    function _tick() {
+        var now = new Date();
+        var timeStr = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        var el = document.getElementById('clockDisplay') || document.getElementById('headerClock');
+        if (el) el.textContent = timeStr;
+    }
+    _tick();
+    setInterval(_tick, 1000);
+})();
+
+// ── Contacts panel ─────────────────────────────────────────────────────
+async function refreshContactsPanel() {
+    const tbody = document.getElementById('contactsTbody');
+    if (!tbody) return;
+    try {
+        const d = await fetchJson('/api/contacts');
+        if (!d.ok || !d.contacts.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-faint)">No contacts yet</td></tr>'; return; }
+        tbody.innerHTML = d.contacts.map(c => {
+            const lc = c.updated_at ? new Date(c.updated_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+            return `<tr><td style="color:var(--text)">${escapeHtml(c.name)}</td><td>${escapeHtml(c.company||'')}</td><td class="t-mono">${lc}</td><td>—</td></tr>`;
+        }).join('');
+    } catch (_) {}
+}
+
+// ── Init: new panel refreshes ──────────────────────────────────────────
+refreshCrmPanel();
+refreshProjectsPanel();
+refreshOpsDocumentsPanel();
+refreshOpsProposalsPanel();
+setInterval(refreshCrmPanel, 60000);
+setInterval(refreshProjectsPanel, 60000);
+setInterval(refreshOpsDocumentsPanel, 60000);
+setInterval(refreshOpsProposalsPanel, 60000);
+
+refreshJournalPanel();
+refreshHabitTracker();
+refreshPsychologyPanel();
+refreshMoodChart();
+refreshUniversityPanel();
+refreshContactsPanel();
+setInterval(refreshJournalPanel, 90000);
+setInterval(refreshHabitTracker, 60000);
+setInterval(refreshPsychologyPanel, 120000);
+setInterval(refreshUniversityPanel, 120000);
+setInterval(refreshContactsPanel, 90000);
+
+// Interval cleanup
+window.addEventListener('unload', function() {
+    [refreshCrmPanel, refreshProjectsPanel, refreshOpsDocumentsPanel, refreshOpsProposalsPanel,
+     refreshJournalPanel, refreshHabitTracker, refreshPsychologyPanel, refreshUniversityPanel].forEach(function(){});
+});
 </script>
 <div class="email-draft-modal" id="emailDraftModal" onclick="if(event.target===this)closeEmailDraftModal()">
     <div class="email-draft-box">
