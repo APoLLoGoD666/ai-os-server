@@ -43,10 +43,8 @@ Output format (strict JSON, no other text):
 }`;
 
 async function expandPrompt(simplePrompt) {
-    const client = process.env.OPENROUTER_API_KEY
-        ? new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' })
-        : new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const model = process.env.OPENROUTER_API_KEY ? OPENROUTER_MODEL : MODEL;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const model = MODEL;
 
     const northStar = memory.getNorthStar();
     const lessons = memory.getLessons();

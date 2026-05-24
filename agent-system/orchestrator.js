@@ -35,7 +35,7 @@ const PRICE = {
 // complex  = architecture changes, multi-system, many files
 // critical = auth, payment, security, database schema
 const ROUTING = {
-    simple:   { architect: M.FREE,   developer: M.HAIKU,  reviewer: M.HAIKU,  validator: M.FREE   },
+    simple:   { architect: M.HAIKU,  developer: M.HAIKU,  reviewer: M.HAIKU,  validator: M.HAIKU  },
     moderate: { architect: M.HAIKU,  developer: M.HAIKU,  reviewer: M.HAIKU,  validator: M.HAIKU  },
     complex:  { architect: M.SONNET, developer: M.SONNET, reviewer: M.SONNET, validator: M.HAIKU  },
     critical: { architect: M.SONNET, developer: M.SONNET, reviewer: M.OPUS,   validator: M.SONNET }
@@ -90,9 +90,8 @@ function _classifyComplexity(spec) {
 }
 
 // ── Cost-aware API callers ────────────────────────────────────────────────────
-function _clientFor(model) {
-    // Free models → OpenRouter client; paid models → Anthropic client
-    return (model === M.FREE && _freeClient) ? _freeClient : _paidClient;
+function _clientFor(_model) {
+    return _paidClient;
 }
 
 function _trackCost(usage, model) {
@@ -570,7 +569,7 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
 
     try {
         // Always use the cheapest available model for reflexion — it's post-run, non-critical
-        const reflexModel = _freeClient ? M.FREE : M.HAIKU;
+        const reflexModel = M.HAIKU;
         const res = await _callClaude(reflexModel, SYSTEM,
             `Task: ${spec.objective}\nOutcome: ${success ? 'SUCCESS' : 'FAILURE'}\nPipeline:\n${summary}`,
             100
@@ -620,11 +619,8 @@ async function runAgentTeam(spec, taskId) {
     _paidClient = process.env.ANTHROPIC_API_KEY
         ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
         : null;
-    _freeClient = process.env.OPENROUTER_API_KEY
-        ? new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' })
-        : null;
-    if (!_paidClient && !_freeClient) throw new Error('No API key configured — set ANTHROPIC_API_KEY or OPENROUTER_API_KEY');
-    if (!_paidClient) _paidClient = _freeClient; // fallback: all calls through OpenRouter
+    _freeClient = _paidClient;
+    if (!_paidClient) throw new Error('No API key configured — set ANTHROPIC_API_KEY');
 
     // ── Complexity classification → per-agent model routing ──────────────────
     const complexity  = _classifyComplexity(spec);

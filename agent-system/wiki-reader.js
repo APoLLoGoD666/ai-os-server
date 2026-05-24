@@ -60,12 +60,8 @@ async function updateWikiAfterTask(taskId, objective, outcome) {
 // Nightly consolidation — called at 3am by server.js scheduler and by POST /api/wiki/consolidate
 async function consolidateWiki() {
     const Anthropic = require('@anthropic-ai/sdk');
-    const client = process.env.OPENROUTER_API_KEY
-        ? new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' })
-        : new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const model = process.env.OPENROUTER_API_KEY
-        ? 'meta-llama/llama-3.1-8b-instruct:free'
-        : 'claude-haiku-4-5-20251001';
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const model = 'claude-haiku-4-5-20251001';
 
     const today = new Date().toISOString().split('T')[0];
 
