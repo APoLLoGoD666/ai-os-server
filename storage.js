@@ -14,7 +14,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 function normalizeWorkspaceStorageFilename(filename) {
-    return path.basename(String(filename || "").trim());
+    const base = path.basename(String(filename || "").trim());
+    // Whitelist: alphanumerics, hyphens, underscores, dots only — rejects path traversal and null bytes
+    return (base.replace(/[^a-zA-Z0-9._-]/g, "_") || "unnamed").slice(0, 255);
 }
 
 async function uploadWorkspaceFile(filename, content) {

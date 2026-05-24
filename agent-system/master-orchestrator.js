@@ -58,9 +58,10 @@ function markFeatureComplete(featureId) {
     );
     fs.writeFileSync(ROADMAP_FILE, content, 'utf8');
     try {
+        const repoUrl = `https://apex-autopilot:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
         execSync('git add ROADMAP.md', { cwd: ROOT, stdio: 'pipe' });
         execSync(`git commit -m "roadmap: mark ${featureId} complete [skip ci]"`, { cwd: ROOT, stdio: 'pipe' });
-        execSync('git push', { cwd: ROOT, stdio: 'pipe' });
+        execSync(`git push ${repoUrl} main`, { cwd: ROOT, stdio: 'pipe' });
         console.log(`[Master] ROADMAP.md pushed — ${featureId} marked [x]`);
     } catch (e) {
         console.warn(`[Master] ROADMAP.md push failed (non-fatal): ${e.message}`);

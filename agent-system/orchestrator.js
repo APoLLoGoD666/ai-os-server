@@ -41,10 +41,15 @@ const ROUTING = {
     critical: { architect: M.SONNET, developer: M.SONNET, reviewer: M.OPUS,   validator: M.SONNET }
 };
 
-// ── Circuit breaker — opens after 5 consecutive API failures, resets after 60s ──
+// ── Circuit breaker — opens after 5 consecutive API failures, exponential cooldown ──
 const _cb = {
-    failures: 0, lastFailure: 0, threshold: 5, cooldown: 60000,
-    isOpen()  { return this.failures >= this.threshold && (Date.now() - this.lastFailure) < this.cooldown; },
+    failures: 0, lastFailure: 0, threshold: 5,
+    // Exponential backoff: 60s, 120s, 240s... capped at 15 min
+    cooldown() {
+        const extra = Math.max(0, this.failures - this.threshold);
+        return Math.min(60000 * Math.pow(2, extra), 900000);
+    },
+    isOpen()  { return this.failures >= this.threshold && (Date.now() - this.lastFailure) < this.cooldown(); },
     record(ok) { if (ok) { this.failures = 0; } else { this.failures++; this.lastFailure = Date.now(); } }
 };
 
@@ -142,14 +147,20 @@ async function callWithBackoff(fn, retries = 3) {
 }
 
 // Model-aware API call — uses correct client for the model, tracks cost
+const _CLAUDE_TIMEOUT_MS = 90000; // 90s hard cap per LLM call
 async function _callClaude(model, systemPrompt, userContent, maxTokens) {
     const client = _clientFor(model);
-    const res = await callWithBackoff(() => client.messages.create({
-        model,
-        max_tokens: maxTokens || 800,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userContent }]
-    }));
+    // Prompt caching: mark system prompt for 5-min cache (0.1x read cost vs 1.25x write)
+    const systemBlock = [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }];
+    const res = await callWithBackoff(() => Promise.race([
+        client.messages.create({
+            model,
+            max_tokens: maxTokens || 800,
+            system: systemBlock,
+            messages: [{ role: 'user', content: userContent }]
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`LLM timeout after ${_CLAUDE_TIMEOUT_MS}ms`)), _CLAUDE_TIMEOUT_MS))
+    ]));
     _trackCost(res.usage, model);
     return res;
 }
@@ -276,7 +287,7 @@ Frontend testCases MUST include:
 }
 
 // ── Agent: DEVELOPER (per-file write) ────────────────────────────────────────
-async function _developerWriteFile(spec, filename, architectAnalysis) {
+async function _developerWriteFile(spec, filename, architectAnalysis, failureContext) {
     const fp = path.join(_worktreeRoot, filename);
     let currentContent = null;
     let isNew = false;
@@ -290,6 +301,10 @@ async function _developerWriteFile(spec, filename, architectAnalysis) {
     console.log(`[Developer] ${isNew ? 'creating' : 'updating'}: ${filename} (worktree=${_worktreeRoot !== ROOT})`);
 
     // Stable prefix (system + spec + architect analysis) — cached by Anthropic when ≥1024 tokens
+    const failureSection = failureContext
+        ? `\n\nPREVIOUS ATTEMPT FAILED — FIX THIS:\n${failureContext}\nDo not repeat the same mistake.`
+        : '';
+
     const SYSTEM = `You are the DEVELOPER agent for Apex AI OS — expert Node.js/Express backend engineer.
 Return ONLY the complete ${isNew ? 'new' : 'updated'} file content. No markdown fences, no explanation, no preamble.
 Your entire response IS the file, written to disk exactly as returned.
@@ -303,7 +318,7 @@ SPEC:
 ${JSON.stringify(spec, null, 2)}
 
 ARCHITECT ANALYSIS:
-${architectAnalysis}`;
+${architectAnalysis}${failureSection}`;
 
     // Variable part (just the file) goes in user message — kept separate so system stays cacheable
     const userContent = isNew
@@ -318,7 +333,7 @@ ${architectAnalysis}`;
     return { file: filename, status: isNew ? 'created' : 'written' };
 }
 
-async function _developer(spec, architectLog) {
+async function _developer(spec, architectLog, failureContext) {
     const t0 = Date.now();
     const SYSTEM = `You are the DEVELOPER routing agent for Apex AI OS.
 Decide which files actually need changes to complete the task.
@@ -345,7 +360,7 @@ Rules:
     const applied = [];
     for (const filename of filesToWrite) {
         try {
-            const r = await _developerWriteFile(spec, filename, architectLog.result.summary);
+            const r = await _developerWriteFile(spec, filename, architectLog.result.summary, failureContext);
             applied.push(r);
             console.log(`[DEVELOPER] wrote ${filename} (${r.status})`);
         } catch (e) {
@@ -658,8 +673,9 @@ async function runAgentTeam(spec, taskId) {
     }
 
     // ── Git worktree isolation (Superpowers pattern) ──────────────────────────
+    const ts          = Date.now().toString(36); // base-36 timestamp suffix prevents branch collision on re-run
     const worktreeDir = path.join(os.tmpdir(), `apex-wt-${taskId}`);
-    const branchName  = `feat/${taskId.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
+    const branchName  = `feat/${taskId.toLowerCase().replace(/[^a-z0-9-]/g, '-')}-${ts}`;
     let usingWorktree = false;
 
     // Remove any stale worktree/branch for this taskId before creating
@@ -722,8 +738,18 @@ async function runAgentTeam(spec, taskId) {
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             console.log(`[Orchestrator] ── Attempt ${attempt}/${MAX_ATTEMPTS} ──`);
 
-            // Step 2 — DEVELOPER
-            developerLog = await _developer(spec, architectLog);
+            // Escalate developer model on retry: Haiku → Sonnet → Opus
+            // This avoids burning expensive tokens on the first attempt while ensuring retries have more power
+            if (attempt === 2 && _agentModels.developer === M.HAIKU) {
+                _agentModels.developer = M.SONNET;
+                console.log(`[Orchestrator] retry escalation: DEVELOPER → ${M.SONNET}`);
+            } else if (attempt === 3 && _agentModels.developer !== M.OPUS) {
+                _agentModels.developer = M.OPUS;
+                console.log(`[Orchestrator] retry escalation: DEVELOPER → ${M.OPUS}`);
+            }
+
+            // Step 2 — DEVELOPER (passes lastFailure as grounded feedback on retries — Reflexion pattern)
+            developerLog = await _developer(spec, architectLog, attempt > 1 ? lastFailure : null);
             agentLogs.push(developerLog);
             console.log(`[Orchestrator] DEVELOPER (${developerLog.duration}ms) — ${developerLog.result.applied?.length || 0} files written`);
 

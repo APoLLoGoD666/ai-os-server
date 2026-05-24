@@ -3,12 +3,25 @@ require("dotenv").config();
 const Sentry = require("@sentry/node");
 Sentry.init({ dsn: process.env.SENTRY_DSN || "", tracesSampleRate: 0.1 });
 
+// Prevent silent crashes from taking down the server
+process.on('uncaughtException', (err) => {
+    console.error('[FATAL] uncaughtException:', err.message, err.stack);
+    Sentry.captureException(err);
+    // Give Sentry time to flush before exiting — Render will restart immediately
+    setTimeout(() => process.exit(1), 1000);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('[FATAL] unhandledRejection:', reason);
+    Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
+});
+
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
 const Anthropic = require("@anthropic-ai/sdk");
 const jwt = require("jsonwebtoken");
 const { createClient: createDeepgramClient } = require("@deepgram/sdk");
@@ -136,6 +149,10 @@ const app = express();
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
+app.use(helmet({
+    contentSecurityPolicy: false, // Dashboard uses inline scripts — CSP requires separate config
+    crossOriginEmbedderPolicy: false
+}));
 app.use(cors({
     origin: [
         'https://apex-ai-os-cos.uk',
@@ -9067,6 +9084,8 @@ checkPendingMasterTasks();
 }));
 
 app.use((err, req, res, next) => {
-    console.error(`[ERROR] ${new Date().toISOString()} — ${err.message}\n${err.stack}`);
-    res.status(500).json({ ok: false, reply: 'Internal server error.' });
+    const status = err.status || err.statusCode || 500;
+    console.error(`[ERROR] ${new Date().toISOString()} ${req.method} ${req.path} — ${err.message}\n${err.stack}`);
+    Sentry.captureException(err);
+    res.status(status).json({ ok: false, reply: status === 500 ? 'Internal server error.' : err.message });
 });
