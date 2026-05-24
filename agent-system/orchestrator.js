@@ -61,6 +61,12 @@ const ArchitectSchema = z.object({
     testCases:         z.array(z.string()).default([])
 });
 
+// Module-level Supabase client — created once, reused across all pipeline runs
+const { createClient: _sbCreate } = require('@supabase/supabase-js');
+const _sb = process.env.SUPABASE_URL
+    ? _sbCreate(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+    : null;
+
 // Per-run clients — set in runAgentTeam based on env
 let _freeClient  = null;   // OpenRouter or Anthropic fallback (analysis)
 let _paidClient  = null;   // Always Anthropic (writes + paid model calls)
@@ -70,6 +76,10 @@ let _agentModels = { architect: M.HAIKU, developer: M.HAIKU, reviewer: M.HAIKU, 
 
 // Per-run state — reset at start of each runAgentTeam call
 let _worktreeRoot = ROOT;
+let _startTime    = 0;     // pipeline wall-clock start (for total duration in audit log)
+
+// Per-run per-agent token usage — reset each run
+let _agentTokens  = {};
 let _costUsd      = 0;     // running dollar cost (model-aware)
 let obsidianContext = '';
 
@@ -99,10 +109,17 @@ function _clientFor(_model) {
     return _paidClient;
 }
 
-function _trackCost(usage, model) {
+function _trackCost(usage, model, role) {
     if (!usage) return;
     const p = PRICE[model] || PRICE[M.HAIKU];
     _costUsd += ((usage.input_tokens || 0) * p.in + (usage.output_tokens || 0) * p.out) / 1_000_000;
+    // Per-agent token accumulator — logged at end of run for cost attribution
+    if (role) {
+        if (!_agentTokens[role]) _agentTokens[role] = { in: 0, out: 0, cache_read: 0 };
+        _agentTokens[role].in  += usage.input_tokens  || 0;
+        _agentTokens[role].out += usage.output_tokens || 0;
+        _agentTokens[role].cache_read += usage.cache_read_input_tokens || 0;
+    }
 }
 
 // ── Clean up orphaned worktrees from crashed previous runs ────────────────────
@@ -117,7 +134,7 @@ function _trackCost(usage, model) {
             spawnSync('git', ['branch', '-D', branch], { cwd: ROOT, encoding: 'utf8' });
         }
         if (tmpEntries.length) console.log(`[Worktree] cleaned ${tmpEntries.length} orphaned worktree(s) on startup`);
-    } catch {}
+    } catch (e) { console.warn('[Worktree] orphan cleanup error (non-fatal):', e.message); }
 })();
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -148,7 +165,7 @@ async function callWithBackoff(fn, retries = 3) {
 
 // Model-aware API call — uses correct client for the model, tracks cost
 const _CLAUDE_TIMEOUT_MS = 90000; // 90s hard cap per LLM call
-async function _callClaude(model, systemPrompt, userContent, maxTokens) {
+async function _callClaude(model, systemPrompt, userContent, maxTokens, role) {
     const client = _clientFor(model);
     // Prompt caching: mark system prompt for 5-min cache (0.1x read cost vs 1.25x write)
     const systemBlock = [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }];
@@ -161,13 +178,13 @@ async function _callClaude(model, systemPrompt, userContent, maxTokens) {
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error(`LLM timeout after ${_CLAUDE_TIMEOUT_MS}ms`)), _CLAUDE_TIMEOUT_MS))
     ]));
-    _trackCost(res.usage, model);
+    _trackCost(res.usage, model, role);
     return res;
 }
 
 // Write call — always uses paid client, prompt-cached system, tracks cost
 const _WRITE_TIMEOUT_MS = 180000; // 3 min — write calls generate large files, need more time
-async function _callWrite(model, systemPrompt, userContent) {
+async function _callWrite(model, systemPrompt, userContent, role) {
     const res = await callWithBackoff(() => Promise.race([
         _paidClient.messages.create({
             model,
@@ -177,7 +194,7 @@ async function _callWrite(model, systemPrompt, userContent) {
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error(`Write timeout after ${_WRITE_TIMEOUT_MS}ms`)), _WRITE_TIMEOUT_MS))
     ]));
-    _trackCost(res.usage, model);
+    _trackCost(res.usage, model, role);
     return res;
 }
 
@@ -260,12 +277,15 @@ Frontend testCases MUST include:
 - "renders without horizontal scroll at 375px viewport width"
 - "all interactive elements have visible :focus-visible outline when tabbed to"` : '';
 
-    const archFileContents = (spec.filesToRead || []).map(f => {
-        try {
-            const content = fs.readFileSync(path.join(_worktreeRoot, f), 'utf8');
-            return `FILE: ${f}\n\`\`\`\n${content.slice(0, 5000)}\n\`\`\``;
-        } catch { return `FILE: ${f}\n(not found)`; }
-    }).join('\n\n');
+    // Read all spec files in parallel and cap at 2500 chars each (was 5000 — unnecessary token burn)
+    const archFileContents = (await Promise.all(
+        (spec.filesToRead || []).map(async f => {
+            try {
+                const content = fs.readFileSync(path.join(_worktreeRoot, f), 'utf8');
+                return `FILE: ${f}\n\`\`\`\n${content.slice(0, 2500)}\n\`\`\``;
+            } catch { return `FILE: ${f}\n(not found)`; }
+        })
+    )).join('\n\n');
 
     // Graphify — best-effort, 3s cap, ANSI-stripped
     let graphContext = '';
@@ -285,7 +305,7 @@ Frontend testCases MUST include:
         `FILE CONTENTS:\n${archFileContents}` +
         (graphContext ? '\n\nKNOWLEDGE GRAPH:\n' + graphContext : '') +
         (obsidianContext ? '\n\nSYSTEM MEMORY:\n' + obsidianContext : ''),
-        800
+        800, 'ARCHITECT'
     );
 
     const text = res.content[0]?.text?.trim();
@@ -340,7 +360,7 @@ ${architectAnalysis}${failureSection}`;
         ? `Create file: ${filename}`
         : `Update file: ${filename}\n\nCURRENT FILE CONTENT:\n${currentContent}`;
 
-    const res = await _callWrite(_agentModels.developer, SYSTEM, userContent);
+    const res = await _callWrite(_agentModels.developer, SYSTEM, userContent, 'DEVELOPER');
     const newContent = res.content[0]?.text || '';
 
     fs.mkdirSync(path.dirname(fp), { recursive: true });
@@ -362,7 +382,7 @@ Rules:
     // Routing decision uses architect-level model (same tier — it's a reasoning call)
     const res = await _callClaude(_agentModels.architect, SYSTEM,
         `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nARCHITECT:\n${architectLog.result.summary}\n\nFILES:\n${(spec.filesToModify || []).join('\n')}\n\nOutput JSON starting with {`,
-        200
+        300, 'DEVELOPER'
     );
     const text = res.content[0]?.text?.trim();
     let parsed;
@@ -427,7 +447,7 @@ Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}
                 })),
                 new Promise((_, reject) => setTimeout(() => reject(new Error(`REVIEWER timeout: ${filename}`)), 45000))
             ]);
-            _trackCost(response.usage, _agentModels.reviewer);
+            _trackCost(response.usage, _agentModels.reviewer, 'REVIEWER');
             const text = response.content[0]?.text?.trim();
             try { fileResult = _parseJSON(text); }
             catch { fileResult = { file: filename, passed: true, issues: [] }; }
@@ -469,7 +489,7 @@ Reply JSON: {"passed":bool,"failedCases":["what failed and why"]}`;
     try {
         const res = await _callClaude(_agentModels.validator, SYSTEM,
             `EXPECTED BEHAVIORS:\n${testCases.map((tc, i) => `${i + 1}. ${tc}`).join('\n')}\n\nIMPLEMENTED CODE:\n${codeSnapshot}`,
-            300
+            300, 'VALIDATOR'
         );
         try { result = _parseJSON(res.content[0]?.text?.trim()); }
         catch { result = { passed: true, failedCases: [] }; }
@@ -574,6 +594,7 @@ async function _committer(spec, branchName) {
                     hostname: 'api.render.com',
                     path: `/v1/services/${process.env.RENDER_SERVICE_ID}/deploys`,
                     method: 'POST',
+                    timeout: 10000, // 10s — don't let a stuck Render API hang the pipeline
                     headers: {
                         'Authorization': `Bearer ${process.env.RENDER_API_KEY}`,
                         'Content-Type': 'application/json',
@@ -581,6 +602,7 @@ async function _committer(spec, branchName) {
                     }
                 }, resolve);
                 req.on('error', () => resolve());
+                req.on('timeout', () => { req.destroy(); resolve(); });
                 req.write(body);
                 req.end();
             });
@@ -611,7 +633,7 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
         const reflexModel = M.HAIKU;
         const res = await _callClaude(reflexModel, SYSTEM,
             `Task: ${spec.objective}\nOutcome: ${success ? 'SUCCESS' : 'FAILURE'}\nPipeline:\n${summary}`,
-            100
+            100, 'REFLECTOR'
         );
         const lesson = res.content[0]?.text?.trim();
         if (lesson && lesson.length > 10) {
@@ -625,23 +647,22 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
 
 // ── Audit log — records each pipeline run to Supabase for cost tracking ────────
 async function _auditLog(taskId, spec, success, agentLogs, cost, complexity) {
+    if (!_sb) return; // Supabase not configured — skip silently
     try {
-        const { createClient } = require('@supabase/supabase-js');
-        const sb = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-        );
         const agentSummary = agentLogs.map(l => ({
             role: l.role, duration: l.duration,
             passed: l.result?.passed, error: l.result?.error || l.result?.commitHash
         }));
-        await sb.from('apex_agent_runs').upsert({
+        const durationMs = _startTime ? Date.now() - _startTime : null;
+        await _sb.from('apex_agent_runs').upsert({
             task_id:       taskId,
             objective:     (spec.objective || '').slice(0, 255),
             success,
             cost_usd:      parseFloat(cost) || 0,
             complexity:    complexity || 'moderate',
             agent_summary: JSON.stringify(agentSummary),
+            duration_ms:   durationMs,
+            token_usage:   JSON.stringify(_agentTokens),
             created_at:    new Date().toISOString()
         }, { onConflict: 'task_id' });
     } catch (e) {
@@ -650,7 +671,8 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity) {
 }
 
 // ── Per-run cost cap — aborts pipeline if budget exceeded ─────────────────────
-const PIPELINE_BUDGET_USD = parseFloat(process.env.PIPELINE_BUDGET_USD || '2.00');
+const _rawBudget = parseFloat(process.env.PIPELINE_BUDGET_USD || '2.00');
+const PIPELINE_BUDGET_USD = Number.isFinite(_rawBudget) && _rawBudget > 0 ? _rawBudget : 2.00;
 function _checkBudget() {
     if (_costUsd > PIPELINE_BUDGET_USD) {
         throw new Error(`Pipeline budget exceeded: $${_costUsd.toFixed(4)} > $${PIPELINE_BUDGET_USD} cap. Set PIPELINE_BUDGET_USD env var to raise limit.`);
@@ -659,8 +681,14 @@ function _checkBudget() {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 async function runAgentTeam(spec, taskId) {
+    // Validate spec before doing anything expensive
+    if (!spec || !spec.objective || !String(spec.objective).trim()) {
+        return { success: false, commitHash: null, agentLogs: [], error: 'spec.objective is required and must be non-empty', complexity: 'unknown', models: {} };
+    }
     _costUsd      = 0;
     _worktreeRoot = ROOT;
+    _startTime    = Date.now();
+    _agentTokens  = {};
 
     // ── Client setup ──────────────────────────────────────────────────────────
     _paidClient = process.env.ANTHROPIC_API_KEY
@@ -846,7 +874,14 @@ async function runAgentTeam(spec, taskId) {
         }
 
         const cost = _costUsd.toFixed(5);
-        console.log(`[Cost] ${taskId}: $${cost} (complexity=${complexity}, arch=${_agentModels.architect.split('/').pop()} dev=${_agentModels.developer.split('/').pop()} rev=${_agentModels.reviewer.split('/').pop()})`);
+        const durationSec = _startTime ? ((Date.now() - _startTime) / 1000).toFixed(1) : '?';
+        console.log(`[Cost] ${taskId}: $${cost} (complexity=${complexity}, arch=${_agentModels.architect.split('/').pop()} dev=${_agentModels.developer.split('/').pop()} rev=${_agentModels.reviewer.split('/').pop()}) duration=${durationSec}s`);
+        if (Object.keys(_agentTokens).length) {
+            const breakdown = Object.entries(_agentTokens)
+                .map(([role, t]) => `${role}:in=${t.in},out=${t.out}${t.cache_read ? `,cached=${t.cache_read}` : ''}`)
+                .join(' | ');
+            console.log(`[Tokens] ${taskId}: ${breakdown}`);
+        }
         console.log(`[Orchestrator] ── ${taskId} COMPLETE — ${committerLog.result.commitHash} ──`);
 
         setImmediate(() => _reflector(spec, agentLogs, true));
@@ -874,3 +909,9 @@ async function runAgentTeam(spec, taskId) {
 }
 
 module.exports = runAgentTeam;
+
+// Purge old backups every 24 hours (fire-and-forget, non-fatal)
+setInterval(() => {
+    try { require('./backup-manager').cleanOldBackups(); }
+    catch (e) { console.warn('[Orchestrator] cleanOldBackups error (non-fatal):', e.message); }
+}, 24 * 60 * 60 * 1000);
