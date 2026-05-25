@@ -10264,6 +10264,43 @@ function initOccultPage() {
     };
 })();
 
+// ── STUBS FOR PAGE-LEVEL ACTIONS ──────────────────────────────────────────────
+function showComposeModal() {
+    var existing = document.getElementById('compose-modal');
+    if (existing) existing.remove();
+    var modal = document.createElement('div');
+    modal.id = 'compose-modal';
+    modal.style.cssText = 'position:fixed;bottom:80px;right:24px;width:340px;background:var(--surface);border:1px solid var(--border-cyan);border-radius:10px;padding:16px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.5)';
+    modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="t-label">New email</span><button onclick="document.getElementById(\'compose-modal\').remove()" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:18px">&times;</button></div><input class="ds-input" id="composeTo" placeholder="To:" style="margin-bottom:6px;width:100%;box-sizing:border-box"><input class="ds-input" id="composeSubject" placeholder="Subject:" style="margin-bottom:6px;width:100%;box-sizing:border-box"><textarea class="ds-input" id="composeBody" placeholder="Message…" style="height:80px;resize:none;padding:8px;width:100%;box-sizing:border-box"></textarea><div style="display:flex;gap:6px;margin-top:8px"><button class="ds-btn cyan" onclick="sendComposedEmail()">Send</button><button class="ds-btn xs" onclick="document.getElementById(\'compose-modal\').remove()">Cancel</button></div>';
+    document.body.appendChild(modal);
+}
+
+function sendComposedEmail() {
+    var to = (document.getElementById('composeTo')||{}).value||'';
+    var subject = (document.getElementById('composeSubject')||{}).value||'';
+    var body = (document.getElementById('composeBody')||{}).value||'';
+    if (!to.trim() || !body.trim()) return;
+    fetch('/api/email/send', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({to:to,subject:subject,body:body}) })
+        .then(function(r){return r.json();}).then(function(d){
+            var m = document.getElementById('compose-modal'); if (m) m.remove();
+            if (typeof showToast==='function') showToast(d.ok?'Email sent':'Send failed');
+        }).catch(function(){ if(typeof showToast==='function') showToast('Send failed'); });
+}
+
+function approveTask(id) {
+    fetch('/api/tasks/'+id+'/approve', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({approved:true}) })
+        .then(function(r){return r.json();}).then(function(d){
+            if (d.ok) { fetchBizApprovals(); if(typeof pollPermissions==='function') pollPermissions(); }
+        }).catch(function(){});
+}
+
+function denyTask(id) {
+    fetch('/api/tasks/'+id+'/approve', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({approved:false}) })
+        .then(function(r){return r.json();}).then(function(d){
+            if (d.ok) { fetchBizApprovals(); if(typeof pollPermissions==='function') pollPermissions(); }
+        }).catch(function(){});
+}
+
 </script>
 </body>
 </html>
