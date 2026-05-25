@@ -4349,74 +4349,33 @@ html, body {
 
             <!-- ══ PAGE: OVERVIEW ══ -->
             <div class="page" id="page-overview">
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">Overview</span>
-                        <span class="ds-page-subtitle">Live status · metrics · briefing</span>
-                    </div>
-                    <button class="ds-btn cyan" onclick="refreshAll()">↻ Refresh all</button>
-                </div>
-                <div class="ds-grid-stats">
-                    <div class="ds-stat-card ac-cyan">
-                        <div class="ds-stat-label">Pending approvals</div>
-                        <div class="ds-stat-value red" id="ovStatApprovals">—</div>
-                        <div class="ds-stat-sub"><span class="ds-dot red pulse"></span><span style="color:var(--red)">Action required</span></div>
-                    </div>
-                    <div class="ds-stat-card ac-green">
-                        <div class="ds-stat-label">Notifications</div>
-                        <div class="ds-stat-value cyan" id="ovStatNotifs">—</div>
-                        <div class="ds-stat-sub">unread</div>
-                    </div>
-                    <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">Emails</div>
-                        <div class="ds-stat-value amber" id="ovStatEmails">—</div>
-                        <div class="ds-stat-sub">unread / urgent</div>
-                    </div>
-                    <div class="ds-stat-card ac-purple">
-                        <div class="ds-stat-label">System status</div>
-                        <div class="ds-stat-value green">OK</div>
-                        <div class="ds-stat-sub"><span class="ds-dot green"></span><span>All services nominal</span></div>
-                    </div>
-                </div>
-                <div class="ds-grid-2">
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Quick Actions</span></div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+
+                    <!-- Widget 1: Greeting hero -->
+                    <div style="background:linear-gradient(135deg,rgba(0,212,255,0.07),rgba(124,111,255,0.04));border:1px solid rgba(0,212,255,0.10);border-radius:12px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between">
+                        <div>
+                            <div id="ovr-greeting" style="font-size:22px;font-weight:600;color:var(--text)">Good morning, sir.</div>
+                            <div id="ovr-date" style="font-size:12px;color:var(--text-mute);margin-top:4px"></div>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:8px">
-                            <button class="ds-btn cyan" style="justify-content:center" onclick="switchPage('command')">▶ Pipeline Control</button>
-                            <button class="ds-btn amber" style="justify-content:center" onclick="switchPage('operation')">⚡ Approvals Queue</button>
-                            <button class="ds-btn purple" style="justify-content:center" onclick="switchPage('communication')">✉ Email &amp; Comms</button>
-                            <button class="ds-btn green" style="justify-content:center" onclick="switchPage('finance')">£ Finance</button>
-                            <button class="ds-btn grey" style="justify-content:center" onclick="refreshAll()">↻ Refresh everything</button>
-                        </div>
+                        <div id="ovr-motivational" style="font-size:13px;color:var(--text-mid);font-style:italic;text-align:right;max-width:280px"></div>
                     </div>
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">System Status</span></div>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Supabase</span><span class="orb-sys-status" style="color:var(--green)">Online</span></div>
-                            <div class="orb-sys-row"><span class="ds-dot cyan"></span><span class="orb-sys-name">Voice Pipeline</span><span class="orb-sys-status" style="color:var(--cyan)">Ready</span></div>
-                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Memory</span><span class="orb-sys-status" style="color:var(--green)">Connected</span></div>
-                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">GitHub</span><span class="orb-sys-status" style="color:var(--green)">Connected</span></div>
-                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Render</span><span class="orb-sys-status" style="color:var(--green)">Online</span></div>
-                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Deepgram</span><span class="orb-sys-status" style="color:var(--green)">Active</span></div>
-                            <div class="orb-sys-row"><span class="ds-dot amber"></span><span class="orb-sys-name">Anthropic</span><span class="orb-sys-status" style="color:var(--amber)">$14.61 remaining</span></div>
-                        </div>
+
+                    <!-- Widget 2: Top wins row (API-populated) -->
+                    <div id="ovr-wins-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
+
+                    <!-- Widget 3: Three snapshot panels -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+                        <div id="ovr-finance-snap" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px"><div class="skel skel-row skel-wide"></div></div>
+                        <div id="ovr-health-snap" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px"><div class="skel skel-row skel-wide"></div></div>
+                        <div id="ovr-system-snap" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px"><div class="skel skel-row skel-wide"></div></div>
                     </div>
-                </div>
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Recent Agent Activity</span></div>
-                        <div class="ds-panel-header-right"><button class="ds-btn xs cyan" onclick="refreshRecentRuns()">↻</button></div>
-                    </div>
-                    <table class="ds-table">
-                        <thead><tr><th>Feat</th><th>Title</th><th>Status</th><th>Cost</th></tr></thead>
-                        <tbody id="ovRecentRunsPanel">
-                            <tr><td colspan="4" class="skel-cell" style="text-align:center;padding:12px;font-style:italic;color:var(--text-faint)">Loading…</td></tr>
-                        </tbody>
-                    </table>
+
+                    <!-- Widget 4: Communications snapshot -->
+                    <div id="ovr-comms-snap" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px"><div class="skel skel-row skel-wide"></div></div>
+
+                    <!-- Widget 5: Section summaries -->
+                    <div id="ovr-summary-row" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px"></div>
+
                 </div>
             </div>
 
@@ -8732,6 +8691,218 @@ function refreshCommandPage() {
 }
 refreshCommandPage();
 _addInterval(refreshCommandPage, 30000);
+
+// ── Overview page ─────────────────────────────────────────────────────────────
+async function initOverviewPage() {
+    try {
+        // Greeting
+        var greetEl = document.getElementById('ovr-greeting');
+        var dateEl  = document.getElementById('ovr-date');
+        var motEl   = document.getElementById('ovr-motivational');
+        var h = new Date().getHours();
+        if (greetEl) greetEl.textContent = h < 12 ? 'Good morning, sir.' : h < 18 ? 'Good afternoon, sir.' : 'Good evening, sir.';
+        if (dateEl)  dateEl.textContent  = new Date().toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+        var phrases = [
+            'Small wins compound into large victories.',
+            'Clarity precedes mastery.',
+            'Every system built is a future freed.',
+            'The margin is in the details.',
+            'Consistency is the highest form of discipline.',
+            'Build it once. Let it run forever.'
+        ];
+        if (motEl) motEl.textContent = '“' + phrases[Math.floor(h / 4) % phrases.length] + '”';
+    } catch(e) { console.error('[APEX-UI] greeting', e); }
+
+    // Fetch all data in parallel
+    var hdrs = {'x-app-key': window._appKey || ''};
+    var [runsR, metricsR, sleepR, workoutsR, financeR, emailsR, calendarR] = await Promise.allSettled([
+        fetch('/api/intelligence/agent-runs', {headers: hdrs}).then(function(r){return r.json();}),
+        fetch('/api/master/metrics',          {headers: hdrs}).then(function(r){return r.json();}),
+        fetch('/api/health/sleep',            {headers: hdrs}).then(function(r){return r.json();}),
+        fetch('/api/health/workouts',         {headers: hdrs}).then(function(r){return r.json();}),
+        fetch('/api/finance/summary',         {headers: hdrs}).then(function(r){return r.json();}),
+        fetch('/api/emails',                  {headers: hdrs}).then(function(r){return r.json();}),
+        fetch('/api/calendar/events',         {headers: hdrs}).then(function(r){return r.json();})
+    ]);
+
+    var allRuns  = (runsR.status === 'fulfilled'  && runsR.value.ok)  ? (runsR.value.runs  || []) : [];
+    var metrics  = (metricsR.status === 'fulfilled') ? metricsR.value : {};
+    var sleepArr = (sleepR.status === 'fulfilled'  && sleepR.value.ok) ? (sleepR.value.sleep || []) : [];
+    var wkArr    = (workoutsR.status === 'fulfilled' && workoutsR.value.ok) ? (workoutsR.value.workouts || []) : [];
+    var finData  = (financeR.status === 'fulfilled' && financeR.value.ok) ? financeR.value : {};
+    var emailArr = (emailsR.status === 'fulfilled'  && emailsR.value.ok)  ? (emailsR.value.emails || []) : [];
+    var calArr   = (calendarR.status === 'fulfilled' && calendarR.value.ok) ? (calendarR.value.events || []) : [];
+
+    // ── Wins row ──────────────────────────────────────────────────────────────
+    try {
+        var weekAgo = Date.now() - 7 * 86400000;
+        var thisWeek = allRuns.filter(function(r) { return new Date(r.created_at) > weekAgo; });
+        var successRate = allRuns.length ? Math.round(allRuns.filter(function(r) { return r.success; }).length / allRuns.length * 100) : 0;
+        var wkCnt = wkArr.filter(function(w) { return new Date(w.workout_date || w.date || w.created_at) > weekAgo; }).length;
+
+        var wins = [];
+        if (thisWeek.length > 0) wins.push({label:'FEATURES THIS WEEK', value:thisWeek.length, trend:'↑ building', color:'var(--green)'});
+        if (successRate > 0)     wins.push({label:'PIPELINE SUCCESS',    value:successRate+'%', trend:'→ consistent', color:'var(--cyan)'});
+        if (wkCnt > 0)           wins.push({label:'WORKOUTS THIS WEEK',  value:wkCnt,           trend:'↑ active',    color:'var(--green)'});
+        wins.push({label:'SYSTEM STATUS', value:'ALL OK', trend:'→ nominal', color:'var(--green)'});
+
+        var winsRow = document.getElementById('ovr-wins-row');
+        if (winsRow) {
+            winsRow.innerHTML = wins.slice(0, 4).map(function(w) {
+                return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">'
+                    + '<div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:8px">' + w.label + '</div>'
+                    + '<div style="font-size:24px;font-weight:600;color:' + w.color + '">' + w.value + '</div>'
+                    + '<div style="font-size:11px;color:var(--text-mute);margin-top:4px">' + w.trend + '</div>'
+                    + '</div>';
+            }).join('');
+        }
+    } catch(e) { console.error('[APEX-UI] wins', e); }
+
+    // ── Finance snapshot ──────────────────────────────────────────────────────
+    try {
+        var finSnap = document.getElementById('ovr-finance-snap');
+        if (finSnap) {
+            var credit = parseFloat(metrics.anthropicCredit || metrics.credit || finData.credit || 14.61);
+            var pct    = Math.min(100, credit / 25 * 100).toFixed(1);
+            finSnap.innerHTML =
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+                + '<div style="width:6px;height:6px;border-radius:50%;background:var(--amber)"></div>'
+                + '<span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Finance</span>'
+                + '</div>'
+                + '<div style="font-size:22px;font-weight:600;color:var(--amber)">$' + credit.toFixed(2) + '</div>'
+                + '<div style="font-size:10px;color:var(--text-mute);margin-bottom:8px">AI credits remaining</div>'
+                + '<div style="height:3px;border-radius:2px;background:var(--border);margin-bottom:10px">'
+                + '<div style="height:100%;border-radius:2px;background:var(--amber);width:' + pct + '%"></div>'
+                + '</div>'
+                + (credit < 5 ? '<div style="font-size:10px;color:var(--red)">⚠ Low credit — enable auto-reload</div>' : '')
+                + '<div style="font-size:11px;color:var(--text-mute);margin-top:6px">Bank: not connected</div>';
+        }
+    } catch(e) { console.error('[APEX-UI] finance-snap', e); }
+
+    // ── Health snapshot ───────────────────────────────────────────────────────
+    try {
+        var hlSnap = document.getElementById('ovr-health-snap');
+        if (hlSnap) {
+            var lastSleep = sleepArr.length ? (sleepArr[sleepArr.length - 1].hours || sleepArr[sleepArr.length - 1].duration || '—') : '—';
+            var weekAgo2  = Date.now() - 7 * 86400000;
+            var wkCnt2    = wkArr.filter(function(w) { return new Date(w.workout_date || w.date || w.created_at) > weekAgo2; }).length;
+            hlSnap.innerHTML =
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+                + '<div style="width:6px;height:6px;border-radius:50%;background:var(--green)"></div>'
+                + '<span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Health</span>'
+                + '</div>'
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+                + '<div><div style="font-size:9px;color:var(--text-mute)">SLEEP</div>'
+                + '<div style="font-size:16px;font-weight:600;color:var(--text)">' + (lastSleep === '—' ? '—' : lastSleep + 'h') + '</div></div>'
+                + '<div><div style="font-size:9px;color:var(--text-mute)">WORKOUTS</div>'
+                + '<div style="font-size:16px;font-weight:600;color:var(--text)">' + wkCnt2 + '<span style="font-size:10px;color:var(--text-mute)"> this week</span></div></div>'
+                + '<div><div style="font-size:9px;color:var(--text-mute)">CALORIES</div>'
+                + '<div style="font-size:16px;font-weight:600;color:var(--text)">—</div></div>'
+                + '<div><div style="font-size:9px;color:var(--text-mute)">WATER</div>'
+                + '<div style="font-size:16px;font-weight:600;color:var(--text)">—</div></div>'
+                + '</div>';
+        }
+    } catch(e) { console.error('[APEX-UI] health-snap', e); }
+
+    // ── System snapshot ───────────────────────────────────────────────────────
+    try {
+        var sysSnap = document.getElementById('ovr-system-snap');
+        if (sysSnap) {
+            var complete   = metrics.featuresComplete || allRuns.filter(function(r){return r.success;}).length || 0;
+            var approvals  = metrics.pendingApprovals || 0;
+            var lastRun    = allRuns[0];
+            var relTime    = function(d) {
+                if (!d) return '';
+                var diff = Date.now() - new Date(d);
+                var min  = Math.floor(diff / 60000);
+                return min < 60 ? min + 'm ago' : Math.floor(min / 60) + 'h ago';
+            };
+            sysSnap.innerHTML =
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+                + '<div style="width:6px;height:6px;border-radius:50%;background:var(--cyan)"></div>'
+                + '<span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">System</span>'
+                + '</div>'
+                + '<div style="font-size:22px;font-weight:600;color:var(--cyan)">' + complete
+                + '<span style="font-size:13px;color:var(--text-mute)"> / 109</span></div>'
+                + '<div style="font-size:10px;color:var(--text-mute);margin-bottom:10px">features complete</div>'
+                + (lastRun ? '<div style="font-size:11px;color:var(--text-mid)">Last: ' + (lastRun.task_id || '—')
+                    + ' · <span style="color:' + (lastRun.success ? 'var(--green)' : 'var(--amber)') + '">' + (lastRun.success ? 'success' : 'failed') + '</span>'
+                    + ' · ' + relTime(lastRun.created_at) + '</div>' : '')
+                + '<div style="font-size:11px;margin-top:6px;color:' + (approvals > 0 ? 'var(--amber)' : 'var(--text-mute)') + '">'
+                + approvals + ' approval' + (approvals !== 1 ? 's' : '') + ' pending</div>';
+        }
+    } catch(e) { console.error('[APEX-UI] system-snap', e); }
+
+    // ── Communications snapshot ───────────────────────────────────────────────
+    try {
+        var commsSnap = document.getElementById('ovr-comms-snap');
+        if (commsSnap) {
+            var unread  = emailArr.filter(function(e){return !e.read;}).length;
+            var urgent  = emailArr.filter(function(e){return e.priority === 'urgent' || e.flagged;}).length;
+            var today   = new Date().toDateString();
+            var todayEv = calArr.filter(function(ev){ return new Date(ev.start || ev.date).toDateString() === today; });
+            var nextEv  = todayEv[0];
+            commsSnap.innerHTML =
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+                + '<div style="width:6px;height:6px;border-radius:50%;background:var(--cyan)"></div>'
+                + '<span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute);flex:1">Communications</span>'
+                + '<span onclick="switchPage(\'comms\')" style="font-size:10px;color:var(--cyan);cursor:pointer">→ Go to Comms</span>'
+                + '</div>'
+                + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">'
+                + '<div><div style="font-size:9px;color:var(--text-mute)">EMAIL</div>'
+                + '<div style="font-size:18px;font-weight:600;color:var(--text)">' + unread + '</div>'
+                + '<div style="font-size:10px;color:var(--text-mute)">unread</div></div>'
+                + '<div><div style="font-size:9px;color:var(--text-mute)">URGENT</div>'
+                + '<div style="font-size:18px;font-weight:600;color:' + (urgent > 0 ? 'var(--red)' : 'var(--text)') + '">' + urgent + '</div>'
+                + '<div style="font-size:10px;color:var(--text-mute)">flagged</div></div>'
+                + '<div><div style="font-size:9px;color:var(--text-mute)">CALENDAR</div>'
+                + '<div style="font-size:18px;font-weight:600;color:var(--text)">' + todayEv.length + '</div>'
+                + '<div style="font-size:10px;color:var(--text-mute)">today</div></div>'
+                + '<div><div style="font-size:9px;color:var(--text-mute)">NEXT</div>'
+                + '<div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.3">' + (nextEv ? (nextEv.title || nextEv.summary || 'Event') : '—') + '</div></div>'
+                + '</div>';
+        }
+    } catch(e) { console.error('[APEX-UI] comms-snap', e); }
+
+    // ── Section summary cards ─────────────────────────────────────────────────
+    try {
+        var credit2    = parseFloat(metrics.anthropicCredit || metrics.credit || finData.credit || 14.61);
+        var lastSleep2 = sleepArr.length ? (sleepArr[sleepArr.length - 1].hours || '—') : '—';
+        var approvals2 = metrics.pendingApprovals || 0;
+        var summaryCards = [
+            {label:'FINANCE',    page:'finance',    value: '$' + credit2.toFixed(2), sub:'AI credits',    color:'var(--amber)'},
+            {label:'HEALTH',     page:'health',     value: lastSleep2 === '—' ? '—' : lastSleep2 + 'h', sub:'last sleep', color:'var(--green)'},
+            {label:'BUSINESS',   page:'business',   value: approvals2,   sub:'approvals', color: approvals2 > 0 ? 'var(--red)' : 'var(--text)'},
+            {label:'UNIVERSITY', page:'university', value: '—',      sub:'assignments due', color:'var(--text-mute)'},
+            {label:'OCCULT',     page:'occult',     value: '—',      sub:'practices today', color:'var(--text-mute)'}
+        ];
+        var summaryRow = document.getElementById('ovr-summary-row');
+        if (summaryRow) {
+            summaryRow.innerHTML = summaryCards.map(function(c) {
+                return '<div onclick="switchPage(\'' + c.page + '\')"'
+                    + ' style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:border-color 0.15s"'
+                    + ' onmouseover="this.style.borderColor=\'var(--cyan)\'"'
+                    + ' onmouseout="this.style.borderColor=\'var(--border)\'">'
+                    + '<div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px">' + c.label + '</div>'
+                    + '<div style="font-size:18px;font-weight:600;color:' + c.color + '">' + c.value + '</div>'
+                    + '<div style="font-size:10px;color:var(--text-mute);margin-top:3px">' + c.sub + '</div>'
+                    + '</div>';
+            }).join('');
+        }
+    } catch(e) { console.error('[APEX-UI] summary', e); }
+}
+
+// Hook initOverviewPage into switchPage without touching the original
+(function() {
+    var _orig = window.switchPage;
+    if (_orig) window.switchPage = function(name) {
+        _orig(name);
+        if (name === 'overview') initOverviewPage();
+    };
+})();
+initOverviewPage();
+var _ovrIntId = setInterval(initOverviewPage, 120000);
+if (window._apexIntervals) window._apexIntervals.push(_ovrIntId);
 
 </script>
 </body>
