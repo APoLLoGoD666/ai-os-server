@@ -3427,118 +3427,96 @@ html, body {
 
             <!-- ══ PAGE: SYSTEM ══ -->
             <div class="page" id="page-system">
+                <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
 
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">Intel</span>
-                        <span class="ds-page-subtitle">Notifications · memory · lessons</span>
+                    <!-- Section 1: Agent Grid -->
+                    <div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                            <span style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Agent Pipeline</span>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span style="font-size:9px;color:var(--text-mute)">8 agents</span>
+                                <button class="ds-btn xs" onclick="switchPage('operation')">View Logs</button>
+                            </div>
+                        </div>
+                        <div id="sys-agent-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div>
                     </div>
+
+                    <!-- Section 2: Memory Vault + Pipeline Flow -->
+                    <div style="display:grid;grid-template-columns:1fr 320px;gap:16px">
+                        <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden">
+                            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <div style="width:6px;height:6px;border-radius:50%;background:#7c6fff"></div>
+                                    <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Memory Vault</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <span id="sys-memory-pts" style="font-size:10px;color:var(--text-mute)">— pts</span>
+                                    <button class="ds-btn xs" onclick="initMemoryCanvas()">&#8635;</button>
+                                </div>
+                            </div>
+                            <div style="position:relative">
+                                <canvas id="sys-memory-canvas" style="width:100%;height:280px;display:block;background:#080a0e"></canvas>
+                                <div style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;padding:10px">
+                                    <div style="font-size:10px;color:rgba(255,255,255,0.4)">Memory Vault</div>
+                                    <div style="position:absolute;bottom:10px;left:10px;display:flex;gap:12px">
+                                        <span style="font-size:9px;color:rgba(255,255,255,0.5)"><span style="color:#00d4ff">&#9679;</span> conversation</span>
+                                        <span style="font-size:9px;color:rgba(255,255,255,0.5)"><span style="color:#7c6fff">&#9679;</span> lesson</span>
+                                        <span style="font-size:9px;color:rgba(255,255,255,0.5)"><span style="color:#00e5a0">&#9679;</span> feature</span>
+                                        <span style="font-size:9px;color:rgba(255,255,255,0.5)"><span style="color:#f5a623">&#9679;</span> decision</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:16px">
+                            <div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:12px">Pipeline Flow</div>
+                            <div id="sys-pipeline-flow" style="display:flex;flex-direction:column;gap:4px"></div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Roadmap Timeline + Cost Analysis -->
+                    <div style="display:grid;grid-template-columns:1fr 360px;gap:16px">
+                        <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);padding:16px">
+                            <div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:12px">Roadmap Timeline</div>
+                            <div id="sys-timeline" style="overflow-x:auto;padding-bottom:8px">
+                                <div style="min-width:960px;height:48px;background:rgba(255,255,255,0.02);border-radius:4px"></div>
+                            </div>
+                            <div id="sys-timeline-summary" style="font-size:11px;color:var(--text-mute);margin-top:8px">Loading&#8230;</div>
+                        </div>
+                        <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);padding:16px">
+                            <div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:10px">Cost Analysis</div>
+                            <table style="width:100%;border-collapse:collapse">
+                                <thead>
+                                    <tr>
+                                        <th style="font-size:9px;color:var(--text-mute);text-align:left;padding-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Agent</th>
+                                        <th style="font-size:9px;color:var(--text-mute);text-align:right;padding-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Runs</th>
+                                        <th style="font-size:9px;color:var(--text-mute);text-align:right;padding-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Cost</th>
+                                        <th style="font-size:9px;color:var(--text-mute);text-align:right;padding-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Avg</th>
+                                        <th style="font-size:9px;color:var(--text-mute);text-align:right;padding-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sys-cost-tbody">
+                                    <tr><td colspan="5" style="font-size:11px;color:var(--text-faint);padding:8px 0">Loading&#8230;</td></tr>
+                                </tbody>
+                            </table>
+                            <div id="sys-cost-projection" style="font-size:10px;color:var(--text-mute);margin-top:10px;border-top:1px solid var(--border);padding-top:8px">&#8212;</div>
+                        </div>
+                    </div>
+
+                    <!-- Section 4: Suggestions (collapsible) -->
+                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+                        <div onclick="var c=document.getElementById('sys-suggestions');var a=document.getElementById('sys-sugg-chev');c.style.display=c.style.display==='none'?'block':'none';a.textContent=c.style.display==='none'?'▸':'▾'" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div style="width:6px;height:6px;border-radius:50%;background:var(--amber)"></div>
+                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">System Suggestions</span>
+                            </div>
+                            <span id="sys-sugg-chev" style="color:var(--text-mute);font-size:12px">&#9656;</span>
+                        </div>
+                        <div id="sys-suggestions" style="display:none;padding:12px 16px;border-top:1px solid var(--border)">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+
                 </div>
-
-                <!-- Stat cards -->
-                <div class="ds-grid-stats">
-                    <div class="ds-stat-card ac-cyan">
-                        <div class="ds-stat-label">Notifications</div>
-                        <div class="ds-stat-value cyan" id="intelStatNotifs">—</div>
-                        <div class="ds-stat-sub"><span class="ds-dot red pulse"></span><span style="color:var(--red)">1 urgent</span></div>
-                    </div>
-                    <div class="ds-stat-card ac-purple">
-                        <div class="ds-stat-label">Lessons logged</div>
-                        <div class="ds-stat-value purple">12</div>
-                        <div class="ds-stat-sub">by Reflector this week</div>
-                    </div>
-                    <div class="ds-stat-card ac-green">
-                        <div class="ds-stat-label">Memory status</div>
-                        <div class="ds-stat-value green">OK</div>
-                        <div class="ds-stat-sub"><span class="ds-dot green"></span><span>Obsidian · 1,247 pts</span></div>
-                    </div>
-                    <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">Last pipeline run</div>
-                        <div class="ds-stat-value cyan" style="font-family:var(--font-mono);font-size:18px">FEAT-H009</div>
-                        <div class="ds-stat-sub">committed · 28m ago</div>
-                    </div>
-                </div>
-
-                <div class="ds-grid-2">
-                    <!-- Left column -->
-                    <div style="display:flex;flex-direction:column;gap:14px">
-                        <!-- Notifications -->
-                        <div class="ds-panel">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Notifications</span></div>
-                                <div class="ds-panel-header-right">
-                                    <span class="ds-notif-badge cyan" id="intelNotifCount">—</span>
-                                    <button class="ds-btn xs" onclick="refreshNotifications()">Mark all read</button>
-                                </div>
-                            </div>
-                            <div id="notifScroll" style="display:flex;flex-direction:column;gap:6px">
-                                <div class="ds-skel-row">Loading notifications…</div>
-                            </div>
-                        </div>
-
-                        <!-- Agent lessons -->
-                        <div class="ds-panel">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Agent Lessons</span></div>
-                                <div class="ds-panel-header-right">
-                                    <span class="ds-badge purple">Reflector</span>
-                                    <button class="ds-btn xs purple" onclick="refreshLessons()">↻</button>
-                                </div>
-                            </div>
-                            <div id="lessonsPanel" style="display:flex;flex-direction:column;gap:6px">
-                                <div class="ds-skel-row">Loading lessons…</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right column -->
-                    <div style="display:flex;flex-direction:column;gap:14px">
-                        <!-- Memory -->
-                        <div class="ds-panel">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">Memory · Obsidian Vault</span></div>
-                                <div class="ds-panel-header-right">
-                                    <span class="ds-badge green">Connected</span>
-                                    <button class="ds-btn xs cyan" onclick="refreshMemory()">↻ Refresh</button>
-                                </div>
-                            </div>
-                            <div id="memoryList" class="memory-scroll" style="display:flex;flex-direction:column;gap:6px">
-                                <div class="ds-skel-row">Loading memory…</div>
-                            </div>
-                        </div>
-
-                        <!-- Approval queue -->
-                        <div class="ds-panel">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot red"></span><span class="t-label">Approval Queue</span></div>
-                                <div class="ds-panel-header-right">
-                                    <span class="ds-badge red" id="intelApprovalCount">—</span>
-                                    <button class="ds-btn xs" onclick="switchPage('operation')">View all →</button>
-                                </div>
-                            </div>
-                            <div id="approvalQueue" class="queue-scroll" style="display:flex;flex-direction:column;gap:6px">
-                                <div class="ds-skel-row">Loading approval queue…</div>
-                            </div>
-                        </div>
-
-                        <!-- Agent library -->
-                        <div class="ds-panel" id="agentLibraryPanel">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Agent Library</span><span id="agentLibCount" style="font-size:9px;color:var(--cyan);letter-spacing:.08em;margin-left:6px"></span></div>
-                                <div class="ds-panel-header-right">
-                                    <button class="ds-btn xs" onclick="refreshAgentLibrary()">↻</button>
-                                    <button class="ds-btn xs purple" onclick="syncAgentLibrary()" title="Re-sync all 150+ agents">Sync</button>
-                                </div>
-                            </div>
-                            <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap" id="agentCategoryBar"></div>
-                            <input id="agentSearchInput" placeholder="Search agents…" class="chat-input" style="height:28px;font-size:11px;margin-bottom:8px;border-radius:var(--r-md)" oninput="filterAgents(this.value)">
-                            <div id="agentList" style="display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto">
-                                <div class="ds-skel-row">Click ↻ to load agents</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
             <!-- ══ PAGE: COMMUNICATION ══ -->
@@ -8903,6 +8881,358 @@ async function initOverviewPage() {
 initOverviewPage();
 var _ovrIntId = setInterval(initOverviewPage, 120000);
 if (window._apexIntervals) window._apexIntervals.push(_ovrIntId);
+
+// ── System page ───────────────────────────────────────────────────────────────
+
+var _sysAgents = [
+    {role:'architect',           name:'Architect',    color:'#7c6fff', icon:'&#9672;',  model:'sonnet'},
+    {role:'developer',           name:'Developer',    color:'#00d4ff', icon:'&#10216;/&#10217;', model:'haiku'},
+    {role:'reviewer',            name:'Reviewer',     color:'#f5a623', icon:'&#8853;',  model:'haiku'},
+    {role:'validator',           name:'Validator',    color:'#00e5a0', icon:'&#10003;', model:'haiku'},
+    {role:'tester',              name:'Tester',       color:'#00bcd4', icon:'&#8857;',  model:'haiku'},
+    {role:'committer',           name:'Committer',    color:'#4fc3f7', icon:'&#8593;',  model:'haiku'},
+    {role:'reflector',           name:'Reflector',    color:'#f48fb1', icon:'&#9678;',  model:'haiku'},
+    {role:'master-orchestrator', name:'Orchestrator', color:'#ffffff', icon:'&#11041;', model:'sonnet'}
+];
+
+function buildAgentGrid() {
+    var grid = document.getElementById('sys-agent-grid');
+    if (!grid) return;
+    grid.innerHTML = _sysAgents.map(function(a) {
+        var cardId = 'sys-agent-' + a.role.replace(/[^a-z]/g, '-');
+        return '<div id="' + cardId + '"'
+            + ' style="background:var(--surface);border-radius:10px;padding:12px 14px;'
+            + 'border:1px solid var(--border);border-top:2px solid ' + a.color + ';'
+            + 'cursor:pointer;transition:border-color 0.15s,transform 0.15s"'
+            + ' onclick="openAgentDrawer(\'' + a.role + '\')"'
+            + ' onmouseover="this.style.transform=\'translateY(-2px)\'"'
+            + ' onmouseout="this.style.transform=\'\'">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between">'
+            + '<span style="font-size:16px;color:' + a.color + '">' + a.icon + '</span>'
+            + '<span data-status style="font-size:9px;padding:2px 7px;border-radius:3px;'
+            + 'background:rgba(255,255,255,0.06);color:var(--text-mute)">IDLE</span>'
+            + '</div>'
+            + '<div style="font-weight:600;font-size:12px;color:var(--text);margin-top:8px">' + a.name
+            + '<span style="font-size:9px;font-weight:400;padding:1px 5px;border-radius:3px;'
+            + 'background:rgba(255,255,255,0.05);color:var(--text-mute);margin-left:4px">' + a.model + '</span>'
+            + '</div>'
+            + '<div data-last-action style="font-size:11px;color:var(--text-mute);margin-top:4px;'
+            + 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No recent activity</div>'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">'
+            + '<span data-cost style="font-size:10px;font-family:monospace;color:var(--text-mute)">$0.0000</span>'
+            + '<span data-success style="font-size:10px;color:var(--text-mute)">&#8212;%</span>'
+            + '</div>'
+            + '<div data-last-run style="font-size:10px;color:var(--text-mute);text-align:right;margin-top:2px">&#8212;</div>'
+            + '</div>';
+    }).join('');
+}
+
+async function fetchSystemAgents() {
+    try {
+        var r = await fetch('/api/intelligence/agent-runs', {headers:{'x-app-key':window._appKey||''}});
+        var d = await r.json();
+        var runs = d.runs || d.data || [];
+
+        _sysAgents.forEach(function(a) {
+            var roleRuns   = runs.filter(function(r){ return (r.role||r.agent_role||'').toLowerCase() === a.role; });
+            var lastRun    = roleRuns[0];
+            var totalCost  = roleRuns.reduce(function(s,r){ return s + (parseFloat(r.cost_usd)||0); }, 0);
+            var successCnt = roleRuns.filter(function(r){ return r.success||r.status==='committed'; }).length;
+            var successRate = roleRuns.length ? Math.round(successCnt/roleRuns.length*100) : -1;
+
+            var card = document.getElementById('sys-agent-' + a.role.replace(/[^a-z]/g,'-'));
+            if (!card) return;
+
+            var statusEl  = card.querySelector('[data-status]');
+            var actEl     = card.querySelector('[data-last-action]');
+            var costEl    = card.querySelector('[data-cost]');
+            var succEl    = card.querySelector('[data-success]');
+            var lastRunEl = card.querySelector('[data-last-run]');
+
+            var status = !lastRun ? 'IDLE' :
+                lastRun.status==='running'   ? 'RUNNING'  :
+                lastRun.status==='committed' ? 'COMPLETE' :
+                lastRun.status==='failed'    ? 'ERROR'    : 'IDLE';
+
+            if (statusEl) {
+                statusEl.textContent = status;
+                statusEl.style.background = status==='RUNNING'  ? 'rgba(0,212,255,0.12)'   :
+                                            status==='COMPLETE' ? 'rgba(0,229,160,0.12)'   :
+                                            status==='ERROR'    ? 'rgba(255,77,106,0.12)'  :
+                                                                  'rgba(255,255,255,0.06)';
+                statusEl.style.color = status==='RUNNING'  ? 'var(--cyan)'  :
+                                       status==='COMPLETE' ? 'var(--green)' :
+                                       status==='ERROR'    ? 'var(--red)'   : 'var(--text-mute)';
+            }
+            if (actEl) {
+                var act = (lastRun && (lastRun.objective || lastRun.task_id || '')) || 'No recent activity';
+                actEl.textContent = act.length > 45 ? act.slice(0,42)+'...' : act;
+            }
+            if (costEl) {
+                costEl.textContent = '$' + totalCost.toFixed(4);
+                costEl.style.color = totalCost > 0.10 ? 'var(--amber)' : 'var(--text-mute)';
+            }
+            if (succEl) {
+                succEl.textContent  = successRate >= 0 ? successRate+'% success' : '—%';
+                succEl.style.color  = successRate>=80 ? 'var(--green)' : successRate>=50 ? 'var(--amber)' : successRate>=0 ? 'var(--red)' : 'var(--text-mute)';
+            }
+            if (lastRunEl) {
+                if (lastRun && lastRun.created_at) {
+                    var m = Math.floor((Date.now()-new Date(lastRun.created_at))/60000);
+                    lastRunEl.textContent = m<60 ? m+'m ago' : Math.floor(m/60)+'h ago';
+                } else { lastRunEl.textContent = '—'; }
+            }
+        });
+
+        // Pipeline flow
+        var flowEl = document.getElementById('sys-pipeline-flow');
+        if (flowEl) {
+            var stages = [
+                {role:'architect', name:'Architect', color:'#7c6fff'},
+                {role:'developer', name:'Developer', color:'#00d4ff'},
+                {role:'reviewer',  name:'Reviewer',  color:'#f5a623'},
+                {role:'validator', name:'Validator', color:'#00e5a0'},
+                {role:'tester',    name:'Tester',    color:'#00bcd4'},
+                {role:'committer', name:'Committer', color:'#4fc3f7'},
+                {role:'reflector', name:'Reflector', color:'#f48fb1'}
+            ];
+            var activeRole = (runs[0] && runs[0].status==='running') ? (runs[0].role||runs[0].agent_role||'') : '';
+            flowEl.innerHTML = stages.map(function(s, i) {
+                var sr = runs.filter(function(r){ return (r.role||r.agent_role||'')===s.role; })[0];
+                var st = !sr ? 'IDLE' : sr.status==='committed'?'COMPLETE':sr.status==='running'?'RUNNING':sr.status==='failed'?'ERROR':'IDLE';
+                var isActive = s.role === activeRole;
+                var bdr  = isActive ? '1px solid var(--cyan)' : '1px solid var(--border)';
+                var bg   = isActive ? 'rgba(0,212,255,0.06)'  : 'rgba(255,255,255,0.02)';
+                var bc   = st==='RUNNING'?'var(--cyan)':st==='COMPLETE'?'var(--green)':st==='ERROR'?'var(--red)':'var(--text-mute)';
+                var bbg  = st==='RUNNING'?'rgba(0,212,255,0.12)':st==='COMPLETE'?'rgba(0,229,160,0.12)':st==='ERROR'?'rgba(255,77,106,0.12)':'rgba(255,255,255,0.06)';
+                var row  = '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;'
+                         + 'border:'+bdr+';border-left:3px solid '+s.color+';background:'+bg+'">'
+                         + '<span style="font-weight:600;font-size:11px;color:'+s.color+';flex:1">'+s.name+'</span>'
+                         + '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:'+bbg+';color:'+bc+'">'+st+'</span>'
+                         + '</div>';
+                var arrow = i < stages.length-1 ? '<div style="text-align:center;font-size:10px;color:var(--text-mute);padding:2px 0">&#8595;</div>' : '';
+                return row + arrow;
+            }).join('');
+        }
+    } catch(e) { console.error('[APEX-UI] fetchSystemAgents', e); }
+}
+
+async function fetchSystemCosts() {
+    try {
+        var r = await fetch('/api/intelligence/agent-runs', {headers:{'x-app-key':window._appKey||''}});
+        var d = await r.json();
+        var runs = d.runs || d.data || [];
+
+        var byRole = {};
+        runs.forEach(function(run) {
+            var role = run.role || run.agent_role || 'unknown';
+            if (!byRole[role]) byRole[role] = {runs:0, cost:0, success:0};
+            byRole[role].runs++;
+            byRole[role].cost += parseFloat(run.cost_usd)||0;
+            if (run.success||run.status==='committed') byRole[role].success++;
+        });
+
+        var tbody = document.getElementById('sys-cost-tbody');
+        if (tbody) {
+            var sorted = Object.entries(byRole).sort(function(a,b){ return b[1].cost-a[1].cost; });
+            var totalCost = sorted.reduce(function(s,e){ return s+e[1].cost; }, 0);
+            var totalRuns = sorted.reduce(function(s,e){ return s+e[1].runs; }, 0);
+
+            if (!sorted.length) {
+                tbody.innerHTML = '<tr><td colspan="5" style="font-size:11px;color:var(--text-faint);padding:8px 0">No pipeline runs yet</td></tr>';
+            } else {
+                tbody.innerHTML = sorted.map(function(e) {
+                    var rl=e[0], s=e[1];
+                    var rate = s.runs ? Math.round(s.success/s.runs*100) : 0;
+                    return '<tr>'
+                        + '<td style="font-size:11px;color:var(--text);padding:5px 0">'+rl+'</td>'
+                        + '<td style="font-size:11px;color:var(--text-mute);text-align:right;font-family:monospace">'+s.runs+'</td>'
+                        + '<td style="font-size:11px;color:var(--amber);text-align:right;font-family:monospace">$'+s.cost.toFixed(4)+'</td>'
+                        + '<td style="font-size:11px;color:var(--text-mute);text-align:right;font-family:monospace">$'+(s.cost/s.runs).toFixed(4)+'</td>'
+                        + '<td style="font-size:11px;text-align:right;color:'+(rate>=80?'var(--green)':'var(--amber)')+'">'+rate+'%</td>'
+                        + '</tr>';
+                }).join('')
+                + '<tr style="border-top:1px solid var(--border)">'
+                + '<td style="font-size:11px;font-weight:600;color:var(--text);padding:5px 0">TOTAL</td>'
+                + '<td style="font-size:11px;font-weight:600;text-align:right;font-family:monospace">'+totalRuns+'</td>'
+                + '<td style="font-size:11px;font-weight:600;color:var(--amber);text-align:right;font-family:monospace">$'+totalCost.toFixed(4)+'</td>'
+                + '<td colspan="2"></td></tr>';
+            }
+        }
+
+        var weekAgo = Date.now()-7*86400000;
+        var weekCost = runs.filter(function(r){ return new Date(r.created_at)>weekAgo; })
+            .reduce(function(s,r){ return s+(parseFloat(r.cost_usd)||0); }, 0);
+        var projEl = document.getElementById('sys-cost-projection');
+        if (projEl) projEl.textContent = 'This week: $'+weekCost.toFixed(4)+' · Projected monthly: $'+(weekCost*4.3).toFixed(2);
+    } catch(e) { console.error('[APEX-UI] fetchSystemCosts', e); }
+}
+
+function fetchSystemTimeline() {
+    fetch('/api/intelligence/agent-runs?limit=100', {headers:{'x-app-key':window._appKey||''}})
+        .then(function(r){ return r.json(); })
+        .then(function(d) {
+            var runs = d.runs || d.data || [];
+            var timelineEl = document.getElementById('sys-timeline');
+            var summaryEl  = document.getElementById('sys-timeline-summary');
+            if (!timelineEl) return;
+
+            var now = new Date();
+            var months = [];
+            for (var i=11; i>=0; i--) {
+                var md = new Date(now.getFullYear(), now.getMonth()-i, 1);
+                months.push({
+                    label: md.toLocaleDateString('en-GB',{month:'short'}),
+                    year:  md.getFullYear(),
+                    month: md.getMonth(),
+                    cur:   i===0
+                });
+            }
+
+            var monthsHtml = '<div style="display:flex">'
+                + months.map(function(m) {
+                    return '<div style="flex:0 0 80px;text-align:center;font-size:9px;'
+                        + 'color:'+(m.cur?'var(--cyan)':'var(--text-mute)')+';'
+                        + 'font-weight:'+(m.cur?600:400)+'">'+m.label+'</div>';
+                }).join('') + '</div>';
+
+            var dotsHtml = '';
+            runs.forEach(function(run) {
+                if (!run.created_at) return;
+                var rd = new Date(run.created_at);
+                var mDiff = (now.getFullYear()-rd.getFullYear())*12+(now.getMonth()-rd.getMonth());
+                if (mDiff>=0 && mDiff<12) {
+                    var mIdx = 11-mDiff;
+                    var left = ((mIdx + rd.getDate()/31)/12*100).toFixed(1);
+                    var recent = mDiff===0;
+                    dotsHtml += '<div style="position:absolute;top:-3px;left:'+left+'%;'
+                        + 'width:7px;height:7px;border-radius:50%;transform:translateX(-50%);'
+                        + 'background:'+(recent?'var(--cyan)':'rgba(0,212,255,0.45)')+';cursor:pointer"'
+                        + ' title="'+(run.task_id||run.objective||'').substring(0,40)+'"></div>';
+                }
+            });
+
+            timelineEl.innerHTML = '<div style="min-width:960px">'
+                + monthsHtml
+                + '<div style="height:1px;background:var(--border);margin:6px 0;position:relative">'
+                + dotsHtml + '</div></div>';
+
+            var totalCost = runs.reduce(function(s,r){ return s+(parseFloat(r.cost_usd)||0); },0);
+            if (summaryEl) summaryEl.textContent = runs.length+' features · $'+totalCost.toFixed(4)+' total'+(runs[0]?' · Last: '+(runs[0].task_id||'—'):'');
+        })
+        .catch(function(e){ console.error('[APEX-UI] fetchSystemTimeline',e); });
+}
+
+async function buildSystemSuggestions() {
+    try {
+        var el = document.getElementById('sys-suggestions');
+        if (!el) return;
+        var suggestions = [];
+
+        var r = await fetch('/api/intelligence/cost-summary', {headers:{'x-app-key':window._appKey||''}});
+        var cs = await r.json();
+        if (cs.ok) {
+            if (parseFloat(cs.totalCostUsd||0) === 0 && cs.totalRuns === 0)
+                suggestions.push({text:'No pipeline runs yet — run your first feature via Command', btn:'Command', page:'command'});
+            var credit = parseFloat((window._anthropicCredit||0));
+            if (credit > 0 && credit < 5)
+                suggestions.push({text:'AI credit low ($'+credit.toFixed(2)+') — consider adding credits', btn:'Settings', page:'system'});
+        }
+
+        if (!suggestions.length) {
+            el.innerHTML = '<div style="font-size:11px;color:var(--text-mute)">System is optimally configured.</div>';
+        } else {
+            el.innerHTML = suggestions.slice(0,5).map(function(s) {
+                return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-faint)">'
+                    + '<div style="width:5px;height:5px;border-radius:50%;background:var(--amber);flex-shrink:0"></div>'
+                    + '<span style="font-size:11px;color:var(--text-mute);flex:1">'+s.text+'</span>'
+                    + '<button class="ds-btn xs" onclick="switchPage(\''+s.page+'\')">'+s.btn+'</button>'
+                    + '</div>';
+            }).join('');
+        }
+    } catch(e) { console.error('[APEX-UI] buildSystemSuggestions', e); }
+}
+
+function initMemoryCanvas() {
+    var canvas = document.getElementById('sys-memory-canvas');
+    if (!canvas) return;
+    if (canvas.dataset.animId) cancelAnimationFrame(parseInt(canvas.dataset.animId));
+
+    var ctx = canvas.getContext('2d');
+    canvas.width  = canvas.offsetWidth  || 600;
+    canvas.height = canvas.offsetHeight || 280;
+
+    var colors = {conversation:'#00d4ff', lesson:'#7c6fff', feature:'#00e5a0', decision:'#f5a623'};
+    var types  = ['conversation','lesson','feature','decision'];
+    var pts    = [];
+    for (var i=0; i<70; i++) {
+        pts.push({
+            x: Math.random()*canvas.width,  y: Math.random()*canvas.height,
+            vx:(Math.random()-0.5)*0.4,     vy:(Math.random()-0.5)*0.4,
+            r: 1.5+Math.random()*2.5,
+            type: types[Math.floor(Math.random()*4)],
+            o:   0.3+Math.random()*0.7
+        });
+    }
+
+    function drawFrame() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        pts.forEach(function(p){
+            p.x+=p.vx; p.y+=p.vy;
+            if (p.x<0||p.x>canvas.width)  p.vx*=-1;
+            if (p.y<0||p.y>canvas.height) p.vy*=-1;
+        });
+        for (var i=0;i<pts.length;i++) {
+            for (var j=i+1;j<pts.length;j++) {
+                var dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
+                var dist=Math.sqrt(dx*dx+dy*dy);
+                if (dist<85) {
+                    ctx.beginPath();
+                    ctx.strokeStyle='rgba(255,255,255,'+(0.06*(1-dist/85)).toFixed(3)+')';
+                    ctx.lineWidth=0.5;
+                    ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+        pts.forEach(function(p){
+            ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+            ctx.fillStyle=colors[p.type]; ctx.globalAlpha=p.o; ctx.fill(); ctx.globalAlpha=1;
+        });
+        canvas.dataset.animId = requestAnimationFrame(drawFrame);
+    }
+    drawFrame();
+}
+
+var _sysPageInited = false;
+async function initSystemPage() {
+    buildAgentGrid();
+    fetchSystemAgents();
+    initMemoryCanvas();
+    fetchSystemCosts();
+    fetchSystemTimeline();
+    buildSystemSuggestions();
+
+    if (!_sysPageInited) {
+        _sysPageInited = true;
+        var id1 = setInterval(fetchSystemAgents, 45000);
+        var id2 = setInterval(fetchSystemCosts, 120000);
+        if (window._apexIntervals) window._apexIntervals.push(id1, id2);
+    }
+}
+
+// Hook system page into switchPage (wrapping the already-wrapped version)
+(function() {
+    var _prev = window.switchPage;
+    window.switchPage = function(name) {
+        if (name !== 'system') {
+            var c = document.getElementById('sys-memory-canvas');
+            if (c && c.dataset.animId) { cancelAnimationFrame(parseInt(c.dataset.animId)); c.dataset.animId=''; }
+        }
+        _prev(name);
+        if (name === 'system') initSystemPage();
+    };
+})();
 
 </script>
 </body>
