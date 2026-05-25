@@ -259,7 +259,7 @@ app.post('/auth/login', (req, res) => {
     const token = jwt.sign({ apex: true }, secret, { expiresIn: '1h' });
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('apex_token', token, {
-        httpOnly: true,
+        httpOnly: false,
         secure: isSecure,
         sameSite: 'Lax',
         maxAge: 60 * 60 * 1000
