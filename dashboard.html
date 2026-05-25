@@ -3217,10 +3217,10 @@ html, body {
             <span class="ticker-item-ds"><span class="ds-dot green"></span><span class="t-label-tiny">GitHub</span><span>Connected</span></span>
             <span class="ticker-item-ds"><span class="ds-dot green"></span><span class="t-label-tiny">Render</span><span>Online</span></span>
             <span class="ticker-item-ds"><span class="ds-dot green"></span><span class="t-label-tiny">Deepgram</span><span>Active</span></span>
-            <span class="ticker-item-ds"><span class="ds-dot amber"></span><span class="t-label-tiny" id="tickerCredit">Anthropic Credit</span><span>$14.61 / $25</span></span>
-            <span class="ticker-item-ds"><span class="ds-dot red"></span><span class="t-label-tiny">Pending Approvals</span><span id="tickerApprovals">7</span></span>
+            <span class="ticker-item-ds"><span class="ds-dot amber"></span><span class="t-label-tiny" id="tickerCredit">Anthropic Credit</span><span id="tickerCreditVal">&#8212;</span></span>
+            <span class="ticker-item-ds"><span class="ds-dot red"></span><span class="t-label-tiny">Pending Approvals</span><span id="tickerApprovals">&#8212;</span></span>
             <span class="ticker-item-ds"><span class="ds-dot cyan"></span><span class="t-label-tiny">Pipeline</span><span id="tickerPipeline">Standby</span></span>
-            <span class="ticker-item-ds"><span class="ds-dot green"></span><span class="t-label-tiny">Last Run</span><span>FEAT-H009 · committed</span></span>
+            <span class="ticker-item-ds"><span class="ds-dot green"></span><span class="t-label-tiny">Last Run</span><span id="tickerLastRun">&#8212;</span></span>
             <!-- duplicate for seamless loop -->
             <span class="ticker-item-ds"><span class="ds-dot green"></span><span class="t-label-tiny">Supabase</span><span>Online</span></span>
             <span class="ticker-item-ds"><span class="ds-dot cyan"></span><span class="t-label-tiny">Voice Pipeline</span><span>Ready</span></span>
@@ -3228,8 +3228,8 @@ html, body {
             <span class="ticker-item-ds"><span class="ds-dot green"></span><span class="t-label-tiny">GitHub</span><span>Connected</span></span>
             <span class="ticker-item-ds"><span class="ds-dot green"></span><span class="t-label-tiny">Render</span><span>Online</span></span>
             <span class="ticker-item-ds"><span class="ds-dot green"></span><span class="t-label-tiny">Deepgram</span><span>Active</span></span>
-            <span class="ticker-item-ds"><span class="ds-dot amber"></span><span class="t-label-tiny">Anthropic Credit</span><span>$14.61 / $25</span></span>
-            <span class="ticker-item-ds"><span class="ds-dot red"></span><span class="t-label-tiny">Pending Approvals</span><span>7</span></span>
+            <span class="ticker-item-ds"><span class="ds-dot amber"></span><span class="t-label-tiny">Anthropic Credit</span><span id="tickerCreditVal2">&#8212;</span></span>
+            <span class="ticker-item-ds"><span class="ds-dot red"></span><span class="t-label-tiny">Pending Approvals</span><span id="tickerApprovals2">&#8212;</span></span>
             <span class="ticker-item-ds"><span class="ds-dot cyan"></span><span class="t-label-tiny">Pipeline</span><span>Standby</span></span>
             <span class="ticker-item-ds"><span class="ds-dot green"></span><span class="t-label-tiny">Last Run</span><span>FEAT-H009 · committed</span></span>
         </div>
@@ -4059,18 +4059,18 @@ html, body {
                 <div class="ds-page-header">
                     <div class="ds-page-header-left">
                         <span class="ds-page-title">Life</span>
-                        <span class="ds-page-subtitle">Health · sleep · briefing · journal · university</span>
+                        <span class="ds-page-subtitle">health &#183; sleep &#183; spiritual &#183; journal</span>
                     </div>
-                    <button class="ds-btn cyan">🎙 Log via voice</button>
+                    <button class="ds-btn cyan" onclick="logHealthVoice()">&#127897; Log via voice</button>
                 </div>
 
                 <div class="ds-grid-stats-6">
-                    <div class="ds-stat-card" style="--accent:var(--green)"><div class="ds-stat-label">Workouts</div><div class="ds-stat-value" style="color:var(--text-faint)">—</div><div class="ds-stat-sub" style="color:var(--text-faint)">this week</div></div>
-                    <div class="ds-stat-card" style="--accent:var(--amber)"><div class="ds-stat-label">Calories</div><div class="ds-stat-value" style="color:var(--text-faint)">—</div><div class="ds-stat-sub" style="color:var(--text-faint)">vs 2,200 target</div></div>
-                    <div class="ds-stat-card" style="--accent:var(--purple)"><div class="ds-stat-label">Sleep</div><div class="ds-stat-value" style="color:var(--text-faint)">—</div><div class="ds-stat-sub" style="color:var(--text-faint)">last night</div></div>
-                    <div class="ds-stat-card" style="--accent:var(--cyan)"><div class="ds-stat-label">Journal streak</div><div class="ds-stat-value" style="color:var(--text-faint)">—</div><div class="ds-stat-sub" style="color:var(--text-faint)">days</div></div>
-                    <div class="ds-stat-card" style="--accent:var(--purple)"><div class="ds-stat-label">Mood today</div><div class="ds-stat-value" style="color:var(--text-faint)">—</div><div class="ds-stat-sub" style="color:var(--text-faint)">1–10 scale</div></div>
-                    <div class="ds-stat-card" style="--accent:var(--amber)"><div class="ds-stat-label">Study sessions</div><div class="ds-stat-value" style="color:var(--text-faint)">—</div><div class="ds-stat-sub" style="color:var(--text-faint)">this week</div></div>
+                    <div class="ds-stat-card" style="--accent:var(--green)"><div class="ds-stat-label">Workouts</div><div class="ds-stat-value" id="hlthStatWorkouts" style="color:var(--text-faint)">&#8212;</div><div class="ds-stat-sub" style="color:var(--text-faint)">this week</div></div>
+                    <div class="ds-stat-card" style="--accent:var(--amber)"><div class="ds-stat-label">Calories</div><div class="ds-stat-value" id="hlthStatCalories" style="color:var(--text-faint)">&#8212;</div><div class="ds-stat-sub" style="color:var(--text-faint)">vs 2,200 target</div></div>
+                    <div class="ds-stat-card" style="--accent:var(--purple)"><div class="ds-stat-label">Sleep</div><div class="ds-stat-value" id="hlthStatSleep" style="color:var(--text-faint)">&#8212;</div><div class="ds-stat-sub" style="color:var(--text-faint)">last night</div></div>
+                    <div class="ds-stat-card" style="--accent:var(--cyan)"><div class="ds-stat-label">Journal streak</div><div class="ds-stat-value" id="hlthStatJournal" style="color:var(--text-faint)">&#8212;</div><div class="ds-stat-sub" style="color:var(--text-faint)">days</div></div>
+                    <div class="ds-stat-card" style="--accent:var(--purple)"><div class="ds-stat-label">Mood today</div><div class="ds-stat-value" id="hlthStatMood" style="color:var(--text-faint)">&#8212;</div><div class="ds-stat-sub" style="color:var(--text-faint)">1&#8211;10 scale</div></div>
+                    <div class="ds-stat-card" style="--accent:var(--amber)"><div class="ds-stat-label">Study sessions</div><div class="ds-stat-value" id="hlthStatStudy" style="color:var(--text-faint)">&#8212;</div><div class="ds-stat-sub" style="color:var(--text-faint)">this week</div></div>
                 </div>
 
                 <!-- ── HEALTH & FITNESS ── -->
@@ -4080,13 +4080,13 @@ html, body {
                         <div class="ds-panel-header">
                             <span class="ds-panel-dot" style="background:var(--green)"></span>
                             <span class="ds-panel-title">Workouts</span>
-                            <div class="ds-panel-right"><span class="ds-badge green">FEAT-H009</span><button class="ds-btn green btn--xs">+ Log</button></div>
+                            <div class="ds-panel-right"><button class="ds-btn green btn--xs">+ Log</button></div>
                         </div>
-                        <div class="ds-skel" style="margin-bottom:10px">Today's workout · log via voice</div>
+                        <div class="ds-skel" style="margin-bottom:10px">Today&#39;s workout &#183; log via voice</div>
                         <div class="t-label" style="margin-bottom:6px">Last 91 days</div>
                         <div class="contrib-grid-ds" id="workoutContribGrid"></div>
                         <div style="display:flex;justify-content:space-between;margin-top:8px">
-                            <span class="t-mono" style="color:var(--text-mute)">← 13w ago</span>
+                            <span class="t-mono" style="color:var(--text-mute)">&#8592; 13w ago</span>
                             <span class="t-mono" style="color:var(--text-mute)">today</span>
                         </div>
                     </div>
@@ -4095,23 +4095,18 @@ html, body {
                         <div class="ds-panel-header">
                             <span class="ds-panel-dot" style="background:var(--amber)"></span>
                             <span class="ds-panel-title">Nutrition</span>
-                            <div class="ds-panel-right"><span class="ds-badge amber">FEAT-H008</span><button class="ds-btn amber btn--xs">+ Log meal</button></div>
+                            <div class="ds-panel-right"><button class="ds-btn amber btn--xs">+ Log meal</button></div>
                         </div>
                         <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center">
-                            <div style="width:110px;height:110px;border-radius:50%;background:conic-gradient(transparent 0deg,rgba(255,255,255,0.05) 0deg);border:3px solid var(--amber);display:flex;align-items:center;justify-content:center;flex-direction:column">
-                                <div class="t-stat" style="font-size:20px;color:var(--text-faint)">—</div>
+                            <div style="width:110px;height:110px;border-radius:50%;border:3px solid var(--amber);display:flex;align-items:center;justify-content:center;flex-direction:column">
+                                <div class="t-stat" id="hlthCalRing" style="font-size:20px;color:var(--text-faint)">&#8212;</div>
                                 <div class="t-label-tiny">kcal</div>
                             </div>
                             <div style="display:flex;flex-direction:column;gap:8px">
-                                <div><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span class="t-small" style="color:var(--text)">Protein</span><span class="t-mono" style="color:var(--text-faint)">— / —g</span></div><div class="ds-bar green" style="--pct:0%"></div></div>
-                                <div><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span class="t-small" style="color:var(--text)">Carbs</span><span class="t-mono" style="color:var(--text-faint)">— / —g</span></div><div class="ds-bar amber" style="--pct:0%"></div></div>
-                                <div><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span class="t-small" style="color:var(--text)">Fat</span><span class="t-mono" style="color:var(--text-faint)">— / —g</span></div><div class="ds-bar purple" style="--pct:0%"></div></div>
+                                <div><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span class="t-small" style="color:var(--text)">Protein</span><span class="t-mono" id="hlthProtein" style="color:var(--text-faint)">&#8212;</span></div><div class="ds-bar green"></div></div>
+                                <div><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span class="t-small" style="color:var(--text)">Carbs</span><span class="t-mono" id="hlthCarbs" style="color:var(--text-faint)">&#8212;</span></div><div class="ds-bar amber"></div></div>
+                                <div><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span class="t-small" style="color:var(--text)">Fat</span><span class="t-mono" id="hlthFat" style="color:var(--text-faint)">&#8212;</span></div><div class="ds-bar purple"></div></div>
                             </div>
-                        </div>
-                        <div style="margin-top:10px">
-                            <div class="ds-skel">Breakfast · — kcal</div>
-                            <div class="ds-skel" style="margin-top:4px">Lunch · — kcal</div>
-                            <div class="ds-skel" style="margin-top:4px">Dinner · — kcal</div>
                         </div>
                     </div>
 
@@ -4119,22 +4114,16 @@ html, body {
                         <div class="ds-panel-header">
                             <span class="ds-panel-dot" style="background:var(--cyan)"></span>
                             <span class="ds-panel-title">Body metrics</span>
-                            <div class="ds-panel-right"><span class="ds-badge cyan">FEAT-H008/H013</span></div>
                         </div>
-                        <div class="mini-chart-ds" style="height:80px;margin-bottom:10px">
-                            <div class="mini-chart-grid-ds"></div>
-                            <svg viewBox="0 0 280 80" style="position:absolute;inset:0;width:100%;height:100%">
-                                <path d="M0 40 L40 38 L80 42 L120 35 L160 36 L200 32 L240 34 L280 30" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-dasharray="3 4"/>
-                            </svg>
-                            <span style="position:absolute;top:6px;left:8px;font-size:10px;color:var(--text-mute)">weight · 30d</span>
-                            <span style="position:absolute;bottom:6px;right:8px;font-size:10px;color:var(--text-mute)">awaits scale link</span>
+                        <div style="height:60px;position:relative;margin-bottom:10px">
+                            <canvas id="hlth-metrics-spark" style="width:100%;height:60px"></canvas>
                         </div>
                         <table class="ds-table">
-                            <thead><tr><th>Metric</th><th>Latest</th><th>30d</th></tr></thead>
-                            <tbody>
-                                <tr><td>Weight</td><td class="ds-skel-row">—</td><td class="ds-skel-row">—</td></tr>
-                                <tr><td>BP · systolic</td><td class="ds-skel-row">—</td><td class="ds-skel-row">—</td></tr>
-                                <tr><td>Resting HR</td><td class="ds-skel-row">—</td><td class="ds-skel-row">—</td></tr>
+                            <thead><tr><th>Metric</th><th>Latest</th><th>30d trend</th></tr></thead>
+                            <tbody id="hlthMetricsTbody">
+                                <tr><td>Weight</td><td id="hlthWeight" style="color:var(--text-faint)">&#8212;</td><td style="color:var(--text-faint)">&#8212;</td></tr>
+                                <tr><td>BP systolic</td><td id="hlthBP" style="color:var(--text-faint)">&#8212;</td><td style="color:var(--text-faint)">&#8212;</td></tr>
+                                <tr><td>Resting HR</td><td id="hlthHR" style="color:var(--text-faint)">&#8212;</td><td style="color:var(--text-faint)">&#8212;</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -4147,19 +4136,11 @@ html, body {
                         <div class="ds-panel-header">
                             <span class="ds-panel-dot" style="background:var(--purple)"></span>
                             <span class="ds-panel-title">Sleep</span>
-                            <div class="ds-panel-right"><span class="ds-badge purple">FEAT-H012</span></div>
                         </div>
-                        <div class="ds-skel" style="margin-bottom:10px">Last night · — hours · quality —/10</div>
+                        <div id="hlthSleepLast" class="ds-skel" style="margin-bottom:10px">Last night &#183; &#8212; hours &#183; quality &#8212;/10</div>
                         <div class="t-label" style="margin-bottom:6px">Last 7 nights</div>
-                        <div id="sleepBarsPanel" style="display:flex;gap:6px;align-items:flex-end;height:60px">
-                            <!-- populated by refreshSleepPanel() -->
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
-                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%"><div style="height:10%;width:100%;background:rgba(255,255,255,0.06);border-radius:3px 3px 0 0"></div><span class="t-mono" style="color:var(--text-faint);font-size:9px">—</span></div>
+                        <div id="sleepBarsPanel" style="height:80px;position:relative">
+                            <canvas id="hlth-sleep-chart" style="width:100%;height:80px"></canvas>
                         </div>
                     </div>
 
@@ -4167,50 +4148,21 @@ html, body {
                         <div class="ds-panel-header">
                             <span class="ds-panel-dot" style="background:var(--green)"></span>
                             <span class="ds-panel-title">Wellness</span>
-                            <div class="ds-panel-right"><span class="ds-badge green">FEAT-H005/H006/H007</span></div>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span style="width:16px;height:16px;border:1.5px solid var(--green);border-radius:4px;background:var(--green);color:#06080c;display:grid;place-items:center;font-size:11px;font-weight:700">✓</span><span class="t-small" style="color:var(--text)">Vitamin D · 4000IU</span><span class="t-mono" style="color:var(--green)">taken</span></div>
-                            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span style="width:16px;height:16px;border:1.5px solid var(--green);border-radius:4px;background:var(--green);color:#06080c;display:grid;place-items:center;font-size:11px;font-weight:700">✓</span><span class="t-small" style="color:var(--text)">Omega 3</span><span class="t-mono" style="color:var(--green)">taken</span></div>
-                            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span style="width:16px;height:16px;border:1.5px solid var(--border-strong);border-radius:4px;display:grid;place-items:center"></span><span class="t-small" style="color:var(--text)">Magnesium</span><span class="t-mono" style="color:var(--text-mute)">pending</span></div>
-                            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span style="width:16px;height:16px;border:1.5px solid var(--green);border-radius:4px;background:var(--green);color:#06080c;display:grid;place-items:center;font-size:11px;font-weight:700">✓</span><span class="t-small" style="color:var(--text)">Creatine 5g</span><span class="t-mono" style="color:var(--green)">taken</span></div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
-                                <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px">
-                                    <div class="t-label">Water</div>
-                                    <div class="t-stat" style="color:var(--cyan);font-size:18px;margin-top:2px">1.4L<span style="font-size:11px;color:var(--text-mute)"> / 3L</span></div>
-                                    <div class="ds-bar cyan" style="--pct:47%"></div>
-                                </div>
-                                <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px">
-                                    <div class="t-label">Fasting</div>
-                                    <div class="t-stat" style="color:var(--amber);font-size:18px;margin-top:2px">14:32</div>
-                                    <button class="ds-btn amber btn--xs" style="margin-top:4px">End fast</button>
-                                </div>
+                        <div id="hlthSupplementList" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+                            <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px">
+                                <div class="t-label">Water</div>
+                                <div id="hlthWater" class="t-stat" style="color:var(--cyan);font-size:18px;margin-top:2px">&#8212;</div>
+                            </div>
+                            <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px">
+                                <div class="t-label">Fasting</div>
+                                <div id="hlthFasting" class="t-stat" style="color:var(--amber);font-size:18px;margin-top:2px">&#8212;</div>
+                                <button class="ds-btn amber btn--xs" style="margin-top:4px">Log fast</button>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- ── DAILY BRIEFING ── -->
-                <div class="ds-section-head"><span style="height:1px;background:var(--border);width:16px"></span><span class="t-label-tiny" style="color:var(--cyan)">Daily Briefing</span><span style="height:1px;background:var(--border);flex:1"></span></div>
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <span class="ds-panel-dot" style="background:var(--cyan)"></span>
-                        <span class="ds-panel-title">Morning report</span>
-                        <div class="ds-panel-right"><span class="ds-badge cyan">FEAT-D001 → D014</span><button class="ds-btn cyan btn--xs">Generate now</button></div>
-                    </div>
-                    <div class="briefing-grid-ds">
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--cyan)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--cyan)">☀</span><span class="t-label-tiny">D001</span></div><div class="t-h3" style="font-size:12px">Weather</div><div class="t-small" style="color:var(--text-mid)">Clear · 19°C high</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--cyan)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--cyan)">⌖</span><span class="t-label-tiny">D002</span></div><div class="t-h3" style="font-size:12px">Calendar</div><div class="t-small" style="color:var(--text-mid)">0 events today</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--red)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--red)">✉</span><span class="t-label-tiny">D003</span></div><div class="t-h3" style="font-size:12px">Email priorities</div><div class="t-small" style="color:var(--text-mid)">2 urgent · 1 draft</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--purple)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--purple)">📰</span><span class="t-label-tiny">D004</span></div><div class="t-h3" style="font-size:12px">News headlines</div><div class="t-small" style="color:var(--text-mid)">5 stories curated</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--amber)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--amber)">£</span><span class="t-label-tiny">D005</span></div><div class="t-h3" style="font-size:12px">Financial snapshot</div><div class="t-small" style="color:var(--text-mid)">$0.00 spent · credit low</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--green)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--green)">♥</span><span class="t-label-tiny">D006</span></div><div class="t-h3" style="font-size:12px">Health check</div><div class="t-small" style="color:var(--text-mid)">— kcal · — sleep</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--amber)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--amber)">◉</span><span class="t-label-tiny">D007</span></div><div class="t-h3" style="font-size:12px">Reminders</div><div class="t-small" style="color:var(--text-mid)">3 tasks due today</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--green)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--green)">🚦</span><span class="t-label-tiny">D008</span></div><div class="t-h3" style="font-size:12px">Traffic</div><div class="t-small" style="color:var(--text-mid)">commute clear</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--cyan)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--cyan)">✦</span><span class="t-label-tiny">D009</span></div><div class="t-h3" style="font-size:12px">Motivational</div><div class="t-small" style="color:var(--text-mid)">"Small wins compound."</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--purple)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--purple)">🌙</span><span class="t-label-tiny">D010</span></div><div class="t-h3" style="font-size:12px">Evening wind-down</div><div class="t-small" style="color:var(--text-mid)">sigil + 5min reflection</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--cyan)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--cyan)">📊</span><span class="t-label-tiny">D011</span></div><div class="t-h3" style="font-size:12px">Weekly review</div><div class="t-small" style="color:var(--text-mid)">Sunday 18:00</div></div>
-                        <div class="briefing-cell-ds" style="border-left:2px solid var(--purple)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;color:var(--purple)">📈</span><span class="t-label-tiny">D012</span></div><div class="t-h3" style="font-size:12px">Monthly summary</div><div class="t-small" style="color:var(--text-mid)">7 days to next</div></div>
                     </div>
                 </div>
 
@@ -4220,27 +4172,24 @@ html, body {
                     <div class="ds-panel">
                         <div class="ds-panel-header">
                             <span class="ds-panel-dot" style="background:var(--purple)"></span>
-                            <span class="ds-panel-title">Spiritual progression</span>
-                            <div class="ds-panel-right"><span class="ds-badge purple">FEAT-S001 → S007</span></div>
+                            <span class="ds-panel-title">Spiritual sessions</span>
+                            <div class="ds-panel-right"><button class="ds-btn purple btn--xs" onclick="logSpiritualSession()">+ Log</button></div>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Morning meditation · 20m</span><span class="ds-badge green">done</span></div>
-                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Sigil routine</span><span class="ds-badge amber">pending</span></div>
-                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Evening reading · 30m</span><span class="ds-badge grey">scheduled</span></div>
-                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Weekly reflection</span><span class="ds-badge cyan">Sunday</span></div>
+                        <div id="spiritualSessionsList" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
                         </div>
                     </div>
                     <div class="ds-panel">
                         <div class="ds-panel-header">
                             <span class="ds-panel-dot" style="background:var(--green)"></span>
                             <span class="ds-panel-title">Mindfulness</span>
-                            <div class="ds-panel-right"><span class="ds-badge green">FEAT-S005</span><button class="ds-btn green btn--xs">▶ Start timer</button></div>
+                            <div class="ds-panel-right"><button class="ds-btn green btn--xs">&#9658; Start timer</button></div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Breath · 4-7-8</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
-                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Body scan</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
-                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Mindful walk</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
-                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Gratitude</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
+                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Breath &#183; 4-7-8</div><div class="t-mono" id="mindBreath" style="color:var(--text-mute);margin-top:4px">&#8212; sessions</div></div>
+                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Body scan</div><div class="t-mono" id="mindBody" style="color:var(--text-mute);margin-top:4px">&#8212; sessions</div></div>
+                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Mindful walk</div><div class="t-mono" id="mindWalk" style="color:var(--text-mute);margin-top:4px">&#8212; sessions</div></div>
+                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Gratitude</div><div class="t-mono" id="mindGratitude" style="color:var(--text-mute);margin-top:4px">&#8212; sessions</div></div>
                         </div>
                     </div>
                 </div>
@@ -4252,21 +4201,23 @@ html, body {
                         <div class="ds-panel-header">
                             <span class="ds-panel-dot" style="background:var(--cyan)"></span>
                             <span class="ds-panel-title">Journal</span>
-                            <div class="ds-panel-right"><span class="ds-badge cyan">FEAT-J001/J002/J003</span></div>
                         </div>
-                        <textarea class="ds-input" id="journalTextarea" placeholder="Today's entry — speak it or type it…" style="height:80px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box"></textarea>
-                        <button class="ds-btn cyan btn--xs" style="margin-top:6px;width:100%" onclick="submitJournalEntry()">Save entry</button>
+                        <textarea class="ds-input" id="journalTextarea" placeholder="Today&#39;s entry &#8212; speak it or type it&#8230;" style="height:80px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box"></textarea>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+                            <button class="ds-btn cyan btn--xs" onclick="submitJournalEntry()">Save entry</button>
+                            <span id="hlthJournalWordCount" class="t-mono" style="color:var(--text-mute);font-size:10px">0 words</span>
+                        </div>
                         <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;margin-top:8px">
-                            <div class="t-label" style="margin-bottom:6px">Mood · tap to log</div>
+                            <div class="t-label" style="margin-bottom:6px">Mood &#183; tap to log</div>
                             <div class="mood-faces" id="moodFacesRow"></div>
                             <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-                                <span class="t-mono" style="color:var(--cyan)" id="moodScoreDisplay">—/10</span>
-                                <span class="t-small" style="color:var(--green);display:none" id="moodConfirm">Mood logged ✓</span>
+                                <span class="t-mono" style="color:var(--cyan)" id="moodScoreDisplay">&#8212;/10</span>
+                                <span class="t-small" style="color:var(--green);display:none" id="moodConfirm">Mood logged &#10003;</span>
                             </div>
                         </div>
                         <div class="t-label" style="margin-top:12px;margin-bottom:6px">Recent entries</div>
                         <div id="journalEntriesPanel" style="display:flex;flex-direction:column;gap:4px">
-                            <div class="t-small" style="color:var(--text-faint)"><span class="skel skel-row skel-med" style="display:block"></span></div>
+                            <span class="skel skel-row skel-med" style="display:block"></span>
                         </div>
                     </div>
 
@@ -4274,69 +4225,46 @@ html, body {
                         <div class="ds-panel-header">
                             <span class="ds-panel-dot" style="background:var(--purple)"></span>
                             <span class="ds-panel-title">Psychology</span>
-                            <div class="ds-panel-right"><span class="ds-badge purple">FEAT-J004 → J014</span></div>
                         </div>
-                        <div class="t-label" style="margin-bottom:6px">Mood · 7-day trend</div>
+                        <div class="t-label" style="margin-bottom:6px">Mood &#183; 7-day trend</div>
                         <div id="moodChart" style="height:70px;margin-bottom:12px;position:relative">
                             <canvas id="moodChartCanvas" style="width:100%;height:70px"></canvas>
                         </div>
-                        <div class="t-label" style="margin-bottom:6px">Habit tracker · this week</div>
+                        <div class="t-label" style="margin-bottom:6px">Habit tracker &#183; this week</div>
                         <div id="habitTrackerGrid">
-                            <div class="t-small" style="color:var(--text-faint)"><span class="skel skel-row skel-med" style="display:block"></span></div>
+                            <span class="skel skel-row skel-med" style="display:block"></span>
                         </div>
                         <div id="crisisDetectionPanel" style="margin-top:12px;padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:10px">
                             <span class="ds-dot grey"></span>
-                            <span class="t-small" style="color:var(--text-mute)">Crisis detection · loading…</span>
+                            <span class="t-small" style="color:var(--text-mute)">Crisis detection &#183; loading&#8230;</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- ── UNIVERSITY ── -->
-                <div class="ds-section-head"><span style="height:1px;background:var(--border);width:16px"></span><span class="t-label-tiny" style="color:var(--cyan)">University</span><span style="height:1px;background:var(--border);flex:1"></span></div>
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <span class="ds-panel-dot" style="background:var(--amber)"></span>
-                        <span class="ds-panel-title">Modules · assignments · study</span>
-                        <div class="ds-panel-right"><span class="ds-badge amber">FEAT-U001 → U015</span><button class="ds-btn amber btn--xs">▶ Start session</button></div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                        <div>
-                            <div class="t-label" style="margin-bottom:8px">Module progress</div>
-                            <div id="uniModulesPanel">
-                                <div class="t-small" style="color:var(--text-faint)"><span class="skel skel-row skel-med" style="display:block"></span></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="t-label" style="margin-bottom:8px">Assignments due</div>
-                            <table class="ds-table">
-                                <thead><tr><th>Assignment</th><th>Due</th><th>Status</th></tr></thead>
-                                <tbody id="uniAssignmentsTbody">
-                                    <tr><td colspan="3" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr>
-                                </tbody>
-                            </table>
+                <!-- ── STUDY SESSION (Pomodoro) ── -->
+                <div class="ds-section-head"><span style="height:1px;background:var(--border);width:16px"></span><span class="t-label-tiny" style="color:var(--cyan)">Study session</span><span style="height:1px;background:var(--border);flex:1"></span></div>
+                <div class="ds-panel" style="display:flex;align-items:center;gap:24px">
+                    <div style="text-align:center">
+                        <div class="t-label" style="margin-bottom:6px">Pomodoro</div>
+                        <div class="t-stat" id="pomodoroDisplay" style="color:var(--cyan);font-size:28px;font-variant-numeric:tabular-nums">25:00</div>
+                        <div style="display:flex;gap:6px;justify-content:center;margin-top:8px">
+                            <button class="ds-btn cyan btn--xs" id="pomodoroStartBtn" onclick="pomodoroToggle()">&#9658; Start</button>
+                            <button class="ds-btn grey btn--xs" onclick="pomodoroReset()">&#8635;</button>
                         </div>
                     </div>
-                    <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-                        <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--cyan);border-radius:8px;text-align:center">
-                            <div class="t-label">Study session</div>
-                            <div class="t-stat" id="pomodoroDisplay" style="color:var(--cyan);font-size:28px;margin-top:6px">25:00</div>
-                            <div style="display:flex;gap:6px;justify-content:center;margin-top:6px">
-                                <button class="ds-btn cyan btn--xs" id="pomodoroStartBtn" onclick="pomodoroToggle()">▶ Start</button>
-                                <button class="ds-btn grey btn--xs" onclick="pomodoroReset()">↺</button>
-                            </div>
-                        </div>
-                        <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--purple);border-radius:8px">
-                            <div class="t-label">Flashcards due</div>
-                            <div class="t-stat" style="color:var(--purple);font-size:22px;margin-top:4px"><span id="flashcardDueCount">—</span></div>
-                            <button class="ds-btn purple btn--xs" style="margin-top:4px">Start session</button>
-                        </div>
-                        <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px">
-                            <div class="t-label">Reading list</div>
-                            <div class="t-stat" style="color:var(--amber);font-size:22px;margin-top:4px">3<span style="font-size:11px;color:var(--text-mute)"> / 7 books</span></div>
-                            <div class="ds-bar amber" style="--pct:42%"></div>
+                    <div style="flex:1">
+                        <div class="t-label" style="margin-bottom:4px">Flashcards due</div>
+                        <div class="t-stat" style="color:var(--purple);font-size:22px"><span id="flashcardDueCount">&#8212;</span></div>
+                        <button class="ds-btn purple btn--xs" style="margin-top:6px" onclick="openFlashcardSession()">Start session</button>
+                    </div>
+                    <div style="flex:1">
+                        <div class="t-label" style="margin-bottom:6px">Recent study sessions</div>
+                        <div id="hlthStudySessions" style="display:flex;flex-direction:column;gap:4px">
+                            <div class="skel skel-row skel-wide"></div>
                         </div>
                     </div>
                 </div>
+
             </div>
 
             <!-- ══ PAGE: OVERVIEW ══ -->
@@ -4533,79 +4461,159 @@ html, body {
 
             <!-- ══ PAGE: UNIVERSITY ══ -->
             <div class="page" id="page-university">
+
                 <div class="ds-page-header">
                     <div class="ds-page-header-left">
                         <span class="ds-page-title">University</span>
-                        <span class="ds-page-subtitle">15 features · modules · assignments · study</span>
+                        <span class="ds-page-subtitle">modules &#183; assignments &#183; flashcards &#183; study</span>
                     </div>
-                    <button class="ds-btn amber" onclick="refreshUniversityPanel()">▶ Start session</button>
+                    <button class="ds-btn amber" onclick="pomodoroToggle()">&#9658; Start session</button>
                 </div>
+
                 <div class="ds-grid-stats">
                     <div class="ds-stat-card ac-amber">
                         <div class="ds-stat-label">Modules</div>
-                        <div class="ds-stat-value amber" id="uniStatModules">—</div>
+                        <div class="ds-stat-value amber" id="uniStatModules">&#8212;</div>
                         <div class="ds-stat-sub">in progress</div>
                     </div>
                     <div class="ds-stat-card ac-cyan">
                         <div class="ds-stat-label">Assignments due</div>
-                        <div class="ds-stat-value cyan" id="uniStatAssignments">—</div>
+                        <div class="ds-stat-value cyan" id="uniStatAssignments">&#8212;</div>
                         <div class="ds-stat-sub">this week</div>
                     </div>
                     <div class="ds-stat-card ac-purple">
                         <div class="ds-stat-label">Flashcards due</div>
-                        <div class="ds-stat-value purple" id="uniStatFlashcards">—</div>
+                        <div class="ds-stat-value purple" id="uniStatFlashcards">&#8212;</div>
                         <div class="ds-stat-sub">for review</div>
                     </div>
                     <div class="ds-stat-card ac-green">
                         <div class="ds-stat-label">Study sessions</div>
-                        <div class="ds-stat-value green" id="uniStatSessions">—</div>
+                        <div class="ds-stat-value green" id="uniStatSessions">&#8212;</div>
                         <div class="ds-stat-sub">this week</div>
                     </div>
                 </div>
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <span class="ds-panel-dot" style="background:var(--amber)"></span>
-                        <span class="ds-panel-title">Modules · assignments · study</span>
-                        <div class="ds-panel-right"><span class="ds-badge amber">FEAT-U001 → U015</span><button class="ds-btn amber btn--xs">▶ Start session</button></div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                        <div>
-                            <div class="t-label" style="margin-bottom:8px">Module progress</div>
-                            <div id="uniModulesPanelB">
-                                <div class="t-small" style="color:var(--text-faint)"><span class="skel skel-row skel-med" style="display:block"></span></div>
+
+                <!-- Pomodoro + Modules + Assignments -->
+                <div style="display:grid;grid-template-columns:200px 1fr 1fr;gap:14px">
+
+                    <!-- SVG Ring Timer -->
+                    <div class="ds-panel" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 14px">
+                        <div class="t-label" style="margin-bottom:2px">Study session</div>
+                        <div style="position:relative;width:110px;height:110px">
+                            <svg width="110" height="110" viewBox="0 0 110 110">
+                                <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+                                <circle id="uni-pomo-ring" cx="55" cy="55" r="46" fill="none" stroke="var(--cyan)" stroke-width="8" stroke-linecap="round" stroke-dasharray="289.03" stroke-dashoffset="0" transform="rotate(-90 55 55)" style="transition:stroke-dashoffset 1s linear"/>
+                            </svg>
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+                                <div id="pomodoroDisplayB" style="font-size:22px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums">25:00</div>
                             </div>
                         </div>
-                        <div>
-                            <div class="t-label" style="margin-bottom:8px">Assignments due</div>
-                            <table class="ds-table">
-                                <thead><tr><th>Assignment</th><th>Due</th><th>Status</th></tr></thead>
-                                <tbody id="uniAssignmentsTbodyB">
-                                    <tr><td colspan="3" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr>
-                                </tbody>
-                            </table>
+                        <div style="display:flex;gap:6px">
+                            <button class="ds-btn xs cyan" id="uniPomoBtn" onclick="pomodoroToggle()">&#9658; Start</button>
+                            <button class="ds-btn xs" onclick="pomodoroReset()">&#8635;</button>
                         </div>
+                        <div id="uniPomoPhase" class="t-label" style="color:var(--text-mute)">focus</div>
                     </div>
-                    <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-                        <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--cyan);border-radius:8px;text-align:center">
-                            <div class="t-label">Study session</div>
-                            <div class="t-stat" id="pomodoroDisplayB" style="color:var(--cyan);font-size:28px;margin-top:6px">25:00</div>
-                            <div style="display:flex;gap:6px;justify-content:center;margin-top:6px">
-                                <button class="ds-btn cyan btn--xs" onclick="pomodoroToggle()">▶ Start</button>
-                                <button class="ds-btn grey btn--xs" onclick="pomodoroReset()">↺</button>
+
+                    <!-- Module progress -->
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot amber"></span>
+                                <span class="t-label">Module progress</span>
                             </div>
                         </div>
-                        <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--purple);border-radius:8px">
-                            <div class="t-label">Flashcards due</div>
-                            <div class="t-stat" style="color:var(--purple);font-size:22px;margin-top:4px"><span id="flashcardDueCountB">—</span></div>
-                            <button class="ds-btn purple btn--xs" style="margin-top:4px">Start session</button>
+                        <div id="uniModulesPanelB" style="display:flex;flex-direction:column;gap:8px">
+                            <div class="skel skel-row skel-wide"></div>
                         </div>
-                        <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px">
-                            <div class="t-label">Reading list</div>
-                            <div class="t-stat" style="color:var(--amber);font-size:22px;margin-top:4px">3<span style="font-size:11px;color:var(--text-mute)"> / 7 books</span></div>
-                            <div class="ds-bar amber" style="--pct:42%"></div>
+                    </div>
+
+                    <!-- Assignments -->
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Assignments due</span>
+                            </div>
+                        </div>
+                        <table class="ds-table">
+                            <thead><tr><th>Assignment</th><th>Due</th><th>Status</th></tr></thead>
+                            <tbody id="uniAssignmentsTbodyB">
+                                <tr><td colspan="3" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+                <!-- Flashcards + Reading list -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Flashcards &#183; <span id="flashcardDueCountB">&#8212;</span> due</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <button class="ds-btn xs purple" onclick="openFlashcardSession()">&#9658; Start session</button>
+                            </div>
+                        </div>
+                        <div id="uni-flashcard-preview" style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">
+                            Loading flashcards&#8230;
+                        </div>
+                    </div>
+
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot amber"></span>
+                                <span class="t-label">Reading list</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <button class="ds-btn xs amber">+ Add book</button>
+                            </div>
+                        </div>
+                        <div id="uni-reading-list" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                        <div style="margin-top:10px">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                                <span class="t-label">Progress</span>
+                                <span class="t-mono" id="uni-reading-progress" style="color:var(--amber)">&#8212;</span>
+                            </div>
+                            <div class="ds-bar amber">
+                                <div class="ds-bar-fill" id="uni-reading-bar" style="width:0%"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Flashcard modal (hidden) -->
+                <div id="uni-fc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;align-items:center;justify-content:center">
+                    <div style="width:440px;background:var(--surface);border:1px solid var(--border-cyan);border-radius:14px;padding:24px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                            <span class="t-label">Flashcard session · <span id="fc-remaining">&#8212;</span> remaining</span>
+                            <button onclick="closeFlashcardSession()" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:20px">&times;</button>
+                        </div>
+                        <div style="perspective:900px;height:160px;cursor:pointer" onclick="flipFlashcard()">
+                            <div id="fc-inner" style="position:relative;width:100%;height:100%;transition:transform 0.5s;transform-style:preserve-3d">
+                                <div id="fc-front" style="position:absolute;inset:0;backface-visibility:hidden;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center">
+                                    <div id="fc-front-text" style="font-size:16px;font-weight:600;color:var(--text)">&#8212;</div>
+                                </div>
+                                <div id="fc-back" style="position:absolute;inset:0;backface-visibility:hidden;background:var(--surface-2);border:1px solid var(--border-cyan);border-radius:10px;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;transform:rotateY(180deg)">
+                                    <div id="fc-back-text" style="font-size:14px;color:var(--cyan)">&#8212;</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="font-size:11px;color:var(--text-mute);text-align:center;margin-top:8px">Tap card to reveal answer</div>
+                        <div style="display:flex;gap:8px;margin-top:16px;justify-content:center">
+                            <button class="ds-btn red" onclick="rateFlashcard(1)">&#128582; Hard</button>
+                            <button class="ds-btn amber" onclick="rateFlashcard(3)">&#128528; OK</button>
+                            <button class="ds-btn green" onclick="rateFlashcard(5)">&#128512; Easy</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- ══ PAGE: OCCULT ══ -->
@@ -4613,72 +4621,132 @@ html, body {
                 <div class="ds-page-header">
                     <div class="ds-page-header-left">
                         <span class="ds-page-title">Occult</span>
-                        <span class="ds-page-subtitle">7 features · spiritual · mindfulness · sigil</span>
+                        <span class="ds-page-subtitle">spiritual &#183; journal &#183; psychology &#183; reflection</span>
                     </div>
+                    <button class="ds-btn purple" onclick="logSpiritualSession()">+ Log session</button>
                 </div>
+
                 <div class="ds-grid-stats">
                     <div class="ds-stat-card ac-purple">
                         <div class="ds-stat-label">Meditation streak</div>
-                        <div class="ds-stat-value purple">—</div>
+                        <div class="ds-stat-value purple" id="occStatMeditation">&#8212;</div>
                         <div class="ds-stat-sub" style="color:var(--text-faint)">days</div>
                     </div>
                     <div class="ds-stat-card ac-cyan">
                         <div class="ds-stat-label">Sigil practice</div>
-                        <div class="ds-stat-value cyan">—</div>
+                        <div class="ds-stat-value cyan" id="occStatSigil">&#8212;</div>
                         <div class="ds-stat-sub" style="color:var(--text-faint)">this week</div>
                     </div>
                     <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">Study sessions</div>
-                        <div class="ds-stat-value amber">—</div>
-                        <div class="ds-stat-sub" style="color:var(--text-faint)">occult reading</div>
-                    </div>
-                    <div class="ds-stat-card ac-green">
-                        <div class="ds-stat-label">Rituals logged</div>
-                        <div class="ds-stat-value green">—</div>
+                        <div class="ds-stat-label">Sessions logged</div>
+                        <div class="ds-stat-value amber" id="occStatSessions">&#8212;</div>
                         <div class="ds-stat-sub" style="color:var(--text-faint)">this month</div>
                     </div>
+                    <div class="ds-stat-card ac-green">
+                        <div class="ds-stat-label">Avg mood</div>
+                        <div class="ds-stat-value green" id="occStatMood">&#8212;</div>
+                        <div class="ds-stat-sub" style="color:var(--text-faint)">7-day avg</div>
+                    </div>
                 </div>
-                <!-- Spiritual progression + Mindfulness -->
+
+                <!-- Journal + Recent entries -->
                 <div class="ds-grid-2">
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <span class="ds-panel-dot" style="background:var(--purple)"></span>
-                            <span class="ds-panel-title">Spiritual progression</span>
-                            <div class="ds-panel-right"><span class="ds-badge purple">FEAT-S001 → S007</span></div>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot amber"></span>
+                                <span class="t-label">Occult journal &#183; dream log</span>
+                            </div>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Morning meditation · 20m</span><span class="ds-badge green">done</span></div>
-                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Sigil routine</span><span class="ds-badge amber">pending</span></div>
-                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Evening reading · 30m</span><span class="ds-badge grey">scheduled</span></div>
-                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Weekly reflection</span><span class="ds-badge cyan">Sunday</span></div>
+                        <textarea class="ds-input" id="occultJournal" placeholder="Log a dream, ritual, insight or synchronicity&#8230;" style="height:100px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box" oninput="updateOccultWordCount()"></textarea>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+                            <button class="ds-btn amber btn--xs" onclick="saveOccultJournal()">Save entry</button>
+                            <span id="occ-word-count" class="t-mono" style="color:var(--text-mute);font-size:10px">0 words</span>
+                        </div>
+                        <div class="t-label" style="margin-top:12px;margin-bottom:6px">Recent entries</div>
+                        <div id="occ-entries" style="display:flex;flex-direction:column;gap:4px">
+                            <span class="skel skel-row skel-wide" style="display:block"></span>
                         </div>
                     </div>
+
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <span class="ds-panel-dot" style="background:var(--green)"></span>
-                            <span class="ds-panel-title">Mindfulness</span>
-                            <div class="ds-panel-right"><span class="ds-badge green">FEAT-S005</span><button class="ds-btn green btn--xs">▶ Start timer</button></div>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Spiritual sessions</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <button class="ds-btn purple btn--xs" onclick="logSpiritualSession()">+ Log</button>
+                            </div>
                         </div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Breath · 4-7-8</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
-                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Body scan</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
-                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Mindful walk</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
-                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Gratitude</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
+                        <div id="occ-sessions" style="display:flex;flex-direction:column;gap:6px">
+                            <span class="skel skel-row skel-wide" style="display:block"></span>
                         </div>
                     </div>
                 </div>
-                <!-- Journal / mood for occult page -->
+
+                <!-- Psychology panel: mood trend + habit tracker -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Mood &#183; 7-day trend</span>
+                            </div>
+                        </div>
+                        <div style="height:80px;position:relative;margin-bottom:10px">
+                            <canvas id="occ-mood-chart" style="width:100%;height:80px"></canvas>
+                        </div>
+                        <div id="occ-crisis-panel" style="padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:10px">
+                            <span class="ds-dot grey"></span>
+                            <span class="t-small" style="color:var(--text-mute)">Weekly summary &#183; loading&#8230;</span>
+                        </div>
+                    </div>
+
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Habit tracker &#183; this week</span>
+                            </div>
+                        </div>
+                        <div id="occ-habit-grid" style="display:flex;flex-direction:column;gap:4px">
+                            <span class="skel skel-row skel-wide" style="display:block"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reading prompt (rotates by day of year) -->
                 <div class="ds-panel">
                     <div class="ds-panel-header">
-                        <span class="ds-panel-dot" style="background:var(--amber)"></span>
-                        <span class="ds-panel-title">Occult journal · dream log</span>
-                        <div class="ds-panel-right"><span class="ds-badge amber">FEAT-S002/S003</span></div>
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot amber"></span>
+                            <span class="t-label">Reading prompt &#183; today</span>
+                        </div>
                     </div>
-                    <textarea class="ds-input" id="occultJournal" placeholder="Log a dream, ritual, insight or synchronicity…" style="height:80px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box"></textarea>
-                    <button class="ds-btn amber btn--xs" style="margin-top:6px;width:100%" onclick="submitJournalEntry()">Save entry</button>
+                    <div id="occ-reading-prompt" style="font-size:14px;color:var(--text-mid);font-style:italic;padding:10px 0"></div>
                 </div>
+
+                <!-- Weekly reflection (collapsible, highlighted on Sundays) -->
+                <div class="ds-panel" id="occ-reflection-panel">
+                    <div class="ds-panel-header" style="cursor:pointer" onclick="toggleOccReflection()">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot cyan"></span>
+                            <span class="t-label" id="occ-reflection-label">Weekly reflection</span>
+                        </div>
+                        <div class="ds-panel-header-right">
+                            <span id="occ-reflection-chev" style="color:var(--text-mute);font-size:12px">&#9660;</span>
+                        </div>
+                    </div>
+                    <div id="occ-reflection-body" style="display:none">
+                        <textarea class="ds-input" id="occReflectionText" placeholder="This week I learned&#8230; What went well&#8230; What to improve&#8230;" style="height:120px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box"></textarea>
+                        <button class="ds-btn cyan btn--xs" style="margin-top:6px" onclick="saveOccReflection()">Save reflection</button>
+                    </div>
+                </div>
+
             </div>
 
+            
         </div><!-- .page-wrap -->
 
         <!-- ══ INPUT ZONE ══ -->
@@ -7311,6 +7379,9 @@ async function pollPermissions() {
             </div>`;
         }).filter(Boolean);
         container.innerHTML = cards.join('');
+        // Update ticker
+        var count = cards.length;
+        ['tickerApprovals','tickerApprovals2'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=count; });
     } catch (_) {}
 }
 
@@ -8653,6 +8724,9 @@ async function fetchCommandProgress() {
             if (el) el.textContent = d.totalRuns;
             if (sl) sl.textContent = d.successRate + '% success';
             if (cl) cl.textContent = '$' + parseFloat(d.totalCostUsd).toFixed(2);
+            // Update ticker credit
+            var creditTxt = '$' + parseFloat(d.totalCostUsd).toFixed(2) + ' spent';
+            ['tickerCreditVal','tickerCreditVal2'].forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=creditTxt; });
         }
     } catch(e) {}
     try {
@@ -9684,6 +9758,509 @@ function refreshBizPage() {
     window.switchPage = function(name){
         if (typeof _prevBiz==='function') _prevBiz(name);
         if (name==='business') refreshBizPage();
+    };
+})();
+
+// ── UNIVERSITY PAGE ───────────────────────────────────────────────────────────
+var _fcCards = [], _fcIndex = 0, _fcFlipped = false;
+var _uniPomoTotal = 25 * 60, _uniPomoRingCirc = 289.03;
+
+function updateUniPomoRing() {
+    var ring = document.getElementById('uni-pomo-ring');
+    var dispB = document.getElementById('pomodoroDisplayB');
+    var dispMain = document.getElementById('pomodoroDisplay');
+    if (!ring) return;
+    var txt = dispMain ? dispMain.textContent : '25:00';
+    if (dispB) dispB.textContent = txt;
+    var parts = txt.split(':');
+    var rem = (parseInt(parts[0])||0)*60 + (parseInt(parts[1])||0);
+    var frac = rem / _uniPomoTotal;
+    ring.setAttribute('stroke-dashoffset', (_uniPomoRingCirc * (1 - frac)).toFixed(2));
+}
+
+function fetchUniModules() {
+    fetch('/api/life/university/modules').then(function(r){return r.json();}).then(function(d){
+        var mods = d.modules || [];
+        var panel = document.getElementById('uniModulesPanelB');
+        var statEl = document.getElementById('uniStatModules');
+        if (statEl) statEl.textContent = mods.length;
+        if (!panel) return;
+        if (!mods.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No modules yet</div>'; return; }
+        panel.innerHTML = mods.map(function(m){
+            var pct = m.progress || 0;
+            return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:600;color:var(--text)">'+(m.name||'Module')+'</span><span class="t-mono" style="color:var(--amber)">'+(m.grade||'—')+'</span></div><div class="ds-bar amber"><div class="ds-bar-fill" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+pct+'% complete</div></div>';
+        }).join('');
+    }).catch(function(){});
+}
+
+function fetchUniAssignments() {
+    fetch('/api/life/university/assignments').then(function(r){return r.json();}).then(function(d){
+        var asgns = d.assignments || [];
+        var tb = document.getElementById('uniAssignmentsTbodyB');
+        var statEl = document.getElementById('uniStatAssignments');
+        var now = new Date();
+        var weekEnd = new Date(now); weekEnd.setDate(now.getDate()+7);
+        var dueThisWeek = asgns.filter(function(a){ var dd = new Date(a.due_date); return dd>=now && dd<=weekEnd; });
+        if (statEl) statEl.textContent = dueThisWeek.length;
+        if (!tb) return;
+        if (!asgns.length) { tb.innerHTML = '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-faint);font-style:italic">No assignments</td></tr>'; return; }
+        tb.innerHTML = asgns.slice(0,8).map(function(a){
+            var due = a.due_date ? new Date(a.due_date).toLocaleDateString() : '—';
+            var st = a.status||'pending';
+            var badgeCol = st==='submitted'?'green':st==='overdue'?'red':'amber';
+            return '<tr><td style="font-weight:600">'+(a.title||'Assignment')+'</td><td class="t-mono" style="font-size:10px">'+due+'</td><td><span class="ds-badge '+badgeCol+'" style="font-size:9px">'+st+'</span></td></tr>';
+        }).join('');
+    }).catch(function(){});
+}
+
+function fetchUniFlashcards() {
+    fetch('/api/life/university/flashcards').then(function(r){return r.json();}).then(function(d){
+        var cards = d.flashcards || [];
+        _fcCards = cards;
+        var countEl = document.getElementById('flashcardDueCountB');
+        var statEl = document.getElementById('uniStatFlashcards');
+        var prev = document.getElementById('uni-flashcard-preview');
+        if (countEl) countEl.textContent = d.due || cards.length;
+        if (statEl) statEl.textContent = d.due || cards.length;
+        if (prev) {
+            if (!cards.length) {
+                prev.innerHTML = '<div style="color:var(--green);padding:16px;text-align:center">&#10003; All caught up — no cards due</div>';
+            } else {
+                prev.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--text);padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px">'+(cards[0].front||'?')+'</div><div style="font-size:10px;color:var(--text-mute);margin-top:6px">'+cards.length+' cards due · tap "Start session" to review</div>';
+            }
+        }
+    }).catch(function(){
+        var prev = document.getElementById('uni-flashcard-preview');
+        if (prev) prev.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">Flashcards unavailable</div>';
+    });
+}
+
+function fetchUniReadingList() {
+    fetch('/api/life/university/reading-list').then(function(r){return r.json();}).then(function(d){
+        var books = d.books || [];
+        var panel = document.getElementById('uni-reading-list');
+        var progEl = document.getElementById('uni-reading-progress');
+        var barEl = document.getElementById('uni-reading-bar');
+        if (!panel) return;
+        if (!books.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No books added yet</div>'; return; }
+        var done = books.filter(function(b){ return b.status==='completed'; }).length;
+        var pct = Math.round(done/books.length*100);
+        if (progEl) progEl.textContent = done+' / '+books.length+' books · '+pct+'%';
+        if (barEl) barEl.style.width = pct+'%';
+        panel.innerHTML = books.slice(0,6).map(function(b){
+            var isDone = b.status==='completed';
+            return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="width:14px;height:14px;border:1.5px solid '+(isDone?'var(--green)':'var(--border-strong)')+';border-radius:3px;background:'+(isDone?'var(--green)':'transparent')+';display:grid;place-items:center;flex-shrink:0">'+(isDone?'&#10003;':'')+'</span><span style="font-size:12px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(b.title||'Book')+'</span><span class="t-mono" style="font-size:10px;color:var(--text-mute)">'+(b.author||'')+'</span></div>';
+        }).join('');
+    }).catch(function(){
+        var panel = document.getElementById('uni-reading-list');
+        if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Reading list unavailable</div>';
+    });
+}
+
+function openFlashcardSession() {
+    _fcIndex = 0; _fcFlipped = false;
+    var modal = document.getElementById('uni-fc-modal');
+    if (!modal) return;
+    if (!_fcCards.length) { if(typeof showToast==='function') showToast('No flashcards due'); return; }
+    modal.style.display = 'flex';
+    loadFlashcard();
+}
+
+function closeFlashcardSession() {
+    var modal = document.getElementById('uni-fc-modal');
+    if (modal) modal.style.display = 'none';
+    fetchUniFlashcards();
+}
+
+function loadFlashcard() {
+    var card = _fcCards[_fcIndex];
+    if (!card) { closeFlashcardSession(); return; }
+    var front = document.getElementById('fc-front-text');
+    var back = document.getElementById('fc-back-text');
+    var rem = document.getElementById('fc-remaining');
+    var inner = document.getElementById('fc-inner');
+    if (front) front.textContent = card.front || '?';
+    if (back) back.textContent = card.back || '?';
+    if (rem) rem.textContent = (_fcCards.length - _fcIndex) + ' remaining';
+    if (inner) inner.style.transform = '';
+    _fcFlipped = false;
+}
+
+function flipFlashcard() {
+    var inner = document.getElementById('fc-inner');
+    if (!inner) return;
+    _fcFlipped = !_fcFlipped;
+    inner.style.transform = _fcFlipped ? 'rotateY(180deg)' : '';
+}
+
+function rateFlashcard(ease) {
+    if (!_fcFlipped) { flipFlashcard(); return; }
+    var card = _fcCards[_fcIndex];
+    if (card) {
+        fetch('/api/life/university/flashcards/'+card.id+'/review', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ease:ease}) }).catch(function(){});
+    }
+    _fcIndex++;
+    if (_fcIndex >= _fcCards.length) { closeFlashcardSession(); } else { loadFlashcard(); }
+}
+
+function initUniversityPage() {
+    fetchUniModules();
+    fetchUniAssignments();
+    fetchUniFlashcards();
+    fetchUniReadingList();
+    updateUniPomoRing();
+}
+
+// Sync ring when pomodoro ticks
+(function(){
+    var _origToggle = window.pomodoroToggle;
+    if (typeof _origToggle === 'function') {
+        window.pomodoroToggle = function(){
+            _origToggle.apply(this, arguments);
+            setTimeout(function syncRing(){
+                updateUniPomoRing();
+                var btn = document.getElementById('uniPomoBtn');
+                var dispMain = document.getElementById('pomodoroDisplay');
+                if (btn && dispMain) btn.textContent = (window._pomodoroRunning ? '⏸ Pause' : '▶ Start');
+                if (document.getElementById('uni-pomo-ring')) setTimeout(syncRing, 1000);
+            }, 100);
+        };
+    }
+})();
+
+(function(){
+    var _prevUni = window.switchPage;
+    window.switchPage = function(name){
+        if (typeof _prevUni==='function') _prevUni(name);
+        if (name==='university') initUniversityPage();
+    };
+})();
+
+// ── HEALTH PAGE ───────────────────────────────────────────────────────────────
+var _hlthSleepChart = null;
+
+function initHealthSleepChart(data) {
+    if (typeof Chart === 'undefined') return;
+    var canvas = document.getElementById('hlth-sleep-chart');
+    if (!canvas) return;
+    if (_hlthSleepChart) { try { _hlthSleepChart.destroy(); } catch(e){} }
+    var labels = data.map(function(d){ return d.label||''; });
+    var values = data.map(function(d){ return d.hours||0; });
+    _hlthSleepChart = new Chart(canvas, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ data: values, backgroundColor: values.map(function(v){ return v>=7?'rgba(124,111,255,0.7)':v>=6?'rgba(245,166,35,0.6)':'rgba(255,77,106,0.55)'; }), borderRadius: 3, barPercentage: 0.7 }] },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{ ticks:{color:'rgba(255,255,255,0.4)',font:{size:9}}, grid:{display:false} }, y:{ min:0, max:10, ticks:{color:'rgba(255,255,255,0.4)',font:{size:9},stepSize:2}, grid:{color:'rgba(255,255,255,0.05)'} } } }
+    });
+}
+
+function fetchHealthSleep() {
+    fetch('/api/health/sleep?limit=7').then(function(r){return r.json();}).then(function(d){
+        var entries = d.entries || d.data || [];
+        var statEl = document.getElementById('hlthStatSleep');
+        var lastEl = document.getElementById('hlthSleepLast');
+        if (entries.length) {
+            var last = entries[0];
+            if (statEl) statEl.textContent = (last.hours||'—')+'h';
+            if (lastEl) lastEl.textContent = 'Last night · '+(last.hours||'—')+'h · quality '+(last.quality||'—')+'/10';
+        }
+        var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        var chartData = entries.slice(0,7).reverse().map(function(e){
+            var dt = e.date ? new Date(e.date) : new Date();
+            return { label: days[dt.getDay()], hours: parseFloat(e.hours||0) };
+        });
+        if (chartData.length < 7) {
+            for (var i = chartData.length; i < 7; i++) chartData.unshift({ label:'—', hours:0 });
+        }
+        initHealthSleepChart(chartData);
+    }).catch(function(){
+        initHealthSleepChart([{label:'M',hours:0},{label:'T',hours:0},{label:'W',hours:0},{label:'T',hours:0},{label:'F',hours:0},{label:'S',hours:0},{label:'S',hours:0}]);
+    });
+}
+
+function fetchHealthSupplements() {
+    fetch('/api/health/supplements').then(function(r){return r.json();}).then(function(d){
+        var sups = d.supplements || d.data || [];
+        var panel = document.getElementById('hlthSupplementList');
+        if (!panel) return;
+        if (!sups.length) {
+            panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No supplements configured</div>';
+            return;
+        }
+        panel.innerHTML = sups.map(function(s){
+            var taken = s.taken_today || false;
+            return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px" onclick="toggleSupplement(\''+s.id+'\')" style="cursor:pointer"><span style="width:16px;height:16px;border:1.5px solid '+(taken?'var(--green)':'var(--border-strong)')+';border-radius:4px;background:'+(taken?'var(--green)':'transparent')+';color:#06080c;display:grid;place-items:center;font-size:11px;font-weight:700">'+(taken?'&#10003;':'')+'</span><span class="t-small" style="color:var(--text)">'+(s.name||'Supplement')+(s.dose?' &#183; '+s.dose:'')+'</span><span class="t-mono" style="color:'+(taken?'var(--green)':'var(--text-mute)')+'">'+( taken?'taken':'pending')+'</span></div>';
+        }).join('');
+    }).catch(function(){
+        var panel = document.getElementById('hlthSupplementList');
+        if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Supplements unavailable</div>';
+    });
+}
+
+function toggleSupplement(id) {
+    fetch('/api/health/supplements/'+id+'/toggle', { method:'POST' }).then(function(r){return r.json();}).then(function(d){ if(d.ok) fetchHealthSupplements(); }).catch(function(){});
+}
+
+function fetchSpiritualSessions() {
+    fetch('/api/life/spiritual/sessions').then(function(r){return r.json();}).then(function(d){
+        var sessions = d.sessions || [];
+        var panel = document.getElementById('spiritualSessionsList');
+        if (!panel) return;
+        if (!sessions.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No sessions logged yet</div>'; return; }
+        panel.innerHTML = sessions.slice(0,5).map(function(s){
+            var dt = s.created_at ? new Date(s.created_at).toLocaleDateString() : '—';
+            return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span class="ds-dot purple"></span><span style="flex:1;font-size:12px;color:var(--text)">'+(s.practice_type||'Practice')+'</span><span class="t-mono" style="font-size:10px;color:var(--text-mute)">'+(s.duration_minutes?s.duration_minutes+'m':'')+' &#183; '+dt+'</span></div>';
+        }).join('');
+    }).catch(function(){});
+}
+
+function fetchHealthMetrics() {
+    fetch('/api/health/metrics').then(function(r){return r.json();}).then(function(d){
+        var metrics = d.metrics || d.data || {};
+        var w = document.getElementById('hlthWeight');
+        var bp = document.getElementById('hlthBP');
+        var hr = document.getElementById('hlthHR');
+        if (w) w.textContent = metrics.weight ? metrics.weight+'kg' : '—';
+        if (bp) bp.textContent = metrics.bp_systolic ? metrics.bp_systolic+'mmHg' : '—';
+        if (hr) hr.textContent = metrics.hr ? metrics.hr+'bpm' : '—';
+    }).catch(function(){});
+}
+
+function fetchHealthStudySessions() {
+    fetch('/api/life/university/sessions?limit=3').then(function(r){return r.json();}).then(function(d){
+        var sessions = d.sessions || [];
+        var panel = document.getElementById('hlthStudySessions');
+        var statEl = document.getElementById('hlthStatStudy');
+        var now = new Date(); var weekAgo = new Date(now); weekAgo.setDate(now.getDate()-7);
+        var thisWeek = sessions.filter(function(s){ return new Date(s.created_at)>=weekAgo; });
+        if (statEl) statEl.textContent = thisWeek.length;
+        if (!panel) return;
+        if (!sessions.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No study sessions yet</div>'; return; }
+        panel.innerHTML = sessions.map(function(s){
+            var mins = Math.round((s.duration_seconds||0)/60);
+            return '<div style="font-size:11px;color:var(--text-mid);padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">'+(s.session_type||'study')+' &#183; '+mins+'m &#183; <span style="color:var(--text-mute)">'+(s.created_at||'').split('T')[0]+'</span></div>';
+        }).join('');
+    }).catch(function(){});
+}
+
+// Word count for journal textarea
+(function(){
+    var ta = document.getElementById('journalTextarea');
+    var wc = document.getElementById('hlthJournalWordCount');
+    if (ta && wc) {
+        ta.addEventListener('input', function(){
+            var words = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0;
+            wc.textContent = words + ' word' + (words===1?'':'s');
+        });
+    }
+})();
+
+function logSpiritualSession() {
+    var t = prompt('Practice type (meditation/sigil/gratitude/other):','meditation');
+    if (!t) return;
+    var dur = parseInt(prompt('Duration in minutes:','20')||'0');
+    fetch('/api/life/spiritual/log', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({practice_type:t, duration_minutes:dur}) })
+        .then(function(r){return r.json();}).then(function(d){ if(d.ok) fetchSpiritualSessions(); }).catch(function(){});
+}
+
+function logHealthVoice() { if(typeof toggleListening==='function') toggleListening(); }
+
+function initHealthPage() {
+    fetchHealthSleep();
+    fetchHealthSupplements();
+    fetchSpiritualSessions();
+    fetchHealthMetrics();
+    fetchHealthStudySessions();
+}
+
+(function(){
+    var _prevHealth = window.switchPage;
+    window.switchPage = function(name){
+        if (typeof _prevHealth==='function') _prevHealth(name);
+        if (name==='health') initHealthPage();
+    };
+})();
+
+// ── OCCULT PAGE ───────────────────────────────────────────────────────────────
+var _occReadingPrompts = [
+    'Explore the symbolic language of your dreams — what recurring images appeared this week?',
+    'Meditate on the Hermetic principle: "As above, so below." Where do you see this reflected in your life?',
+    'Journal about synchronicities you\'ve noticed. What patterns keep emerging?',
+    'Study the Tarot card of the day. How does its energy resonate with your current situation?',
+    'Reflect on your shadow self — what aspects are you avoiding integrating?',
+    'Explore a new sigil practice. Set an intention and observe how it manifests.',
+    'Read about a spiritual tradition different from your current path. What resonates?',
+    'Practice scrying — gaze into water, fire, or a mirror. What images arise?',
+    'Journal about your relationship with death and impermanence. What does it teach you?',
+    'Explore sacred geometry — find the golden ratio in nature or architecture today.',
+    'Meditate on the four elements. Which do you need to balance in your life right now?',
+    'Research a historical occultist or mystical figure. What can you learn from their path?',
+    'Perform a ritual of gratitude — what have you manifested recently that deserves acknowledgment?',
+    'Explore your ancestral lineage energetically. What gifts and wounds have you inherited?',
+    'Study plant consciousness — spend time in nature and observe what messages arise.'
+];
+
+function buildOccReadingPrompt() {
+    var el = document.getElementById('occ-reading-prompt');
+    if (!el) return;
+    var now = new Date();
+    var start = new Date(now.getFullYear(), 0, 0);
+    var diff = now - start;
+    var dayOfYear = Math.floor(diff / 86400000);
+    el.textContent = _occReadingPrompts[dayOfYear % _occReadingPrompts.length];
+}
+
+function updateOccultWordCount() {
+    var ta = document.getElementById('occultJournal');
+    var wc = document.getElementById('occ-word-count');
+    if (!ta || !wc) return;
+    var words = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0;
+    wc.textContent = words + ' word' + (words===1?'':'s');
+}
+
+function saveOccultJournal() {
+    var ta = document.getElementById('occultJournal');
+    if (!ta || !ta.value.trim()) return;
+    fetch('/api/life/journal/entries', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({entry_text:ta.value.trim()}) })
+        .then(function(r){return r.json();}).then(function(d){
+            if (d.ok) { ta.value=''; updateOccultWordCount(); fetchOccEntries(); if(typeof showToast==='function') showToast('Entry saved'); }
+        }).catch(function(){});
+}
+
+function fetchOccEntries() {
+    fetch('/api/life/journal/entries?limit=5').then(function(r){return r.json();}).then(function(d){
+        var entries = d.entries || [];
+        var panel = document.getElementById('occ-entries');
+        if (!panel) return;
+        if (!entries.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No entries yet</div>'; return; }
+        panel.innerHTML = entries.map(function(e){
+            var dt = e.created_at ? new Date(e.created_at).toLocaleDateString() : '—';
+            var preview = (e.entry_text||'').slice(0,80) + ((e.entry_text||'').length>80?'…':'');
+            return '<div style="padding:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px"><div style="font-size:10px;color:var(--text-mute);margin-bottom:3px">'+dt+'</div><div style="font-size:12px;color:var(--text-mid)">'+preview+'</div></div>';
+        }).join('');
+    }).catch(function(){});
+}
+
+function fetchOccSessions() {
+    fetch('/api/life/spiritual/sessions').then(function(r){return r.json();}).then(function(d){
+        var sessions = d.sessions || [];
+        var panel = document.getElementById('occ-sessions');
+        var now = new Date();
+        var monthAgo = new Date(now); monthAgo.setDate(now.getDate()-30);
+        var thisMonth = sessions.filter(function(s){ return new Date(s.created_at)>=monthAgo; });
+        var statEl = document.getElementById('occStatSessions');
+        if (statEl) statEl.textContent = thisMonth.length;
+        // Count meditation streak
+        var streak = 0; var prevDay = '';
+        sessions.slice().reverse().forEach(function(s){
+            if (s.practice_type==='meditation') {
+                var d2 = (s.created_at||'').split('T')[0];
+                if (!prevDay || d2===prevDay) { prevDay=d2; streak++; }
+            }
+        });
+        var streakEl = document.getElementById('occStatMeditation');
+        if (streakEl) streakEl.textContent = streak;
+        if (!panel) return;
+        if (!sessions.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No sessions logged yet</div>'; return; }
+        panel.innerHTML = sessions.slice(0,6).map(function(s){
+            var dt = (s.created_at||'').split('T')[0];
+            return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span class="ds-dot purple"></span><span style="flex:1;font-size:12px;color:var(--text)">'+(s.practice_type||'session')+'</span><span class="t-mono" style="font-size:10px;color:var(--text-mute)">'+(s.duration_minutes?s.duration_minutes+'m':'')+' &#183; '+dt+'</span></div>';
+        }).join('');
+    }).catch(function(){});
+}
+
+var _occMoodChart = null;
+function fetchOccMood() {
+    fetch('/api/life/journal/entries?limit=7').then(function(r){return r.json();}).then(function(d){
+        var entries = d.entries || [];
+        var moods = entries.slice(0,7).reverse().map(function(e){ return e.mood_score||null; });
+        var avg = moods.filter(Boolean).reduce(function(s,v){return s+v;},0) / (moods.filter(Boolean).length||1);
+        var statEl = document.getElementById('occStatMood');
+        if (statEl) statEl.textContent = avg>0 ? avg.toFixed(1)+'/10' : '—';
+        if (typeof Chart==='undefined') return;
+        var canvas = document.getElementById('occ-mood-chart');
+        if (!canvas) return;
+        if (_occMoodChart) { try{_occMoodChart.destroy();}catch(e){} }
+        _occMoodChart = new Chart(canvas, {
+            type:'line',
+            data:{ labels: moods.map(function(_,i){return 'd'+(i+1);}), datasets:[{ data:moods, borderColor:'rgba(124,111,255,0.8)', backgroundColor:'rgba(124,111,255,0.1)', fill:true, tension:0.4, pointRadius:3, borderWidth:2 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'rgba(255,255,255,0.35)',font:{size:9}},grid:{display:false}}, y:{min:0,max:10,ticks:{color:'rgba(255,255,255,0.35)',font:{size:9},stepSize:5},grid:{color:'rgba(255,255,255,0.05)'}} } }
+        });
+    }).catch(function(){});
+}
+
+function fetchOccCrisisCheck() {
+    fetch('/api/life/psychology/crisis-check').then(function(r){return r.json();}).then(function(d){
+        var panel = document.getElementById('occ-crisis-panel');
+        if (!panel) return;
+        if (d.flagged) {
+            panel.innerHTML = '<span class="ds-dot red pulse"></span><span class="t-small" style="color:var(--red)">Low mood detected &#183; avg '+d.avgMood+'/10 &#183; consider reaching out</span>';
+        } else {
+            panel.innerHTML = '<span class="ds-dot green"></span><span class="t-small" style="color:var(--green)">Mood stable &#183; avg '+(d.avgMood||'—')+'/10 from '+( d.entriesAnalysed||0)+' entries</span>';
+        }
+    }).catch(function(){
+        var panel = document.getElementById('occ-crisis-panel');
+        if (panel) panel.innerHTML = '<span class="ds-dot grey"></span><span class="t-small" style="color:var(--text-mute)">Weekly summary unavailable</span>';
+    });
+}
+
+function fetchOccHabits() {
+    fetch('/api/life/habits').then(function(r){return r.json();}).then(function(d){
+        var habits = d.habits || [];
+        var grid = document.getElementById('occ-habit-grid');
+        if (!grid) return;
+        if (!habits.length) { grid.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No habits configured</div>'; return; }
+        var days = ['M','T','W','T','F','S','S'];
+        grid.innerHTML = habits.slice(0,5).map(function(h){
+            var dots = days.map(function(day){
+                return '<span style="width:18px;height:18px;border-radius:4px;background:rgba(255,255,255,0.06);border:1px solid var(--border);display:inline-block" title="'+day+'"></span>';
+            }).join('');
+            return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="width:120px;font-size:11px;color:var(--text)">'+(h.habit_name||'Habit')+'</span><div style="display:flex;gap:3px">'+dots+'</div></div>';
+        }).join('');
+    }).catch(function(){
+        var grid = document.getElementById('occ-habit-grid');
+        if (grid) grid.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Habits unavailable</div>';
+    });
+}
+
+function toggleOccReflection() {
+    var body = document.getElementById('occ-reflection-body');
+    var chev = document.getElementById('occ-reflection-chev');
+    if (!body) return;
+    var open = body.style.display === 'block';
+    body.style.display = open ? 'none' : 'block';
+    if (chev) chev.textContent = open ? '▼' : '▲';
+}
+
+function saveOccReflection() {
+    var ta = document.getElementById('occReflectionText');
+    if (!ta || !ta.value.trim()) return;
+    fetch('/api/life/journal/entries', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({entry_text:'[Weekly Reflection] '+ta.value.trim()}) })
+        .then(function(r){return r.json();}).then(function(d){ if(d.ok && typeof showToast==='function') showToast('Reflection saved'); }).catch(function(){});
+}
+
+function initOccultPage() {
+    buildOccReadingPrompt();
+    fetchOccEntries();
+    fetchOccSessions();
+    fetchOccMood();
+    fetchOccCrisisCheck();
+    fetchOccHabits();
+    // Highlight reflection on Sundays
+    var isSunday = new Date().getDay() === 0;
+    var lbl = document.getElementById('occ-reflection-label');
+    var panel = document.getElementById('occ-reflection-panel');
+    if (isSunday) {
+        if (lbl) lbl.innerHTML = 'Weekly reflection <span class="ds-badge cyan" style="font-size:9px;margin-left:6px">Sunday &#9654;</span>';
+        if (panel) panel.style.border = '1px solid rgba(0,212,255,0.3)';
+        toggleOccReflection();
+    }
+}
+
+(function(){
+    var _prevOcc = window.switchPage;
+    window.switchPage = function(name){
+        if (typeof _prevOcc==='function') _prevOcc(name);
+        if (name==='occult') initOccultPage();
     };
 })();
 
