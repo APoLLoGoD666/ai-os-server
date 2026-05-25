@@ -3291,215 +3291,136 @@ html, body {
                         <span class="ds-page-subtitle">Pipeline control center</span>
                     </div>
                     <div style="display:flex;gap:8px">
-                        <button class="ds-btn cyan" onclick="masterRunNext()">▶ Run next feature</button>
-                        <button class="ds-btn amber" title="Run all 109 features sequentially">⚡ Run all 109</button>
+                        <button class="ds-btn cyan" onclick="masterRunNext()">&#9658; Run next feature</button>
+                        <button class="ds-btn amber" onclick="masterRunAll()" title="Run all 109 features sequentially">&#9889; Run all 109</button>
                     </div>
                 </div>
 
-                <!-- Stat cards -->
+                <!-- Stat strip -->
                 <div class="ds-grid-stats">
                     <div class="ds-stat-card ac-cyan">
                         <div class="ds-stat-label">Features complete</div>
-                        <div class="ds-stat-value cyan" id="cmdStatFeatures">0<span style="font-size:14px;color:var(--text-mute);font-weight:500">/109</span></div>
+                        <div class="ds-stat-value cyan" id="cmdStatFeatures">&#8212;<span style="font-size:14px;color:var(--text-mute);font-weight:500">/109</span></div>
                         <div class="ds-bar" style="margin-top:4px"><div class="ds-bar-fill" id="cmdFeatureBar" style="width:0%"></div></div>
                     </div>
                     <div class="ds-stat-card ac-green">
                         <div class="ds-stat-label">Pipeline cost today</div>
                         <div class="ds-stat-value green" id="cmdStatCost">$0.00</div>
-                        <div class="ds-stat-sub"><span class="ds-dot amber"></span><span style="color:var(--amber)">Credit <span id="cmdStatCredit">$14.61</span> remaining</span></div>
+                        <div class="ds-stat-sub"><span class="ds-dot amber"></span><span style="color:var(--amber)">Credit <span id="cmdStatCredit">&#8212;</span> remaining</span></div>
                     </div>
                     <div class="ds-stat-card ac-purple">
-                        <div class="ds-stat-label">Agents status</div>
-                        <div class="ds-stat-value" style="color:var(--text)">8 <span style="font-size:13px;color:var(--text-mute);font-weight:500">STANDBY</span></div>
-                        <div class="ds-stat-sub" style="gap:5px">
-                            <span class="ds-dot" style="background:var(--agent-architect);box-shadow:0 0 6px var(--agent-architect)"></span>
-                            <span class="ds-dot" style="background:var(--agent-developer);box-shadow:0 0 6px var(--agent-developer)"></span>
-                            <span class="ds-dot" style="background:var(--agent-reviewer);box-shadow:0 0 6px var(--agent-reviewer)"></span>
-                            <span class="ds-dot" style="background:var(--agent-validator);box-shadow:0 0 6px var(--agent-validator)"></span>
-                            <span class="ds-dot" style="background:var(--agent-tester);box-shadow:0 0 6px var(--agent-tester)"></span>
-                            <span class="ds-dot" style="background:var(--agent-committer);box-shadow:0 0 6px var(--agent-committer)"></span>
-                        </div>
+                        <div class="ds-stat-label">Pipeline runs</div>
+                        <div class="ds-stat-value" style="color:var(--text)" id="cmdStatRuns">&#8212;</div>
+                        <div class="ds-stat-sub"><span class="ds-dot purple"></span><span style="color:var(--text-mute)" id="cmdStatSuccess">&#8212; success rate</span></div>
                     </div>
                     <div class="ds-stat-card ac-red">
                         <div class="ds-stat-label">Pending approvals</div>
-                        <div class="ds-stat-value red" id="cmdStatApprovals">7</div>
+                        <div class="ds-stat-value red" id="cmdStatApprovals">&#8212;</div>
                         <div class="ds-stat-sub"><span class="ds-dot red pulse"></span><span style="color:var(--red)">Action required</span></div>
                     </div>
                 </div>
 
-                <!-- Apex Core Orb -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left">
-                            <span class="ds-dot cyan"></span>
-                            <span class="t-label">Apex Core</span>
-                        </div>
-                        <div class="ds-panel-header-right">
-                            <span class="ds-badge cyan" id="orbStateBadge">Standby</span>
-                            <button class="ds-btn xs cyan" onclick="masterRunNext()">▶ Run next</button>
-                        </div>
-                    </div>
-                    <div class="orb-row-ds">
-                        <!-- Left system status -->
-                        <div class="orb-side-ds left">
-                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Supabase</span><span class="orb-sys-status" style="color:var(--green)">Online</span></div>
-                            <div class="orb-sys-row"><span class="ds-dot cyan"></span><span class="orb-sys-name">Voice Pipeline</span><span class="orb-sys-status" style="color:var(--cyan)">Ready</span></div>
-                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Memory</span><span class="orb-sys-status" style="color:var(--green)">Connected</span></div>
-                        </div>
-                        <!-- Central orb (keeps existing click-to-speak) -->
-                        <div class="cmd-orb-shell">
-                            <div class="cmd-orb-ring r1"></div>
-                            <div class="cmd-orb-ring r2"></div>
-                            <div class="cmd-orb-ring r3"></div>
-                            <!-- Keep the existing interactive orb inside -->
-                            <div class="cmd-orb-core" onclick="toggleListening()" title="Click to speak" id="orb" style="cursor:pointer">
-                                <div class="cmd-orb-name">APEX</div>
-                                <div class="cmd-orb-state" id="orbStatus">Standby</div>
-                            </div>
-                        </div>
-                        <!-- Right system status -->
-                        <div class="orb-side-ds right">
-                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">GitHub</span><span class="orb-sys-status" style="color:var(--green)">Connected</span></div>
-                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Render</span><span class="orb-sys-status" style="color:var(--green)">Online</span></div>
-                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Deepgram</span><span class="orb-sys-status" style="color:var(--green)">Active</span></div>
-                        </div>
-                    </div>
-                    <!-- Waveform / listening indicator (keep existing JS-driven element) -->
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:8px">
-                        <div class="waveform" id="waveform" style="display:none">
-                            <div class="wb"></div><div class="wb"></div><div class="wb"></div>
-                            <div class="wb"></div><div class="wb"></div><div class="wb"></div>
-                            <div class="wb"></div>
-                        </div>
-                    </div>
-                </div>
+                <!-- 3-column main grid: 280px | 1fr | 280px -->
+                <div style="display:grid;grid-template-columns:280px 1fr 280px;gap:12px;align-items:start">
 
-                <!-- Agent Pipeline -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left">
-                            <span class="ds-dot purple"></span>
-                            <span class="t-label">Agent Pipeline</span>
-                        </div>
-                        <div class="ds-panel-header-right">
-                            <span class="ds-badge grey">8 agents</span>
-                            <button class="ds-btn xs cyan" onclick="switchPage('system')">View logs</button>
-                        </div>
-                    </div>
-                    <div class="ds-grid-agents">
-                        <div class="ds-agent architect" onclick="openAgentDrawer('architect')">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                                <span class="t-label" style="color:var(--agent-architect)">Architect</span>
-                                <span class="ds-badge grey">Idle</span>
-                            </div>
-                            <div class="t-small">Plans feature spec · awaiting trigger</div>
-                        </div>
-                        <div class="ds-agent developer" onclick="openAgentDrawer('developer')">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                                <span class="t-label" style="color:var(--agent-developer)">Developer</span>
-                                <span class="ds-badge cyan">Standby</span>
-                            </div>
-                            <div class="t-small">Last: FEAT-H009 · server.js patch</div>
-                        </div>
-                        <div class="ds-agent reviewer" onclick="openAgentDrawer('reviewer')">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                                <span class="t-label" style="color:var(--agent-reviewer)">Reviewer</span>
-                                <span class="ds-badge grey">Idle</span>
-                            </div>
-                            <div class="t-small">Awaiting developer output</div>
-                        </div>
-                        <div class="ds-agent validator" onclick="openAgentDrawer('validator')">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                                <span class="t-label" style="color:var(--agent-validator)">Validator</span>
-                                <span class="ds-badge green">Complete</span>
-                            </div>
-                            <div class="t-small">Passed · 0 errors · last run 28m ago</div>
-                        </div>
-                        <div class="ds-agent tester" onclick="openAgentDrawer('tester')">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                                <span class="t-label" style="color:var(--agent-tester)">Tester</span>
-                                <span class="ds-badge grey">Idle</span>
-                            </div>
-                            <div class="t-small">node --check · suite ready</div>
-                        </div>
-                        <div class="ds-agent committer" onclick="openAgentDrawer('committer')">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                                <span class="t-label" style="color:var(--agent-committer)">Committer</span>
-                                <span class="ds-badge grey">Idle</span>
-                            </div>
-                            <div class="t-small">Approval required before push</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Roadmap + Recent Runs -->
-                <div class="ds-grid-2">
-                    <div class="ds-panel">
+                    <!-- LEFT: Roadmap progress -->
+                    <div class="ds-panel" style="margin:0">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Roadmap Progress</span></div>
-                            <div class="ds-panel-header-right">
-                                <span class="ds-badge cyan">1 / 109</span>
-                                <button class="ds-btn xs" onclick="refreshRoadmapPanel()">↻</button>
+                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Roadmap</span></div>
+                            <div class="ds-panel-header-right"><button class="ds-btn xs" onclick="fetchCommandProgress()">&#8635;</button></div>
+                        </div>
+                        <div id="roadmapProgress" style="display:flex;flex-direction:column;gap:8px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                        <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+                            <div style="display:flex;gap:6px">
+                                <input id="roadmapFeatureInput" type="text" placeholder="FEAT-C001" style="flex:1;height:28px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:0 8px;color:var(--text);font-size:11px;outline:none;font-family:inherit">
+                                <button class="ds-btn cyan xs" onclick="masterRunFeature()">Run</button>
                             </div>
                         </div>
-                        <div id="roadmapProgress" style="display:flex;flex-direction:column;gap:10px">
-                            <!-- Workstreams — static design + live data fills in via JS -->
-                            <div class="ws-row"><span class="t-small" style="color:var(--text);font-weight:500">Communications</span><span class="t-mono" style="color:var(--text-mute);text-align:right">0/14</span><div class="ds-bar tall"><div class="ds-bar-fill" style="width:0%"></div></div></div>
-                            <div class="ws-row"><span class="t-small" style="color:var(--text);font-weight:500">Finance & Wealth</span><span class="t-mono" style="color:var(--text-mute);text-align:right">0/18</span><div class="ds-bar tall"><div class="ds-bar-fill" style="width:0%"></div></div></div>
-                            <div class="ws-row"><span class="t-small" style="color:var(--text);font-weight:500">Health & Diet</span><span class="t-mono" style="color:var(--text-mute);text-align:right">1/18</span><div class="ds-bar tall green"><div class="ds-bar-fill" style="width:5.5%"></div></div></div>
-                            <div class="ws-row"><span class="t-small" style="color:var(--text);font-weight:500">Business Ops</span><span class="t-mono" style="color:var(--text-mute);text-align:right">0/9</span><div class="ds-bar tall purple"><div class="ds-bar-fill" style="width:0%"></div></div></div>
-                            <div class="ws-row"><span class="t-small" style="color:var(--text);font-weight:500">Daily Briefing</span><span class="t-mono" style="color:var(--text-mute);text-align:right">0/14</span><div class="ds-bar tall purple"><div class="ds-bar-fill" style="width:0%"></div></div></div>
-                            <div class="ws-row"><span class="t-small" style="color:var(--text);font-weight:500">Spiritual</span><span class="t-mono" style="color:var(--text-mute);text-align:right">0/7</span><div class="ds-bar tall amber"><div class="ds-bar-fill" style="width:0%"></div></div></div>
-                            <div class="ws-row"><span class="t-small" style="color:var(--text);font-weight:500">University</span><span class="t-mono" style="color:var(--text-mute);text-align:right">0/15</span><div class="ds-bar tall amber"><div class="ds-bar-fill" style="width:0%"></div></div></div>
-                            <div class="ws-row"><span class="t-small" style="color:var(--text);font-weight:500">Journal & Psych</span><span class="t-mono" style="color:var(--text-mute);text-align:right">0/14</span><div class="ds-bar tall red"><div class="ds-bar-fill" style="width:0%"></div></div></div>
+                    </div>
+
+                    <!-- CENTER: Orb + pipeline + chat -->
+                    <div style="display:flex;flex-direction:column;gap:12px">
+                        <div class="ds-panel" style="margin:0;text-align:center">
+                            <div class="ds-panel-header" style="text-align:left">
+                                <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Apex Core</span></div>
+                                <div class="ds-panel-header-right">
+                                    <span class="ds-badge cyan" id="orbStateBadge">Standby</span>
+                                    <button class="ds-btn xs cyan" onclick="masterRunNext()">&#9658; Run next</button>
+                                </div>
+                            </div>
+                            <div class="cmd-orb-shell" style="margin:0 auto">
+                                <div class="cmd-orb-ring r1"></div>
+                                <div class="cmd-orb-ring r2"></div>
+                                <div class="cmd-orb-ring r3"></div>
+                                <div class="cmd-orb-core" onclick="toggleListening()" title="Click to speak" id="orb" style="cursor:pointer">
+                                    <div class="cmd-orb-name">APEX</div>
+                                    <div class="cmd-orb-state" id="orbStatus">Standby</div>
+                                </div>
+                            </div>
+                            <div style="display:flex;justify-content:center;margin-top:8px">
+                                <div class="waveform" id="waveform" style="display:none">
+                                    <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+                                    <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+                                    <div class="wb"></div>
+                                </div>
+                            </div>
                         </div>
-                        <div style="display:flex;gap:6px;margin-top:12px">
-                            <button class="ds-btn cyan" style="flex:1;justify-content:center" onclick="masterRunNext()">▶ Run next feature</button>
-                            <button class="ds-btn amber" style="flex:1;justify-content:center" onclick="masterRunAll()">⚡ Run all 109</button>
+                        <div class="ds-panel" style="margin:0">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">Recent Pipeline Runs</span></div>
+                                <div class="ds-panel-header-right"><button class="ds-btn xs cyan" onclick="fetchCommandUpdates()">&#8635;</button></div>
+                            </div>
+                            <table class="ds-table">
+                                <thead><tr><th>Feat</th><th>Objective</th><th>Status</th><th>Cost</th></tr></thead>
+                                <tbody id="recentRunsPanel"><tr><td colspan="4" style="text-align:center;padding:12px;color:var(--text-faint);font-style:italic">Loading&#8230;</td></tr></tbody>
+                            </table>
+                            <div style="margin-top:10px">
+                                <div class="t-label" style="margin-bottom:6px">Pipeline Stats</div>
+                                <div id="metricsPanel"><div class="skel skel-row skel-wide"></div></div>
+                            </div>
                         </div>
-                        <div style="display:flex;gap:6px;margin-top:6px">
-                            <input id="roadmapFeatureInput" type="text" placeholder="FEAT-C001" style="flex:2;height:30px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:0 10px;color:var(--text);font-size:11px;outline:none;font-family:inherit">
-                            <button class="ds-btn cyan xs" onclick="masterRunFeature()">Run</button>
+                        <div class="ds-panel" style="margin:0">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Chat &#183; Voice</span></div>
+                                <div class="ds-panel-header-right">
+                                    <button class="ds-btn xs" onclick="clearChat()">Clear</button>
+                                    <button class="mic-btn ds-btn xs" id="micBtn" onclick="toggleListening()" title="Voice input" style="width:28px;height:28px;padding:0;font-size:14px;border-radius:50%;display:grid;place-items:center">&#127908;</button>
+                                </div>
+                            </div>
+                            <div class="chat-log" id="chatLog" style="min-height:120px;max-height:260px;overflow-y:auto">
+                                <div class="typing-indicator" id="typingIndicator" style="display:none">
+                                    <div class="typing-dot"></div>
+                                    <div class="typing-dot"></div>
+                                    <div class="typing-dot"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">Recent Pipeline Runs</span></div>
-                            <div class="ds-panel-header-right"><button class="ds-btn xs cyan" onclick="refreshRecentRuns()">Run history</button></div>
+                    <!-- RIGHT: Tasks + News -->
+                    <div style="display:flex;flex-direction:column;gap:12px">
+                        <div class="ds-panel" style="margin:0">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">Daily Tasks</span></div>
+                                <div class="ds-panel-header-right"><button class="ds-btn xs" onclick="fetchCommandTasks()">&#8635;</button></div>
+                            </div>
+                            <div id="cmdTasksList" style="display:flex;flex-direction:column;gap:6px">
+                                <div class="skel skel-row skel-wide"></div>
+                            </div>
                         </div>
-                        <table class="ds-table">
-                            <thead><tr><th>Feat</th><th>Title</th><th>Cplx</th><th>Status</th><th>Cost</th><th>Time</th></tr></thead>
-                            <tbody id="recentRunsPanel">
-                                <tr><td class="t-mono" style="color:var(--cyan)">FEAT-H009</td><td>Workout logging via voice</td><td><span class="ds-badge amber">moderate</span></td><td><span class="ds-badge green">committed</span></td><td class="t-mono">$0.0042</td><td class="t-mono">8m ago</td></tr>
-                                <tr><td colspan="6" class="skel-cell" style="text-align:center;padding:12px;font-style:italic;color:var(--text-faint)">Loading pipeline history…</td></tr>
-                            </tbody>
-                        </table>
+                        <div class="ds-panel" style="margin:0">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Intel Feed</span></div>
+                                <div class="ds-panel-header-right"><button class="ds-btn xs" onclick="fetchCommandNews()">&#8635;</button></div>
+                            </div>
+                            <div id="cmdNewsFeed" style="display:flex;flex-direction:column;gap:6px">
+                                <div class="skel skel-row skel-wide"></div>
+                            </div>
+                        </div>
+                    </div>
 
-                        <!-- Pipeline stats panel -->
-                        <div style="margin-top:12px">
-                            <div class="t-label" style="margin-bottom:8px">Pipeline Stats</div>
-                            <div id="metricsPanel"><div class="skel skel-row skel-wide"></div></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Chat log (existing — kept for voice/chat functionality) -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Chat · Voice</span></div>
-                        <div class="ds-panel-header-right">
-                            <button class="ds-btn xs" onclick="clearChat()">Clear</button>
-                            <button class="mic-btn ds-btn xs" id="micBtn" onclick="toggleListening()" title="Voice input" style="width:28px;height:28px;padding:0;font-size:14px;border-radius:50%;display:grid;place-items:center">🎤</button>
-                        </div>
-                    </div>
-                    <div class="chat-log" id="chatLog" style="min-height:120px;max-height:300px;overflow-y:auto">
-                        <div class="typing-indicator" id="typingIndicator" style="display:none">
-                            <div class="typing-dot"></div>
-                            <div class="typing-dot"></div>
-                            <div class="typing-dot"></div>
-                        </div>
-                    </div>
                 </div>
 
             </div>
@@ -8682,6 +8603,135 @@ if (!isIOSPWA) { setTimeout(function() { var ci = document.getElementById('chatI
     var nav = document.querySelector('.bottom-nav, nav.bottom-nav');
     if (nav) nav.style.paddingBottom = 'env(safe-area-inset-bottom, 0px)';
 })();
+
+// ── Command page data functions ───────────────────────────────────────────────
+async function fetchCommandProgress() {
+    try {
+        const r = await fetch('/api/intelligence/cost-summary');
+        const d = await r.json();
+        if (d.ok) {
+            const el = document.getElementById('cmdStatRuns');
+            const sl = document.getElementById('cmdStatSuccess');
+            const cl = document.getElementById('cmdStatCost');
+            if (el) el.textContent = d.totalRuns;
+            if (sl) sl.textContent = d.successRate + '% success';
+            if (cl) cl.textContent = '$' + parseFloat(d.totalCostUsd).toFixed(2);
+        }
+    } catch(e) {}
+    try {
+        const r = await fetch('/api/intelligence/agent-runs?limit=100');
+        const d = await r.json();
+        const runs = d.runs || [];
+        const done = runs.filter(function(r){return r.success;}).length;
+        const featEl = document.getElementById('cmdStatFeatures');
+        const barEl  = document.getElementById('cmdFeatureBar');
+        if (featEl) featEl.innerHTML = done + '<span style="font-size:14px;color:var(--text-mute);font-weight:500">/109</span>';
+        if (barEl)  barEl.style.width = (done / 109 * 100).toFixed(1) + '%';
+    } catch(e) {}
+    try {
+        const el = document.getElementById('roadmapProgress');
+        if (!el) return;
+        const workstreams = [
+            {name:'Communications',     total:14},
+            {name:'Finance & Wealth',   total:18},
+            {name:'Health & Diet',      total:18},
+            {name:'Business Ops',       total:9},
+            {name:'Daily Briefing',     total:14},
+            {name:'Spiritual',          total:7},
+            {name:'University',         total:15},
+            {name:'Journal & Psych',    total:14}
+        ];
+        el.innerHTML = workstreams.map(function(ws) {
+            return '<div class="ws-row"><span class="t-small" style="color:var(--text);font-weight:500">'+ws.name+'</span>'
+                + '<span class="t-mono" style="color:var(--text-mute);text-align:right">0/'+ws.total+'</span>'
+                + '<div class="ds-bar tall"><div class="ds-bar-fill" style="width:0%"></div></div></div>';
+        }).join('');
+    } catch(e) {}
+}
+
+async function fetchCommandUpdates() {
+    try {
+        const r = await fetch('/api/intelligence/agent-runs?limit=8');
+        const d = await r.json();
+        const tbody = document.getElementById('recentRunsPanel');
+        if (d.ok && tbody) {
+            if (!d.runs || !d.runs.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:12px;color:var(--text-faint);font-style:italic">No runs yet</td></tr>';
+            } else {
+                tbody.innerHTML = d.runs.map(function(run) {
+                    const badge = run.success ? '<span class="ds-badge green">success</span>' : '<span class="ds-badge red">failed</span>';
+                    const cost  = run.cost_usd ? '$' + parseFloat(run.cost_usd).toFixed(4) : '—';
+                    const feat  = (run.task_id || run.objective || '—').substring(0, 14);
+                    const title = (run.objective || '').substring(0, 24);
+                    return '<tr><td class="t-mono" style="color:var(--cyan)">'+feat+'</td><td>'+title+'</td><td>'+badge+'</td><td class="t-mono">'+cost+'</td></tr>';
+                }).join('');
+            }
+        }
+        const metrics = document.getElementById('metricsPanel');
+        if (metrics) {
+            const r2 = await fetch('/api/intelligence/cost-summary');
+            const d2 = await r2.json();
+            if (d2.ok) {
+                metrics.innerHTML = '<div style="display:flex;gap:16px;flex-wrap:wrap">'
+                    + '<span class="t-small"><span style="color:var(--text-mute)">Total runs</span> <span style="color:var(--cyan)">'+d2.totalRuns+'</span></span>'
+                    + '<span class="t-small"><span style="color:var(--text-mute)">Success</span> <span style="color:var(--green)">'+d2.successRate+'%</span></span>'
+                    + '<span class="t-small"><span style="color:var(--text-mute)">Spend</span> <span style="color:var(--amber)">$'+parseFloat(d2.totalCostUsd).toFixed(4)+'</span></span>'
+                    + '</div>';
+            }
+        }
+    } catch(e) {}
+}
+
+async function fetchCommandTasks() {
+    try {
+        const el = document.getElementById('cmdTasksList');
+        if (!el) return;
+        const r = await fetch('/api/habits');
+        const d = await r.json();
+        if (!d.ok || !d.habits || !d.habits.length) {
+            el.innerHTML = '<div class="t-small" style="color:var(--text-mute)">No habits configured</div>';
+            return;
+        }
+        el.innerHTML = d.habits.map(function(h) {
+            const done  = h.completed || false;
+            const color = done ? 'var(--green)' : 'var(--text-mute)';
+            const icon  = done ? '✓' : '○';
+            return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border-faint)">'
+                + '<span style="color:'+color+';font-size:12px">'+icon+'</span>'
+                + '<span class="t-small" style="flex:1;color:'+(done?'var(--text-mute)':'var(--text)')+'">'+h.habit_name+'</span>'
+                + '</div>';
+        }).join('');
+    } catch(e) {}
+}
+
+async function fetchCommandNews() {
+    try {
+        const el = document.getElementById('cmdNewsFeed');
+        if (!el) return;
+        const r = await fetch('/api/intelligence/news');
+        const d = await r.json();
+        if (!d.ok || !d.articles || !d.articles.length) {
+            el.innerHTML = '<div class="t-small" style="color:var(--text-mute)">No intel feed configured</div>';
+            return;
+        }
+        el.innerHTML = d.articles.map(function(a) {
+            const cat = a.category ? '<span class="ds-badge grey" style="font-size:9px">'+a.category+'</span>' : '';
+            return '<div style="padding:6px 0;border-bottom:1px solid var(--border-faint)">'
+                + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">'+cat
+                + '<span class="t-mono" style="color:var(--text-faint);font-size:9px">'+(a.source||'')+'</span></div>'
+                + '<div class="t-small" style="color:var(--text)">'+a.title+'</div></div>';
+        }).join('');
+    } catch(e) {}
+}
+
+function refreshCommandPage() {
+    fetchCommandProgress();
+    fetchCommandUpdates();
+    fetchCommandTasks();
+    fetchCommandNews();
+}
+refreshCommandPage();
+_addInterval(refreshCommandPage, 30000);
 
 </script>
 </body>
