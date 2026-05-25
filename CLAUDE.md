@@ -77,6 +77,12 @@ Ruflo v3.7.0-alpha.72 is installed as the agent orchestration backbone.
 - Ruflo agents must respect the same approval/safety rules as all other agents.
 - Do not expose Ruflo API endpoints publicly without auth middleware.
 
+## rtk (token proxy — active)
+Shell commands route through rtk automatically via the PreToolUse hook.
+- Prefer `cat`, `head`, `tail`, `rg`, `grep`, `find` over built-in Read/Grep/Glob when scanning the codebase — shell output is ~80% cheaper through rtk.
+- When a test or lint command fails, run `rtk err <cmd>` to filter to errors only.
+- After sessions with 5+ shell commands, run `rtk gain` to report savings.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

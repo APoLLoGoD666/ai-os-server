@@ -44,6 +44,15 @@ router.get('/health/sleep', _auth, async (req, res) => {
     } catch (e) { res.json({ ok: true, sleep: [], error: e.message }); }
 });
 
+router.get('/mood', _auth, async (req, res) => {
+    try {
+        const since = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+        const { data, error } = await sb().from('apex_mood_log').select('date,score').gte('date', since).order('date', { ascending: true });
+        if (error) return res.json({ ok: true, moods: [] });
+        res.json({ ok: true, moods: data || [] });
+    } catch (e) { res.json({ ok: true, moods: [], error: e.message }); }
+});
+
 router.post('/mood', _auth, async (req, res) => {
     try {
         const { score, date } = req.body || {};
@@ -51,6 +60,34 @@ router.post('/mood', _auth, async (req, res) => {
         const { data, error } = await sb().from('apex_mood_log').upsert({ date: date || new Date().toISOString().split('T')[0], score: Number(score) }, { onConflict: 'date' }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, mood: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/health/metrics', _auth, async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit) || 14, 50);
+        const { data, error } = await sb().from('apex_body_measurements').select('*').order('measured_at', { ascending: false }).limit(limit);
+        if (error) return res.json({ ok: true, metrics: [] });
+        res.json({ ok: true, metrics: data || [] });
+    } catch (e) { res.json({ ok: true, metrics: [], error: e.message }); }
+});
+
+router.get('/health/supplements', _auth, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const { data, error } = await sb().from('apex_supplements').select('id,name,taken,log_date').eq('log_date', today);
+        if (error) return res.json({ ok: true, supplements: [] });
+        res.json({ ok: true, supplements: data || [] });
+    } catch (e) { res.json({ ok: true, supplements: [], error: e.message }); }
+});
+
+router.post('/health/supplements', _auth, async (req, res) => {
+    try {
+        const { supplement_id, taken } = req.body || {};
+        const today = new Date().toISOString().split('T')[0];
+        const { data, error } = await sb().from('apex_supplements').upsert({ id: supplement_id, log_date: today, taken: !!taken }, { onConflict: 'id,log_date' }).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, supplement: data });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 

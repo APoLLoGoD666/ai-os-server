@@ -4,13 +4,7 @@ const express = require('express');
 const router  = express.Router();
 
 function _lib() { return require('../agent-system/agent-library'); }
-
-function _auth(req, res, next) {
-    const key    = req.headers['x-app-key'] || req.query.app_key;
-    const appKey = process.env.APP_ACCESS_KEY;
-    if (appKey && key !== appKey) return res.status(401).json({ ok: false, error: 'Unauthorized' });
-    next();
-}
+const _auth = require('../lib/app-auth');
 
 // GET /api/agents/status
 router.get('/agents/status', _auth, (req, res) => {

@@ -104,5 +104,16 @@ router.get('/cost-summary', async (req, res) => {
     }
 });
 
+// GET /api/intelligence/news — structured news feed (returns empty if no source configured)
+router.get('/news', async (req, res) => {
+    try {
+        const { data, error } = await sb().from('apex_news_cache').select('title,source,category,url,published_at').order('published_at', { ascending: false }).limit(10);
+        if (error || !data || !data.length) return res.json({ ok: true, articles: [] });
+        res.json({ ok: true, articles: data });
+    } catch (e) {
+        res.json({ ok: true, articles: [], error: e.message });
+    }
+});
+
 module.exports = router;
 module.exports.voiceState = voiceState;

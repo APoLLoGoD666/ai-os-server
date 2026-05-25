@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta name="apex-version" content="v9" />
+    <meta name="apex-version" content="v10" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <title>APEX AI OS</title>
@@ -2228,9 +2228,7 @@ html, body {
     margin-bottom: 8px; cursor: pointer;
 }
 
-/* ── Page fade transition ───────────────────────────────────────────── */
-.page { opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
-.page.active { opacity: 1; pointer-events: auto; }
+/* ── Panel entrance ─────────────────────────────────────────────────── */
 .ds-panel { animation: panelIn 0.2s ease both; }
 @keyframes panelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -2643,8 +2641,8 @@ html, body {
   gap: 6px;
   color: var(--text-mid);
 }
-@keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@-webkit-keyframes ticker-scroll { from { -webkit-transform: translateX(0); } to { -webkit-transform: translateX(-50%); } }
+@keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(calc(-50% + 77px)); } }
+@-webkit-keyframes ticker-scroll { from { -webkit-transform: translateX(0); } to { -webkit-transform: translateX(calc(-50% + 77px)); } }
 
 /* ── Sidebar / nav redesign ─────────────────────────────────────────── */
 .bottom-nav, nav.bottom-nav {
@@ -3249,7 +3247,7 @@ html, body {
         <div class="help-box">
             <h3>⌨ Keyboard Shortcuts</h3>
             <div class="help-grid">
-                <div class="help-row"><span class="help-key">1–6</span><span class="help-desc">Switch page</span></div>
+                <div class="help-row"><span class="help-key">1–0</span><span class="help-desc">Switch page (10 pages)</span></div>
                 <div class="help-row"><span class="help-key">R</span><span class="help-desc">Refresh current page</span></div>
                 <div class="help-row"><span class="help-key">A</span><span class="help-desc">Jump to approvals</span></div>
                 <div class="help-row"><span class="help-key">N</span><span class="help-desc">Jump to notifications</span></div>
@@ -3385,7 +3383,7 @@ html, body {
                         </div>
                         <div class="ds-panel-header-right">
                             <span class="ds-badge grey">8 agents</span>
-                            <button class="ds-btn xs cyan" onclick="switchPage('intelligence')">View logs</button>
+                            <button class="ds-btn xs cyan" onclick="switchPage('system')">View logs</button>
                         </div>
                     </div>
                     <div class="ds-grid-agents">
@@ -3506,8 +3504,8 @@ html, body {
 
             </div>
 
-            <!-- ══ PAGE: INTELLIGENCE ══ -->
-            <div class="page" id="page-intelligence">
+            <!-- ══ PAGE: SYSTEM ══ -->
+            <div class="page" id="page-system">
 
                 <div class="ds-page-header">
                     <div class="ds-page-header-left">
@@ -3594,7 +3592,7 @@ html, body {
                                 <div class="ds-panel-header-left"><span class="ds-dot red"></span><span class="t-label">Approval Queue</span></div>
                                 <div class="ds-panel-header-right">
                                     <span class="ds-badge red" id="intelApprovalCount">—</span>
-                                    <button class="ds-btn xs" onclick="switchPage('operations')">View all →</button>
+                                    <button class="ds-btn xs" onclick="switchPage('operation')">View all →</button>
                                 </div>
                             </div>
                             <div id="approvalQueue" class="queue-scroll" style="display:flex;flex-direction:column;gap:6px">
@@ -3622,8 +3620,8 @@ html, body {
 
             </div>
 
-            <!-- ══ PAGE: COMMS ══ -->
-            <div class="page" id="page-comms">
+            <!-- ══ PAGE: COMMUNICATION ══ -->
+            <div class="page" id="page-communication">
 
                 <div class="ds-page-header">
                     <div class="ds-page-header-left">
@@ -4010,8 +4008,8 @@ html, body {
 
             </div>
 
-            <!-- ══ PAGE: OPERATIONS ══ -->
-            <div class="page" id="page-operations">
+            <!-- ══ PAGE: OPERATION ══ -->
+            <div class="page" id="page-operation">
                 <div class="ds-page-header">
                     <div class="ds-page-header-left">
                         <span class="ds-page-title">Ops</span>
@@ -4143,8 +4141,8 @@ html, body {
                 </div>
             </div>
 
-            <!-- ══ PAGE: LIFE ══ -->
-            <div class="page" id="page-life">
+            <!-- ══ PAGE: HEALTH ══ -->
+            <div class="page" id="page-health">
                 <div class="ds-page-header">
                     <div class="ds-page-header-left">
                         <span class="ds-page-title">Life</span>
@@ -4428,6 +4426,301 @@ html, body {
                 </div>
             </div>
 
+            <!-- ══ PAGE: OVERVIEW ══ -->
+            <div class="page" id="page-overview">
+                <div class="ds-page-header">
+                    <div class="ds-page-header-left">
+                        <span class="ds-page-title">Overview</span>
+                        <span class="ds-page-subtitle">Live status · metrics · briefing</span>
+                    </div>
+                    <button class="ds-btn cyan" onclick="refreshAll()">↻ Refresh all</button>
+                </div>
+                <div class="ds-grid-stats">
+                    <div class="ds-stat-card ac-cyan">
+                        <div class="ds-stat-label">Pending approvals</div>
+                        <div class="ds-stat-value red" id="ovStatApprovals">—</div>
+                        <div class="ds-stat-sub"><span class="ds-dot red pulse"></span><span style="color:var(--red)">Action required</span></div>
+                    </div>
+                    <div class="ds-stat-card ac-green">
+                        <div class="ds-stat-label">Notifications</div>
+                        <div class="ds-stat-value cyan" id="ovStatNotifs">—</div>
+                        <div class="ds-stat-sub">unread</div>
+                    </div>
+                    <div class="ds-stat-card ac-amber">
+                        <div class="ds-stat-label">Emails</div>
+                        <div class="ds-stat-value amber" id="ovStatEmails">—</div>
+                        <div class="ds-stat-sub">unread / urgent</div>
+                    </div>
+                    <div class="ds-stat-card ac-purple">
+                        <div class="ds-stat-label">System status</div>
+                        <div class="ds-stat-value green">OK</div>
+                        <div class="ds-stat-sub"><span class="ds-dot green"></span><span>All services nominal</span></div>
+                    </div>
+                </div>
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Quick Actions</span></div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:8px">
+                            <button class="ds-btn cyan" style="justify-content:center" onclick="switchPage('command')">▶ Pipeline Control</button>
+                            <button class="ds-btn amber" style="justify-content:center" onclick="switchPage('operation')">⚡ Approvals Queue</button>
+                            <button class="ds-btn purple" style="justify-content:center" onclick="switchPage('communication')">✉ Email &amp; Comms</button>
+                            <button class="ds-btn green" style="justify-content:center" onclick="switchPage('finance')">£ Finance</button>
+                            <button class="ds-btn grey" style="justify-content:center" onclick="refreshAll()">↻ Refresh everything</button>
+                        </div>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">System Status</span></div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Supabase</span><span class="orb-sys-status" style="color:var(--green)">Online</span></div>
+                            <div class="orb-sys-row"><span class="ds-dot cyan"></span><span class="orb-sys-name">Voice Pipeline</span><span class="orb-sys-status" style="color:var(--cyan)">Ready</span></div>
+                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Memory</span><span class="orb-sys-status" style="color:var(--green)">Connected</span></div>
+                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">GitHub</span><span class="orb-sys-status" style="color:var(--green)">Connected</span></div>
+                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Render</span><span class="orb-sys-status" style="color:var(--green)">Online</span></div>
+                            <div class="orb-sys-row"><span class="ds-dot green"></span><span class="orb-sys-name">Deepgram</span><span class="orb-sys-status" style="color:var(--green)">Active</span></div>
+                            <div class="orb-sys-row"><span class="ds-dot amber"></span><span class="orb-sys-name">Anthropic</span><span class="orb-sys-status" style="color:var(--amber)">$14.61 remaining</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Recent Agent Activity</span></div>
+                        <div class="ds-panel-header-right"><button class="ds-btn xs cyan" onclick="refreshRecentRuns()">↻</button></div>
+                    </div>
+                    <table class="ds-table">
+                        <thead><tr><th>Feat</th><th>Title</th><th>Status</th><th>Cost</th></tr></thead>
+                        <tbody id="ovRecentRunsPanel">
+                            <tr><td colspan="4" class="skel-cell" style="text-align:center;padding:12px;font-style:italic;color:var(--text-faint)">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ══ PAGE: BUSINESS ══ -->
+            <div class="page" id="page-business">
+                <div class="ds-page-header">
+                    <div class="ds-page-header-left">
+                        <span class="ds-page-title">Business</span>
+                        <span class="ds-page-subtitle">CRM · projects · proposals · documents</span>
+                    </div>
+                    <button class="ds-btn cyan" onclick="refreshCrmPanel();refreshProjectsPanel()">↻ Refresh</button>
+                </div>
+                <div class="ds-grid-stats">
+                    <div class="ds-stat-card ac-purple">
+                        <div class="ds-stat-label">Active clients</div>
+                        <div class="ds-stat-value purple" id="bizStatClients">—</div>
+                        <div class="ds-stat-sub">in pipeline</div>
+                    </div>
+                    <div class="ds-stat-card ac-cyan">
+                        <div class="ds-stat-label">Projects</div>
+                        <div class="ds-stat-value cyan" id="bizStatProjects">—</div>
+                        <div class="ds-stat-sub">active</div>
+                    </div>
+                    <div class="ds-stat-card ac-amber">
+                        <div class="ds-stat-label">Proposals</div>
+                        <div class="ds-stat-value amber" id="bizStatProposals">—</div>
+                        <div class="ds-stat-sub">pending</div>
+                    </div>
+                    <div class="ds-stat-card ac-green">
+                        <div class="ds-stat-label">Documents</div>
+                        <div class="ds-stat-value green" id="bizStatDocs">—</div>
+                        <div class="ds-stat-sub">stored</div>
+                    </div>
+                </div>
+                <!-- CRM + PROJECTS -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <span class="ds-panel-dot" style="background:var(--purple)"></span>
+                            <span class="ds-panel-title">CRM · client pipeline</span>
+                            <div class="ds-panel-right">
+                                <button class="ds-btn purple btn--xs">+ Add</button>
+                            </div>
+                        </div>
+                        <table class="ds-table">
+                            <thead><tr><th>Client</th><th>Stage</th><th>Value</th><th>Follow-up</th></tr></thead>
+                            <tbody id="bizCrmTbody"><tr><td colspan="4" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <span class="ds-panel-dot" style="background:var(--cyan)"></span>
+                            <span class="ds-panel-title">Projects</span>
+                        </div>
+                        <div id="bizProjectsPanel" style="display:flex;flex-direction:column;gap:8px"><div class="skel skel-row skel-wide"></div></div>
+                    </div>
+                </div>
+                <!-- DOCS + PROPOSALS -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <span class="ds-panel-dot" style="background:var(--cyan)"></span>
+                            <span class="ds-panel-title">Documents · contracts</span>
+                            <div class="ds-panel-right"><button class="ds-btn cyan btn--xs">Upload</button></div>
+                        </div>
+                        <div id="bizDocumentsPanel" style="display:flex;flex-direction:column;gap:6px"><div class="skel skel-row skel-wide"></div></div>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <span class="ds-panel-dot" style="background:var(--purple)"></span>
+                            <span class="ds-panel-title">Proposals</span>
+                        </div>
+                        <div id="bizProposalsPanel" style="display:flex;flex-direction:column;gap:6px"><div class="skel skel-row skel-wide"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ PAGE: UNIVERSITY ══ -->
+            <div class="page" id="page-university">
+                <div class="ds-page-header">
+                    <div class="ds-page-header-left">
+                        <span class="ds-page-title">University</span>
+                        <span class="ds-page-subtitle">15 features · modules · assignments · study</span>
+                    </div>
+                    <button class="ds-btn amber" onclick="refreshUniversityPanel()">▶ Start session</button>
+                </div>
+                <div class="ds-grid-stats">
+                    <div class="ds-stat-card ac-amber">
+                        <div class="ds-stat-label">Modules</div>
+                        <div class="ds-stat-value amber" id="uniStatModules">—</div>
+                        <div class="ds-stat-sub">in progress</div>
+                    </div>
+                    <div class="ds-stat-card ac-cyan">
+                        <div class="ds-stat-label">Assignments due</div>
+                        <div class="ds-stat-value cyan" id="uniStatAssignments">—</div>
+                        <div class="ds-stat-sub">this week</div>
+                    </div>
+                    <div class="ds-stat-card ac-purple">
+                        <div class="ds-stat-label">Flashcards due</div>
+                        <div class="ds-stat-value purple" id="uniStatFlashcards">—</div>
+                        <div class="ds-stat-sub">for review</div>
+                    </div>
+                    <div class="ds-stat-card ac-green">
+                        <div class="ds-stat-label">Study sessions</div>
+                        <div class="ds-stat-value green" id="uniStatSessions">—</div>
+                        <div class="ds-stat-sub">this week</div>
+                    </div>
+                </div>
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <span class="ds-panel-dot" style="background:var(--amber)"></span>
+                        <span class="ds-panel-title">Modules · assignments · study</span>
+                        <div class="ds-panel-right"><span class="ds-badge amber">FEAT-U001 → U015</span><button class="ds-btn amber btn--xs">▶ Start session</button></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                        <div>
+                            <div class="t-label" style="margin-bottom:8px">Module progress</div>
+                            <div id="uniModulesPanelB">
+                                <div class="t-small" style="color:var(--text-faint)"><span class="skel skel-row skel-med" style="display:block"></span></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="t-label" style="margin-bottom:8px">Assignments due</div>
+                            <table class="ds-table">
+                                <thead><tr><th>Assignment</th><th>Due</th><th>Status</th></tr></thead>
+                                <tbody id="uniAssignmentsTbodyB">
+                                    <tr><td colspan="3" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                        <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--cyan);border-radius:8px;text-align:center">
+                            <div class="t-label">Study session</div>
+                            <div class="t-stat" id="pomodoroDisplayB" style="color:var(--cyan);font-size:28px;margin-top:6px">25:00</div>
+                            <div style="display:flex;gap:6px;justify-content:center;margin-top:6px">
+                                <button class="ds-btn cyan btn--xs" onclick="pomodoroToggle()">▶ Start</button>
+                                <button class="ds-btn grey btn--xs" onclick="pomodoroReset()">↺</button>
+                            </div>
+                        </div>
+                        <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--purple);border-radius:8px">
+                            <div class="t-label">Flashcards due</div>
+                            <div class="t-stat" style="color:var(--purple);font-size:22px;margin-top:4px"><span id="flashcardDueCountB">—</span></div>
+                            <button class="ds-btn purple btn--xs" style="margin-top:4px">Start session</button>
+                        </div>
+                        <div style="padding:14px;background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px">
+                            <div class="t-label">Reading list</div>
+                            <div class="t-stat" style="color:var(--amber);font-size:22px;margin-top:4px">3<span style="font-size:11px;color:var(--text-mute)"> / 7 books</span></div>
+                            <div class="ds-bar amber" style="--pct:42%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ PAGE: OCCULT ══ -->
+            <div class="page" id="page-occult">
+                <div class="ds-page-header">
+                    <div class="ds-page-header-left">
+                        <span class="ds-page-title">Occult</span>
+                        <span class="ds-page-subtitle">7 features · spiritual · mindfulness · sigil</span>
+                    </div>
+                </div>
+                <div class="ds-grid-stats">
+                    <div class="ds-stat-card ac-purple">
+                        <div class="ds-stat-label">Meditation streak</div>
+                        <div class="ds-stat-value purple">—</div>
+                        <div class="ds-stat-sub" style="color:var(--text-faint)">days</div>
+                    </div>
+                    <div class="ds-stat-card ac-cyan">
+                        <div class="ds-stat-label">Sigil practice</div>
+                        <div class="ds-stat-value cyan">—</div>
+                        <div class="ds-stat-sub" style="color:var(--text-faint)">this week</div>
+                    </div>
+                    <div class="ds-stat-card ac-amber">
+                        <div class="ds-stat-label">Study sessions</div>
+                        <div class="ds-stat-value amber">—</div>
+                        <div class="ds-stat-sub" style="color:var(--text-faint)">occult reading</div>
+                    </div>
+                    <div class="ds-stat-card ac-green">
+                        <div class="ds-stat-label">Rituals logged</div>
+                        <div class="ds-stat-value green">—</div>
+                        <div class="ds-stat-sub" style="color:var(--text-faint)">this month</div>
+                    </div>
+                </div>
+                <!-- Spiritual progression + Mindfulness -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <span class="ds-panel-dot" style="background:var(--purple)"></span>
+                            <span class="ds-panel-title">Spiritual progression</span>
+                            <div class="ds-panel-right"><span class="ds-badge purple">FEAT-S001 → S007</span></div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Morning meditation · 20m</span><span class="ds-badge green">done</span></div>
+                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Sigil routine</span><span class="ds-badge amber">pending</span></div>
+                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Evening reading · 30m</span><span class="ds-badge grey">scheduled</span></div>
+                            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px"><span class="t-small" style="color:var(--text)">Weekly reflection</span><span class="ds-badge cyan">Sunday</span></div>
+                        </div>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <span class="ds-panel-dot" style="background:var(--green)"></span>
+                            <span class="ds-panel-title">Mindfulness</span>
+                            <div class="ds-panel-right"><span class="ds-badge green">FEAT-S005</span><button class="ds-btn green btn--xs">▶ Start timer</button></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Breath · 4-7-8</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
+                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Body scan</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
+                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Mindful walk</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
+                            <div style="padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;text-align:center"><div class="t-h3">Gratitude</div><div class="t-mono" style="color:var(--text-mute);margin-top:4px">— sessions this week</div></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Journal / mood for occult page -->
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <span class="ds-panel-dot" style="background:var(--amber)"></span>
+                        <span class="ds-panel-title">Occult journal · dream log</span>
+                        <div class="ds-panel-right"><span class="ds-badge amber">FEAT-S002/S003</span></div>
+                    </div>
+                    <textarea class="ds-input" id="occultJournal" placeholder="Log a dream, ritual, insight or synchronicity…" style="height:80px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box"></textarea>
+                    <button class="ds-btn amber btn--xs" style="margin-top:6px;width:100%" onclick="submitJournalEntry()">Save entry</button>
+                </div>
+            </div>
+
         </div><!-- .page-wrap -->
 
         <!-- ══ INPUT ZONE ══ -->
@@ -4447,12 +4740,21 @@ html, body {
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Command</span>
         </button>
-        <button class="nav-btn" id="nav-intelligence" onclick="switchPage('intelligence')">
+        <button class="nav-btn" id="nav-overview" onclick="switchPage('overview')">
             <span class="nav-icon">◈</span>
-            <span class="nav-label">Intel</span>
+            <span class="nav-label">Overview</span>
+        </button>
+        <button class="nav-btn" id="nav-operation" onclick="switchPage('operation')">
+            <span class="nav-icon">⊞</span>
+            <span class="nav-label">Operation</span>
+            <span class="ds-notif-badge red" id="navOpsBadge">7</span>
+        </button>
+        <button class="nav-btn" id="nav-system" onclick="switchPage('system')">
+            <span class="nav-icon">◉</span>
+            <span class="nav-label">System</span>
             <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
         </button>
-        <button class="nav-btn" id="nav-comms" onclick="switchPage('comms')">
+        <button class="nav-btn" id="nav-communication" onclick="switchPage('communication')">
             <span class="nav-icon">✉</span>
             <span class="nav-label">Comms</span>
             <span class="ds-notif-badge cyan" id="navCommsBadge" style="display:none">5</span>
@@ -4461,18 +4763,25 @@ html, body {
             <span class="nav-icon">◎</span>
             <span class="nav-label">Finance</span>
         </button>
-        <button class="nav-btn" id="nav-operations" onclick="switchPage('operations')">
-            <span class="nav-icon">⊞</span>
-            <span class="nav-label">Ops</span>
-            <span class="ds-notif-badge red" id="navOpsBadge">7</span>
+        <button class="nav-btn" id="nav-business" onclick="switchPage('business')">
+            <span class="nav-icon">◧</span>
+            <span class="nav-label">Business</span>
         </button>
-        <button class="nav-btn" id="nav-life" onclick="switchPage('life')">
+        <button class="nav-btn" id="nav-university" onclick="switchPage('university')">
+            <span class="nav-icon">◫</span>
+            <span class="nav-label">University</span>
+        </button>
+        <button class="nav-btn" id="nav-health" onclick="switchPage('health')">
             <span class="nav-icon">◑</span>
-            <span class="nav-label">Life</span>
+            <span class="nav-label">Health</span>
+        </button>
+        <button class="nav-btn" id="nav-occult" onclick="switchPage('occult')">
+            <span class="nav-icon">◬</span>
+            <span class="nav-label">Occult</span>
         </button>
         <div class="ds-sidebar-footer">
             <div class="ds-sidebar-meta">
-                <span>v9.0.4</span>
+                <span>v10.0.0</span>
                 <span style="color:var(--green)">● Render</span>
             </div>
             <div class="ds-sidebar-meta">
@@ -4486,7 +4795,7 @@ html, body {
 
 <script>
 (function() {
-    var pages = ['command', 'intelligence', 'comms', 'finance', 'operations', 'life'];
+    var pages = ['command', 'overview', 'operation', 'system', 'communication', 'finance', 'business', 'university', 'health', 'occult'];
     var activePage = 'command';
 
     window.switchPage = function(name) {
@@ -4640,6 +4949,14 @@ async function _httBegin() {
         _httStream = await navigator.mediaDevices.getUserMedia({
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
         });
+
+        // Guard: user may have released before getUserMedia resolved (e.g. during permission dialog)
+        if (!_httActive) {
+            _httStream.getTracks().forEach(t => t.stop());
+            _httStream = null;
+            setOrbState('waiting');
+            return;
+        }
 
         const mime = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm';
         _httRecorder = new MediaRecorder(_httStream, { mimeType: mime });
@@ -7805,7 +8122,7 @@ function pomodoroReset() {
 // ── Keyboard shortcuts 1–6 ─────────────────────────────────────────────
 document.addEventListener('keydown', function(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    var map = { '1':'command','2':'intelligence','3':'comms','4':'finance','5':'operations','6':'life' };
+    var map = { '1':'command','2':'overview','3':'operation','4':'system','5':'communication','6':'finance','7':'business','8':'university','9':'health','0':'occult' };
     if (map[e.key] && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); switchPage(map[e.key]); }
     if (e.key === 'Escape') closeAgentDrawer();
 });
@@ -8048,33 +8365,21 @@ function toggleHelpOverlay() {
         if (e.key === 'Escape') { closeAgentDrawer(); var ho = document.getElementById('helpOverlay'); if (ho) ho.classList.remove('open'); return; }
         if (e.key === 'r' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
             e.preventDefault();
-            if (pageId === 'operations') { refreshCrmPanel(); refreshProjectsPanel(); refreshOpsDocumentsPanel(); refreshOpsProposalsPanel(); refreshTaskQueuePanel(); }
-            else if (pageId === 'life') { refreshJournalPanel(); refreshHabitTracker(); refreshPsychologyPanel(); refreshUniversityPanel(); }
+            if (pageId === 'operation') { refreshCrmPanel(); refreshProjectsPanel(); refreshOpsDocumentsPanel(); refreshOpsProposalsPanel(); refreshTaskQueuePanel(); }
+            else if (pageId === 'health') { refreshJournalPanel(); refreshHabitTracker(); refreshPsychologyPanel(); refreshUniversityPanel(); }
             else if (pageId === 'finance') { refreshExpensesPanel(); refreshSubscriptionsPanel(); }
-            else if (pageId === 'comms') { refreshContactsPanel(); }
+            else if (pageId === 'communication') { refreshContactsPanel(); }
             else { refreshMetrics(); refreshRecentRuns(); }
             return;
         }
         if (e.key === 'R' && e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (confirm('Run next pipeline feature?')) masterRunNext(); return; }
-        if (e.key === 'a' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('operations'); setTimeout(function() { var el = document.getElementById('permissionCards'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200); return; }
-        if (e.key === 'n' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('intelligence'); return; }
+        if (e.key === 'a' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('operation'); setTimeout(function() { var el = document.getElementById('permissionCards'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200); return; }
+        if (e.key === 'n' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('system'); return; }
         if (e.key === '/' && !e.shiftKey) { e.preventDefault(); var ci = document.getElementById('chatInput'); if (ci) ci.focus(); return; }
     });
 })();
 
-// ── Page transition (fade) ────────────────────────────────────────────
-(function() {
-    var origSwitch = window.switchPage;
-    window.switchPage = function(name) {
-        var current = document.querySelector('.page.active');
-        if (current) { current.style.opacity = '0'; }
-        setTimeout(function() {
-            origSwitch(name);
-            var next = document.getElementById('page-' + name);
-            if (next) { next.style.opacity = '0'; setTimeout(function() { next.style.opacity = '1'; }, 30); }
-        }, 120);
-    };
-})();
+// Page transitions handled by .page / .page.active CSS at lines 198-218
 
 // ── Agent drawer — real data ──────────────────────────────────────────
 window.openAgentDrawer = function(role) {
@@ -8302,8 +8607,75 @@ refreshWorkoutGrid();
 initMoodSelector();
 renderFinanceCards();
 
-// ── Chat input focus after load ───────────────────────────────────────
-setTimeout(function() { var ci = document.getElementById('chatInput'); if (ci && !document.activeElement.matches('input,textarea')) ci.focus(); }, 500);
+// ── Business page panel refreshes ─────────────────────────────────────
+async function refreshBizCrmPanel() {
+    var tbody = document.getElementById('bizCrmTbody');
+    if (!tbody) return;
+    try {
+        var d = await fetchJson('/api/operations/clients');
+        if (!d.ok || !d.clients.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-faint)">No clients yet</td></tr>'; return; }
+        var STAGE_TONE = { closing:'green', proposing:'amber', qualifying:'cyan', prospect:'grey' };
+        tbody.innerHTML = d.clients.map(function(c) {
+            var tone = STAGE_TONE[c.stage] || 'grey';
+            var val = c.value ? '£' + Number(c.value).toLocaleString() : '£—';
+            var fu = c.follow_up_date ? new Date(c.follow_up_date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+            var lc = c.updated_at ? new Date(c.updated_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+            return '<tr><td style="color:var(--text)">' + escapeHtml(c.name) + '</td><td><span class="ds-badge ' + tone + '">' + escapeHtml(c.stage) + '</span></td><td class="t-mono">' + val + '</td><td class="t-mono">' + lc + '</td><td><span class="ds-badge ' + tone + '">' + fu + '</span></td></tr>';
+        }).join('');
+    } catch (_) {}
+}
+async function refreshBizProjectsPanel() {
+    var panel = document.getElementById('bizProjectsPanel');
+    if (!panel) return;
+    try {
+        var d = await fetchJson('/api/operations/projects');
+        if (!d.ok || !d.projects.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No projects yet</div>'; return; }
+        var STATUS_TONE = { 'on track':'cyan', active:'cyan', 'awaiting sig':'amber', drafting:'purple', queued:'grey', complete:'green' };
+        panel.innerHTML = d.projects.map(function(p) {
+            var tone = STATUS_TONE[p.status] || 'grey';
+            var pct = p.progress_pct || 0;
+            return '<div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--' + tone + ');border-radius:8px;padding:12px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="t-h3">' + escapeHtml(p.name) + '</span><span class="ds-badge ' + tone + '">' + escapeHtml(p.status||'active') + '</span></div><div class="ds-bar ' + tone + '" style="--pct:' + pct + '%"></div></div>';
+        }).join('');
+    } catch (_) {}
+}
+async function refreshBizDocumentsPanel() {
+    var panel = document.getElementById('bizDocumentsPanel');
+    if (!panel) return;
+    try {
+        var d = await fetchJson('/api/operations/documents');
+        if (!d.ok || !d.documents.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No documents yet</div>'; return; }
+        var STATUS_TONE = { signed:'green', sent:'cyan', draft:'amber', archived:'grey' };
+        panel.innerHTML = d.documents.map(function(doc) {
+            var tone = STATUS_TONE[doc.status] || 'grey';
+            var dt = doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+            return '<div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;margin-bottom:4px"><span style="width:18px;height:22px;border-radius:2px;background:var(--surface-3);border:1px solid var(--border);display:block"></span><span class="t-small" style="color:var(--text)">' + escapeHtml(doc.name) + '</span><span class="ds-badge ' + tone + '">' + escapeHtml(doc.status||'') + '</span><span class="t-mono" style="color:var(--text-mute)">' + dt + '</span></div>';
+        }).join('');
+    } catch (_) {}
+}
+async function refreshBizProposalsPanel() {
+    var panel = document.getElementById('bizProposalsPanel');
+    if (!panel) return;
+    try {
+        var d = await fetchJson('/api/operations/proposals');
+        if (!d.ok || !d.proposals.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No proposals yet</div>'; return; }
+        var STATUS_TONE = { draft:'purple', sent:'cyan', accepted:'green', rejected:'red' };
+        panel.innerHTML = d.proposals.map(function(p) {
+            var tone = STATUS_TONE[p.status] || 'grey';
+            return '<div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--' + tone + ');border-radius:8px;padding:10px;margin-bottom:4px"><div class="t-h3">' + escapeHtml(p.title||p.name||'Proposal') + '</div><div class="t-small">' + escapeHtml(p.status||'draft') + (p.value ? ' · £' + Number(p.value).toLocaleString() : '') + '</div></div>';
+        }).join('');
+    } catch (_) {}
+}
+refreshBizCrmPanel();
+refreshBizProjectsPanel();
+refreshBizDocumentsPanel();
+refreshBizProposalsPanel();
+_addInterval(refreshBizCrmPanel, 120000);
+_addInterval(refreshBizProjectsPanel, 120000);
+_addInterval(refreshBizDocumentsPanel, 60000);
+_addInterval(refreshBizProposalsPanel, 60000);
+
+// ── Chat input focus after load (desktop only — iOS keyboard would flash) ─
+if (!isIOSPWA) { setTimeout(function() { var ci = document.getElementById('chatInput'); if (ci && !document.activeElement.matches('input,textarea')) ci.focus(); }, 500); }
 
 // ── iOS safe area for bottom nav ──────────────────────────────────────
 (function() {

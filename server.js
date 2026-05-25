@@ -259,7 +259,7 @@ app.post('/auth/login', (req, res) => {
     const token = jwt.sign({ apex: true }, secret, { expiresIn: '1h' });
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('apex_token', token, {
-        httpOnly: false,
+        httpOnly: true,
         secure: isSecure,
         sameSite: 'Lax',
         maxAge: 60 * 60 * 1000
@@ -518,10 +518,7 @@ function requireAppAccess(req, res, next) {
 }
 
 function hasCronAccess(req) {
-    if (!CRON_SECRET) {
-        return true;
-    }
-
+    if (!CRON_SECRET) return false;
     return req.get("x-cron-secret") === CRON_SECRET;
 }
 
@@ -1342,7 +1339,8 @@ Safety rules:
         throw new Error("No reflection JSON returned.");
     }
 
-    const parsed = JSON.parse(jsonText);
+    let parsed;
+    try { parsed = JSON.parse(jsonText); } catch (e) { throw new Error(`Reflection JSON parse failed: ${e.message}`); }
     const whatWorked = String(parsed.what_worked || "No specific success noted.").trim();
     const whatFailed = String(parsed.what_failed || "No specific failure noted.").trim();
     const rememberNextTime = String(parsed.remember_next_time || parsed.lesson || "").trim();
@@ -7010,6 +7008,7 @@ app.post("/chat", requireAppAccess, async (req, res) => {
                 setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
                 return res.status(200).json({ ok: true, reply: _agentReply });
             } catch (e) {
+                if (res.headersSent) return;
                 console.warn('[AgentLib] intent invoke failed, falling through to normal chat:', e.message);
             }
         }
@@ -7317,7 +7316,7 @@ app.get("/auth/gmail/callback", requireAppAccess, async (req, res) => {
         return res.send("Gmail re-authorisation complete. New refresh token saved. You can close this tab.");
     } catch (err) {
         console.error('[Gmail OAuth] callback failed:', err.message, err.stack);
-        return res.status(500).send(`OAuth callback failed: ${err.message}<br><pre>${err.stack}</pre>`);
+        return res.status(500).send(`OAuth callback failed. Check server logs for details.`);
     }
 });
 

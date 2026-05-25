@@ -105,4 +105,33 @@ router.post('/university/sessions', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+router.get('/university/reading-list', _auth, async (req, res) => {
+    try {
+        const { data, error } = await sb().from('apex_reading_list').select('*').order('created_at', { ascending: false });
+        if (error) return res.json({ ok: true, books: [] });
+        res.json({ ok: true, books: data || [] });
+    } catch (e) { res.json({ ok: true, books: [], error: e.message }); }
+});
+
+router.post('/spiritual/log', _auth, async (req, res) => {
+    try {
+        const { practice_type, duration_minutes, notes } = req.body || {};
+        if (!practice_type) return res.status(400).json({ ok: false, error: 'practice_type required' });
+        const { data, error } = await sb().from('apex_spiritual_sessions').insert({ practice_type, duration_minutes: duration_minutes || null, notes: notes || null }).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, session: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.post('/habits/log', _auth, async (req, res) => {
+    try {
+        const { habit_id, completed, log_date } = req.body || {};
+        if (!habit_id) return res.status(400).json({ ok: false, error: 'habit_id required' });
+        const today = log_date || new Date().toISOString().split('T')[0];
+        const { data, error } = await sb().from('apex_habit_logs').upsert({ habit_id, log_date: today, completed: !!completed }, { onConflict: 'habit_id,log_date' }).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, log: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;
