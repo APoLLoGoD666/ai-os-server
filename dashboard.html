@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta name="apex-version" content="v10" />
@@ -3525,45 +3525,44 @@ html, body {
                 <div class="ds-page-header">
                     <div class="ds-page-header-left">
                         <span class="ds-page-title">Comms</span>
-                        <span class="ds-page-subtitle">14 features · email · calendar · messaging</span>
+                        <span class="ds-page-subtitle">email &#183; calendar &#183; messaging</span>
                     </div>
-                    <button class="ds-btn cyan" onclick="checkEmailNow()">▶ Check inbox now</button>
+                    <button class="ds-btn cyan" onclick="checkEmailNow()">&#9658; Check inbox now</button>
                 </div>
 
                 <div class="ds-grid-stats">
                     <div class="ds-stat-card ac-cyan">
                         <div class="ds-stat-label">Inbox</div>
-                        <div class="ds-stat-value cyan" id="commsStatInbox">—</div>
+                        <div class="ds-stat-value cyan" id="commsStatInbox">&#8212;</div>
                         <div class="ds-stat-sub">unread emails</div>
                     </div>
                     <div class="ds-stat-card ac-amber">
                         <div class="ds-stat-label">Drafts pending</div>
-                        <div class="ds-stat-value amber" id="commsStatDrafts">—</div>
+                        <div class="ds-stat-value amber" id="commsStatDrafts">&#8212;</div>
                         <div class="ds-stat-sub"><span class="ds-dot amber"></span><span>review before send</span></div>
                     </div>
                     <div class="ds-stat-card ac-red">
                         <div class="ds-stat-label">Urgent</div>
-                        <div class="ds-stat-value red" id="commsStatUrgent">—</div>
+                        <div class="ds-stat-value red" id="commsStatUrgent">&#8212;</div>
                         <div class="ds-stat-sub"><span class="ds-dot red pulse"></span><span>action required</span></div>
                     </div>
                     <div class="ds-stat-card ac-cyan">
                         <div class="ds-stat-label">Calendar today</div>
                         <div class="ds-stat-value" style="color:var(--text-faint)" id="commsStatCal">0</div>
-                        <div class="ds-stat-sub" style="color:var(--text-faint)">no events scheduled</div>
+                        <div class="ds-stat-sub" style="color:var(--text-faint)">no events today</div>
                     </div>
                 </div>
 
-                <!-- Email panel — full width -->
+                <!-- Unified inbox -->
                 <div class="ds-panel">
                     <div class="ds-panel-header">
                         <div class="ds-panel-header-left">
                             <span class="ds-dot cyan"></span>
-                            <span class="t-label">Email · Gmail</span>
-                            <span class="t-mono" style="color:var(--text-mute);margin-left:6px;font-size:10px">FEAT-C001 · C011 · C012</span>
+                            <span class="t-label">Unified inbox</span>
                         </div>
                         <div class="ds-panel-header-right">
-                            <span class="ds-badge cyan">Polling every 5m</span>
-                            <button class="ds-btn xs cyan">Compose</button>
+                            <span class="ds-badge cyan">Polling 5m</span>
+                            <button class="ds-btn xs cyan" onclick="showComposeModal()">Compose</button>
                         </div>
                     </div>
                     <div class="ds-pill-row" id="emailFilterPills">
@@ -3571,9 +3570,11 @@ html, body {
                         <button class="ds-pill" onclick="filterEmails('urgent',this)">Urgent</button>
                         <button class="ds-pill" onclick="filterEmails('draft',this)">Draft</button>
                         <button class="ds-pill" onclick="filterEmails('normal',this)">Normal</button>
+                        <button class="ds-pill" onclick="filterEmails('gmail',this)"><svg width="11" height="9" viewBox="0 0 24 20" style="vertical-align:middle;margin-right:3px"><path d="M20 0H4C2.9 0 2 .9 2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V2c0-1.1-.9-2-2-2z" fill="rgba(234,67,53,0.55)"/><path d="M20 2L12 11 4 2" stroke="white" stroke-width="2" fill="none"/></svg>Gmail</button>
+                        <button class="ds-pill" onclick="filterEmails('linkedin',this)"><svg width="11" height="11" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:3px"><rect width="24" height="24" rx="3" fill="rgba(10,102,194,0.65)"/><path d="M7 10h2v7H7zm1-2a1 1 0 110-2 1 1 0 010 2zm4 2h1.9l.1 1c.4-.7 1.3-1.2 2.4-1.2 2.5 0 3 1.6 3 3.7V17h-2v-3.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2v-7z" fill="white"/></svg>LinkedIn</button>
                     </div>
-                    <div id="emailList" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                        <div class="ds-skel-row" style="grid-column:1/-1">Loading emails…</div>
+                    <div id="emailList" style="display:flex;flex-direction:column;gap:6px">
+                        <div class="ds-skel-row" style="height:48px">Loading inbox&#8230;</div>
                     </div>
                 </div>
 
@@ -3581,37 +3582,30 @@ html, body {
                 <div class="ds-grid-2">
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Calendar</span></div>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Calendar &#8212; this week</span>
+                            </div>
                             <div class="ds-panel-header-right">
-                                <span class="ds-badge cyan">FEAT-C005</span>
-                                <button class="ds-btn xs cyan">+ Add event</button>
+                                <button class="ds-btn xs cyan">+ Event</button>
                             </div>
                         </div>
-                        <div style="background:var(--surface-2);border:1px dashed rgba(255,255,255,0.08);border-radius:8px;padding:20px 14px;text-align:center;margin-bottom:12px">
-                            <div class="t-label" style="margin-bottom:4px">Today · Sat 24 May</div>
-                            <div style="color:var(--text-faint);font-style:italic;font-size:12px">No events today — add one via voice</div>
-                        </div>
-                        <div class="t-label" style="margin-bottom:8px">This week</div>
-                        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 6px;text-align:center"><div class="t-label-tiny" style="margin-bottom:6px">M</div><div style="font-size:14px;font-weight:600">20</div></div>
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 6px;text-align:center"><div class="t-label-tiny" style="margin-bottom:6px">T</div><div style="font-size:14px;font-weight:600">21</div><div style="height:4px;margin-top:6px;display:flex;gap:2px;justify-content:center"><span style="width:4px;height:4px;background:var(--purple);border-radius:2px"></span></div></div>
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 6px;text-align:center"><div class="t-label-tiny" style="margin-bottom:6px">W</div><div style="font-size:14px;font-weight:600">22</div></div>
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 6px;text-align:center"><div class="t-label-tiny" style="margin-bottom:6px">T</div><div style="font-size:14px;font-weight:600">23</div><div style="height:4px;margin-top:6px;display:flex;gap:2px;justify-content:center"><span style="width:4px;height:4px;background:var(--cyan);border-radius:2px"></span><span style="width:4px;height:4px;background:var(--amber);border-radius:2px"></span></div></div>
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 6px;text-align:center"><div class="t-label-tiny" style="margin-bottom:6px">F</div><div style="font-size:14px;font-weight:600">24</div></div>
-                            <div style="background:var(--surface-2);border:1px solid var(--border-cyan);border-radius:6px;padding:10px 6px;text-align:center"><div class="t-label-tiny" style="margin-bottom:6px;color:var(--cyan)">S</div><div style="font-size:14px;font-weight:600;color:var(--cyan)">25</div></div>
-                            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 6px;text-align:center"><div class="t-label-tiny" style="margin-bottom:6px">S</div><div style="font-size:14px;font-weight:600">26</div></div>
+                        <div id="comms-cal-today" class="t-label" style="margin-bottom:8px;color:var(--text-faint)">&#8212;</div>
+                        <div id="comms-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
                         </div>
                     </div>
 
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Contacts</span></div>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Contacts</span>
+                            </div>
                             <div class="ds-panel-header-right">
-                                <span class="ds-badge purple">FEAT-C006</span>
                                 <button class="ds-btn xs">Sync</button>
                             </div>
                         </div>
-                        <input class="chat-input" placeholder="Search contacts…" style="height:28px;font-size:11px;border-radius:var(--r-md);margin-bottom:10px">
+                        <input class="chat-input" placeholder="Search contacts&#8230;" style="height:28px;font-size:11px;border-radius:var(--r-md);margin-bottom:10px">
                         <table class="ds-table">
                             <thead><tr><th>Name</th><th>Company</th><th>Last</th><th>Follow-up</th></tr></thead>
                             <tbody id="contactsTbody">
@@ -3621,86 +3615,77 @@ html, body {
                     </div>
                 </div>
 
-                <!-- Setup-required panels -->
+                <!-- Channel setup cards -->
                 <div class="ds-grid-2">
+
                     <div class="ds-panel accent-amber">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">WhatsApp Business</span></div>
-                            <div class="ds-panel-header-right"><span class="ds-badge amber">Setup required</span><span class="t-mono" style="color:var(--text-mute)">FEAT-C002</span></div>
+                            <div class="ds-panel-header-left">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(37,211,102,0.75)" style="margin-right:6px;flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.847 2C6.477 2 2.086 6.38 2.073 11.758c0 1.718.457 3.39 1.33 4.867L2 22l5.504-1.44A9.854 9.854 0 0011.847 21.56C17.224 21.56 21.616 17.18 21.616 11.8c0-2.617-1.023-5.076-2.876-6.921A9.727 9.727 0 0011.847 2z"/></svg>
+                                <span class="t-label">WhatsApp Business</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <span class="ds-badge amber">Setup required</span>
+                            </div>
                         </div>
                         <div style="display:flex;flex-direction:column;gap:6px">
-                            <div class="ds-skel-row">Unread count · —</div>
-                            <div class="ds-skel-row">Last message preview · —</div>
-                            <div class="ds-skel-row">Voice-reply · disabled until configured</div>
-                            <div style="margin-top:8px;padding:12px;background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.28);border-radius:8px">
-                                <div class="t-small" style="color:var(--text);margin-bottom:4px">Business API not configured.</div>
+                            <div class="ds-skel-row">Unread count &#183; &#8212;</div>
+                            <div class="ds-skel-row">Last message &#183; &#8212;</div>
+                            <div style="margin-top:6px;padding:10px;background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.28);border-radius:8px">
                                 <div class="t-mono" style="color:var(--amber)">Add WHATSAPP_TOKEN to Render env vars.</div>
-                                <button class="ds-btn xs amber" style="margin-top:8px">Copy setup instructions</button>
+                                <button class="ds-btn xs amber" style="margin-top:6px">Copy setup instructions</button>
                             </div>
                         </div>
                     </div>
 
                     <div class="ds-panel accent-amber">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">SMS · iMessage</span></div>
-                            <div class="ds-panel-header-right"><span class="ds-badge amber">Setup required</span><span class="t-mono" style="color:var(--text-mute)">FEAT-C003</span></div>
+                            <div class="ds-panel-header-left">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right:6px;flex-shrink:0"><rect width="24" height="24" rx="4" fill="rgba(52,199,89,0.4)"/><path d="M7 12h10M7 8h10M7 16h6" stroke="rgba(52,199,89,0.9)" stroke-width="2" stroke-linecap="round"/></svg>
+                                <span class="t-label">SMS &#183; iMessage</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <span class="ds-badge amber">Setup required</span>
+                            </div>
                         </div>
                         <div style="display:flex;flex-direction:column;gap:6px">
-                            <div class="ds-skel-row">Unread SMS · —</div>
-                            <div class="ds-skel-row">Latest sender · —</div>
-                            <div class="ds-skel-row">Voice-reply · disabled</div>
-                            <div style="margin-top:8px;padding:12px;background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.28);border-radius:8px">
-                                <div class="t-small" style="color:var(--text);margin-bottom:4px">Twilio not configured.</div>
+                            <div class="ds-skel-row">Unread SMS &#183; &#8212;</div>
+                            <div class="ds-skel-row">Latest sender &#183; &#8212;</div>
+                            <div style="margin-top:6px;padding:10px;background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.28);border-radius:8px">
                                 <div class="t-mono" style="color:var(--amber)">Add TWILIO_API_KEY + TWILIO_FROM_NUMBER.</div>
-                                <button class="ds-btn xs amber" style="margin-top:8px">Copy setup instructions</button>
+                                <button class="ds-btn xs amber" style="margin-top:6px">Copy setup instructions</button>
                             </div>
                         </div>
                     </div>
 
                     <div class="ds-panel accent-amber">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">Voicemail</span></div>
-                            <div class="ds-panel-header-right"><span class="ds-badge amber">FEAT-C008</span></div>
+                            <div class="ds-panel-header-left">
+                                <svg width="14" height="14" viewBox="0 0 24 24" style="margin-right:6px;flex-shrink:0"><rect width="24" height="24" rx="3" fill="rgba(10,102,194,0.75)"/><path d="M7 10h2v7H7zm1-2a1 1 0 110-2 1 1 0 010 2zm4 2h1.9l.1 1c.4-.7 1.3-1.2 2.4-1.2 2.5 0 3 1.6 3 3.7V17h-2v-3.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2v-7z" fill="white"/></svg>
+                                <span class="t-label">LinkedIn</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <span class="ds-badge amber">Monitoring off</span>
+                            </div>
                         </div>
                         <div style="display:flex;flex-direction:column;gap:6px">
-                            <div class="ds-skel-row">Recent voicemail · —</div>
-                            <div class="ds-skel-row">Transcript · awaiting Deepgram link</div>
-                            <div class="ds-skel-row">Action items · auto-extract pending</div>
+                            <div class="ds-skel-row">Unread DMs &#183; &#8212;</div>
+                            <div class="ds-skel-row">Connection requests &#183; &#8212;</div>
                         </div>
                     </div>
 
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Meeting Summaries</span></div>
-                            <div class="ds-panel-header-right"><span class="ds-badge cyan">FEAT-C007</span></div>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div class="ds-skel-row">No meetings recorded yet — Apex captures on next call</div>
-                            <div class="ds-skel-row">Action points · summary · sentiment · follow-ups</div>
-                        </div>
-                    </div>
-
-                    <div class="ds-panel accent-amber">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">LinkedIn</span></div>
-                            <div class="ds-panel-header-right"><span class="ds-badge amber">Monitoring off</span><span class="t-mono" style="color:var(--text-mute)">FEAT-C009</span></div>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div class="ds-skel-row">Unread DMs · —</div>
-                            <div class="ds-skel-row">Connection requests · —</div>
-                            <div class="ds-skel-row">Recent activity · —</div>
-                        </div>
-                    </div>
-
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Birthdays · Anniversaries</span></div>
-                            <div class="ds-panel-header-right"><span class="ds-badge purple">FEAT-C014</span></div>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Birthdays &#183; Anniversaries</span>
+                            </div>
                         </div>
                         <div id="birthdayPanel" style="display:flex;flex-direction:column;gap:6px">
                             <div class="skel skel-wide" style="height:12px;margin:4px 0"></div>
                         </div>
                     </div>
+
                 </div>
 
             </div>
@@ -3711,16 +3696,40 @@ html, body {
                 <div class="ds-page-header">
                     <div class="ds-page-header-left">
                         <span class="ds-page-title">Finance</span>
-                        <span class="ds-page-subtitle">18 features · banking · invoices · taxes</span>
+                        <span class="ds-page-subtitle">banking &#183; invoices &#183; budgets &#183; taxes</span>
                     </div>
-                    <button class="ds-btn cyan" onclick="logExpenseQuick()">+ Log expense via voice</button>
+                    <button class="ds-btn cyan" onclick="logExpenseQuick()">+ Log expense</button>
+                </div>
+
+                <!-- Net worth hero -->
+                <div style="background:linear-gradient(135deg,rgba(0,212,255,0.07),rgba(124,111,255,0.04));border:1px solid rgba(0,212,255,0.12);border-radius:12px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
+                    <div>
+                        <div class="t-label" style="margin-bottom:6px">Net worth</div>
+                        <div id="fin-net-worth-val" style="font-size:32px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums">&#8212;</div>
+                        <div id="fin-net-worth-sub" style="font-size:11px;color:var(--text-mute);margin-top:4px">Connect Plaid to calculate</div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:right">
+                        <div>
+                            <div class="t-label">Assets</div>
+                            <div id="fin-assets-val" style="font-size:16px;font-weight:600;color:var(--green)">&#8212;</div>
+                        </div>
+                        <div>
+                            <div class="t-label">Liabilities</div>
+                            <div id="fin-liab-val" style="font-size:16px;font-weight:600;color:var(--red)">&#8212;</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Bank cards visual -->
                 <div class="ds-panel" style="margin-bottom:0">
                     <div class="ds-panel-header">
-                        <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Linked accounts</span></div>
-                        <div class="ds-panel-header-right"><span class="t-mono" style="color:var(--text-mute)">FEAT-F001</span></div>
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot cyan"></span>
+                            <span class="t-label">Linked accounts</span>
+                        </div>
+                        <div class="ds-panel-header-right">
+                            <span class="ds-badge amber">Plaid not connected</span>
+                        </div>
                     </div>
                     <div id="financeCardsRow" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:4px"></div>
                 </div>
@@ -3728,77 +3737,53 @@ html, body {
                 <div class="ds-grid-stats">
                     <div class="ds-stat-card ac-amber">
                         <div class="ds-stat-label">Bank balance</div>
-                        <div class="ds-stat-value" style="color:var(--text-faint)">—</div>
+                        <div class="ds-stat-value" style="color:var(--text-faint)" id="finStatBank">&#8212;</div>
                         <div class="ds-stat-sub"><span class="ds-dot amber"></span><span style="color:var(--amber)">Plaid not connected</span></div>
                     </div>
                     <div class="ds-stat-card ac-cyan">
                         <div class="ds-stat-label">Invoices active</div>
-                        <div class="ds-stat-value">0</div>
-                        <div class="ds-stat-sub" style="color:var(--text-faint)">0 sent · 0 overdue</div>
+                        <div class="ds-stat-value" id="finStatInvoices">0</div>
+                        <div class="ds-stat-sub" style="color:var(--text-faint)">0 sent &#183; 0 overdue</div>
                     </div>
                     <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">AI credits remaining</div>
-                        <div class="ds-stat-value amber" id="finStatCredit">$14.61</div>
-                        <div class="ds-stat-sub"><span class="ds-dot amber pulse"></span><span style="color:var(--amber)">auto-reload OFF</span></div>
-                        <div class="ds-bar amber" style="margin-top:4px"><div class="ds-bar-fill" style="width:58%"></div></div>
+                        <div class="ds-stat-label">AI credits</div>
+                        <div class="ds-stat-value amber" id="finStatCredit">&#8212;</div>
+                        <div class="ds-stat-sub"><span class="ds-dot amber pulse"></span><span id="finStatCreditSub" style="color:var(--amber)">loading</span></div>
                     </div>
-                    <div class="ds-stat-card ac-purple">
-                        <div class="ds-stat-label">Net worth</div>
-                        <div class="ds-stat-value" style="color:var(--text-faint)">—</div>
-                        <div class="ds-stat-sub" style="color:var(--text-faint)">pending setup</div>
-                    </div>
-                </div>
-
-                <!-- Bank accounts -->
-                <div class="ds-panel accent-amber">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">Bank Accounts</span></div>
-                        <div class="ds-panel-header-right"><span class="ds-badge amber">Plaid not connected</span><span class="t-mono" style="color:var(--text-mute)">FEAT-F001</span></div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-                        <div style="background:var(--surface-2);border:1px dashed rgba(255,255,255,0.10);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px">
-                            <div style="display:flex;justify-content:space-between;align-items:center"><div class="t-label">Current</div><div style="width:24px;height:16px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div></div>
-                            <div class="t-mono" style="color:var(--text-faint)">**** ****</div>
-                            <div style="font-size:22px;font-weight:600;color:var(--text-faint);font-variant-numeric:tabular-nums">£—.—</div>
-                            <button class="ds-btn xs amber">Connect via Plaid</button>
-                        </div>
-                        <div style="background:var(--surface-2);border:1px dashed rgba(255,255,255,0.10);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px">
-                            <div style="display:flex;justify-content:space-between;align-items:center"><div class="t-label">Savings</div><div style="width:24px;height:16px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div></div>
-                            <div class="t-mono" style="color:var(--text-faint)">**** ****</div>
-                            <div style="font-size:22px;font-weight:600;color:var(--text-faint);font-variant-numeric:tabular-nums">£—.—</div>
-                            <button class="ds-btn xs amber">Connect via Plaid</button>
-                        </div>
-                        <div style="background:var(--surface-2);border:1px dashed rgba(255,255,255,0.10);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px">
-                            <div style="display:flex;justify-content:space-between;align-items:center"><div class="t-label">Business</div><div style="width:24px;height:16px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid var(--border)"></div></div>
-                            <div class="t-mono" style="color:var(--text-faint)">**** ****</div>
-                            <div style="font-size:22px;font-weight:600;color:var(--text-faint);font-variant-numeric:tabular-nums">£—.—</div>
-                            <button class="ds-btn xs amber">Connect via Plaid</button>
-                        </div>
-                    </div>
-                    <div style="margin-top:12px;padding:12px;background:rgba(255,77,106,0.06);border:1px solid rgba(255,77,106,0.28);border-radius:8px">
-                        <div class="t-small" style="color:var(--text);margin-bottom:4px">⚠ Anthropic auto-reload is OFF</div>
-                        <div class="t-mono" style="color:var(--red)">Enable at console.anthropic.com to avoid pipeline interruption.</div>
+                    <div class="ds-stat-card ac-green">
+                        <div class="ds-stat-label">Expenses logged</div>
+                        <div class="ds-stat-value green" id="finStatExpenses">&#8212;</div>
+                        <div class="ds-stat-sub" style="color:var(--text-faint)">this month</div>
                     </div>
                 </div>
 
-                <!-- AI Credits -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">AI Credits · Vendor Balances</span></div>
-                        <div class="ds-panel-header-right"><button class="ds-btn xs amber">Top up</button></div>
+                <!-- Charts row: income/expenses bar + spend doughnut -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Income vs Expenses &#183; 6 months</span>
+                            </div>
+                        </div>
+                        <div style="position:relative;height:160px">
+                            <canvas id="fin-chart-income" style="width:100%;height:160px"></canvas>
+                        </div>
                     </div>
-                    <div id="financePanel" style="display:flex;flex-direction:column;gap:12px">
-                        <div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="t-h3">Anthropic</span><span class="t-mono" style="color:var(--amber)">$14.61 / $25 · 58%</span></div>
-                            <div class="ds-bar tall amber"><div class="ds-bar-fill" style="width:58%"></div></div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Spend by category</span>
+                            </div>
                         </div>
-                        <div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="t-h3">OpenRouter</span><span class="t-mono" style="color:var(--green)">$48.20 · active</span></div>
-                            <div class="ds-bar tall green"><div class="ds-bar-fill" style="width:84%"></div></div>
-                        </div>
-                        <div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="t-h3">Deepgram</span><span class="t-mono" style="color:var(--green)">$22.00 · active</span></div>
-                            <div class="ds-bar tall green"><div class="ds-bar-fill" style="width:88%"></div></div>
+                        <div style="display:flex;align-items:center;gap:16px">
+                            <div style="position:relative;width:130px;height:130px;flex-shrink:0">
+                                <canvas id="fin-chart-spend" style="width:130px;height:130px"></canvas>
+                            </div>
+                            <div id="fin-spend-legend" style="display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--text-mute)">
+                                No expense data yet
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3807,101 +3792,130 @@ html, body {
                 <div class="ds-grid-2">
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Invoices</span></div>
-                            <div class="ds-panel-header-right"><span class="t-mono" style="color:var(--text-mute)">FEAT-F004</span><button class="ds-btn xs cyan">+ Create</button></div>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Invoices</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <button class="ds-btn xs cyan">+ Create</button>
+                            </div>
                         </div>
                         <table class="ds-table">
-                            <thead><tr><th>Client</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead>
-                            <tbody><tr><td class="skel-cell" colspan="5" style="text-align:center;padding:20px;font-style:italic;color:var(--text-faint)">No invoices yet — say "draft invoice for [client] £[amount]"</td></tr></tbody>
+                            <thead><tr><th>Client</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead>
+                            <tbody id="invoicesTbody">
+                                <tr><td class="skel-cell" colspan="4" style="text-align:center;padding:20px;font-style:italic;color:var(--text-faint)">No invoices yet</td></tr>
+                            </tbody>
                         </table>
                     </div>
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Expenses</span></div>
-                            <div class="ds-panel-header-right"><span class="t-mono" style="color:var(--text-mute)">FEAT-F003</span><button class="ds-btn xs purple">📷 Scan receipt</button></div>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Expenses</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <button class="ds-btn xs purple">&#128247; Scan receipt</button>
+                            </div>
                         </div>
                         <table class="ds-table">
                             <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead>
                             <tbody id="expensesTbody">
-                                <tr><td colspan="4" class="skel skel-wide" style="height:12px;margin:8px 0"></td></tr>
+                                <tr><td colspan="4" style="padding:14px;text-align:center;color:var(--text-faint);font-style:italic">Loading expenses&#8230;</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- Crypto + Subscriptions -->
+                <!-- Cash flow forecast (full width) -->
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot cyan"></span>
+                            <span class="t-label">Cash Flow &#183; 30-day forecast</span>
+                        </div>
+                    </div>
+                    <div style="position:relative;height:140px">
+                        <canvas id="fin-chart-cashflow" style="width:100%;height:140px"></canvas>
+                    </div>
+                </div>
+
+                <!-- Budget vs actual + Subscriptions -->
                 <div class="ds-grid-2">
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Crypto & Investments</span></div>
-                            <div class="ds-panel-header-right"><span class="t-mono" style="color:var(--text-mute)">FEAT-F008/F009</span></div>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot green"></span>
+                                <span class="t-label">Budget vs Actual</span>
+                            </div>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:10px">
-                            <div style="display:grid;grid-template-columns:1fr 80px 100px;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px"><div><div class="t-h3">Bitcoin</div><div class="t-mono" style="color:var(--text-mute)">BTC</div></div><span class="ds-badge amber">holding</span><div class="t-mono" style="color:var(--text-faint);text-align:right">£—.—</div></div>
-                            <div style="display:grid;grid-template-columns:1fr 80px 100px;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px"><div><div class="t-h3">Ethereum</div><div class="t-mono" style="color:var(--text-mute)">ETH</div></div><span class="ds-badge purple">holding</span><div class="t-mono" style="color:var(--text-faint);text-align:right">£—.—</div></div>
-                            <div style="display:grid;grid-template-columns:1fr 80px 100px;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px"><div><div class="t-h3">Stocks · ISA</div><div class="t-mono" style="color:var(--text-mute)">GBP</div></div><span class="ds-badge cyan">holding</span><div class="t-mono" style="color:var(--text-faint);text-align:right">£—.—</div></div>
-                            <button class="ds-btn xs purple" style="align-self:flex-start;margin-top:4px">Connect portfolio tracker</button>
+                        <div style="position:relative;height:160px">
+                            <canvas id="fin-chart-budget" style="width:100%;height:160px"></canvas>
                         </div>
                     </div>
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Subscriptions</span></div>
-                            <div class="ds-panel-header-right"><span class="t-mono" style="color:var(--text-mute)">FEAT-F010</span><button class="ds-btn xs cyan">Import from bank</button></div>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Subscriptions</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <button class="ds-btn xs cyan">Import</button>
+                            </div>
                         </div>
                         <table class="ds-table">
-                            <thead><tr><th>Service</th><th>Monthly</th><th>Next billing</th><th>Status</th></tr></thead>
+                            <thead><tr><th>Service</th><th>Monthly</th><th>Next</th><th>Status</th></tr></thead>
                             <tbody id="subscriptionsTbody">
-                                <tr><td colspan="4" style="color:var(--text-faint);padding:16px;text-align:center;font-style:italic">No subscriptions yet — import from bank or add manually</td></tr>
+                                <tr><td colspan="4" style="color:var(--text-faint);padding:16px;text-align:center;font-style:italic">No subscriptions yet</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- Budget + Cashflow -->
-                <div class="ds-grid-2">
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">Budget vs Actual</span></div>
-                            <div class="ds-panel-header-right"><span class="t-mono" style="color:var(--text-mute)">FEAT-F011</span></div>
+                <!-- AI vendor balances -->
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot amber"></span>
+                            <span class="t-label">AI Credits &#183; Vendor Balances</span>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:10px">
-                            <div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span class="t-small" style="color:var(--text);font-weight:500">Food</span><span class="t-mono" style="color:var(--text-mute)">£105 / £200</span></div><div class="ds-bar"><div class="ds-bar-fill green" style="width:52%"></div></div></div>
-                            <div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span class="t-small" style="color:var(--text);font-weight:500">Software</span><span class="t-mono" style="color:var(--red)">£75 / £60</span></div><div class="ds-bar"><div class="ds-bar-fill" style="width:100%;background:var(--red)"></div></div></div>
-                            <div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span class="t-small" style="color:var(--text);font-weight:500">Transit</span><span class="t-mono" style="color:var(--text-mute)">£22 / £80</span></div><div class="ds-bar"><div class="ds-bar-fill green" style="width:27%"></div></div></div>
-                            <div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span class="t-small" style="color:var(--text);font-weight:500">Eating out</span><span class="t-mono" style="color:var(--text-mute)">£88 / £120</span></div><div class="ds-bar"><div class="ds-bar-fill" style="width:73%"></div></div></div>
-                            <div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span class="t-small" style="color:var(--text);font-weight:500">Subscriptions</span><span class="t-mono" style="color:var(--text-mute)">£59 / £100</span></div><div class="ds-bar green"><div class="ds-bar-fill" style="width:59%"></div></div></div>
+                        <div class="ds-panel-header-right">
+                            <button class="ds-btn xs amber">Top up</button>
                         </div>
                     </div>
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Cash Flow · 30-Day Forecast</span></div>
-                            <div class="ds-panel-header-right"><span class="t-mono" style="color:var(--text-mute)">FEAT-F012</span></div>
-                        </div>
-                        <div class="mini-chart-ds" style="height:160px">
-                            <div class="mini-chart-grid-ds"></div>
-                            <svg viewBox="0 0 300 160" style="position:absolute;inset:0;width:100%;height:100%">
-                                <defs><linearGradient id="cf-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00d4ff" stop-opacity="0.4"/><stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/></linearGradient></defs>
-                                <path d="M0 110 L40 95 L80 100 L120 70 L160 75 L200 50 L240 65 L300 40 L300 160 L0 160 Z" fill="url(#cf-grad)"/>
-                                <path d="M0 110 L40 95 L80 100 L120 70 L160 75 L200 50 L240 65 L300 40" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
-                            </svg>
-                            <span class="mini-chart-label" style="top:8px;left:8px">£</span>
-                            <span class="mini-chart-label" style="bottom:6px;left:8px">now</span>
-                            <span class="mini-chart-label" style="bottom:6px;right:8px">+30d</span>
-                        </div>
+                    <div id="financePanel" style="display:flex;flex-direction:column;gap:12px">
+                        <div class="skel skel-row skel-wide"></div>
                     </div>
                 </div>
 
                 <!-- Tax -->
                 <div class="ds-panel">
                     <div class="ds-panel-header">
-                        <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Tax & VAT · Self-Employed</span></div>
-                        <div class="ds-panel-header-right"><span class="t-mono" style="color:var(--text-mute)">FEAT-F007 · F017 · F018</span></div>
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot purple"></span>
+                            <span class="t-label">Tax &#183; VAT &#183; Self-Employed</span>
+                        </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--cyan);border-radius:8px;padding:12px"><div class="t-label">Self-assessment due</div><div class="t-h2" style="color:var(--cyan);margin-top:6px">31 Jan 2027</div><div class="t-small" style="margin-top:4px">on track</div></div>
-                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px;padding:12px"><div class="t-label">VAT next quarter</div><div class="t-h2" style="color:var(--amber);margin-top:6px">07 Aug</div><div class="t-small" style="margin-top:4px">returns drafted</div></div>
-                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--green);border-radius:8px;padding:12px"><div class="t-label">Expenses logged YTD</div><div class="t-h2" style="color:var(--green);margin-top:6px">£428.50</div><div class="t-small" style="margin-top:4px">auto-categorised</div></div>
-                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px;padding:12px"><div class="t-label">Estimated tax owed</div><div class="t-h2" style="color:var(--amber);margin-top:6px">£—</div><div class="t-small" style="margin-top:4px">awaits bank link</div></div>
+                    <div id="fin-tax-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--cyan);border-radius:8px;padding:12px">
+                            <div class="t-label">Self-assessment due</div>
+                            <div class="t-h2" style="color:var(--cyan);margin-top:6px">31 Jan 2027</div>
+                            <div class="t-small" style="margin-top:4px">on track</div>
+                        </div>
+                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px;padding:12px">
+                            <div class="t-label">VAT next quarter</div>
+                            <div class="t-h2" style="color:var(--amber);margin-top:6px" id="fin-vat-date">&#8212;</div>
+                            <div class="t-small" style="margin-top:4px">returns pending</div>
+                        </div>
+                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--green);border-radius:8px;padding:12px">
+                            <div class="t-label">Expenses YTD</div>
+                            <div class="t-h2" style="color:var(--green);margin-top:6px" id="fin-expenses-ytd">&#8212;</div>
+                            <div class="t-small" style="margin-top:4px">auto-categorised</div>
+                        </div>
+                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px;padding:12px">
+                            <div class="t-label">Estimated tax</div>
+                            <div class="t-h2" style="color:var(--amber);margin-top:6px">&#8212;</div>
+                            <div class="t-small" style="margin-top:4px">awaits bank link</div>
+                        </div>
                     </div>
                 </div>
 
@@ -4359,76 +4373,162 @@ html, body {
 
             <!-- ══ PAGE: BUSINESS ══ -->
             <div class="page" id="page-business">
+
                 <div class="ds-page-header">
                     <div class="ds-page-header-left">
                         <span class="ds-page-title">Business</span>
-                        <span class="ds-page-subtitle">CRM · projects · proposals · documents</span>
+                        <span class="ds-page-subtitle">CRM &#183; projects &#183; approvals &#183; tasks</span>
                     </div>
-                    <button class="ds-btn cyan" onclick="refreshCrmPanel();refreshProjectsPanel()">↻ Refresh</button>
+                    <button class="ds-btn cyan" onclick="refreshBizPage()">&#8635; Refresh</button>
                 </div>
+
                 <div class="ds-grid-stats">
+                    <div class="ds-stat-card ac-red">
+                        <div class="ds-stat-label">Pending approvals</div>
+                        <div class="ds-stat-value red" id="bizStatApprovals">&#8212;</div>
+                        <div class="ds-stat-sub"><span class="ds-dot red pulse"></span><span style="color:var(--red)">action required</span></div>
+                    </div>
                     <div class="ds-stat-card ac-purple">
                         <div class="ds-stat-label">Active clients</div>
-                        <div class="ds-stat-value purple" id="bizStatClients">—</div>
+                        <div class="ds-stat-value purple" id="bizStatClients">&#8212;</div>
                         <div class="ds-stat-sub">in pipeline</div>
                     </div>
                     <div class="ds-stat-card ac-cyan">
                         <div class="ds-stat-label">Projects</div>
-                        <div class="ds-stat-value cyan" id="bizStatProjects">—</div>
+                        <div class="ds-stat-value cyan" id="bizStatProjects">&#8212;</div>
                         <div class="ds-stat-sub">active</div>
                     </div>
                     <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">Proposals</div>
-                        <div class="ds-stat-value amber" id="bizStatProposals">—</div>
+                        <div class="ds-stat-label">Tasks queued</div>
+                        <div class="ds-stat-value amber" id="bizStatTasks">&#8212;</div>
                         <div class="ds-stat-sub">pending</div>
                     </div>
-                    <div class="ds-stat-card ac-green">
-                        <div class="ds-stat-label">Documents</div>
-                        <div class="ds-stat-value green" id="bizStatDocs">—</div>
-                        <div class="ds-stat-sub">stored</div>
+                </div>
+
+                <!-- Pending approvals (compact) -->
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot red pulse"></span>
+                            <span class="t-label">Pending approvals</span>
+                        </div>
+                        <div class="ds-panel-header-right">
+                            <span class="ds-badge red" id="bizApprovalBadge">&#8212;</span>
+                            <button class="ds-btn xs red" onclick="denyAllApprovals()">Deny all</button>
+                        </div>
+                    </div>
+                    <div id="bizApprovalList" style="display:flex;flex-direction:column;gap:8px">
+                        <div class="ds-skel-row">Loading approvals&#8230;</div>
                     </div>
                 </div>
-                <!-- CRM + PROJECTS -->
-                <div class="ds-grid-2">
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <span class="ds-panel-dot" style="background:var(--purple)"></span>
-                            <span class="ds-panel-title">CRM · client pipeline</span>
-                            <div class="ds-panel-right">
-                                <button class="ds-btn purple btn--xs">+ Add</button>
-                            </div>
+
+                <!-- CRM with Kanban toggle -->
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot purple"></span>
+                            <span class="t-label">CRM &#183; client pipeline</span>
                         </div>
+                        <div class="ds-panel-header-right">
+                            <button class="ds-btn xs" id="bizCrmViewBtn" onclick="toggleBizCrmView()">&#9778; Kanban</button>
+                            <button class="ds-btn xs purple">+ Add client</button>
+                        </div>
+                    </div>
+                    <!-- Table view -->
+                    <div id="bizCrmTableView">
                         <table class="ds-table">
-                            <thead><tr><th>Client</th><th>Stage</th><th>Value</th><th>Follow-up</th></tr></thead>
-                            <tbody id="bizCrmTbody"><tr><td colspan="4" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr></tbody>
+                            <thead><tr><th>Client</th><th>Stage</th><th>Value</th><th>Follow-up</th><th></th></tr></thead>
+                            <tbody id="bizCrmTbody">
+                                <tr><td colspan="5" style="padding:14px;text-align:center;color:var(--text-faint);font-style:italic">Loading CRM&#8230;</td></tr>
+                            </tbody>
                         </table>
                     </div>
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <span class="ds-panel-dot" style="background:var(--cyan)"></span>
-                            <span class="ds-panel-title">Projects</span>
+                    <!-- Kanban view -->
+                    <div id="bizCrmKanban" style="display:none;overflow-x:auto;padding-bottom:8px">
+                        <div style="display:flex;gap:12px;min-width:600px">
+                            <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbLead">
+                                <div class="t-label" style="margin-bottom:8px;color:var(--cyan)">Lead</div>
+                                <div class="kb-col" data-stage="lead" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
+                            </div>
+                            <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbProposal">
+                                <div class="t-label" style="margin-bottom:8px;color:var(--amber)">Proposal</div>
+                                <div class="kb-col" data-stage="proposal" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
+                            </div>
+                            <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbNegotiation">
+                                <div class="t-label" style="margin-bottom:8px;color:var(--purple)">Negotiation</div>
+                                <div class="kb-col" data-stage="negotiation" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
+                            </div>
+                            <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbWon">
+                                <div class="t-label" style="margin-bottom:8px;color:var(--green)">Won</div>
+                                <div class="kb-col" data-stage="won" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
+                            </div>
                         </div>
-                        <div id="bizProjectsPanel" style="display:flex;flex-direction:column;gap:8px"><div class="skel skel-row skel-wide"></div></div>
                     </div>
                 </div>
-                <!-- DOCS + PROPOSALS -->
+
+                <!-- Projects + Tasks -->
                 <div class="ds-grid-2">
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <span class="ds-panel-dot" style="background:var(--cyan)"></span>
-                            <span class="ds-panel-title">Documents · contracts</span>
-                            <div class="ds-panel-right"><button class="ds-btn cyan btn--xs">Upload</button></div>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Projects</span>
+                            </div>
                         </div>
-                        <div id="bizDocumentsPanel" style="display:flex;flex-direction:column;gap:6px"><div class="skel skel-row skel-wide"></div></div>
+                        <div id="bizProjectsPanel" style="display:flex;flex-direction:column;gap:8px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot amber"></span>
+                                <span class="t-label">Task queue &#183; by priority</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <button class="ds-btn xs amber" onclick="toggleTaskAddRow()">+ Add</button>
+                            </div>
+                        </div>
+                        <div id="taskAddRow" style="display:none;gap:6px;margin-bottom:6px">
+                            <input id="taskAddInput" class="ds-input" placeholder="Task description&#8230;">
+                            <button class="ds-btn xs green" onclick="addTaskFromInput()">Save</button>
+                        </div>
+                        <div id="bizTaskQueue" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents + Proposals -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Documents &#183; contracts</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <button class="ds-btn xs cyan">Upload</button>
+                            </div>
+                        </div>
+                        <div id="bizDocumentsPanel" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
                     </div>
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <span class="ds-panel-dot" style="background:var(--purple)"></span>
-                            <span class="ds-panel-title">Proposals</span>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Proposals</span>
+                            </div>
                         </div>
-                        <div id="bizProposalsPanel" style="display:flex;flex-direction:column;gap:6px"><div class="skel skel-row skel-wide"></div></div>
+                        <div id="bizProposalsPanel" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
                     </div>
                 </div>
+
             </div>
 
             <!-- ══ PAGE: UNIVERSITY ══ -->
@@ -9231,6 +9331,359 @@ async function initSystemPage() {
         }
         _prev(name);
         if (name === 'system') initSystemPage();
+    };
+})();
+
+// ── COMMUNICATION PAGE ────────────────────────────────────────────────────────
+function buildWeekCalendar() {
+    var grid = document.getElementById('comms-cal-grid');
+    var todayEl = document.getElementById('comms-cal-today');
+    if (!grid) return;
+    var now = new Date();
+    var dow = now.getDay(); // 0=Sun
+    var monday = new Date(now);
+    monday.setDate(now.getDate() - ((dow + 6) % 7));
+    var days = ['M','T','W','T','F','S','S'];
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    if (todayEl) todayEl.textContent = 'Today · ' + now.getDate() + ' ' + months[now.getMonth()];
+    grid.innerHTML = '';
+    for (var i = 0; i < 7; i++) {
+        var d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        var isToday = d.toDateString() === now.toDateString();
+        var cell = document.createElement('div');
+        cell.style.cssText = 'background:var(--surface-2);border:1px solid ' + (isToday ? 'var(--border-cyan)' : 'var(--border)') + ';border-radius:6px;padding:10px 6px;text-align:center';
+        cell.innerHTML = '<div class="t-label-tiny" style="margin-bottom:6px' + (isToday ? ';color:var(--cyan)' : '') + '">' + days[i] + '</div><div style="font-size:14px;font-weight:600' + (isToday ? ';color:var(--cyan)' : '') + '">' + d.getDate() + '</div>';
+        grid.appendChild(cell);
+    }
+}
+
+function fetchCommsEmails() {
+    var el = document.getElementById('emailList');
+    if (!el) return;
+    fetch('/api/email/inbox').then(function(r){return r.json();}).then(function(d){
+        if (!d.ok || !d.emails || !d.emails.length) {
+            el.innerHTML = '<div style="color:var(--text-faint);padding:20px;text-align:center;font-style:italic">No emails · inbox empty or not yet configured</div>';
+            return;
+        }
+        var groups = {};
+        d.emails.forEach(function(e){
+            var dt = e.date ? new Date(e.date).toLocaleDateString() : 'Unknown date';
+            if (!groups[dt]) groups[dt] = [];
+            groups[dt].push(e);
+        });
+        var html = '';
+        Object.keys(groups).forEach(function(dt){
+            html += '<div style="color:var(--text-mute);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:6px 0 2px">' + dt + '</div>';
+            groups[dt].forEach(function(m){
+                var urgBadge = m.urgent ? '<span class="ds-badge red" style="font-size:9px">urgent</span>' : '';
+                var draftBadge = m.draft ? '<span class="ds-badge amber" style="font-size:9px">draft</span>' : '';
+                var fromEsc = (m.from||'').replace(/'/g,"\\'");
+                html += '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+                    + '<div style="display:flex;align-items:center;gap:6px;min-width:0">'
+                    + '<svg width="12" height="10" viewBox="0 0 24 20"><path d="M20 0H4C2.9 0 2 .9 2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V2c0-1.1-.9-2-2-2z" fill="rgba(234,67,53,0.5)"/><path d="M20 2L12 11 4 2" stroke="white" stroke-width="2" fill="none"/></svg>'
+                    + '<span style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">' + (m.from||'Unknown') + '</span>'
+                    + '</div><span style="font-size:10px;color:var(--text-mute);white-space:nowrap">' + (m.time||'') + '</span></div>'
+                    + '<div style="font-size:12px;color:var(--text-mid);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.subject||'(no subject)') + '</div>'
+                    + '<div style="display:flex;gap:6px;margin-top:6px;align-items:center">'
+                    + '<button class="ds-btn xs cyan" onclick="quickReply(event,\'' + fromEsc + '\')">Reply</button>'
+                    + urgBadge + draftBadge
+                    + '</div></div>';
+            });
+        });
+        el.innerHTML = html;
+    }).catch(function(){
+        el.innerHTML = '<div style="color:var(--text-faint);padding:20px;text-align:center;font-style:italic">Email not configured</div>';
+    });
+}
+
+function quickReply(ev, to) {
+    ev.stopPropagation();
+    var existing = document.getElementById('comms-qr-modal');
+    if (existing) existing.remove();
+    var modal = document.createElement('div');
+    modal.id = 'comms-qr-modal';
+    modal.style.cssText = 'position:fixed;bottom:80px;right:24px;width:320px;background:var(--surface);border:1px solid var(--border-cyan);border-radius:10px;padding:14px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.5)';
+    modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="t-label">Reply to: <span style="color:var(--cyan)">' + to + '</span></span><button onclick="document.getElementById(\'comms-qr-modal\').remove()" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:16px">&times;</button></div><textarea class="ds-input" id="commsReplyBody" placeholder="Type reply…" style="height:70px;resize:none;padding:8px;width:100%;box-sizing:border-box"></textarea><div style="display:flex;gap:6px;margin-top:8px"><button class="ds-btn cyan" onclick="sendQuickReply(\'' + to.replace(/'/g,"\\'") + '\')">Send</button><button class="ds-btn xs" onclick="document.getElementById(\'comms-qr-modal\').remove()">Cancel</button></div>';
+    document.body.appendChild(modal);
+}
+
+function sendQuickReply(to) {
+    var body = (document.getElementById('commsReplyBody')||{}).value||'';
+    if (!body.trim()) return;
+    fetch('/api/email/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:to,body:body})})
+        .then(function(r){return r.json();}).then(function(d){
+            var m = document.getElementById('comms-qr-modal');
+            if (m) m.remove();
+            if (typeof showToast==='function') showToast(d.ok?'Reply sent':'Send failed');
+        }).catch(function(){if(typeof showToast==='function') showToast('Send failed');});
+}
+
+function filterEmails(filter, btn) {
+    if (btn) {
+        document.querySelectorAll('#emailFilterPills .ds-pill').forEach(function(b){b.classList.remove('active');});
+        btn.classList.add('active');
+    }
+}
+
+function initCommunicationPage() {
+    buildWeekCalendar();
+    fetchCommsEmails();
+}
+
+(function(){
+    var _prevComm = window.switchPage;
+    window.switchPage = function(name){
+        if (typeof _prevComm==='function') _prevComm(name);
+        if (name==='communication') initCommunicationPage();
+    };
+})();
+
+// ── FINANCE PAGE ──────────────────────────────────────────────────────────────
+var _finCharts = {};
+function _destroyFinChart(k) {
+    if (_finCharts[k]) { try { _finCharts[k].destroy(); } catch(e){} delete _finCharts[k]; }
+}
+
+function initFinanceCharts() {
+    if (typeof Chart === 'undefined') return;
+    var months = ['Dec','Jan','Feb','Mar','Apr','May'];
+    _destroyFinChart('income');
+    var ctx1 = document.getElementById('fin-chart-income');
+    if (ctx1) {
+        _finCharts['income'] = new Chart(ctx1, {
+            type: 'bar',
+            data: { labels: months, datasets: [
+                { label: 'Income', data: [0,0,0,0,0,0], backgroundColor: 'rgba(0,212,255,0.55)', borderRadius: 3 },
+                { label: 'Expenses', data: [0,0,0,0,0,0], backgroundColor: 'rgba(255,77,106,0.45)', borderRadius: 3 }
+            ]},
+            options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'rgba(255,255,255,0.5)', font:{size:10} } } }, scales:{ x:{ ticks:{ color:'rgba(255,255,255,0.4)', font:{size:10} }, grid:{ color:'rgba(255,255,255,0.04)' } }, y:{ ticks:{ color:'rgba(255,255,255,0.4)', font:{size:10} }, grid:{ color:'rgba(255,255,255,0.06)' } } } }
+        });
+    }
+    _destroyFinChart('spend');
+    var ctx2 = document.getElementById('fin-chart-spend');
+    if (ctx2) {
+        _finCharts['spend'] = new Chart(ctx2, {
+            type: 'doughnut',
+            data: { labels: ['No data'], datasets: [{ data: [1], backgroundColor: ['rgba(255,255,255,0.06)'], borderWidth: 0 }] },
+            options: { responsive:false, plugins:{ legend:{ display:false } }, cutout:'70%' }
+        });
+    }
+    _destroyFinChart('cashflow');
+    var ctx3 = document.getElementById('fin-chart-cashflow');
+    if (ctx3) {
+        var cfLabels = [];
+        for (var i = 0; i < 30; i++) { var d2 = new Date(); d2.setDate(d2.getDate()+i); cfLabels.push(i===0?'today':i%5===0?'+'+i+'d':''); }
+        _finCharts['cashflow'] = new Chart(ctx3, {
+            type: 'line',
+            data: { labels: cfLabels, datasets: [{ label: 'Balance', data: new Array(30).fill(null), borderColor: 'rgba(0,212,255,0.7)', backgroundColor: 'rgba(0,212,255,0.08)', fill:true, tension:0.4, pointRadius:0, borderWidth:1.5 }] },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'rgba(255,255,255,0.35)', font:{size:9} }, grid:{ display:false } }, y:{ ticks:{ color:'rgba(255,255,255,0.35)', font:{size:9} }, grid:{ color:'rgba(255,255,255,0.05)' } } } }
+        });
+    }
+    _destroyFinChart('budget');
+    var ctx4 = document.getElementById('fin-chart-budget');
+    if (ctx4) {
+        _finCharts['budget'] = new Chart(ctx4, {
+            type: 'bar',
+            data: { labels: ['Food','Software','Transit','Eating out','Subs'], datasets: [
+                { label: 'Budget', data: [0,0,0,0,0], backgroundColor: 'rgba(255,255,255,0.08)', borderRadius:3 },
+                { label: 'Actual', data: [0,0,0,0,0], backgroundColor: 'rgba(0,212,255,0.5)', borderRadius:3 }
+            ]},
+            options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'rgba(255,255,255,0.5)', font:{size:10} } } }, scales:{ x:{ ticks:{ color:'rgba(255,255,255,0.4)', font:{size:10} }, grid:{ color:'rgba(255,255,255,0.05)' } }, y:{ ticks:{ color:'rgba(255,255,255,0.5)', font:{size:10} }, grid:{ display:false } } } }
+        });
+    }
+}
+
+function fetchFinanceData() {
+    fetch('/api/finance/expenses?limit=20').then(function(r){return r.json();}).then(function(d){
+        var tb = document.getElementById('expensesTbody');
+        if (!tb) return;
+        if (!d.ok || !d.expenses || !d.expenses.length) {
+            tb.innerHTML = '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--text-faint);font-style:italic">No expenses logged yet</td></tr>';
+            return;
+        }
+        var total = 0;
+        tb.innerHTML = d.expenses.map(function(e){
+            total += parseFloat(e.amount||0);
+            return '<tr><td class="t-mono" style="font-size:10px">'+(e.date||'').split('T')[0]+'</td><td><span class="ds-badge purple" style="font-size:9px">'+(e.category||'misc')+'</span></td><td style="color:var(--text-mid)">'+(e.description||'')+'</td><td class="t-mono">'+(e.currency||'£')+parseFloat(e.amount||0).toFixed(2)+'</td></tr>';
+        }).join('');
+        var expEl = document.getElementById('finStatExpenses');
+        if (expEl) expEl.textContent = '£'+total.toFixed(0);
+        var ytdEl = document.getElementById('fin-expenses-ytd');
+        if (ytdEl) ytdEl.textContent = '£'+total.toFixed(2);
+    }).catch(function(){});
+    fetch('/api/intelligence/cost-summary').then(function(r){return r.json();}).then(function(d){
+        if (!d.ok) return;
+        var el = document.getElementById('finStatCredit');
+        var sub = document.getElementById('finStatCreditSub');
+        if (el) el.textContent = '$'+(d.totalCostUsd||'0.0000');
+        if (sub) sub.textContent = d.totalRuns+' runs · '+d.successRate+'% success';
+        var panel = document.getElementById('financePanel');
+        if (panel) panel.innerHTML = '<div><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="t-h3">Anthropic · total spend</span><span class="t-mono" style="color:var(--amber)">$'+(d.totalCostUsd||'0')+'</span></div><div class="ds-bar tall amber"><div class="ds-bar-fill" style="width:100%"></div></div></div>';
+    }).catch(function(){});
+}
+
+var _finPageInited = false;
+function initFinancePage() {
+    fetchFinanceData();
+    if (!_finPageInited) { setTimeout(initFinanceCharts, 60); _finPageInited = true; }
+}
+
+(function(){
+    var _prevFin = window.switchPage;
+    window.switchPage = function(name){
+        if (typeof _prevFin==='function') _prevFin(name);
+        if (name==='finance') initFinancePage();
+    };
+})();
+
+// ── BUSINESS PAGE ─────────────────────────────────────────────────────────────
+var _bizCrmView = 'table';
+var _bizCrmData = [];
+
+function toggleBizCrmView() {
+    var btn = document.getElementById('bizCrmViewBtn');
+    var tbl = document.getElementById('bizCrmTableView');
+    var kb  = document.getElementById('bizCrmKanban');
+    if (!tbl || !kb) return;
+    if (_bizCrmView === 'table') {
+        _bizCrmView = 'kanban';
+        tbl.style.display = 'none'; kb.style.display = 'block';
+        if (btn) btn.textContent = '☰ Table';
+        buildKanban(_bizCrmData);
+    } else {
+        _bizCrmView = 'table';
+        tbl.style.display = 'block'; kb.style.display = 'none';
+        if (btn) btn.textContent = '⊞ Kanban';
+    }
+}
+
+function buildKanban(clients) {
+    var stages = ['lead','proposal','negotiation','won'];
+    stages.forEach(function(s){
+        var col = document.querySelector('.kb-col[data-stage="'+s+'"]');
+        if (!col) return;
+        var items = clients.filter(function(c){ return (c.stage||'lead').toLowerCase()===s; });
+        col.innerHTML = items.length ? items.map(function(c){
+            return '<div draggable="true" data-id="'+c.id+'" data-stage="'+s+'" ondragstart="bizDragStart(event)" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;cursor:grab"><div style="font-size:12px;font-weight:600;color:var(--text)">'+(c.name||c.client_name||'Client')+'</div><div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+((c.value?'£'+c.value:'no value'))+'</div></div>';
+        }).join('') : '<div style="font-size:11px;color:var(--text-faint);font-style:italic;padding:4px">empty</div>';
+        col.ondragover = function(e){ e.preventDefault(); };
+        col.ondrop = function(e){ e.preventDefault(); bizDrop(e, s); };
+    });
+}
+
+function bizDragStart(ev) {
+    ev.dataTransfer.setData('text/plain', JSON.stringify({ id: ev.target.dataset.id, stage: ev.target.dataset.stage }));
+}
+
+function bizDrop(ev, newStage) {
+    try {
+        var data = JSON.parse(ev.dataTransfer.getData('text/plain'));
+        if (data.stage === newStage) return;
+        fetch('/api/crm/clients/'+data.id, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ stage: newStage }) })
+            .then(function(r){return r.json();}).then(function(d){
+                if (d.ok) { fetchBizCrm(); }
+            }).catch(function(){});
+    } catch(e) {}
+}
+
+function fetchBizApprovals() {
+    fetch('/api/tasks/approvals?status=pending&limit=5').then(function(r){return r.json();}).then(function(d){
+        var list = document.getElementById('bizApprovalList');
+        var badge = document.getElementById('bizApprovalBadge');
+        var statEl = document.getElementById('bizStatApprovals');
+        if (!list) return;
+        var items = d.approvals || d.tasks || d.data || [];
+        if (badge) badge.textContent = items.length;
+        if (statEl) statEl.textContent = items.length;
+        if (!items.length) {
+            list.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:10px 0">No pending approvals</div>';
+            return;
+        }
+        list.innerHTML = items.slice(0,5).map(function(a){
+            return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2);border:1px solid rgba(255,77,106,0.2);border-radius:8px">'
+                + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text)">'+(a.description||a.task||'Task')+'</div>'
+                + '<div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+(a.category||'general')+' · '+(a.risk||'medium')+' risk</div></div>'
+                + '<button class="ds-btn xs green" onclick="approveTask(\''+a.id+'\')">Approve</button>'
+                + '<button class="ds-btn xs red" onclick="denyTask(\''+a.id+'\')">Deny</button>'
+                + '</div>';
+        }).join('');
+    }).catch(function(){
+        var list = document.getElementById('bizApprovalList');
+        if (list) list.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:10px 0">Approvals unavailable</div>';
+    });
+}
+
+function fetchBizCrm() {
+    fetch('/api/crm/clients').then(function(r){return r.json();}).then(function(d){
+        var clients = d.clients || d.data || [];
+        _bizCrmData = clients;
+        var tb = document.getElementById('bizCrmTbody');
+        var statEl = document.getElementById('bizStatClients');
+        if (statEl) statEl.textContent = clients.length;
+        if (!tb) return;
+        if (!clients.length) {
+            tb.innerHTML = '<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--text-faint);font-style:italic">No clients yet — add one via voice</td></tr>';
+            return;
+        }
+        tb.innerHTML = clients.map(function(c){
+            var stageBadge = { lead:'cyan', proposal:'amber', negotiation:'purple', won:'green' }[c.stage||'lead'] || 'cyan';
+            return '<tr><td style="font-weight:600">'+(c.name||c.client_name||'—')+'</td><td><span class="ds-badge '+stageBadge+'">'+(c.stage||'lead')+'</span></td><td class="t-mono">'+(c.value?'£'+c.value:'—')+'</td><td style="color:var(--text-mute)">'+(c.follow_up||'—')+'</td><td><button class="ds-btn xs" onclick="editCrmClient(\''+c.id+'\')">Edit</button></td></tr>';
+        }).join('');
+        if (_bizCrmView === 'kanban') buildKanban(clients);
+    }).catch(function(){});
+}
+
+function fetchBizProjects() {
+    fetch('/api/projects').then(function(r){return r.json();}).then(function(d){
+        var projects = d.projects || d.data || [];
+        var panel = document.getElementById('bizProjectsPanel');
+        var statEl = document.getElementById('bizStatProjects');
+        if (statEl) statEl.textContent = projects.filter(function(p){ return p.status==='active'; }).length;
+        if (!panel) return;
+        if (!projects.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No projects yet</div>'; return; }
+        panel.innerHTML = projects.map(function(p){
+            var pct = p.progress || 0;
+            return '<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600;color:var(--text)">'+(p.name||'Unnamed')+'</span><span class="ds-badge cyan" style="font-size:9px">'+(p.status||'active')+'</span></div><div class="ds-bar"><div class="ds-bar-fill cyan" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+pct+'% complete</div></div>';
+        }).join('');
+    }).catch(function(){
+        var panel = document.getElementById('bizProjectsPanel');
+        if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Projects unavailable</div>';
+    });
+}
+
+function fetchBizTasks() {
+    fetch('/api/tasks?sort=priority&limit=10').then(function(r){return r.json();}).then(function(d){
+        var tasks = d.tasks || d.data || [];
+        var panel = document.getElementById('bizTaskQueue');
+        var statEl = document.getElementById('bizStatTasks');
+        if (statEl) statEl.textContent = tasks.filter(function(t){ return t.status!=='done'; }).length;
+        if (!panel) return;
+        var sorted = tasks.slice().sort(function(a,b){ var p={high:0,normal:1,low:2}; return (p[a.priority]||1)-(p[b.priority]||1); });
+        if (!sorted.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No tasks queued</div>'; return; }
+        panel.innerHTML = sorted.map(function(t){
+            var dotCol = t.priority==='high'?'red':t.priority==='low'?'cyan':'amber';
+            return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span class="ds-dot '+dotCol+'"></span><span style="flex:1;font-size:12px;color:var(--text)">'+(t.description||t.title||'Task')+'</span><span class="ds-badge" style="font-size:9px;background:rgba(255,255,255,0.06)">'+(t.priority||'normal')+'</span></div>';
+        }).join('');
+    }).catch(function(){
+        var panel = document.getElementById('bizTaskQueue');
+        if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Tasks unavailable</div>';
+    });
+}
+
+function refreshBizPage() {
+    fetchBizApprovals();
+    fetchBizCrm();
+    fetchBizProjects();
+    fetchBizTasks();
+}
+
+(function(){
+    var _prevBiz = window.switchPage;
+    window.switchPage = function(name){
+        if (typeof _prevBiz==='function') _prevBiz(name);
+        if (name==='business') refreshBizPage();
     };
 })();
 
