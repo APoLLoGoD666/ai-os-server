@@ -3447,6 +3447,88 @@ select.cdp-input { background: rgba(4,8,20,0.9); }
 .cdp-swatch.selected { border-color: #fff; }
 @keyframes cmdBlink { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
 @keyframes cmdIcoPulse { 0%,100% { transform:scale(1); opacity:0.7; } 50% { transform:scale(1.1); opacity:1; } }
+/* ── Widget canvas layer ── */
+#cmdWidgetLayer { position:absolute;inset:0;pointer-events:none;z-index:5; }
+.cmd-edit-mode #cmdWidgetLayer { pointer-events:auto; }
+.cwid { position:absolute;pointer-events:auto; }
+.cwid-bar {
+  position:absolute;top:0;left:0;right:0;height:24px;display:none;
+  align-items:center;justify-content:space-between;
+  background:rgba(76,200,255,0.1);border-bottom:1px solid rgba(76,200,255,0.2);
+  border-radius:8px 8px 0 0;padding:0 8px;cursor:grab;z-index:20;
+  font-size:8px;font-weight:700;letter-spacing:0.2em;color:rgba(76,200,255,0.7);
+  text-transform:uppercase;user-select:none;
+}
+.cwid-bar:active { cursor:grabbing; }
+.cwid-del {
+  width:18px;height:18px;border-radius:3px;display:grid;place-items:center;
+  background:rgba(255,93,122,0.15);border:1px solid rgba(255,93,122,0.3);
+  color:rgba(255,93,122,0.8);font-size:12px;cursor:pointer;line-height:1;flex-shrink:0;
+}
+.cwid-del:hover { background:rgba(255,93,122,0.3); }
+.cmd-edit-mode .cwid { outline:1px dashed rgba(76,200,255,0.25);border-radius:8px; }
+.cmd-edit-mode .cwid:hover { outline:1px dashed rgba(76,200,255,0.6); }
+.cmd-edit-mode .cwid-bar { display:flex; }
+.cmd-edit-mode .cwid.has-bar > *:not(.cwid-bar) { margin-top:24px; }
+/* ── Edit toolbar ── */
+#cmdEditBar {
+  position:absolute;top:0;left:0;right:0;z-index:200;height:0;overflow:hidden;
+  background:rgba(4,8,20,0.92);border-bottom:1px solid rgba(76,160,255,0.15);
+  backdrop-filter:blur(12px);display:flex;align-items:center;gap:8px;padding:0 14px;
+  transition:height 220ms;pointer-events:none;
+}
+.cmd-edit-mode #cmdEditBar { height:44px;pointer-events:auto; }
+.ebar-lbl { font-size:9px;font-weight:700;letter-spacing:0.3em;text-transform:uppercase;color:rgba(76,200,255,0.45);margin-right:2px; }
+.ebar-btn {
+  padding:5px 12px;border-radius:5px;font-size:9.5px;font-weight:700;
+  letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;white-space:nowrap;
+  background:rgba(76,200,255,0.1);border:1px solid rgba(76,200,255,0.25);color:var(--cmd-cyan);transition:background 160ms;
+}
+.ebar-btn:hover { background:rgba(76,200,255,0.2); }
+.ebar-btn.done { background:rgba(70,231,179,0.1);border-color:rgba(70,231,179,0.3);color:var(--cmd-mint); }
+.ebar-btn.done:hover { background:rgba(70,231,179,0.2); }
+.ebar-btn.rst { background:rgba(255,93,122,0.08);border-color:rgba(255,93,122,0.2);color:var(--cmd-rose); }
+.ebar-btn.rst:hover { background:rgba(255,93,122,0.18); }
+.ebar-sep { flex:1; }
+/* ── Widget palette modal ── */
+#cmdPalette {
+  position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);
+  backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;
+}
+#cmdPalette.open { display:flex; }
+.cpal-box {
+  background:rgba(4,8,20,0.98);border:1px solid rgba(76,160,255,0.2);
+  border-radius:14px;padding:22px 20px;width:400px;max-width:92vw;
+}
+.cpal-head { display:flex;align-items:center;justify-content:space-between;margin-bottom:16px; }
+.cpal-title { font-size:10px;font-weight:700;letter-spacing:0.3em;text-transform:uppercase;color:var(--cmd-cyan); }
+.cpal-close { cursor:pointer;font-size:22px;color:rgba(180,205,240,0.45);line-height:1; }
+.cpal-close:hover { color:rgba(180,205,240,0.85); }
+.cpal-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:8px; }
+.cpal-item {
+  padding:16px 10px;border-radius:8px;cursor:pointer;text-align:center;
+  background:rgba(255,255,255,0.03);border:1px solid rgba(76,160,255,0.12);transition:all 160ms;
+}
+.cpal-item:hover { background:rgba(76,200,255,0.1);border-color:rgba(76,200,255,0.4); }
+.cpal-ico { font-size:22px;line-height:1;margin-bottom:8px; }
+.cpal-name { font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(180,205,240,0.65); }
+/* ── Widget type: hud (free-floating) ── */
+.cwid-hud {
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
+  background:rgba(4,8,20,0.65);border:1px solid rgba(76,160,255,0.18);
+  border-radius:4px;backdrop-filter:blur(8px);
+  font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;
+  letter-spacing:0.28em;text-transform:uppercase;color:rgba(180,205,240,0.55);
+}
+.cwid-hud .tick { width:5px;height:5px;border-radius:50%;background:var(--cmd-cyan);box-shadow:0 0 6px var(--cmd-cyan);flex-shrink:0;animation:cmdBlink 2s ease-in-out infinite; }
+/* ── Widget type: text / note / clock ── */
+.cwid-text-inner { padding:10px 14px;background:rgba(10,18,40,0.6);border:1px solid rgba(76,160,255,0.12);border-radius:8px;color:rgba(220,235,255,0.8);font-size:13px;line-height:1.5;min-width:120px; }
+.cwid-clock-inner { padding:10px 16px;background:rgba(10,18,40,0.6);border:1px solid rgba(76,160,255,0.15);border-radius:8px;text-align:center; }
+.cwid-clock-time { font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--cmd-cyan);letter-spacing:0.08em; }
+.cwid-clock-date { font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(180,205,240,0.45);margin-top:2px; }
+.cwid-note-inner { padding:10px 14px;background:rgba(255,183,71,0.06);border:1px solid rgba(255,183,71,0.18);border-radius:8px;color:rgba(255,220,160,0.8);font-size:12px;line-height:1.55;min-width:140px;min-height:60px; }
+/* Design panel inspector tab */
+.cdp-inspector-hint { font-size:10.5px;color:rgba(180,205,240,0.3);text-align:center;padding:24px 0;line-height:1.7; }
 </style>
 </head>
 <body>
@@ -3589,58 +3671,22 @@ select.cdp-input { background: rgba(4,8,20,0.9); }
                 <canvas id="cmdStars"></canvas>
 
                 <div class="cmd-stage" id="cmdStage">
-                    <button id="cmdEditToggle" onclick="cmdToggleEditMode()" title="Design Studio">✏</button>
+                    <!-- Edit toolbar (visible in edit mode) -->
+                    <div id="cmdEditBar">
+                        <span class="ebar-lbl">Edit Mode</span>
+                        <button class="ebar-btn" onclick="cmdShowPalette()">+ Add Widget</button>
+                        <button class="ebar-btn rst" onclick="cmdResetLayout()">Reset</button>
+                        <span class="ebar-sep"></span>
+                        <button class="ebar-btn done" onclick="cmdToggleEditMode()">Done</button>
+                    </div>
 
-                    <!-- HUD corner tags -->
-                    <div class="cmd-hud" style="left:24px;top:18px" id="cmdHudTL"><span class="tick"></span><span id="cmdHudTLText">CORE · STABLE</span></div>
-                    <div class="cmd-hud" style="right:64px;top:18px;flex-direction:row-reverse" id="cmdHudTR"><span class="tick"></span><span id="cmdHudTRText">UPLINK · OK</span></div>
-                    <div class="cmd-hud" style="left:24px;bottom:18px" id="cmdHudBL"><span class="tick"></span><span id="cmdHudBLText">SIG · 98%</span></div>
-                    <div class="cmd-hud" style="right:24px;bottom:18px;flex-direction:row-reverse" id="cmdHudBR"><span class="tick"></span><span id="cmdHudBRText">LAT · 42ms</span></div>
+                    <!-- Edit toggle button -->
+                    <button id="cmdEditToggle" onclick="cmdToggleEditMode()" title="Edit Widgets">✏</button>
 
-                    <!-- Checklist -->
-                    <aside class="cmd-checklist" id="cmdChecklist">
-                        <div class="cmd-drag-handle" id="cmdChecklistDH">
-                            <span>⠿ Checklist</span>
-                            <span class="dh-close" onclick="cmdToggleWidget('cmdChecklist',false)">×</span>
-                        </div>
-                        <div class="cmd-hull-head">
-                            <span class="lbl"><span class="dot"></span><span id="cmdClTitle">Today · Checklist</span></span>
-                            <span class="frac" id="cmdClFrac">0/0</span>
-                        </div>
-                        <div class="cmd-cl-meta">
-                            <span><b id="cmdClDate"></b></span>
-                            <span id="cmdClPct">0% complete</span>
-                            <span class="streak" id="cmdClStreak">streak 0d</span>
-                        </div>
-                        <div class="cmd-cl-body" id="cmdClBody"></div>
-                    </aside>
+                    <!-- Widget canvas layer — all movable widgets rendered here by JS -->
+                    <div id="cmdWidgetLayer"></div>
 
-                    <!-- News / Daily Brief -->
-                    <aside class="cmd-news" id="cmdNews">
-                        <div class="cmd-drag-handle" id="cmdNewsDH">
-                            <span>⠿ Daily Brief</span>
-                            <span class="dh-close" onclick="cmdToggleWidget('cmdNews',false)">×</span>
-                        </div>
-                        <div class="cmd-news-head">
-                            <span class="lbl"><span class="dot"></span><span id="cmdNewsTitle">Live · Daily Brief</span></span>
-                            <span class="src" id="cmdNewsTime">--:-- GMT</span>
-                        </div>
-                        <div class="cmd-news-thumb">
-                            <div class="cmd-news-thumb-img"></div>
-                            <span class="cmd-news-mast" id="cmdNewsMast">Reuters</span>
-                            <button class="cmd-news-play" title="Play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
-                            <div class="cmd-news-cap">
-                                <b id="cmdNewsHeadline">AI Markets Weekly Brief</b>
-                                <span id="cmdNewsSub">Live morning digest · top stories</span>
-                            </div>
-                        </div>
-                        <div class="cmd-news-foot">
-                            <span class="src-name" id="cmdNewsSources">▸ Reuters · BBC · FT</span>
-                            <span id="cmdNewsDur">--:--</span>
-                        </div>
-                    </aside>
-
-                    <!-- Particle orb -->
+                    <!-- Particle orb (fixed background element) -->
                     <canvas id="cmdOrbCanvas"></canvas>
                     <div class="cmd-orb-label">
                         <b>APEX</b>
@@ -3662,7 +3708,7 @@ select.cdp-input { background: rgba(4,8,20,0.9); }
                         <span style="width:6px;height:6px;border-radius:50%;background:#46e7b3;box-shadow:0 0 6px #46e7b3;flex-shrink:0" id="apexTtsDot"></span>
                         <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:rgba(180,205,240,0.55)" id="apexTtsLabel">TTS · DG</span>
                     </div>
-                    <!-- Waveform (voice) — keep for existing voice logic -->
+                    <!-- Waveform (voice) -->
                     <div class="waveform" id="waveform" style="display:none;position:absolute;left:50%;bottom:60px;transform:translateX(-50%);z-index:5">
                         <div class="wb"></div><div class="wb"></div><div class="wb"></div>
                         <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
@@ -3707,7 +3753,25 @@ select.cdp-input { background: rgba(4,8,20,0.9); }
                     </div>
                 </div>
 
-                <!-- Chat log + mic (kept for voice; hidden visually, used by voice JS) -->
+                <!-- Widget palette modal -->
+                <div id="cmdPalette">
+                    <div class="cpal-box">
+                        <div class="cpal-head">
+                            <span class="cpal-title">Add Widget</span>
+                            <span class="cpal-close" onclick="cmdHidePalette()">×</span>
+                        </div>
+                        <div class="cpal-grid">
+                            <div class="cpal-item" onclick="cmdAddWidget('checklist')"><div class="cpal-ico">✅</div><div class="cpal-name">Checklist</div></div>
+                            <div class="cpal-item" onclick="cmdAddWidget('news')"><div class="cpal-ico">📰</div><div class="cpal-name">Daily Brief</div></div>
+                            <div class="cpal-item" onclick="cmdAddWidget('hud')"><div class="cpal-ico">🏷</div><div class="cpal-name">HUD Tag</div></div>
+                            <div class="cpal-item" onclick="cmdAddWidget('clock')"><div class="cpal-ico">🕐</div><div class="cpal-name">Clock</div></div>
+                            <div class="cpal-item" onclick="cmdAddWidget('text')"><div class="cpal-ico">✍</div><div class="cpal-name">Text Label</div></div>
+                            <div class="cpal-item" onclick="cmdAddWidget('note')"><div class="cpal-ico">📝</div><div class="cpal-name">Note</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden stubs for voice JS compatibility -->
                 <div id="chatLog" style="display:none"></div>
                 <div id="typingIndicator" style="display:none"></div>
                 <span id="orbStateBadge" style="display:none"></span>
@@ -10613,48 +10677,46 @@ function denyTask(id) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   COMMAND PAGE v2 — Design System
+   COMMAND PAGE v3 — Widget Canvas
    ═══════════════════════════════════════════════════════════ */
 (function(){
-var CMD={editMode:false,activeTab:'widgets',starFrame:null,orbFrame:null,orbBoost:0,clockInterval:null,initialized:false,config:null,layout:null};
-var DC={tasks:[{id:1,title:'Morning briefing · review overnight intel',sub:'06:30 · 8 min',priority:'P1',done:true},{id:2,title:'Approve pending permission requests',sub:'Ops · blocks pipeline',priority:'P1',done:false},{id:3,title:'Reply to urgent emails',sub:'Inbox · investor + client',priority:'P2',done:true},{id:4,title:'Workout · push day · 45 min',sub:'Log via voice when done',priority:'P2',done:false},{id:5,title:'Review FEAT-H009 commits + ship',sub:'Validator green · awaiting approval',priority:'P3',done:false}],nextId:6,checklist:{title:'Today · Checklist',streak:'14d'},stats:[{label:'Balance',val:'£—',unit:'',sub:'Loading…',color:'mint'},{label:'Messages',val:'—',unit:'unread',sub:'Loading…',color:'cyan'},{label:'Tasks',val:'—',unit:'/ 0 today',sub:'Loading…',color:'amber'},{label:'System Health',val:'',unit:'',sub:'',color:'mint',isHealth:true}],news:{title:'Live · Daily Brief',headline:'AI Markets Weekly Brief',sub:'Live morning digest · top stories',sources:'▸ Reuters · BBC · FT',mast:'Reuters',dur:'--:--'},widgets:{checklist:true,news:true,hudTL:true,hudTR:true,hudBL:true,hudBR:true,orbPlay:true},hudText:{TL:'CORE · STABLE',TR:'UPLINK · OK',BL:'SIG · 98%',BR:'LAT · 42ms'},colors:{cyan:'#4cc8ff',mint:'#46e7b3',amber:'#ffb547',rose:'#ff5d7a'}};
-var DL={checklist:{x:24,y:24},news:{x:null,y:24}};
+var CMD={editMode:false,activeTab:'widgets',starFrame:null,orbFrame:null,orbBoost:0,clockInterval:null,widgetClockInterval:null,initialized:false,config:null,widgets:null,nextWid:100};
+var DC={tasks:[{id:1,title:'Morning briefing · review overnight intel',sub:'06:30 · 8 min',priority:'P1',done:true},{id:2,title:'Approve pending permission requests',sub:'Ops · blocks pipeline',priority:'P1',done:false},{id:3,title:'Reply to urgent emails',sub:'Inbox · investor + client',priority:'P2',done:true},{id:4,title:'Workout · push day · 45 min',sub:'Log via voice when done',priority:'P2',done:false},{id:5,title:'Review FEAT-H009 commits + ship',sub:'Validator green · awaiting approval',priority:'P3',done:false}],nextTaskId:6,checklist:{title:'Today · Checklist',streak:'14d'},stats:[{label:'Balance',val:'£—',unit:'',sub:'Loading…',color:'mint'},{label:'Messages',val:'—',unit:'unread',sub:'Loading…',color:'cyan'},{label:'Tasks',val:'—',unit:'/ 0 today',sub:'Loading…',color:'amber'},{label:'System Health',val:'',unit:'',sub:'',color:'mint',isHealth:true}],news:{title:'Live · Daily Brief',headline:'AI Markets Weekly Brief',sub:'Live morning digest · top stories',sources:'▸ Reuters · BBC · FT',mast:'Reuters',dur:'--:--'},hudText:{TL:'CORE · STABLE',TR:'UPLINK · OK',BL:'SIG · 98%',BR:'LAT · 42ms'},colors:{cyan:'#4cc8ff',mint:'#46e7b3',amber:'#ffb547',rose:'#ff5d7a'}};
+var DW=[
+  {id:'w-checklist',type:'checklist',x:24,y:24,w:240},
+  {id:'w-news',type:'news',x:null,y:24,w:242},
+  {id:'w-hud-tl',type:'hud',x:24,y:18,w:null,data:{text:'CORE · STABLE'}},
+  {id:'w-hud-tr',type:'hud',x:null,y:18,w:null,xRight:64,data:{text:'UPLINK · OK'}},
+  {id:'w-hud-bl',type:'hud',x:24,y:null,w:null,yBottom:18,data:{text:'SIG · 98%'}},
+  {id:'w-hud-br',type:'hud',x:null,y:null,w:null,xRight:24,yBottom:18,data:{text:'LAT · 42ms'}}
+];
 
 function clone(o){return JSON.parse(JSON.stringify(o));}
-function merge(t,d){for(var k in d){if(!(k in t)){t[k]=clone(d[k]);}else if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])){if(!t[k]||typeof t[k]!=='object')t[k]={};merge(t[k],d[k]);}}}
-function loadCfg(){try{CMD.config=JSON.parse(localStorage.getItem('apex_cmd_cfg')||'null')||clone(DC);}catch(e){CMD.config=clone(DC);}merge(CMD.config,DC);}
-function saveCfg(){try{localStorage.setItem('apex_cmd_cfg',JSON.stringify(CMD.config));}catch(e){}}
-function loadLayout(){try{CMD.layout=JSON.parse(localStorage.getItem('apex_cmd_lay')||'null')||clone(DL);}catch(e){CMD.layout=clone(DL);}}
-function saveLayout(){try{localStorage.setItem('apex_cmd_lay',JSON.stringify(CMD.layout));}catch(e){}}
-
 function $id(id){return document.getElementById(id);}
 function setText(id,t){var e=$id(id);if(e)e.textContent=t;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
+function loadCfg(){try{CMD.config=JSON.parse(localStorage.getItem('apex_cmd_cfg_v3')||'null')||clone(DC);}catch(e){CMD.config=clone(DC);}
+  var dk=Object.keys(DC);dk.forEach(function(k){if(!(k in CMD.config))CMD.config[k]=clone(DC[k]);});}
+function saveCfg(){try{localStorage.setItem('apex_cmd_cfg_v3',JSON.stringify(CMD.config));}catch(e){}}
+function loadWidgets(){try{CMD.widgets=JSON.parse(localStorage.getItem('apex_cmd_widgets_v3')||'null');}catch(e){CMD.widgets=null;}if(!CMD.widgets||!CMD.widgets.length)CMD.widgets=clone(DW);}
+function saveWidgets(){try{localStorage.setItem('apex_cmd_widgets_v3',JSON.stringify(CMD.widgets));}catch(e){}}
+
 window.cmdInitPage=function(){
     if(CMD.initialized){if(!CMD.starFrame)initStars();if(!CMD.orbFrame)initOrb();if(!CMD.clockInterval)startClock();return;}
     CMD.initialized=true;
-    loadCfg();loadLayout();
-    applyColors();applyHud();applyVis();restorePos();
-    renderChecklist();renderStrip();applyNews();
+    loadCfg();loadWidgets();
+    applyColors();
+    renderAllWidgets();
+    renderStrip();
     initStars();initOrb();startClock();fetchHealth();
-    makeDrag($id('cmdChecklist'),'checklist');
-    makeDrag($id('cmdNews'),'news');
 };
 window.cmdPausePage=function(){
     if(CMD.starFrame){cancelAnimationFrame(CMD.starFrame);CMD.starFrame=null;}
     if(CMD.orbFrame){cancelAnimationFrame(CMD.orbFrame);CMD.orbFrame=null;}
     if(CMD.clockInterval){clearInterval(CMD.clockInterval);CMD.clockInterval=null;}
+    if(CMD.widgetClockInterval){clearInterval(CMD.widgetClockInterval);CMD.widgetClockInterval=null;}
 };
-
-function startClock(){updateClock();CMD.clockInterval=setInterval(updateClock,30000);}
-function updateClock(){
-    var now=new Date();
-    var h=String(now.getUTCHours()).padStart(2,'0'),m=String(now.getUTCMinutes()).padStart(2,'0');
-    setText('cmdNewsTime',h+':'+m+' GMT');
-    var days=['SUN','MON','TUE','WED','THU','FRI','SAT'],months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    setText('cmdClDate',days[now.getDay()]+' · '+months[now.getMonth()]+' '+now.getDate());
-}
 
 function hexRgba(h,a){var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return'rgba('+r+','+g+','+b+','+a+')';}
 function lighten(h){return'rgb('+Math.min(255,parseInt(h.slice(1,3),16)+60)+','+Math.min(255,parseInt(h.slice(3,5),16)+60)+','+Math.min(255,parseInt(h.slice(5,7),16)+60)+')';}
@@ -10667,62 +10729,187 @@ function applyColors(){
     p.style.setProperty('--cmd-amber',c.amber);
     p.style.setProperty('--cmd-rose',c.rose);
 }
-function applyHud(){var h=CMD.config.hudText;setText('cmdHudTLText',h.TL);setText('cmdHudTRText',h.TR);setText('cmdHudBLText',h.BL);setText('cmdHudBRText',h.BR);}
-function applyVis(){
-    var w=CMD.config.widgets;
-    setVis('cmdChecklist',w.checklist);setVis('cmdNews',w.news);
-    setVis('cmdHudTL',w.hudTL);setVis('cmdHudTR',w.hudTR);setVis('cmdHudBL',w.hudBL);setVis('cmdHudBR',w.hudBR);
-    setVis('cmdOrbPlayBtn',w.orbPlay);
+
+/* ── WIDGET LAYER ── */
+function renderAllWidgets(){
+    var layer=$id('cmdWidgetLayer');if(!layer)return;
+    layer.innerHTML='';
+    CMD.widgets.forEach(function(w){layer.appendChild(buildWidget(w));});
+    if(CMD.widgetClockInterval)clearInterval(CMD.widgetClockInterval);
+    CMD.widgetClockInterval=setInterval(tickClocks,30000);
+    tickClocks();
 }
-function setVis(id,v){var e=$id(id);if(e)e.style.display=v?'':'none';}
-window.cmdToggleWidget=function(id,v){
-    var map={cmdChecklist:'checklist',cmdNews:'news',cmdHudTL:'hudTL',cmdHudTR:'hudTR',cmdHudBL:'hudBL',cmdHudBR:'hudBR',cmdOrbPlayBtn:'orbPlay'};
-    var k=map[id];if(k){CMD.config.widgets[k]=v;saveCfg();applyVis();if(CMD.editMode)renderPanel();}
-};
-function restorePos(){applyPos('cmdChecklist',CMD.layout.checklist,false);applyPos('cmdNews',CMD.layout.news,true);}
-function applyPos(id,pos,rightAnch){
-    var e=$id(id);if(!e||!pos)return;
-    if(rightAnch&&pos.x===null){e.style.left='';e.style.right='24px';}else{e.style.left=pos.x+'px';e.style.right='';}
-    e.style.top=pos.y+'px';
+
+function buildWidget(w){
+    var el=document.createElement('div');
+    el.className='cwid has-bar';
+    el.dataset.wid=w.id;
+    positionWidget(el,w);
+
+    var bar=document.createElement('div');
+    bar.className='cwid-bar';
+    var typeLabel=w.type.charAt(0).toUpperCase()+w.type.slice(1);
+    var del=document.createElement('span');
+    del.className='cwid-del';del.textContent='×';
+    del.addEventListener('click',function(e){e.stopPropagation();cmdDeleteWidget(w.id);});
+    bar.appendChild(document.createTextNode(typeLabel));
+    bar.appendChild(del);
+    el.appendChild(bar);
+
+    var inner=document.createElement('div');
+    inner.dataset.inner='1';
+    buildWidgetInner(w,inner);
+    el.appendChild(inner);
+
+    initWidgetDrag(el,w);
+    return el;
 }
-function makeDrag(el,key){
-    if(!el)return;
-    var dh=el.querySelector('.cmd-drag-handle');if(!dh)return;
+
+function positionWidget(el,w){
+    var stage=$id('cmdStage');
+    var sw=stage?stage.offsetWidth:window.innerWidth;
+    var sh=stage?stage.offsetHeight:window.innerHeight;
+    if(w.x!==null&&w.x!==undefined){el.style.left=w.x+'px';el.style.right='';}
+    else if(w.xRight!==null&&w.xRight!==undefined){el.style.right=w.xRight+'px';el.style.left='';}
+    else{el.style.right='24px';el.style.left='';}
+    if(w.y!==null&&w.y!==undefined){el.style.top=w.y+'px';el.style.bottom='';}
+    else if(w.yBottom!==null&&w.yBottom!==undefined){el.style.bottom=w.yBottom+'px';el.style.top='';}
+    else{el.style.top='24px';el.style.bottom='';}
+    if(w.w)el.style.width=w.w+'px';
+}
+
+function buildWidgetInner(w,inner){
+    if(w.type==='checklist')buildChecklist(w,inner);
+    else if(w.type==='news')buildNews(w,inner);
+    else if(w.type==='hud')buildHud(w,inner);
+    else if(w.type==='clock')buildClock(w,inner);
+    else if(w.type==='text')buildTextWidget(w,inner);
+    else if(w.type==='note')buildNote(w,inner);
+}
+
+function refreshWidget(wid){
+    var el=document.querySelector('[data-wid="'+wid+'"]');if(!el)return;
+    var w=CMD.widgets.find(function(x){return x.id===wid;});if(!w)return;
+    var inner=el.querySelector('[data-inner]');if(!inner)return;
+    inner.innerHTML='';buildWidgetInner(w,inner);
+}
+
+/* Checklist widget */
+function buildChecklist(w,inner){
+    inner.className='cmd-checklist';inner.removeAttribute('id');
+    var cfg=CMD.config;
+    var tasks=cfg.tasks||[];
+    var done=tasks.filter(function(t){return t.done;}).length,total=tasks.length;
+    inner.innerHTML='<div class="cmd-hull-head"><span class="lbl"><span class="dot"></span><span>'+esc(cfg.checklist.title)+'</span></span><span class="frac">'+done+'/'+total+'</span></div>'
+      +'<div class="cmd-cl-meta"><span><b id="cmdClDate"></b></span><span>'+(Math.round(done/Math.max(1,total)*100))+'% complete</span><span class="streak">streak '+esc(cfg.checklist.streak)+'</span></div>'
+      +'<div class="cmd-cl-body" id="cmdClBody"></div>';
+    var days=['SUN','MON','TUE','WED','THU','FRI','SAT'],months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    var now=new Date();setText('cmdClDate',days[now.getDay()]+' · '+months[now.getMonth()]+' '+now.getDate());
+    var body=inner.querySelector('.cmd-cl-body');
+    tasks.forEach(function(t){
+        var d=document.createElement('div');d.className='cmd-task'+(t.done?' done':'');
+        d.innerHTML='<div class="box"></div><div class="body"><div class="ttl">'+esc(t.title)+'</div><div class="sub">'+esc(t.sub)+'</div></div><span class="pr '+t.priority.toLowerCase()+'">'+t.priority+'</span>';
+        d.addEventListener('click',function(){t.done=!t.done;saveCfg();refreshWidget(w.id);});
+        body.appendChild(d);
+    });
+}
+
+/* News widget */
+function buildNews(w,inner){
+    inner.className='cmd-news';inner.removeAttribute('id');
+    var n=CMD.config.news;
+    var now=new Date();
+    var h=String(now.getUTCHours()).padStart(2,'0'),m=String(now.getUTCMinutes()).padStart(2,'0');
+    inner.innerHTML='<div class="cmd-news-head"><span class="lbl"><span class="dot"></span><span>'+esc(n.title)+'</span></span><span class="src">'+h+':'+m+' GMT</span></div>'
+      +'<div class="cmd-news-thumb"><div class="cmd-news-thumb-img"></div><span class="cmd-news-mast">'+esc(n.mast)+'</span>'
+      +'<button class="cmd-news-play" title="Play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>'
+      +'<div class="cmd-news-cap"><b>'+esc(n.headline)+'</b><span>'+esc(n.sub)+'</span></div></div>'
+      +'<div class="cmd-news-foot"><span class="src-name">'+esc(n.sources)+'</span><span>'+esc(n.dur)+'</span></div>';
+}
+
+/* HUD tag widget */
+function buildHud(w,inner){
+    var data=w.data||{};
+    inner.innerHTML='';
+    var hud=document.createElement('div');hud.className='cwid-hud';
+    var tick=document.createElement('span');tick.className='tick';
+    var txt=document.createElement('span');txt.textContent=data.text||'HUD TAG';
+    hud.appendChild(tick);hud.appendChild(txt);inner.appendChild(hud);
+}
+
+/* Clock widget */
+function buildClock(w,inner){
+    inner.innerHTML='<div class="cwid-clock-inner"><div class="cwid-clock-time" id="cwid-clock-'+w.id+'">--:--</div><div class="cwid-clock-date" id="cwid-clock-d-'+w.id+'"></div></div>';
+    updateClock(w.id);
+}
+function updateClock(wid){
+    var now=new Date();
+    var h=String(now.getHours()).padStart(2,'0'),m=String(now.getMinutes()).padStart(2,'0');
+    var days=['SUN','MON','TUE','WED','THU','FRI','SAT'],months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    setText('cwid-clock-'+wid,h+':'+m);
+    setText('cwid-clock-d-'+wid,days[now.getDay()]+' · '+months[now.getMonth()]+' '+now.getDate());
+}
+function tickClocks(){
+    CMD.widgets.forEach(function(w){if(w.type==='clock')updateClock(w.id);});
+}
+
+/* Text label widget */
+function buildTextWidget(w,inner){
+    var data=w.data||{};
+    inner.innerHTML='<div class="cwid-text-inner">'+esc(data.text||'Text label')+'</div>';
+}
+
+/* Note widget */
+function buildNote(w,inner){
+    var data=w.data||{};
+    inner.innerHTML='<div class="cwid-note-inner">'+esc(data.text||'Note…')+'</div>';
+}
+
+function initWidgetDrag(el,w){
+    var bar=el.querySelector('.cwid-bar');if(!bar)return;
     var sx=0,sy=0;
-    dh.addEventListener('mousedown',function(e){
+    bar.addEventListener('mousedown',function(e){
         if(!CMD.editMode)return;
-        e.preventDefault();
-        sx=e.clientX-el.offsetLeft;sy=e.clientY-el.offsetTop;
+        if(e.target.classList.contains('cwid-del'))return;
+        e.preventDefault();e.stopPropagation();
+        var r=el.getBoundingClientRect(),stage=$id('cmdStage'),sr=stage.getBoundingClientRect();
+        sx=e.clientX-(r.left-sr.left);sy=e.clientY-(r.top-sr.top);
         document.addEventListener('mousemove',onM);document.addEventListener('mouseup',onU);
     });
     function onM(e){
         var stage=$id('cmdStage');if(!stage)return;
-        var r=stage.getBoundingClientRect();
-        var x=Math.max(0,Math.min(r.width-el.offsetWidth,e.clientX-sx));
-        var y=Math.max(0,Math.min(r.height-el.offsetHeight,e.clientY-sy));
-        el.style.left=x+'px';el.style.right='';el.style.top=y+'px';
-        CMD.layout[key]={x:Math.round(x),y:Math.round(y)};
+        var sr=stage.getBoundingClientRect();
+        var x=Math.max(0,Math.min(sr.width-el.offsetWidth,e.clientX-sr.left-sx));
+        var y=Math.max(0,Math.min(sr.height-el.offsetHeight,e.clientY-sr.top-sy));
+        el.style.left=x+'px';el.style.right='';
+        el.style.top=y+'px';el.style.bottom='';
+        var wObj=CMD.widgets.find(function(x2){return x2.id===w.id;});
+        if(wObj){wObj.x=Math.round(x);wObj.y=Math.round(y);wObj.xRight=null;wObj.yBottom=null;}
     }
-    function onU(){saveLayout();document.removeEventListener('mousemove',onM);document.removeEventListener('mouseup',onU);}
+    function onU(){saveWidgets();document.removeEventListener('mousemove',onM);document.removeEventListener('mouseup',onU);}
 }
 
-function renderChecklist(){
-    var tasks=CMD.config.tasks||[];
-    var done=tasks.filter(function(t){return t.done;}).length,total=tasks.length;
-    setText('cmdClTitle',CMD.config.checklist.title);
-    setText('cmdClFrac',done+'/'+total);
-    setText('cmdClPct',Math.round(done/Math.max(1,total)*100)+'% complete');
-    setText('cmdClStreak','streak '+CMD.config.checklist.streak);
-    var body=$id('cmdClBody');if(!body)return;
-    body.innerHTML='';
-    tasks.forEach(function(t){
-        var d=document.createElement('div');
-        d.className='cmd-task'+(t.done?' done':'');
-        d.innerHTML='<div class="box"></div><div class="body"><div class="ttl">'+esc(t.title)+'</div><div class="sub">'+esc(t.sub)+'</div></div><span class="pr '+t.priority.toLowerCase()+'">'+t.priority+'</span>';
-        d.addEventListener('click',function(){t.done=!t.done;saveCfg();renderChecklist();});
-        body.appendChild(d);
-    });
-}
+window.cmdDeleteWidget=function(wid){
+    CMD.widgets=CMD.widgets.filter(function(w){return w.id!==wid;});
+    saveWidgets();renderAllWidgets();if(CMD.editMode)renderPanel();
+};
+window.cmdAddWidget=function(type){
+    cmdHidePalette();
+    var id='w-'+type+'-'+Date.now();
+    var w={id:id,type:type,x:60,y:60,w:null,data:{}};
+    if(type==='checklist')w.w=240;
+    if(type==='news')w.w=242;
+    if(type==='hud')w.data={text:'NEW TAG'};
+    if(type==='text')w.data={text:'Text label'};
+    if(type==='note')w.data={text:'Note…'};
+    CMD.widgets.push(w);saveWidgets();renderAllWidgets();if(CMD.editMode)renderPanel();
+};
+window.cmdResetLayout=function(){
+    CMD.widgets=clone(DW);saveWidgets();renderAllWidgets();if(CMD.editMode)renderPanel();
+};
+window.cmdShowPalette=function(){var p=$id('cmdPalette');if(p)p.classList.add('open');};
+window.cmdHidePalette=function(){var p=$id('cmdPalette');if(p)p.classList.remove('open');};
+
 function renderStrip(){
     var stats=CMD.config.stats;
     for(var i=0;i<4;i++){
@@ -10732,11 +10919,7 @@ function renderStrip(){
         if(!s.isHealth){setText('cmdStatVal'+i,s.val||'—');setText('cmdStatUnit'+i,s.unit||'');setText('cmdStatSub'+i,s.sub||'');}
     }
 }
-function applyNews(){
-    var n=CMD.config.news;
-    setText('cmdNewsTitle',n.title);setText('cmdNewsHeadline',n.headline);setText('cmdNewsSub',n.sub);
-    setText('cmdNewsSources',n.sources);setText('cmdNewsMast',n.mast);setText('cmdNewsDur',n.dur);
-}
+function startClock(){CMD.clockInterval=setInterval(function(){},60000);}
 function fetchHealth(){
     fetch('/health').then(function(r){return r.json();}).then(function(d){
         var ok=d.status==='ok';
@@ -10845,6 +11028,7 @@ window.cmdToggleEditMode=function(){
     if(pan)pan.classList.toggle('open',CMD.editMode);
     if(tog)tog.classList.toggle('active',CMD.editMode);
     if(CMD.editMode)renderPanel();
+    else cmdHidePalette();
 };
 window.cmdShowTab=function(tab){
     CMD.activeTab=tab;
@@ -10853,62 +11037,57 @@ window.cmdShowTab=function(tab){
 };
 function renderPanel(){
     var body=$id('cdpBody');if(!body)return;body.innerHTML='';
-    if(CMD.activeTab==='widgets')renderWidgets(body);
+    if(CMD.activeTab==='widgets')renderWidgetsTab(body);
     else if(CMD.activeTab==='content')renderContent(body);
     else renderColorsTab(body);
 }
 
 /* Widgets tab */
-function renderWidgets(body){
-    var w=CMD.config.widgets,h=CMD.config.hudText;
-    var s=mkSec('Panels');
-    s.appendChild(mkTogRow('Checklist',w.checklist,function(v){CMD.config.widgets.checklist=v;saveCfg();applyVis();}));
-    s.appendChild(mkTogRow('Daily Brief',w.news,function(v){CMD.config.widgets.news=v;saveCfg();applyVis();}));
-    s.appendChild(mkTogRow('Orb Play Button',w.orbPlay,function(v){CMD.config.widgets.orbPlay=v;saveCfg();applyVis();}));
-    body.appendChild(s);
-    var hs=mkSec('HUD Tags');
-    ['TL','TR','BL','BR'].forEach(function(pos){
-        var row=document.createElement('div');row.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:6px';
-        var tog=mkTog(w['hud'+pos],function(v){CMD.config.widgets['hud'+pos]=v;saveCfg();applyVis();});tog.style.flexShrink='0';
-        var inp=document.createElement('input');inp.className='cdp-input';inp.style.flex='1';inp.value=h[pos];
-        inp.addEventListener('input',(function(p){return function(){CMD.config.hudText[p]=this.value;saveCfg();applyHud();};})(pos));
-        row.appendChild(tog);row.appendChild(inp);hs.appendChild(row);
+function renderWidgetsTab(body){
+    var list=mkSec('Canvas Widgets');
+    var hint=document.createElement('div');
+    hint.className='cdp-inspector-hint';
+    hint.textContent=CMD.widgets.length?'Drag widgets by their top bar. Use × to delete.':'No widgets — click "+ Add Widget" to begin.';
+    list.appendChild(hint);
+    CMD.widgets.forEach(function(w){
+        var row=document.createElement('div');row.className='cdp-row';row.style.marginBottom='6px';
+        var lbl=document.createElement('span');lbl.className='cdp-label';lbl.textContent=w.type+(w.data&&w.data.text?' · '+w.data.text.slice(0,16):'');
+        var del=document.createElement('button');del.className='cdp-mini-btn danger';del.textContent='×';del.title='Delete';
+        del.onclick=(function(id){return function(){cmdDeleteWidget(id);};})(w.id);
+        row.appendChild(lbl);row.appendChild(del);list.appendChild(row);
     });
-    body.appendChild(hs);
-    var ps=mkSec('Positions');
-    var rb=document.createElement('button');rb.className='cdp-mini-btn danger';rb.textContent='Reset positions';
-    rb.onclick=function(){CMD.layout=clone(DL);saveLayout();restorePos();};
-    ps.appendChild(rb);
-    var hint=document.createElement('div');hint.style.cssText='font-size:10px;color:rgba(180,205,240,0.4);margin-top:8px;line-height:1.5';
-    hint.textContent='Drag panels by their top handle bar.';ps.appendChild(hint);
-    body.appendChild(ps);
+    var ab=document.createElement('button');ab.className='cdp-mini-btn';ab.style.marginTop='8px';ab.textContent='+ Add Widget';
+    ab.onclick=cmdShowPalette;list.appendChild(ab);
+    var rb=document.createElement('button');rb.className='cdp-mini-btn rst';rb.style.marginTop='6px';rb.textContent='Reset Layout';
+    rb.onclick=cmdResetLayout;list.appendChild(rb);
+    body.appendChild(list);
 }
 
 /* Content tab */
 function renderContent(body){
     var cls=mkSec('Checklist');
-    cls.appendChild(mkInp('Title',CMD.config.checklist.title,function(v){CMD.config.checklist.title=v;saveCfg();renderChecklist();}));
-    cls.appendChild(mkInp('Streak',CMD.config.checklist.streak,function(v){CMD.config.checklist.streak=v;saveCfg();renderChecklist();},'e.g. 14d'));
+    cls.appendChild(mkInp('Title',CMD.config.checklist.title,function(v){CMD.config.checklist.title=v;saveCfg();var w=CMD.widgets.find(function(x){return x.type==='checklist';});if(w)refreshWidget(w.id);}));
+    cls.appendChild(mkInp('Streak',CMD.config.checklist.streak,function(v){CMD.config.checklist.streak=v;saveCfg();var w=CMD.widgets.find(function(x){return x.type==='checklist';});if(w)refreshWidget(w.id);},'e.g. 14d'));
     body.appendChild(cls);
 
     var ts=mkSec('Tasks');
     CMD.config.tasks.forEach(function(task,idx){
         var item=document.createElement('div');item.className='cdp-task-item';
         var ti=document.createElement('input');ti.className='cdp-input';ti.value=task.title;ti.placeholder='Task title';
-        ti.addEventListener('input',function(){CMD.config.tasks[idx].title=this.value;saveCfg();renderChecklist();});
+        ti.addEventListener('input',function(){CMD.config.tasks[idx].title=this.value;saveCfg();var w=CMD.widgets.find(function(x){return x.type==='checklist';});if(w)refreshWidget(w.id);});
         var r2=document.createElement('div');r2.style.cssText='display:flex;gap:6px';
         var si=document.createElement('input');si.className='cdp-input';si.style.flex='1';si.value=task.sub;si.placeholder='Sub text';
-        si.addEventListener('input',function(){CMD.config.tasks[idx].sub=this.value;saveCfg();renderChecklist();});
+        si.addEventListener('input',function(){CMD.config.tasks[idx].sub=this.value;saveCfg();var w=CMD.widgets.find(function(x){return x.type==='checklist';});if(w)refreshWidget(w.id);});
         var pr=document.createElement('select');pr.className='cdp-input';pr.style.width='62px';
         ['P1','P2','P3'].forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;if(task.priority===p)o.selected=true;pr.appendChild(o);});
-        pr.addEventListener('change',function(){CMD.config.tasks[idx].priority=this.value;saveCfg();renderChecklist();});
+        pr.addEventListener('change',function(){CMD.config.tasks[idx].priority=this.value;saveCfg();var w=CMD.widgets.find(function(x){return x.type==='checklist';});if(w)refreshWidget(w.id);});
         r2.appendChild(si);r2.appendChild(pr);
         var del=document.createElement('button');del.className='cdp-mini-btn danger';del.textContent='Delete';
-        del.onclick=(function(i){return function(){CMD.config.tasks.splice(i,1);saveCfg();renderChecklist();renderPanel();};})(idx);
+        del.onclick=(function(i){return function(){CMD.config.tasks.splice(i,1);saveCfg();var w=CMD.widgets.find(function(x){return x.type==='checklist';});if(w)refreshWidget(w.id);renderPanel();};})(idx);
         item.appendChild(ti);item.appendChild(r2);item.appendChild(del);ts.appendChild(item);
     });
     var ab=document.createElement('button');ab.className='cdp-mini-btn';ab.textContent='+ Add task';
-    ab.onclick=function(){CMD.config.tasks.push({id:CMD.config.nextId++,title:'New task',sub:'',priority:'P3',done:false});saveCfg();renderChecklist();renderPanel();};
+    ab.onclick=function(){CMD.config.tasks.push({id:CMD.config.nextTaskId++,title:'New task',sub:'',priority:'P3',done:false});saveCfg();var w=CMD.widgets.find(function(x){return x.type==='checklist';});if(w)refreshWidget(w.id);renderPanel();};
     ts.appendChild(ab);body.appendChild(ts);
 
     var ss=mkSec('Stat Cards');
@@ -10935,10 +11114,11 @@ function renderContent(body){
 
     var ns=mkSec('Daily Brief');
     var n=CMD.config.news;
-    ns.appendChild(mkInp('Headline',n.headline,function(v){CMD.config.news.headline=v;saveCfg();applyNews();}));
-    ns.appendChild(mkInp('Sub text',n.sub,function(v){CMD.config.news.sub=v;saveCfg();applyNews();}));
-    ns.appendChild(mkInp('Sources',n.sources,function(v){CMD.config.news.sources=v;saveCfg();applyNews();}));
-    ns.appendChild(mkInp('Masthead',n.mast,function(v){CMD.config.news.mast=v;saveCfg();applyNews();}));
+    var refreshNews=function(){var w=CMD.widgets.find(function(x){return x.type==='news';});if(w)refreshWidget(w.id);};
+    ns.appendChild(mkInp('Headline',n.headline,function(v){CMD.config.news.headline=v;saveCfg();refreshNews();}));
+    ns.appendChild(mkInp('Sub text',n.sub,function(v){CMD.config.news.sub=v;saveCfg();refreshNews();}));
+    ns.appendChild(mkInp('Sources',n.sources,function(v){CMD.config.news.sources=v;saveCfg();refreshNews();}));
+    ns.appendChild(mkInp('Masthead',n.mast,function(v){CMD.config.news.mast=v;saveCfg();refreshNews();}));
     body.appendChild(ns);
 }
 
@@ -10962,7 +11142,6 @@ function renderColorsTab(body){
 
 /* helpers */
 function mkSec(title){var s=document.createElement('div');s.className='cdp-section';var h=document.createElement('div');h.className='cdp-section-head';h.textContent=title;s.appendChild(h);return s;}
-function mkTogRow(label,checked,onChange){var row=document.createElement('div');row.className='cdp-row';row.style.marginBottom='8px';var l=document.createElement('span');l.className='cdp-label';l.textContent=label;row.appendChild(l);row.appendChild(mkTog(checked,onChange));return row;}
 function mkTog(checked,onChange){var t=document.createElement('div');t.className='cdp-toggle'+(checked?' on':'');t.addEventListener('click',function(){var v=t.classList.toggle('on');onChange(v);});return t;}
 function mkInp(label,value,onChange,placeholder){var w=document.createElement('div');w.style.marginBottom='6px';var l=document.createElement('div');l.className='cdp-sub-lbl';l.textContent=label;var i=document.createElement('input');i.className='cdp-input';i.value=value||'';i.placeholder=placeholder||'';i.addEventListener('input',function(){onChange(this.value);});w.appendChild(l);w.appendChild(i);return w;}
 
@@ -10975,7 +11154,6 @@ document.addEventListener('DOMContentLoaded',function(){
     setTimeout(function(){
         var p=$id('page-command');
         if(p&&p.classList.contains('active'))window.cmdInitPage();
-        // Sync toggle UI to persisted provider on every load
         if(typeof window.setTtsProvider==='function'){
             try{window.setTtsProvider(localStorage.getItem('apex_tts_provider')||'deepgram');}catch(_){}
         }
