@@ -3654,6 +3654,14 @@ select.cdp-input { background: rgba(4,8,20,0.9); }
                         <div class="hint">Tap to speak · auto-listen on</div>
                     </div>
 
+                    <!-- TTS provider toggle pill -->
+                    <div id="apexTtsToggle" data-provider="deepgram"
+                         title="TTS: DEEPGRAM (click to switch)"
+                         onclick="(function(t){var next=t.dataset.provider==='deepgram'?'gemini':'deepgram';window.setTtsProvider(next);})(this)"
+                         style="position:absolute;bottom:22px;right:22px;z-index:10;display:flex;align-items:center;gap:6px;padding:4px 10px 4px 8px;border-radius:20px;background:rgba(10,18,40,0.7);border:1px solid rgba(76,160,255,0.18);backdrop-filter:blur(8px);cursor:pointer;transition:border-color 200ms;user-select:none">
+                        <span style="width:6px;height:6px;border-radius:50%;background:#46e7b3;box-shadow:0 0 6px #46e7b3;flex-shrink:0" id="apexTtsDot"></span>
+                        <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:rgba(180,205,240,0.55)" id="apexTtsLabel">TTS · DG</span>
+                    </div>
                     <!-- Waveform (voice) — keep for existing voice logic -->
                     <div class="waveform" id="waveform" style="display:none;position:absolute;left:50%;bottom:60px;transform:translateX(-50%);z-index:5">
                         <div class="wb"></div><div class="wb"></div><div class="wb"></div>
@@ -5157,6 +5165,26 @@ let dgMuted             = false;  // true while AI is speaking — ignore SR tra
 let currentAudio        = null;
 let currentAbort        = null;
 let speakQueue          = [];
+// ── TTS provider toggle ────────────────────────────────────────────────────
+// 'deepgram' (default) or 'gemini' — persisted in localStorage
+var _ttsProvider = (function(){
+    try { return localStorage.getItem('apex_tts_provider') || 'deepgram'; } catch(_){ return 'deepgram'; }
+})();
+function getTtsUrl()      { return _ttsProvider === 'gemini' ? '/api/tts/gemini' : '/api/tts'; }
+function getTtsMimeType() { return _ttsProvider === 'gemini' ? 'audio/wav' : 'audio/mpeg'; }
+window.setTtsProvider = function(p) {
+    _ttsProvider = (p === 'gemini') ? 'gemini' : 'deepgram';
+    try { localStorage.setItem('apex_tts_provider', _ttsProvider); } catch(_){}
+    var tog  = document.getElementById('apexTtsToggle');
+    var dot  = document.getElementById('apexTtsDot');
+    var lbl  = document.getElementById('apexTtsLabel');
+    var isGemini = _ttsProvider === 'gemini';
+    if (tog) { tog.dataset.provider = _ttsProvider; tog.title = 'TTS: ' + _ttsProvider.toUpperCase() + ' (click to switch)'; tog.style.borderColor = isGemini ? 'rgba(138,108,255,0.5)' : 'rgba(76,160,255,0.18)'; }
+    if (dot) { dot.style.background = isGemini ? '#8a6cff' : '#46e7b3'; dot.style.boxShadow = '0 0 6px ' + (isGemini ? '#8a6cff' : '#46e7b3'); }
+    if (lbl) lbl.textContent = isGemini ? 'TTS · GEMINI' : 'TTS · DG';
+    console.log('[TTS] provider switched to:', _ttsProvider,
+        isGemini ? '(Gemini 2.5 Flash · gemini-2.5-flash-preview-tts)' : '(Deepgram Aura · aura-helios-en)');
+};
 let isSpeakingNow       = false;
 let vadAnalyser         = null;
 let vadInterval         = null;
@@ -5370,12 +5398,12 @@ function _httSpeak(text) {
     isSpeakingNow = true;
     _apexSpeakStartMs = Date.now();
     setOrbState('speaking');
-    console.log('[HTT] fetching TTS audio for:', text.substring(0, 60));
+    console.log('[HTT] fetching TTS audio for:', text.substring(0, 60), '| provider:', _ttsProvider);
     if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
     if (_httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
     const wordCount = text.trim().split(/\s+/).length;
     const safetyMs  = Math.min(60000, Math.max(8000, wordCount * 1000 + 6000));
-    fetch(buildApiUrl('/api/tts'), {
+    fetch(buildApiUrl(getTtsUrl()), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text })
@@ -5685,10 +5713,10 @@ async function speakWithElevenLabs(text) {
     if (!_apexAudio) _apexAudio = new Audio();
 
     try {
-        console.log(`[LATENCY] +${Date.now() - _t0Voice}ms ElevenLabs request sent`);
+        console.log(`[LATENCY] +${Date.now() - _t0Voice}ms TTS request sent | provider:${_ttsProvider}`);
         const ac = new AbortController();
         currentAbort = ac;
-        const fetchRes = await fetch(buildApiUrl("/api/tts"), {
+        const fetchRes = await fetch(buildApiUrl(getTtsUrl()), {
             method: "POST",
             headers: buildApiHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ text: phrase }),
@@ -5699,7 +5727,7 @@ async function speakWithElevenLabs(text) {
 
         // arrayBuffer → Blob approach is the only path that reliably works on iOS Safari
         const buf  = await fetchRes.arrayBuffer();
-        const blob = new Blob([buf], { type: "audio/mpeg" });
+        const blob = new Blob([buf], { type: getTtsMimeType() });
 
         // Revoke the previous blob URL before creating the new one
         if (_apexBlobUrl) { try { URL.revokeObjectURL(_apexBlobUrl); } catch (_) {} }
@@ -10944,7 +10972,14 @@ window.switchPage=function(name){if(typeof _sp==='function')_sp(name);if(name===
 
 /* Auto-init on load */
 document.addEventListener('DOMContentLoaded',function(){
-    setTimeout(function(){var p=$id('page-command');if(p&&p.classList.contains('active'))window.cmdInitPage();},250);
+    setTimeout(function(){
+        var p=$id('page-command');
+        if(p&&p.classList.contains('active'))window.cmdInitPage();
+        // Sync toggle UI to persisted provider on every load
+        if(typeof window.setTtsProvider==='function'){
+            try{window.setTtsProvider(localStorage.getItem('apex_tts_provider')||'deepgram');}catch(_){}
+        }
+    },250);
 });
 })();
 
