@@ -3145,6 +3145,308 @@ html, body {
   .orb-side-ds.left, .orb-side-ds.right { display: none; }
   .briefing-grid-ds { grid-template-columns: repeat(2,1fr); }
 }
+
+/* ═══════════════════════════════════════════════════════
+   COMMAND PAGE v2 — immersive orb layout
+   ═══════════════════════════════════════════════════════ */
+#page-command {
+  overflow-y: hidden !important;
+  --cmd-hull-bord: rgba(76,160,255,0.18);
+  --cmd-hull-line: rgba(76,160,255,0.10);
+  --cmd-ice:       #e6f4ff;
+  --cmd-ice-dim:   rgba(220,235,255,0.62);
+  --cmd-ice-mute:  rgba(180,205,240,0.40);
+  --cmd-cyan:      #4cc8ff;
+  --cmd-cyan-hot:  #b8ecff;
+  --cmd-cyan-glow: rgba(76,200,255,0.55);
+  --cmd-rose:      #ff5d7a;
+  --cmd-amber:     #ffb547;
+  --cmd-mint:      #46e7b3;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  padding: 0 !important;
+}
+#page-command::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 1;
+  background:
+    radial-gradient(circle at 50% 52%, rgba(20,50,140,0.18) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 100%, rgba(40,60,160,0.10) 0%, transparent 60%);
+  pointer-events: none;
+}
+#cmdStars { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.cmd-stage { position: relative; z-index: 3; flex: 1; overflow: hidden; min-height: 0; }
+#cmdOrbCanvas {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%);
+  width: 280px; height: 280px; pointer-events: none;
+}
+.cmd-orb-label {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%);
+  pointer-events: none; text-align: center; z-index: 2;
+}
+.cmd-orb-label b {
+  display: block; font-size: 20px; font-weight: 700;
+  letter-spacing: 0.45em; color: #fff; padding-left: 0.5em;
+  text-shadow: 0 0 14px rgba(180,230,255,0.95), 0 0 28px rgba(76,200,255,0.75), 0 0 48px rgba(76,200,255,0.4);
+}
+.cmd-orb-label span {
+  display: block; margin-top: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; font-weight: 600; letter-spacing: 0.36em;
+  color: rgba(180,220,255,0.7); text-shadow: 0 0 8px rgba(76,200,255,0.6);
+}
+.cmd-orb-play {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(calc(-50% - 100px),-50%);
+  width: 56px; height: 56px; border-radius: 50%; z-index: 4;
+  background: rgba(2,6,18,0.4);
+  border: 1.5px solid rgba(180,220,255,0.55);
+  box-shadow: 0 0 18px rgba(76,200,255,0.3), inset 0 0 16px rgba(76,200,255,0.12);
+  display: grid; place-items: center; cursor: pointer;
+  transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.cmd-orb-play:hover {
+  transform: translate(calc(-50% - 100px),-50%) scale(1.08);
+  box-shadow: 0 0 28px rgba(76,200,255,0.55), inset 0 0 22px rgba(76,200,255,0.2);
+  border-color: var(--cmd-cyan-hot);
+}
+.cmd-orb-play svg { width: 18px; height: 18px; fill: rgba(220,240,255,0.85); margin-left: 3px; filter: drop-shadow(0 0 6px var(--cmd-cyan-glow)); }
+.cmd-orb-status {
+  position: absolute; left: 50%; bottom: 28px;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 18px;
+  font-family: 'JetBrains Mono', monospace; z-index: 4;
+}
+.cmd-orb-status .state {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.4em;
+  color: var(--cmd-cyan-hot); text-shadow: 0 0 16px var(--cmd-cyan-glow);
+  text-transform: uppercase;
+}
+.cmd-orb-status .state::before { content: '◉ '; opacity: 0.7; }
+.cmd-orb-status .hint { font-size: 9.5px; letter-spacing: 0.22em; color: var(--cmd-ice-mute); text-transform: uppercase; }
+.cmd-checklist {
+  position: absolute; top: 24px; left: 24px; width: 320px; z-index: 4;
+  background: linear-gradient(160deg, rgba(10,18,40,0.72), rgba(6,12,28,0.65));
+  border: 1px solid var(--cmd-hull-bord); border-radius: 8px;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 0 28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.03);
+  overflow: hidden;
+}
+.cmd-news {
+  position: absolute; top: 24px; right: 24px; width: 280px; z-index: 4;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid var(--cmd-hull-bord); border-radius: 8px;
+  overflow: hidden;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 0 28px rgba(0,0,0,0.55);
+}
+.cmd-hull-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--cmd-hull-line);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.34em; text-transform: uppercase;
+}
+.cmd-hull-head .lbl { color: var(--cmd-cyan); display: flex; align-items: center; gap: 8px; }
+.cmd-hull-head .lbl .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cmd-cyan); box-shadow: 0 0 8px var(--cmd-cyan-glow); }
+.cmd-hull-head .frac { color: var(--cmd-ice-mute); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; }
+.cmd-cl-meta {
+  display: flex; gap: 14px; padding: 8px 14px 4px;
+  font-size: 10px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; color: var(--cmd-ice-mute);
+}
+.cmd-cl-meta b { color: var(--cmd-ice); font-weight: 600; }
+.cmd-cl-meta .streak { color: var(--cmd-cyan); }
+.cmd-cl-body { display: flex; flex-direction: column; padding: 4px 8px 10px; gap: 2px; }
+.cmd-task {
+  display: grid; grid-template-columns: 22px 1fr auto;
+  gap: 10px; align-items: center; padding: 8px; border-radius: 5px;
+  cursor: pointer; transition: background 160ms ease; position: relative;
+}
+.cmd-task:hover { background: rgba(76,200,255,0.04); }
+.cmd-task .box {
+  width: 16px; height: 16px; border-radius: 3px;
+  border: 1.5px solid rgba(76,200,255,0.5);
+  background: rgba(2,6,18,0.5); display: grid; place-items: center;
+  transition: all 180ms ease; flex-shrink: 0;
+}
+.cmd-task.done .box { background: var(--cmd-cyan); border-color: var(--cmd-cyan); box-shadow: 0 0 10px var(--cmd-cyan-glow); }
+.cmd-task.done .box::after {
+  content: ''; width: 8px; height: 4px; display: block;
+  border-left: 2px solid #02061f; border-bottom: 2px solid #02061f;
+  transform: translateY(-1px) rotate(-45deg);
+}
+.cmd-task .body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cmd-task .body .ttl { font-size: 11.5px; font-weight: 500; color: var(--cmd-ice); line-height: 1.3; }
+.cmd-task.done .body .ttl { color: var(--cmd-ice-mute); text-decoration: line-through; text-decoration-color: rgba(180,205,240,0.3); }
+.cmd-task .body .sub { font-size: 9.5px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em; color: var(--cmd-ice-mute); }
+.cmd-task .pr { font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em; padding: 3px 6px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
+.cmd-task .pr.p1 { color: var(--cmd-rose);  background: rgba(255,93,122,0.1); }
+.cmd-task .pr.p2 { color: var(--cmd-amber); background: rgba(255,181,71,0.08); }
+.cmd-task .pr.p3 { color: var(--cmd-cyan);  background: rgba(76,200,255,0.06); }
+.cmd-news-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 12px; border-bottom: 1px solid var(--cmd-hull-line);
+  font-size: 9px; font-weight: 700; letter-spacing: 0.34em; text-transform: uppercase;
+}
+.cmd-news-head .lbl { color: var(--cmd-cyan); display: flex; align-items: center; gap: 7px; }
+.cmd-news-head .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--cmd-rose); animation: cmdBlink 1.2s infinite; box-shadow: 0 0 6px var(--cmd-rose); }
+.cmd-news-head .src { color: var(--cmd-ice-mute); font-family: 'JetBrains Mono', monospace; }
+.cmd-news-thumb { position: relative; aspect-ratio: 16/9; overflow: hidden; background: #0a1020; }
+.cmd-news-thumb-img {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 80% at 22% 65%, rgba(20,50,100,0.9) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 70% 45%, rgba(120,90,70,0.5) 0%, transparent 65%),
+    linear-gradient(180deg, #1a2a48 0%, #0e1830 60%, #04081a 100%);
+}
+.cmd-news-mast { position: absolute; top: 8px; right: 8px; font-size: 9px; font-weight: 800; letter-spacing: 0.06em; color: #ff2244; background: #fff; padding: 3px 6px; border-radius: 2px; }
+.cmd-news-cap {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 10px 12px 8px;
+  background: linear-gradient(0deg, rgba(0,0,0,0.85), transparent);
+  font-size: 9.5px; line-height: 1.35; color: rgba(220,235,255,0.85);
+}
+.cmd-news-cap b { display: block; font-size: 10.5px; font-weight: 600; color: var(--cmd-ice); margin-bottom: 2px; }
+.cmd-news-play {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.55);
+  display: grid; place-items: center; transition: all 180ms ease; cursor: pointer;
+}
+.cmd-news-play:hover { transform: translate(-50%,-50%) scale(1.1); background: rgba(255,255,255,0.28); }
+.cmd-news-play svg { width: 12px; height: 12px; fill: #fff; margin-left: 2px; }
+.cmd-news-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--cmd-ice-mute);
+  letter-spacing: 0.12em; text-transform: uppercase;
+  border-top: 1px solid var(--cmd-hull-line);
+}
+.cmd-news-foot .src-name { color: var(--cmd-ice-dim); }
+.cmd-hud {
+  position: absolute; font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px; letter-spacing: 0.32em; color: var(--cmd-ice-mute);
+  text-transform: uppercase; pointer-events: none; opacity: 0.55; z-index: 4;
+  display: flex; align-items: center; gap: 6px;
+}
+.cmd-hud .tick { display: inline-block; width: 14px; height: 1px; background: rgba(76,200,255,0.5); flex-shrink: 0; }
+.cmd-strip {
+  position: relative; z-index: 3; flex-shrink: 0;
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 14px; padding: 14px 24px 18px;
+  border-top: 1px solid rgba(76,160,255,0.06);
+  background: linear-gradient(0deg, rgba(0,0,0,0.7), rgba(0,0,0,0.25));
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.cmd-stat {
+  --c: var(--cmd-cyan);
+  position: relative; padding: 14px 18px;
+  background: rgba(10,18,40,0.55);
+  border: 1px solid var(--cmd-hull-bord);
+  border-radius: 6px; display: flex; flex-direction: column; gap: 6px; overflow: hidden;
+}
+.cmd-stat::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--c); box-shadow: 0 0 12px var(--c); }
+.cmd-stat.mint  { --c: #46e7b3; }
+.cmd-stat.cyan  { --c: #4cc8ff; }
+.cmd-stat.amber { --c: #ffb547; }
+.cmd-stat.rose  { --c: #ff5d7a; }
+.cmd-stat .stat-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.32em; color: var(--cmd-ice-mute); text-transform: uppercase; }
+.cmd-stat .stat-row { display: flex; align-items: center; justify-content: space-between; }
+.cmd-stat .stat-ico { width: 18px; height: 18px; color: var(--c); display: grid; place-items: center; }
+.cmd-stat .stat-ico svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px var(--c)); }
+.cmd-stat .stat-num { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: var(--cmd-ice); line-height: 1; font-feature-settings:"tnum"; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.cmd-stat .stat-unit { font-size: 11px; font-weight: 500; color: var(--cmd-ice-mute); letter-spacing: 0.06em; }
+.cmd-stat .stat-sub { font-size: 10px; letter-spacing: 0.06em; color: var(--c); display: flex; align-items: center; gap: 6px; }
+.cmd-stat .stat-sub .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); flex-shrink: 0; }
+.cmd-stat .health-num { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; color: #46e7b3; text-shadow: 0 0 14px rgba(70,231,179,0.55); }
+.cmd-stat .health-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.cmd-stat .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 10px; background: rgba(70,231,179,0.08); border: 1px solid rgba(70,231,179,0.25); font-size: 9px; font-weight: 600; letter-spacing: 0.16em; color: rgba(220,235,255,0.85); text-transform: uppercase; }
+.cmd-stat .chip .dot { width: 5px; height: 5px; border-radius: 50%; background: #46e7b3; box-shadow: 0 0 6px #46e7b3; }
+.cmd-stat .ico-pulse { animation: cmdIcoPulse 1.8s ease-in-out infinite; }
+/* Drag handles */
+.cmd-drag-handle {
+  position: absolute; top: 0; left: 0; right: 0; height: 26px;
+  cursor: grab; background: rgba(76,200,255,0.08);
+  border-bottom: 1px solid rgba(76,200,255,0.2);
+  display: none; align-items: center; justify-content: space-between;
+  padding: 0 10px; font-size: 9px; font-weight: 700; letter-spacing: 0.24em;
+  color: rgba(76,200,255,0.7); text-transform: uppercase; z-index: 10;
+  border-radius: 8px 8px 0 0;
+}
+.cmd-drag-handle:active { cursor: grabbing; }
+.cmd-drag-handle .dh-close { cursor: pointer; color: rgba(255,93,122,0.7); font-size: 14px; padding: 2px; line-height: 1; }
+.cmd-edit-mode .cmd-drag-handle { display: flex; }
+.cmd-edit-mode .cmd-checklist,
+.cmd-edit-mode .cmd-news { outline: 1px dashed rgba(76,200,255,0.3); }
+.cmd-edit-mode .cmd-checklist { padding-top: 26px; }
+.cmd-edit-mode .cmd-news      { padding-top: 26px; }
+/* Edit toggle */
+#cmdEditToggle {
+  position: absolute; top: 16px; right: 16px; z-index: 50;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(10,18,40,0.7); border: 1px solid rgba(76,160,255,0.2);
+  display: grid; place-items: center; cursor: pointer;
+  transition: all 200ms; backdrop-filter: blur(8px); font-size: 14px;
+  color: var(--cmd-ice-mute);
+}
+#cmdEditToggle:hover { background: rgba(76,200,255,0.15); border-color: var(--cmd-cyan); color: var(--cmd-cyan); }
+#cmdEditToggle.active { background: rgba(76,200,255,0.2); border-color: var(--cmd-cyan); box-shadow: 0 0 14px rgba(76,200,255,0.3); color: var(--cmd-cyan); }
+/* Design panel */
+#cmdDesignPanel {
+  position: absolute; right: -340px; top: 0; bottom: 0; width: 320px;
+  background: rgba(4,8,20,0.97);
+  border-left: 1px solid rgba(76,160,255,0.15);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  z-index: 100; display: flex; flex-direction: column;
+  transition: right 280ms cubic-bezier(0.4,0,0.2,1);
+}
+#cmdDesignPanel.open { right: 0; }
+.cdp-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 12px; border-bottom: 1px solid rgba(76,160,255,0.10); flex-shrink: 0; }
+.cdp-head .title { font-size: 11px; font-weight: 700; letter-spacing: 0.32em; text-transform: uppercase; color: var(--cmd-cyan); }
+.cdp-head .close-btn { cursor: pointer; color: var(--cmd-ice-mute); font-size: 18px; line-height: 1; transition: color 160ms; }
+.cdp-head .close-btn:hover { color: var(--cmd-ice); }
+.cdp-tabs { display: flex; border-bottom: 1px solid rgba(76,160,255,0.10); flex-shrink: 0; }
+.cdp-tab { flex: 1; padding: 9px 0; font-size: 9.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; text-align: center; cursor: pointer; color: var(--cmd-ice-mute); border-bottom: 2px solid transparent; transition: all 180ms; }
+.cdp-tab.active { color: var(--cmd-cyan); border-bottom-color: var(--cmd-cyan); }
+.cdp-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+.cdp-section { display: flex; flex-direction: column; gap: 8px; }
+.cdp-section-head { font-size: 9px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--cmd-ice-mute); padding-bottom: 4px; border-bottom: 1px solid rgba(76,160,255,0.08); }
+.cdp-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cdp-label { font-size: 11px; color: var(--cmd-ice-dim); }
+.cdp-toggle { width: 34px; height: 18px; border-radius: 9px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); cursor: pointer; position: relative; transition: background 200ms; flex-shrink: 0; }
+.cdp-toggle.on { background: var(--cmd-cyan); border-color: var(--cmd-cyan); }
+.cdp-toggle::after { content: ''; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: left 200ms; }
+.cdp-toggle.on::after { left: 18px; }
+.cdp-input {
+  width: 100%; box-sizing: border-box;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(76,160,255,0.15);
+  border-radius: 5px; color: var(--cmd-ice);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 7px 10px; outline: none; transition: border-color 180ms;
+}
+.cdp-input:focus { border-color: var(--cmd-cyan); }
+select.cdp-input { background: rgba(4,8,20,0.9); }
+.cdp-mini-btn {
+  padding: 5px 10px; border-radius: 4px; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; transition: all 160ms;
+  background: rgba(76,200,255,0.1); border: 1px solid rgba(76,200,255,0.25); color: var(--cmd-cyan); white-space: nowrap;
+}
+.cdp-mini-btn:hover { background: rgba(76,200,255,0.2); }
+.cdp-mini-btn.danger { background: rgba(255,93,122,0.1); border-color: rgba(255,93,122,0.25); color: var(--cmd-rose); }
+.cdp-mini-btn.danger:hover { background: rgba(255,93,122,0.2); }
+.cdp-task-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(76,160,255,0.10); border-radius: 5px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.cdp-sub-lbl { font-size: 9px; color: rgba(180,205,240,0.45); margin-bottom: 2px; letter-spacing: 0.08em; }
+.cdp-swatch { width: 24px; height: 24px; border-radius: 4px; border: 2px solid rgba(255,255,255,0.15); cursor: pointer; transition: transform 160ms; flex-shrink: 0; }
+.cdp-swatch:hover { transform: scale(1.12); }
+.cdp-swatch.selected { border-color: #fff; }
+@keyframes cmdBlink { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+@keyframes cmdIcoPulse { 0%,100% { transform:scale(1); opacity:0.7; } 50% { transform:scale(1.1); opacity:1; } }
 </style>
 </head>
 <body>
@@ -3284,144 +3586,125 @@ html, body {
             <!-- ══ PAGE: COMMAND ══ -->
             <div class="page active" id="page-command">
 
-                <!-- Page header -->
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">Command</span>
-                        <span class="ds-page-subtitle">Pipeline control center</span>
+                <canvas id="cmdStars"></canvas>
+
+                <div class="cmd-stage" id="cmdStage">
+                    <button id="cmdEditToggle" onclick="cmdToggleEditMode()" title="Design Studio">✏</button>
+
+                    <!-- HUD corner tags -->
+                    <div class="cmd-hud" style="left:24px;top:18px" id="cmdHudTL"><span class="tick"></span><span id="cmdHudTLText">CORE · STABLE</span></div>
+                    <div class="cmd-hud" style="right:64px;top:18px;flex-direction:row-reverse" id="cmdHudTR"><span class="tick"></span><span id="cmdHudTRText">UPLINK · OK</span></div>
+                    <div class="cmd-hud" style="left:24px;bottom:18px" id="cmdHudBL"><span class="tick"></span><span id="cmdHudBLText">SIG · 98%</span></div>
+                    <div class="cmd-hud" style="right:24px;bottom:18px;flex-direction:row-reverse" id="cmdHudBR"><span class="tick"></span><span id="cmdHudBRText">LAT · 42ms</span></div>
+
+                    <!-- Checklist -->
+                    <aside class="cmd-checklist" id="cmdChecklist">
+                        <div class="cmd-drag-handle" id="cmdChecklistDH">
+                            <span>⠿ Checklist</span>
+                            <span class="dh-close" onclick="cmdToggleWidget('cmdChecklist',false)">×</span>
+                        </div>
+                        <div class="cmd-hull-head">
+                            <span class="lbl"><span class="dot"></span><span id="cmdClTitle">Today · Checklist</span></span>
+                            <span class="frac" id="cmdClFrac">0/0</span>
+                        </div>
+                        <div class="cmd-cl-meta">
+                            <span><b id="cmdClDate"></b></span>
+                            <span id="cmdClPct">0% complete</span>
+                            <span class="streak" id="cmdClStreak">streak 0d</span>
+                        </div>
+                        <div class="cmd-cl-body" id="cmdClBody"></div>
+                    </aside>
+
+                    <!-- News / Daily Brief -->
+                    <aside class="cmd-news" id="cmdNews">
+                        <div class="cmd-drag-handle" id="cmdNewsDH">
+                            <span>⠿ Daily Brief</span>
+                            <span class="dh-close" onclick="cmdToggleWidget('cmdNews',false)">×</span>
+                        </div>
+                        <div class="cmd-news-head">
+                            <span class="lbl"><span class="dot"></span><span id="cmdNewsTitle">Live · Daily Brief</span></span>
+                            <span class="src" id="cmdNewsTime">--:-- GMT</span>
+                        </div>
+                        <div class="cmd-news-thumb">
+                            <div class="cmd-news-thumb-img"></div>
+                            <span class="cmd-news-mast" id="cmdNewsMast">Reuters</span>
+                            <button class="cmd-news-play" title="Play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+                            <div class="cmd-news-cap">
+                                <b id="cmdNewsHeadline">AI Markets Weekly Brief</b>
+                                <span id="cmdNewsSub">Live morning digest · top stories</span>
+                            </div>
+                        </div>
+                        <div class="cmd-news-foot">
+                            <span class="src-name" id="cmdNewsSources">▸ Reuters · BBC · FT</span>
+                            <span id="cmdNewsDur">--:--</span>
+                        </div>
+                    </aside>
+
+                    <!-- Particle orb -->
+                    <canvas id="cmdOrbCanvas"></canvas>
+                    <div class="cmd-orb-label">
+                        <b>APEX</b>
+                        <span id="cmdOrbStateLabel">STANDBY</span>
                     </div>
-                    <div style="display:flex;gap:8px">
-                        <button class="ds-btn cyan" onclick="masterRunNext()">&#9658; Run next feature</button>
-                        <button class="ds-btn amber" onclick="masterRunAll()" title="Run all 109 features sequentially">&#9889; Run all 109</button>
+                    <button class="cmd-orb-play" id="cmdOrbPlayBtn" onclick="typeof toggleListening==='function'&&toggleListening()" title="Activate voice">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <div class="cmd-orb-status">
+                        <div class="state" id="cmdOrbState">Standby</div>
+                        <div class="hint">Tap to speak · auto-listen on</div>
+                    </div>
+
+                    <!-- Waveform (voice) — keep for existing voice logic -->
+                    <div class="waveform" id="waveform" style="display:none;position:absolute;left:50%;bottom:60px;transform:translateX(-50%);z-index:5">
+                        <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+                        <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
+                    </div>
+
+                    <!-- Design Studio panel -->
+                    <div id="cmdDesignPanel">
+                        <div class="cdp-head">
+                            <span class="title">Design Studio</span>
+                            <span class="close-btn" onclick="cmdToggleEditMode()">×</span>
+                        </div>
+                        <div class="cdp-tabs">
+                            <div class="cdp-tab active" onclick="cmdShowTab('widgets')">Widgets</div>
+                            <div class="cdp-tab" onclick="cmdShowTab('content')">Content</div>
+                            <div class="cdp-tab" onclick="cmdShowTab('colors')">Colors</div>
+                        </div>
+                        <div class="cdp-body" id="cdpBody"></div>
+                    </div>
+                </div><!-- .cmd-stage -->
+
+                <!-- Bottom stat strip -->
+                <div class="cmd-strip" id="cmdStrip">
+                    <div class="cmd-stat mint" id="cmdStat0">
+                        <div class="stat-row"><div class="stat-lbl" id="cmdStatLbl0">Balance</div><div class="stat-ico"><svg viewBox="0 0 24 24"><path d="M12 3v18M7 7h7a3 3 0 010 6H8a3 3 0 000 6h9"/></svg></div></div>
+                        <div class="stat-num"><span id="cmdStatVal0">£—</span><span class="stat-unit" id="cmdStatUnit0"></span></div>
+                        <div class="stat-sub"><span class="dot"></span><span id="cmdStatSub0">Loading…</span></div>
+                    </div>
+                    <div class="cmd-stat cyan" id="cmdStat1">
+                        <div class="stat-row"><div class="stat-lbl" id="cmdStatLbl1">Messages</div><div class="stat-ico"><svg viewBox="0 0 24 24"><path d="M3 6l9 7 9-7M3 6h18v12H3z"/></svg></div></div>
+                        <div class="stat-num"><span id="cmdStatVal1">—</span><span class="stat-unit" id="cmdStatUnit1">unread</span></div>
+                        <div class="stat-sub"><span class="dot"></span><span id="cmdStatSub1">Loading…</span></div>
+                    </div>
+                    <div class="cmd-stat amber" id="cmdStat2">
+                        <div class="stat-row"><div class="stat-lbl" id="cmdStatLbl2">Tasks</div><div class="stat-ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><path d="M2 6l1 1 2-2M2 12l1 1 2-2M2 18l1 1 2-2"/></svg></div></div>
+                        <div class="stat-num"><span id="cmdStatVal2">—</span><span class="stat-unit" id="cmdStatUnit2">/ 0 today</span></div>
+                        <div class="stat-sub"><span class="dot"></span><span id="cmdStatSub2">Loading…</span></div>
+                    </div>
+                    <div class="cmd-stat mint" id="cmdStat3">
+                        <div class="stat-row"><div class="stat-lbl" id="cmdStatLbl3">System Health</div><div class="stat-ico ico-pulse"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg></div></div>
+                        <div class="health-num" id="cmdHealthText">Checking…</div>
+                        <div class="health-row" id="cmdHealthChips"></div>
                     </div>
                 </div>
 
-                <!-- Stat strip -->
-                <div class="ds-grid-stats">
-                    <div class="ds-stat-card ac-cyan">
-                        <div class="ds-stat-label">Features complete</div>
-                        <div class="ds-stat-value cyan" id="cmdStatFeatures">&#8212;<span style="font-size:14px;color:var(--text-mute);font-weight:500">/109</span></div>
-                        <div class="ds-bar" style="margin-top:4px"><div class="ds-bar-fill" id="cmdFeatureBar" style="width:0%"></div></div>
-                    </div>
-                    <div class="ds-stat-card ac-green">
-                        <div class="ds-stat-label">Pipeline cost today</div>
-                        <div class="ds-stat-value green" id="cmdStatCost">$0.00</div>
-                        <div class="ds-stat-sub"><span class="ds-dot amber"></span><span style="color:var(--amber)">Credit <span id="cmdStatCredit">&#8212;</span> remaining</span></div>
-                    </div>
-                    <div class="ds-stat-card ac-purple">
-                        <div class="ds-stat-label">Pipeline runs</div>
-                        <div class="ds-stat-value" style="color:var(--text)" id="cmdStatRuns">&#8212;</div>
-                        <div class="ds-stat-sub"><span class="ds-dot purple"></span><span style="color:var(--text-mute)" id="cmdStatSuccess">&#8212; success rate</span></div>
-                    </div>
-                    <div class="ds-stat-card ac-red">
-                        <div class="ds-stat-label">Pending approvals</div>
-                        <div class="ds-stat-value red" id="cmdStatApprovals">&#8212;</div>
-                        <div class="ds-stat-sub"><span class="ds-dot red pulse"></span><span style="color:var(--red)">Action required</span></div>
-                    </div>
-                </div>
-
-                <!-- 3-column main grid: 280px | 1fr | 280px -->
-                <div style="display:grid;grid-template-columns:280px 1fr 280px;gap:12px;align-items:start">
-
-                    <!-- LEFT: Roadmap progress -->
-                    <div class="ds-panel" style="margin:0">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Roadmap</span></div>
-                            <div class="ds-panel-header-right"><button class="ds-btn xs" onclick="fetchCommandProgress()">&#8635;</button></div>
-                        </div>
-                        <div id="roadmapProgress" style="display:flex;flex-direction:column;gap:8px">
-                            <div class="skel skel-row skel-wide"></div>
-                        </div>
-                        <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
-                            <div style="display:flex;gap:6px">
-                                <input id="roadmapFeatureInput" type="text" placeholder="FEAT-C001" style="flex:1;height:28px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:0 8px;color:var(--text);font-size:11px;outline:none;font-family:inherit">
-                                <button class="ds-btn cyan xs" onclick="masterRunFeature()">Run</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CENTER: Orb + pipeline + chat -->
-                    <div style="display:flex;flex-direction:column;gap:12px">
-                        <div class="ds-panel" style="margin:0;text-align:center">
-                            <div class="ds-panel-header" style="text-align:left">
-                                <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Apex Core</span></div>
-                                <div class="ds-panel-header-right">
-                                    <span class="ds-badge cyan" id="orbStateBadge">Standby</span>
-                                    <button class="ds-btn xs cyan" onclick="masterRunNext()">&#9658; Run next</button>
-                                </div>
-                            </div>
-                            <div class="cmd-orb-shell" style="margin:0 auto">
-                                <div class="cmd-orb-ring r1"></div>
-                                <div class="cmd-orb-ring r2"></div>
-                                <div class="cmd-orb-ring r3"></div>
-                                <div class="cmd-orb-core" onclick="toggleListening()" title="Click to speak" id="orb" style="cursor:pointer">
-                                    <div class="cmd-orb-name">APEX</div>
-                                    <div class="cmd-orb-state" id="orbStatus">Standby</div>
-                                </div>
-                            </div>
-                            <div style="display:flex;justify-content:center;margin-top:8px">
-                                <div class="waveform" id="waveform" style="display:none">
-                                    <div class="wb"></div><div class="wb"></div><div class="wb"></div>
-                                    <div class="wb"></div><div class="wb"></div><div class="wb"></div>
-                                    <div class="wb"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="ds-panel" style="margin:0">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">Recent Pipeline Runs</span></div>
-                                <div class="ds-panel-header-right"><button class="ds-btn xs cyan" onclick="fetchCommandUpdates()">&#8635;</button></div>
-                            </div>
-                            <table class="ds-table">
-                                <thead><tr><th>Feat</th><th>Objective</th><th>Status</th><th>Cost</th></tr></thead>
-                                <tbody id="recentRunsPanel"><tr><td colspan="4" style="text-align:center;padding:12px;color:var(--text-faint);font-style:italic">Loading&#8230;</td></tr></tbody>
-                            </table>
-                            <div style="margin-top:10px">
-                                <div class="t-label" style="margin-bottom:6px">Pipeline Stats</div>
-                                <div id="metricsPanel"><div class="skel skel-row skel-wide"></div></div>
-                            </div>
-                        </div>
-                        <div class="ds-panel" style="margin:0">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Chat &#183; Voice</span></div>
-                                <div class="ds-panel-header-right">
-                                    <button class="ds-btn xs" onclick="clearChat()">Clear</button>
-                                    <button class="mic-btn ds-btn xs" id="micBtn" onclick="toggleListening()" title="Voice input" style="width:28px;height:28px;padding:0;font-size:14px;border-radius:50%;display:grid;place-items:center">&#127908;</button>
-                                </div>
-                            </div>
-                            <div class="chat-log" id="chatLog" style="min-height:120px;max-height:260px;overflow-y:auto">
-                                <div class="typing-indicator" id="typingIndicator" style="display:none">
-                                    <div class="typing-dot"></div>
-                                    <div class="typing-dot"></div>
-                                    <div class="typing-dot"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- RIGHT: Tasks + News -->
-                    <div style="display:flex;flex-direction:column;gap:12px">
-                        <div class="ds-panel" style="margin:0">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">Daily Tasks</span></div>
-                                <div class="ds-panel-header-right"><button class="ds-btn xs" onclick="fetchCommandTasks()">&#8635;</button></div>
-                            </div>
-                            <div id="cmdTasksList" style="display:flex;flex-direction:column;gap:6px">
-                                <div class="skel skel-row skel-wide"></div>
-                            </div>
-                        </div>
-                        <div class="ds-panel" style="margin:0">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Intel Feed</span></div>
-                                <div class="ds-panel-header-right"><button class="ds-btn xs" onclick="fetchCommandNews()">&#8635;</button></div>
-                            </div>
-                            <div id="cmdNewsFeed" style="display:flex;flex-direction:column;gap:6px">
-                                <div class="skel skel-row skel-wide"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
+                <!-- Chat log + mic (kept for voice; hidden visually, used by voice JS) -->
+                <div id="chatLog" style="display:none"></div>
+                <div id="typingIndicator" style="display:none"></div>
+                <span id="orbStateBadge" style="display:none"></span>
+                <span id="orbStatus" style="display:none">Standby</span>
+                <span id="micBtn" style="display:none"></span>
 
             </div>
 
@@ -10300,6 +10583,370 @@ function denyTask(id) {
             if (d.ok) { fetchBizApprovals(); if(typeof pollPermissions==='function') pollPermissions(); }
         }).catch(function(){});
 }
+
+/* ═══════════════════════════════════════════════════════════
+   COMMAND PAGE v2 — Design System
+   ═══════════════════════════════════════════════════════════ */
+(function(){
+var CMD={editMode:false,activeTab:'widgets',starFrame:null,orbFrame:null,orbBoost:0,clockInterval:null,initialized:false,config:null,layout:null};
+var DC={tasks:[{id:1,title:'Morning briefing · review overnight intel',sub:'06:30 · 8 min',priority:'P1',done:true},{id:2,title:'Approve pending permission requests',sub:'Ops · blocks pipeline',priority:'P1',done:false},{id:3,title:'Reply to urgent emails',sub:'Inbox · investor + client',priority:'P2',done:true},{id:4,title:'Workout · push day · 45 min',sub:'Log via voice when done',priority:'P2',done:false},{id:5,title:'Review FEAT-H009 commits + ship',sub:'Validator green · awaiting approval',priority:'P3',done:false}],nextId:6,checklist:{title:'Today · Checklist',streak:'14d'},stats:[{label:'Balance',val:'£—',unit:'',sub:'Loading…',color:'mint'},{label:'Messages',val:'—',unit:'unread',sub:'Loading…',color:'cyan'},{label:'Tasks',val:'—',unit:'/ 0 today',sub:'Loading…',color:'amber'},{label:'System Health',val:'',unit:'',sub:'',color:'mint',isHealth:true}],news:{title:'Live · Daily Brief',headline:'AI Markets Weekly Brief',sub:'Live morning digest · top stories',sources:'▸ Reuters · BBC · FT',mast:'Reuters',dur:'--:--'},widgets:{checklist:true,news:true,hudTL:true,hudTR:true,hudBL:true,hudBR:true,orbPlay:true},hudText:{TL:'CORE · STABLE',TR:'UPLINK · OK',BL:'SIG · 98%',BR:'LAT · 42ms'},colors:{cyan:'#4cc8ff',mint:'#46e7b3',amber:'#ffb547',rose:'#ff5d7a'}};
+var DL={checklist:{x:24,y:24},news:{x:null,y:24}};
+
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function merge(t,d){for(var k in d){if(!(k in t)){t[k]=clone(d[k]);}else if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k])){if(!t[k]||typeof t[k]!=='object')t[k]={};merge(t[k],d[k]);}}}
+function loadCfg(){try{CMD.config=JSON.parse(localStorage.getItem('apex_cmd_cfg')||'null')||clone(DC);}catch(e){CMD.config=clone(DC);}merge(CMD.config,DC);}
+function saveCfg(){try{localStorage.setItem('apex_cmd_cfg',JSON.stringify(CMD.config));}catch(e){}}
+function loadLayout(){try{CMD.layout=JSON.parse(localStorage.getItem('apex_cmd_lay')||'null')||clone(DL);}catch(e){CMD.layout=clone(DL);}}
+function saveLayout(){try{localStorage.setItem('apex_cmd_lay',JSON.stringify(CMD.layout));}catch(e){}}
+
+function $id(id){return document.getElementById(id);}
+function setText(id,t){var e=$id(id);if(e)e.textContent=t;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+window.cmdInitPage=function(){
+    if(CMD.initialized){if(!CMD.starFrame)initStars();if(!CMD.orbFrame)initOrb();if(!CMD.clockInterval)startClock();return;}
+    CMD.initialized=true;
+    loadCfg();loadLayout();
+    applyColors();applyHud();applyVis();restorePos();
+    renderChecklist();renderStrip();applyNews();
+    initStars();initOrb();startClock();fetchHealth();
+    makeDrag($id('cmdChecklist'),'checklist');
+    makeDrag($id('cmdNews'),'news');
+};
+window.cmdPausePage=function(){
+    if(CMD.starFrame){cancelAnimationFrame(CMD.starFrame);CMD.starFrame=null;}
+    if(CMD.orbFrame){cancelAnimationFrame(CMD.orbFrame);CMD.orbFrame=null;}
+    if(CMD.clockInterval){clearInterval(CMD.clockInterval);CMD.clockInterval=null;}
+};
+
+function startClock(){updateClock();CMD.clockInterval=setInterval(updateClock,30000);}
+function updateClock(){
+    var now=new Date();
+    var h=String(now.getUTCHours()).padStart(2,'0'),m=String(now.getUTCMinutes()).padStart(2,'0');
+    setText('cmdNewsTime',h+':'+m+' GMT');
+    var days=['SUN','MON','TUE','WED','THU','FRI','SAT'],months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    setText('cmdClDate',days[now.getDay()]+' · '+months[now.getMonth()]+' '+now.getDate());
+}
+
+function hexRgba(h,a){var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return'rgba('+r+','+g+','+b+','+a+')';}
+function lighten(h){return'rgb('+Math.min(255,parseInt(h.slice(1,3),16)+60)+','+Math.min(255,parseInt(h.slice(3,5),16)+60)+','+Math.min(255,parseInt(h.slice(5,7),16)+60)+')';}
+function applyColors(){
+    var c=CMD.config.colors,p=$id('page-command');if(!p)return;
+    p.style.setProperty('--cmd-cyan',c.cyan);
+    p.style.setProperty('--cmd-cyan-glow',hexRgba(c.cyan,0.55));
+    p.style.setProperty('--cmd-cyan-hot',lighten(c.cyan));
+    p.style.setProperty('--cmd-mint',c.mint);
+    p.style.setProperty('--cmd-amber',c.amber);
+    p.style.setProperty('--cmd-rose',c.rose);
+}
+function applyHud(){var h=CMD.config.hudText;setText('cmdHudTLText',h.TL);setText('cmdHudTRText',h.TR);setText('cmdHudBLText',h.BL);setText('cmdHudBRText',h.BR);}
+function applyVis(){
+    var w=CMD.config.widgets;
+    setVis('cmdChecklist',w.checklist);setVis('cmdNews',w.news);
+    setVis('cmdHudTL',w.hudTL);setVis('cmdHudTR',w.hudTR);setVis('cmdHudBL',w.hudBL);setVis('cmdHudBR',w.hudBR);
+    setVis('cmdOrbPlayBtn',w.orbPlay);
+}
+function setVis(id,v){var e=$id(id);if(e)e.style.display=v?'':'none';}
+window.cmdToggleWidget=function(id,v){
+    var map={cmdChecklist:'checklist',cmdNews:'news',cmdHudTL:'hudTL',cmdHudTR:'hudTR',cmdHudBL:'hudBL',cmdHudBR:'hudBR',cmdOrbPlayBtn:'orbPlay'};
+    var k=map[id];if(k){CMD.config.widgets[k]=v;saveCfg();applyVis();if(CMD.editMode)renderPanel();}
+};
+function restorePos(){applyPos('cmdChecklist',CMD.layout.checklist,false);applyPos('cmdNews',CMD.layout.news,true);}
+function applyPos(id,pos,rightAnch){
+    var e=$id(id);if(!e||!pos)return;
+    if(rightAnch&&pos.x===null){e.style.left='';e.style.right='24px';}else{e.style.left=pos.x+'px';e.style.right='';}
+    e.style.top=pos.y+'px';
+}
+function makeDrag(el,key){
+    if(!el)return;
+    var dh=el.querySelector('.cmd-drag-handle');if(!dh)return;
+    var sx=0,sy=0;
+    dh.addEventListener('mousedown',function(e){
+        if(!CMD.editMode)return;
+        e.preventDefault();
+        sx=e.clientX-el.offsetLeft;sy=e.clientY-el.offsetTop;
+        document.addEventListener('mousemove',onM);document.addEventListener('mouseup',onU);
+    });
+    function onM(e){
+        var stage=$id('cmdStage');if(!stage)return;
+        var r=stage.getBoundingClientRect();
+        var x=Math.max(0,Math.min(r.width-el.offsetWidth,e.clientX-sx));
+        var y=Math.max(0,Math.min(r.height-el.offsetHeight,e.clientY-sy));
+        el.style.left=x+'px';el.style.right='';el.style.top=y+'px';
+        CMD.layout[key]={x:Math.round(x),y:Math.round(y)};
+    }
+    function onU(){saveLayout();document.removeEventListener('mousemove',onM);document.removeEventListener('mouseup',onU);}
+}
+
+function renderChecklist(){
+    var tasks=CMD.config.tasks||[];
+    var done=tasks.filter(function(t){return t.done;}).length,total=tasks.length;
+    setText('cmdClTitle',CMD.config.checklist.title);
+    setText('cmdClFrac',done+'/'+total);
+    setText('cmdClPct',Math.round(done/Math.max(1,total)*100)+'% complete');
+    setText('cmdClStreak','streak '+CMD.config.checklist.streak);
+    var body=$id('cmdClBody');if(!body)return;
+    body.innerHTML='';
+    tasks.forEach(function(t){
+        var d=document.createElement('div');
+        d.className='cmd-task'+(t.done?' done':'');
+        d.innerHTML='<div class="box"></div><div class="body"><div class="ttl">'+esc(t.title)+'</div><div class="sub">'+esc(t.sub)+'</div></div><span class="pr '+t.priority.toLowerCase()+'">'+t.priority+'</span>';
+        d.addEventListener('click',function(){t.done=!t.done;saveCfg();renderChecklist();});
+        body.appendChild(d);
+    });
+}
+function renderStrip(){
+    var stats=CMD.config.stats;
+    for(var i=0;i<4;i++){
+        var s=stats[i],c=$id('cmdStat'+i);if(!c||!s)continue;
+        c.className='cmd-stat '+(s.color||'cyan');
+        setText('cmdStatLbl'+i,s.label||'');
+        if(!s.isHealth){setText('cmdStatVal'+i,s.val||'—');setText('cmdStatUnit'+i,s.unit||'');setText('cmdStatSub'+i,s.sub||'');}
+    }
+}
+function applyNews(){
+    var n=CMD.config.news;
+    setText('cmdNewsTitle',n.title);setText('cmdNewsHeadline',n.headline);setText('cmdNewsSub',n.sub);
+    setText('cmdNewsSources',n.sources);setText('cmdNewsMast',n.mast);setText('cmdNewsDur',n.dur);
+}
+function fetchHealth(){
+    fetch('/health').then(function(r){return r.json();}).then(function(d){
+        var ok=d.status==='ok';
+        var el=$id('cmdHealthText');if(el){el.textContent=ok?'All Systems Go':'Degraded';el.style.color=ok?'#46e7b3':'#ff5d7a';}
+        renderChips([{n:'Supabase',ok:!!d.db},{n:'Render',ok:ok},{n:'GitHub',ok:true},{n:'Voice',ok:true}]);
+    }).catch(function(){
+        var el=$id('cmdHealthText');if(el){el.textContent='Unknown';el.style.color='#ffb547';}
+        renderChips([{n:'Supabase',ok:false},{n:'Render',ok:false},{n:'GitHub',ok:false},{n:'Voice',ok:false}]);
+    });
+}
+function renderChips(svc){
+    var c=$id('cmdHealthChips');if(!c)return;c.innerHTML='';
+    svc.forEach(function(s){
+        var ch=document.createElement('span');ch.className='chip';
+        ch.innerHTML='<span class="dot" style="background:'+(s.ok?'#46e7b3':'#ff5d7a')+';box-shadow:0 0 6px '+(s.ok?'#46e7b3':'#ff5d7a')+'"></span>'+esc(s.n);
+        if(!s.ok)ch.style.borderColor='rgba(255,93,122,0.3)';
+        c.appendChild(ch);
+    });
+}
+
+/* ── STARFIELD ── */
+function initStars(){
+    var c=$id('cmdStars');if(!c)return;
+    var ctx=c.getContext('2d'),stars=[],dpr=Math.min(window.devicePixelRatio||1,2);
+    function resize(){
+        var stage=$id('cmdStage');if(!stage)return;
+        var r=stage.getBoundingClientRect();
+        c.width=r.width*dpr;c.height=r.height*dpr;
+        c.style.width=r.width+'px';c.style.height=r.height+'px';
+        stars=[];var n=Math.floor(r.width*r.height/2400);
+        for(var i=0;i<n;i++)stars.push({x:Math.random()*c.width,y:Math.random()*c.height,z:Math.random()*0.9+0.1,r:(Math.random()*1.1+0.25)*dpr,vx:(Math.random()-0.5)*0.04*dpr,vy:(Math.random()-0.5)*0.04*dpr,tw:Math.random()*Math.PI*2,tws:Math.random()*0.02+0.005,hue:Math.random()<0.08?(Math.random()<0.5?'cyan':'gold'):'white'});
+    }
+    resize();window.addEventListener('resize',resize);
+    (function frame(){
+        ctx.clearRect(0,0,c.width,c.height);
+        for(var i=0;i<stars.length;i++){
+            var s=stars[i];s.x+=s.vx;s.y+=s.vy;s.tw+=s.tws;
+            if(s.x<-2)s.x=c.width+2;if(s.x>c.width+2)s.x=-2;
+            if(s.y<-2)s.y=c.height+2;if(s.y>c.height+2)s.y=-2;
+            var a=(0.45+0.55*(Math.sin(s.tw)*0.5+0.5))*s.z;
+            ctx.beginPath();
+            if(s.hue==='cyan'){ctx.fillStyle='rgba(140,210,255,'+a+')';ctx.shadowColor='rgba(76,200,255,0.7)';ctx.shadowBlur=6*dpr*s.z;}
+            else if(s.hue==='gold'){ctx.fillStyle='rgba(255,215,160,'+a+')';ctx.shadowColor='rgba(255,200,140,0.65)';ctx.shadowBlur=5*dpr*s.z;}
+            else{ctx.fillStyle='rgba(255,255,255,'+a+')';ctx.shadowColor='rgba(220,235,255,0.4)';ctx.shadowBlur=3*dpr*s.z;}
+            ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+        }
+        ctx.shadowBlur=0;
+        CMD.starFrame=requestAnimationFrame(frame);
+    })();
+}
+
+/* ── PARTICLE ORB ── */
+function initOrb(){
+    var c=$id('cmdOrbCanvas');if(!c)return;
+    var ctx=c.getContext('2d'),dpr=Math.min(window.devicePixelRatio||1,2);
+    function resize(){var r=c.getBoundingClientRect();c.width=r.width*dpr;c.height=r.height*dpr;}
+    resize();window.addEventListener('resize',resize);
+    var N=1100,pts=[];
+    for(var i=0;i<N;i++){var phi=Math.acos(1-2*(i+0.5)/N),theta=Math.PI*(1+Math.sqrt(5))*(i+0.5);pts.push({x:Math.sin(phi)*Math.cos(theta),y:Math.cos(phi),z:Math.sin(phi)*Math.sin(theta)});}
+    var t=0;
+    var pb=$id('cmdOrbPlayBtn');
+    if(pb){pb.addEventListener('mousedown',function(){CMD.orbBoost=1;});pb.addEventListener('mouseup',function(){CMD.orbBoost=0;});pb.addEventListener('mouseleave',function(){CMD.orbBoost=0;});}
+    (function frame(){
+        var w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
+        var cx=w/2,cy=h/2;t+=0.0045;
+        var breath=1+Math.sin(t*2.2)*0.025,boost=1+CMD.orbBoost*0.12;
+        var baseR=Math.min(w,h)*0.36*breath*boost;
+        var ry=t*0.8,cosY=Math.cos(ry),sinY=Math.sin(ry);
+        var rx=Math.sin(t*0.35)*0.18,cosX=Math.cos(rx),sinX=Math.sin(rx);
+        var proj=pts.map(function(p){var x=p.x*cosY-p.z*sinY,z=p.x*sinY+p.z*cosY,y=p.y,y2=y*cosX-z*sinX,z2=y*sinX+z*cosX;return{x:x,y:y2,z:z2};});
+        proj.sort(function(a,b){return a.z-b.z;});
+        var hg=ctx.createRadialGradient(cx,cy,baseR*0.4,cx,cy,baseR*1.3);
+        hg.addColorStop(0,'rgba(76,200,255,0.18)');hg.addColorStop(0.55,'rgba(76,200,255,0.05)');hg.addColorStop(1,'rgba(76,200,255,0)');
+        ctx.fillStyle=hg;ctx.beginPath();ctx.arc(cx,cy,baseR*1.3,0,Math.PI*2);ctx.fill();
+        for(var j=0;j<proj.length;j++){
+            var p=proj[j],px=cx+p.x*baseR,py=cy+p.y*baseR,d=(p.z+1)/2;
+            var sz=(0.5+d*1.6)*dpr,a=0.18+d*0.82;
+            ctx.fillStyle=d>0.92?'rgba(220,240,255,'+a+')':d>0.6?'rgba(140,210,255,'+a+')':'rgba(76,160,230,'+(a*0.7)+')';
+            ctx.beginPath();ctx.arc(px,py,sz,0,Math.PI*2);ctx.fill();
+        }
+        var fi=0.28+Math.sin(t*2.2)*0.06+CMD.orbBoost*0.25,fl=baseR*1.25,fw=baseR*0.028;
+        ctx.globalCompositeOperation='lighter';
+        function flare(x1,y1,x2,y2,ox,oy){
+            var g=ctx.createLinearGradient(x1,y1,x2,y2);
+            g.addColorStop(0,'rgba(76,200,255,0)');g.addColorStop(0.40,'rgba(120,200,255,'+(fi*0.4)+')');
+            g.addColorStop(0.49,'rgba(180,230,255,'+(fi*0.8)+')');g.addColorStop(0.51,'rgba(180,230,255,'+(fi*0.8)+')');
+            g.addColorStop(0.60,'rgba(120,200,255,'+(fi*0.4)+')');g.addColorStop(1,'rgba(76,200,255,0)');
+            ctx.fillStyle=g;ctx.beginPath();
+            ctx.moveTo(x1,y1);ctx.quadraticCurveTo(ox[0],oy[0],x2,y2);ctx.quadraticCurveTo(ox[1],oy[1],x1,y1);ctx.fill();
+        }
+        flare(cx-fl,cy,cx+fl,cy,[cx,cx],[cy-fw*1.2,cy+fw*1.2]);
+        flare(cx,cy-fl,cx,cy+fl,[cx-fw*1.2,cx+fw*1.2],[cy,cy]);
+        var burst=ctx.createRadialGradient(cx,cy,0,cx,cy,baseR*0.55);
+        burst.addColorStop(0,'rgba(100,180,240,'+(0.10+CMD.orbBoost*0.18)+')');burst.addColorStop(0.6,'rgba(76,160,220,'+(0.05+CMD.orbBoost*0.1)+')');burst.addColorStop(1,'rgba(76,200,255,0)');
+        ctx.fillStyle=burst;ctx.beginPath();ctx.arc(cx,cy,baseR*0.55,0,Math.PI*2);ctx.fill();
+        ctx.globalCompositeOperation='source-over';
+        CMD.orbFrame=requestAnimationFrame(frame);
+    })();
+}
+
+/* ── EDIT MODE ── */
+window.cmdToggleEditMode=function(){
+    CMD.editMode=!CMD.editMode;
+    var p=$id('page-command'),pan=$id('cmdDesignPanel'),tog=$id('cmdEditToggle');
+    if(p)p.classList.toggle('cmd-edit-mode',CMD.editMode);
+    if(pan)pan.classList.toggle('open',CMD.editMode);
+    if(tog)tog.classList.toggle('active',CMD.editMode);
+    if(CMD.editMode)renderPanel();
+};
+window.cmdShowTab=function(tab){
+    CMD.activeTab=tab;
+    document.querySelectorAll('.cdp-tab').forEach(function(t){t.classList.toggle('active',t.textContent.toLowerCase()===tab);});
+    renderPanel();
+};
+function renderPanel(){
+    var body=$id('cdpBody');if(!body)return;body.innerHTML='';
+    if(CMD.activeTab==='widgets')renderWidgets(body);
+    else if(CMD.activeTab==='content')renderContent(body);
+    else renderColorsTab(body);
+}
+
+/* Widgets tab */
+function renderWidgets(body){
+    var w=CMD.config.widgets,h=CMD.config.hudText;
+    var s=mkSec('Panels');
+    s.appendChild(mkTogRow('Checklist',w.checklist,function(v){CMD.config.widgets.checklist=v;saveCfg();applyVis();}));
+    s.appendChild(mkTogRow('Daily Brief',w.news,function(v){CMD.config.widgets.news=v;saveCfg();applyVis();}));
+    s.appendChild(mkTogRow('Orb Play Button',w.orbPlay,function(v){CMD.config.widgets.orbPlay=v;saveCfg();applyVis();}));
+    body.appendChild(s);
+    var hs=mkSec('HUD Tags');
+    ['TL','TR','BL','BR'].forEach(function(pos){
+        var row=document.createElement('div');row.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:6px';
+        var tog=mkTog(w['hud'+pos],function(v){CMD.config.widgets['hud'+pos]=v;saveCfg();applyVis();});tog.style.flexShrink='0';
+        var inp=document.createElement('input');inp.className='cdp-input';inp.style.flex='1';inp.value=h[pos];
+        inp.addEventListener('input',(function(p){return function(){CMD.config.hudText[p]=this.value;saveCfg();applyHud();};})(pos));
+        row.appendChild(tog);row.appendChild(inp);hs.appendChild(row);
+    });
+    body.appendChild(hs);
+    var ps=mkSec('Positions');
+    var rb=document.createElement('button');rb.className='cdp-mini-btn danger';rb.textContent='Reset positions';
+    rb.onclick=function(){CMD.layout=clone(DL);saveLayout();restorePos();};
+    ps.appendChild(rb);
+    var hint=document.createElement('div');hint.style.cssText='font-size:10px;color:rgba(180,205,240,0.4);margin-top:8px;line-height:1.5';
+    hint.textContent='Drag panels by their top handle bar.';ps.appendChild(hint);
+    body.appendChild(ps);
+}
+
+/* Content tab */
+function renderContent(body){
+    var cls=mkSec('Checklist');
+    cls.appendChild(mkInp('Title',CMD.config.checklist.title,function(v){CMD.config.checklist.title=v;saveCfg();renderChecklist();}));
+    cls.appendChild(mkInp('Streak',CMD.config.checklist.streak,function(v){CMD.config.checklist.streak=v;saveCfg();renderChecklist();},'e.g. 14d'));
+    body.appendChild(cls);
+
+    var ts=mkSec('Tasks');
+    CMD.config.tasks.forEach(function(task,idx){
+        var item=document.createElement('div');item.className='cdp-task-item';
+        var ti=document.createElement('input');ti.className='cdp-input';ti.value=task.title;ti.placeholder='Task title';
+        ti.addEventListener('input',function(){CMD.config.tasks[idx].title=this.value;saveCfg();renderChecklist();});
+        var r2=document.createElement('div');r2.style.cssText='display:flex;gap:6px';
+        var si=document.createElement('input');si.className='cdp-input';si.style.flex='1';si.value=task.sub;si.placeholder='Sub text';
+        si.addEventListener('input',function(){CMD.config.tasks[idx].sub=this.value;saveCfg();renderChecklist();});
+        var pr=document.createElement('select');pr.className='cdp-input';pr.style.width='62px';
+        ['P1','P2','P3'].forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;if(task.priority===p)o.selected=true;pr.appendChild(o);});
+        pr.addEventListener('change',function(){CMD.config.tasks[idx].priority=this.value;saveCfg();renderChecklist();});
+        r2.appendChild(si);r2.appendChild(pr);
+        var del=document.createElement('button');del.className='cdp-mini-btn danger';del.textContent='Delete';
+        del.onclick=(function(i){return function(){CMD.config.tasks.splice(i,1);saveCfg();renderChecklist();renderPanel();};})(idx);
+        item.appendChild(ti);item.appendChild(r2);item.appendChild(del);ts.appendChild(item);
+    });
+    var ab=document.createElement('button');ab.className='cdp-mini-btn';ab.textContent='+ Add task';
+    ab.onclick=function(){CMD.config.tasks.push({id:CMD.config.nextId++,title:'New task',sub:'',priority:'P3',done:false});saveCfg();renderChecklist();renderPanel();};
+    ts.appendChild(ab);body.appendChild(ts);
+
+    var ss=mkSec('Stat Cards');
+    CMD.config.stats.forEach(function(stat,i){
+        var card=document.createElement('div');card.className='cdp-task-item';
+        var lh=document.createElement('div');lh.style.cssText='font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(76,200,255,0.55);margin-bottom:6px';lh.textContent='Card '+(i+1);card.appendChild(lh);
+        card.appendChild(mkInp('Label',stat.label,function(v){CMD.config.stats[i].label=v;saveCfg();renderStrip();}));
+        if(!stat.isHealth){
+            card.appendChild(mkInp('Value',stat.val,function(v){CMD.config.stats[i].val=v;saveCfg();renderStrip();}));
+            card.appendChild(mkInp('Unit',stat.unit,function(v){CMD.config.stats[i].unit=v;saveCfg();renderStrip();}));
+            card.appendChild(mkInp('Sub',stat.sub,function(v){CMD.config.stats[i].sub=v;saveCfg();renderStrip();}));
+        }
+        var cr=document.createElement('div');cr.style.cssText='display:flex;gap:6px;align-items:center;margin-top:4px';
+        var cl=document.createElement('span');cl.className='cdp-label';cl.textContent='Color';cr.appendChild(cl);
+        ['mint','cyan','amber','rose'].forEach(function(clr){
+            var sw=document.createElement('div');sw.className='cdp-swatch'+(stat.color===clr?' selected':'');
+            sw.style.background=clr==='mint'?'#46e7b3':clr==='cyan'?'#4cc8ff':clr==='amber'?'#ffb547':'#ff5d7a';
+            sw.onclick=(function(c,si2){return function(){CMD.config.stats[si2].color=c;saveCfg();renderStrip();renderPanel();};})(clr,i);
+            cr.appendChild(sw);
+        });
+        card.appendChild(cr);ss.appendChild(card);
+    });
+    body.appendChild(ss);
+
+    var ns=mkSec('Daily Brief');
+    var n=CMD.config.news;
+    ns.appendChild(mkInp('Headline',n.headline,function(v){CMD.config.news.headline=v;saveCfg();applyNews();}));
+    ns.appendChild(mkInp('Sub text',n.sub,function(v){CMD.config.news.sub=v;saveCfg();applyNews();}));
+    ns.appendChild(mkInp('Sources',n.sources,function(v){CMD.config.news.sources=v;saveCfg();applyNews();}));
+    ns.appendChild(mkInp('Masthead',n.mast,function(v){CMD.config.news.mast=v;saveCfg();applyNews();}));
+    body.appendChild(ns);
+}
+
+/* Colors tab */
+function renderColorsTab(body){
+    var s=mkSec('Accent Colors');
+    [{key:'cyan',label:'Primary (Cyan)',hint:'Orb · active states'},{key:'mint',label:'Success (Mint)',hint:'Balance · health'},{key:'amber',label:'Warning (Amber)',hint:'P2 tasks · warnings'},{key:'rose',label:'Error (Rose)',hint:'P1 tasks · alerts'}]
+    .forEach(function(c){
+        var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:10px';
+        var sw=document.createElement('input');sw.type='color';sw.value=CMD.config.colors[c.key];
+        sw.style.cssText='width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;background:none;padding:0;flex-shrink:0';
+        sw.addEventListener('input',function(){CMD.config.colors[c.key]=this.value;saveCfg();applyColors();renderStrip();});
+        var info=document.createElement('div');info.style.flex='1';
+        info.innerHTML='<div style="font-size:11px;color:rgba(220,235,255,0.7);font-weight:500">'+c.label+'</div><div style="font-size:9.5px;color:rgba(180,205,240,0.4);margin-top:2px">'+c.hint+'</div>';
+        row.appendChild(sw);row.appendChild(info);s.appendChild(row);
+    });
+    var rb=document.createElement('button');rb.className='cdp-mini-btn danger';rb.style.marginTop='4px';rb.textContent='Reset to defaults';
+    rb.onclick=function(){CMD.config.colors=clone(DC.colors);saveCfg();applyColors();renderPanel();};
+    s.appendChild(rb);body.appendChild(s);
+}
+
+/* helpers */
+function mkSec(title){var s=document.createElement('div');s.className='cdp-section';var h=document.createElement('div');h.className='cdp-section-head';h.textContent=title;s.appendChild(h);return s;}
+function mkTogRow(label,checked,onChange){var row=document.createElement('div');row.className='cdp-row';row.style.marginBottom='8px';var l=document.createElement('span');l.className='cdp-label';l.textContent=label;row.appendChild(l);row.appendChild(mkTog(checked,onChange));return row;}
+function mkTog(checked,onChange){var t=document.createElement('div');t.className='cdp-toggle'+(checked?' on':'');t.addEventListener('click',function(){var v=t.classList.toggle('on');onChange(v);});return t;}
+function mkInp(label,value,onChange,placeholder){var w=document.createElement('div');w.style.marginBottom='6px';var l=document.createElement('div');l.className='cdp-sub-lbl';l.textContent=label;var i=document.createElement('input');i.className='cdp-input';i.value=value||'';i.placeholder=placeholder||'';i.addEventListener('input',function(){onChange(this.value);});w.appendChild(l);w.appendChild(i);return w;}
+
+/* Hook switchPage */
+var _sp=window.switchPage;
+window.switchPage=function(name){if(typeof _sp==='function')_sp(name);if(name==='command'){setTimeout(window.cmdInitPage,60);}else{window.cmdPausePage();}};
+
+/* Auto-init on load */
+document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(function(){var p=$id('page-command');if(p&&p.classList.contains('active'))window.cmdInitPage();},250);
+});
+})();
 
 </script>
 </body>
