@@ -11358,11 +11358,13 @@ document.addEventListener('DOMContentLoaded',function(){
         <div class="as-item" onclick="asAddWidget('note')"><div class="as-ico">📝</div><div class="as-lbl">Note</div></div>
       </div>
     </div>
-    <!-- Layers tab -->
-    <div id="asTabLayers" class="as-layers" style="display:none"></div>
-    <!-- Props tab -->
+    <!-- Layers tab — #csLayers used by existing sidebar JS -->
+    <div id="asTabLayers" class="as-layers" style="display:none">
+      <div id="csLayers"></div>
+    </div>
+    <!-- Props tab — #csProps used by existing sidebar JS -->
     <div id="asTabProps" class="as-props" style="display:none">
-      <div class="as-empty">Click a widget to edit its properties.</div>
+      <div id="csProps"><div class="as-empty">Click a widget to edit its properties.</div></div>
     </div>
   </div>
 </div>
@@ -11393,41 +11395,21 @@ function asTab(el,tab){
   document.getElementById('asTabLayers').style.display=tab==='layers'?'':'none';
   document.getElementById('asTabProps').style.display=tab==='props'?'':'none';
   if(tab==='layers')asRenderLayers();
+  if(tab==='props')asRenderProps();
 }
 window.asTab=asTab;
 
 function asRenderLayers(){
-  var sec=document.getElementById('asTabLayers');if(!sec)return;
-  sec.innerHTML='<div class="as-cat-lbl" style="padding:10px 12px 6px">Layers</div>';
-  var widgets=typeof CMD!=='undefined'&&CMD.widgets?CMD.widgets:[];
-  if(!widgets.length){
-    sec.innerHTML+='<div class="as-empty">No widgets on this page.<br>Switch to the Add tab to create one.</div>';
-    return;
-  }
-  var WTYPE_ICO={checklist:'✅',news:'📰',hud:'🏷',clock:'🕐',text:'✍',note:'📝'};
-  widgets.slice().reverse().forEach(function(w){
-    var item=document.createElement('div');
-    item.className='as-layer'+(typeof CMD!=='undefined'&&CMD.selectedWid===w.id?' sel':'');
-    item.innerHTML='<span class="as-layer-ico">'+(WTYPE_ICO[w.type]||'▪')+'</span>'
-      +'<span class="as-layer-name">'+w.type+(w.data&&w.data.text?' — '+w.data.text.slice(0,14):'')+'</span>'
-      +'<span class="as-layer-del" title="Delete">×</span>';
-    item.querySelector('.as-layer-del').addEventListener('click',function(e){
-      e.stopPropagation();
-      if(typeof cmdDeleteWidget==='function')cmdDeleteWidget(w.id);
-      asRenderLayers();
-    });
-    item.addEventListener('click',function(){
-      if(typeof selectWidget==='function')selectWidget(w.id);
-      asRenderLayers();
-    });
-    sec.appendChild(item);
-  });
+  // renderSidebarLayers() populates #csLayers (which lives inside #asTabLayers)
+  if(typeof renderSidebarLayers==='function')renderSidebarLayers();
+}
+function asRenderProps(){
+  if(typeof renderSidebarProps==='function')renderSidebarProps();
 }
 
 function asAddWidget(type){
   if(typeof cmdAddWidget==='function'){
     cmdAddWidget(type);
-    asRenderLayers();
     // Switch to layers after adding
     var lt=document.querySelector('.as-tab[data-tab="layers"]');
     if(lt)asTab(lt,'layers');
@@ -11435,11 +11417,14 @@ function asAddWidget(type){
 }
 window.asAddWidget=asAddWidget;
 
-// Sync layers panel when widget selected on canvas
+// Sync layers/props panel when widget selected on canvas
 var _origSelectWidget=window.selectWidget;
 window.selectWidget=function(wid){
   if(typeof _origSelectWidget==='function')_origSelectWidget(wid);
-  if(_asOpen&&_asActiveTab==='layers')asRenderLayers();
+  if(_asOpen){
+    if(_asActiveTab==='layers')asRenderLayers();
+    if(_asActiveTab==='props')asRenderProps();
+  }
 };
 
 })();
