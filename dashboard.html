@@ -3903,7 +3903,36 @@ select.as-pi { background:rgba(2,4,14,0.9); }
             <div class="page" id="page-system">
                 <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
 
-                    <!-- Section 1: Agent Grid -->
+                    <!-- Section 0: Domain Agents -->
+                    <div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                            <span style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Domain Agents</span>
+                            <span style="font-size:9px;color:var(--text-mute)">5 specialists</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px" id="domainAgentGrid">
+                            <!-- populated by initDomainAgentGrid() -->
+                        </div>
+                    </div>
+
+                    <!-- Domain Agent Chat Modal -->
+                    <div id="domainAgentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:400;align-items:center;justify-content:center">
+                        <div style="width:520px;max-height:70vh;background:var(--surface);border:1px solid var(--border-cyan);border-radius:14px;display:flex;flex-direction:column;overflow:hidden">
+                            <div style="padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                                <div>
+                                    <span id="damTitle" style="font-size:13px;font-weight:600;color:var(--text)">Agent</span>
+                                    <span id="damCategory" class="ds-badge" style="margin-left:8px"></span>
+                                </div>
+                                <button onclick="closeDomainAgentModal()" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:20px">&times;</button>
+                            </div>
+                            <div id="damLog" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:160px"></div>
+                            <div style="padding:12px;border-top:1px solid var(--border);display:flex;gap:8px">
+                                <input id="damInput" class="ds-input" placeholder="Ask this agent…" style="flex:1" onkeydown="if(event.key==='Enter')sendDomainAgentMsg()">
+                                <button class="ds-btn cyan" onclick="sendDomainAgentMsg()">Send</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 1: Agent Pipeline -->
                     <div>
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
                             <span style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Agent Pipeline</span>
@@ -9904,6 +9933,106 @@ function initMemoryCanvas() {
 }
 
 var _sysPageInited = false;
+/* ── Domain Agent Cards ── */
+var _dam = { slug: null, history: [], busy: false };
+var _DA_META = {
+    system:   {icon:'⚙',color:'#7c6fff',label:'System'},
+    file:     {icon:'📁',color:'#4cc8ff',label:'File'},
+    uni:      {icon:'🎓',color:'#ffb547',label:'Uni'},
+    finance:  {icon:'£',color:'#46e7b3',label:'Finance'},
+    business: {icon:'💼',color:'#ff5d7a',label:'Business'}
+};
+
+function initDomainAgentGrid() {
+    var grid = document.getElementById('domainAgentGrid');
+    if (!grid || grid.dataset.inited) return;
+    grid.dataset.inited = '1';
+    var slugs = ['system','file','uni','finance','business'];
+    grid.innerHTML = slugs.map(function(s) {
+        var m = _DA_META[s] || {icon:'?',color:'var(--cyan)',label:s};
+        return '<div style="background:var(--surface);border-radius:10px;padding:14px;border:1px solid var(--border);border-top:2px solid '+m.color+';cursor:pointer;transition:transform 150ms;text-align:center"'
+            +' onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'\'"'
+            +' onclick="openDomainAgent(\''+s+'\')">'
+            + '<div style="font-size:22px;margin-bottom:6px">'+m.icon+'</div>'
+            + '<div style="font-size:11px;font-weight:600;color:var(--text)">'+m.label+'</div>'
+            + '<div style="font-size:9px;color:var(--text-mute);margin-top:2px;text-transform:uppercase;letter-spacing:0.1em">Agent</div>'
+            + '</div>';
+    }).join('');
+}
+
+function openDomainAgent(slug) {
+    _dam.slug = slug;
+    _dam.history = [];
+    _dam.busy = false;
+    var m = _DA_META[slug] || {label:slug,color:'var(--cyan)'};
+    var t = document.getElementById('damTitle');
+    var c = document.getElementById('damCategory');
+    var log = document.getElementById('damLog');
+    var inp = document.getElementById('damInput');
+    if (t)  t.textContent = m.label + ' Agent';
+    if (c)  { c.textContent = slug; c.style.background = 'rgba(76,200,255,0.1)'; }
+    if (log) log.innerHTML = '<div style="font-size:11px;color:var(--text-mute);text-align:center;padding:20px 0">Hello, sir. How can I assist you?</div>';
+    if (inp) { inp.value = ''; inp.focus(); }
+    var modal = document.getElementById('domainAgentModal');
+    if (modal) modal.style.display = 'flex';
+}
+window.openDomainAgent = openDomainAgent;
+
+function closeDomainAgentModal() {
+    var modal = document.getElementById('domainAgentModal');
+    if (modal) modal.style.display = 'none';
+    _dam.slug = null;
+}
+window.closeDomainAgentModal = closeDomainAgentModal;
+
+async function sendDomainAgentMsg() {
+    if (_dam.busy || !_dam.slug) return;
+    var inp = document.getElementById('damInput');
+    var msg = (inp ? inp.value.trim() : '');
+    if (!msg) return;
+    if (inp) inp.value = '';
+
+    var log = document.getElementById('damLog');
+    var esc2 = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    var addMsg = function(role, text) {
+        if (!log) return;
+        var isUser = role === 'user';
+        var d = document.createElement('div');
+        d.style.cssText = 'max-width:90%;padding:8px 12px;border-radius:8px;font-size:12px;line-height:1.5;'
+            + (isUser ? 'align-self:flex-end;background:rgba(76,200,255,0.12);color:var(--text);margin-left:auto' : 'align-self:flex-start;background:var(--surface-2);border:1px solid var(--border);color:var(--text-mid)');
+        d.innerHTML = esc2(text).replace(/\n/g,'<br>');
+        log.appendChild(d);
+        log.scrollTop = log.scrollHeight;
+    };
+
+    addMsg('user', msg);
+    _dam.history.push({role:'user', content:msg});
+
+    _dam.busy = true;
+    var typing = document.createElement('div');
+    typing.style.cssText = 'font-size:11px;color:var(--text-mute);padding:4px 0';
+    typing.textContent = 'Thinking…';
+    if (log) log.appendChild(typing);
+
+    try {
+        var d = await fetchJson('/api/agents/domain/invoke', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','x-app-key':window._appKey||''},
+            body: JSON.stringify({slug:_dam.slug, message:msg, history:_dam.history.slice(-8)})
+        });
+        if (typing.parentNode) typing.parentNode.removeChild(typing);
+        var reply = (d.ok && d.reply) ? d.reply : (d.error || 'No response');
+        addMsg('assistant', reply);
+        _dam.history.push({role:'assistant', content:reply});
+    } catch(e) {
+        if (typing.parentNode) typing.parentNode.removeChild(typing);
+        addMsg('assistant', 'Error: ' + e.message);
+    } finally {
+        _dam.busy = false;
+    }
+}
+window.sendDomainAgentMsg = sendDomainAgentMsg;
+
 async function fetchVaultStatus() {
     try {
         var d = await fetchJson('/api/wiki/status');
@@ -9955,6 +10084,7 @@ async function triggerCs249rIngest() {
 window.triggerCs249rIngest = triggerCs249rIngest;
 
 async function initSystemPage() {
+    initDomainAgentGrid();
     buildAgentGrid();
     fetchSystemAgents();
     initMemoryCanvas();
