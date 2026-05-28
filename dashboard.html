@@ -3976,7 +3976,38 @@ select.as-pi { background:rgba(2,4,14,0.9); }
                         </div>
                     </div>
 
-                    <!-- Section 4: Suggestions (collapsible) -->
+                    <!-- Section 4: Obsidian Vault Sync -->
+                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);padding:16px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div id="vault-status-dot" style="width:6px;height:6px;border-radius:50%;background:var(--text-mute)"></div>
+                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Obsidian Vault</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span id="vault-status-badge" class="ds-badge" style="font-size:9px">Loading&hellip;</span>
+                                <button class="ds-btn xs" onclick="fetchVaultStatus()">&#8635;</button>
+                                <button class="ds-btn xs amber" onclick="triggerCs249rIngest()">Ingest CS249R</button>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+                            <div style="background:var(--surface-2);border-radius:8px;padding:10px;border:1px solid var(--border)">
+                                <div style="font-size:9px;color:var(--text-mute);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.1em">Notes</div>
+                                <div id="vault-note-count" style="font-size:20px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums">&#8212;</div>
+                            </div>
+                            <div style="background:var(--surface-2);border-radius:8px;padding:10px;border:1px solid var(--border)">
+                                <div style="font-size:9px;color:var(--text-mute);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.1em">Last Write</div>
+                                <div id="vault-last-write" style="font-size:11px;font-weight:600;color:var(--text)">&#8212;</div>
+                            </div>
+                            <div style="background:var(--surface-2);border-radius:8px;padding:10px;border:1px solid var(--border)">
+                                <div style="font-size:9px;color:var(--text-mute);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.1em">Buffer</div>
+                                <div id="vault-buffer" style="font-size:11px;font-weight:600;color:var(--text)">&#8212;</div>
+                            </div>
+                        </div>
+                        <div style="font-size:9px;color:var(--text-mute);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.1em">Latest lesson</div>
+                        <div id="vault-recent-lesson" style="font-size:11px;color:var(--text-mid);line-height:1.55;background:var(--surface-2);border-radius:6px;padding:8px 10px;min-height:32px">&#8212;</div>
+                    </div>
+
+                    <!-- Section 5: Suggestions (collapsible) -->
                     <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border)">
                         <div onclick="var c=document.getElementById('sys-suggestions');var a=document.getElementById('sys-sugg-chev');c.style.display=c.style.display==='none'?'block':'none';a.textContent=c.style.display==='none'?'▸':'▾'" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
                             <div style="display:flex;align-items:center;gap:8px">
@@ -9873,6 +9904,56 @@ function initMemoryCanvas() {
 }
 
 var _sysPageInited = false;
+async function fetchVaultStatus() {
+    try {
+        var d = await fetchJson('/api/wiki/status');
+        var dot = document.getElementById('vault-status-dot');
+        var badge = document.getElementById('vault-status-badge');
+        var nc = document.getElementById('vault-note-count');
+        var lw = document.getElementById('vault-last-write');
+        var buf = document.getElementById('vault-buffer');
+        var lesson = document.getElementById('vault-recent-lesson');
+
+        var ok = d.ok && d.vaultConfigured;
+        if (dot) { dot.style.background = ok ? 'var(--green)' : 'var(--amber)'; dot.style.boxShadow = ok ? '0 0 6px var(--green)' : '0 0 6px var(--amber)'; }
+        if (badge) { badge.textContent = ok ? 'Connected' : 'Local only'; badge.style.background = ok ? 'rgba(70,231,179,0.12)' : 'rgba(255,183,71,0.12)'; badge.style.color = ok ? 'var(--green)' : 'var(--amber)'; }
+        if (nc) nc.textContent = d.noteCount || '—';
+        if (lw) {
+            if (d.lastWrite) {
+                var ago = Math.floor((Date.now() - new Date(d.lastWrite)) / 60000);
+                lw.textContent = ago < 60 ? ago + 'm ago' : Math.floor(ago / 60) + 'h ago';
+            } else { lw.textContent = 'Never'; lw.style.color = 'var(--text-mute)'; }
+        }
+        if (buf) {
+            var lines = (d.recentLessons || '').trim().split('\n').filter(Boolean);
+            buf.textContent = lines.length + ' in buffer';
+        }
+        if (lesson) {
+            var firstLesson = (d.recentLessons || '').trim().split('\n---\n')[0] || '';
+            lesson.textContent = firstLesson.trim().slice(0, 200) || 'No lessons yet';
+            lesson.style.color = firstLesson ? 'var(--text-mid)' : 'var(--text-mute)';
+        }
+    } catch(e) {
+        var badge2 = document.getElementById('vault-status-badge');
+        if (badge2) { badge2.textContent = 'Error'; badge2.style.color = 'var(--red)'; }
+    }
+}
+window.fetchVaultStatus = fetchVaultStatus;
+
+async function triggerCs249rIngest() {
+    var btn = event && event.target;
+    if (btn) { btn.disabled = true; btn.textContent = 'Ingesting…'; }
+    try {
+        var d = await fetchJson('/api/wiki/ingest-cs249r', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+        if (typeof showToast === 'function') showToast(d.ok ? 'CS249R ingested to vault' : (d.error || 'Ingest failed'));
+    } catch(e) {
+        if (typeof showToast === 'function') showToast('Ingest error: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Ingest CS249R'; }
+    }
+}
+window.triggerCs249rIngest = triggerCs249rIngest;
+
 async function initSystemPage() {
     buildAgentGrid();
     fetchSystemAgents();
@@ -9880,6 +9961,7 @@ async function initSystemPage() {
     fetchSystemCosts();
     fetchSystemTimeline();
     buildSystemSuggestions();
+    fetchVaultStatus();
 
     if (!_sysPageInited) {
         _sysPageInited = true;
