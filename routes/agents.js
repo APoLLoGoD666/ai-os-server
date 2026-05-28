@@ -3,7 +3,8 @@
 const express = require('express');
 const router  = express.Router();
 
-function _lib() { return require('../agent-system/agent-library'); }
+function _lib()    { return require('../agent-system/agent-library'); }
+function _domain() { return require('../agent-system/domain-agents'); }
 const _auth = require('../lib/app-auth');
 
 // GET /api/agents/status
@@ -48,6 +49,23 @@ router.post('/agents/invoke', _auth, async (req, res) => {
         return res.status(400).json({ ok: false, error: 'agentSlug and message required' });
     try {
         const result = await _lib().invokeAgent(agentSlug, message);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// GET /api/agents/domain — list Apex domain agents (System, File, Uni, Finance, Business)
+router.get('/agents/domain', _auth, (req, res) => {
+    try { res.json({ ok: true, agents: _domain().listDomainAgents() }); }
+    catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// POST /api/agents/domain/invoke  { slug, message, history? }
+router.post('/agents/domain/invoke', _auth, async (req, res) => {
+    const { slug, message, history } = req.body || {};
+    if (!slug || !message)
+        return res.status(400).json({ ok: false, error: 'slug and message required' });
+    try {
+        const result = await _domain().invokeDomainAgent(slug, message, { history: history || [] });
         res.json({ ok: true, ...result });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
