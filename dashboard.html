@@ -7836,6 +7836,11 @@ async function refreshTaskQueuePanel() {
             frag.push(`<div class="task-item task-failed"><span class="task-item-title">✗ ${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span></div>`);
         });
         el.innerHTML = frag.length ? frag.join('') : '<div class="empty-note">No tasks</div>';
+        // Update task stat card
+        var pending = (data.pending || []).length + (data.inProgress || []).length;
+        var total   = pending + (data.completed || []).length + (data.failed || []).length;
+        var tq = document.querySelector('#page-operation .ds-stat-card:nth-child(3) .ds-stat-value');
+        if (tq) tq.textContent = pending;
     } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
 }
 
@@ -7933,9 +7938,15 @@ async function pollPermissions() {
             </div>`;
         }).filter(Boolean);
         container.innerHTML = cards.join('');
-        // Update ticker
+        // Update ticker + stat card
         var count = cards.length;
         ['tickerApprovals','tickerApprovals2'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=count; });
+        var pc = document.getElementById('opsPendingCount');
+        if (pc) pc.textContent = count;
+        var badge = document.querySelector('#page-operation .ds-badge.red');
+        if (badge) badge.textContent = count + ' pending';
+        var navBadge = document.getElementById('navOpsBadge');
+        if (navBadge) { navBadge.textContent = count; navBadge.style.display = count > 0 ? '' : 'none'; }
     } catch (_) {}
 }
 
