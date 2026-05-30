@@ -40,6 +40,7 @@
     themeOpen: false,
     drag: { active: false, startX: 0, startY: 0, baseTx: 0, baseTy: 0 },
     clipboard: null,
+    multi: new Set(),
   };
 
   /* ═══════════════════════════════════════════════
@@ -100,7 +101,14 @@
   function undo() {
     const e = S.undoStack.pop();
     if (!e) return;
-    if (e.type === 'delete' || e.type === 'paste') {
+    if (e.type === 'delete-multi') {
+      e.snapshot.forEach(({ el, parent, nextSibling }) => parent.insertBefore(el, nextSibling));
+      S.redoStack.push(e); renderLayers();
+    } else if (e.type === 'paste-multi') {
+      e.nodes.forEach(n => n.remove());
+      if (e.nodes.includes(S.el)) deselect();
+      S.redoStack.push(e); renderLayers();
+    } else if (e.type === 'delete' || e.type === 'paste') {
       if (e.type === 'delete') e.parent.insertBefore(e.el, e.nextSibling);
       else e.el.remove();
       if (S.el === e.el) deselect();
@@ -117,7 +125,14 @@
   function redo() {
     const e = S.redoStack.pop();
     if (!e) return;
-    if (e.type === 'delete' || e.type === 'paste') {
+    if (e.type === 'delete-multi') {
+      e.snapshot.forEach(({ el }) => el.remove());
+      S.undoStack.push(e); renderLayers();
+    } else if (e.type === 'paste-multi') {
+      const parent = e.nodes[0] && e.nodes[0].parentNode;
+      e.nodes.forEach(n => { if (parent) parent.appendChild(n); });
+      S.undoStack.push(e); renderLayers();
+    } else if (e.type === 'delete' || e.type === 'paste') {
       if (e.type === 'paste') e.parent.insertBefore(e.el, e.nextSibling);
       else e.el.remove();
       if (S.el === e.el) deselect();
@@ -160,19 +175,33 @@
   }
 
   function deleteEl() {
-    if (!S.el) return;
-    const el = S.el;
-    const parent = el.parentNode;
-    const nextSibling = el.nextSibling;
-    if (!parent) return;
-    S.undoStack.push({ type: 'delete', el, parent, nextSibling });
-    if (S.undoStack.length > MAX_HISTORY) S.undoStack.shift();
-    S.redoStack = [];
-    syncHistoryBtns();
-    el.remove();
-    deselect();
-    renderLayers();
-    toast('Element deleted — Ctrl+Z to undo');
+    const targets = S.multi.size > 1 ? [...S.multi] : (S.el ? [S.el] : []);
+    if (!targets.length) return;
+
+    if (targets.length > 1) {
+      const snapshot = targets.map(el => ({ el, parent: el.parentNode, nextSibling: el.nextSibling }));
+      S.undoStack.push({ type: 'delete-multi', snapshot });
+      if (S.undoStack.length > MAX_HISTORY) S.undoStack.shift();
+      S.redoStack = [];
+      syncHistoryBtns();
+      targets.forEach(el => el.remove());
+      deselect();
+      renderLayers();
+      toast(`Deleted ${targets.length} elements — Ctrl+Z to undo`);
+    } else {
+      const el = targets[0];
+      const parent = el.parentNode;
+      const nextSibling = el.nextSibling;
+      if (!parent) return;
+      S.undoStack.push({ type: 'delete', el, parent, nextSibling });
+      if (S.undoStack.length > MAX_HISTORY) S.undoStack.shift();
+      S.redoStack = [];
+      syncHistoryBtns();
+      el.remove();
+      deselect();
+      renderLayers();
+      toast('Deleted — Ctrl+Z to undo');
+    }
   }
 
   /* ═══════════════════════════════════════════════
@@ -190,12 +219,57 @@
 
   function deselect() {
     S.el = null;
+    clearMulti();
     const sel = $('_ed-sel');
     if (sel) sel.style.display = 'none';
     const pb = $('_ed-props-body');
-    if (pb) pb.innerHTML = '<div class="_ed-empty">Click any element on the page to edit its styles.</div>';
+    if (pb) pb.innerHTML = '<div class="_ed-empty">Click any element to edit · Shift+click to multi-select</div>';
     const curtag = $('_ed-curtag');
     if (curtag) curtag.textContent = 'Nothing selected';
+  }
+
+  function clearMulti() {
+    S.multi.forEach(el => el.classList.remove('_ed-multi-sel'));
+    S.multi.clear();
+  }
+
+  function addToMulti(el) {
+    if (isEditorEl(el)) return;
+    // First shift-click: pull the current single selection in too
+    if (S.multi.size === 0 && S.el && S.el !== el) {
+      S.multi.add(S.el);
+      S.el.classList.add('_ed-multi-sel');
+    }
+    if (S.multi.has(el)) {
+      S.multi.delete(el);
+      el.classList.remove('_ed-multi-sel');
+    } else {
+      S.multi.add(el);
+      el.classList.add('_ed-multi-sel');
+    }
+    S.el = el;
+    positionSel(el);
+    renderMultiPanel();
+    renderLayers();
+    const curtag = $('_ed-curtag');
+    if (curtag) curtag.textContent = `${S.multi.size} selected`;
+  }
+
+  function renderMultiPanel() {
+    const body = $('_ed-props-body');
+    if (!body) return;
+    const count = S.multi.size;
+    body.innerHTML = `
+      <div class="_ed-multi-info">
+        <div class="_ed-multi-count">✦ ${count} element${count !== 1 ? 's' : ''} selected</div>
+        <div class="_ed-multi-hint">Shift+click to add/remove · click without shift to switch to single</div>
+        <div class="_ed-multi-btns">
+          <button class="_ed-btn" onclick="__APEX_EDITOR__.copyEl()" title="Ctrl+C">⎘ Copy All</button>
+          <button class="_ed-btn" onclick="__APEX_EDITOR__.cutEl()"  title="Ctrl+X">✂ Cut All</button>
+          <button class="_ed-btn _ed-btn-clear" onclick="__APEX_EDITOR__.selectChildren()" title="Select all children of primary">⊞ Children</button>
+          <button class="_ed-btn _ed-btn-exit"  onclick="__APEX_EDITOR__.deleteEl()" title="Del">🗑 Delete All</button>
+        </div>
+      </div>`;
   }
 
   function positionSel(el) {
@@ -218,51 +292,68 @@
      COPY / CUT / PASTE
   ═══════════════════════════════════════════════ */
   function copyEl() {
-    if (!S.el) return;
-    S.clipboard = S.el.outerHTML;
-    try { navigator.clipboard.writeText(S.clipboard); } catch {}
+    const targets = S.multi.size > 1 ? [...S.multi] : (S.el ? [S.el] : []);
+    if (!targets.length) return;
+    S.clipboard = targets.map(el => el.outerHTML);
+    try { navigator.clipboard.writeText(S.clipboard.join('\n')); } catch {}
     syncClipboardBtn();
-    toast('Copied — Ctrl+V to paste');
+    toast(targets.length > 1 ? `Copied ${targets.length} elements` : 'Copied — Ctrl+V to paste');
   }
 
   function cutEl() {
-    if (!S.el) return;
+    if (!S.el && !S.multi.size) return;
     copyEl();
     deleteEl();
   }
 
+  function selectChildren() {
+    if (!S.el) return;
+    const kids = [...S.el.children].filter(c => !isEditorEl(c));
+    if (!kids.length) { toast('No children'); return; }
+    clearMulti();
+    kids.forEach(k => { S.multi.add(k); k.classList.add('_ed-multi-sel'); });
+    S.el = kids[kids.length - 1];
+    positionSel(S.el);
+    renderMultiPanel();
+    renderLayers();
+    const curtag = $('_ed-curtag');
+    if (curtag) curtag.textContent = `${S.multi.size} selected`;
+    toast(`Selected ${kids.length} children`);
+  }
+
   function pasteEl() {
-    if (!S.clipboard) { toast('Nothing copied yet'); return; }
+    if (!S.clipboard || !S.clipboard.length) { toast('Nothing copied yet'); return; }
 
-    const tmp = document.createElement('div');
-    tmp.innerHTML = S.clipboard;
-    const node = tmp.firstElementChild;
-    if (!node) return;
+    const insertParent = (S.el && S.el.parentNode) || document.querySelector('.page.active') || document.querySelector('#pageWrap') || document.body;
+    const insertRef    = S.el ? S.el.nextSibling : null;
+    const pastedNodes  = [];
 
-    // Strip old apex-ed IDs so new element gets fresh tracking
-    node.removeAttribute('data-apex-ed');
-    node.querySelectorAll('[data-apex-ed]').forEach(el => el.removeAttribute('data-apex-ed'));
+    S.clipboard.forEach(html => {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const node = tmp.firstElementChild;
+      if (!node) return;
+      node.removeAttribute('data-apex-ed');
+      node.querySelectorAll('[data-apex-ed]').forEach(el => el.removeAttribute('data-apex-ed'));
+      insertParent.insertBefore(node, insertRef);
+      pastedNodes.push(node);
+    });
 
-    // Insert after selected element, or append to active page
-    let insertParent, insertBefore;
-    if (S.el) {
-      insertParent = S.el.parentNode;
-      insertBefore = S.el.nextSibling;
-    } else {
-      insertParent = document.querySelector('.page.active') || document.querySelector('#pageWrap') || document.body;
-      insertBefore = null;
-    }
+    if (!pastedNodes.length) return;
 
-    insertParent.insertBefore(node, insertBefore);
-
-    S.undoStack.push({ type: 'paste', el: node, parent: insertParent, nextSibling: insertBefore });
+    S.undoStack.push({ type: 'paste-multi', nodes: pastedNodes });
     if (S.undoStack.length > MAX_HISTORY) S.undoStack.shift();
     S.redoStack = [];
     syncHistoryBtns();
 
-    select(node);
+    // Select all pasted nodes
+    clearMulti();
+    pastedNodes.forEach(n => { S.multi.add(n); n.classList.add('_ed-multi-sel'); });
+    S.el = pastedNodes[pastedNodes.length - 1];
+    positionSel(S.el);
+    if (pastedNodes.length > 1) renderMultiPanel();
     renderLayers();
-    toast('Pasted — Ctrl+Z to undo');
+    toast(`Pasted ${pastedNodes.length} element${pastedNodes.length !== 1 ? 's' : ''} — Ctrl+Z to undo`);
   }
 
   function syncClipboardBtn() {
@@ -337,11 +428,14 @@
   function onDragStart(e) {
     if (!S.el || e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
-    S.drag.active  = true;
-    S.drag.startX  = e.clientX;
-    S.drag.startY  = e.clientY;
-    S.drag.baseTx  = parseFloat(S.el.dataset.apexTx || 0);
-    S.drag.baseTy  = parseFloat(S.el.dataset.apexTy || 0);
+    // Snapshot base translate for every selected element
+    const targets = S.multi.size > 1 ? [...S.multi] : [S.el];
+    S.drag.active   = true;
+    S.drag.startX   = e.clientX;
+    S.drag.startY   = e.clientY;
+    S.drag.baseTx   = parseFloat(S.el.dataset.apexTx || 0);
+    S.drag.baseTy   = parseFloat(S.el.dataset.apexTy || 0);
+    S.drag.targets  = targets.map(el => ({ el, bx: parseFloat(el.dataset.apexTx||0), by: parseFloat(el.dataset.apexTy||0) }));
     buildSnapTargets();
     const sel = $('_ed-sel');
     if (sel) sel.classList.add('_ed-dragging');
@@ -352,13 +446,19 @@
 
   function onDragMove(e) {
     if (!S.drag.active || !S.el) return;
-    const rawNx = S.drag.baseTx + (e.clientX - S.drag.startX);
-    const rawNy = S.drag.baseTy + (e.clientY - S.drag.startY);
+    const dx = e.clientX - S.drag.startX;
+    const dy = e.clientY - S.drag.startY;
+    const rawNx = S.drag.baseTx + dx;
+    const rawNy = S.drag.baseTy + dy;
     const { nx, ny, guideX, guideY } = computeSnap(S.el, rawNx, rawNy);
+    const snapDx = nx - rawNx, snapDy = ny - rawNy;
     showGuides(guideX, guideY);
-    S.el.style.transform = `translate(${nx}px,${ny}px)`;
-    S.el.dataset.apexTx  = nx;
-    S.el.dataset.apexTy  = ny;
+    S.drag.targets.forEach(({ el, bx, by }) => {
+      const ex = bx + dx + snapDx, ey = by + dy + snapDy;
+      el.style.transform = `translate(${ex}px,${ey}px)`;
+      el.dataset.apexTx  = ex;
+      el.dataset.apexTy  = ey;
+    });
     positionSel(S.el);
   }
 
@@ -376,14 +476,16 @@
     const dy = e.clientY - S.drag.startY;
     if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
 
-    const finalTx = parseFloat(S.el.dataset.apexTx || 0);
-    const finalTy = parseFloat(S.el.dataset.apexTy || 0);
-    const prev = `translate(${S.drag.baseTx}px,${S.drag.baseTy}px)`;
-    const next = `translate(${finalTx}px,${finalTy}px)`;
-    const id = edId(S.el);
-    if (!S.styles[id]) S.styles[id] = {};
-    S.styles[id].transform = next;
-    pushHistory(S.el, 'transform', prev, next);
+    S.drag.targets.forEach(({ el, bx, by }) => {
+      const nx = parseFloat(el.dataset.apexTx || 0);
+      const ny = parseFloat(el.dataset.apexTy || 0);
+      const prev = `translate(${bx}px,${by}px)`;
+      const next = `translate(${nx}px,${ny}px)`;
+      const id = edId(el);
+      if (!S.styles[id]) S.styles[id] = {};
+      S.styles[id].transform = next;
+      pushHistory(el, 'transform', prev, next);
+    });
   }
 
   /* ═══════════════════════════════════════════════
@@ -909,7 +1011,8 @@
   function onPageClick(e) {
     if (!S.on || isEditorEl(e.target)) return;
     e.preventDefault(); e.stopPropagation();
-    select(e.target);
+    if (e.shiftKey) addToMulti(e.target);
+    else { clearMulti(); select(e.target); }
   }
 
   function onMouseover(e) {
@@ -1221,6 +1324,16 @@ body._ed-active .page-wrap,body._ed-active #pageWrap{margin-left:220px!important
 /* Hover highlight (from layer panel hover) */
 ._ed-hi{outline:1px dashed rgba(76,200,255,.45)!important;}
 
+/* Multi-select highlight */
+._ed-multi-sel{outline:2px solid #7c6fff!important;outline-offset:1px;}
+
+/* Multi-select panel */
+._ed-multi-info{padding:16px 14px;}
+._ed-multi-count{font-size:13px;font-weight:600;color:#7c6fff;margin-bottom:6px;}
+._ed-multi-hint{font-size:9px;color:rgba(180,205,240,.35);margin-bottom:12px;line-height:1.6;}
+._ed-multi-btns{display:flex;flex-direction:column;gap:6px;}
+._ed-multi-btns ._ed-btn{width:100%;justify-content:center;padding:7px;font-size:9px;}
+
 /* Toast */
 #_ed-toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(70,231,179,.12);border:1px solid rgba(70,231,179,.35);color:#46e7b3;font-size:11px;font-weight:600;padding:8px 18px;border-radius:6px;z-index:999999;opacity:0;transition:opacity 280ms;pointer-events:none;white-space:nowrap;}
 `;
@@ -1238,7 +1351,7 @@ body._ed-active .page-wrap,body._ed-active #pageWrap{margin-left:220px!important
     global.__APEX_EDITOR__ = {
       toggle, undo, redo, openTheme, closeTheme,
       saveStyles, clearSaved, deselect, renderLayers,
-      deleteEl, copyEl, cutEl, pasteEl, togglePanel,
+      deleteEl, copyEl, cutEl, pasteEl, selectChildren, togglePanel,
     };
   }
 
