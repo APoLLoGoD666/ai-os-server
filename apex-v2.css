@@ -1,0 +1,877 @@
+/*
+ * apex-v2.css — Platinum design system override
+ * Cascades over dashboard.html <style> block.
+ *
+ * Philosophy:
+ *   - Neutral black surfaces (#080808 base, not pure #000)
+ *   - Elevation via bg lightness only — no box-shadow
+ *   - Zero ambient glow on structural chrome
+ *   - Semantic colors (cyan/amber/green/red) kept — glows stripped
+ *   - Nav/focus accent: #5e6ad2 (Linear violet)
+ *   - All cheap animations removed; functional motion kept
+ *   - Inter 14px base, -0.005em heading tracking
+ */
+
+/* ══════════════════════════════════════════════════════════════════
+   1. TOKEN OVERRIDES
+══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Surface ladder — pure neutral black base */
+  --bg:               #080808;
+  --bg-deep:          #040404;
+  --bg2:              #040404;
+  --glass:            rgba(255,255,255,0.025);
+  --glass2:           rgba(255,255,255,0.018);
+
+  /* Surfaces */
+  --surface:          #111111;
+  --surface-1:        #111111;
+  --surface-2:        #1a1a1a;
+  --surface-3:        #222222;
+  --surface-ghost:    rgba(255,255,255,0.020);
+
+  /* Borders — neutral white alpha, no cyan bias */
+  --border:           rgba(255,255,255,0.08);
+  --border-dim:       rgba(255,255,255,0.044);
+  --border-strong:    rgba(255,255,255,0.14);
+  --border-cyan:      rgba(94,106,210,0.28);
+  --border-cyan-soft: rgba(94,106,210,0.14);
+
+  /* Structural accent — Linear violet */
+  --accent:           #5e6ad2;
+  --accent-dim:       rgba(94,106,210,0.14);
+  --accent-glow:      transparent;
+
+  /* Semantic palette — unchanged hues, glows zeroed */
+  --cyan:             #00d4ff;
+  --cyan-dim:         rgba(0,212,255,0.10);
+  --cyan-glow:        transparent;
+  --primary:          #00d4ff;
+  --primary-dim:      rgba(0,212,255,0.10);
+  --primary-glow:     transparent;
+
+  --purple:           #7c6fff;
+  --purple-dim:       rgba(124,111,255,0.10);
+  --purple-glow:      transparent;
+
+  --green:            #00e5a0;
+  --green-dim:        rgba(0,229,160,0.10);
+  --green-glow:       transparent;
+  --success:          #00e5a0;
+
+  --amber:            #f5a623;
+  --amber-dim:        rgba(245,166,35,0.10);
+  --amber-glow:       transparent;
+
+  --red:              #ff4d6a;
+  --red-dim:          rgba(255,77,106,0.10);
+  --red-glow:         transparent;
+  --danger:           #ff4d6a;
+
+  /* Agent colours */
+  --agent-architect:  #7c6fff;
+  --agent-developer:  #00d4ff;
+  --agent-reviewer:   #f5a623;
+  --agent-validator:  #00e5a0;
+  --agent-tester:     #2dd4d8;
+  --agent-committer:  #18c478;
+
+  /* Text — neutral grey scale */
+  --text:             #ededed;
+  --text-mid:         rgba(237,237,237,0.72);
+  --text-mute:        rgba(237,237,237,0.38);
+  --text-faint:       rgba(237,237,237,0.18);
+  --muted:            rgba(237,237,237,0.50);
+  --muted2:           rgba(237,237,237,0.28);
+  --text-on-accent:   #ffffff;
+
+  /* Shadows — no ambient glow, only hard drop */
+  --shadow-panel:     none;
+  --shadow-pop:       0 8px 32px rgba(0,0,0,0.85);
+  --glow-cyan:        none;
+  --glow-purple:      none;
+  --glow-green:       none;
+  --glow-amber:       none;
+  --glow-red:         none;
+
+  /* Layout */
+  --topbar-h:         48px;
+  --ticker-h:         0px;   /* collapses ticker row in grid */
+  --sidebar-w:        200px;
+  --chatbar-h:        52px;
+  --nav-h:            60px;
+  --input-h:          52px;
+
+  /* Radius — 8px cap */
+  --r-sm:   4px;
+  --r-md:   6px;
+  --r-lg:   8px;
+  --r-xl:   8px;
+  --r-pill: 999px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   2. GLOBAL / APP SHELL
+══════════════════════════════════════════════════════════════════ */
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Remove radial gradient overlays — pure flat bg */
+.app {
+  background: var(--bg) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   3. LAYOUT — collapse ticker row
+══════════════════════════════════════════════════════════════════ */
+
+/* Ticker gone — reclaim vertical space */
+.ticker-bar {
+  display: none !important;
+}
+
+/* Override desktop grid to drop the ticker row */
+@media (min-width: 900px) {
+  .app {
+    grid-template-rows: var(--topbar-h) 1fr !important;
+    grid-template-columns: var(--sidebar-w) 1fr !important;
+    grid-template-areas:
+      "topbar  topbar"
+      "sidebar body" !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   4. TOPBAR
+══════════════════════════════════════════════════════════════════ */
+
+.topbar {
+  background: rgba(8,8,8,0.94) !important;
+  border-bottom: 1px solid var(--border) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   5. BRAND — kill pulse, clean ring
+══════════════════════════════════════════════════════════════════ */
+
+.brand-ring {
+  animation: none !important;
+  box-shadow: none !important;
+  border-color: rgba(255,255,255,0.16) !important;
+  border-width: 1px !important;
+}
+
+.brand-ring-dot {
+  background: var(--accent) !important;
+  box-shadow: none !important;
+}
+
+/* Brand text */
+.brand-copy strong {
+  color: var(--text) !important;
+  letter-spacing: 0.16em !important;
+}
+
+/* Topbar pills — neutral */
+.topbar-pill {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-mute) !important;
+}
+
+.topbar-pill .num {
+  color: var(--text) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   6. SIDEBAR NAV
+══════════════════════════════════════════════════════════════════ */
+
+.bottom-nav,
+nav.bottom-nav {
+  background: rgba(8,8,8,0.96) !important;
+  border-right: 1px solid var(--border) !important;
+  border-top: none !important;
+}
+
+.nav-btn {
+  color: var(--text-mute) !important;
+  transition: background 140ms ease, color 140ms ease !important;
+}
+
+.nav-btn:hover {
+  color: var(--text) !important;
+  background: rgba(255,255,255,0.03) !important;
+}
+
+.nav-btn.active {
+  color: var(--text) !important;
+  background: rgba(94,106,210,0.08) !important;
+}
+
+/* Active indicator — solid violet, no glow */
+.nav-btn.active::before {
+  background: var(--accent) !important;
+  box-shadow: none !important;
+  width: 2px !important;
+  border-radius: 0 2px 2px 0 !important;
+}
+
+.nav-btn.active::after {
+  display: none !important;
+}
+
+/* Sidebar footer */
+.ds-sidebar-footer {
+  border-top: 1px solid var(--border) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   7. GREETING BAR
+══════════════════════════════════════════════════════════════════ */
+
+.greeting-bar {
+  background: rgba(8,8,8,0.80) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   8. CHAT / INPUT ZONE
+══════════════════════════════════════════════════════════════════ */
+
+.input-zone {
+  background: rgba(8,8,8,0.96) !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+.chat-input {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-lg) !important;
+  color: var(--text) !important;
+  caret-color: var(--accent) !important;
+}
+
+.chat-input:focus {
+  border-color: var(--accent) !important;
+  background: var(--surface-2) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(94,106,210,0.18) !important;
+}
+
+.send-btn {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: none !important;
+  transition: background 140ms ease !important;
+}
+
+.send-btn:hover {
+  background: #6b77e8 !important;
+  box-shadow: none !important;
+}
+
+.mic-btn {
+  box-shadow: none !important;
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-lg) !important;
+  transition: background 140ms ease, border-color 140ms ease !important;
+}
+
+.mic-btn:hover,
+.mic-btn.listening {
+  background: rgba(94,106,210,0.14) !important;
+  border-color: var(--accent) !important;
+  box-shadow: none !important;
+}
+
+.clear-chat-btn,
+.auto-listen-btn {
+  box-shadow: none !important;
+  transition: background 140ms ease, border-color 140ms ease !important;
+}
+
+.auto-listen-btn.on {
+  background: rgba(94,106,210,0.12) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  box-shadow: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   9. COMMAND PAGE — ORB & WAVEFORM
+══════════════════════════════════════════════════════════════════ */
+
+/* Remove spinning ring decorations */
+.orb-ring-outer,
+.orb-ring-mid {
+  animation: none !important;
+  border-color: rgba(255,255,255,0.06) !important;
+  opacity: 0.5 !important;
+}
+
+/* Orb inner — neutral dark fill, no glow */
+.orb-inner {
+  background: radial-gradient(circle, rgba(94,106,210,0.10) 0%, rgba(8,8,8,0.92) 100%) !important;
+  box-shadow: none !important;
+}
+
+.orb-inner-text {
+  color: var(--text) !important;
+}
+
+.orb-inner-state {
+  color: var(--text-mute) !important;
+}
+
+/* Kill the three expanding pulse rings */
+.pulse-ring {
+  display: none !important;
+}
+
+/* Kill the old orb glow animations */
+@keyframes orbListen  { from { box-shadow: none; } to { box-shadow: none; } }
+@keyframes orbActive  { from { box-shadow: none; } to { box-shadow: none; } }
+@keyframes orbWait    { from { box-shadow: none; } to { box-shadow: none; } }
+
+/* Waveform — visible but static at rest */
+.waveform .bar {
+  animation: none !important;
+  background: rgba(94,106,210,0.5) !important;
+  opacity: 0.4 !important;
+}
+
+/* Restore animation while actively listening or speaking */
+.orb.listening .waveform .bar,
+.orb.active    .waveform .bar {
+  animation: wb 0.7s ease-in-out infinite alternate !important;
+  opacity: 1 !important;
+}
+
+/* Orb dot accents — no glow */
+.orb-dot-n,
+.orb-dot-e,
+.orb-dot-s,
+.orb-dot-w {
+  box-shadow: none !important;
+}
+
+/* Command stat strip */
+.cmd-strip {
+  border-top: 1px solid var(--border) !important;
+}
+
+.cmd-stat {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-lg) !important;
+}
+
+/* Spinner icon on health stat — no pulse */
+.ico-pulse {
+  animation: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   10. PANELS
+══════════════════════════════════════════════════════════════════ */
+
+.ds-panel {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: none !important;
+}
+
+/* Accent left-border — 2px, no glow */
+.ds-panel.accent-cyan   { border-left: 2px solid var(--cyan)   !important; }
+.ds-panel.accent-purple { border-left: 2px solid var(--purple) !important; }
+.ds-panel.accent-green  { border-left: 2px solid var(--green)  !important; }
+.ds-panel.accent-amber  { border-left: 2px solid var(--amber)  !important; }
+.ds-panel.accent-red    { border-left: 2px solid var(--red)    !important; }
+
+/* Panel entrance — keep but softer */
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   11. STAT CARDS
+══════════════════════════════════════════════════════════════════ */
+
+.ds-stat-card {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: none !important;
+}
+
+/* Accent left borders */
+.ds-stat-card.ac-cyan   { border-left: 2px solid var(--cyan)   !important; }
+.ds-stat-card.ac-purple { border-left: 2px solid var(--purple) !important; }
+.ds-stat-card.ac-green  { border-left: 2px solid var(--green)  !important; }
+.ds-stat-card.ac-amber  { border-left: 2px solid var(--amber)  !important; }
+.ds-stat-card.ac-red    { border-left: 2px solid var(--red)    !important; }
+
+/* ══════════════════════════════════════════════════════════════════
+   12. STATUS DOTS — solid color, zero glow
+══════════════════════════════════════════════════════════════════ */
+
+.ds-dot              { background: var(--text-faint) !important; box-shadow: none !important; }
+.ds-dot.cyan         { background: var(--cyan)   !important; box-shadow: none !important; }
+.ds-dot.purple       { background: var(--purple) !important; box-shadow: none !important; }
+.ds-dot.green        { background: var(--green)  !important; box-shadow: none !important; }
+.ds-dot.amber        { background: var(--amber)  !important; box-shadow: none !important; }
+.ds-dot.red          { background: var(--red)    !important; box-shadow: none !important; }
+
+/* Pulse dot — keep the scale animation, strip shadow */
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%       { transform: scale(1.3); opacity: 0.7; }
+}
+
+/* Connection dot */
+.status-dot.on {
+  background: var(--green) !important;
+  box-shadow: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   13. BADGES
+══════════════════════════════════════════════════════════════════ */
+
+.ds-badge {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-mute) !important;
+  box-shadow: none !important;
+}
+
+.ds-badge.cyan {
+  color: var(--cyan)   !important;
+  background: var(--cyan-dim)   !important;
+  border-color: rgba(0,212,255,0.18) !important;
+}
+.ds-badge.purple {
+  color: var(--purple) !important;
+  background: var(--purple-dim) !important;
+  border-color: rgba(124,111,255,0.18) !important;
+}
+.ds-badge.green {
+  color: var(--green)  !important;
+  background: var(--green-dim)  !important;
+  border-color: rgba(0,229,160,0.18) !important;
+}
+.ds-badge.amber {
+  color: var(--amber)  !important;
+  background: var(--amber-dim)  !important;
+  border-color: rgba(245,166,35,0.18) !important;
+}
+.ds-badge.red {
+  color: var(--red)    !important;
+  background: var(--red-dim)    !important;
+  border-color: rgba(255,77,106,0.18) !important;
+}
+.ds-badge.grey {
+  color: var(--text-mute) !important;
+  background: rgba(255,255,255,0.04) !important;
+  border-color: var(--border) !important;
+}
+.ds-badge.solid-red {
+  background: var(--red) !important;
+  color: #fff !important;
+  border-color: var(--red) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   14. BUTTONS
+══════════════════════════════════════════════════════════════════ */
+
+.ds-btn {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-mid) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: none !important;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease !important;
+}
+
+.ds-btn:hover {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+.ds-btn:active { opacity: 0.72 !important; }
+
+.ds-btn.cyan {
+  color: var(--cyan)   !important;
+  border-color: rgba(0,212,255,0.22) !important;
+}
+.ds-btn.cyan:hover {
+  background: var(--cyan-dim) !important;
+  border-color: var(--cyan) !important;
+}
+
+.ds-btn.purple {
+  color: var(--purple) !important;
+  border-color: rgba(124,111,255,0.22) !important;
+}
+.ds-btn.purple:hover { background: var(--purple-dim) !important; }
+
+.ds-btn.green {
+  color: var(--green)  !important;
+  border-color: rgba(0,229,160,0.22) !important;
+}
+.ds-btn.green:hover  { background: var(--green-dim) !important; }
+
+.ds-btn.amber {
+  color: var(--amber)  !important;
+  border-color: rgba(245,166,35,0.22) !important;
+}
+.ds-btn.amber:hover  { background: var(--amber-dim) !important; }
+
+.ds-btn.red {
+  color: var(--red)    !important;
+  border-color: rgba(255,77,106,0.22) !important;
+}
+.ds-btn.red:hover    { background: var(--red-dim) !important; }
+
+/* Filled variants — solid fill, no glow */
+.ds-btn.filled-green {
+  background: var(--green) !important;
+  color: #000 !important;
+  border-color: var(--green) !important;
+  box-shadow: none !important;
+}
+.ds-btn.filled-green:hover {
+  background: #00f5ac !important;
+  box-shadow: none !important;
+}
+
+.ds-btn.filled-cyan {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+  box-shadow: none !important;
+}
+.ds-btn.filled-cyan:hover {
+  background: #6b77e8 !important;
+  box-shadow: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   15. PILLS (filter tabs)
+══════════════════════════════════════════════════════════════════ */
+
+.ds-pill {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-mute) !important;
+  border-radius: var(--r-sm) !important;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease !important;
+}
+
+.ds-pill:hover {
+  color: var(--text) !important;
+  border-color: var(--border-strong) !important;
+  background: rgba(255,255,255,0.03) !important;
+}
+
+.ds-pill.active {
+  color: var(--text) !important;
+  border-color: var(--accent) !important;
+  background: rgba(94,106,210,0.12) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   16. TABLES
+══════════════════════════════════════════════════════════════════ */
+
+.ds-table th {
+  color: var(--text-mute) !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: transparent !important;
+}
+
+.ds-table td {
+  border-bottom: 1px solid rgba(255,255,255,0.032) !important;
+  color: var(--text-mid) !important;
+}
+
+.ds-table tr:hover td {
+  background: rgba(255,255,255,0.016) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   17. PAGE HEADERS
+══════════════════════════════════════════════════════════════════ */
+
+.ds-page-header {
+  background: transparent !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   18. INPUT FOCUS — consistent accent ring
+══════════════════════════════════════════════════════════════════ */
+
+input:focus,
+textarea:focus,
+select:focus,
+.ds-input:focus {
+  outline: none;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(94,106,210,0.18) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   19. SCROLLBARS — minimal
+══════════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar       { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
+
+/* ══════════════════════════════════════════════════════════════════
+   20. MODALS & OVERLAYS
+══════════════════════════════════════════════════════════════════ */
+
+/* Agent drawer */
+.agent-drawer {
+  background: #0c0c0c !important;
+  border-left: 1px solid var(--border) !important;
+}
+
+.agent-drawer-overlay.open {
+  background: rgba(0,0,0,0.65) !important;
+}
+
+/* Help overlay */
+.help-box {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.help-box h3 {
+  color: var(--text-mid) !important;
+}
+
+.help-key {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border-strong) !important;
+  color: var(--text-mid) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.help-desc {
+  color: var(--text-mute) !important;
+}
+
+/* Command box */
+.cmd-box {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.80) !important;
+  backdrop-filter: blur(24px) !important;
+}
+
+.cmd-input {
+  border-bottom-color: var(--border) !important;
+}
+
+.cmd-item:hover,
+.cmd-item.active {
+  background: rgba(255,255,255,0.04) !important;
+}
+
+/* Drop overlay */
+.drop-overlay {
+  background: rgba(94,106,210,0.04) !important;
+  border: 2px dashed rgba(94,106,210,0.40) !important;
+}
+
+.drop-label {
+  background: none !important;
+  -webkit-text-fill-color: var(--text) !important;
+  color: var(--text) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   21. EMAIL ITEMS
+══════════════════════════════════════════════════════════════════ */
+
+.email-item {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--border) !important;
+  transition: border-color 140ms ease !important;
+}
+
+.email-item:hover {
+  border-color: var(--border-strong) !important;
+}
+
+.email-priority.urgent { background: var(--red-dim) !important;   color: var(--red) !important; }
+.email-priority.high   { background: var(--amber-dim) !important; color: var(--amber) !important; }
+.email-priority.normal { background: var(--surface-2) !important; color: var(--text-mute) !important; }
+.email-priority.low    { background: var(--surface-2) !important; color: var(--text-faint) !important; }
+
+/* ══════════════════════════════════════════════════════════════════
+   22. FINANCE
+══════════════════════════════════════════════════════════════════ */
+
+/* Finance progress bars — accent fill, no glow */
+.finance-bar-fill {
+  background: var(--accent) !important;
+  box-shadow: none !important;
+}
+
+.finance-bar-fill.over {
+  background: var(--red) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   23. ROUTINE TOGGLES
+══════════════════════════════════════════════════════════════════ */
+
+.routine-toggle.on {
+  background: rgba(94,106,210,0.14) !important;
+  border-color: var(--accent) !important;
+  box-shadow: none !important;
+}
+
+.routine-toggle.on::after {
+  background: var(--accent) !important;
+  box-shadow: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   24. AGENT CARDS / INVOKE BUTTONS
+══════════════════════════════════════════════════════════════════ */
+
+.agent-invoke-btn {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: var(--border) !important;
+  color: var(--text-mute) !important;
+  box-shadow: none !important;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease !important;
+}
+
+.agent-invoke-btn:hover {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   25. NOTIFICATION BADGES
+══════════════════════════════════════════════════════════════════ */
+
+/* Red urgent badge — keep visible, remove pulsing */
+.ds-notif-badge.red {
+  animation: none !important;
+  background: var(--red) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   26. PANEL ERROR BAR
+══════════════════════════════════════════════════════════════════ */
+
+.panel-error {
+  background: var(--red-dim) !important;
+  border-left-color: var(--red) !important;
+  color: var(--red) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   27. STAT CHANGE INDICATORS
+══════════════════════════════════════════════════════════════════ */
+
+.stat-change.up   { color: var(--green) !important; }
+.stat-change.down { color: var(--red)   !important; }
+.stat-change.flat { color: var(--text-faint) !important; }
+
+/* ══════════════════════════════════════════════════════════════════
+   28. MEMORY CANVAS
+══════════════════════════════════════════════════════════════════ */
+
+#sys-memory-canvas {
+  background: var(--surface-2) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   29. TTS TOGGLE PILL — clean up inline-styled element
+══════════════════════════════════════════════════════════════════ */
+
+#apexTtsToggle {
+  background: rgba(8,8,8,0.82) !important;
+  border-color: rgba(255,255,255,0.10) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+#apexTtsDot {
+  box-shadow: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   30. BAR GRAPHS — ds-bar override
+══════════════════════════════════════════════════════════════════ */
+
+.ds-bar.cyan[style*="--pct"]   { color: var(--cyan); }
+.ds-bar.green[style*="--pct"]  { color: var(--green); }
+.ds-bar.amber[style*="--pct"]  { color: var(--amber); }
+.ds-bar.purple[style*="--pct"] { color: var(--purple); }
+.ds-bar.red[style*="--pct"]    { color: var(--red); }
+
+/* ══════════════════════════════════════════════════════════════════
+   31. SKELETON SHIMMER — subtler on dark bg
+══════════════════════════════════════════════════════════════════ */
+
+.skel,
+.ds-skel-row {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.025) 25%,
+    rgba(255,255,255,0.055) 50%,
+    rgba(255,255,255,0.025) 75%
+  ) !important;
+  background-size: 200% 100% !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   32. OVERVIEW / HOMEPAGE CANVAS ELEMENTS
+══════════════════════════════════════════════════════════════════ */
+
+/* Stars canvas on command page — keep black bg */
+#cmdStars { background: transparent !important; }
+
+/* Obsidian vault status dot */
+#vault-status-dot { box-shadow: none !important; }
+
+/* ══════════════════════════════════════════════════════════════════
+   33. RESPONSIVE — mobile adjustments
+══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 899px) {
+  /* Mobile bottom nav — dark bar */
+  .bottom-nav,
+  nav.bottom-nav {
+    background: rgba(8,8,8,0.97) !important;
+    border-top: 1px solid var(--border) !important;
+    border-right: none !important;
+  }
+}
