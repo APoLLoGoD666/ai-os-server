@@ -1,5 +1,13 @@
 "use strict";
 
+// When running locally the Obsidian vault is on the same machine as the server.
+// obsidian-client.js reads/writes directly via the filesystem fallback —
+// no Cloudflare tunnel is needed. Exit immediately so nothing starts.
+if (process.env.LOCAL_MODE === "true") {
+    console.log("[Tunnel] LOCAL_MODE — vault accessed via filesystem, tunnel skipped.");
+    return;
+}
+
 const { spawn } = require("child_process");
 const https = require("https");
 

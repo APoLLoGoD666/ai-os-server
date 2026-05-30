@@ -221,9 +221,19 @@ app.use('/api/', (req, res, next) => {
 });
 
 app.get('/health', async (req, res) => {
-    const db = require('./pg_database');
     let dbOk = false;
-    try { await db.query('SELECT 1'); dbOk = true; } catch {}
+    try {
+        // In LOCAL_MODE the raw pg pool has no valid connection string — use Supabase JS client instead.
+        // On Render the pg pool (DATABASE_URL) is expected to be configured.
+        if (process.env.LOCAL_MODE === 'true') {
+            const { error } = await sbAdmin.from('notifications').select('id').limit(1);
+            dbOk = !error;
+        } else {
+            const pgPool = require('./pg_database');
+            await pgPool.query('SELECT 1');
+            dbOk = true;
+        }
+    } catch {}
     const status = dbOk ? 'ok' : 'degraded';
     res.status(dbOk ? 200 : 503).json({ status, uptime: process.uptime(), timestamp: Date.now(), db: dbOk });
 });
