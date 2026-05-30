@@ -39,6 +39,7 @@
     styles: {},
     themeOpen: false,
     drag: { active: false, startX: 0, startY: 0, baseTx: 0, baseTy: 0 },
+    clipboard: null,
   };
 
   /* ═══════════════════════════════════════════════
@@ -99,9 +100,12 @@
   function undo() {
     const e = S.undoStack.pop();
     if (!e) return;
-    if (e.type === 'delete') {
-      e.parent.insertBefore(e.el, e.nextSibling);
+    if (e.type === 'delete' || e.type === 'paste') {
+      if (e.type === 'delete') e.parent.insertBefore(e.el, e.nextSibling);
+      else e.el.remove();
+      if (S.el === e.el) deselect();
       S.redoStack.push(e);
+      renderLayers();
     } else {
       applyStyle(e.el, e.prop, e.prev, false);
       S.redoStack.push(e);
@@ -113,10 +117,12 @@
   function redo() {
     const e = S.redoStack.pop();
     if (!e) return;
-    if (e.type === 'delete') {
-      e.el.remove();
+    if (e.type === 'delete' || e.type === 'paste') {
+      if (e.type === 'paste') e.parent.insertBefore(e.el, e.nextSibling);
+      else e.el.remove();
       if (S.el === e.el) deselect();
       S.undoStack.push(e);
+      renderLayers();
     } else {
       applyStyle(e.el, e.prop, e.next, false);
       S.undoStack.push(e);
@@ -206,6 +212,62 @@
     const id  = el.id ? '#'+el.id : '';
     const cls = el.classList.length ? '.'+[...el.classList][0] : '';
     return tag + (id || cls);
+  }
+
+  /* ═══════════════════════════════════════════════
+     COPY / CUT / PASTE
+  ═══════════════════════════════════════════════ */
+  function copyEl() {
+    if (!S.el) return;
+    S.clipboard = S.el.outerHTML;
+    try { navigator.clipboard.writeText(S.clipboard); } catch {}
+    syncClipboardBtn();
+    toast('Copied — Ctrl+V to paste');
+  }
+
+  function cutEl() {
+    if (!S.el) return;
+    copyEl();
+    deleteEl();
+  }
+
+  function pasteEl() {
+    if (!S.clipboard) { toast('Nothing copied yet'); return; }
+
+    const tmp = document.createElement('div');
+    tmp.innerHTML = S.clipboard;
+    const node = tmp.firstElementChild;
+    if (!node) return;
+
+    // Strip old apex-ed IDs so new element gets fresh tracking
+    node.removeAttribute('data-apex-ed');
+    node.querySelectorAll('[data-apex-ed]').forEach(el => el.removeAttribute('data-apex-ed'));
+
+    // Insert after selected element, or append to active page
+    let insertParent, insertBefore;
+    if (S.el) {
+      insertParent = S.el.parentNode;
+      insertBefore = S.el.nextSibling;
+    } else {
+      insertParent = document.querySelector('.page.active') || document.querySelector('#pageWrap') || document.body;
+      insertBefore = null;
+    }
+
+    insertParent.insertBefore(node, insertBefore);
+
+    S.undoStack.push({ type: 'paste', el: node, parent: insertParent, nextSibling: insertBefore });
+    if (S.undoStack.length > MAX_HISTORY) S.undoStack.shift();
+    S.redoStack = [];
+    syncHistoryBtns();
+
+    select(node);
+    renderLayers();
+    toast('Pasted — Ctrl+Z to undo');
+  }
+
+  function syncClipboardBtn() {
+    const btn = $('_ed-paste-btn');
+    if (btn) btn.disabled = !S.clipboard;
   }
 
   /* ═══════════════════════════════════════════════
@@ -879,6 +941,9 @@
     if ((e.ctrlKey||e.metaKey) && (e.key==='y'||(e.shiftKey&&e.key==='z'))) { e.preventDefault(); redo(); }
     if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); saveStyles(); }
     if ((e.key==='Delete'||e.key==='Backspace') && S.el && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) { e.preventDefault(); deleteEl(); }
+    if ((e.ctrlKey||e.metaKey) && e.key==='c' && S.el && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) { e.preventDefault(); copyEl(); }
+    if ((e.ctrlKey||e.metaKey) && e.key==='x' && S.el && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) { e.preventDefault(); cutEl(); }
+    if ((e.ctrlKey||e.metaKey) && e.key==='v' && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) { e.preventDefault(); pasteEl(); }
   }
 
   /* ═══════════════════════════════════════════════
@@ -962,7 +1027,10 @@
       <div class="_ed-ph">
         <span class="_ed-ptitle">PROPERTIES</span>
         <div style="display:flex;gap:4px;">
-          <button class="_ed-icon-btn _ed-del-btn" onclick="__APEX_EDITOR__.deleteEl()" title="Delete element (Del)">🗑</button>
+          <button class="_ed-icon-btn" onclick="__APEX_EDITOR__.copyEl()" title="Copy (Ctrl+C)">⎘</button>
+          <button class="_ed-icon-btn" onclick="__APEX_EDITOR__.cutEl()"  title="Cut (Ctrl+X)">✂</button>
+          <button class="_ed-icon-btn" id="_ed-paste-btn" onclick="__APEX_EDITOR__.pasteEl()" title="Paste after (Ctrl+V)" disabled>⎙</button>
+          <button class="_ed-icon-btn _ed-del-btn" onclick="__APEX_EDITOR__.deleteEl()" title="Delete (Del)">🗑</button>
           <button class="_ed-icon-btn" onclick="__APEX_EDITOR__.deselect()" title="Deselect">✕</button>
         </div>
       </div>
@@ -1169,7 +1237,8 @@ body._ed-active .page-wrap,body._ed-active #pageWrap{margin-left:220px!important
     loadSavedStyles();
     global.__APEX_EDITOR__ = {
       toggle, undo, redo, openTheme, closeTheme,
-      saveStyles, clearSaved, deselect, renderLayers, deleteEl, togglePanel,
+      saveStyles, clearSaved, deselect, renderLayers,
+      deleteEl, copyEl, cutEl, pasteEl, togglePanel,
     };
   }
 
