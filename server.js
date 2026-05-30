@@ -9367,6 +9367,8 @@ const server = require("http").createServer(app);
 server.keepAliveTimeout = 65000;
 server.headersTimeout   = 70000; // must be > keepAliveTimeout
 
+require('./routes/gemini-live').attach(server, { appKey: APP_ACCESS_KEY });
+
 
 server.listen(PORT, () => {
     ensureSetup();

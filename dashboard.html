@@ -3830,6 +3830,18 @@ select.as-pi { background:rgba(2,4,14,0.9); }
                             <span style="width:6px;height:6px;border-radius:50%;background:#46e7b3;box-shadow:0 0 6px #46e7b3;flex-shrink:0" id="apexTtsDot"></span>
                             <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:rgba(180,205,240,0.55)" id="apexTtsLabel">TTS · DG</span>
                         </div>
+                        <!-- Gemini Live pill -->
+                        <div id="apexLivePill" title="Gemini 2.5 Natural Audio — end-to-end native voice (click to toggle)"
+                             onclick="window.toggleGeminiLive()"
+                             style="position:absolute;bottom:22px;left:130px;z-index:10;display:flex;align-items:center;gap:6px;padding:4px 10px 4px 8px;border-radius:20px;background:rgba(10,18,40,0.7);border:1px solid rgba(138,108,255,0.25);backdrop-filter:blur(8px);cursor:pointer;transition:all 200ms;user-select:none">
+                            <span id="apexLiveDot" style="width:6px;height:6px;border-radius:50%;background:#8a6cff;box-shadow:0 0 6px #8a6cff;flex-shrink:0;transition:all 200ms"></span>
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:rgba(180,205,240,0.55)" id="apexLiveLabel">LIVE · OFF</span>
+                        </div>
+                        <!-- Gemini Live transcript overlay -->
+                        <div id="apexLiveTranscript" style="display:none;position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:8;max-width:480px;width:90%;text-align:center">
+                            <div id="apexLiveUserText" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(180,205,240,0.45);margin-bottom:4px;min-height:14px"></div>
+                            <div id="apexLiveApexText" style="font-family:inherit;font-size:13px;color:#c8d8f0;font-weight:500;min-height:18px"></div>
+                        </div>
                         <!-- Waveform (voice) -->
                         <div class="waveform" id="waveform" style="display:none;position:absolute;left:50%;bottom:60px;transform:translateX(-50%);z-index:5">
                             <div class="wb"></div><div class="wb"></div><div class="wb"></div>
@@ -5349,6 +5361,7 @@ select.as-pi { background:rgba(2,4,14,0.9); }
 // ══ CONFIG ════════════════════════════════════════════════════════════
 const API_BASE = "";
 const APP_KEY  = new URLSearchParams(window.location.search).get("app_key") || "";
+window._apexAppKey = APP_KEY;
 const MAX_ITEMS           = 5;
 const REFRESH_INTERVAL_MS = 18000;
 
@@ -5386,6 +5399,224 @@ window.setTtsProvider = function(p) {
     console.log('[TTS] provider switched to:', _ttsProvider,
         isGemini ? '(Gemini 2.5 Flash · gemini-2.5-flash-preview-tts)' : '(Deepgram Aura · aura-helios-en)');
 };
+
+// ════════════════════════════════════════════════════════════════════════════
+// GEMINI 2.5 NATURAL AUDIO — Live API end-to-end voice pipeline
+// gemini-2.5-flash-preview-native-audio-dialog: STT + LLM + native TTS in one
+// ════════════════════════════════════════════════════════════════════════════
+var GL = {
+    active:      false,
+    ws:          null,
+    audioCtx:    null,   // input: 16 kHz AudioContext for mic capture
+    playCtx:     null,   // output: 24 kHz AudioContext for playback
+    stream:      null,   // MediaStream from getUserMedia
+    processor:   null,   // ScriptProcessorNode
+    source:      null,   // MediaStreamSourceNode
+    nextPlayAt:  0,      // next scheduled AudioBufferSource start time
+    chunkBuf:    [],     // accumulated Float32 samples for buffered playback
+    chunkTimer:  null,
+};
+
+function _glUpdateUI() {
+    var pill  = document.getElementById('apexLivePill');
+    var dot   = document.getElementById('apexLiveDot');
+    var lbl   = document.getElementById('apexLiveLabel');
+    var tbar  = document.getElementById('apexLiveTranscript');
+    if (!pill) return;
+    if (GL.active) {
+        pill.style.borderColor = 'rgba(138,108,255,0.7)';
+        dot.style.background   = '#b090ff';
+        dot.style.boxShadow    = '0 0 8px #b090ff';
+        lbl.textContent        = 'LIVE · ON';
+        if (tbar) tbar.style.display = 'block';
+    } else {
+        pill.style.borderColor = 'rgba(138,108,255,0.25)';
+        dot.style.background   = '#8a6cff';
+        dot.style.boxShadow    = '0 0 6px #8a6cff';
+        lbl.textContent        = 'LIVE · OFF';
+        if (tbar) tbar.style.display = 'none';
+    }
+}
+
+function _glPlayPCM(base64) {
+    if (!GL.playCtx) return;
+    try {
+        var bytes = atob(base64);
+        var int16 = new Int16Array(bytes.length / 2);
+        for (var i = 0; i < int16.length; i++) {
+            int16[i] = bytes.charCodeAt(i * 2) | (bytes.charCodeAt(i * 2 + 1) << 8);
+        }
+        var f32 = new Float32Array(int16.length);
+        for (var j = 0; j < int16.length; j++) f32[j] = int16[j] / 32768;
+
+        var buf = GL.playCtx.createBuffer(1, f32.length, 24000);
+        buf.copyToChannel(f32, 0);
+        var src = GL.playCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(GL.playCtx.destination);
+        var now = GL.playCtx.currentTime;
+        var start = Math.max(now, GL.nextPlayAt);
+        src.start(start);
+        GL.nextPlayAt = start + buf.duration;
+    } catch(e) { console.warn('[GeminiLive] play error:', e.message); }
+}
+
+function _glStopAudio() {
+    GL.nextPlayAt = GL.playCtx ? GL.playCtx.currentTime : 0;
+}
+
+async function _glStart() {
+    if (GL.active) return;
+    GL.active = true;
+    _glUpdateUI();
+
+    // Pause the existing voice pipeline while Live is active
+    try { if (typeof stopDgPipeline === 'function') stopDgPipeline(); } catch(_){}
+    try { if (typeof stopIosPWAPipeline === 'function') stopIosPWAPipeline(); } catch(_){}
+
+    // Build WebSocket URL
+    var proto  = location.protocol === 'https:' ? 'wss' : 'ws';
+    var appKey = window._apexAppKey || '';
+    var wsUrl  = proto + '://' + location.host + '/ws/gemini-live' + (appKey ? '?app_key=' + encodeURIComponent(appKey) : '');
+
+    GL.ws = new WebSocket(wsUrl);
+
+    GL.ws.onopen = function() {
+        console.log('[GeminiLive] WebSocket connected, waiting for ready…');
+    };
+
+    GL.ws.onclose = function(e) {
+        console.log('[GeminiLive] WebSocket closed', e.code, e.reason);
+        if (GL.active) _glStop(false);
+    };
+
+    GL.ws.onerror = function(e) {
+        console.error('[GeminiLive] WebSocket error', e);
+        _glSetStatus('Connection error');
+    };
+
+    GL.ws.onmessage = function(ev) {
+        var msg;
+        try { msg = JSON.parse(ev.data); } catch { return; }
+
+        if (msg.type === 'ready') {
+            console.log('[GeminiLive] session ready — starting mic');
+            _glStartMic();
+            _glSetStatus('Listening…');
+        } else if (msg.type === 'audio') {
+            _glPlayPCM(msg.data);
+        } else if (msg.type === 'transcript_user') {
+            var el = document.getElementById('apexLiveUserText');
+            if (el) el.textContent = msg.text;
+        } else if (msg.type === 'transcript_apex') {
+            var el2 = document.getElementById('apexLiveApexText');
+            if (el2) el2.textContent = msg.text;
+        } else if (msg.type === 'turn_complete') {
+            _glSetStatus('Listening…');
+        } else if (msg.type === 'error') {
+            console.error('[GeminiLive] server error:', msg.message);
+            _glSetStatus('Error: ' + msg.message);
+        }
+    };
+
+    // 24 kHz playback context
+    GL.playCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+    GL.nextPlayAt = 0;
+}
+
+async function _glStartMic() {
+    try {
+        GL.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+
+        // Try 16 kHz input context; fallback to default if browser rejects it
+        try {
+            GL.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        } catch(_) {
+            GL.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        GL.source    = GL.audioCtx.createMediaStreamSource(GL.stream);
+        GL.processor = GL.audioCtx.createScriptProcessor(4096, 1, 1);
+
+        var actualRate = GL.audioCtx.sampleRate;
+        GL.processor.onaudioprocess = function(e) {
+            if (!GL.ws || GL.ws.readyState !== WebSocket.OPEN) return;
+            var pcmF32 = e.inputBuffer.getChannelData(0);
+            var samples;
+            // Downsample to 16 kHz if AudioContext is at a higher rate
+            if (actualRate !== 16000) {
+                var ratio   = actualRate / 16000;
+                var outLen  = Math.floor(pcmF32.length / ratio);
+                samples = new Int16Array(outLen);
+                for (var i = 0; i < outLen; i++) {
+                    var idx = Math.floor(i * ratio);
+                    samples[i] = Math.max(-32768, Math.min(32767, pcmF32[idx] * 32768));
+                }
+            } else {
+                samples = new Int16Array(pcmF32.length);
+                for (var i = 0; i < pcmF32.length; i++) {
+                    samples[i] = Math.max(-32768, Math.min(32767, pcmF32[i] * 32768));
+                }
+            }
+            // Base64 encode
+            var bytes = new Uint8Array(samples.buffer);
+            var b64   = btoa(String.fromCharCode.apply(null, bytes));
+            GL.ws.send(JSON.stringify({ type: 'audio', data: b64 }));
+        };
+
+        GL.source.connect(GL.processor);
+        GL.processor.connect(GL.audioCtx.destination);
+        console.log('[GeminiLive] mic running at', actualRate, 'Hz →', actualRate !== 16000 ? 'downsampled to 16k' : '16k native');
+    } catch(err) {
+        console.error('[GeminiLive] mic error:', err);
+        _glSetStatus('Mic error: ' + err.message);
+        _glStop(true);
+    }
+}
+
+function _glStop(closeWs) {
+    GL.active = false;
+    // Stop mic
+    if (GL.processor) { try { GL.processor.disconnect(); } catch(_){} GL.processor = null; }
+    if (GL.source)    { try { GL.source.disconnect(); }    catch(_){} GL.source    = null; }
+    if (GL.audioCtx)  { try { GL.audioCtx.close(); }       catch(_){} GL.audioCtx  = null; }
+    if (GL.stream)    { try { GL.stream.getTracks().forEach(t => t.stop()); } catch(_){} GL.stream = null; }
+    // Stop playback
+    if (GL.playCtx)   { try { GL.playCtx.close(); }        catch(_){} GL.playCtx   = null; }
+    GL.nextPlayAt = 0;
+    // Close WebSocket
+    if (closeWs && GL.ws && (GL.ws.readyState === WebSocket.OPEN || GL.ws.readyState === WebSocket.CONNECTING)) {
+        try { GL.ws.close(); } catch(_){}
+    }
+    GL.ws = null;
+    _glUpdateUI();
+    _glSetStatus('');
+    var el = document.getElementById('apexLiveUserText'); if (el) el.textContent = '';
+    var el2= document.getElementById('apexLiveApexText'); if (el2) el2.textContent = '';
+    console.log('[GeminiLive] stopped');
+}
+
+function _glSetStatus(msg) {
+    var el = document.getElementById('cmdOrbState');
+    if (el && msg) el.textContent = msg;
+    var el2 = document.getElementById('cmdOrbStateLabel');
+    if (el2 && msg) el2.textContent = msg.toUpperCase();
+}
+
+window.toggleGeminiLive = function() {
+    if (GL.active) { _glStop(true); }
+    else           { _glStart(); }
+};
+
+// Restore Live state from localStorage if user left it on
+(function() {
+    try {
+        if (localStorage.getItem('apex_gemini_live') === '1') {
+            // Don't auto-start — requires user gesture for getUserMedia
+        }
+    } catch(_){}
+})();
+
 let isSpeakingNow       = false;
 let vadAnalyser         = null;
 let vadInterval         = null;
