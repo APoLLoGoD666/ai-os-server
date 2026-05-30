@@ -41,6 +41,8 @@
     drag: { active: false, startX: 0, startY: 0, baseTx: 0, baseTy: 0 },
     clipboard: null,
     multi: new Set(),
+    autoSaveTimer: null,
+    panelState: JSON.parse(localStorage.getItem('_apex_ed_panels')||'{}'),
   };
 
   /* ═══════════════════════════════════════════════
@@ -171,7 +173,8 @@
   }
 
   function set(prop, val) {
-    if (S.el) applyStyle(S.el, prop, val);
+    if (S.multi.size > 1) [...S.multi].forEach(el => applyStyle(el, prop, val));
+    else if (S.el) applyStyle(S.el, prop, val);
   }
 
   function deleteEl() {
@@ -213,8 +216,27 @@
     positionSel(el);
     renderProps();
     renderLayers();
+    renderBreadcrumb(el);
     const curtag = $('_ed-curtag');
     if (curtag) curtag.textContent = tagLabel(el);
+  }
+
+  function renderBreadcrumb(el) {
+    const bar = $('_ed-crumb');
+    if (!bar) return;
+    bar.innerHTML = '';
+    const chain = [];
+    let cur = el;
+    while (cur && cur !== document.body && chain.length < 8) {
+      if (!isEditorEl(cur)) chain.unshift(cur);
+      cur = cur.parentElement;
+    }
+    chain.forEach((node, i) => {
+      const span = mk('span', {cls:'_ed-crumb-item', txt: tagLabel(node)});
+      span.onclick = () => select(node);
+      bar.appendChild(span);
+      if (i < chain.length - 1) bar.appendChild(mk('span', {cls:'_ed-crumb-sep', txt:' › '}));
+    });
   }
 
   function deselect() {
@@ -359,6 +381,130 @@
   function syncClipboardBtn() {
     const btn = $('_ed-paste-btn');
     if (btn) btn.disabled = !S.clipboard;
+  }
+
+  /* ═══════════════════════════════════════════════
+     NUDGE / DUPLICATE / GROUP / VISIBILITY / MISC
+  ═══════════════════════════════════════════════ */
+  function nudge(dx, dy) {
+    const targets = S.multi.size > 1 ? [...S.multi] : (S.el ? [S.el] : []);
+    if (!targets.length) return;
+    targets.forEach(el => {
+      const tx = parseFloat(el.dataset.apexTx || 0) + dx;
+      const ty = parseFloat(el.dataset.apexTy || 0) + dy;
+      applyStyle(el, 'transform', `translate(${tx}px,${ty}px)`);
+      el.dataset.apexTx = tx; el.dataset.apexTy = ty;
+    });
+    if (S.el) positionSel(S.el);
+  }
+
+  function duplicateEl() {
+    if (!S.el && !S.multi.size) return;
+    copyEl();
+    pasteEl();
+  }
+
+  function toggleVisibility() {
+    if (!S.el) return;
+    const hidden = S.el.style.display === 'none';
+    applyStyle(S.el, 'display', hidden ? '' : 'none');
+    const btn = $('_ed-vis-btn');
+    if (btn) btn.title = hidden ? 'Hide element' : 'Show element';
+    if (btn) btn.textContent = hidden ? '👁' : '🙈';
+  }
+
+  function groupEls() {
+    const targets = S.multi.size > 1 ? [...S.multi] : (S.el ? [S.el] : []);
+    if (targets.length < 2) { toast('Select 2+ elements to group'); return; }
+    const parent = targets[0].parentNode;
+    const ref    = targets[0];
+    const wrap   = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:contents;';
+    parent.insertBefore(wrap, ref);
+    targets.forEach(el => wrap.appendChild(el));
+    clearMulti();
+    select(wrap);
+    renderLayers();
+    toast('Grouped — Ctrl+Z to undo');
+  }
+
+  function showShortcuts() {
+    const ov = $('_ed-shortcuts');
+    if (ov) ov.style.display = 'flex';
+  }
+  function hideShortcuts() {
+    const ov = $('_ed-shortcuts');
+    if (ov) ov.style.display = 'none';
+  }
+
+  function toggleBeforeAfter() {
+    const link = document.querySelector('link[href="/apex-custom.css"]');
+    if (!link) { toast('No apex-custom.css link found'); return; }
+    link.disabled = !link.disabled;
+    toast(link.disabled ? 'Showing ORIGINAL (custom styles off)' : 'Showing EDITED (custom styles on)');
+    const btn = $('_ed-ba-btn');
+    if (btn) { btn.textContent = link.disabled ? '◑ Original' : '◑ Edited'; btn.style.color = link.disabled ? '#ffb547' : ''; }
+  }
+
+  function startAutoSave() {
+    if (S.autoSaveTimer) clearInterval(S.autoSaveTimer);
+    S.autoSaveTimer = setInterval(() => {
+      if (S.on && (Object.keys(S.styles).length || document.documentElement.style.cssText)) {
+        saveStyles().catch(()=>{});
+      }
+    }, 120000);
+  }
+
+  /* ═══════════════════════════════════════════════
+     RESIZE HANDLES
+  ═══════════════════════════════════════════════ */
+  const RESIZE_CURSORS = { tl:'nwse-resize', t:'ns-resize', tr:'nesw-resize', r:'ew-resize', br:'nwse-resize', b:'ns-resize', bl:'nesw-resize', l:'ew-resize' };
+  let resizing = null;
+
+  function onResizeStart(e, handle) {
+    if (!S.el || e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const el = S.el;
+    resizing = {
+      handle, el,
+      startX: e.clientX, startY: e.clientY,
+      startW: el.offsetWidth, startH: el.offsetHeight,
+      startTx: parseFloat(el.dataset.apexTx||0),
+      startTy: parseFloat(el.dataset.apexTy||0),
+    };
+    document.body.classList.add('_ed-grabbing');
+    document.addEventListener('mousemove', onResizeMove);
+    document.addEventListener('mouseup',   onResizeEnd);
+  }
+
+  function onResizeMove(e) {
+    if (!resizing) return;
+    const { handle, el, startX, startY, startW, startH, startTx, startTy } = resizing;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    let w = startW, h = startH, tx = startTx, ty = startTy;
+    if (handle.includes('r'))  w = Math.max(20, startW + dx);
+    if (handle.includes('b'))  h = Math.max(20, startH + dy);
+    if (handle.includes('l')) { w = Math.max(20, startW - dx); tx = startTx + (startW - w); }
+    if (handle.includes('t')) { h = Math.max(20, startH - dy); ty = startTy + (startH - h); }
+    el.style.width  = w + 'px';
+    el.style.height = h + 'px';
+    el.style.transform = `translate(${tx}px,${ty}px)`;
+    el.dataset.apexTx = tx; el.dataset.apexTy = ty;
+    positionSel(el);
+  }
+
+  function onResizeEnd() {
+    if (!resizing) return;
+    document.removeEventListener('mousemove', onResizeMove);
+    document.removeEventListener('mouseup',   onResizeEnd);
+    document.body.classList.remove('_ed-grabbing');
+    const { el } = resizing;
+    const id = edId(el);
+    if (!S.styles[id]) S.styles[id] = {};
+    S.styles[id].width     = el.style.width;
+    S.styles[id].height    = el.style.height;
+    S.styles[id].transform = el.style.transform;
+    resizing = null;
   }
 
   /* ═══════════════════════════════════════════════
@@ -612,8 +758,60 @@
         })(),
       ]),
 
+      sec('Element Identity', [
+        row('ID',      identInput('id', el.id || '')),
+        row('Classes', classTagInput(el)),
+      ]),
+
+      sec('Inner HTML', [innerHTMLWidget(el)]),
+
       sec('Raw CSS', [rawCSS(el)]),
     );
+  }
+
+  /* ── Identity / Class helpers ── */
+  function identInput(attr, value) {
+    const i = mk('input', {cls:'_ed-inp', type:'text', value});
+    i.onchange = e => {
+      if (!S.el) return;
+      if (attr === 'id') S.el.id = e.target.value;
+    };
+    return i;
+  }
+
+  function classTagInput(el) {
+    const wrap = mk('div', {cls:'_ed-cls-wrap'});
+    const render = () => {
+      wrap.innerHTML = '';
+      [...el.classList].filter(c => !c.startsWith('_ed')).forEach(cls => {
+        const tag = mk('span', {cls:'_ed-cls-tag'});
+        tag.innerHTML = `${cls}<span class="_ed-cls-x" data-cls="${cls}">×</span>`;
+        tag.querySelector('._ed-cls-x').onclick = () => { el.classList.remove(cls); render(); };
+        wrap.appendChild(tag);
+      });
+      const addInp = mk('input', {cls:'_ed-inp _ed-cls-inp', type:'text', placeholder:'+ class'});
+      addInp.onkeydown = e => {
+        if (e.key === 'Enter' && addInp.value.trim()) {
+          addInp.value.trim().split(/\s+/).forEach(c => c && el.classList.add(c));
+          render();
+        }
+      };
+      wrap.appendChild(addInp);
+    };
+    render();
+    return wrap;
+  }
+
+  function innerHTMLWidget(el) {
+    const ta = mk('textarea', {cls:'_ed-raw'});
+    ta.style.minHeight = '60px';
+    ta.value = el.innerHTML;
+    ta.onchange = e => {
+      const prev = el.innerHTML;
+      el.innerHTML = e.target.value;
+      pushHistory(el, '_html_', prev, e.target.value);
+    };
+    return ta;
   }
 
   /* ── Helpers ── */
@@ -833,6 +1031,8 @@
     if (!panel) return;
     const hidden = panel.classList.toggle('_ed-panel-hidden');
     if (btn) btn.classList.toggle('_ed-btn-panel-off', hidden);
+    S.panelState[side] = hidden;
+    localStorage.setItem('_apex_ed_panels', JSON.stringify(S.panelState));
     syncPageMargins();
   }
 
@@ -1043,10 +1243,19 @@
     if ((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key==='z') { e.preventDefault(); undo(); }
     if ((e.ctrlKey||e.metaKey) && (e.key==='y'||(e.shiftKey&&e.key==='z'))) { e.preventDefault(); redo(); }
     if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); saveStyles(); }
-    if ((e.key==='Delete'||e.key==='Backspace') && S.el && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) { e.preventDefault(); deleteEl(); }
-    if ((e.ctrlKey||e.metaKey) && e.key==='c' && S.el && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) { e.preventDefault(); copyEl(); }
-    if ((e.ctrlKey||e.metaKey) && e.key==='x' && S.el && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) { e.preventDefault(); cutEl(); }
-    if ((e.ctrlKey||e.metaKey) && e.key==='v' && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) { e.preventDefault(); pasteEl(); }
+    const notInput = !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName);
+    if ((e.key==='Delete'||e.key==='Backspace') && S.el && notInput) { e.preventDefault(); deleteEl(); }
+    if ((e.ctrlKey||e.metaKey) && e.key==='c' && S.el && notInput) { e.preventDefault(); copyEl(); }
+    if ((e.ctrlKey||e.metaKey) && e.key==='x' && S.el && notInput) { e.preventDefault(); cutEl(); }
+    if ((e.ctrlKey||e.metaKey) && e.key==='v' && notInput) { e.preventDefault(); pasteEl(); }
+    if ((e.ctrlKey||e.metaKey) && e.key==='d' && notInput) { e.preventDefault(); duplicateEl(); }
+    if ((e.ctrlKey||e.metaKey) && e.key==='g' && notInput) { e.preventDefault(); groupEls(); }
+    if (e.key === '?' && notInput) { e.preventDefault(); showShortcuts(); }
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && (S.el||S.multi.size) && notInput) {
+      e.preventDefault();
+      const step = e.shiftKey ? 10 : 1;
+      nudge(e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0, e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0);
+    }
   }
 
   /* ═══════════════════════════════════════════════
@@ -1086,8 +1295,19 @@
     const hover = mk('div',{id:'_ed-hover'}); document.body.appendChild(hover);
     // Selection outline
     const selOv = mk('div',{id:'_ed-sel'});
-    selOv.innerHTML = '<div class="_ed-sel-lbl" title="Drag to move">⠿</div><div class="_ed-sel-tag"></div>';
+    selOv.innerHTML = `
+      <div class="_ed-sel-lbl" title="Drag to move">⠿</div>
+      <div class="_ed-sel-tag"></div>
+      <div class="_ed-rh _ed-rh-tl" data-h="tl"></div>
+      <div class="_ed-rh _ed-rh-t"  data-h="t"></div>
+      <div class="_ed-rh _ed-rh-tr" data-h="tr"></div>
+      <div class="_ed-rh _ed-rh-r"  data-h="r"></div>
+      <div class="_ed-rh _ed-rh-br" data-h="br"></div>
+      <div class="_ed-rh _ed-rh-b"  data-h="b"></div>
+      <div class="_ed-rh _ed-rh-bl" data-h="bl"></div>
+      <div class="_ed-rh _ed-rh-l"  data-h="l"></div>`;
     selOv.querySelector('._ed-sel-lbl').addEventListener('mousedown', onDragStart);
+    selOv.querySelectorAll('._ed-rh').forEach(h => h.addEventListener('mousedown', e => onResizeStart(e, h.dataset.h)));
     document.body.appendChild(selOv);
 
     // Root
@@ -1112,6 +1332,8 @@
         <span class="_ed-hint">Alt+E toggle · Ctrl+Z undo · Ctrl+S save</span>
         <button class="_ed-btn _ed-btn-panel" id="_ed-hide-left"  onclick="__APEX_EDITOR__.togglePanel('left')"  title="Hide/show Layers panel">◧ Layers</button>
         <button class="_ed-btn _ed-btn-panel" id="_ed-hide-right" onclick="__APEX_EDITOR__.togglePanel('right')" title="Hide/show Properties panel">Properties ◨</button>
+        <button class="_ed-btn" id="_ed-ba-btn" onclick="__APEX_EDITOR__.toggleBeforeAfter()" title="Toggle before/after">◑ Edited</button>
+        <button class="_ed-btn" onclick="__APEX_EDITOR__.showShortcuts()" title="Keyboard shortcuts">?</button>
         <button class="_ed-btn _ed-btn-exit" onclick="__APEX_EDITOR__.toggle()">✕ Exit</button>
       </div>`;
 
@@ -1130,6 +1352,8 @@
       <div class="_ed-ph">
         <span class="_ed-ptitle">PROPERTIES</span>
         <div style="display:flex;gap:4px;">
+          <button class="_ed-icon-btn" id="_ed-vis-btn" onclick="__APEX_EDITOR__.toggleVisibility()" title="Hide element">👁</button>
+          <button class="_ed-icon-btn" onclick="__APEX_EDITOR__.duplicateEl()" title="Duplicate (Ctrl+D)">⧉</button>
           <button class="_ed-icon-btn" onclick="__APEX_EDITOR__.copyEl()" title="Copy (Ctrl+C)">⎘</button>
           <button class="_ed-icon-btn" onclick="__APEX_EDITOR__.cutEl()"  title="Cut (Ctrl+X)">✂</button>
           <button class="_ed-icon-btn" id="_ed-paste-btn" onclick="__APEX_EDITOR__.pasteEl()" title="Paste after (Ctrl+V)" disabled>⎙</button>
@@ -1160,7 +1384,43 @@
     aiBar.querySelector('#_ed-ai-inp').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runAIPrompt(e.target.value); } });
     aiBar.querySelector('#_ed-ai-send').addEventListener('click', () => runAIPrompt($('_ed-ai-inp').value));
 
-    root.append(tb, left, right, theme, aiBar);
+    // Breadcrumb bar
+    const crumb = mk('div',{id:'_ed-crumb'});
+    crumb.innerHTML = '<span class="_ed-crumb-label">—</span>';
+
+    // Shortcut overlay
+    const shortcuts = mk('div',{id:'_ed-shortcuts', onclick:'if(event.target===this)__APEX_EDITOR__.hideShortcuts()'});
+    shortcuts.innerHTML = `
+      <div class="_ed-sc-box">
+        <div class="_ed-sc-hdr"><span class="_ed-ptitle">⌨ KEYBOARD SHORTCUTS</span><button class="_ed-icon-btn" onclick="__APEX_EDITOR__.hideShortcuts()">✕</button></div>
+        <div class="_ed-sc-body">
+          <div class="_ed-sc-group"><div class="_ed-sc-glbl">Navigation</div>
+            <div class="_ed-sc-row"><kbd>Alt+E</kbd><span>Toggle editor on/off</span></div>
+            <div class="_ed-sc-row"><kbd>Esc</kbd><span>Deselect / close panel / exit editor</span></div>
+            <div class="_ed-sc-row"><kbd>Shift+Click</kbd><span>Add to multi-selection</span></div>
+            <div class="_ed-sc-row"><kbd>↑ ↓ ← →</kbd><span>Nudge 1px</span></div>
+            <div class="_ed-sc-row"><kbd>Shift+Arrow</kbd><span>Nudge 10px</span></div>
+          </div>
+          <div class="_ed-sc-group"><div class="_ed-sc-glbl">Edit</div>
+            <div class="_ed-sc-row"><kbd>Ctrl+Z</kbd><span>Undo</span></div>
+            <div class="_ed-sc-row"><kbd>Ctrl+Y</kbd><span>Redo</span></div>
+            <div class="_ed-sc-row"><kbd>Ctrl+S</kbd><span>Save styles</span></div>
+            <div class="_ed-sc-row"><kbd>Ctrl+C</kbd><span>Copy element</span></div>
+            <div class="_ed-sc-row"><kbd>Ctrl+X</kbd><span>Cut element</span></div>
+            <div class="_ed-sc-row"><kbd>Ctrl+V</kbd><span>Paste element</span></div>
+            <div class="_ed-sc-row"><kbd>Ctrl+D</kbd><span>Duplicate element</span></div>
+            <div class="_ed-sc-row"><kbd>Ctrl+G</kbd><span>Group selected elements</span></div>
+            <div class="_ed-sc-row"><kbd>Del / Backspace</kbd><span>Delete element</span></div>
+          </div>
+          <div class="_ed-sc-group"><div class="_ed-sc-glbl">View</div>
+            <div class="_ed-sc-row"><kbd>?</kbd><span>Show this reference</span></div>
+            <div class="_ed-sc-row"><kbd>Drag ⠿ handle</kbd><span>Move element</span></div>
+            <div class="_ed-sc-row"><kbd>Drag corner/edge</kbd><span>Resize element</span></div>
+          </div>
+        </div>
+      </div>`;
+
+    root.append(tb, crumb, left, right, theme, aiBar, shortcuts);
     document.body.appendChild(root);
 
     // Toggle button (always visible)
@@ -1336,6 +1596,47 @@ body._ed-active .page-wrap,body._ed-active #pageWrap{margin-left:220px!important
 
 /* Toast */
 #_ed-toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(70,231,179,.12);border:1px solid rgba(70,231,179,.35);color:#46e7b3;font-size:11px;font-weight:600;padding:8px 18px;border-radius:6px;z-index:999999;opacity:0;transition:opacity 280ms;pointer-events:none;white-space:nowrap;}
+
+/* Resize handles */
+._ed-rh{display:none;position:absolute;width:8px;height:8px;background:#4cc8ff;border:1px solid rgba(0,0,0,.4);border-radius:1px;pointer-events:auto;z-index:1;}
+#_ed-sel:hover ._ed-rh,#_ed-sel._ed-dragging ._ed-rh{display:block;}
+._ed-rh-tl{top:-4px;left:-4px;cursor:nwse-resize;}
+._ed-rh-t{top:-4px;left:calc(50% - 4px);cursor:ns-resize;}
+._ed-rh-tr{top:-4px;right:-4px;cursor:nesw-resize;}
+._ed-rh-r{top:calc(50% - 4px);right:-4px;cursor:ew-resize;}
+._ed-rh-br{bottom:-4px;right:-4px;cursor:nwse-resize;}
+._ed-rh-b{bottom:-4px;left:calc(50% - 4px);cursor:ns-resize;}
+._ed-rh-bl{bottom:-4px;left:-4px;cursor:nesw-resize;}
+._ed-rh-l{top:calc(50% - 4px);left:-4px;cursor:ew-resize;}
+
+/* Breadcrumb bar */
+#_ed-crumb{display:none;position:fixed;top:46px;left:220px;right:300px;height:26px;background:#08090f;border-bottom:1px solid rgba(76,160,255,.1);z-index:99997;align-items:center;padding:0 12px;gap:2px;overflow:hidden;}
+body._ed-active #_ed-crumb{display:flex;}
+._ed-crumb-item{font-size:9px;color:rgba(76,200,255,.55);cursor:pointer;white-space:nowrap;font-family:'JetBrains Mono',monospace;padding:1px 4px;border-radius:3px;transition:color 100ms;}
+._ed-crumb-item:hover{color:#4cc8ff;background:rgba(76,200,255,.08);}
+._ed-crumb-sep{font-size:9px;color:rgba(180,205,240,.2);}
+._ed-crumb-label{font-size:9px;color:rgba(180,205,240,.2);}
+body._ed-active .page-wrap,body._ed-active #pageWrap{margin-top:26px;}
+#_ed-theme{top:72px!important;}
+#_ed-left,#_ed-right{top:72px!important;}
+
+/* Class tag editor */
+._ed-cls-wrap{display:flex;flex-wrap:wrap;gap:3px;flex:1;align-items:center;}
+._ed-cls-tag{display:inline-flex;align-items:center;gap:3px;background:rgba(76,200,255,.08);border:1px solid rgba(76,200,255,.18);color:#4cc8ff;font-size:9px;padding:1px 5px;border-radius:3px;}
+._ed-cls-x{cursor:pointer;color:rgba(255,93,122,.6);font-size:11px;line-height:1;}
+._ed-cls-x:hover{color:#ff5d7a;}
+._ed-cls-inp{min-width:60px!important;flex:0 1 80px!important;}
+
+/* Shortcut overlay */
+#_ed-shortcuts{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999998;align-items:center;justify-content:center;backdrop-filter:blur(6px);}
+._ed-sc-box{background:#0a0f1a;border:1px solid rgba(76,160,255,.18);border-radius:10px;width:540px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;}
+._ed-sc-hdr{padding:12px 16px;border-bottom:1px solid rgba(76,160,255,.1);display:flex;align-items:center;justify-content:space-between;}
+._ed-sc-body{padding:14px 16px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;}
+._ed-sc-group{margin-bottom:14px;}
+._ed-sc-glbl{font-size:8px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:#4cc8ff;margin-bottom:7px;}
+._ed-sc-row{display:flex;align-items:center;gap:10px;margin-bottom:5px;}
+kbd{background:rgba(255,255,255,.07);border:1px solid rgba(76,160,255,.2);border-radius:3px;padding:1px 6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(220,235,255,.7);white-space:nowrap;}
+._ed-sc-row span{font-size:10px;color:rgba(180,205,240,.5);}
 `;
     document.head.appendChild(s);
   }
@@ -1348,10 +1649,16 @@ body._ed-active .page-wrap,body._ed-active #pageWrap{margin-left:220px!important
     buildUI();
     document.addEventListener('keydown', onKeyDown);
     loadSavedStyles();
+    // Restore panel state from last session
+    if (S.panelState.left)  togglePanel('left');
+    if (S.panelState.right) togglePanel('right');
+    startAutoSave();
     global.__APEX_EDITOR__ = {
       toggle, undo, redo, openTheme, closeTheme,
       saveStyles, clearSaved, deselect, renderLayers,
-      deleteEl, copyEl, cutEl, pasteEl, selectChildren, togglePanel,
+      deleteEl, copyEl, cutEl, pasteEl, duplicateEl, selectChildren,
+      togglePanel, toggleVisibility, groupEls, showShortcuts, hideShortcuts,
+      toggleBeforeAfter, nudge,
     };
   }
 
