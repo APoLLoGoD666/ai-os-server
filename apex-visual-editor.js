@@ -98,18 +98,29 @@
   function undo() {
     const e = S.undoStack.pop();
     if (!e) return;
-    applyStyle(e.el, e.prop, e.prev, false);
-    S.redoStack.push(e);
-    if (e.el === S.el) renderProps();
+    if (e.type === 'delete') {
+      e.parent.insertBefore(e.el, e.nextSibling);
+      S.redoStack.push(e);
+    } else {
+      applyStyle(e.el, e.prop, e.prev, false);
+      S.redoStack.push(e);
+      if (e.el === S.el) renderProps();
+    }
     syncHistoryBtns();
   }
 
   function redo() {
     const e = S.redoStack.pop();
     if (!e) return;
-    applyStyle(e.el, e.prop, e.next, false);
-    S.undoStack.push(e);
-    if (e.el === S.el) renderProps();
+    if (e.type === 'delete') {
+      e.el.remove();
+      if (S.el === e.el) deselect();
+      S.undoStack.push(e);
+    } else {
+      applyStyle(e.el, e.prop, e.next, false);
+      S.undoStack.push(e);
+      if (e.el === S.el) renderProps();
+    }
     syncHistoryBtns();
   }
 
@@ -134,6 +145,22 @@
 
   function set(prop, val) {
     if (S.el) applyStyle(S.el, prop, val);
+  }
+
+  function deleteEl() {
+    if (!S.el) return;
+    const el = S.el;
+    const parent = el.parentNode;
+    const nextSibling = el.nextSibling;
+    if (!parent) return;
+    S.undoStack.push({ type: 'delete', el, parent, nextSibling });
+    if (S.undoStack.length > MAX_HISTORY) S.undoStack.shift();
+    S.redoStack = [];
+    syncHistoryBtns();
+    el.remove();
+    deselect();
+    renderLayers();
+    toast('Element deleted — Ctrl+Z to undo');
   }
 
   /* ═══════════════════════════════════════════════
@@ -619,6 +646,7 @@
     if ((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key==='z') { e.preventDefault(); undo(); }
     if ((e.ctrlKey||e.metaKey) && (e.key==='y'||(e.shiftKey&&e.key==='z'))) { e.preventDefault(); redo(); }
     if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); saveStyles(); }
+    if ((e.key==='Delete'||e.key==='Backspace') && S.el && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) { e.preventDefault(); deleteEl(); }
   }
 
   /* ═══════════════════════════════════════════════
@@ -693,7 +721,10 @@
     right.innerHTML = `
       <div class="_ed-ph">
         <span class="_ed-ptitle">PROPERTIES</span>
-        <button class="_ed-icon-btn" onclick="__APEX_EDITOR__.deselect()" title="Deselect">✕</button>
+        <div style="display:flex;gap:4px;">
+          <button class="_ed-icon-btn _ed-del-btn" onclick="__APEX_EDITOR__.deleteEl()" title="Delete element (Del)">🗑</button>
+          <button class="_ed-icon-btn" onclick="__APEX_EDITOR__.deselect()" title="Deselect">✕</button>
+        </div>
       </div>
       <div id="_ed-props-body" class="_ed-pbody">
         <div class="_ed-empty">Click any element on the page to edit its styles.</div>
@@ -752,6 +783,8 @@ body._ed-active #_ed-toolbar{display:flex;}
 ._ed-btn-exit:hover{background:rgba(255,93,122,.18);}
 ._ed-icon-btn{background:none;border:none;color:rgba(180,205,240,.38);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:3px;transition:color 120ms;}
 ._ed-icon-btn:hover{color:rgba(220,235,255,.85);}
+._ed-del-btn{color:rgba(255,93,122,.45)!important;}
+._ed-del-btn:hover{color:#ff5d7a!important;background:rgba(255,93,122,.1)!important;}
 
 /* Left panel */
 #_ed-left{display:none;position:fixed;top:46px;left:0;bottom:0;width:220px;background:#08090f;border-right:1px solid rgba(76,160,255,.13);z-index:99998;flex-direction:column;overflow:hidden;}
@@ -852,7 +885,7 @@ body._ed-active .page-wrap,body._ed-active #pageWrap{margin-left:220px!important
     loadSavedStyles();
     global.__APEX_EDITOR__ = {
       toggle, undo, redo, openTheme, closeTheme,
-      saveStyles, clearSaved, deselect, renderLayers,
+      saveStyles, clearSaved, deselect, renderLayers, deleteEl,
     };
   }
 
