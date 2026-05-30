@@ -596,6 +596,27 @@
   }
 
   /* ═══════════════════════════════════════════════
+     PANEL VISIBILITY
+  ═══════════════════════════════════════════════ */
+  function togglePanel(side) {
+    const panel = $(side === 'left' ? '_ed-left' : '_ed-right');
+    const btn   = $(side === 'left' ? '_ed-hide-left' : '_ed-hide-right');
+    if (!panel) return;
+    const hidden = panel.classList.toggle('_ed-panel-hidden');
+    if (btn) btn.classList.toggle('_ed-btn-panel-off', hidden);
+    syncPageMargins();
+  }
+
+  function syncPageMargins() {
+    const leftHidden  = $('_ed-left')  && $('_ed-left').classList.contains('_ed-panel-hidden');
+    const rightHidden = $('_ed-right') && $('_ed-right').classList.contains('_ed-panel-hidden');
+    const wrap = document.querySelector('.page-wrap, #pageWrap');
+    if (!wrap) return;
+    wrap.style.marginLeft  = leftHidden  ? '0' : '220px';
+    wrap.style.marginRight = rightHidden ? '0' : '300px';
+  }
+
+  /* ═══════════════════════════════════════════════
      SAVE
   ═══════════════════════════════════════════════ */
   async function saveStyles() {
@@ -732,6 +753,7 @@
       document.addEventListener('mouseover', onMouseover);
       document.addEventListener('mouseout',  onMouseout);
       document.addEventListener('scroll',    onScroll, true);
+      syncPageMargins();
       renderLayers();
       toast('Editor ON — click any element');
     } else {
@@ -777,6 +799,8 @@
       </div>
       <div class="_ed-tb-r">
         <span class="_ed-hint">Alt+E toggle · Ctrl+Z undo · Ctrl+S save</span>
+        <button class="_ed-btn _ed-btn-panel" id="_ed-hide-left"  onclick="__APEX_EDITOR__.togglePanel('left')"  title="Hide/show Layers panel">◧ Layers</button>
+        <button class="_ed-btn _ed-btn-panel" id="_ed-hide-right" onclick="__APEX_EDITOR__.togglePanel('right')" title="Hide/show Properties panel">Properties ◨</button>
         <button class="_ed-btn _ed-btn-exit" onclick="__APEX_EDITOR__.toggle()">✕ Exit</button>
       </div>`;
 
@@ -854,18 +878,26 @@ body._ed-active #_ed-toolbar{display:flex;}
 ._ed-btn-clear:hover{background:rgba(255,183,71,.15);}
 ._ed-btn-exit{background:rgba(255,93,122,.06);border-color:rgba(255,93,122,.18);color:#ff5d7a;}
 ._ed-btn-exit:hover{background:rgba(255,93,122,.18);}
+._ed-btn-panel{background:rgba(255,255,255,.03);border-color:rgba(76,160,255,.18);color:rgba(180,205,240,.55);}
+._ed-btn-panel:hover{background:rgba(76,200,255,.1);color:#4cc8ff;}
+._ed-btn-panel-off{opacity:.4;text-decoration:line-through;}
 ._ed-icon-btn{background:none;border:none;color:rgba(180,205,240,.38);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:3px;transition:color 120ms;}
 ._ed-icon-btn:hover{color:rgba(220,235,255,.85);}
 ._ed-del-btn{color:rgba(255,93,122,.45)!important;}
 ._ed-del-btn:hover{color:#ff5d7a!important;background:rgba(255,93,122,.1)!important;}
 
 /* Left panel */
-#_ed-left{display:none;position:fixed;top:46px;left:0;bottom:0;width:220px;background:#08090f;border-right:1px solid rgba(76,160,255,.13);z-index:99998;flex-direction:column;overflow:hidden;}
+#_ed-left{display:none;position:fixed;top:46px;left:0;bottom:0;width:220px;background:#08090f;border-right:1px solid rgba(76,160,255,.13);z-index:99998;flex-direction:column;overflow:hidden;transition:transform 200ms ease;}
 body._ed-active #_ed-left{display:flex;}
+#_ed-left._ed-panel-hidden{transform:translateX(-100%);}
 
 /* Right panel */
-#_ed-right{display:none;position:fixed;top:46px;right:0;bottom:0;width:300px;background:#08090f;border-left:1px solid rgba(76,160,255,.13);z-index:99998;flex-direction:column;overflow:hidden;}
+#_ed-right{display:none;position:fixed;top:46px;right:0;bottom:0;width:300px;background:#08090f;border-left:1px solid rgba(76,160,255,.13);z-index:99998;flex-direction:column;overflow:hidden;transition:transform 200ms ease;}
 body._ed-active #_ed-right{display:flex;}
+#_ed-right._ed-panel-hidden{transform:translateX(100%);}
+
+/* Page margins */
+body._ed-active .page-wrap,body._ed-active #pageWrap{transition:margin 200ms ease;}
 
 /* Panel header */
 ._ed-ph{padding:9px 11px;border-bottom:1px solid rgba(76,160,255,.09);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
@@ -962,7 +994,7 @@ body._ed-active .page-wrap,body._ed-active #pageWrap{margin-left:220px!important
     loadSavedStyles();
     global.__APEX_EDITOR__ = {
       toggle, undo, redo, openTheme, closeTheme,
-      saveStyles, clearSaved, deselect, renderLayers, deleteEl,
+      saveStyles, clearSaved, deselect, renderLayers, deleteEl, togglePanel,
     };
   }
 
