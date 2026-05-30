@@ -368,12 +368,19 @@
     S.redoStack = [];
     syncHistoryBtns();
 
-    // Select all pasted nodes
+    // Select pasted nodes
     clearMulti();
-    pastedNodes.forEach(n => { S.multi.add(n); n.classList.add('_ed-multi-sel'); });
-    S.el = pastedNodes[pastedNodes.length - 1];
-    positionSel(S.el);
-    if (pastedNodes.length > 1) renderMultiPanel();
+    if (pastedNodes.length === 1) {
+      S.el = pastedNodes[0];
+      positionSel(S.el);
+      renderProps();
+      renderBreadcrumb(S.el);
+    } else {
+      pastedNodes.forEach(n => { S.multi.add(n); n.classList.add('_ed-multi-sel'); });
+      S.el = pastedNodes[pastedNodes.length - 1];
+      positionSel(S.el);
+      renderMultiPanel();
+    }
     renderLayers();
     toast(`Pasted ${pastedNodes.length} element${pastedNodes.length !== 1 ? 's' : ''} — Ctrl+Z to undo`);
   }
@@ -621,6 +628,10 @@
     const dx = e.clientX - S.drag.startX;
     const dy = e.clientY - S.drag.startY;
     if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
+
+    // Suppress the click event that fires after mouseup to prevent element interaction
+    const suppressClick = ev => { ev.stopPropagation(); ev.preventDefault(); document.removeEventListener('click', suppressClick, true); };
+    document.addEventListener('click', suppressClick, true);
 
     S.drag.targets.forEach(({ el, bx, by }) => {
       const nx = parseFloat(el.dataset.apexTx || 0);
@@ -1215,6 +1226,13 @@
     else { clearMulti(); select(e.target); }
   }
 
+  function onPageMousedown(e) {
+    if (!S.on || !S.el || isEditorEl(e.target) || e.button !== 0) return;
+    if (S.el === e.target || S.el.contains(e.target)) {
+      onDragStart(e);
+    }
+  }
+
   function onMouseover(e) {
     if (!S.on || isEditorEl(e.target)) return;
     const ov = $('_ed-hover');
@@ -1266,6 +1284,7 @@
     document.body.classList.toggle('_ed-active', S.on);
     if (S.on) {
       document.addEventListener('click',     onPageClick, true);
+      document.addEventListener('mousedown', onPageMousedown, true);
       document.addEventListener('mouseover', onMouseover);
       document.addEventListener('mouseout',  onMouseout);
       document.addEventListener('scroll',    onScroll, true);
@@ -1274,6 +1293,7 @@
       toast('Editor ON — click any element');
     } else {
       document.removeEventListener('click',     onPageClick, true);
+      document.removeEventListener('mousedown', onPageMousedown, true);
       document.removeEventListener('mouseover', onMouseover);
       document.removeEventListener('mouseout',  onMouseout);
       document.removeEventListener('scroll',    onScroll, true);
