@@ -38,6 +38,7 @@
     idCounter: 0,
     styles: {},
     themeOpen: false,
+    drag: { active: false, startX: 0, startY: 0, baseTx: 0, baseTy: 0 },
   };
 
   /* ═══════════════════════════════════════════════
@@ -65,7 +66,7 @@
   }
 
   function isEditorEl(el) {
-    return el && (el.closest('#_ed-root') || el.id === '_ed-toggle' || el.id === '_ed-hover' || el.id === '_ed-sel');
+    return el && (el.closest('#_ed-root') || el.id === '_ed-toggle' || el.id === '_ed-hover' || el.closest('#_ed-sel'));
   }
 
   function rgbToHex(v) {
@@ -136,6 +137,11 @@
   function applyStyle(el, prop, value, track) {
     const prev = el.style[prop] || '';
     el.style[prop] = value;
+    if (prop === 'transform') {
+      const m = value && value.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
+      el.dataset.apexTx = m ? m[1] : 0;
+      el.dataset.apexTy = m ? m[2] : 0;
+    }
     const id = edId(el);
     if (!S.styles[id]) S.styles[id] = {};
     if (!value) delete S.styles[id][prop];
@@ -172,8 +178,8 @@
     positionSel(el);
     renderProps();
     renderLayers();
-    const lbl = $('_ed-curtag');
-    if (lbl) lbl.textContent = tagLabel(el);
+    const curtag = $('_ed-curtag');
+    if (curtag) curtag.textContent = tagLabel(el);
   }
 
   function deselect() {
@@ -182,8 +188,8 @@
     if (sel) sel.style.display = 'none';
     const pb = $('_ed-props-body');
     if (pb) pb.innerHTML = '<div class="_ed-empty">Click any element on the page to edit its styles.</div>';
-    const lbl = $('_ed-curtag');
-    if (lbl) lbl.textContent = 'Nothing selected';
+    const curtag = $('_ed-curtag');
+    if (curtag) curtag.textContent = 'Nothing selected';
   }
 
   function positionSel(el) {
@@ -191,8 +197,8 @@
     if (!ov) return;
     const r = el.getBoundingClientRect();
     ov.style.cssText = `display:block;top:${r.top+scrollY}px;left:${r.left+scrollX}px;width:${r.width}px;height:${r.height}px;`;
-    const lbl = ov.querySelector('._ed-sel-lbl');
-    if (lbl) lbl.textContent = tagLabel(el);
+    const tag = ov.querySelector('._ed-sel-tag');
+    if (tag) tag.textContent = tagLabel(el);
   }
 
   function tagLabel(el) {
@@ -200,6 +206,57 @@
     const id  = el.id ? '#'+el.id : '';
     const cls = el.classList.length ? '.'+[...el.classList][0] : '';
     return tag + (id || cls);
+  }
+
+  /* ═══════════════════════════════════════════════
+     DRAG TO REPOSITION
+  ═══════════════════════════════════════════════ */
+  function onDragStart(e) {
+    if (!S.el || e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    S.drag.active  = true;
+    S.drag.startX  = e.clientX;
+    S.drag.startY  = e.clientY;
+    S.drag.baseTx  = parseFloat(S.el.dataset.apexTx || 0);
+    S.drag.baseTy  = parseFloat(S.el.dataset.apexTy || 0);
+    const sel = $('_ed-sel');
+    if (sel) sel.classList.add('_ed-dragging');
+    document.body.classList.add('_ed-grabbing');
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup',   onDragEnd);
+  }
+
+  function onDragMove(e) {
+    if (!S.drag.active || !S.el) return;
+    const nx = S.drag.baseTx + (e.clientX - S.drag.startX);
+    const ny = S.drag.baseTy + (e.clientY - S.drag.startY);
+    S.el.style.transform = `translate(${nx}px,${ny}px)`;
+    S.el.dataset.apexTx  = nx;
+    S.el.dataset.apexTy  = ny;
+    positionSel(S.el);
+  }
+
+  function onDragEnd(e) {
+    if (!S.drag.active) return;
+    document.removeEventListener('mousemove', onDragMove);
+    document.removeEventListener('mouseup',   onDragEnd);
+    document.body.classList.remove('_ed-grabbing');
+    const sel = $('_ed-sel');
+    if (sel) sel.classList.remove('_ed-dragging');
+    S.drag.active = false;
+
+    const dx = e.clientX - S.drag.startX;
+    const dy = e.clientY - S.drag.startY;
+    if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
+
+    const nx = S.drag.baseTx + dx;
+    const ny = S.drag.baseTy + dy;
+    const prev = `translate(${S.drag.baseTx}px,${S.drag.baseTy}px)`;
+    const next = `translate(${nx}px,${ny}px)`;
+    const id = edId(S.el);
+    if (!S.styles[id]) S.styles[id] = {};
+    S.styles[id].transform = next;
+    pushHistory(S.el, 'transform', prev, next);
   }
 
   /* ═══════════════════════════════════════════════
@@ -309,6 +366,21 @@
         row('Auto Cols',     inp('gridAutoColumns', el.style.gridAutoColumns||'')),
         row('Auto Rows',     inp('gridAutoRows', el.style.gridAutoRows||'')),
         row('Auto Flow',     sel('gridAutoFlow', c.gridAutoFlow, ['row','column','dense','row dense','column dense'])),
+      ]),
+
+      sec('Position Override', [
+        row('Translate X', inp('--tx-display', (parseFloat(el.dataset.apexTx||0)).toFixed(0)+'px (drag handle to move)')),
+        (() => {
+          const btn = mk('button',{cls:'_ed-btn _ed-btn-clear'});
+          btn.textContent = '↺ Reset Position';
+          btn.style.cssText = 'width:100%;margin-top:4px;';
+          btn.onclick = () => {
+            applyStyle(el, 'transform', '');
+            el.dataset.apexTx = 0; el.dataset.apexTy = 0;
+            renderProps();
+          };
+          return btn;
+        })(),
       ]),
 
       sec('Raw CSS', [rawCSS(el)]),
@@ -681,7 +753,8 @@
     const hover = mk('div',{id:'_ed-hover'}); document.body.appendChild(hover);
     // Selection outline
     const selOv = mk('div',{id:'_ed-sel'});
-    selOv.innerHTML = '<div class="_ed-sel-lbl"></div>';
+    selOv.innerHTML = '<div class="_ed-sel-lbl" title="Drag to move">⠿</div><div class="_ed-sel-tag"></div>';
+    selOv.querySelector('._ed-sel-lbl').addEventListener('mousedown', onDragStart);
     document.body.appendChild(selOv);
 
     // Root
@@ -860,7 +933,11 @@ body._ed-active #_ed-right{display:flex;}
 
 /* Selection outline */
 #_ed-sel{display:none;pointer-events:none;position:absolute;z-index:99996;border:2px solid #4cc8ff;border-radius:2px;}
-._ed-sel-lbl{position:absolute;top:-20px;left:-1px;font-size:9px;font-weight:600;letter-spacing:.06em;background:#4cc8ff;color:#000;padding:1px 7px;border-radius:3px;white-space:nowrap;}
+#_ed-sel._ed-dragging{border-color:#46e7b3;border-style:dashed;}
+._ed-sel-lbl{position:absolute;top:-22px;left:-2px;pointer-events:auto;cursor:grab;background:#4cc8ff;color:#000;padding:1px 7px;border-radius:3px 0 0 3px;font-size:13px;line-height:20px;height:20px;display:flex;align-items:center;user-select:none;}
+._ed-sel-lbl:hover{background:#7de3ff;}
+._ed-sel-tag{position:absolute;top:-22px;left:26px;pointer-events:none;font-size:9px;font-weight:600;letter-spacing:.06em;background:rgba(0,0,0,.7);color:#4cc8ff;border:1px solid #4cc8ff;padding:1px 7px;border-radius:0 3px 3px 0;white-space:nowrap;height:20px;line-height:18px;}
+body._ed-grabbing,body._ed-grabbing *{cursor:grabbing!important;}
 
 /* Page offset when editor active */
 body._ed-active{padding-top:46px!important;}
