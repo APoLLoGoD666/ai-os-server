@@ -14,39 +14,51 @@ function log(msg) {
     console.log(`[${ts()}] ${msg}`);
 }
 
-async function updateRender(url) {
+async function updateRender(url, attempt = 1) {
     if (!RENDER_API_KEY || !RENDER_SERVICE_ID) {
         log("[Tunnel] RENDER_API_KEY or RENDER_SERVICE_ID not set — skipping Render update.");
         return;
     }
 
-    await new Promise((resolve, reject) => {
-        const body = JSON.stringify([{ key: "OBSIDIAN_URL", value: url }]);
-        const options = {
-            hostname: "api.render.com",
-            path: `/v1/services/${RENDER_SERVICE_ID}/env-vars`,
-            method: "PUT",
-            headers: {
-                "Authorization": `Bearer ${RENDER_API_KEY}`,
-                "Content-Type": "application/json",
-                "Content-Length": Buffer.byteLength(body)
-            }
-        };
-        const req = https.request(options, (res) => {
-            let data = "";
-            res.on("data", chunk => data += chunk);
-            res.on("end", () => {
-                if (res.statusCode >= 200 && res.statusCode < 300) {
-                    resolve();
-                } else {
-                    reject(new Error(`Render API error ${res.statusCode}: ${data}`));
+    const MAX_ATTEMPTS = 6;
+    const RETRY_DELAY = 8000;
+
+    try {
+        await new Promise((resolve, reject) => {
+            const body = JSON.stringify([{ key: "OBSIDIAN_URL", value: url }]);
+            const options = {
+                hostname: "api.render.com",
+                path: `/v1/services/${RENDER_SERVICE_ID}/env-vars`,
+                method: "PUT",
+                headers: {
+                    "Authorization": `Bearer ${RENDER_API_KEY}`,
+                    "Content-Type": "application/json",
+                    "Content-Length": Buffer.byteLength(body)
                 }
+            };
+            const req = https.request(options, (res) => {
+                let data = "";
+                res.on("data", chunk => data += chunk);
+                res.on("end", () => {
+                    if (res.statusCode >= 200 && res.statusCode < 300) {
+                        resolve();
+                    } else {
+                        reject(new Error(`Render API error ${res.statusCode}: ${data}`));
+                    }
+                });
             });
+            req.on("error", reject);
+            req.write(body);
+            req.end();
         });
-        req.on("error", reject);
-        req.write(body);
-        req.end();
-    });
+    } catch (err) {
+        if (attempt < MAX_ATTEMPTS) {
+            log(`[Tunnel] Render update failed (attempt ${attempt}/${MAX_ATTEMPTS}): ${err.message} — retrying in ${RETRY_DELAY / 1000}s...`);
+            setTimeout(() => updateRender(url, attempt + 1), RETRY_DELAY);
+            return;
+        }
+        throw err;
+    }
 
     log(`[Tunnel] OBSIDIAN_URL updated on Render: ${url}`);
 }

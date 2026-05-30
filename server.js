@@ -8637,6 +8637,19 @@ app.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
     return _runTask(taskId, res);
 });
 
+// ── Visual Editor ─────────────────────────────────────────────────
+app.post('/api/editor/save-styles', requireAppAccess, async (req, res) => {
+    try {
+        const { css } = req.body;
+        if (typeof css !== 'string') return res.status(400).json({ error: 'css required' });
+        const fs = require('fs').promises;
+        await fs.writeFile(path.join(__dirname, 'apex-custom.css'), css, 'utf8');
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ── Master Orchestrator Routes ────────────────────────────────────
 const { runMasterOrchestrator, runFeature, parseRoadmap, runFeatureWithPermission, autoApproveStandardPermissions } =
     require('./agent-system/master-orchestrator');
