@@ -8638,6 +8638,57 @@ app.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
 });
 
 // ── Visual Editor ─────────────────────────────────────────────────
+app.post('/api/editor/ai', requireAppAccess, async (req, res) => {
+    try {
+        const { prompt, element, page } = req.body;
+        if (!prompt) return res.status(400).json({ error: 'prompt required' });
+
+        const systemPrompt = `You are a precise CSS/DOM editor assistant embedded in a visual dashboard editor.
+The user has selected an HTML element and wants to change it using natural language.
+
+Element info:
+- Tag: ${element.tag || 'unknown'}
+- ID: ${element.id || 'none'}
+- Classes: ${(element.classes||[]).join(' ') || 'none'}
+- Page: ${page || 'unknown'}
+- Current inline styles: ${JSON.stringify(element.inlineStyles||{})}
+- Computed size: ${element.width}×${element.height}px
+- Parent: ${element.parentTag || 'unknown'}
+
+Respond ONLY with a JSON object in this exact shape, no markdown, no explanation:
+{
+  "actions": [
+    { "type": "style", "prop": "camelCaseCSSProperty", "value": "cssValue" },
+    { "type": "delete" },
+    { "type": "text", "value": "new text content" }
+  ],
+  "explanation": "one short sentence describing what you did"
+}
+
+Rules:
+- Use camelCase for CSS props (e.g. backgroundColor, fontSize, marginLeft)
+- For positioning use transform e.g. "translate(120px, 40px)"
+- For centering horizontally: marginLeft+marginRight auto, or transform translateX(-50%) + left 50%
+- For delete: just {"type":"delete"}
+- For text change: {"type":"text","value":"..."}
+- Multiple style actions allowed
+- Return empty actions array if request is unclear`;
+
+        const msg = await client.messages.create({
+            model: HAIKU_MODEL,
+            max_tokens: 512,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: prompt }],
+        });
+
+        const raw = msg.content[0].text.trim();
+        const json = JSON.parse(raw.replace(/^```json\s*/,'').replace(/```$/,''));
+        res.json(json);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/editor/save-styles', requireAppAccess, async (req, res) => {
     try {
         const { css } = req.body;

@@ -209,6 +209,67 @@
   }
 
   /* ═══════════════════════════════════════════════
+     SNAP / ALIGN GUIDES
+  ═══════════════════════════════════════════════ */
+  const SNAP_THRESHOLD = 7;
+  let snapTargets = [];
+
+  function buildSnapTargets() {
+    const page = document.querySelector('.page.active') || document.body;
+    snapTargets = [];
+    const all = page.querySelectorAll('*');
+    all.forEach(el => {
+      if (el === S.el || isEditorEl(el)) return;
+      const r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) return;
+      const ax = r.left + scrollX, ay = r.top + scrollY;
+      const aw = r.width, ah = r.height;
+      snapTargets.push({ lx: ax, rx: ax+aw, cx: ax+aw/2, ty: ay, by: ay+ah, cy: ay+ah/2 });
+    });
+    // Add viewport center
+    snapTargets.push({ lx: innerWidth/2, rx: innerWidth/2, cx: innerWidth/2, ty: innerHeight/2, by: innerHeight/2, cy: innerHeight/2 });
+  }
+
+  function computeSnap(el, nx, ny) {
+    const r   = el.getBoundingClientRect();
+    const elW = r.width, elH = r.height;
+    // Current absolute position after translate
+    const base = el.getBoundingClientRect();
+    const absL = base.left + scrollX - parseFloat(el.dataset.apexTx||0) + nx;
+    const absT = base.top  + scrollY - parseFloat(el.dataset.apexTy||0) + ny;
+    const absR = absL + elW, absB = absT + elH, absCX = absL+elW/2, absCY = absT+elH/2;
+
+    let snapX = null, snapY = null, guideX = null, guideY = null;
+
+    for (const t of snapTargets) {
+      if (snapX === null) {
+        if (Math.abs(absL  - t.lx) < SNAP_THRESHOLD) { snapX = nx + (t.lx - absL);  guideX = t.lx; }
+        else if (Math.abs(absR  - t.rx) < SNAP_THRESHOLD) { snapX = nx + (t.rx - absR);  guideX = t.rx; }
+        else if (Math.abs(absCX - t.cx) < SNAP_THRESHOLD) { snapX = nx + (t.cx - absCX); guideX = t.cx; }
+      }
+      if (snapY === null) {
+        if (Math.abs(absT  - t.ty) < SNAP_THRESHOLD) { snapY = ny + (t.ty - absT);  guideY = t.ty; }
+        else if (Math.abs(absB  - t.by) < SNAP_THRESHOLD) { snapY = ny + (t.by - absB);  guideY = t.by; }
+        else if (Math.abs(absCY - t.cy) < SNAP_THRESHOLD) { snapY = ny + (t.cy - absCY); guideY = t.cy; }
+      }
+      if (snapX !== null && snapY !== null) break;
+    }
+    return { nx: snapX !== null ? snapX : nx, ny: snapY !== null ? snapY : ny, guideX, guideY };
+  }
+
+  function showGuides(gx, gy) {
+    const vl = $('_ed-guide-v'), hl = $('_ed-guide-h');
+    if (vl) { vl.style.display = gx !== null ? 'block' : 'none'; if (gx !== null) vl.style.left = gx+'px'; }
+    if (hl) { hl.style.display = gy !== null ? 'block' : 'none'; if (gy !== null) hl.style.top  = gy+'px'; }
+  }
+
+  function hideGuides() {
+    const vl = $('_ed-guide-v'), hl = $('_ed-guide-h');
+    if (vl) vl.style.display = 'none';
+    if (hl) hl.style.display = 'none';
+  }
+
+  /* ═══════════════════════════════════════════════
      DRAG TO REPOSITION
   ═══════════════════════════════════════════════ */
   function onDragStart(e) {
@@ -219,6 +280,7 @@
     S.drag.startY  = e.clientY;
     S.drag.baseTx  = parseFloat(S.el.dataset.apexTx || 0);
     S.drag.baseTy  = parseFloat(S.el.dataset.apexTy || 0);
+    buildSnapTargets();
     const sel = $('_ed-sel');
     if (sel) sel.classList.add('_ed-dragging');
     document.body.classList.add('_ed-grabbing');
@@ -228,8 +290,10 @@
 
   function onDragMove(e) {
     if (!S.drag.active || !S.el) return;
-    const nx = S.drag.baseTx + (e.clientX - S.drag.startX);
-    const ny = S.drag.baseTy + (e.clientY - S.drag.startY);
+    const rawNx = S.drag.baseTx + (e.clientX - S.drag.startX);
+    const rawNy = S.drag.baseTy + (e.clientY - S.drag.startY);
+    const { nx, ny, guideX, guideY } = computeSnap(S.el, rawNx, rawNy);
+    showGuides(guideX, guideY);
     S.el.style.transform = `translate(${nx}px,${ny}px)`;
     S.el.dataset.apexTx  = nx;
     S.el.dataset.apexTy  = ny;
@@ -241,6 +305,7 @@
     document.removeEventListener('mousemove', onDragMove);
     document.removeEventListener('mouseup',   onDragEnd);
     document.body.classList.remove('_ed-grabbing');
+    hideGuides();
     const sel = $('_ed-sel');
     if (sel) sel.classList.remove('_ed-dragging');
     S.drag.active = false;
@@ -249,10 +314,10 @@
     const dy = e.clientY - S.drag.startY;
     if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
 
-    const nx = S.drag.baseTx + dx;
-    const ny = S.drag.baseTy + dy;
+    const finalTx = parseFloat(S.el.dataset.apexTx || 0);
+    const finalTy = parseFloat(S.el.dataset.apexTy || 0);
     const prev = `translate(${S.drag.baseTx}px,${S.drag.baseTy}px)`;
-    const next = `translate(${nx}px,${ny}px)`;
+    const next = `translate(${finalTx}px,${finalTy}px)`;
     const id = edId(S.el);
     if (!S.styles[id]) S.styles[id] = {};
     S.styles[id].transform = next;
@@ -611,9 +676,15 @@
     const leftHidden  = $('_ed-left')  && $('_ed-left').classList.contains('_ed-panel-hidden');
     const rightHidden = $('_ed-right') && $('_ed-right').classList.contains('_ed-panel-hidden');
     const wrap = document.querySelector('.page-wrap, #pageWrap');
-    if (!wrap) return;
-    wrap.style.marginLeft  = leftHidden  ? '0' : '220px';
-    wrap.style.marginRight = rightHidden ? '0' : '300px';
+    if (wrap) {
+      wrap.style.marginLeft  = leftHidden  ? '0' : '220px';
+      wrap.style.marginRight = rightHidden ? '0' : '300px';
+    }
+    const aiBar = $('_ed-ai-bar');
+    if (aiBar) {
+      aiBar.style.left  = leftHidden  ? '0'     : '220px';
+      aiBar.style.right = rightHidden ? '0'     : '300px';
+    }
   }
 
   /* ═══════════════════════════════════════════════
@@ -688,6 +759,74 @@
     localStorage.removeItem('_apex_editor_map');
     localStorage.removeItem('_apex_editor_root');
     toast('✓ Cleared saved styles — reload to reset');
+  }
+
+  /* ═══════════════════════════════════════════════
+     AI PROMPT
+  ═══════════════════════════════════════════════ */
+  async function runAIPrompt(prompt) {
+    if (!prompt.trim()) return;
+    const inp = $('_ed-ai-inp');
+    const btn = $('_ed-ai-send');
+    if (inp) inp.disabled = true;
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    setAIStatus('thinking…');
+
+    try {
+      const el = S.el;
+      const c  = el ? cs(el) : {};
+      const payload = {
+        prompt,
+        page: (document.querySelector('.page.active')||{}).id || 'unknown',
+        element: el ? {
+          tag:          el.tagName.toLowerCase(),
+          id:           el.id || '',
+          classes:      [...el.classList].filter(x => !x.startsWith('_ed')),
+          inlineStyles: Object.fromEntries([...el.style].map(p => [p, el.style[p]])),
+          width:        Math.round(el.offsetWidth),
+          height:       Math.round(el.offsetHeight),
+          parentTag:    el.parentElement ? el.parentElement.tagName.toLowerCase() : '',
+        } : {},
+      };
+
+      const res = await fetch('/api/editor/ai', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+
+      let applied = 0;
+      (data.actions || []).forEach(action => {
+        if (action.type === 'style' && el) {
+          applyStyle(el, action.prop, action.value);
+          applied++;
+        } else if (action.type === 'delete' && el) {
+          deleteEl();
+          applied++;
+        } else if (action.type === 'text' && el) {
+          const prev = el.textContent;
+          el.textContent = action.value;
+          pushHistory(el, '_text_', prev, action.value);
+          applied++;
+        }
+      });
+
+      if (el && applied > 0) { positionSel(el); renderProps(); }
+      setAIStatus(data.explanation || `Applied ${applied} change${applied !== 1 ? 's' : ''}`);
+      if (inp) inp.value = '';
+    } catch (err) {
+      setAIStatus('Error: ' + err.message);
+    } finally {
+      if (inp) inp.disabled = false;
+      if (btn) { btn.disabled = false; btn.textContent = '↵'; }
+    }
+  }
+
+  function setAIStatus(msg) {
+    const s = $('_ed-ai-status');
+    if (s) { s.textContent = msg; s.style.opacity = '1'; clearTimeout(s._t); s._t = setTimeout(() => { s.style.opacity = '0'; }, 4000); }
   }
 
   /* ═══════════════════════════════════════════════
@@ -771,6 +910,10 @@
      BUILD UI
   ═══════════════════════════════════════════════ */
   function buildUI() {
+    // Snap guides
+    const guideV = mk('div',{id:'_ed-guide-v'}); document.body.appendChild(guideV);
+    const guideH = mk('div',{id:'_ed-guide-h'}); document.body.appendChild(guideH);
+
     // Hover outline
     const hover = mk('div',{id:'_ed-hover'}); document.body.appendChild(hover);
     // Selection outline
@@ -836,7 +979,17 @@
       </div>
       <div id="_ed-theme-body" class="_ed-theme-body"></div>`;
 
-    root.append(tb, left, right, theme);
+    // AI prompt bar
+    const aiBar = mk('div',{id:'_ed-ai-bar'});
+    aiBar.innerHTML = `
+      <span class="_ed-ai-icon">✦</span>
+      <input id="_ed-ai-inp" class="_ed-ai-inp" type="text" placeholder="Ask AI — &quot;center this&quot;, &quot;make font 18px&quot;, &quot;delete it&quot;, &quot;align left edge with header&quot;…" autocomplete="off"/>
+      <button id="_ed-ai-send" class="_ed-ai-send" title="Send (Enter)">↵</button>
+      <span id="_ed-ai-status" class="_ed-ai-status"></span>`;
+    aiBar.querySelector('#_ed-ai-inp').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runAIPrompt(e.target.value); } });
+    aiBar.querySelector('#_ed-ai-send').addEventListener('click', () => runAIPrompt($('_ed-ai-inp').value));
+
+    root.append(tb, left, right, theme, aiBar);
     document.body.appendChild(root);
 
     // Toggle button (always visible)
@@ -898,6 +1051,28 @@ body._ed-active #_ed-right{display:flex;}
 
 /* Page margins */
 body._ed-active .page-wrap,body._ed-active #pageWrap{transition:margin 200ms ease;}
+
+/* Snap guides */
+#_ed-guide-v{display:none;pointer-events:none;position:absolute;top:0;bottom:0;width:1px;background:#46e7b3;z-index:99994;box-shadow:0 0 4px rgba(70,231,179,.6);}
+#_ed-guide-h{display:none;pointer-events:none;position:absolute;left:0;right:0;height:1px;background:#46e7b3;z-index:99994;box-shadow:0 0 4px rgba(70,231,179,.6);}
+
+/* AI bar */
+#_ed-ai-bar{display:none;position:fixed;bottom:0;left:220px;right:300px;height:50px;background:#08090f;border-top:1px solid rgba(76,160,255,.15);z-index:99999;align-items:center;gap:10px;padding:0 14px;}
+body._ed-active #_ed-ai-bar{display:flex;}
+body._ed-active #_ed-left._ed-panel-hidden ~ * #_ed-ai-bar,
+body._ed-active._ed-left-hidden #_ed-ai-bar{left:0;}
+._ed-ai-icon{font-size:15px;color:#7c6fff;flex-shrink:0;}
+._ed-ai-inp{flex:1;background:rgba(124,111,255,.07);border:1px solid rgba(124,111,255,.22);border-radius:6px;color:rgba(220,235,255,.88);font-family:'Inter',-apple-system,sans-serif;font-size:12px;padding:8px 12px;outline:none;transition:border-color 150ms;}
+._ed-ai-inp:focus{border-color:#7c6fff;box-shadow:0 0 0 2px rgba(124,111,255,.12);}
+._ed-ai-inp::placeholder{color:rgba(180,205,240,.28);}
+._ed-ai-inp:disabled{opacity:.5;}
+._ed-ai-send{background:rgba(124,111,255,.15);border:1px solid rgba(124,111,255,.3);color:#7c6fff;width:32px;height:32px;border-radius:5px;font-size:14px;cursor:pointer;flex-shrink:0;transition:all 130ms;display:flex;align-items:center;justify-content:center;}
+._ed-ai-send:hover{background:rgba(124,111,255,.3);}
+._ed-ai-send:disabled{opacity:.4;cursor:default;}
+._ed-ai-status{font-size:10px;color:rgba(180,205,240,.45);white-space:nowrap;opacity:0;transition:opacity 300ms;max-width:300px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+
+/* Shift page up to make room for AI bar */
+body._ed-active{padding-bottom:50px!important;}
 
 /* Panel header */
 ._ed-ph{padding:9px 11px;border-bottom:1px solid rgba(76,160,255,.09);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
