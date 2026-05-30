@@ -3918,36 +3918,20 @@ select.as-pi { background:rgba(2,4,14,0.9); }
                         <div id="sys-agent-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div>
                     </div>
 
-                    <!-- Section 2: Memory Vault + Pipeline Flow -->
-                    <div style="display:grid;grid-template-columns:1fr 320px;gap:16px">
-                        <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden">
-                            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-                                <div style="display:flex;align-items:center;gap:8px">
-                                    <div style="width:6px;height:6px;border-radius:50%;background:#7c6fff"></div>
-                                    <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Memory Vault</span>
-                                </div>
-                                <div style="display:flex;align-items:center;gap:8px">
-                                    <span id="sys-memory-pts" style="font-size:10px;color:var(--text-mute)">— pts</span>
-                                    <button class="ds-btn xs" onclick="initMemoryCanvas()">&#8635;</button>
-                                </div>
+                    <!-- Section 2: Stack Pipeline Timeline -->
+                    <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden">
+                        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>
+                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Stack Pipeline</span>
+                                <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(99,102,241,0.10);color:var(--accent)">Live</span>
                             </div>
-                            <div style="position:relative">
-                                <canvas id="sys-memory-canvas" style="width:100%;height:280px;display:block;background:#080a0e"></canvas>
-                                <div style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;padding:10px">
-                                    <div style="font-size:10px;color:rgba(255,255,255,0.4)">Memory Vault</div>
-                                    <div style="position:absolute;bottom:10px;left:10px;display:flex;gap:12px">
-                                        <span style="font-size:9px;color:rgba(255,255,255,0.5)"><span style="color:#00d4ff">&#9679;</span> conversation</span>
-                                        <span style="font-size:9px;color:rgba(255,255,255,0.5)"><span style="color:#7c6fff">&#9679;</span> lesson</span>
-                                        <span style="font-size:9px;color:rgba(255,255,255,0.5)"><span style="color:#00e5a0">&#9679;</span> feature</span>
-                                        <span style="font-size:9px;color:rgba(255,255,255,0.5)"><span style="color:#f5a623">&#9679;</span> decision</span>
-                                    </div>
-                                </div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span id="sys-stack-pktcount" style="font-size:10px;color:var(--text-mute)">— events</span>
+                                <button class="ds-btn xs" onclick="initStackPipeline()">&#8635;</button>
                             </div>
                         </div>
-                        <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:16px">
-                            <div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:12px">Pipeline Flow</div>
-                            <div id="sys-pipeline-flow" style="display:flex;flex-direction:column;gap:4px"></div>
-                        </div>
+                        <canvas id="sys-stack-canvas" style="width:100%;height:300px;display:block"></canvas>
                     </div>
 
                     <!-- Section 3: Roadmap Timeline + Cost Analysis -->
@@ -9697,6 +9681,12 @@ async function fetchSystemAgents() {
             }
         });
 
+        // Feed stack pipeline live counters
+        window._stackPipelineData = window._stackPipelineData || {};
+        var successRuns = runs.filter(function(r){ return r.success || r.status === 'committed'; }).length;
+        window._stackPipelineData.claude = runs.length + ' runs';
+        window._stackPipelineData.memory = successRuns + ' saved';
+
         // Pipeline flow
         var flowEl = document.getElementById('sys-pipeline-flow');
         if (flowEl) {
@@ -9866,56 +9856,253 @@ async function buildSystemSuggestions() {
     } catch(e) { console.error('[APEX-UI] buildSystemSuggestions', e); }
 }
 
-function initMemoryCanvas() {
-    var canvas = document.getElementById('sys-memory-canvas');
+// Stack pipeline live data — populated by fetch functions
+window._stackPipelineData = window._stackPipelineData || {
+    voice: 'live', claude: '—', memory: '—', vault: '—', github: 'main', render: 'online'
+};
+
+function initStackPipeline() {
+    var canvas = document.getElementById('sys-stack-canvas');
     if (!canvas) return;
-    if (canvas.dataset.animId) cancelAnimationFrame(parseInt(canvas.dataset.animId));
+    if (canvas._rafId) { cancelAnimationFrame(canvas._rafId); canvas._rafId = 0; }
 
+    var dpr = window.devicePixelRatio || 1;
+    var W = canvas.offsetWidth || 860;
+    var H = 300;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
     var ctx = canvas.getContext('2d');
-    canvas.width  = canvas.offsetWidth  || 600;
-    canvas.height = canvas.offsetHeight || 280;
+    ctx.scale(dpr, dpr);
 
-    var colors = {conversation:'#00d4ff', lesson:'#7c6fff', feature:'#00e5a0', decision:'#f5a623'};
-    var types  = ['conversation','lesson','feature','decision'];
-    var pts    = [];
-    for (var i=0; i<70; i++) {
-        pts.push({
-            x: Math.random()*canvas.width,  y: Math.random()*canvas.height,
-            vx:(Math.random()-0.5)*0.4,     vy:(Math.random()-0.5)*0.4,
-            r: 1.5+Math.random()*2.5,
-            type: types[Math.floor(Math.random()*4)],
-            o:   0.3+Math.random()*0.7
+    var STAGES = [
+        { id:'voice',  label:'Voice Input', sub:'Deepgram STT',  icon:'◎', color:'#38bdf8' },
+        { id:'claude', label:'Claude API',  sub:'Anthropic',      icon:'◆', color:'#6366f1' },
+        { id:'memory', label:'Supabase',    sub:'Memory DB',      icon:'▣', color:'#34d399' },
+        { id:'vault',  label:'Obsidian',    sub:'Vault Sync',     icon:'◉', color:'#a78bfa' },
+        { id:'github', label:'GitHub',      sub:'Repository',     icon:'◈', color:'#e4e4e7' },
+        { id:'render', label:'Render',      sub:'Live Deploy',    icon:'▶', color:'#fbbf24' }
+    ];
+
+    var NR  = 26;             // node radius
+    var NY  = H * 0.40;      // node centre Y
+    var MX  = 72;             // horizontal margin
+    var SPC = (W - MX * 2) / (STAGES.length - 1);
+
+    STAGES.forEach(function(s, i) {
+        s.x      = MX + i * SPC;
+        s.y      = NY;
+        s.pulseR = 0;
+        s.pulsing = false;
+        s.lastHit = 0;
+    });
+
+    // Packet colours per segment [from→to]
+    var SEG_COLS = [
+        ['#38bdf8','#38bdf8','#6366f1'],
+        ['#6366f1','#6366f1','#a78bfa'],
+        ['#34d399','#34d399','#6366f1'],
+        ['#a78bfa','#34d399'],
+        ['#fbbf24','#e4e4e7']
+    ];
+    var SEG_RATE = [68, 95, 135, 190, 250]; // frames between auto-spawns
+
+    var packets  = [];
+    var counters = [0, 0, 0, 0, 0];
+    var totalPkts = 0;
+    var frame    = 0;
+
+    function spawn(fromIdx, color) {
+        if (fromIdx >= STAGES.length - 1) return;
+        var f = STAGES[fromIdx], t = STAGES[fromIdx + 1];
+        packets.push({
+            fi: fromIdx, ti: fromIdx + 1,
+            sx: f.x + NR + 4, sy: f.y,
+            tx: t.x - NR - 4, ty: t.y,
+            prog: 0,
+            speed: 0.007 + Math.random() * 0.005,
+            color: color,
+            r: 3 + Math.random() * 1.5
         });
+        totalPkts++;
     }
 
-    function drawFrame() {
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        pts.forEach(function(p){
-            p.x+=p.vx; p.y+=p.vy;
-            if (p.x<0||p.x>canvas.width)  p.vx*=-1;
-            if (p.y<0||p.y>canvas.height) p.vy*=-1;
-        });
-        for (var i=0;i<pts.length;i++) {
-            for (var j=i+1;j<pts.length;j++) {
-                var dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
-                var dist=Math.sqrt(dx*dx+dy*dy);
-                if (dist<85) {
-                    ctx.beginPath();
-                    ctx.strokeStyle='rgba(255,255,255,'+(0.06*(1-dist/85)).toFixed(3)+')';
-                    ctx.lineWidth=0.5;
-                    ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y);
-                    ctx.stroke();
-                }
+    function pulse(idx) {
+        STAGES[idx].pulsing = true;
+        STAGES[idx].pulseR  = NR + 2;
+        STAGES[idx].lastHit = Date.now();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        frame++;
+
+        // Background
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
+
+        // Auto-spawn packets per segment
+        for (var si = 0; si < SEG_RATE.length; si++) {
+            if (++counters[si] >= SEG_RATE[si]) {
+                counters[si] = 0;
+                var cols = SEG_COLS[si];
+                spawn(si, cols[Math.floor(Math.random() * cols.length)]);
             }
         }
-        pts.forEach(function(p){
-            ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-            ctx.fillStyle=colors[p.type]; ctx.globalAlpha=p.o; ctx.fill(); ctx.globalAlpha=1;
+
+        // Connecting lines
+        for (var li = 0; li < STAGES.length - 1; li++) {
+            ctx.save();
+            ctx.setLineDash([5, 6]);
+            ctx.strokeStyle = 'rgba(255,255,255,0.055)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(STAGES[li].x + NR + 4, STAGES[li].y);
+            ctx.lineTo(STAGES[li + 1].x - NR - 4, STAGES[li + 1].y);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Packets
+        var alive = [];
+        for (var pi = 0; pi < packets.length; pi++) {
+            var p = packets[pi];
+            p.prog += p.speed;
+            if (p.prog >= 1) {
+                pulse(p.ti);
+                if (Math.random() < 0.78) {
+                    var nc = SEG_COLS[p.ti] ? SEG_COLS[p.ti][Math.floor(Math.random() * SEG_COLS[p.ti].length)] : p.color;
+                    spawn(p.ti, nc);
+                }
+                continue;
+            }
+            alive.push(p);
+            var px = p.sx + (p.tx - p.sx) * p.prog;
+            var py = p.sy + (p.ty - p.sy) * p.prog;
+
+            // Glow halo
+            ctx.save();
+            ctx.globalAlpha = 0.22;
+            var grd = ctx.createRadialGradient(px, py, 0, px, py, p.r * 5);
+            grd.addColorStop(0, p.color);
+            grd.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grd;
+            ctx.beginPath();
+            ctx.arc(px, py, p.r * 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Core
+            ctx.save();
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = 0.90;
+            ctx.beginPath();
+            ctx.arc(px, py, p.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        packets = alive;
+
+        // Nodes
+        STAGES.forEach(function(s) {
+            // Pulse ring
+            if (s.pulsing) {
+                s.pulseR += 1.3;
+                var maxPR  = NR + 24;
+                var palpha = Math.max(0, (1 - (s.pulseR - NR) / (maxPR - NR))) * 0.45;
+                if (s.pulseR >= maxPR) { s.pulsing = false; s.pulseR = 0; }
+                else {
+                    ctx.save();
+                    ctx.strokeStyle = s.color;
+                    ctx.lineWidth = 1.5;
+                    ctx.globalAlpha = palpha;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.pulseR, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            // Node fill + border
+            ctx.save();
+            ctx.fillStyle = '#0d0d0d';
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, NR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+
+            // Colour accent arc (top)
+            ctx.save();
+            ctx.strokeStyle = s.color;
+            ctx.lineWidth = 2.5;
+            ctx.globalAlpha = 0.75;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, NR, -Math.PI * 0.65, -Math.PI * 0.35);
+            ctx.stroke();
+            ctx.restore();
+
+            // Icon
+            ctx.save();
+            ctx.fillStyle = s.color;
+            ctx.font = '13px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(s.icon, s.x, s.y);
+            ctx.restore();
+
+            // Activity dot (top-right of node)
+            var recent = (Date.now() - s.lastHit) < 1800;
+            ctx.save();
+            ctx.fillStyle = recent ? s.color : 'rgba(255,255,255,0.16)';
+            ctx.beginPath();
+            ctx.arc(s.x + NR * 0.68, s.y - NR * 0.68, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Label
+            ctx.save();
+            ctx.fillStyle = 'rgba(244,244,245,0.88)';
+            ctx.font = '500 11px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(s.label, s.x, s.y + NR + 9);
+            ctx.restore();
+
+            // Sub-label
+            ctx.save();
+            ctx.fillStyle = 'rgba(113,113,122,0.85)';
+            ctx.font = '9px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(s.sub, s.x, s.y + NR + 23);
+            ctx.restore();
+
+            // Live counter
+            var lv = (window._stackPipelineData && window._stackPipelineData[s.id]) || '—';
+            ctx.save();
+            ctx.fillStyle = s.color;
+            ctx.font = '600 10px "JetBrains Mono", monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(lv, s.x, s.y + NR + 38);
+            ctx.restore();
         });
-        canvas.dataset.animId = requestAnimationFrame(drawFrame);
+
+        // Event counter badge
+        var el = document.getElementById('sys-stack-pktcount');
+        if (el) el.textContent = totalPkts.toLocaleString() + ' events';
+
+        canvas._rafId = requestAnimationFrame(draw);
     }
-    drawFrame();
+
+    draw();
 }
+window.initStackPipeline = initStackPipeline;
 
 var _sysPageInited = false;
 /* ── Domain Agent Cards ── */
@@ -10032,6 +10219,8 @@ async function fetchVaultStatus() {
         if (dot) { dot.style.background = ok ? 'var(--green)' : 'var(--amber)'; dot.style.boxShadow = ok ? '0 0 6px var(--green)' : '0 0 6px var(--amber)'; }
         if (badge) { badge.textContent = ok ? 'Connected' : 'Local only'; badge.style.background = ok ? 'rgba(70,231,179,0.12)' : 'rgba(255,183,71,0.12)'; badge.style.color = ok ? 'var(--green)' : 'var(--amber)'; }
         if (nc) nc.textContent = d.noteCount || '—';
+        window._stackPipelineData = window._stackPipelineData || {};
+        window._stackPipelineData.vault = (d.noteCount || 0) + ' notes';
         if (lw) {
             if (d.lastWrite) {
                 var ago = Math.floor((Date.now() - new Date(d.lastWrite)) / 60000);
@@ -10072,7 +10261,7 @@ async function initSystemPage() {
     initDomainAgentGrid();
     buildAgentGrid();
     fetchSystemAgents();
-    initMemoryCanvas();
+    initStackPipeline();
     fetchSystemCosts();
     fetchSystemTimeline();
     buildSystemSuggestions();
@@ -10091,8 +10280,8 @@ async function initSystemPage() {
     var _prev = window.switchPage;
     window.switchPage = function(name) {
         if (name !== 'system') {
-            var c = document.getElementById('sys-memory-canvas');
-            if (c && c.dataset.animId) { cancelAnimationFrame(parseInt(c.dataset.animId)); c.dataset.animId=''; }
+            var c = document.getElementById('sys-stack-canvas');
+            if (c && c._rafId) { cancelAnimationFrame(c._rafId); c._rafId = 0; }
         }
         _prev(name);
         if (name === 'system') initSystemPage();
