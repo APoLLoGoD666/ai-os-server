@@ -1,234 +1,226 @@
-// PlasmaOrb.js — APEX Plasma Orb, vanilla JS
-// Self-contained canvas renderer. Exposes window.APEX_ORB.setState(state).
+// PlasmaOrb.js — APEX Plasma Orb v2 (shadowBlur layered strokes, no ctx.filter)
+// Exposes window.APEX_ORB.setState(state).
 // States: 'standby' | 'listening' | 'thinking' | 'speaking'
 
 (function () {
   'use strict';
 
   var W = 320, H = 320, CX = 160, CY = 160, R = 138;
-  var LERP = 0.008;
-
-  var frame = 0;
-  var frameId = null;
-  var ctx = null;
-
-  var lSpMul = 1.0, lBright = 1.0, lShift = 0.0;
+  var LERP = 0.007;
+  var frame = 0, frameId = null, ctx = null;
+  var lSpMul = 1, lBright = 1, lShift = 0;
   var currentState = 'standby';
 
-  var STATE_CONFIG = {
+  var STATE_CFG = {
     standby:   { spMul: 1.0,  bright: 1.0,  shift:  0.0 },
-    listening: { spMul: 3.8,  bright: 1.6,  shift:  0.3 },
-    thinking:  { spMul: 2.2,  bright: 1.3,  shift: -0.4 },
-    speaking:  { spMul: 5.0,  bright: 1.85, shift:  0.6 },
+    listening: { spMul: 4.0,  bright: 1.6,  shift:  0.3 },
+    thinking:  { spMul: 2.4,  bright: 1.3,  shift: -0.5 },
+    speaking:  { spMul: 5.5,  bright: 1.9,  shift:  0.6 },
   };
 
-  var PALETTE = [
-    { r: 80,  g: 20,  b: 255 },
-    { r: 110, g: 30,  b: 255 },
-    { r: 20,  g: 80,  b: 255 },
-    { r: 0,   g: 140, b: 255 },
-    { r: 0,   g: 200, b: 255 },
-    { r: 160, g: 60,  b: 255 },
-    { r: 40,  g: 40,  b: 220 },
+  var COLS = [
+    [80,  20,  255],
+    [110, 30,  255],
+    [20,  80,  255],
+    [0,   140, 255],
+    [0,   210, 255],
+    [160, 60,  255],
+    [40,  40,  220],
+    [130, 10,  255],
   ];
 
-  function seededRandom(seed) {
+  function srng(seed) {
     var s = seed;
     return function () { s = (s * 9301 + 49297) % 233280; return s / 233280; };
   }
 
-  function buildRibbons() {
-    var rng = seededRandom(137);
-    var ribbons = [];
-    for (var i = 0; i < 26; i++) {
-      ribbons.push({
-        tilt:      (rng() - 0.5) * Math.PI * 1.7,
+  var rng = srng(137);
+  var RIBBONS = (function () {
+    var arr = [];
+    for (var i = 0; i < 28; i++) {
+      arr.push({
+        tilt:      (rng() - 0.5) * Math.PI * 1.75,
         azimuth:   rng() * Math.PI * 2,
-        speed:     (0.00008 + rng() * 0.00014) * (rng() > 0.5 ? 1 : -1),
-        width:     28 + rng() * 55,
+        speed:     (0.00006 + rng() * 0.00012) * (rng() > 0.5 ? 1 : -1),
+        width:     22 + rng() * 52,
         phase:     rng() * Math.PI * 2,
         wavePhase: rng() * Math.PI * 2,
-        amp:       0.06 + rng() * 0.18,
-        freq:      0.5  + rng() * 1.5,
-        col:       PALETTE[i % PALETTE.length],
-        alpha:     0.35 + rng() * 0.45,
+        amp:       0.04 + rng() * 0.16,
+        freq:      0.4  + rng() * 1.6,
+        col:       COLS[i % COLS.length],
+        alpha:     0.28 + rng() * 0.42,
       });
     }
-    return ribbons;
-  }
+    return arr;
+  })();
 
-  var RIBBONS = buildRibbons();
-  var OFF_POOL = null;
-
-  function initOffPool() {
-    OFF_POOL = [];
-    for (var i = 0; i < 30; i++) {
-      var c = document.createElement('canvas');
-      c.width = W; c.height = H;
-      OFF_POOL.push(c);
-    }
-  }
-
-  function computeRibbonPoints(ribbon, T) {
+  function computePoints(rib, T) {
     var pts = [];
-    var N = 180;
-    var cosTilt = Math.cos(ribbon.tilt);
-    var sinTilt = Math.sin(ribbon.tilt);
-    var cosAz   = Math.cos(ribbon.azimuth);
-    var sinAz   = Math.sin(ribbon.azimuth);
-    var phase   = ribbon.phase + T * ribbon.speed;
+    var N   = 200;
+    var ct  = Math.cos(rib.tilt),    st = Math.sin(rib.tilt);
+    var ca  = Math.cos(rib.azimuth), sa = Math.sin(rib.azimuth);
 
     for (var k = 0; k <= N; k++) {
       var u  = (k / N) * Math.PI * 2;
-      var x3 = R * Math.cos(u + phase);
-      var y3 = R * Math.sin(u + phase);
+      var ph = rib.phase + T;
 
-      // Rotate around Z by tilt
-      var xRot = x3 * cosTilt - y3 * sinTilt;
-      var yRot = x3 * sinTilt + y3 * cosTilt;
+      var x = R * Math.cos(u + ph);
+      var y = R * Math.sin(u + ph);
 
-      // Rotate around X by azimuth
-      var xFinal = xRot;
-      var yFinal = yRot * cosAz;
-      var zFinal = yRot * sinAz;
+      // Rotation 1 — tilt around Z
+      var xr = x * ct - y * st;
+      var yr = x * st + y * ct;
 
-      // Radial sine-wave surface deformation
-      var wave = ribbon.amp * R *
-        Math.sin(u * ribbon.freq + T * ribbon.speed * 0.3 + ribbon.wavePhase);
-      var nx = xFinal / R, ny = yFinal / R, nz = zFinal / R;
-      var wx = xFinal + nx * wave * 0.25;
-      var wy = yFinal + ny * wave * 0.25;
-      var wz = zFinal + nz * wave * 0.25;
+      // Rotation 2 — azimuth around X
+      var xf = xr;
+      var yf = yr * ca;
+      var zf = yr * sa;
+
+      // Surface wave deformation
+      var wave = rib.amp * R *
+        Math.sin(u * rib.freq + T * 0.3 + rib.wavePhase);
+      var nx = xf / R, ny = yf / R, nz = zf / R;
+      xf += nx * wave * 0.22;
+      yf += ny * wave * 0.22;
+      zf += nz * wave * 0.22;
 
       pts.push({
-        x:     CX + wx,
-        y:     CY - wz * 0.90 + wy * 0.18,
-        depth: wy,
+        x:     CX + xf,
+        y:     CY - zf * 0.9 + yf * 0.16,
+        depth: yf,
       });
     }
     return pts;
   }
 
-  function drawRibbonBlurred(ribbonPoints, colour, width, alpha, poolIdx) {
-    var off    = OFF_POOL[poolIdx];
-    var offCtx = off.getContext('2d');
-    offCtx.clearRect(0, 0, W, H);
-
-    offCtx.beginPath();
-    for (var i = 0; i < ribbonPoints.length; i++) {
-      var p = ribbonPoints[i];
-      if (i === 0) offCtx.moveTo(p.x, p.y);
-      else         offCtx.lineTo(p.x, p.y);
+  // 4-layer shadowBlur stroke — replaces ctx.filter blur
+  function drawRibbon(pts, colR, colG, colB, width, alpha, isFront) {
+    var seg = [];
+    for (var i = 0; i < pts.length; i++) {
+      if (isFront ? pts[i].depth >= 0 : pts[i].depth < 0) seg.push(pts[i]);
     }
-    offCtx.lineWidth   = width;
-    offCtx.lineCap     = 'round';
-    offCtx.strokeStyle = colour;
-    offCtx.globalAlpha = 1.0;
-    offCtx.stroke();
+    if (seg.length < 3) return;
 
-    ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-    ctx.globalAlpha              = alpha;
-    ctx.filter                   = 'blur(' + Math.round(width * 0.28) + 'px)';
-    ctx.drawImage(off, 0, 0);
-    ctx.filter = 'none';
-    ctx.restore();
+    var depthMul  = isFront ? 1.0 : 0.15;
+    var baseAlpha = alpha * depthMul;
+    if (baseAlpha < 0.01) return;
+
+    function stroke(lw, sa, blurW, blurA, brightBoost) {
+      var br = brightBoost ? Math.min(255, colR + 80) : colR;
+      var bg = brightBoost ? Math.min(255, colG + 60) : colG;
+      var bb = brightBoost ? 255 : colB;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(seg[0].x, seg[0].y);
+      for (var i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
+      ctx.lineWidth   = lw;
+      ctx.lineCap     = 'round';
+      ctx.lineJoin    = 'round';
+      ctx.strokeStyle = 'rgba(' + Math.round(br) + ',' + Math.round(bg) + ',' + Math.round(bb) + ',' + (baseAlpha * sa) + ')';
+      ctx.shadowBlur  = blurW;
+      ctx.shadowColor = 'rgba(' + Math.round(colR) + ',' + Math.round(colG) + ',' + Math.round(colB) + ',' + (baseAlpha * blurA) + ')';
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Layer 1 — ultra-wide outer feather
+    stroke(width * 3.2, 0.06, width * 2.5, 0.12, false);
+    // Layer 2 — wide mid feather
+    stroke(width * 1.6, 0.18, width * 1.2, 0.25, false);
+    // Layer 3 — main ribbon body
+    stroke(width * 0.7, 0.55, width * 0.6, 0.60, false);
+    // Layer 4 — thin bright core line
+    stroke(width * 0.18, 0.85, width * 0.4, 0.4, true);
   }
 
   function render() {
-    frameId = requestAnimationFrame(render);
-
-    var cfg = STATE_CONFIG[currentState];
+    var cfg = STATE_CFG[currentState];
     lSpMul  += (cfg.spMul  - lSpMul)  * LERP;
     lBright += (cfg.bright - lBright) * LERP;
     lShift  += (cfg.shift  - lShift)  * LERP;
 
     var T = frame * 0.001 * lSpMul;
-
     ctx.clearRect(0, 0, W, H);
 
-    // 1. Outer corona
-    var corona = ctx.createRadialGradient(CX, CY, R * 0.5, CX, CY, R * 1.6);
-    corona.addColorStop(0,    'rgba(10,30,180,' + (0.22 * lBright) + ')');
-    corona.addColorStop(0.4,  'rgba(5,15,120,'  + (0.10 * lBright) + ')');
-    corona.addColorStop(0.8,  'rgba(2,6,60,'    + (0.04 * lBright) + ')');
+    // 1. Outer corona halo
+    var corona = ctx.createRadialGradient(CX, CY, R * 0.5, CX, CY, R * 1.58);
+    corona.addColorStop(0,    'rgba(12,30,180,'  + (0.22 * lBright) + ')');
+    corona.addColorStop(0.45, 'rgba(6,15,110,'   + (0.09 * lBright) + ')');
     corona.addColorStop(1,    'rgba(0,0,0,0)');
     ctx.beginPath();
-    ctx.arc(CX, CY, R * 1.6, 0, Math.PI * 2);
+    ctx.arc(CX, CY, R * 1.58, 0, Math.PI * 2);
     ctx.fillStyle = corona;
     ctx.fill();
 
-    // 2. Sphere base (inside clip)
+    // 2. Sphere clip
     ctx.save();
     ctx.beginPath();
     ctx.arc(CX, CY, R, 0, Math.PI * 2);
     ctx.clip();
 
+    // 3. Deep navy base
     var base = ctx.createRadialGradient(CX - R * 0.1, CY - R * 0.18, 0, CX, CY, R);
-    base.addColorStop(0,    'rgb(10,18,72)');
-    base.addColorStop(0.4,  'rgb(5,10,42)');
-    base.addColorStop(0.75, 'rgb(2,5,22)');
-    base.addColorStop(1,    'rgb(1,2,12)');
+    base.addColorStop(0,    'rgb(9,16,68)');
+    base.addColorStop(0.42, 'rgb(4,9,38)');
+    base.addColorStop(0.78, 'rgb(2,4,20)');
+    base.addColorStop(1,    'rgb(1,2,11)');
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, W, H);
 
-    // 3. Ribbons — sort back to front, offscreen blur per ribbon
-    var sorted = RIBBONS.map(function (rib) {
-      var pts = computeRibbonPoints(rib, T * rib.speed * 800);
-      var sum = 0;
+    // 4. Ribbons with screen blend
+    ctx.globalCompositeOperation = 'screen';
+
+    var computed = RIBBONS.map(function (rib) {
+      var speed = rib.speed * lSpMul;
+      var ribWithSpeed = { tilt: rib.tilt, azimuth: rib.azimuth, speed: speed,
+        width: rib.width, phase: rib.phase, wavePhase: rib.wavePhase,
+        amp: rib.amp, freq: rib.freq, col: rib.col, alpha: rib.alpha };
+      var pts  = computePoints(ribWithSpeed, T);
+      var sum  = 0;
       for (var i = 0; i < pts.length; i++) sum += pts[i].depth;
-      return { rib: rib, pts: pts, avgDepth: sum / pts.length };
-    }).sort(function (a, b) { return a.avgDepth - b.avgDepth; });
+      return { rib: rib, pts: pts, avgD: sum / pts.length };
+    });
+    computed.sort(function (a, b) { return a.avgD - b.avgD; });
 
-    var poolIdx = 0;
-    for (var si = 0; si < sorted.length; si++) {
-      var rib = sorted[si].rib, pts = sorted[si].pts;
-
-      for (var pass = 0; pass < 2; pass++) {
-        var isFront = pass === 1;
-        var seg = [];
-        for (var pi = 0; pi < pts.length; pi++) {
-          if (isFront ? pts[pi].depth >= 0 : pts[pi].depth < 0) seg.push(pts[pi]);
-        }
-        if (seg.length < 2 || poolIdx >= OFF_POOL.length) continue;
-
-        var rc = rib.col.r, gc = rib.col.g, bc = rib.col.b;
-        var colour = 'rgb(' +
-          Math.round(Math.min(255, Math.max(0, rc + lShift * 60))) + ',' +
-          Math.round(Math.min(255, Math.max(0, gc + lShift * 30))) + ',' +
-          Math.round(Math.min(255, Math.max(0, bc + lShift * 15))) + ')';
-
-        var finalAlpha = Math.min(0.9, rib.alpha * lBright * (isFront ? 1.0 : 0.18));
-        drawRibbonBlurred(seg, colour, rib.width * lBright, finalAlpha, poolIdx++);
-      }
+    for (var si = 0; si < computed.length; si++) {
+      var rib = computed[si].rib, pts = computed[si].pts;
+      var c   = rib.col;
+      var cs  = lShift * 55;
+      var colR = Math.min(255, Math.max(0, c[0] + cs));
+      var colG = Math.min(255, Math.max(0, c[1] + cs * 0.4));
+      var colB = Math.min(255, Math.max(0, c[2] + cs * 0.15));
+      var w    = rib.width * (0.85 + 0.15 * lBright);
+      drawRibbon(pts, colR, colG, colB, w, rib.alpha * lBright, false);
+      drawRibbon(pts, colR, colG, colB, w, rib.alpha * lBright, true);
     }
 
-    // 4. Dot matrix — right-hemisphere surface texture
-    var ROWS = 20, COLS = 24;
-    for (var ri = 0; ri < ROWS; ri++) {
-      var phi = (ri / (ROWS - 1)) * Math.PI;
-      for (var ci = 0; ci < COLS; ci++) {
-        var theta   = (ci / COLS) * Math.PI * 2;
-        var dx      =  R * Math.sin(phi) * Math.cos(theta);
-        var dy      =  R * Math.cos(phi);
-        var dz      =  R * Math.sin(phi) * Math.sin(theta);
-        if (dx < 15 || dy < -60) continue;
-        var dpx = CX + dx;
-        var dpy = CY - dz * 0.9 + dy * 0.18;
-        var dAlpha = Math.max(0, dy / R) * 0.20 + 0.03;
+    ctx.globalCompositeOperation = 'source-over';
+
+    // 5. Dot matrix — right hemisphere surface texture
+    for (var ri = 0; ri < 20; ri++) {
+      for (var ci = 0; ci < 24; ci++) {
+        var phi   = (ri / 19) * Math.PI;
+        var theta = (ci / 24) * Math.PI * 2;
+        var x3 =  R * Math.sin(phi) * Math.cos(theta);
+        var y3 =  R * Math.cos(phi);
+        var z3 =  R * Math.sin(phi) * Math.sin(theta);
+        if (x3 < 12 || y3 < -55) continue;
+        var dpx = CX + x3;
+        var dpy = CY - z3 * 0.9 + y3 * 0.16;
+        var da  = Math.max(0, y3 / R) * 0.18 + 0.03;
         ctx.beginPath();
         ctx.arc(dpx, dpy, 0.85, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(80,160,255,' + dAlpha + ')';
+        ctx.fillStyle = 'rgba(80,160,255,' + da + ')';
         ctx.fill();
       }
     }
 
-    // 5. Inner core glow
+    // 6. Inner volumetric core glow
     ctx.globalCompositeOperation = 'screen';
-    var coreBreath = (0.20 + 0.06 * Math.sin(frame * 0.006)) * lBright;
-    var core = ctx.createRadialGradient(CX, CY, 0, CX, CY, R * 0.68);
-    core.addColorStop(0,   'rgba(55,110,255,' + coreBreath + ')');
-    core.addColorStop(0.4, 'rgba(28,60,200,'  + (coreBreath * 0.35) + ')');
+    var cb   = (0.18 + 0.055 * Math.sin(frame * 0.006)) * lBright;
+    var core = ctx.createRadialGradient(CX, CY, 0, CX, CY, R * 0.7);
+    core.addColorStop(0,   'rgba(55,110,255,' + cb + ')');
+    core.addColorStop(0.4, 'rgba(28,58,200,'  + (cb * 0.35) + ')');
     core.addColorStop(1,   'rgba(0,0,0,0)');
     ctx.beginPath();
     ctx.arc(CX, CY, R, 0, Math.PI * 2);
@@ -236,61 +228,64 @@
     ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
 
-    // 6. Edge vignette
+    // 7. Edge vignette
     var vign = ctx.createRadialGradient(CX, CY, R * 0.45, CX, CY, R);
     vign.addColorStop(0,    'rgba(0,0,0,0)');
-    vign.addColorStop(0.65, 'rgba(0,0,0,0.05)');
-    vign.addColorStop(1,    'rgba(0,0,0,0.65)');
+    vign.addColorStop(0.68, 'rgba(0,0,0,0.06)');
+    vign.addColorStop(1,    'rgba(0,0,0,0.68)');
     ctx.fillStyle = vign;
     ctx.fillRect(0, 0, W, H);
 
-    // 7. Specular highlight — top-left
+    // 8. Specular highlight top-left
     var spec = ctx.createRadialGradient(
       CX - R * 0.34, CY - R * 0.38, 0,
       CX - R * 0.30, CY - R * 0.30, R * 0.44
     );
-    spec.addColorStop(0,    'rgba(210,235,255,0.26)');
-    spec.addColorStop(0.35, 'rgba(150,210,255,0.08)');
-    spec.addColorStop(0.7,  'rgba(100,170,255,0.02)');
-    spec.addColorStop(1,    'rgba(0,0,0,0)');
+    spec.addColorStop(0,   'rgba(210,235,255,0.24)');
+    spec.addColorStop(0.4, 'rgba(150,210,255,0.07)');
+    spec.addColorStop(1,   'rgba(0,0,0,0)');
     ctx.fillStyle = spec;
     ctx.fillRect(0, 0, W, H);
 
     ctx.restore(); // end sphere clip
 
-    // 8. Rim light — outside clip, sits on sphere edge
+    // 9. Rim light
     ctx.beginPath();
-    ctx.arc(CX, CY, R - 0.5, Math.PI * 0.72, Math.PI * 1.92);
-    ctx.strokeStyle = 'rgba(140,200,255,' + (0.45 * lBright) + ')';
-    ctx.lineWidth   = 1.5;
+    ctx.arc(CX, CY, R - 0.5, Math.PI * 0.72, Math.PI * 1.95);
+    ctx.strokeStyle = 'rgba(140,200,255,' + (0.42 * lBright) + ')';
+    ctx.lineWidth   = 1.4;
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(CX, CY, R - 0.5, Math.PI * 1.92, Math.PI * 2.72);
-    ctx.strokeStyle = 'rgba(30,60,180,' + (0.12 * lBright) + ')';
+    ctx.arc(CX, CY, R - 0.5, Math.PI * 1.95, Math.PI * 2.72);
+    ctx.strokeStyle = 'rgba(30,60,180,' + (0.11 * lBright) + ')';
     ctx.lineWidth   = 0.8;
     ctx.stroke();
 
-    // 9. State indicator rings
+    // 10. State rings
     var s = currentState;
     if (s === 'listening' || s === 'speaking') {
-      var spd    = s === 'speaking' ? 0.14 : 0.08;
-      var pulseR = R + 10 + 8 * Math.sin(frame * spd);
-      var pulseA = (0.25 + 0.15 * Math.abs(Math.sin(frame * spd))) * lBright;
+      var spd = s === 'speaking' ? 0.13 : 0.07;
+      var pr  = R + 10 + 8 * Math.sin(frame * spd);
+      var pa  = (0.22 + 0.14 * Math.abs(Math.sin(frame * spd))) * lBright;
       ctx.beginPath();
-      ctx.arc(CX, CY, pulseR, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,212,255,' + pulseA + ')';
+      ctx.arc(CX, CY, pr, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,212,255,' + pa + ')';
       ctx.lineWidth   = 1.2;
       ctx.stroke();
     }
     if (s === 'thinking') {
-      var arcStart = (frame * 0.025) % (Math.PI * 2);
+      var arcStart = (frame * 0.022) % (Math.PI * 2);
       ctx.beginPath();
-      ctx.arc(CX, CY, R + 8, arcStart, arcStart + Math.PI * 1.2);
-      ctx.strokeStyle = 'rgba(160,80,255,' + (0.35 * lBright) + ')';
-      ctx.lineWidth   = 1;
+      ctx.arc(CX, CY, R + 9, arcStart, arcStart + Math.PI * 1.3);
+      ctx.strokeStyle = 'rgba(160,80,255,' + (0.32 * lBright) + ')';
+      ctx.lineWidth   = 1.0;
       ctx.stroke();
     }
+  }
 
+  function loop() {
+    frameId = requestAnimationFrame(loop);
+    render();
     frame++;
   }
 
@@ -315,7 +310,7 @@
   // ── Public API ────────────────────────────────────────────────────────
   window.APEX_ORB = {
     setState: function (state) {
-      if (!STATE_CONFIG[state]) return;
+      if (!STATE_CFG[state]) return;
       currentState = state;
       updateLabels();
     },
@@ -326,18 +321,15 @@
   function init() {
     var canvas = document.getElementById('plasmaOrb');
     if (!canvas) return;
-
     canvas.width  = W;
     canvas.height = H;
     ctx = canvas.getContext('2d');
-
-    initOffPool();
     updateLabels();
 
     var cmdPage = document.getElementById('page-command');
 
     function startLoop() {
-      if (!frameId) frameId = requestAnimationFrame(render);
+      if (!frameId) loop();
     }
     function stopLoop() {
       if (frameId) { cancelAnimationFrame(frameId); frameId = null; }
