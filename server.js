@@ -45,6 +45,19 @@ const expandPrompt = require('./agent-system/prompt-expander');
 const runAgentTeam = require('./agent-system/orchestrator');
 const agentLib     = require('./agent-system/agent-library');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
+const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
+
+// ── Keyword-based domain detector (fast, zero API cost) ──────────────────────
+function detectDomain(text) {
+    const t = text.toLowerCase();
+    if (/financ|money|spend|budget|invoice|transaction|payment|income|expense|cost|£|\$|gbp|bank|subscript/.test(t)) return 'finance';
+    if (/uni|university|assignment|lecture|module|flashcard|deadline|exam|study|coursework|cs249r|textbook/.test(t)) return 'uni';
+    if (/\bfile\b|folder|vault|obsidian|document|note|wiki|upload|storage|knowledge base/.test(t)) return 'file';
+    if (/server|pipeline|render|health|agent.?run|uptime|deploy|system.?status|circuit.?breaker|cost.?spike|haiku|sonnet/.test(t)) return 'system';
+    if (/client|proposal|crm|project|contract|business|lead|pipeline|follow.?up|deal|invoice.*(client|project)/.test(t)) return 'business';
+    return null;
+}
+// ── End detectDomain ──────────────────────────────────────────────────────────
 const { createClient: _sbAdmin } = require('@supabase/supabase-js');
 const sbAdmin = _sbAdmin(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const {
@@ -7023,6 +7036,21 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         }
         // ── End agent intent ───────────────────────────────────────────────────
 
+        // ── Domain agent routing (keyword-based) ───────────────────────────────
+        const _chatDomainSlug = detectDomain(userMessage);
+        if (_chatDomainSlug && Object.prototype.hasOwnProperty.call(_DOMAIN_AGENTS, _chatDomainSlug)) {
+            try {
+                const _domRes = await _invokeDomainAgent(_chatDomainSlug, userMessage);
+                clearTimeout(chatTimeout);
+                const _domReply = `[${_domRes.agent.name}]\n\n${_domRes.reply}`;
+                setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _domReply); });
+                return res.status(200).json({ ok: true, reply: _domReply, domain: _chatDomainSlug });
+            } catch (_domErr) {
+                console.warn('[CHAT] domain agent failed, falling through to general:', _domErr.message);
+            }
+        }
+        // ── End domain routing ─────────────────────────────────────────────────
+
         const memory = await loadMemory();
         setImmediate(() => addToMemory("user", userMessage));
 
@@ -8182,13 +8210,16 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         try { alexContext = await buildAlexContext(); } catch {}
 
         // Domain agent routing — dispatch to specialist when intent is clear
-        const { invokeDomainAgent, DOMAIN_AGENTS } = require('./agent-system/domain-agents');
-        const _domainSlug = lcRouter.DOMAIN_SLUG_MAP[lcRoute.domain];
+        // Prefer LangChain slug (high confidence); fall back to keyword detection.
+        const _lcSlug    = lcRouter.DOMAIN_SLUG_MAP[lcRoute.domain];
+        const _domainSlug = (_lcSlug && lcRoute.confidence >= 0.75)
+            ? _lcSlug
+            : detectDomain(userMessage);
         let finalReply = '';
 
-        if (_domainSlug && Object.prototype.hasOwnProperty.call(DOMAIN_AGENTS, _domainSlug) && lcRoute.confidence >= 0.75) {
+        if (_domainSlug && Object.prototype.hasOwnProperty.call(_DOMAIN_AGENTS, _domainSlug)) {
             try {
-                const domResult = await invokeDomainAgent(_domainSlug, userMessage);
+                const domResult = await _invokeDomainAgent(_domainSlug, userMessage);
                 finalReply = domResult.reply;
                 console.log(`[LATENCY] +${Date.now() - t0}ms domain agent: ${domResult.agent.name} | stop: ${domResult.stopReason}`);
             } catch (domErr) {

@@ -5866,8 +5866,8 @@ textarea, select, .ds-input, .apex-search-input,
 /* Plasma orb canvas */
 #plasmaOrb {
   display: block !important;
-  width: 280px !important;
-  height: 280px !important;
+  width: 320px !important;
+  height: 320px !important;
 }
 
 /* ── SVG precision rings ──────────────────────────────────────────── */
@@ -6179,13 +6179,11 @@ textarea, select, .ds-input, .apex-search-input,
                     <div class="cmd-stage" id="cmdStage">
 
                         <!-- APEX Plasma Orb -->
-                        <div class="jarvis-orb-wrap">
-                            <canvas id="plasmaOrb" width="280" height="280" onclick="window.startVoice && window.startVoice()" style="cursor:pointer;display:block;"></canvas>
-                            <div class="orb-text">
-                                <div class="orb-name">APEX</div>
-                                <div class="orb-state" id="cmdOrbState">STANDBY</div>
-                            </div>
-                            <div class="orb-hint">TAP TO SPEAK</div>
+                        <div class="jarvis-orb-wrap" onclick="window.startVoice && window.startVoice()" style="cursor:pointer;">
+                            <canvas id="plasmaOrb" style="border-radius:50%;display:block;"></canvas>
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.22em;color:#00d4ff;display:block;">APEX</span>
+                            <span id="plasmaOrbSubLabel" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.15em;color:#1a3050;display:block;">STANDBY · TAP TO SPEAK</span>
+                            <span id="cmdOrbState" style="display:none">STANDBY</span>
                         </div>
 
                         <!-- Waveform (voice active) -->
@@ -8389,31 +8387,34 @@ function setConnStatus(online) {
 
 // ══ ORB STATE ═════════════════════════════════════════════════════════
 function setOrbState(state) {
-    // state: "ready" | "listening" | "processing" | "speaking"
+    // Map legacy state names to PlasmaOrb states
+    const ORB_MAP = { ready: 'standby', waiting: 'standby', listening: 'listening', processing: 'thinking', thinking: 'thinking', speaking: 'speaking' };
+    if (window.APEX_ORB) window.APEX_ORB.setState(ORB_MAP[state] || 'standby');
+
     const shell    = document.getElementById("orbShell");
     const statusEl = document.getElementById("orbStatus");
     const waveform = document.getElementById("waveform");
     const micBtn   = document.getElementById("micBtn");
     const orbEl    = document.getElementById("orb");
 
-    shell.classList.remove("active", "listening", "waiting");
-    waveform.classList.remove("active");
-    micBtn.classList.remove("listening");
+    if (shell) shell.classList.remove("active", "listening", "waiting");
+    if (waveform) waveform.classList.remove("active");
+    if (micBtn) micBtn.classList.remove("listening");
     if (orbEl) orbEl.classList.remove("orb-recording");
 
     const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
     const labels = { ready: "Ready", waiting: "Standby", listening: isTouchDevice ? "Hold To Talk" : "Listening…", processing: "Processing…", thinking: "Thinking…", speaking: "Speaking…" };
-    statusEl.textContent = labels[state] || "Ready";
+    if (statusEl) statusEl.textContent = labels[state] || "Ready";
 
     if (state === "listening") {
-        shell.classList.add("listening");
-        waveform.classList.add("active");
-        micBtn.classList.add("listening");
+        if (shell) shell.classList.add("listening");
+        if (waveform) waveform.classList.add("active");
+        if (micBtn) micBtn.classList.add("listening");
         if (orbEl) orbEl.classList.add("orb-recording");
     } else if (state === "processing" || state === "speaking") {
-        shell.classList.add("active");
+        if (shell) shell.classList.add("active");
     } else if (state === "waiting") {
-        shell.classList.add("waiting");
+        if (shell) shell.classList.add("waiting");
     }
 }
 
@@ -14728,221 +14729,7 @@ window.apexFileDropHandler = function(e){
 })();
 </script>
 <!-- Plasma Orb Canvas Engine -->
-<script>
-(function initPlasmaOrb() {
-  var canvas = document.getElementById('plasmaOrb');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var W = canvas.width, H = canvas.height;
-  var CX = W / 2, CY = H / 2;
-  var RADIUS = 100;
-
-  var COLOURS = [
-    '#00d4ff', // cyan
-    '#0099ff', // blue-cyan
-    '#00ffcc', // teal
-    '#7b5fff', // violet
-    '#00b8ff', // mid-blue
-    '#44eeff', // bright cyan
-    '#3380ff'  // cobalt
-  ];
-
-  var ribbons = [
-    { tiltAngle: 0,   speed: 0.00055, phase: 0,    amplitude: 0.55, frequency: 2.1, colour: COLOURS[0], width: 2.5, opacity: 0.90 },
-    { tiltAngle: 26,  speed: 0.00080, phase: 1.1,  amplitude: 0.48, frequency: 1.7, colour: COLOURS[1], width: 1.8, opacity: 0.75 },
-    { tiltAngle: 52,  speed: 0.00035, phase: 2.3,  amplitude: 0.62, frequency: 2.5, colour: COLOURS[2], width: 1.5, opacity: 0.70 },
-    { tiltAngle: 78,  speed: 0.00065, phase: 0.7,  amplitude: 0.40, frequency: 1.4, colour: COLOURS[3], width: 2.0, opacity: 0.80 },
-    { tiltAngle: 104, speed: 0.00045, phase: 3.1,  amplitude: 0.58, frequency: 3.0, colour: COLOURS[4], width: 1.2, opacity: 0.65 },
-    { tiltAngle: 130, speed: 0.00090, phase: 1.8,  amplitude: 0.35, frequency: 1.9, colour: COLOURS[5], width: 2.2, opacity: 0.85 },
-    { tiltAngle: 156, speed: 0.00070, phase: 0.4,  amplitude: 0.50, frequency: 2.3, colour: COLOURS[0], width: 1.6, opacity: 0.72 },
-    { tiltAngle: 15,  speed: 0.00042, phase: 2.7,  amplitude: 0.44, frequency: 1.6, colour: COLOURS[6], width: 1.4, opacity: 0.68 },
-    { tiltAngle: 41,  speed: 0.00075, phase: 0.9,  amplitude: 0.60, frequency: 2.8, colour: COLOURS[1], width: 2.8, opacity: 0.78 },
-    { tiltAngle: 67,  speed: 0.00030, phase: 1.5,  amplitude: 0.38, frequency: 2.0, colour: COLOURS[2], width: 1.1, opacity: 0.60 },
-    { tiltAngle: 93,  speed: 0.00095, phase: 3.5,  amplitude: 0.52, frequency: 2.6, colour: COLOURS[3], width: 1.9, opacity: 0.82 },
-    { tiltAngle: 119, speed: 0.00058, phase: 0.2,  amplitude: 0.46, frequency: 1.3, colour: COLOURS[4], width: 2.4, opacity: 0.88 },
-    { tiltAngle: 145, speed: 0.00038, phase: 2.1,  amplitude: 0.64, frequency: 2.2, colour: COLOURS[5], width: 1.7, opacity: 0.76 },
-    { tiltAngle: 171, speed: 0.00085, phase: 1.3,  amplitude: 0.42, frequency: 1.8, colour: COLOURS[6], width: 1.3, opacity: 0.63 }
-  ];
-
-  var frame = 0;
-
-  function drawRibbon(r, breathe) {
-    var tilt = r.tiltAngle * Math.PI / 180;
-    var cosTilt = Math.cos(tilt);
-    var sinTilt = Math.sin(tilt);
-    var t = frame * r.speed + r.phase;
-    var pts = [];
-    var steps = 120;
-
-    for (var i = 0; i <= steps; i++) {
-      var u = (i / steps) * Math.PI * 2;
-      var baseX = Math.cos(u) * RADIUS * breathe;
-      var baseY = Math.sin(u) * RADIUS * breathe;
-      // z-displacement creates the plasma wave bulge
-      var z = Math.sin(u * r.frequency + t) * r.amplitude * RADIUS * breathe;
-      // project 3D tilt onto 2D
-      var px = baseX * Math.cos(0) - z * Math.sin(0); // no rotation needed
-      var py = baseY + z * sinTilt;
-      // apply tilt rotation
-      var rx = px * Math.cos(tilt) - py * 0;
-      var ry = baseY * cosTilt + z * sinTilt;
-      pts.push({ x: baseX + CX, y: ry + CY, z: z });
-    }
-
-    // sort: back (z<0) first, then front (z>0)
-    // draw back half
-    ctx.beginPath();
-    var started = false;
-    for (var i = 0; i <= steps; i++) {
-      var p = pts[i];
-      if (p.z <= 0) {
-        if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-        else ctx.lineTo(p.x, p.y);
-      }
-    }
-    if (started) {
-      ctx.strokeStyle = r.colour;
-      ctx.globalAlpha = r.opacity * 0.4;
-      ctx.lineWidth = r.width * 0.7;
-      ctx.stroke();
-    }
-
-    // draw front half (brighter)
-    ctx.beginPath();
-    started = false;
-    for (var i = 0; i <= steps; i++) {
-      var p = pts[i];
-      if (p.z > 0) {
-        if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-        else ctx.lineTo(p.x, p.y);
-      }
-    }
-    if (started) {
-      ctx.strokeStyle = r.colour;
-      ctx.globalAlpha = r.opacity;
-      ctx.lineWidth = r.width;
-      ctx.stroke();
-    }
-  }
-
-  function drawGlowCore(breathe) {
-    // Layer 1: outer ambient glow (large, very soft)
-    var g1 = ctx.createRadialGradient(CX, CY, 0, CX, CY, RADIUS * 1.4 * breathe);
-    g1.addColorStop(0,   'rgba(0,212,255,0.08)');
-    g1.addColorStop(0.5, 'rgba(0,100,200,0.04)');
-    g1.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = g1;
-    ctx.beginPath();
-    ctx.arc(CX, CY, RADIUS * 1.4 * breathe, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Layer 2: mid plasma glow
-    var g2 = ctx.createRadialGradient(CX, CY, 0, CX, CY, RADIUS * 0.9 * breathe);
-    g2.addColorStop(0,   'rgba(0,180,255,0.18)');
-    g2.addColorStop(0.6, 'rgba(0,100,255,0.06)');
-    g2.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = g2;
-    ctx.beginPath();
-    ctx.arc(CX, CY, RADIUS * 0.9 * breathe, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Layer 3: hot core
-    var g3 = ctx.createRadialGradient(CX, CY, 0, CX, CY, RADIUS * 0.35 * breathe);
-    g3.addColorStop(0,   'rgba(180,240,255,0.55)');
-    g3.addColorStop(0.4, 'rgba(0,212,255,0.30)');
-    g3.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = g3;
-    ctx.beginPath();
-    ctx.arc(CX, CY, RADIUS * 0.35 * breathe, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function drawClipMask(breathe) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(CX, CY, RADIUS * breathe, 0, Math.PI * 2);
-    ctx.clip();
-  }
-
-  function render() {
-    frame++;
-    var breathe = 1.0 + 0.012 * Math.sin(frame * 0.008);
-
-    ctx.clearRect(0, 0, W, H);
-    ctx.globalAlpha = 1;
-
-    // glow layers (outside clip — allowed to bleed)
-    drawGlowCore(breathe);
-
-    // clip ribbons to orb sphere
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(CX, CY, RADIUS * breathe + 2, 0, Math.PI * 2);
-    ctx.clip();
-
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.shadowBlur = 0;
-
-    // pass 1: glow (wide, transparent)
-    ctx.shadowBlur = 8;
-    for (var i = 0; i < ribbons.length; i++) {
-      ctx.shadowColor = ribbons[i].colour;
-      drawRibbon(ribbons[i], breathe);
-    }
-
-    // pass 2: core line (sharp, full opacity)
-    ctx.shadowBlur = 3;
-    for (var i = 0; i < ribbons.length; i++) {
-      ctx.shadowColor = ribbons[i].colour;
-      drawRibbon(ribbons[i], breathe);
-    }
-
-    ctx.restore();
-
-    // pass 3: bright specular re-glow over everything
-    ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#00d4ff';
-    ctx.beginPath();
-    ctx.arc(CX, CY, RADIUS * breathe, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(0,212,255,0.6)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
-
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-
-    requestAnimationFrame(render);
-  }
-
-  // start when command page becomes visible (or immediately if already visible)
-  function tryStart() {
-    var cmdPage = document.getElementById('page-command');
-    if (cmdPage && cmdPage.classList.contains('active')) {
-      render();
-    } else {
-      var obs = new MutationObserver(function(mutations) {
-        if (cmdPage && cmdPage.classList.contains('active')) {
-          obs.disconnect();
-          render();
-        }
-      });
-      var target = cmdPage || document.body;
-      obs.observe(target, { attributes: true, attributeFilter: ['class'] });
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tryStart);
-  } else {
-    tryStart();
-  }
-})();
-</script>
+<script src="/src/components/orb/PlasmaOrb.js"></script>
 <!-- apex-visual-editor removed -->
 </body>
 </html>
