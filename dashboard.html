@@ -5838,99 +5838,227 @@ textarea, select, .ds-input, .apex-search-input,
 .page-and-input:has(#page-command.active) .apex-input-zone,
 .page-and-input:has(#page-command.active) > div:last-child { display: none !important; }
 
-/* ── Jarvis CSS orb ──────────────────────────────────────────────────── */
+/* ══ APEX JARVIS ORB ═════════════════════════════════════════════════ */
 .jarvis-orb-wrap {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 28px !important;
-  pointer-events: none !important;
+  gap: 32px !important;
   user-select: none !important;
 }
+
 .jarvis-orb {
   position: relative !important;
-  width: 180px !important; height: 180px !important;
-  display: flex !important; align-items: center !important; justify-content: center !important;
-  pointer-events: auto !important;
+  width: 240px !important; height: 240px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   cursor: pointer !important;
 }
-.orb-ring {
+
+/* ── SVG precision rings ──────────────────────────────────────────── */
+.j-svg {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important; height: 100% !important;
+  overflow: visible !important;
+}
+
+/* Outer tick ring — slow reverse */
+.j-ticks { animation: j-spin-rev 35s linear infinite !important; transform-origin: center !important; }
+
+/* Segment ring — medium reverse */
+.j-segs  { animation: j-spin-rev 18s linear infinite !important; transform-origin: center !important; }
+
+/* Inner segment ring — slow forward */
+.j-segs-i { animation: j-spin-fwd 25s linear infinite !important; transform-origin: center !important; }
+
+/* Primary 270° arc — fast forward */
+.j-arc-p { animation: j-spin-fwd 4s linear infinite !important; transform-origin: center !important; }
+
+/* Arc head dot — same speed as primary arc */
+.j-arc-h { animation: j-spin-fwd 4s linear infinite !important; transform-origin: center !important; }
+
+/* Counter arc — medium reverse */
+.j-arc-c { animation: j-spin-rev 7s linear infinite !important; transform-origin: center !important; }
+
+/* 4 data markers — very slow forward */
+.j-marks { animation: j-spin-fwd 20s linear infinite !important; transform-origin: center !important; }
+
+/* Inner fast arc — very fast forward */
+.j-arc-i { animation: j-spin-fwd 1.8s linear infinite !important; transform-origin: center !important; }
+
+/* Core SVG ring — medium, reverse */
+.j-core-svg { animation: j-spin-rev 10s linear infinite !important; transform-origin: center !important; }
+
+/* Cross-hairs — static */
+.j-cross { }
+
+@keyframes j-spin-fwd { from { transform: rotate(0deg); }   to { transform: rotate(360deg); }  }
+@keyframes j-spin-rev { from { transform: rotate(0deg); }   to { transform: rotate(-360deg); } }
+
+/* ── 3D orbital rings ─────────────────────────────────────────────── */
+.j-orbit {
   position: absolute !important;
   border-radius: 50% !important;
-  border: 1px solid rgba(0,212,255,0.15) !important;
-  animation: orb-rotate 8s linear infinite !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
 }
-.orb-ring-1 {
-  width: 180px !important; height: 180px !important;
-  border-top-color: rgba(0,212,255,0.5) !important;
-  border-right-color: rgba(0,212,255,0.1) !important;
-  animation-duration: 6s !important;
-}
-.orb-ring-2 {
-  width: 140px !important; height: 140px !important;
-  border-bottom-color: rgba(0,212,255,0.4) !important;
-  border-left-color: rgba(0,212,255,0.08) !important;
-  animation-direction: reverse !important;
-  animation-duration: 9s !important;
-}
-.orb-ring-3 {
-  width: 108px !important; height: 108px !important;
-  border-top-color: rgba(0,212,255,0.25) !important;
-  border-right-color: transparent !important;
-  border-bottom-color: transparent !important;
-  animation-duration: 4s !important;
-}
-.orb-core {
-  width: 72px !important; height: 72px !important;
-  border-radius: 50% !important;
-  background: radial-gradient(circle at 40% 35%, rgba(0,212,255,0.18) 0%, rgba(0,212,255,0.04) 60%, transparent 100%) !important;
-  border: 1px solid rgba(0,212,255,0.3) !important;
-  display: flex !important; align-items: center !important; justify-content: center !important;
-  animation: orb-breathe 3s ease-in-out infinite !important;
-}
-.orb-inner {
-  width: 32px !important; height: 32px !important;
-  border-radius: 50% !important;
-  background: rgba(0,212,255,0.12) !important;
-  border: 1px solid rgba(0,212,255,0.5) !important;
-}
-@keyframes orb-rotate {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-@keyframes orb-breathe {
-  0%,100% { transform: scale(1);    opacity: 0.7; }
-  50%      { transform: scale(1.06); opacity: 1; }
-}
-.jarvis-orb.active .orb-ring { animation-duration: 1.5s !important; }
-.jarvis-orb.active .orb-core { animation-duration: 0.8s !important; border-color: rgba(0,212,255,0.8) !important; }
 
+/* Orbit A: main equatorial, 180px, 5s */
+.j-orbit-a {
+  width: 180px !important; height: 180px !important;
+  border: 1px solid rgba(0,212,255,0.22) !important;
+  animation: j-orbit-a 5s linear infinite !important;
+}
+@keyframes j-orbit-a {
+  from { transform: perspective(350px) rotateX(72deg) rotateZ(0deg); }
+  to   { transform: perspective(350px) rotateX(72deg) rotateZ(360deg); }
+}
+
+/* Orbit B: 60° offset, 148px, 8s reverse */
+.j-orbit-b {
+  width: 148px !important; height: 148px !important;
+  border: 1px solid rgba(0,212,255,0.16) !important;
+  animation: j-orbit-b 8s linear infinite !important;
+}
+@keyframes j-orbit-b {
+  from { transform: perspective(350px) rotateX(72deg) rotateZ(60deg); }
+  to   { transform: perspective(350px) rotateX(72deg) rotateZ(-300deg); }
+}
+
+/* Orbit C: perpendicular Y-axis, 120px, 3.5s */
+.j-orbit-c {
+  width: 120px !important; height: 120px !important;
+  border: 1px solid rgba(0,212,255,0.2) !important;
+  animation: j-orbit-c 3.5s linear infinite !important;
+}
+@keyframes j-orbit-c {
+  from { transform: perspective(350px) rotateY(72deg) rotateZ(0deg); }
+  to   { transform: perspective(350px) rotateY(72deg) rotateZ(360deg); }
+}
+
+/* Orbit dots — sit at top of each ring, orbit in 3D with parent */
+.j-dot {
+  position: absolute !important;
+  top: -4px !important;
+  left: 50% !important;
+  margin-left: -4px !important;
+  width: 8px !important; height: 8px !important;
+  border-radius: 50% !important;
+  background: var(--cyan) !important;
+  box-shadow: 0 0 6px rgba(0,212,255,0.9) !important;
+}
+
+/* Comet trail on orbits A and C */
+.j-comet {
+  position: absolute !important;
+  top: -2px !important;
+  left: 50% !important;
+  margin-left: -12px !important;
+  width: 24px !important; height: 4px !important;
+  border-radius: 2px !important;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.6)) !important;
+}
+
+/* ── Sweep scanner ────────────────────────────────────────────────── */
+.j-scan {
+  position: absolute !important;
+  width: 156px !important; height: 156px !important;
+  border-radius: 50% !important;
+  background: conic-gradient(
+    from 0deg,
+    rgba(0,212,255,0.18) 0deg,
+    rgba(0,212,255,0.04) 30deg,
+    transparent 60deg
+  ) !important;
+  animation: j-spin-fwd 3s linear infinite !important;
+}
+
+/* ── Core sphere ──────────────────────────────────────────────────── */
+.j-core {
+  position: absolute !important;
+  width: 66px !important; height: 66px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: radial-gradient(
+    circle at 38% 32%,
+    rgba(0,212,255,0.22) 0%,
+    rgba(0,212,255,0.07) 45%,
+    rgba(0,0,0,0.4) 100%
+  ) !important;
+  border: 1px solid rgba(0,212,255,0.4) !important;
+  animation: j-breathe 3s ease-in-out infinite !important;
+}
+
+.j-core-glow {
+  position: absolute !important;
+  inset: -12px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle, rgba(0,212,255,0.08) 0%, transparent 70%) !important;
+  animation: j-breathe 3s ease-in-out infinite !important;
+}
+
+.j-core-ring-css {
+  position: absolute !important;
+  width: 44px !important; height: 44px !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(0,212,255,0.3) !important;
+  animation: j-spin-fwd 8s linear infinite !important;
+  border-top-color: rgba(0,212,255,0.7) !important;
+  border-right-color: transparent !important;
+}
+
+.j-core-dot {
+  width: 14px !important; height: 14px !important;
+  border-radius: 50% !important;
+  background: rgba(0,212,255,0.9) !important;
+  box-shadow: 0 0 8px rgba(0,212,255,0.6) !important;
+  animation: j-pulse 2s ease-in-out infinite !important;
+}
+
+@keyframes j-breathe {
+  0%,100% { opacity: 0.7; transform: scale(1);    }
+  50%      { opacity: 1;   transform: scale(1.05); }
+}
+@keyframes j-pulse {
+  0%,100% { opacity: 0.8; transform: scale(1);    }
+  50%      { opacity: 1;   transform: scale(1.3); }
+}
+
+/* Active state when voice is on */
+.jarvis-orb.active .j-arc-p { animation-duration: 1.5s !important; }
+.jarvis-orb.active .j-arc-i { animation-duration: 0.6s !important; }
+.jarvis-orb.active .j-scan  { animation-duration: 1s !important; }
+.jarvis-orb.active .j-core  { border-color: rgba(0,212,255,0.9) !important; }
+
+/* ── Orb labels ───────────────────────────────────────────────────── */
 .orb-text { text-align: center !important; }
 .orb-name {
   font-family: var(--f-mono) !important;
-  font-size: 11px !important;
-  letter-spacing: 0.3em !important;
+  font-size: 14px !important;
+  letter-spacing: 0.35em !important;
   color: var(--tx0) !important;
   margin-bottom: 6px !important;
 }
 .orb-state {
   font-family: var(--f-mono) !important;
-  font-size: 9px !important;
+  font-size: 11px !important;
   letter-spacing: 0.2em !important;
   color: var(--tx2) !important;
 }
 .orb-hint {
   font-family: var(--f-sans) !important;
-  font-size: 10px !important;
+  font-size: 13px !important;
   color: var(--tx3) !important;
-  letter-spacing: 0.06em !important;
-  animation: orb-hint-fade 3s ease-in-out 2s both !important;
+  letter-spacing: 0.08em !important;
+  animation: j-fade-in 3s ease-in-out 2s both !important;
 }
-@keyframes orb-hint-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
+@keyframes j-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* Waveform on command page */
 .waveform { position: absolute !important; bottom: 20% !important; left: 50% !important; transform: translateX(-50%) !important; }
@@ -6037,14 +6165,59 @@ textarea, select, .ds-input, .apex-search-input,
                 <div id="cmd-main">
                     <div class="cmd-stage" id="cmdStage">
 
-                        <!-- CSS Jarvis orb -->
+                        <!-- APEX Jarvis Orb -->
                         <div class="jarvis-orb-wrap">
                             <div class="jarvis-orb" id="jarvisOrb" onclick="window.startVoice && window.startVoice()">
-                                <div class="orb-ring orb-ring-1"></div>
-                                <div class="orb-ring orb-ring-2"></div>
-                                <div class="orb-ring orb-ring-3"></div>
-                                <div class="orb-core"><div class="orb-inner"></div></div>
+
+                                <!-- SVG precision rings layer -->
+                                <svg class="j-svg" viewBox="-120 -120 240 240" xmlns="http://www.w3.org/2000/svg">
+                                    <!-- Outer tick ring: 72 ticks -->
+                                    <circle class="j-ticks" r="112" fill="none" stroke="rgba(0,212,255,0.18)" stroke-width="1.5" stroke-dasharray="2 7.76"/>
+                                    <!-- Segment ring: 8 segments -->
+                                    <circle class="j-segs" r="99" fill="none" stroke="rgba(0,212,255,0.12)" stroke-width="1" stroke-dasharray="42 27.5"/>
+                                    <!-- Primary 270° arc -->
+                                    <circle class="j-arc-p" r="99" fill="none" stroke="rgba(0,212,255,0.65)" stroke-width="1.5" stroke-dasharray="471 157" stroke-linecap="round"/>
+                                    <!-- Bright arc head — tiny dot racing ahead of arc -->
+                                    <circle class="j-arc-h" r="99" fill="none" stroke="#00d4ff" stroke-width="4" stroke-dasharray="4 624" stroke-linecap="round"/>
+                                    <!-- Counter 180° arc -->
+                                    <circle class="j-arc-c" r="88" fill="none" stroke="rgba(0,212,255,0.2)" stroke-width="1" stroke-dasharray="277 277" stroke-linecap="round"/>
+                                    <!-- 4 data markers at 90° intervals -->
+                                    <circle class="j-marks" r="88" fill="none" stroke="rgba(0,212,255,0.5)" stroke-width="3" stroke-dasharray="4 134.5" stroke-linecap="round"/>
+                                    <!-- Inner fast arc: 60° -->
+                                    <circle class="j-arc-i" r="76" fill="none" stroke="rgba(0,212,255,0.55)" stroke-width="1.5" stroke-dasharray="80 397" stroke-linecap="round"/>
+                                    <!-- Inner segment ring -->
+                                    <circle class="j-segs-i" r="68" fill="none" stroke="rgba(0,212,255,0.08)" stroke-width="1" stroke-dasharray="20 15.7"/>
+                                    <!-- Cross hairs -->
+                                    <line class="j-cross" x1="-60" y1="0" x2="60" y2="0" stroke="rgba(0,212,255,0.06)" stroke-width="1"/>
+                                    <line class="j-cross" x1="0" y1="-60" x2="0" y2="60" stroke="rgba(0,212,255,0.06)" stroke-width="1"/>
+                                    <!-- Core ring SVG -->
+                                    <circle class="j-core-svg" r="34" fill="none" stroke="rgba(0,212,255,0.35)" stroke-width="1" stroke-dasharray="12 7.12"/>
+                                </svg>
+
+                                <!-- 3D orbital rings -->
+                                <div class="j-orbit j-orbit-a">
+                                    <div class="j-dot"></div>
+                                    <div class="j-comet"></div>
+                                </div>
+                                <div class="j-orbit j-orbit-b">
+                                    <div class="j-dot"></div>
+                                </div>
+                                <div class="j-orbit j-orbit-c">
+                                    <div class="j-dot"></div>
+                                    <div class="j-comet"></div>
+                                </div>
+
+                                <!-- Sweep scanner -->
+                                <div class="j-scan"></div>
+
+                                <!-- Core sphere -->
+                                <div class="j-core">
+                                    <div class="j-core-glow"></div>
+                                    <div class="j-core-ring-css"></div>
+                                    <div class="j-core-dot"></div>
+                                </div>
                             </div>
+
                             <div class="orb-text">
                                 <div class="orb-name">APEX</div>
                                 <div class="orb-state" id="cmdOrbState">STANDBY</div>
