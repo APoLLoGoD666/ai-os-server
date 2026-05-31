@@ -5681,6 +5681,16 @@ h1, h2, h3, h4 {
 .topbar .clock-date { font-size: 9px !important; }
 #tmAgents, #tmCost, #tmLatency { display: none !important; }
 
+/* ── Sidebar: force collapse on page switch ─────────────────────────── */
+@media (min-width: 900px) {
+  .bottom-nav.nav-collapsed,
+  .bottom-nav.nav-collapsed:hover {
+    width: 52px !important;
+    box-shadow: none !important;
+  }
+  .bottom-nav.nav-collapsed .nav-label { opacity: 0 !important; }
+}
+
 /* ── Hide all nav notification badges ───────────────────────────────── */
 .ds-notif-badge, #navOpsBadge, #navIntelBadge, #navCommsBadge { display: none !important; }
 
@@ -7530,6 +7540,12 @@ h1, h2, h3, h4 {
         if (page) page.classList.add('active');
         if (btn)  btn.classList.add('active');
         activePage = name;
+        // Force sidebar to collapse on navigation
+        var nav = document.querySelector('.bottom-nav');
+        if (nav) {
+            nav.classList.add('nav-collapsed');
+            setTimeout(function() { nav.classList.remove('nav-collapsed'); }, 400);
+        }
     };
 
     var startX = 0, startY = 0;
