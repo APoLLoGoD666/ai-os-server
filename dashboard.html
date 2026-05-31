@@ -5681,6 +5681,85 @@ h1, h2, h3, h4 {
 .topbar .clock-date { font-size: 9px !important; }
 #tmAgents, #tmCost, #tmLatency { display: none !important; }
 
+/* ── GLOBAL TYPE SCALE INCREASE ─────────────────────────────────────── */
+/* Base body size */
+html, body { font-size: 16px !important; }
+
+/* Navigation */
+.nav-label          { font-size: 13px !important; }
+.nav-icon           { font-size: 20px !important; }
+
+/* Topbar */
+.clock-time         { font-size: 18px !important; }
+.clock-date         { font-size: 12px !important; }
+.topbar-pill        { font-size: 12px !important; }
+.apex-metric-val    { font-size: 14px !important; }
+.apex-metric-lbl    { font-size: 11px !important; }
+
+/* Buttons */
+.ds-btn, button.ds-btn, .btn { font-size: 12px !important; height: 28px !important; padding: 0 14px !important; }
+
+/* Pills & tags */
+.ds-pill, .tag, .badge, .chip,
+[class*="-pill"]:not(.topbar-pill),
+[class*="-badge"] { font-size: 11px !important; padding: 3px 8px !important; }
+
+/* Tables */
+.ds-table th, table th { font-size: 12px !important; padding: 8px 10px !important; }
+.ds-table td, table td { font-size: 14px !important; padding: 9px 10px !important; height: 40px !important; }
+
+/* Section / label text */
+.label-upper, .ds-label, .t-xs, .t-meta,
+[class*="-label"]:not(.nav-label):not(.orb-label),
+[class*="section-title"], [class*="panel-title"] { font-size: 12px !important; }
+.t-small  { font-size: 13px !important; }
+.t-body   { font-size: 16px !important; }
+.t-h3     { font-size: 16px !important; }
+.t-h2     { font-size: 18px !important; }
+.t-h1     { font-size: 22px !important; }
+
+/* Inputs */
+input[type="text"], input[type="email"], input[type="password"],
+input[type="search"], input[type="number"], input[type="url"],
+textarea, select, .ds-input, .apex-search-input,
+.chat-input, .apex-chat-input, #chatInput { font-size: 15px !important; }
+
+/* Chat / feed entries */
+.chat-bubble, .msg, .message,
+.apex-feed-msg, .apex-feed-ts { font-size: 14px !important; }
+.apex-tag { font-size: 11px !important; }
+
+/* Card internals */
+.ds-card *, .glass-panel *, .apex-card * { }
+.stat-num, .stat-val, .cmd-stat .stat-num,
+.fin-amount, .fin-positive, .fin-negative { font-size: 18px !important; }
+.stat-lbl, .stat-sub, .stat-unit { font-size: 12px !important; }
+
+/* Approval / operation items */
+.apq-card *, .approval-card * { font-size: 14px !important; }
+.approve-btn, .deny-btn { font-size: 11px !important; height: 26px !important; padding: 0 12px !important; }
+
+/* Research */
+.apex-res-btn       { font-size: 12px !important; }
+.apex-res-block-title { font-size: 14px !important; }
+.apex-res-block-body  { font-size: 13px !important; }
+.apex-res-block-url   { font-size: 11px !important; }
+
+/* Orb */
+.orb-name   { font-size: 14px !important; }
+.orb-state  { font-size: 12px !important; }
+.orb-hint   { font-size: 13px !important; }
+
+/* Help / drawer */
+.help-key  { font-size: 13px !important; }
+.help-desc { font-size: 13px !important; }
+
+/* Misc small text that may not be caught above */
+* { letter-spacing: revert; }
+[style*="font-size:8"], [style*="font-size: 8"],
+[style*="font-size:9"], [style*="font-size: 9"],
+[style*="font-size:10"], [style*="font-size: 10"] { font-size: 13px !important; }
+
 /* ── Sidebar: force collapse on page switch ─────────────────────────── */
 @media (min-width: 900px) {
   .bottom-nav.nav-collapsed,
