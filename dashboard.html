@@ -5866,15 +5866,15 @@ textarea, select, .ds-input, .apex-search-input,
 /* Plasma orb canvas */
 #plasmaOrb {
   display: block !important;
-  width: 320px !important;
-  height: 320px !important;
+  width: 360px !important;
+  height: 360px !important;
   /* override .cmd-stage canvas { inset:0 } which pins to top-left */
   position: absolute !important;
   top: 50% !important;
   left: 50% !important;
   right: auto !important;
   bottom: auto !important;
-  transform: translate(-50%, -50%) !important;
+  transform: translate(-50%, -54%) !important;
 }
 
 /* ── SVG precision rings ──────────────────────────────────────────── */
@@ -6186,8 +6186,8 @@ textarea, select, .ds-input, .apex-search-input,
                     <div class="cmd-stage" id="cmdStage">
 
                         <!-- APEX Plasma Orb -->
-                        <canvas id="plasmaOrb" onclick="window.startVoice && window.startVoice()" style="cursor:pointer;border-radius:50%;"></canvas>
-                        <div style="position:absolute;top:calc(50% + 172px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;">
+                        <canvas id="plasmaOrb" onclick="window.startVoice && window.startVoice()" style="cursor:pointer;"></canvas>
+                        <div style="position:absolute;top:calc(50% + 148px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;">
                             <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.22em;color:#00d4ff;">APEX</span>
                             <span id="plasmaOrbSubLabel" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.15em;color:#1a3050;">STANDBY · TAP TO SPEAK</span>
                         </div>

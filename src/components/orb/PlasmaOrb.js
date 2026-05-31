@@ -1,285 +1,345 @@
-// PlasmaOrb.js — APEX Plasma Orb v2 (shadowBlur layered strokes, no ctx.filter)
-// Exposes window.APEX_ORB.setState(state).
-// States: 'standby' | 'listening' | 'thinking' | 'speaking'
+// PlasmaOrb.js — APEX Intelligence Core v3
+// Holographic AI viz: wireframe sphere, orbit rings, particles, HUD brackets
+// No ctx.filter — shadowBlur only
 
 (function () {
   'use strict';
 
-  var W = 320, H = 320, CX = 160, CY = 160, R = 138;
-  var LERP = 0.007;
+  var W = 360, H = 360, CX = 180, CY = 180;
+  var LERP = 0.006;
   var frame = 0, frameId = null, ctx = null;
-  var lSpMul = 1, lBright = 1, lShift = 0;
+  var lSpMul = 1.0, lBright = 0.85, lShift = 0.0;
   var currentState = 'standby';
 
   var STATE_CFG = {
-    standby:   { spMul: 1.0,  bright: 1.0,  shift:  0.0 },
-    listening: { spMul: 4.0,  bright: 1.6,  shift:  0.3 },
-    thinking:  { spMul: 2.4,  bright: 1.3,  shift: -0.5 },
-    speaking:  { spMul: 5.5,  bright: 1.9,  shift:  0.6 },
+    standby:   { spMul: 1.0, bright: 0.85, shift:  0.0 },
+    listening: { spMul: 2.8, bright: 1.45, shift:  0.3 },
+    thinking:  { spMul: 3.8, bright: 1.25, shift: -0.3 },
+    speaking:  { spMul: 4.5, bright: 1.65, shift:  0.5 },
   };
 
-  var COLS = [
-    [80,  20,  255],
-    [110, 30,  255],
-    [20,  80,  255],
-    [0,   140, 255],
-    [0,   210, 255],
-    [160, 60,  255],
-    [40,  40,  220],
-    [130, 10,  255],
-  ];
-
-  function srng(seed) {
-    var s = seed;
-    return function () { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  // ── 3-D rotation helpers ──────────────────────────────────────────────
+  function rotX(v, a) {
+    var c = Math.cos(a), s = Math.sin(a);
+    return [v[0], v[1]*c - v[2]*s, v[1]*s + v[2]*c];
+  }
+  function rotY(v, a) {
+    var c = Math.cos(a), s = Math.sin(a);
+    return [v[0]*c + v[2]*s, v[1], -v[0]*s + v[2]*c];
+  }
+  function rotZ(v, a) {
+    var c = Math.cos(a), s = Math.sin(a);
+    return [v[0]*c - v[1]*s, v[0]*s + v[1]*c, v[2]];
+  }
+  function project(v) {
+    return [CX + v[0], CY - v[1]];   // orthographic, Y-up
+  }
+  function applyRots(v, rots) {
+    for (var i = 0; i < rots.length; i++) {
+      var r = rots[i];
+      if (r.ax === 'x') v = rotX(v, r.a);
+      else if (r.ax === 'y') v = rotY(v, r.a);
+      else v = rotZ(v, r.a);
+    }
+    return v;
   }
 
-  var rng = srng(137);
-  var RIBBONS = (function () {
-    var arr = [];
-    for (var i = 0; i < 28; i++) {
-      arr.push({
-        tilt:      (rng() - 0.5) * Math.PI * 1.75,
-        azimuth:   rng() * Math.PI * 2,
-        speed:     (0.00006 + rng() * 0.00012) * (rng() > 0.5 ? 1 : -1),
-        width:     22 + rng() * 52,
-        phase:     rng() * Math.PI * 2,
-        wavePhase: rng() * Math.PI * 2,
-        amp:       0.04 + rng() * 0.16,
-        freq:      0.4  + rng() * 1.6,
-        col:       COLS[i % COLS.length],
-        alpha:     0.28 + rng() * 0.42,
-      });
-    }
-    return arr;
-  })();
+  // ── Wireframe sphere ─────────────────────────────────────────────────
+  function drawWireframeSphere(R, spinY, tiltX, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 0.55;
 
-  function computePoints(rib, T) {
-    var pts = [];
-    var N   = 200;
-    var ct  = Math.cos(rib.tilt),    st = Math.sin(rib.tilt);
-    var ca  = Math.cos(rib.azimuth), sa = Math.sin(rib.azimuth);
-
-    for (var k = 0; k <= N; k++) {
-      var u  = (k / N) * Math.PI * 2;
-      var ph = rib.phase + T;
-
-      var x = R * Math.cos(u + ph);
-      var y = R * Math.sin(u + ph);
-
-      // Rotation 1 — tilt around Z
-      var xr = x * ct - y * st;
-      var yr = x * st + y * ct;
-
-      // Rotation 2 — azimuth around X
-      var xf = xr;
-      var yf = yr * ca;
-      var zf = yr * sa;
-
-      // Surface wave deformation
-      var wave = rib.amp * R *
-        Math.sin(u * rib.freq + T * 0.3 + rib.wavePhase);
-      var nx = xf / R, ny = yf / R, nz = zf / R;
-      xf += nx * wave * 0.22;
-      yf += ny * wave * 0.22;
-      zf += nz * wave * 0.22;
-
-      pts.push({
-        x:     CX + xf,
-        y:     CY - zf * 0.9 + yf * 0.16,
-        depth: yf,
-      });
-    }
-    return pts;
-  }
-
-  // 4-layer shadowBlur stroke — replaces ctx.filter blur
-  function drawRibbon(pts, colR, colG, colB, width, alpha, isFront) {
-    var seg = [];
-    for (var i = 0; i < pts.length; i++) {
-      if (isFront ? pts[i].depth >= 0 : pts[i].depth < 0) seg.push(pts[i]);
-    }
-    if (seg.length < 3) return;
-
-    var depthMul  = isFront ? 1.0 : 0.15;
-    var baseAlpha = alpha * depthMul;
-    if (baseAlpha < 0.01) return;
-
-    function stroke(lw, sa, blurW, blurA, brightBoost) {
-      var br = brightBoost ? Math.min(255, colR + 80) : colR;
-      var bg = brightBoost ? Math.min(255, colG + 60) : colG;
-      var bb = brightBoost ? 255 : colB;
-      ctx.save();
+    // Latitude circles
+    var lats = [-55, -28, 0, 28, 55];
+    for (var li = 0; li < lats.length; li++) {
+      var lat  = lats[li] * Math.PI / 180;
+      var r2   = R * Math.cos(lat);
+      var yOff = R * Math.sin(lat);
       ctx.beginPath();
-      ctx.moveTo(seg[0].x, seg[0].y);
-      for (var i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
-      ctx.lineWidth   = lw;
-      ctx.lineCap     = 'round';
-      ctx.lineJoin    = 'round';
-      ctx.strokeStyle = 'rgba(' + Math.round(br) + ',' + Math.round(bg) + ',' + Math.round(bb) + ',' + (baseAlpha * sa) + ')';
-      ctx.shadowBlur  = blurW;
-      ctx.shadowColor = 'rgba(' + Math.round(colR) + ',' + Math.round(colG) + ',' + Math.round(colB) + ',' + (baseAlpha * blurA) + ')';
+      for (var i = 0; i <= 90; i++) {
+        var a  = (i / 90) * Math.PI * 2;
+        var v  = [r2 * Math.cos(a + spinY), yOff, r2 * Math.sin(a + spinY)];
+        v = rotX(v, tiltX);
+        var p  = project(v);
+        if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+      }
       ctx.stroke();
-      ctx.restore();
     }
 
-    // Layer 1 — ultra-wide outer feather
-    stroke(width * 3.2, 0.06, width * 2.5, 0.12, false);
-    // Layer 2 — wide mid feather
-    stroke(width * 1.6, 0.18, width * 1.2, 0.25, false);
-    // Layer 3 — main ribbon body
-    stroke(width * 0.7, 0.55, width * 0.6, 0.60, false);
-    // Layer 4 — thin bright core line
-    stroke(width * 0.18, 0.85, width * 0.4, 0.4, true);
+    // Meridians
+    for (var mi = 0; mi < 9; mi++) {
+      var lon = (mi / 9) * Math.PI * 2 + spinY;
+      ctx.beginPath();
+      for (var i = 0; i <= 60; i++) {
+        var lat2 = (i / 60) * Math.PI - Math.PI / 2;
+        var v    = [R * Math.cos(lat2) * Math.cos(lon), R * Math.sin(lat2), R * Math.cos(lat2) * Math.sin(lon)];
+        v = rotX(v, tiltX);
+        var p = project(v);
+        if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+      }
+      ctx.stroke();
+    }
   }
 
+  // ── Ring in 3-D space ─────────────────────────────────────────────────
+  function drawRing3D(R, rots, color, lw, dash, glow) {
+    var N   = 100;
+    var pts = [];
+    for (var i = 0; i <= N; i++) {
+      var a = (i / N) * Math.PI * 2;
+      var v = applyRots([R * Math.cos(a), R * Math.sin(a), 0], rots);
+      pts.push(project(v));
+    }
+    if (glow) { ctx.shadowBlur = glow; ctx.shadowColor = color; }
+    if (dash)  ctx.setLineDash(dash);
+    ctx.lineWidth   = lw;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.stroke();
+    if (dash)  ctx.setLineDash([]);
+    if (glow) ctx.shadowBlur = 0;
+  }
+
+  // ── Tick marks on a ring in 3-D ───────────────────────────────────────
+  function drawTicks3D(R, rots, color, count, tickOut, lw) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = lw;
+    for (var i = 0; i < count; i++) {
+      var a  = (i / count) * Math.PI * 2;
+      var v1 = applyRots([R * Math.cos(a), R * Math.sin(a), 0], rots);
+      var v2 = applyRots([(R + tickOut) * Math.cos(a), (R + tickOut) * Math.sin(a), 0], rots);
+      var p1 = project(v1), p2 = project(v2);
+      ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke();
+    }
+  }
+
+  // ── Hexagon ───────────────────────────────────────────────────────────
+  function drawHex(r, angle, color, lw, glow) {
+    if (glow) { ctx.shadowBlur = glow; ctx.shadowColor = color; }
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = lw;
+    ctx.beginPath();
+    for (var i = 0; i <= 6; i++) {
+      var a = angle + (i / 6) * Math.PI * 2;
+      if (i === 0) ctx.moveTo(CX + r * Math.cos(a), CY + r * Math.sin(a));
+      else         ctx.lineTo(CX + r * Math.cos(a), CY + r * Math.sin(a));
+    }
+    ctx.stroke();
+    if (glow) ctx.shadowBlur = 0;
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────
   function render() {
     var cfg = STATE_CFG[currentState];
     lSpMul  += (cfg.spMul  - lSpMul)  * LERP;
     lBright += (cfg.bright - lBright) * LERP;
     lShift  += (cfg.shift  - lShift)  * LERP;
 
-    var T = frame * 0.001 * lSpMul;
+    var T  = frame * 0.0007 * lSpMul;
+    var lb = lBright;
     ctx.clearRect(0, 0, W, H);
 
-    // 1. Outer corona halo
-    var corona = ctx.createRadialGradient(CX, CY, R * 0.5, CX, CY, R * 1.58);
-    corona.addColorStop(0,    'rgba(12,30,180,'  + (0.22 * lBright) + ')');
-    corona.addColorStop(0.45, 'rgba(6,15,110,'   + (0.09 * lBright) + ')');
-    corona.addColorStop(1,    'rgba(0,0,0,0)');
-    ctx.beginPath();
-    ctx.arc(CX, CY, R * 1.58, 0, Math.PI * 2);
-    ctx.fillStyle = corona;
-    ctx.fill();
-
-    // 2. Sphere clip
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(CX, CY, R, 0, Math.PI * 2);
-    ctx.clip();
-
-    // 3. Deep navy base
-    var base = ctx.createRadialGradient(CX - R * 0.1, CY - R * 0.18, 0, CX, CY, R);
-    base.addColorStop(0,    'rgb(9,16,68)');
-    base.addColorStop(0.42, 'rgb(4,9,38)');
-    base.addColorStop(0.78, 'rgb(2,4,20)');
-    base.addColorStop(1,    'rgb(1,2,11)');
-    ctx.fillStyle = base;
+    // 1. Background corona
+    var cor = ctx.createRadialGradient(CX, CY, 20, CX, CY, 185);
+    cor.addColorStop(0,   'rgba(0,90,200,'  + (0.14 * lb) + ')');
+    cor.addColorStop(0.5, 'rgba(0,30,90,'   + (0.07 * lb) + ')');
+    cor.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = cor;
     ctx.fillRect(0, 0, W, H);
 
-    // 4. Ribbons with screen blend
-    ctx.globalCompositeOperation = 'screen';
+    // 2. Wireframe sphere
+    ctx.globalAlpha = 0.18 * lb;
+    drawWireframeSphere(88, T * 0.12, 0.32, '#00aaff');
+    ctx.globalAlpha = 1;
 
-    var computed = RIBBONS.map(function (rib) {
-      var speed = rib.speed * lSpMul;
-      var ribWithSpeed = { tilt: rib.tilt, azimuth: rib.azimuth, speed: speed,
-        width: rib.width, phase: rib.phase, wavePhase: rib.wavePhase,
-        amp: rib.amp, freq: rib.freq, col: rib.col, alpha: rib.alpha };
-      var pts  = computePoints(ribWithSpeed, T);
-      var sum  = 0;
-      for (var i = 0; i < pts.length; i++) sum += pts[i].depth;
-      return { rib: rib, pts: pts, avgD: sum / pts.length };
-    });
-    computed.sort(function (a, b) { return a.avgD - b.avgD; });
-
-    for (var si = 0; si < computed.length; si++) {
-      var rib = computed[si].rib, pts = computed[si].pts;
-      var c   = rib.col;
-      var cs  = lShift * 55;
-      var colR = Math.min(255, Math.max(0, c[0] + cs));
-      var colG = Math.min(255, Math.max(0, c[1] + cs * 0.4));
-      var colB = Math.min(255, Math.max(0, c[2] + cs * 0.15));
-      var w    = rib.width * (0.85 + 0.15 * lBright);
-      drawRibbon(pts, colR, colG, colB, w, rib.alpha * lBright, false);
-      drawRibbon(pts, colR, colG, colB, w, rib.alpha * lBright, true);
+    // 3. Orbiting particle field — 32 dots on spherical shell
+    for (var i = 0; i < 32; i++) {
+      var phi   = Math.acos(1 - 2 * (i + 0.5) / 32);  // Fibonacci sphere
+      var theta = i * 2.39996 + T * (0.35 + (i % 5) * 0.04);
+      var pr    = 90 + (i % 4) * 5;
+      var vp    = [pr * Math.sin(phi) * Math.cos(theta),
+                   pr * Math.cos(phi),
+                   pr * Math.sin(phi) * Math.sin(theta)];
+      var pp    = project(vp);
+      var depth = (vp[2] + pr) / (2 * pr);
+      var da    = (depth * 0.55 + 0.08) * lb;
+      var ds    = depth * 1.8 + 0.5;
+      ctx.beginPath();
+      ctx.arc(pp[0], pp[1], ds, 0, Math.PI * 2);
+      ctx.fillStyle   = 'rgba(0,212,255,' + da + ')';
+      ctx.shadowBlur  = depth * 7;
+      ctx.shadowColor = '#00c8ff';
+      ctx.fill();
+      ctx.shadowBlur  = 0;
     }
 
-    ctx.globalCompositeOperation = 'source-over';
+    // 4. Three tilted orbit rings
+    var rA = [{ ax: 'x', a: 0.52  }, { ax: 'z', a: T * 0.38 }];
+    var rB = [{ ax: 'x', a: 1.12  }, { ax: 'y', a: T * 0.24 }];
+    var rC = [{ ax: 'x', a: 0.22  }, { ax: 'z', a: -T * 0.17 }];
 
-    // 5. Dot matrix — right hemisphere surface texture
-    for (var ri = 0; ri < 20; ri++) {
-      for (var ci = 0; ci < 24; ci++) {
-        var phi   = (ri / 19) * Math.PI;
-        var theta = (ci / 24) * Math.PI * 2;
-        var x3 =  R * Math.sin(phi) * Math.cos(theta);
-        var y3 =  R * Math.cos(phi);
-        var z3 =  R * Math.sin(phi) * Math.sin(theta);
-        if (x3 < 12 || y3 < -55) continue;
-        var dpx = CX + x3;
-        var dpy = CY - z3 * 0.9 + y3 * 0.16;
-        var da  = Math.max(0, y3 / R) * 0.18 + 0.03;
-        ctx.beginPath();
-        ctx.arc(dpx, dpy, 0.85, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(80,160,255,' + da + ')';
-        ctx.fill();
-      }
+    drawRing3D(116, rA, 'rgba(0,212,255,'   + (0.52 * lb) + ')', 0.85, [18, 5, 3, 5], 5);
+    drawRing3D(124, rB, 'rgba(120,50,255,'  + (0.44 * lb) + ')', 0.85, [12, 6, 2, 6], 4);
+    drawRing3D(110, rC, 'rgba(0,100,255,'   + (0.38 * lb) + ')', 0.65, [6, 3],        2);
+
+    // 5. Tick marks + data ring
+    var tickRots = [{ ax: 'x', a: 0.28 }, { ax: 'y', a: T * 0.10 }];
+    drawTicks3D(130, tickRots, 'rgba(0,212,255,' + (0.28 * lb) + ')', 36, 4,  0.55);
+    drawTicks3D(130, tickRots, 'rgba(0,212,255,' + (0.55 * lb) + ')', 12, 7,  0.9);
+
+    // 6. Scanner arc (flat, rotates fast)
+    var sc  = T * 1.8;
+    ctx.beginPath();
+    ctx.arc(CX, CY, 133, sc, sc + Math.PI * 0.38);
+    ctx.strokeStyle = 'rgba(0,212,255,' + (0.72 * lb) + ')';
+    ctx.lineWidth   = 1.6;
+    ctx.shadowBlur  = 10;
+    ctx.shadowColor = '#00d4ff';
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+
+    ctx.beginPath();
+    ctx.arc(CX, CY, 133, sc + Math.PI, sc + Math.PI + Math.PI * 0.18);
+    ctx.strokeStyle = 'rgba(0,212,255,' + (0.18 * lb) + ')';
+    ctx.lineWidth   = 0.7;
+    ctx.stroke();
+
+    // 7. HUD corner brackets (4 × rotating)
+    var bR  = 148;
+    var bL  = 13;
+    var bS  = T * 0.055;
+    ctx.strokeStyle = 'rgba(0,212,255,' + (0.44 * lb) + ')';
+    ctx.lineWidth   = 1.1;
+    ctx.shadowBlur  = 5;
+    ctx.shadowColor = '#00d4ff';
+    for (var bi = 0; bi < 4; bi++) {
+      var ba  = bS + bi * Math.PI * 0.5;
+      var bx  = CX + bR * Math.cos(ba);
+      var by  = CY + bR * Math.sin(ba);
+      var b1a = ba + Math.PI * 0.72;
+      var b2a = ba - Math.PI * 0.72;
+      ctx.beginPath();
+      ctx.moveTo(bx + bL * Math.cos(b1a), by + bL * Math.sin(b1a));
+      ctx.lineTo(bx, by);
+      ctx.lineTo(bx + bL * Math.cos(b2a), by + bL * Math.sin(b2a));
+      ctx.stroke();
     }
+    ctx.shadowBlur = 0;
 
-    // 6. Inner volumetric core glow
-    ctx.globalCompositeOperation = 'screen';
-    var cb   = (0.18 + 0.055 * Math.sin(frame * 0.006)) * lBright;
-    var core = ctx.createRadialGradient(CX, CY, 0, CX, CY, R * 0.7);
-    core.addColorStop(0,   'rgba(55,110,255,' + cb + ')');
-    core.addColorStop(0.4, 'rgba(28,58,200,'  + (cb * 0.35) + ')');
-    core.addColorStop(1,   'rgba(0,0,0,0)');
+    // 8. Inner hexagon trio
+    var hA = T * 0.28;
+    drawHex(44,  hA,                  'rgba(0,212,255,'  + (0.42 * lb) + ')', 1.0, 7);
+    drawHex(37,  hA + Math.PI / 6,   'rgba(120,50,255,' + (0.36 * lb) + ')', 0.8, 4);
+    drawHex(27, -hA * 0.65,          'rgba(0,130,255,'  + (0.50 * lb) + ')', 0.9, 6);
+
+    // 9. Fast inner data ring
     ctx.beginPath();
-    ctx.arc(CX, CY, R, 0, Math.PI * 2);
-    ctx.fillStyle = core;
+    ctx.arc(CX, CY, 54, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0,140,255,' + (0.22 * lb) + ')';
+    ctx.lineWidth   = 0.6;
+    ctx.setLineDash([3, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    var fi = -T * 3.2;
+    ctx.beginPath();
+    ctx.arc(CX, CY, 54, fi, fi + Math.PI * 0.28);
+    ctx.strokeStyle = 'rgba(0,212,255,' + (0.85 * lb) + ')';
+    ctx.lineWidth   = 1.6;
+    ctx.shadowBlur  = 7;
+    ctx.shadowColor = '#00d4ff';
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+
+    // 10. Core radial glow
+    var cb  = (0.28 + 0.07 * Math.sin(frame * 0.038)) * lb;
+    var cg  = ctx.createRadialGradient(CX, CY, 0, CX, CY, 26);
+    cg.addColorStop(0,   'rgba(200,240,255,' + cb + ')');
+    cg.addColorStop(0.45,'rgba(0,200,255,'   + (cb * 0.55) + ')');
+    cg.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = cg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Core bright dot
+    var cr = 3.5 + 1.2 * Math.sin(frame * 0.038);
+    ctx.beginPath();
+    ctx.arc(CX, CY, cr, 0, Math.PI * 2);
+    ctx.fillStyle   = 'rgba(225,248,255,' + (0.92 * lb) + ')';
+    ctx.shadowBlur  = 22;
+    ctx.shadowColor = '#00d4ff';
     ctx.fill();
-    ctx.globalCompositeOperation = 'source-over';
+    ctx.shadowBlur  = 0;
 
-    // 7. Edge vignette
-    var vign = ctx.createRadialGradient(CX, CY, R * 0.45, CX, CY, R);
-    vign.addColorStop(0,    'rgba(0,0,0,0)');
-    vign.addColorStop(0.68, 'rgba(0,0,0,0.06)');
-    vign.addColorStop(1,    'rgba(0,0,0,0.68)');
-    ctx.fillStyle = vign;
-    ctx.fillRect(0, 0, W, H);
+    // 11. Floating data readouts
+    var hx = '0123456789ABCDEF';
+    function fhex(seed, n) {
+      var s = '';
+      for (var i = 0; i < n; i++) s += hx[(frame * 0.06 + seed * 17 + i * 7 | 0) % 16];
+      return s;
+    }
+    ctx.font      = '7px "JetBrains Mono", monospace';
+    ctx.fillStyle = 'rgba(0,212,255,' + (0.32 * lb) + ')';
+    ctx.fillText(fhex(1,4) + ':' + fhex(2,4), CX + 155, CY - 6);
+    ctx.fillText(fhex(3,4) + ':' + fhex(4,4), CX - 184, CY - 6);
+    ctx.fillText(fhex(5,4), CX - 14, CY - 158);
+    ctx.fillText(fhex(6,4), CX - 14, CY + 168);
 
-    // 8. Specular highlight top-left
-    var spec = ctx.createRadialGradient(
-      CX - R * 0.34, CY - R * 0.38, 0,
-      CX - R * 0.30, CY - R * 0.30, R * 0.44
-    );
-    spec.addColorStop(0,   'rgba(210,235,255,0.24)');
-    spec.addColorStop(0.4, 'rgba(150,210,255,0.07)');
-    spec.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = spec;
-    ctx.fillRect(0, 0, W, H);
+    // Status label (small, below brackets)
+    ctx.font      = '6.5px "JetBrains Mono", monospace';
+    ctx.fillStyle = 'rgba(0,212,255,' + (0.22 * lb) + ')';
+    ctx.fillText('SYS:' + (currentState === 'standby' ? 'IDLE' : currentState.toUpperCase().slice(0,4)), CX + 155, CY + 10);
 
-    ctx.restore(); // end sphere clip
-
-    // 9. Rim light
-    ctx.beginPath();
-    ctx.arc(CX, CY, R - 0.5, Math.PI * 0.72, Math.PI * 1.95);
-    ctx.strokeStyle = 'rgba(140,200,255,' + (0.42 * lBright) + ')';
-    ctx.lineWidth   = 1.4;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(CX, CY, R - 0.5, Math.PI * 1.95, Math.PI * 2.72);
-    ctx.strokeStyle = 'rgba(30,60,180,' + (0.11 * lBright) + ')';
-    ctx.lineWidth   = 0.8;
-    ctx.stroke();
-
-    // 10. State rings
+    // 12. State-specific effects
     var s = currentState;
-    if (s === 'listening' || s === 'speaking') {
-      var spd = s === 'speaking' ? 0.13 : 0.07;
-      var pr  = R + 10 + 8 * Math.sin(frame * spd);
-      var pa  = (0.22 + 0.14 * Math.abs(Math.sin(frame * spd))) * lBright;
-      ctx.beginPath();
-      ctx.arc(CX, CY, pr, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,212,255,' + pa + ')';
-      ctx.lineWidth   = 1.2;
-      ctx.stroke();
+
+    if (s === 'listening') {
+      // Two offset expanding pulse rings
+      [0, 0.5].forEach(function(offset) {
+        var ph = ((frame * 0.035) + offset) % 1;
+        var pr = 95 + ph * 58;
+        var pa = (1 - ph) * 0.48 * lb;
+        ctx.beginPath();
+        ctx.arc(CX, CY, pr, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,212,255,' + pa + ')';
+        ctx.lineWidth   = 1.4;
+        ctx.stroke();
+      });
     }
-    if (s === 'thinking') {
-      var arcStart = (frame * 0.022) % (Math.PI * 2);
+
+    if (s === 'speaking') {
+      // Waveform ring
       ctx.beginPath();
-      ctx.arc(CX, CY, R + 9, arcStart, arcStart + Math.PI * 1.3);
-      ctx.strokeStyle = 'rgba(160,80,255,' + (0.32 * lBright) + ')';
-      ctx.lineWidth   = 1.0;
+      for (var wi = 0; wi <= 120; wi++) {
+        var wa = (wi / 120) * Math.PI * 2;
+        var wr = 104 + 7 * Math.sin(wa * 8 + frame * 0.14) * Math.sin(wa * 3 + frame * 0.09);
+        var wx = CX + wr * Math.cos(wa);
+        var wy = CY + wr * Math.sin(wa);
+        if (wi === 0) ctx.moveTo(wx, wy); else ctx.lineTo(wx, wy);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(0,212,255,' + (0.48 * lb) + ')';
+      ctx.lineWidth   = 1;
+      ctx.shadowBlur  = 6;
+      ctx.shadowColor = '#00d4ff';
       ctx.stroke();
+      ctx.shadowBlur  = 0;
+    }
+
+    if (s === 'thinking') {
+      // Three staggered violet scanning arcs
+      for (var ti = 0; ti < 3; ti++) {
+        var ts = T * 4.5 + ti * Math.PI * 0.67;
+        ctx.beginPath();
+        ctx.arc(CX, CY, 99 + ti * 8, ts, ts + Math.PI * 0.32);
+        ctx.strokeStyle = 'rgba(120,50,255,' + (0.48 * lb) + ')';
+        ctx.lineWidth   = 1.1;
+        ctx.shadowBlur  = 5;
+        ctx.shadowColor = 'rgba(120,50,255,0.8)';
+        ctx.stroke();
+        ctx.shadowBlur  = 0;
+      }
     }
   }
 
@@ -289,8 +349,8 @@
     frame++;
   }
 
-  // ── Label updates ─────────────────────────────────────────────────────
-  var STATE_LABELS = {
+  // ── Labels ────────────────────────────────────────────────────────────
+  var LABELS = {
     standby:   'STANDBY · TAP TO SPEAK',
     listening: '● LISTENING',
     thinking:  '⟳ PROCESSING',
@@ -300,11 +360,11 @@
   function updateLabels() {
     var lbl = document.getElementById('plasmaOrbSubLabel');
     if (lbl) {
-      lbl.textContent = STATE_LABELS[currentState] || '';
+      lbl.textContent = LABELS[currentState] || '';
       lbl.style.color = currentState === 'standby' ? '#1a3050' : '#00d4ff';
     }
-    var cmdState = document.getElementById('cmdOrbState');
-    if (cmdState) cmdState.textContent = currentState.toUpperCase();
+    var cs = document.getElementById('cmdOrbState');
+    if (cs) cs.textContent = currentState.toUpperCase();
   }
 
   // ── Public API ────────────────────────────────────────────────────────
@@ -327,18 +387,12 @@
     updateLabels();
 
     var cmdPage = document.getElementById('page-command');
-
-    function startLoop() {
-      if (!frameId) loop();
-    }
-    function stopLoop() {
-      if (frameId) { cancelAnimationFrame(frameId); frameId = null; }
-    }
+    function startLoop() { if (!frameId) loop(); }
+    function stopLoop()  { if (frameId) { cancelAnimationFrame(frameId); frameId = null; } }
 
     if (cmdPage) {
       var obs = new MutationObserver(function () {
-        if (cmdPage.classList.contains('active')) startLoop();
-        else stopLoop();
+        if (cmdPage.classList.contains('active')) startLoop(); else stopLoop();
       });
       obs.observe(cmdPage, { attributes: true, attributeFilter: ['class'] });
       if (cmdPage.classList.contains('active')) startLoop();
