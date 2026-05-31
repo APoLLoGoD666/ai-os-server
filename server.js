@@ -9896,15 +9896,14 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
 });
 
 async function checkPendingMasterTasks() {
-    console.log('[Master] checkPendingMasterTasks() called');
     try {
         const { data, error } = await sbAdmin
             .from('apex_notifications')
             .select('*')
             .in('type', ['master_task', 'master_run'])
             .eq('read', false)
-            .order('created_at', { ascending: true });
-        console.log('[Master] pending task query result:', JSON.stringify(data));
+            .order('created_at', { ascending: true })
+            .limit(10);
         if (error) { console.error('[Master] checkPending query error:', error.message); return; }
         if (!data || !data.length) return;
         _lastPipelineActivity = Date.now();
@@ -10613,7 +10612,7 @@ const _wsKeepalive = setInterval(() => {
         meta._pongReceived = false;
         if (ws.readyState === ws.OPEN) ws.ping();
     });
-}, 30000);
+}, 60000);
 _wss.on('close', () => clearInterval(_wsKeepalive));
 
 // ── gws chunked send: split large payloads into sequenced frames ─────────────
@@ -10682,7 +10681,7 @@ server.listen(PORT, () => {
     }, 6 * 60 * 60 * 1000); // every 6 hours
 
     // Pick up any master tasks that were queued before a cold-start restart
-    setTimeout(() => checkPendingMasterTasks(), 10000);
+    setTimeout(() => checkPendingMasterTasks(), 30000);
     // Auto-approve safe permission requests — runs after task check settles
     setTimeout(() => autoApproveStandardPermissions(), 15000);
 
@@ -10695,7 +10694,7 @@ server.listen(PORT, () => {
         }
     }, 600000);
 
-setInterval(checkPendingMasterTasks, 10000);
+setInterval(checkPendingMasterTasks, 60000);
 checkPendingMasterTasks();
 
     // Nightly wiki consolidation at 3am
