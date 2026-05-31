@@ -4698,10 +4698,10 @@ body::before {
   border-radius: 4px !important;
   border-top: none !important;
 }
-.ds-panel { overflow: hidden !important; }
+.ds-panel { overflow: visible !important; }
 .ds-panel-header {
   display: flex !important; align-items: center !important; justify-content: space-between !important;
-  padding: 9px 12px !important;
+  padding: 10px 14px !important;
   border-bottom: 1px solid var(--v12-bd) !important;
   background: transparent !important;
 }
@@ -5854,7 +5854,6 @@ li, td, th, div.label, div.value { font-size: inherit; }
 .cmd-strip    { display: none !important; }
 #cmdWidgetLayer { display: none !important; }
 #apexTtsToggle  { display: none !important; }
-#apexLivePill   { display: none !important; }
 #apexLiveTranscript { display: none !important; }
 #cmdOrbCanvas   { display: none !important; }
 #cmdStars       { display: none !important; }
@@ -6103,6 +6102,36 @@ li, td, th, div.label, div.value { font-size: inherit; }
 /* Waveform on command page */
 .waveform { position: absolute !important; bottom: 20% !important; left: 50% !important; transform: translateX(-50%) !important; }
 
+/* ── Gemini Live pill — always visible ────────────────────────── */
+#apexLivePill {
+  display: flex !important; align-items: center !important; gap: 5px !important;
+  padding: 4px 10px !important; cursor: pointer !important;
+  border: 1px solid rgba(138,108,255,0.25) !important; border-radius: 3px !important;
+  background: transparent !important; transition: border-color 100ms ease !important;
+}
+#apexLivePill:hover { border-color: rgba(138,108,255,0.55) !important; }
+#apexLiveDot {
+  width: 6px !important; height: 6px !important; border-radius: 50% !important;
+  background: #8a6cff !important; box-shadow: 0 0 6px #8a6cff !important;
+  flex-shrink: 0 !important; display: inline-block !important;
+}
+#apexLiveLabel {
+  font-family: var(--f-mono) !important; font-size: 9px !important;
+  letter-spacing: 0.12em !important; text-transform: uppercase !important;
+  color: rgba(138,108,255,0.85) !important;
+}
+
+/* ── ds-grid responsive ───────────────────────────────────────── */
+@media (max-width: 1100px) { .ds-grid-3 { grid-template-columns: 1fr 1fr !important; } }
+@media (max-width: 700px)  { .ds-grid-3 { grid-template-columns: 1fr !important; } }
+@media (max-width: 700px)  { .ds-grid-stats { grid-template-columns: repeat(2,1fr) !important; } }
+
+/* ── Page header ─────────────────────────────────────────────── */
+.ds-page-header { display: flex !important; align-items: center !important; justify-content: space-between !important; padding-bottom: 4px !important; flex-shrink: 0 !important; }
+.ds-page-header-left { display: flex !important; flex-direction: column !important; gap: 2px !important; }
+.ds-page-title { font-family: var(--f-mono) !important; font-size: 14px !important; font-weight: 600 !important; letter-spacing: 0.12em !important; text-transform: uppercase !important; color: var(--tx0) !important; }
+.ds-page-subtitle { font-family: var(--f-sans) !important; font-size: 11px !important; color: var(--tx2) !important; letter-spacing: 0.04em !important; }
+
 </style>
 </head>
 <body>
@@ -6226,8 +6255,8 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <div id="apexTtsToggle" style="display:none" data-provider="gemini">
                             <span id="apexTtsDot"></span><span id="apexTtsLabel"></span>
                         </div>
-                        <div id="apexLivePill" style="display:none" onclick="window.toggleGeminiLive && window.toggleGeminiLive()">
-                            <span id="apexLiveDot"></span><span id="apexLiveLabel"></span>
+                        <div id="apexLivePill" onclick="window.toggleGeminiLive && window.toggleGeminiLive()">
+                            <span id="apexLiveDot"></span><span id="apexLiveLabel">LIVE · OFF</span>
                         </div>
                         <!-- Gemini Live transcript overlay -->
                         <div id="apexLiveTranscript" style="display:none;position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:8;max-width:480px;width:90%;text-align:center">
@@ -6534,53 +6563,47 @@ li, td, th, div.label, div.value { font-size: inherit; }
                     </div>
                 </div>
 
-                <!-- Channel setup cards -->
-                <div class="ds-grid-2">
+                <!-- Channel status row: WhatsApp · SMS · LinkedIn -->
+                <div class="ds-grid-3">
 
                     <div class="ds-panel accent-amber">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(37,211,102,0.75)" style="margin-right:6px;flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.847 2C6.477 2 2.086 6.38 2.073 11.758c0 1.718.457 3.39 1.33 4.867L2 22l5.504-1.44A9.854 9.854 0 0011.847 21.56C17.224 21.56 21.616 17.18 21.616 11.8c0-2.617-1.023-5.076-2.876-6.921A9.727 9.727 0 0011.847 2z"/></svg>
-                                <span class="t-label">WhatsApp Business</span>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(37,211,102,0.75)" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.847 2C6.477 2 2.086 6.38 2.073 11.758c0 1.718.457 3.39 1.33 4.867L2 22l5.504-1.44A9.854 9.854 0 0011.847 21.56C17.224 21.56 21.616 17.18 21.616 11.8c0-2.617-1.023-5.076-2.876-6.921A9.727 9.727 0 0011.847 2z"/></svg>
+                                <span class="t-label">WhatsApp</span>
                             </div>
                             <div class="ds-panel-header-right">
-                                <span class="ds-badge amber">Setup required</span>
+                                <span class="ds-badge amber">Setup needed</span>
                             </div>
                         </div>
                         <div style="display:flex;flex-direction:column;gap:6px">
-                            <div class="ds-skel-row">Unread count &#183; &#8212;</div>
+                            <div class="ds-skel-row">Unread &#183; &#8212;</div>
                             <div class="ds-skel-row">Last message &#183; &#8212;</div>
-                            <div style="margin-top:6px;padding:10px;background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.28);border-radius:8px">
-                                <div class="t-mono" style="color:var(--amber)">Add WHATSAPP_TOKEN to Render env vars.</div>
-                                <button class="ds-btn xs amber" style="margin-top:6px">Copy setup instructions</button>
-                            </div>
+                            <div class="t-mono" style="color:var(--amber);font-size:10px">Add WHATSAPP_TOKEN to env vars.</div>
                         </div>
                     </div>
 
                     <div class="ds-panel accent-amber">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right:6px;flex-shrink:0"><rect width="24" height="24" rx="4" fill="rgba(52,199,89,0.4)"/><path d="M7 12h10M7 8h10M7 16h6" stroke="rgba(52,199,89,0.9)" stroke-width="2" stroke-linecap="round"/></svg>
-                                <span class="t-label">SMS &#183; iMessage</span>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><rect width="24" height="24" rx="4" fill="rgba(52,199,89,0.4)"/><path d="M7 12h10M7 8h10M7 16h6" stroke="rgba(52,199,89,0.9)" stroke-width="2" stroke-linecap="round"/></svg>
+                                <span class="t-label">SMS · iMessage</span>
                             </div>
                             <div class="ds-panel-header-right">
-                                <span class="ds-badge amber">Setup required</span>
+                                <span class="ds-badge amber">Setup needed</span>
                             </div>
                         </div>
                         <div style="display:flex;flex-direction:column;gap:6px">
                             <div class="ds-skel-row">Unread SMS &#183; &#8212;</div>
                             <div class="ds-skel-row">Latest sender &#183; &#8212;</div>
-                            <div style="margin-top:6px;padding:10px;background:rgba(245,166,35,0.06);border:1px solid rgba(245,166,35,0.28);border-radius:8px">
-                                <div class="t-mono" style="color:var(--amber)">Add TWILIO_API_KEY + TWILIO_FROM_NUMBER.</div>
-                                <button class="ds-btn xs amber" style="margin-top:6px">Copy setup instructions</button>
-                            </div>
+                            <div class="t-mono" style="color:var(--amber);font-size:10px">Add TWILIO_API_KEY + FROM_NUMBER.</div>
                         </div>
                     </div>
 
                     <div class="ds-panel accent-amber">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
-                                <svg width="14" height="14" viewBox="0 0 24 24" style="margin-right:6px;flex-shrink:0"><rect width="24" height="24" rx="3" fill="rgba(10,102,194,0.75)"/><path d="M7 10h2v7H7zm1-2a1 1 0 110-2 1 1 0 010 2zm4 2h1.9l.1 1c.4-.7 1.3-1.2 2.4-1.2 2.5 0 3 1.6 3 3.7V17h-2v-3.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2v-7z" fill="white"/></svg>
+                                <svg width="13" height="13" viewBox="0 0 24 24" style="flex-shrink:0"><rect width="24" height="24" rx="3" fill="rgba(10,102,194,0.75)"/><path d="M7 10h2v7H7zm1-2a1 1 0 110-2 1 1 0 010 2zm4 2h1.9l.1 1c.4-.7 1.3-1.2 2.4-1.2 2.5 0 3 1.6 3 3.7V17h-2v-3.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2v-7z" fill="white"/></svg>
                                 <span class="t-label">LinkedIn</span>
                             </div>
                             <div class="ds-panel-header-right">
@@ -6593,18 +6616,19 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         </div>
                     </div>
 
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot purple"></span>
-                                <span class="t-label">Birthdays &#183; Anniversaries</span>
-                            </div>
-                        </div>
-                        <div id="birthdayPanel" style="display:flex;flex-direction:column;gap:6px">
-                            <div class="skel skel-wide" style="height:12px;margin:4px 0"></div>
+                </div>
+
+                <!-- Birthdays & Anniversaries (full width) -->
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot purple"></span>
+                            <span class="t-label">Birthdays &#183; Anniversaries</span>
                         </div>
                     </div>
-
+                    <div id="birthdayPanel" style="display:flex;flex-direction:column;gap:6px">
+                        <div class="skel skel-wide" style="height:12px;margin:4px 0"></div>
+                    </div>
                 </div>
 
             </div>
@@ -6921,43 +6945,47 @@ li, td, th, div.label, div.value { font-size: inherit; }
                     </div>
                 </div>
 
-                <!-- TASKS + DOCS + PROPOSALS -->
-                <div class="ds-grid-3">
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <span class="ds-panel-dot" style="background:var(--amber)"></span>
-                            <span class="ds-panel-title">Task queue</span>
-                            <div class="ds-panel-right">
-                                <button class="ds-btn amber btn--xs" onclick="toggleTaskAddRow()">+ Add</button>
-                            </div>
+                <!-- TASKS (full width) -->
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot amber"></span>
+                            <span class="t-label">Task queue</span>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div id="taskAddRow" style="display:none;gap:6px;margin-bottom:4px">
-                                <input id="taskAddInput" class="ds-input" placeholder="Task description…">
-                                <button class="ds-btn green btn--xs" onclick="addTaskFromInput()">Save</button>
-                            </div>
-                            <div id="taskQueuePanel"><div class="skel skel-row skel-wide"></div></div>
-                            <input class="ds-input" placeholder="+ Add task · or speak it" style="margin-top:4px">
-                            <!-- Pipeline controls preserved for JS -->
-                            <div style="display:none">
-                                <div id="roadmapProgress"></div>
-                                <div id="roadmapPanel"></div>
-                                <input id="roadmapFeatureInput" type="text" placeholder="FEAT-C001">
-                                <div id="metricsPanel"></div>
-                                <div id="recentRunsPanel"></div>
-                                <div id="lessonsPanel"></div>
-                                <div id="routinesPanel"></div>
-                                <div id="timelinePanel"></div>
-                            </div>
+                        <div class="ds-panel-header-right">
+                            <button class="ds-btn xs amber" onclick="toggleTaskAddRow()">+ Add</button>
                         </div>
                     </div>
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                        <div id="taskAddRow" style="display:none;gap:6px;margin-bottom:4px">
+                            <input id="taskAddInput" class="ds-input" placeholder="Task description…">
+                            <button class="ds-btn xs green" onclick="addTaskFromInput()">Save</button>
+                        </div>
+                        <div id="taskQueuePanel"><div class="skel skel-row skel-wide"></div></div>
+                        <!-- Pipeline controls preserved for JS -->
+                        <div style="display:none">
+                            <div id="roadmapProgress"></div>
+                            <div id="roadmapPanel"></div>
+                            <input id="roadmapFeatureInput" type="text" placeholder="FEAT-C001">
+                            <div id="metricsPanel"></div>
+                            <div id="recentRunsPanel"></div>
+                            <div id="lessonsPanel"></div>
+                            <div id="routinesPanel"></div>
+                            <div id="timelinePanel"></div>
+                        </div>
+                    </div>
+                </div>
 
+                <!-- DOCS + PROPOSALS (2-col) -->
+                <div class="ds-grid-2">
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <span class="ds-panel-dot" style="background:var(--cyan)"></span>
-                            <span class="ds-panel-title">Documents · contracts</span>
-                            <div class="ds-panel-right">
-                                <button class="ds-btn cyan btn--xs">Upload</button>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Documents · contracts</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <button class="ds-btn xs cyan">Upload</button>
                             </div>
                         </div>
                         <div id="opsDocumentsPanel" style="display:flex;flex-direction:column;gap:6px"><div class="skel skel-row skel-wide"></div></div>
@@ -6965,8 +6993,10 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
                     <div class="ds-panel">
                         <div class="ds-panel-header">
-                            <span class="ds-panel-dot" style="background:var(--purple)"></span>
-                            <span class="ds-panel-title">Proposals</span>
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Proposals</span>
+                            </div>
                         </div>
                         <div id="opsProposalsPanel" style="display:flex;flex-direction:column;gap:6px"><div class="skel skel-row skel-wide"></div></div>
                     </div>
@@ -7188,34 +7218,41 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
             <!-- ══ PAGE: OVERVIEW ══ -->
             <div class="page" id="page-overview">
-                <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
 
-                    <!-- Widget 1: Greeting hero -->
-                    <div style="background:linear-gradient(135deg,rgba(0,212,255,0.07),rgba(124,111,255,0.04));border:1px solid rgba(0,212,255,0.10);border-radius:12px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between">
-                        <div>
-                            <div id="ovr-greeting" style="font-size:22px;font-weight:600;color:var(--text)">Good morning, sir.</div>
-                            <div id="ovr-date" style="font-size:12px;color:var(--text-mute);margin-top:4px"></div>
-                        </div>
-                        <div id="ovr-motivational" style="font-size:13px;color:var(--text-mid);font-style:italic;text-align:right;max-width:280px"></div>
+                <div class="ds-page-header">
+                    <div class="ds-page-header-left">
+                        <span class="ds-page-title">Overview</span>
+                        <span class="ds-page-subtitle">briefing · status · all systems</span>
                     </div>
-
-                    <!-- Widget 2: Top wins row (API-populated) -->
-                    <div id="ovr-wins-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
-
-                    <!-- Widget 3: Three snapshot panels -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-                        <div id="ovr-finance-snap" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px"><div class="skel skel-row skel-wide"></div></div>
-                        <div id="ovr-health-snap" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px"><div class="skel skel-row skel-wide"></div></div>
-                        <div id="ovr-system-snap" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px"><div class="skel skel-row skel-wide"></div></div>
-                    </div>
-
-                    <!-- Widget 4: Communications snapshot -->
-                    <div id="ovr-comms-snap" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px"><div class="skel skel-row skel-wide"></div></div>
-
-                    <!-- Widget 5: Section summaries -->
-                    <div id="ovr-summary-row" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px"></div>
-
                 </div>
+
+                <!-- Greeting hero -->
+                <div class="ds-panel" style="background:linear-gradient(135deg,rgba(0,212,255,0.05),rgba(124,111,255,0.03)) !important">
+                    <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:20px">
+                        <div>
+                            <div id="ovr-greeting" style="font-size:20px;font-weight:600;color:var(--tx0)">Good morning, sir.</div>
+                            <div id="ovr-date" style="font-size:11px;color:var(--tx2);margin-top:4px"></div>
+                        </div>
+                        <div id="ovr-motivational" style="font-size:12px;color:var(--tx1);font-style:italic;text-align:right;max-width:300px"></div>
+                    </div>
+                </div>
+
+                <!-- Top wins stat row (API-populated) -->
+                <div id="ovr-wins-row" class="ds-grid-stats"></div>
+
+                <!-- Three module snapshots -->
+                <div class="ds-grid-3">
+                    <div id="ovr-finance-snap" class="ds-panel"><div class="skel skel-row skel-wide" style="margin:12px"></div></div>
+                    <div id="ovr-health-snap"  class="ds-panel"><div class="skel skel-row skel-wide" style="margin:12px"></div></div>
+                    <div id="ovr-system-snap"  class="ds-panel"><div class="skel skel-row skel-wide" style="margin:12px"></div></div>
+                </div>
+
+                <!-- Communications snapshot -->
+                <div id="ovr-comms-snap" class="ds-panel"><div class="skel skel-row skel-wide" style="margin:12px"></div></div>
+
+                <!-- Section summary nav cards (JS populates, 3-col for readability) -->
+                <div id="ovr-summary-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px"></div>
+
             </div>
 
             <!-- ══ PAGE: BUSINESS ══ -->
@@ -7413,7 +7450,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                 </div>
 
                 <!-- Pomodoro + Modules + Assignments -->
-                <div style="display:grid;grid-template-columns:200px 1fr 1fr;gap:14px">
+                <div class="ds-grid-3">
 
                     <!-- SVG Ring Timer -->
                     <div class="ds-panel" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 14px">
@@ -8057,6 +8094,9 @@ window.toggleGeminiLive = function() {
     if (GL.active) { _glStop(true); }
     else           { _glStart(); }
 };
+
+// Orb click handler — tap the plasma orb to toggle voice listening
+window.startVoice = function() { toggleListening(); };
 
 // Restore Live state from localStorage if user left it on
 (function() {
@@ -8733,8 +8773,12 @@ async function _speakInternal(text, useFiller) {
                 await new Promise(r => _speakFallback(phrase, { onEnd: r }));
             }
         } else {
-            if (filler) await new Promise(r => _speakDesktop(filler, { onEnd: r }));
-            await new Promise(r => _speakDesktop(phrase, { onEnd: r }));
+            if (filler) {
+                const _fo = await speakWithElevenLabs(filler);
+                if (!_fo && isSpeakingNow) await new Promise(r => _speakDesktop(filler, { onEnd: r }));
+            }
+            const _mo = await speakWithElevenLabs(phrase);
+            if (!_mo && isSpeakingNow) await new Promise(r => _speakDesktop(phrase, { onEnd: r }));
         }
     } catch (_) {}
 }
