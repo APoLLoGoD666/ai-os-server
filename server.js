@@ -36,7 +36,6 @@ const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 const Anthropic = require("@anthropic-ai/sdk");
 const jwt = require("jsonwebtoken");
-const { createClient: createDeepgramClient } = require("@deepgram/sdk");
 const axios = require("axios");
 const multer = require("multer");
 const multerUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -7302,7 +7301,9 @@ app.get("/auth/gmail/reauthorise", requireAppAccess, (req, res) => {
         prompt: "consent",
         scope: [
             "https://www.googleapis.com/auth/gmail.readonly",
-            "https://www.googleapis.com/auth/gmail.send"
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/calendar.readonly",
+            "https://www.googleapis.com/auth/calendar.events"
         ]
     });
     console.log("[Gmail] Re-auth flow started — redirecting to Google consent screen");
@@ -7504,43 +7505,45 @@ app.post("/api/speak", async (req, res) => {
         const text = String(req.body?.text || "").trim();
         if (!text) return res.status(400).json({ ok: false, reply: "No text provided." });
 
-        const apiKey = process.env.ELEVENLABS_API_KEY;
-        if (!apiKey) return res.status(500).json({ ok: false, reply: "Missing ELEVENLABS_API_KEY." });
+        const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+        if (!apiKey) return res.status(500).json({ ok: false, reply: "GOOGLE_API_KEY not configured." });
 
-        const VOICE_ID      = "pNInz6obpgDQGcFmaJgB";
-        const VOICE_SETTINGS = { stability: 0.4, similarity_boost: 0.75, style: 0, use_speaker_boost: false, speed: 1.25 };
-        const MODELS        = ["eleven_turbo_v2_5", "eleven_turbo_v2"];
-
-        let elRes = null;
-        for (const model_id of MODELS) {
-            const elT0 = Date.now();
-            console.log(`[Speak] model=${model_id} text="${text.slice(0, 80)}"`);
-            const attempt = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
-                method: "POST",
-                headers: { "xi-api-key": apiKey, "Content-Type": "application/json", "Accept": "audio/mpeg" },
-                body: JSON.stringify({ text, model_id, optimize_streaming_latency: 4, voice_settings: VOICE_SETTINGS })
-            });
-            console.log(`[Speak] ElevenLabs status=${attempt.status} model=${model_id} +${Date.now() - elT0}ms`);
-            if (attempt.ok) { elRes = attempt; break; }
-            const errBody = await attempt.text();
-            console.error(`[Speak] ElevenLabs rejected: status=${attempt.status} model=${model_id} body=${errBody}`);
-        }
-
-        if (!elRes) {
-            return res.status(502).json({ ok: false, reply: "ElevenLabs TTS failed on all models." });
-        }
-
-        res.setHeader("Content-Type", "audio/mpeg");
-        try {
-            for await (const chunk of elRes.body) {
-                res.write(chunk);
+        const voiceName = req.body?.voice || 'Kore';
+        const t0 = Date.now();
+        const gRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text }] }],
+                    generationConfig: {
+                        responseModalities: ['AUDIO'],
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } }
+                    }
+                })
             }
-            return res.end();
-        } catch (streamErr) {
-            console.error("[Speak] stream error:", streamErr.message);
-            if (!res.headersSent) return res.status(502).json({ ok: false, reply: "Stream error." });
-            return res.end();
+        );
+        if (!gRes.ok) {
+            const errText = await gRes.text().catch(() => '');
+            console.error(`[Speak] Gemini error ${gRes.status}:`, errText.slice(0, 200));
+            return res.status(502).json({ ok: false, reply: `Gemini TTS failed: ${gRes.status}` });
         }
+        const json = await gRes.json();
+        const inlineData = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+        if (!inlineData?.data) return res.status(502).json({ ok: false, reply: 'No audio in Gemini response' });
+
+        const pcm = Buffer.from(inlineData.data, 'base64');
+        const wav = Buffer.alloc(44 + pcm.length);
+        wav.write('RIFF', 0); wav.writeUInt32LE(36 + pcm.length, 4); wav.write('WAVE', 8);
+        wav.write('fmt ', 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+        wav.writeUInt32LE(24000, 24); wav.writeUInt32LE(48000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+        wav.write('data', 36); wav.writeUInt32LE(pcm.length, 40); pcm.copy(wav, 44);
+
+        console.log(`[Speak] Gemini TTS ${Date.now() - t0}ms · ${wav.length}B · voice:${voiceName}`);
+        res.setHeader("Content-Type", "audio/wav");
+        res.setHeader("Content-Length", String(wav.length));
+        return res.send(wav);
     } catch (error) {
         console.error("[Speak] unexpected error:", error.message, error.stack);
         if (!res.headersSent) return res.status(500).json({ ok: false, reply: error.message || "Speak failed." });
@@ -7554,7 +7557,7 @@ app.post("/api/speak", async (req, res) => {
 const { createClient: _createSupabaseClient } = require('@supabase/supabase-js');
 const supabase = _createSupabaseClient(
     process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_ANON_KEY || ''
+    process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
 async function getVoyageEmbedding(text) {
@@ -7857,6 +7860,38 @@ const APEX_TOOLS = [
         name: 'list_tasks',
         description: 'Read back all pending tasks and reminders Alex has asked Apex to track. Use when asked what tasks are pending, what to follow up on, or what reminders exist.',
         input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'get_news',
+        description: 'Get the latest news headlines. Use when asked about news, current events, what is happening in the world, or headlines.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                category: { type: 'string', description: 'Filter by category: uk, world, business, technology, science. Omit for all.' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'get_calendar_events',
+        description: 'Get upcoming calendar events. Use when asked about schedule, meetings, appointments, what is on today or this week.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                days: { type: 'number', description: 'How many days ahead to look. Defaults to 7.' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'get_finance_summary',
+        description: 'Get a finance summary: recent transactions, invoices, subscriptions, and current month spending. Use when asked about money, spending, finances, budget, or cash flow.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'get_health_summary',
+        description: 'Get a health summary: recent workouts, nutrition today, sleep data, and mood. Use when asked about health, fitness, workouts, calories, sleep, or wellbeing.',
+        input_schema: { type: 'object', properties: {}, required: [] }
     }
 ];
 
@@ -7952,6 +7987,116 @@ async function toolListTasks() {
     }
 }
 
+async function toolGetNews(category) {
+    try {
+        let query = sbAdmin.from('apex_news_cache')
+            .select('title,source,category,url,summary,published_at')
+            .order('published_at', { ascending: false })
+            .limit(8);
+        if (category) query = query.eq('category', category);
+        const { data, error } = await query;
+        if (error || !data || !data.length) {
+            return { articles: [], summary: 'No news articles available. News feed may not have run yet.' };
+        }
+        const summary = data.map(a =>
+            `[${a.category?.toUpperCase() || 'NEWS'}] ${a.title} (${a.source})`
+        ).join('\n');
+        return { articles: data, summary, count: data.length };
+    } catch (e) {
+        return { error: e.message };
+    }
+}
+
+async function toolGetCalendarEvents(days = 7) {
+    try {
+        const today   = new Date().toISOString().split('T')[0];
+        const endDate = new Date(Date.now() + Math.min(days, 30) * 86400000).toISOString().split('T')[0];
+        const { data, error } = await sbAdmin
+            .from('apex_calendar_events')
+            .select('title,event_date,start_time,end_time,all_day,location')
+            .gte('event_date', today)
+            .lte('event_date', endDate)
+            .order('event_date', { ascending: true })
+            .limit(20);
+        if (error || !data || !data.length) {
+            return { events: [], summary: 'No upcoming calendar events found.' };
+        }
+        const summary = data.map(ev => {
+            const time = ev.all_day ? 'All day' : (ev.start_time ? new Date(ev.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '');
+            return `${ev.event_date} ${time}: ${ev.title}${ev.location ? ' @ ' + ev.location : ''}`;
+        }).join('\n');
+        return { events: data, summary, count: data.length };
+    } catch (e) {
+        return { error: e.message };
+    }
+}
+
+async function toolGetFinanceSummary() {
+    try {
+        const [invoices, expenses, subscriptions] = await Promise.all([
+            sbAdmin.from('apex_invoices').select('client_name,amount,status,due_date').order('created_at', { ascending: false }).limit(5),
+            sbAdmin.from('apex_transactions').select('description,amount,category,date').eq('type', 'expense').order('date', { ascending: false }).limit(10),
+            sbAdmin.from('apex_subscriptions').select('name,amount,billing_cycle').eq('active', true).limit(10),
+        ]);
+        const parts = [];
+        if (invoices.data?.length) {
+            const outstanding = invoices.data.filter(i => i.status !== 'paid');
+            parts.push(`Outstanding invoices: ${outstanding.length} totalling £${outstanding.reduce((s, i) => s + (Number(i.amount) || 0), 0).toFixed(2)}`);
+        }
+        if (expenses.data?.length) {
+            const total = expenses.data.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+            parts.push(`Recent expenses: ${expenses.data.length} transactions, £${total.toFixed(2)} total`);
+            const top = expenses.data.slice(0, 3).map(e => `${e.description} £${Number(e.amount).toFixed(2)}`).join(', ');
+            parts.push(`Latest: ${top}`);
+        }
+        if (subscriptions.data?.length) {
+            const monthly = subscriptions.data.filter(s => s.billing_cycle === 'monthly').reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+            parts.push(`Monthly subscriptions: £${monthly.toFixed(2)}/mo across ${subscriptions.data.length} services`);
+        }
+        const summary = parts.length ? parts.join('. ') : 'No financial data available yet.';
+        return { summary, invoices: invoices.data || [], expenses: expenses.data || [], subscriptions: subscriptions.data || [] };
+    } catch (e) {
+        return { error: e.message };
+    }
+}
+
+async function toolGetHealthSummary() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const week  = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+        const [workouts, nutrition, sleep, mood] = await Promise.all([
+            sbAdmin.from('apex_workouts').select('type,duration_min,calories_burned,date').gte('date', week).order('date', { ascending: false }).limit(5),
+            sbAdmin.from('apex_nutrition_log').select('food_name,calories,protein_g,carbs_g,fat_g').eq('date', today),
+            sbAdmin.from('apex_sleep_log').select('date,duration_h,quality_score').order('date', { ascending: false }).limit(3),
+            sbAdmin.from('apex_mood_log').select('date,score,notes').order('date', { ascending: false }).limit(1),
+        ]);
+        const parts = [];
+        if (workouts.data?.length) {
+            parts.push(`${workouts.data.length} workouts this week — latest: ${workouts.data[0].type} (${workouts.data[0].duration_min}min)`);
+        } else {
+            parts.push('No workouts logged this week');
+        }
+        if (nutrition.data?.length) {
+            const cals = nutrition.data.reduce((s, n) => s + (Number(n.calories) || 0), 0);
+            const prot = nutrition.data.reduce((s, n) => s + (Number(n.protein_g) || 0), 0);
+            parts.push(`Today: ${Math.round(cals)} kcal, ${Math.round(prot)}g protein`);
+        } else {
+            parts.push('No nutrition logged today');
+        }
+        if (sleep.data?.length) {
+            const s = sleep.data[0];
+            parts.push(`Last sleep: ${s.duration_h}h${s.quality_score ? ', quality ' + s.quality_score + '/10' : ''}`);
+        }
+        if (mood.data?.length) {
+            parts.push(`Current mood: ${mood.data[0].score}/10${mood.data[0].notes ? ' — ' + mood.data[0].notes : ''}`);
+        }
+        const summary = parts.join('. ');
+        return { summary, workouts: workouts.data || [], nutrition: nutrition.data || [], sleep: sleep.data || [], mood: mood.data || [] };
+    } catch (e) {
+        return { error: e.message };
+    }
+}
+
 async function executeApexTool(name, input) {
     if (name === 'web_search') return await toolWebSearch(input.query);
     if (name === 'get_weather') return await toolWeather(input.location);
@@ -7964,6 +8109,10 @@ async function executeApexTool(name, input) {
     if (name === 'search_documents') return await toolSearchDocuments(input.keyword);
     if (name === 'create_task') return await toolCreateTask(input.description);
     if (name === 'list_tasks') return await toolListTasks();
+    if (name === 'get_news') return await toolGetNews(input.category);
+    if (name === 'get_calendar_events') return await toolGetCalendarEvents(input.days || 7);
+    if (name === 'get_finance_summary') return await toolGetFinanceSummary();
+    if (name === 'get_health_summary') return await toolGetHealthSummary();
     return { error: 'Unknown tool' };
 }
 
@@ -7986,113 +8135,113 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         const userMessage = rawMessage.trim();
 
-        // Fire-and-forget memory write — don't block voice latency
+        // Fire-and-forget legacy memory write (kept for compatibility)
         addToMemory("user", userMessage);
-        // Use direct Postgres keyword search — no Voyage embed, no latency spikes
-        const [memoryText, relevantDocs] = await Promise.all([
-            getMemorySummary(),
-            pgSearchDocuments(userMessage.toLowerCase()).catch(() => [])
+
+        // ── LangChain: memory + RAG + router — all parallel ──────────────────
+        const lcMemory  = require('./agent-system/langchain-memory');
+        const lcRag     = require('./agent-system/langchain-rag');
+        const lcRouter  = require('./agent-system/langchain-router');
+
+        const [lcMemCtx, lcRagCtx, lcRoute, relevantDocs] = await Promise.all([
+            lcMemory.getContext(userMessage).catch(() => ''),
+            lcRag.retrieveContext(userMessage).catch(() => ''),
+            lcRouter.routeMessage(userMessage).catch(() => ({ domain: 'general', confidence: 0, needs_data: false })),
+            pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
         ]);
-        console.log(`[LATENCY] +${Date.now() - t0}ms parallel fetch complete`);
+        console.log(`[LATENCY] +${Date.now() - t0}ms LC parallel fetch | domain:${lcRoute.domain} conf:${lcRoute.confidence?.toFixed(2)}`);
 
         const docsText = relevantDocs.length
             ? relevantDocs.map((doc, i) => `DOC ${i + 1}: ${doc.filename} — ${doc.summary || "No summary"}`).join("\n")
-            : "No relevant documents.";
+            : "";
 
-        const voicePrompt = `You are Apex, a personal AI assistant. Always address the user as 'sir'. Never use 'mate', 'jefe', 'pal', 'buddy', 'bro', or any other informal term of address. Respond in natural spoken English only. Maximum 2 sentences. No markdown, no bullet points, no lists, no file names, no technical strings. Speak like a human, be direct and confident.
+        // Build enriched context block for system prompt
+        const contextParts = [];
+        if (lcMemCtx)  contextParts.push(`CONVERSATION HISTORY:\n${lcMemCtx}`);
+        if (lcRagCtx)  contextParts.push(`VAULT KNOWLEDGE:\n${lcRagCtx}`);
+        if (docsText)  contextParts.push(`WORKSPACE DOCUMENTS:\n${docsText}`);
+        if (lcRoute.domain !== 'general' && lcRoute.confidence > 0.6) {
+            contextParts.push(`ROUTING: This query is classified as [${lcRoute.domain.toUpperCase()}] domain (confidence: ${Math.round(lcRoute.confidence * 100)}%). Use the appropriate data tools for this domain.`);
+        }
+        const enrichedContext = contextParts.join('\n\n---\n\n');
 
-RECENT MEMORY:
-${memoryText}
+        // Only include tools if message looks like an action request OR LC router detected a data domain
+        const needsTools = lcRoute.needs_data
+            || lcRoute.confidence > 0.7
+            || /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment|remember|follow.?up|what.*task|pending|news|health|workout|weather/i.test(userMessage);
+        console.log(`[LATENCY] +${Date.now() - t0}ms building request | domain:${lcRoute.domain} needsTools:${needsTools}`);
 
-RELEVANT DOCUMENTS:
-${docsText}
-
-USER: ${userMessage}
-
-Respond naturally in 1-2 sentences.`.trim();
-
-        // Only include tools if the message looks like an action request
-        const needsTools = /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment|remember|follow.?up|what.*task|pending/i.test(userMessage);
-        console.log(`[LATENCY] +${Date.now() - t0}ms calling Anthropic model:claude-haiku-4-5-20251001 tools:${needsTools}`);
-
-        // Ruflo agent routing hint — maps voice command to best agent
+        // Ruflo agent routing hint
         const _rufloAgent = (() => {
-            const _lc = (userMessage || '').toLowerCase();
-            if (/email|inbox|gmail|send|reply|draft|unread|message/.test(_lc)) return 'apex-email-agent';
-            if (/finance|budget|spending|balance|money|transaction|expense|bank/.test(_lc)) return 'apex-finance-agent';
-            if (/routine|briefing|morning|evening|weekly|schedule|cron/.test(_lc)) return 'apex-routine-agent';
-            if (/reflect|insight|notification|review|pattern/.test(_lc)) return 'apex-reflection-agent';
-            if (/autopilot|github|PR|proposal|code improvement/.test(_lc)) return 'apex-autopilot-agent';
-            if (/search|research|find|look up|what is|who is|news/.test(_lc)) return 'apex-research-agent';
-            return 'apex-system-agent';
+            const domainMap = { finance: 'apex-finance-agent', health: 'apex-finance-agent', university: 'apex-system-agent', business: 'apex-finance-agent', communications: 'apex-email-agent' };
+            return domainMap[lcRoute.domain] || 'apex-system-agent';
         })();
-        console.log('[Ruflo] routing hint:', _rufloAgent, '| needsTools:', needsTools);
 
-        // Recall semantically relevant memories + Alex context (Upgrades 1 & 2)
-        let memoryContext = '';
+        // Alex context (profile)
         let alexContext = '';
-        try {
-            const [memories, alexCtx] = await Promise.all([
-                recallMemories(userMessage, 5),
-                buildAlexContext()
-            ]);
-            alexContext = alexCtx;
-            if (memories.length > 0) {
-                memoryContext = '\n\nRelevant memories from past conversations:\n' +
-                    memories.map(m => `[${m.role.toUpperCase()}]: ${m.content}`).join('\n');
-            }
-        } catch (e) {
-            console.error('[MEMORY] recall failed:', e.message);
-        }
+        try { alexContext = await buildAlexContext(); } catch {}
 
-        // Agentic tool-use loop
-        const messages = [{ role: 'user', content: userMessage }];
+        // Domain agent routing — dispatch to specialist when intent is clear
+        const { invokeDomainAgent, DOMAIN_AGENTS } = require('./agent-system/domain-agents');
+        const _domainSlug = lcRouter.DOMAIN_SLUG_MAP[lcRoute.domain];
         let finalReply = '';
-        let loopCount = 0;
-        const maxLoops = 5;
 
-        let wikiContext = '';
-        try {
-            const { getWikiContext } = require('./agent-system/wiki-reader');
-            wikiContext = await getWikiContext(userMessage).catch(() => '');
-        } catch (e) {
-            console.warn('[Wiki] context read failed:', e.message);
+        if (_domainSlug && Object.prototype.hasOwnProperty.call(DOMAIN_AGENTS, _domainSlug) && lcRoute.confidence >= 0.75) {
+            try {
+                const domResult = await invokeDomainAgent(_domainSlug, userMessage);
+                finalReply = domResult.reply;
+                console.log(`[LATENCY] +${Date.now() - t0}ms domain agent: ${domResult.agent.name} | stop: ${domResult.stopReason}`);
+            } catch (domErr) {
+                console.warn('[VOICE-CHAT] domain agent failed, falling through to generic:', domErr.message);
+            }
         }
 
-        while (loopCount < maxLoops) {
-            loopCount++;
-            const response = await client.messages.create({
-                model: MODEL,
-                max_tokens: 1024,
-                system: `${wikiContext ? 'KNOWLEDGE BASE:\n' + wikiContext + '\n\n---\n\n' : ''}You are Apex, a precise, professional AI operating system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK — use this as the default location for any location-based queries unless told otherwise. You have tools available: use get_notifications proactively if the user greets you or asks what is happening, to surface any unread alerts or briefings. Use list_emails if they ask about their inbox. Use get_weather for weather queries. Use web_search for current facts. Use create_task when Alex asks you to remember or follow up on something. Use list_tasks when asked about pending tasks or reminders.${alexContext}${memoryContext} Respond in plain spoken English only. No markdown, no bullet points, no dashes, no numbered lists, no asterisks. All responses will be read aloud — format as natural speech.`,
-                tools: APEX_TOOLS,
-                messages
-            });
+        if (!finalReply) {
+            // Agentic tool-use loop — generic fallback when no domain agent handled it
+            const messages = [{ role: 'user', content: userMessage }];
+            let loopCount = 0;
+            const maxLoops = 5;
 
-            if (response.stop_reason === 'tool_use') {
-                // Execute all tool calls
-                const assistantMessage = { role: 'assistant', content: response.content };
-                messages.push(assistantMessage);
-                const toolResults = [];
-                for (const block of response.content) {
-                    if (block.type === 'tool_use') {
-                        console.log(`[APEX] Tool call: ${block.name}`, block.input);
-                        const result = await executeApexTool(block.name, block.input);
-                        console.log(`[APEX] Tool result:`, result);
-                        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
+            while (loopCount < maxLoops) {
+                loopCount++;
+                const response = await client.messages.create({
+                    model: MODEL,
+                    max_tokens: 1024,
+                    system: [
+                        enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
+                        `You are Apex, a precise, professional AI operating system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK.`,
+                        `You have tools available — use them proactively: get_notifications when the user greets you or asks what is happening. list_emails for inbox queries. get_weather for weather. web_search for current facts. create_task for reminders. get_news for headlines. get_calendar_events for schedule. get_finance_summary for money queries. get_health_summary for fitness and nutrition.`,
+                        alexContext,
+                        `Respond in plain spoken English only. No markdown, no bullet points, no dashes, no numbered lists, no asterisks. All responses will be read aloud.`,
+                    ].filter(Boolean).join(' '),
+                    tools: APEX_TOOLS,
+                    messages
+                });
+
+                if (response.stop_reason === 'tool_use') {
+                    const assistantMessage = { role: 'assistant', content: response.content };
+                    messages.push(assistantMessage);
+                    const toolResults = [];
+                    for (const block of response.content) {
+                        if (block.type === 'tool_use') {
+                            console.log(`[APEX] Tool call: ${block.name}`, block.input);
+                            const result = await executeApexTool(block.name, block.input);
+                            console.log(`[APEX] Tool result:`, result);
+                            toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
+                        }
                     }
+                    messages.push({ role: 'user', content: toolResults });
+                    continue;
                 }
-                messages.push({ role: 'user', content: toolResults });
-                continue;
-            }
 
-            // stop_reason === 'end_turn' — extract final text
-            finalReply = response.content
-                .filter(b => b.type === 'text')
-                .map(b => b.text)
-                .join(' ')
-                .trim();
-            break;
+                // stop_reason === 'end_turn' — extract final text
+                finalReply = response.content
+                    .filter(b => b.type === 'text')
+                    .map(b => b.text)
+                    .join(' ')
+                    .trim();
+                break;
+            }
         }
 
         if (!finalReply) finalReply = 'I was unable to complete that request, sir.';
@@ -8101,8 +8250,10 @@ Respond naturally in 1-2 sentences.`.trim();
         // Save this exchange to memory asynchronously — never block the response
         saveMemory('user', userMessage).catch(() => {});
         saveMemory('assistant', reply).catch(() => {});
-
         addToMemory("ai", reply);
+
+        // LangChain memory — persist conversation with summary compression
+        setImmediate(() => lcMemory.addExchange(userMessage, reply).catch(() => {}));
         // Upgrade 1: fire-and-forget fact extraction — never blocks response
         setImmediate(() => extractAndSaveFacts(userMessage, reply).catch(() => {}));
 
@@ -8159,30 +8310,39 @@ Respond naturally in 1-2 sentences.`.trim();
 
 app.post("/api/transcribe", requireAppAccess, multerUpload.single("audio"), async (req, res) => {
     try {
-        const key = process.env.DEEPGRAM_API_KEY;
-        if (!key) return res.status(503).json({ ok: false, transcript: "", error: "Deepgram not configured." });
+        const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+        if (!apiKey) return res.status(503).json({ ok: false, transcript: "", error: "GOOGLE_API_KEY not configured." });
 
         const audioBuffer = req.file ? req.file.buffer : req.body;
         if (!audioBuffer || !audioBuffer.length) {
             return res.status(400).json({ ok: false, transcript: "", error: "No audio data received." });
         }
 
-        const mimeType = (req.body && req.body.mimeType) || req.headers["content-type"] || "audio/mp4";
+        const mimeType = req.file?.mimetype || req.headers["content-type"] || "audio/mp4";
         console.log("[APEX transcribe] mimeType:", mimeType, "size:", audioBuffer.length);
-        const dgRes = await axios.post(
-            "https://api.deepgram.com/v1/listen?model=nova-2&language=en-GB&punctuate=true",
-            audioBuffer,
+
+        const gRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
             {
-                headers: {
-                    "Authorization": `Token ${key}`,
-                    "Content-Type": mimeType
-                },
-                maxBodyLength: 25 * 1024 * 1024,
-                responseType: "json"
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: "Transcribe this audio accurately. Return only the transcript text, nothing else." },
+                            { inlineData: { mimeType, data: audioBuffer.toString('base64') } }
+                        ]
+                    }]
+                })
             }
         );
-
-        const transcript = dgRes.data?.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
+        if (!gRes.ok) {
+            const errText = await gRes.text().catch(() => '');
+            console.error('[APEX transcribe] Gemini error:', gRes.status, errText.slice(0, 200));
+            return res.status(502).json({ ok: false, transcript: "", error: `Gemini transcription failed: ${gRes.status}` });
+        }
+        const json = await gRes.json();
+        const transcript = json?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
         console.log(`TRANSCRIBE: "${transcript.slice(0, 100)}"`);
         return res.json({ ok: true, transcript });
     } catch (error) {
@@ -8195,29 +8355,47 @@ app.post('/api/tts', async (req, res) => {
     try {
         const text = (req.body?.text || '').trim();
         if (!text) return res.status(400).json({ error: 'No text provided' });
-        const dgRes = await fetch(
-            'https://api.deepgram.com/v1/speak?model=aura-helios-en',
+
+        const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+        if (!apiKey) return res.status(503).json({ error: 'GOOGLE_API_KEY not configured' });
+
+        const voiceName = req.body?.voice || 'Kore';
+        const t0 = Date.now();
+        const gRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
-                    'Content-Type': 'text/plain'
-                },
-                body: text
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text }] }],
+                    generationConfig: {
+                        responseModalities: ['AUDIO'],
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } }
+                    }
+                })
             }
         );
-        if (!dgRes.ok) {
-            const errText = await dgRes.text();
-            console.error('[TTS] Deepgram error:', dgRes.status, errText);
-            return res.status(502).json({ error: 'TTS failed', detail: errText });
+        if (!gRes.ok) {
+            const errText = await gRes.text().catch(() => '');
+            console.error('[TTS] Gemini error:', gRes.status, errText.slice(0, 200));
+            return res.status(502).json({ error: 'TTS failed', detail: errText.slice(0, 200) });
         }
-        const arrayBuffer = await dgRes.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        res.set('Content-Type', 'audio/mpeg');
-        res.set('Content-Length', buffer.length);
+        const json = await gRes.json();
+        const inlineData = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+        if (!inlineData?.data) return res.status(502).json({ error: 'No audio in Gemini response' });
+
+        const pcm = Buffer.from(inlineData.data, 'base64');
+        const wav = Buffer.alloc(44 + pcm.length);
+        wav.write('RIFF', 0); wav.writeUInt32LE(36 + pcm.length, 4); wav.write('WAVE', 8);
+        wav.write('fmt ', 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+        wav.writeUInt32LE(24000, 24); wav.writeUInt32LE(48000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+        wav.write('data', 36); wav.writeUInt32LE(pcm.length, 40); pcm.copy(wav, 44);
+
+        res.set('Content-Type', 'audio/wav');
+        res.set('Content-Length', String(wav.length));
         res.set('Cache-Control', 'no-store');
-        res.send(buffer);
-        console.log('[TTS] sent', buffer.length, 'bytes for:', text.substring(0, 50));
+        res.send(wav);
+        console.log(`[TTS] Gemini ${Date.now() - t0}ms · ${wav.length}B · voice:${voiceName} · "${text.substring(0, 50)}"`);
     } catch (err) {
         console.error('[TTS] error:', err.message);
         res.status(500).json({ error: err.message });
@@ -8650,8 +8828,23 @@ app.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
 // ── Visual Editor ─────────────────────────────────────────────────
 app.post('/api/editor/ai', requireAppAccess, async (req, res) => {
     try {
-        const { prompt, element, page } = req.body;
+        const { prompt, element, page, dials = {} } = req.body;
         if (!prompt) return res.status(400).json({ error: 'prompt required' });
+
+        // Command routing — impeccable slash commands from prompt (taste-skill + impeccable patterns)
+        const _cmdMatch = prompt.match(/^\/(audit|critique|polish|animate|harden|responsive|typography|color|ux-writing|full-audit)\b/i);
+        if (_cmdMatch && element) {
+            const _cmd = _cmdMatch[1].toLowerCase();
+            const _cmdHtml = `<${element.tag || 'div'} id="${element.id || ''}" class="${(element.classes || []).join(' ')}" style="${Object.entries(element.inlineStyles || {}).map(([k, v]) => `${k}:${v}`).join(';')}"></${element.tag || 'div'}>`;
+            try {
+                const _imp2 = require('./agent-system/impeccable-validator');
+                const _cmdFn = { audit: _imp2.audit, critique: _imp2.critique, polish: _imp2.polish, animate: _imp2.animate, harden: _imp2.harden, responsive: _imp2.responsive, typography: _imp2.typography, color: _imp2.color, 'ux-writing': _imp2.uxWrite, 'full-audit': _imp2.fullAudit }[_cmd];
+                if (_cmdFn) {
+                    const _r = await _cmdFn(_cmdHtml);
+                    return res.json({ actions: [], explanation: _r.report || _r.critique || JSON.stringify(_r.issues || _r.summary || _r), command: _cmd });
+                }
+            } catch {}
+        }
 
         const systemPrompt = `You are a precise CSS/DOM editor assistant embedded in a visual dashboard editor.
 The user has selected an HTML element and wants to change it using natural language.
@@ -8664,6 +8857,20 @@ Element info:
 - Current inline styles: ${JSON.stringify(element.inlineStyles||{})}
 - Computed size: ${element.width}×${element.height}px
 - Parent: ${element.parentTag || 'unknown'}
+
+Design dials (taste-skill — scale 1-10, current values):
+- DESIGN_VARIANCE=${dials.variance || 5}/10 — ${dials.variance >= 7 ? 'experimental layouts encouraged' : dials.variance <= 3 ? 'conservative, safe choices only' : 'balanced exploration'}
+- MOTION_INTENSITY=${dials.motion || 4}/10 — ${dials.motion >= 7 ? 'rich purposeful animation' : dials.motion <= 2 ? 'minimal/no motion' : 'subtle, purposeful only (Emil Kowalski lens)'}
+- VISUAL_DENSITY=${dials.density || 5}/10 — ${dials.density >= 7 ? 'information-dense, compact' : dials.density <= 3 ? 'generous whitespace, minimal' : 'balanced density'}
+
+Design quality rules (impeccable + motion principles — always apply):
+- Colors: use CSS custom properties (--apex-* vars), never hardcoded hex
+- Contrast: min 4.5:1 for text, 3:1 for UI components
+- Touch targets: min 44×44px for interactive elements
+- Motion: use transform/opacity only (not width/height/top/left); duration 150–400ms; respect prefers-reduced-motion
+- Motion restraint: no bounce easing, no pulsing loaders, no stagger spam — purposeful motion only
+- Typography: no font-size <16px on mobile inputs; use the existing type scale
+- Anti-patterns to avoid: outline:none without replacement, hover-only interactions, z-index >100 without comment, emoji as nav icons
 
 Respond ONLY with a JSON object in this exact shape, no markdown, no explanation:
 {
@@ -8709,6 +8916,928 @@ app.post('/api/editor/save-styles', requireAppAccess, async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
+// ── Firecrawl — web research routes ──────────────────────────────────────────
+// Requires env: FIRECRAWL_API_KEY
+const _fc = require('./agent-system/firecrawl-bridge');
+
+app.post('/api/research/scrape', requireAppAccess, async (req, res) => {
+    try {
+        const { url, options } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const result = await _fc.scrape(url, options || {});
+        res.json({ ok: result.success, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.post('/api/research/search', requireAppAccess, async (req, res) => {
+    try {
+        const { query, limit } = req.body;
+        if (!query) return res.status(400).json({ ok: false, error: 'query required' });
+        const result = await _fc.researchTopic(query, limit || 5);
+        res.json({ ok: result.success, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.post('/api/research/crawl', requireAppAccess, async (req, res) => {
+    try {
+        const { url, options } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const job = await _fc.crawlAsync(url, options || {});
+        res.json({ ok: true, jobId: job.id, status: job.status });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.get('/api/research/crawl/:jobId', requireAppAccess, async (req, res) => {
+    try {
+        const status = await _fc.crawlStatus(req.params.jobId);
+        res.json({ ok: true, ...status });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.post('/api/research/map', requireAppAccess, async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const result = await _fc.map(url);
+        res.json({ ok: result.success, urls: result.links || [], count: (result.links || []).length });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ── markitdown — file-to-markdown conversion ──────────────────────────────────
+// Requires: pip install "markitdown[all]"  (Python sidecar or local markitdown binary)
+const _mkd = require('./agent-system/markitdown-bridge');
+
+app.post('/api/convert/file', requireAppAccess, multerUpload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ ok: false, error: 'file required' });
+        const result = await _mkd.convertBuffer(req.file.buffer, req.file.originalname);
+        res.json({ ok: result.success, markdown: result.markdown, source: req.file.originalname });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.post('/api/convert/url', requireAppAccess, async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const result = await _mkd.convertUrl(url);
+        res.json({ ok: result.success, markdown: result.markdown, source: url });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ── impeccable — HTML/CSS anti-pattern validation ─────────────────────────────
+const _imp = require('./agent-system/impeccable-validator');
+
+app.post('/api/editor/validate', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.validateHtml(html);
+        res.json({ ok: true, passed: result.passed, issues: result.issues, skipped: result.skipped || false });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ── browser aria snapshot — LLM-optimised page tree ─────────────────────────
+app.post('/api/browser/aria-snapshot', requireAppAccess, async (req, res) => {
+    try {
+        const { url, waitFor } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const browserAgent = require('./agent-system/browser-agent');
+        const result = await browserAgent.ariaSnapshot(url, { waitFor });
+        res.json({ ok: result.success, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ── RAG-Anything — multimodal knowledge graph (requires sidecar) ──────────────
+// Start sidecar: uvicorn sidecar.main:app --port 8001 --host 0.0.0.0
+// Env: RAG_SIDECAR_URL (default: http://localhost:8001)
+const _rag = require('./agent-system/rag-bridge');
+
+app.get('/api/rag/health', requireAppAccess, async (req, res) => {
+    const status = await _rag.health();
+    res.json(status);
+});
+
+app.post('/api/rag/ingest', requireAppAccess, multerUpload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ ok: false, error: 'file required' });
+        const result = await _rag.ingest(req.file.buffer, req.file.originalname);
+        // Also convert to markdown and store in Obsidian knowledge base
+        try {
+            const mdResult = await _mkd.convertBuffer(req.file.buffer, req.file.originalname);
+            if (mdResult.success && mdResult.markdown) {
+                const { obsidianWrite } = require('./agent-system/obsidian-client');
+                const noteName = `References/${req.file.originalname.replace(/\.[^.]+$/, '')}.md`;
+                await obsidianWrite(noteName, `# ${req.file.originalname}\n\n${mdResult.markdown}`);
+            }
+        } catch {}
+        res.json({ ok: true, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.post('/api/rag/query', requireAppAccess, async (req, res) => {
+    try {
+        const { query, mode, topK } = req.body;
+        if (!query) return res.status(400).json({ ok: false, error: 'query required' });
+        const result = await _rag.query(query, mode || 'hybrid', topK || 5);
+        res.json({ ok: true, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.post('/api/rag/query/multimodal', requireAppAccess, async (req, res) => {
+    try {
+        const { query } = req.body;
+        if (!query) return res.status(400).json({ ok: false, error: 'query required' });
+        const result = await _rag.queryMultimodal(query);
+        res.json({ ok: true, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ── markitdown → Obsidian — convert file and store in knowledge base ──────────
+app.post('/api/convert/ingest', requireAppAccess, multerUpload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ ok: false, error: 'file required' });
+        const mdResult = await _mkd.convertBuffer(req.file.buffer, req.file.originalname);
+        if (!mdResult.success) throw new Error('conversion failed');
+        const { obsidianWrite } = require('./agent-system/obsidian-client');
+        const noteName = `References/${req.file.originalname.replace(/\.[^.]+$/, '')}.md`;
+        await obsidianWrite(noteName, `# ${req.file.originalname}\n\n${mdResult.markdown}`);
+        res.json({ ok: true, note: noteName, chars: mdResult.markdown.length });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ── Extended Firecrawl routes ─────────────────────────────────────────────────
+
+app.post('/api/research/agent', requireAppAccess, async (req, res) => {
+    try {
+        const { prompt, options } = req.body;
+        if (!prompt) return res.status(400).json({ ok: false, error: 'prompt required' });
+        const result = await _fc.agentTask(prompt, options || {});
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/research/extract', requireAppAccess, async (req, res) => {
+    try {
+        const { urls, prompt, schema } = req.body;
+        if (!urls || !prompt) return res.status(400).json({ ok: false, error: 'urls and prompt required' });
+        const result = await _fc.extract(urls, prompt, schema || null);
+        res.json({ ok: result.success, data: result.data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/research/batch', requireAppAccess, async (req, res) => {
+    try {
+        const { urls, screenshot } = req.body;
+        if (!Array.isArray(urls) || !urls.length) return res.status(400).json({ ok: false, error: 'urls array required' });
+        const formats = ['markdown'];
+        if (screenshot) formats.push('screenshot');
+        const result = await _fc.batchScrape(urls, { formats });
+        res.json({ ok: result.success, results: result.results });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/research/interact', requireAppAccess, async (req, res) => {
+    try {
+        const { url, actions } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const result = await _fc.interact(url, actions || []);
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Extended impeccable routes ─────────────────────────────────────────────────
+
+app.post('/api/editor/audit', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.audit(html);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/editor/critique', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.critique(html);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/editor/polish', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.polish(html);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/editor/animate', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.animate(html);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/editor/harden', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.harden(html);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/editor/responsive', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.responsive(html);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/editor/typography', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.typography(html);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/editor/color', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.color(html);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/editor/ux-writing', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.uxWrite(html);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/editor/full-audit', requireAppAccess, async (req, res) => {
+    try {
+        const { html } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+        const result = await _imp.fullAudit(html);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Extended browser routes ───────────────────────────────────────────────────
+app.post('/api/browser/har', requireAppAccess, async (req, res) => {
+    try {
+        const { url, actions } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.recordHar(url, { actions });
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/press', requireAppAccess, async (req, res) => {
+    try {
+        const { url, key, selector } = req.body;
+        if (!url || !key) return res.status(400).json({ ok: false, error: 'url and key required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.pressKey(url, key, { selector });
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/fill', requireAppAccess, async (req, res) => {
+    try {
+        const { url, selector, text, delay, pressEnter } = req.body;
+        if (!url || !selector || text === undefined) return res.status(400).json({ ok: false, error: 'url, selector, text required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.fillSlow(url, selector, text, { delay, pressEnter });
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/select', requireAppAccess, async (req, res) => {
+    try {
+        const { url, selector, value, byLabel } = req.body;
+        if (!url || !selector || !value) return res.status(400).json({ ok: false, error: 'url, selector, value required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.selectOption(url, selector, value, { byLabel });
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/drag', requireAppAccess, async (req, res) => {
+    try {
+        const { url, source, target } = req.body;
+        if (!url || !source || !target) return res.status(400).json({ ok: false, error: 'url, source, target required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.dragDrop(url, source, target);
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/eval', requireAppAccess, async (req, res) => {
+    try {
+        const { url, script, allowDangerous } = req.body;
+        if (!url || !script) return res.status(400).json({ ok: false, error: 'url and script required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.evalInPage(url, script, { allowDangerous });
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/console', requireAppAccess, async (req, res) => {
+    try {
+        const { url, filter } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.consoleMonitor(url, { filter });
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/web-vitals', requireAppAccess, async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.webVitals(url);
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/annotated', requireAppAccess, async (req, res) => {
+    try {
+        const { url, waitFor } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.annotatedSnapshot(url, { waitFor });
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/mock', requireAppAccess, async (req, res) => {
+    try {
+        const { url, patterns, handlers } = req.body;
+        if (!url || !patterns) return res.status(400).json({ ok: false, error: 'url and patterns required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.mockRoute(url, patterns, handlers || [{}]);
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/cookies', requireAppAccess, async (req, res) => {
+    try {
+        const { url, action, cookies } = req.body;
+        if (!url || !action) return res.status(400).json({ ok: false, error: 'url and action required' });
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.manageCookies(url, action, cookies || []);
+        res.json({ ok: result.success, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Extended RAG routes ───────────────────────────────────────────────────────
+app.post('/api/rag/insert', requireAppAccess, async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items) || !items.length) return res.status(400).json({ ok: false, error: 'items array required' });
+        const result = await _rag.insertContent(items);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/rag/ingest/url', requireAppAccess, async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const result = await _rag.ingestUrl(url);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/rag/ingest/folder', requireAppAccess, async (req, res) => {
+    try {
+        const { path: folderPath } = req.body;
+        if (!folderPath) return res.status(400).json({ ok: false, error: 'path required' });
+        const result = await _rag.ingestFolder(folderPath);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/rag/reset', requireAppAccess, async (req, res) => {
+    try {
+        const result = await _rag.reset();
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── markitdown batch convert ──────────────────────────────────────────────────
+app.post('/api/convert/batch', requireAppAccess, multerUpload.array('files', 20), async (req, res) => {
+    try {
+        if (!req.files || !req.files.length) return res.status(400).json({ ok: false, error: 'files required' });
+        const results = await _mkd.convertBatch(req.files.map(f => ({ buffer: f.buffer, name: f.originalname })));
+        res.json({ ok: true, results });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── gstack-pattern: Master intelligence routes ────────────────────────────────
+const _mo = require('./agent-system/master-orchestrator');
+
+app.post('/api/master/office-hours', requireAppAccess, async (req, res) => {
+    try {
+        const { topic } = req.body;
+        if (!topic) return res.status(400).json({ ok: false, error: 'topic required' });
+        const result = await _mo.officeHours(topic);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/qa-review', requireAppAccess, async (req, res) => {
+    try {
+        const { featureId, files } = req.body;
+        if (!featureId) return res.status(400).json({ ok: false, error: 'featureId required' });
+        const result = await _mo.qaLead(featureId, files || []);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/release-check', requireAppAccess, async (req, res) => {
+    try {
+        const { features } = req.body;
+        const result = await _mo.releaseCheck(features || []);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/retro', requireAppAccess, async (req, res) => {
+    try {
+        const { period } = req.body;
+        const result = await _mo.retro(period || 'week');
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/benchmark', requireAppAccess, async (req, res) => {
+    try {
+        const { urls } = req.body;
+        if (!Array.isArray(urls) || !urls.length) return res.status(400).json({ ok: false, error: 'urls array required' });
+        const result = await _mo.benchmark(urls);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/investigate', requireAppAccess, async (req, res) => {
+    try {
+        const { error: errorDesc, context } = req.body;
+        if (!errorDesc) return res.status(400).json({ ok: false, error: 'error description required' });
+        const result = await _mo.investigate(errorDesc, context || {});
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── gstack extended: code review, design, ship, canary, codex ────────────────
+app.post('/api/master/code-review', requireAppAccess, async (req, res) => {
+    try {
+        const { files, context: ctx } = req.body;
+        if (!Array.isArray(files) || !files.length) return res.status(400).json({ ok: false, error: 'files array required' });
+        const result = await _mo.codeReview(files, ctx || '');
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/eng-review', requireAppAccess, async (req, res) => {
+    try {
+        const { featureId, plan } = req.body;
+        if (!featureId) return res.status(400).json({ ok: false, error: 'featureId required' });
+        const result = await _mo.planEngReview(featureId, plan || {});
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/design-review', requireAppAccess, async (req, res) => {
+    try {
+        const { featureId, spec } = req.body;
+        if (!featureId) return res.status(400).json({ ok: false, error: 'featureId required' });
+        const result = await _mo.planDesignReview(featureId, spec || '');
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/design-consult', requireAppAccess, async (req, res) => {
+    try {
+        const { brief } = req.body;
+        if (!brief) return res.status(400).json({ ok: false, error: 'brief required' });
+        const result = await _mo.designConsultation(brief);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/design-shotgun', requireAppAccess, async (req, res) => {
+    try {
+        const { brief, variants } = req.body;
+        if (!brief) return res.status(400).json({ ok: false, error: 'brief required' });
+        const result = await _mo.designShotgun(brief, variants || 3);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/document-release', requireAppAccess, async (req, res) => {
+    try {
+        const { features, version } = req.body;
+        const result = await _mo.documentRelease(features || [], version || '');
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/canary', requireAppAccess, async (req, res) => {
+    try {
+        const { urls, assertions } = req.body;
+        if (!Array.isArray(urls) || !urls.length) return res.status(400).json({ ok: false, error: 'urls array required' });
+        const result = await _mo.canary(urls, assertions || []);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/ship', requireAppAccess, async (req, res) => {
+    try {
+        const { featureId, tag, force } = req.body;
+        if (!featureId) return res.status(400).json({ ok: false, error: 'featureId required' });
+        const result = await _mo.ship(featureId, { tag, force });
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/codex', requireAppAccess, async (req, res) => {
+    try {
+        const { query } = req.body;
+        if (!query) return res.status(400).json({ ok: false, error: 'query required' });
+        const result = await _mo.codex(query);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Pre-deploy quality gate — impeccable + motion + STRIDE + vitals ───────────
+app.post('/api/master/quality-gate', requireAppAccess, async (req, res) => {
+    try {
+        const { html, urls, featureId } = req.body;
+        const _imp = require('./agent-system/impeccable-validator');
+        const _ba = require('./agent-system/browser-agent');
+        const results = {};
+
+        if (html) {
+            const [full, motionR, contrastR, interactionR] = await Promise.all([
+                _imp.fullAudit(html),
+                _imp.motion(html),
+                _imp.contrast(html),
+                _imp.interaction(html)
+            ]);
+            results.impeccable = full;
+            results.motion = motionR;
+            results.contrast = contrastR;
+            results.interaction = interactionR;
+        }
+
+        if (Array.isArray(urls) && urls.length) {
+            results.vitals = [];
+            for (const url of urls.slice(0, 3)) {
+                try { results.vitals.push(await _ba.webVitals(url)); }
+                catch (e) { results.vitals.push({ url, error: e.message }); }
+            }
+        }
+
+        const passed = (
+            (!results.impeccable || results.impeccable.passed) &&
+            (!results.vitals || results.vitals.every(v => v.ratings?.lcp !== 'poor'))
+        );
+
+        if (featureId) {
+            const _mem = require('./agent-system/obsidian-memory');
+            _mem.write(`Projects/QualityGate-${featureId}.md`,
+                `# Quality Gate: ${featureId}\n\n**Passed:** ${passed}\n\n` +
+                (results.impeccable ? `## Impeccable\n${JSON.stringify(results.impeccable.summary, null, 2)}\n\n` : '') +
+                (results.vitals ? `## Web Vitals\n${results.vitals.map(v => `- ${v.url}: LCP=${v.vitals?.lcp}ms (${v.ratings?.lcp})`).join('\n')}` : '')
+            );
+        }
+
+        res.json({ ok: true, passed, results, featureId });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── gstack extended: autoplan, pairAgent, careful, freeze, qaRun ─────────────
+app.post('/api/master/autoplan', requireAppAccess, async (req, res) => {
+    try {
+        const { description, workstream } = req.body;
+        if (!description) return res.status(400).json({ ok: false, error: 'description required' });
+        const result = await _mo.autoplan(description, workstream);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/pair', requireAppAccess, async (req, res) => {
+    try {
+        const { task, currentCode, lastError } = req.body;
+        if (!task) return res.status(400).json({ ok: false, error: 'task required' });
+        const result = await _mo.pairAgent(task, currentCode || '', lastError || '');
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/careful', requireAppAccess, async (req, res) => {
+    try {
+        const { file, change, existing } = req.body;
+        if (!file || !change) return res.status(400).json({ ok: false, error: 'file and change required' });
+        const result = await _mo.careful(file, change, existing || '');
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/freeze', requireAppAccess, async (req, res) => {
+    try {
+        const { branch } = req.body;
+        const result = await _mo.freeze(branch || 'main');
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/master/qa-run', requireAppAccess, async (req, res) => {
+    try {
+        const { featureId, urls, checklist } = req.body;
+        if (!featureId) return res.status(400).json({ ok: false, error: 'featureId required' });
+        const result = await _mo.qaRun(featureId, urls || [], checklist || []);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Firecrawl: screenshot + retry routes ─────────────────────────────────────
+app.post('/api/research/screenshot', requireAppAccess, async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const _fc = require('./agent-system/firecrawl-bridge');
+        const result = await _fc.screenshotUrl(url);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/research/scrape-retry', requireAppAccess, async (req, res) => {
+    try {
+        const { url, options, maxRetries } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const _fc = require('./agent-system/firecrawl-bridge');
+        const result = await _fc.scrapeWithRetry(url, options || {}, maxRetries || 3);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── markitdown: Azure Content Understanding ───────────────────────────────────
+app.post('/api/convert/azure-cu', requireAppAccess, async (req, res) => {
+    try {
+        const { path: filePath, endpoint, key } = req.body;
+        if (!filePath) return res.status(400).json({ ok: false, error: 'path required' });
+        const _mkd = require('./agent-system/markitdown-bridge');
+        const result = await _mkd.convertWithAzureCU(filePath, endpoint, key);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Design lens modes + style variants on /api/editor/lens ───────────────────
+// Named lens: 'kowalski' (restraint), 'krehel' (structural), 'jhey' (playful)
+// Style variant: 'soft', 'minimalist', 'brutalist'
+app.post('/api/editor/lens', requireAppAccess, async (req, res) => {
+    try {
+        const { html, lens = 'kowalski', styleVariant = 'soft' } = req.body;
+        if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+
+        const LENS_DESCRIPTIONS = {
+            kowalski: 'Emil Kowalski lens: motion restraint philosophy. Every transition earns its place. No bounce, no pulse, no stagger spam. Transform + opacity only. 150–400ms. Purposeful.',
+            krehel: 'Jakub Krehel lens: structural elegance. Clean grids, precise spacing, typographic hierarchy. Motion is architectural — reveals structure, not personality.',
+            jhey: 'Jhey Tompkins lens: playful and expressive. Creative motion, personality-driven interactions, delightful micro-moments. Still accessible, but joyful.'
+        };
+        const STYLE_DESCRIPTIONS = {
+            soft: 'Soft style: rounded corners, warm neutrals, gentle shadows, inviting whitespace.',
+            minimalist: 'Minimalist style: flat, no shadows, monochrome palette, maximum negative space, text-only hierarchy.',
+            brutalist: 'Brutalist style: raw contrast, visible borders, intentional asymmetry, bold typography, no rounded corners.'
+        };
+
+        const Anthropic = require('@anthropic-ai/sdk');
+        const _a = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const res_ = await _a.messages.create({
+            model: 'claude-haiku-4-5-20251001', max_tokens: 1500,
+            system: `You are a UI design critic applying a specific design lens to HTML.
+${LENS_DESCRIPTIONS[lens] || LENS_DESCRIPTIONS.kowalski}
+${STYLE_DESCRIPTIONS[styleVariant] || STYLE_DESCRIPTIONS.soft}
+
+Analyse the provided HTML and return specific, actionable CSS changes to align with this lens.
+Format: ## Lens Analysis\n## CSS Changes\n\`\`\`css\n...\n\`\`\`\n## Removed/Avoided`,
+            messages: [{ role: 'user', content: `Apply the ${lens} lens with ${styleVariant} style to:\n\n${html.slice(0, 3000)}` }]
+        });
+        res.json({ ok: true, lens, styleVariant, analysis: res_.content[0].text.trim() });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Motion cookbook export ────────────────────────────────────────────────────
+app.get('/api/editor/motion-cookbook', requireAppAccess, (req, res) => {
+    const cookbook = {
+        philosophy: 'Emil Kowalski: motion is purposeful or absent. Every animation earns its place.',
+        principles: [
+            'Use transform and opacity only — never animate width, height, top, left',
+            'Duration: 150ms (micro) → 250ms (standard) → 400ms (emphasis). Never exceed 500ms.',
+            'Easing: ease-out for entrances, ease-in for exits, ease-in-out for repositioning',
+            'No bounce easing (cubic-bezier overshoot) in production UI',
+            'No pulsing loaders — use skeleton screens or progress indicators instead',
+            'No stagger spam — max 3 staggered elements, 50ms between each',
+            'Respect prefers-reduced-motion: all animations must have a fallback',
+            'GPU compositing: add will-change:transform only on animated elements, remove after'
+        ],
+        tokens: {
+            durationMicro: '150ms',
+            durationBase: '250ms',
+            durationEmphasis: '400ms',
+            easingEntrance: 'cubic-bezier(0, 0, 0.2, 1)',
+            easingExit: 'cubic-bezier(0.4, 0, 1, 1)',
+            easingStandard: 'cubic-bezier(0.4, 0, 0.2, 1)'
+        },
+        patterns: {
+            fadeIn: 'opacity: 0 → 1, duration: 200ms, easing: ease-out',
+            slideUp: 'transform: translateY(8px) → translateY(0), opacity: 0 → 1, 250ms ease-out',
+            scaleIn: 'transform: scale(0.95) → scale(1), opacity: 0 → 1, 200ms ease-out',
+            exit: 'opacity: 1 → 0, duration: 150ms, easing: ease-in'
+        },
+        forbidden: [
+            'animation: pulse 2s infinite (use skeleton instead)',
+            'transition: all (always be specific)',
+            'animation-delay stacked beyond 3 elements',
+            'cubic-bezier with overshoot (bounce)',
+            'Animating box-shadow (composite on CPU, expensive)'
+        ]
+    };
+    res.json({ ok: true, cookbook });
+});
+
+// ── Browser: trace + video recording ─────────────────────────────────────────
+app.post('/api/browser/trace', requireAppAccess, async (req, res) => {
+    try {
+        const { url, actions, timeout } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const _ba = require('./agent-system/browser-agent');
+        const result = await _ba.recordTrace(url, { actions, timeout });
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/browser/video', requireAppAccess, async (req, res) => {
+    try {
+        const { url, actions, base64, timeout, size } = req.body;
+        if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+        const _ba = require('./agent-system/browser-agent');
+        const result = await _ba.recordVideo(url, { actions, base64, timeout, size });
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── markitdown: stream + local + Azure DI ────────────────────────────────────
+app.post('/api/convert/local', requireAppAccess, async (req, res) => {
+    try {
+        const { path: filePath, baseDir } = req.body;
+        if (!filePath) return res.status(400).json({ ok: false, error: 'path required' });
+        const _mkd = require('./agent-system/markitdown-bridge');
+        const result = await _mkd.convertLocal(filePath, { baseDir });
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/convert/azure', requireAppAccess, async (req, res) => {
+    try {
+        const { path: filePath, endpoint, key } = req.body;
+        if (!filePath) return res.status(400).json({ ok: false, error: 'path required' });
+        const _mkd = require('./agent-system/markitdown-bridge');
+        const result = await _mkd.convertWithAzureDI(filePath, endpoint, key);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── impeccable: extended design commands ─────────────────────────────────────
+const _impExt = require('./agent-system/impeccable-validator');
+const _impExtCmds = {
+    layout: 'layout', interaction: 'interaction', motion: 'motion',
+    contrast: 'contrast', spacing: 'spacing', craft: 'craft',
+    shape: 'shape', document: 'document', colorize: 'colorize',
+    typeset: 'typeset', clarify: 'clarify', onboard: 'onboard',
+    delight: 'delight', bolder: 'bolder', quieter: 'quieter',
+    distill: 'distill', overdrive: 'overdrive', adapt: 'adapt',
+    optimize: 'optimize', live: 'live'
+};
+for (const [route, fn] of Object.entries(_impExtCmds)) {
+    app.post(`/api/editor/${route}`, requireAppAccess, async (req, res) => {
+        try {
+            const { html } = req.body;
+            if (!html) return res.status(400).json({ ok: false, error: 'html required' });
+            const result = await _impExt[fn](html);
+            res.json({ ok: true, ...result });
+        } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+    });
+}
+
+// ── Voice end-to-end pipeline route ──────────────────────────────────────────
+// transcript → intent → browser/research → RAG → Claude → TTS → WebSocket
+app.post('/api/voice/pipeline', requireAppAccess, async (req, res) => {
+    try {
+        const { transcript, sessionId, tts = true } = req.body;
+        if (!transcript) return res.status(400).json({ ok: false, error: 'transcript required' });
+
+        const _ba = require('./agent-system/browser-agent');
+        const _fc = (() => { try { const m = require('./agent-system/firecrawl-bridge'); return m.isAvailable() ? m : null; } catch { return null; } })();
+        const _rag = require('./agent-system/rag-bridge');
+
+        // 1. Intent classification
+        const Anthropic = require('@anthropic-ai/sdk');
+        const _anthro = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const intentRes = await _anthro.messages.create({
+            model: 'claude-haiku-4-5-20251001', max_tokens: 200,
+            system: 'Classify the user intent. Reply with JSON only: {"intent":"research|browser|rag|direct","query":"refined query or null"}',
+            messages: [{ role: 'user', content: transcript }]
+        });
+        let intent = { intent: 'direct', query: transcript };
+        try {
+            const txt = intentRes.content[0].text;
+            intent = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
+        } catch {}
+
+        // 2. Fetch context based on intent
+        let context = '';
+        if (intent.intent === 'research' && _fc) {
+            try {
+                const sr = await _fc.search(intent.query || transcript, { limit: 3 });
+                context = (sr.results || []).map(r => `${r.title}: ${r.snippet || r.markdown || ''}`).join('\n').slice(0, 1500);
+            } catch {}
+        } else if (intent.intent === 'browser') {
+            try {
+                const aria = await _ba.ariaSnapshot(intent.query || transcript);
+                context = aria.ariaTree ? aria.ariaTree.slice(0, 1500) : '';
+            } catch {}
+        } else if (intent.intent === 'rag') {
+            try {
+                const ragRes = await _rag.query(intent.query || transcript, 'hybrid', 5);
+                context = ragRes.answer ? ragRes.answer.slice(0, 1500) : '';
+            } catch {}
+        }
+
+        // 3. Generate response via Claude
+        const finalRes = await _anthro.messages.create({
+            model: 'claude-haiku-4-5-20251001', max_tokens: 500,
+            system: 'You are Apex, a concise voice assistant. Respond in 1-3 sentences suitable for speech synthesis. No markdown, no bullet points.',
+            messages: [{ role: 'user', content: `${context ? `Context:\n${context}\n\n` : ''}User: ${transcript}` }]
+        });
+        const answer = finalRes.content[0].text.trim();
+
+        // 4. Push via WebSocket if session connected (filter receives meta, not ws)
+        if (global._wsBroadcast) {
+            global._wsBroadcast({ type: 'voice_response', sessionId, answer },
+                meta => !sessionId || meta.sessionId === sessionId);
+        }
+
+        res.json({ ok: true, transcript, intent: intent.intent, answer, context: context.slice(0, 200) });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // ── Master Orchestrator Routes ────────────────────────────────────
@@ -9375,9 +10504,145 @@ let _lastPipelineActivity = Date.now();
 const server = require("http").createServer(app);
 // Render's load balancer uses 75s idle timeout; set Node's keepAlive below that to avoid 502s
 server.keepAliveTimeout = 65000;
+
+// ── WebSocket server — gws patterns: compression, frame reuse, event pipeline ──
+// Implements gws architecture: perMessageDeflate, broadcast fan-out, lifecycle events.
+const { WebSocketServer } = require('ws');
+const _wss = new WebSocketServer({
+    noServer: true,
+    perMessageDeflate: {
+        zlibDeflateOptions: { level: 6, memLevel: 8 },
+        zlibInflateOptions: { chunkSize: 10 * 1024 },
+        clientNoContextTakeover: true,
+        serverNoContextTakeover: true,
+        threshold: 1024           // only compress messages >1KB (gws threshold pattern)
+    }
+});
+
+// Session registry — maps sessionId → ws connection + metadata
+const _wsSessions = new Map();
+
+// Broadcast fan-out: serialize ONCE, send same buffer to all (gws frame-reuse pattern)
+function wsBroadcast(data, filter = null) {
+    const msg = typeof data === 'string' ? data : JSON.stringify(data);
+    const buf = Buffer.from(msg, 'utf8');
+    _wsSessions.forEach((meta, ws) => {
+        if (ws.readyState === ws.OPEN && (!filter || filter(meta))) {
+            ws.send(buf);
+        }
+    });
+}
+
+// Push to a specific session
+function wsSend(ws, data) {
+    if (ws.readyState === ws.OPEN) {
+        ws.send(typeof data === 'string' ? data : JSON.stringify(data));
+    }
+}
+
+// ── OnOpen — initialize session state ──────────────────────────────
+_wss.on('connection', (ws, req) => {
+    const sessionId = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const meta = { sessionId, connectedAt: new Date().toISOString(), channels: new Set(['system']) };
+    _wsSessions.set(ws, meta);
+    wsSend(ws, { type: 'connected', sessionId, ts: Date.now() });
+    console.log(`[WS] OnOpen — ${sessionId} (total: ${_wsSessions.size})`);
+
+    // ── OnMessage — route to handlers ──────────────────────────────
+    ws.on('message', async (raw) => {
+        let msg;
+        try { msg = JSON.parse(raw); } catch { return; }
+
+        switch (msg.type) {
+            case 'subscribe':
+                (msg.channels || []).forEach(ch => meta.channels.add(ch));
+                wsSend(ws, { type: 'subscribed', channels: [...meta.channels] });
+                break;
+
+            case 'ping':
+                wsSend(ws, { type: 'pong', ts: Date.now() });
+                break;
+
+            case 'voice:transcript':
+                // Voice pipeline input — broadcast to voice channel subscribers
+                wsBroadcast({ type: 'voice:transcript', text: msg.text, ts: Date.now() },
+                    m => m.channels.has('voice'));
+                break;
+
+            case 'agent:status':
+                // Agent pipeline status update — broadcast to agent channel
+                wsBroadcast({ type: 'agent:status', ...msg }, m => m.channels.has('agents'));
+                break;
+
+            case 'browser:snapshot':
+                // Push accessibility snapshot result to requesting session
+                wsSend(ws, { type: 'browser:snapshot', ...msg });
+                break;
+
+            default:
+                wsSend(ws, { type: 'error', message: `Unknown message type: ${msg.type}` });
+        }
+    });
+
+    // ── OnPing / OnPong — respond to client pings, track server pong receipt ──
+    ws.on('ping', () => ws.pong());
+    ws.on('pong', () => { meta._pongReceived = true; });
+    meta._pongReceived = true; // treat initial connect as alive
+
+    // ── OnClose — clean up session ─────────────────────────────────
+    ws.on('close', (code, reason) => {
+        _wsSessions.delete(ws);
+        console.log(`[WS] OnClose — ${sessionId} (code=${code}, remaining: ${_wsSessions.size})`);
+    });
+
+    ws.on('error', err => {
+        console.warn(`[WS] Error on ${sessionId}: ${err.message}`);
+        _wsSessions.delete(ws);
+    });
+});
+
+// ── gws keepalive: proactively ping all clients every 30s, terminate dead ones ─
+const _wsKeepalive = setInterval(() => {
+    _wsSessions.forEach((meta, ws) => {
+        if (meta._pongReceived === false) {
+            console.log(`[WS] Terminating dead session ${meta.sessionId}`);
+            _wsSessions.delete(ws);
+            ws.terminate();
+            return;
+        }
+        meta._pongReceived = false;
+        if (ws.readyState === ws.OPEN) ws.ping();
+    });
+}, 30000);
+_wss.on('close', () => clearInterval(_wsKeepalive));
+
+// ── gws chunked send: split large payloads into sequenced frames ─────────────
+function wsChunkedSend(ws, data, chunkSize = 64 * 1024) {
+    const payload = typeof data === 'string' ? data : JSON.stringify(data);
+    const total = Math.ceil(payload.length / chunkSize);
+    for (let i = 0; i < total; i++) {
+        const chunk = payload.slice(i * chunkSize, (i + 1) * chunkSize);
+        wsSend(ws, { type: 'chunk', seq: i, total, data: chunk });
+    }
+}
+global._wsChunkedSend = wsChunkedSend;
+
+// Upgrade HTTP → WS on /ws path
+server.on('upgrade', (req, socket, head) => {
+    if (req.url === '/ws' || req.url?.startsWith('/ws?')) {
+        _wss.handleUpgrade(req, socket, head, ws => _wss.emit('connection', ws, req));
+    } else {
+        socket.destroy();
+    }
+});
+
+// Export broadcast so routes can push events to clients
+global._wsBroadcast = wsBroadcast;
+global._wsSend = wsSend;
 server.headersTimeout   = 70000; // must be > keepAliveTimeout
 
 require('./routes/gemini-live').attach(server, { appKey: APP_ACCESS_KEY });
+app.use('/api', require('./routes/tts-gemini'));
 
 
 server.listen(PORT, () => {
@@ -9497,6 +10762,32 @@ checkPendingMasterTasks();
                 .catch(() => {}), 7 * 24 * 60 * 60 * 1000);
         }, _next.getTime() - Date.now());
         console.log(`[VaultHealth] Weekly check scheduled for ${_next.toDateString()}`);
+    })();
+
+    // News ingest — runs at 6am daily, plus an immediate run on startup
+    (function _scheduleNewsIngest() {
+        const { ingestNews } = require('./agent-system/news-ingest');
+        const _now = new Date(), _6am = new Date(_now);
+        _6am.setHours(6, 0, 0, 0);
+        if (_6am <= _now) _6am.setDate(_6am.getDate() + 1);
+        // Initial run after 30s (let DB settle after startup)
+        setTimeout(() => ingestNews().catch(e => console.warn('[News] startup ingest failed:', e.message)), 30000);
+        setTimeout(function _dailyNews() {
+            ingestNews().catch(e => console.warn('[News] ingest error:', e.message));
+            setInterval(() => ingestNews().catch(e => console.warn('[News] ingest error:', e.message)), 24 * 60 * 60 * 1000);
+        }, _6am.getTime() - _now.getTime());
+        console.log(`[News] Daily ingest scheduled for 06:00, initial run in 30s`);
+    })();
+
+    // Calendar sync — every 30 minutes
+    (function _scheduleCalendarSync() {
+        const { syncGoogleCalendar } = require('./routes/communications');
+        const doSync = () => syncGoogleCalendar()
+            .then(r => { if (r.count) console.log(`[Calendar] Auto-sync: ${r.count} events`); })
+            .catch(e => console.warn('[Calendar] sync error:', e.message));
+        setTimeout(doSync, 45000); // initial run after 45s
+        setInterval(doSync, 30 * 60 * 1000);
+        console.log('[Calendar] Auto-sync every 30 minutes');
     })();
 
     // Phase 2 agents

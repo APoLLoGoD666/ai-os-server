@@ -2,6 +2,9 @@
 const { obsidianRead, obsidianWrite } = require('./obsidian-client');
 const localMemory = require('./obsidian-memory');
 
+// Lazy-load markitdown bridge — optional dependency
+const _mkd = (() => { try { return require('./markitdown-bridge'); } catch { return null; } })();
+
 const CORE_PAGES = [
     'System/WIKI.md',
     'System/North-Star.md',
@@ -185,4 +188,42 @@ async function getEntityContext(name) {
     return null;
 }
 
-module.exports = { getWikiContext, updateWikiAfterTask, consolidateWiki, checkVaultHealth, getEntityContext };
+// Fetch an external URL and convert it to markdown for use as wiki context.
+// Uses markitdown for structured conversion (PDF, YouTube, HTML articles).
+// Falls back to plain fetch + text extraction if markitdown unavailable.
+async function fetchExternalUrl(url, opts = {}) {
+    if (_mkd && _mkd.isAvailable()) {
+        try {
+            const result = await _mkd.convertUrl(url);
+            if (result.success) {
+                const content = result.markdown.slice(0, opts.maxChars || 2000);
+                if (opts.persist) {
+                    // Persist to vault for future recall
+                    const slug = url.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 60);
+                    try { await obsidianWrite(`Research/External-${slug}.md`, `# ${url}\n\n${content}`); } catch {}
+                }
+                return content;
+            }
+        } catch (e) {
+            console.warn('[Wiki] markitdown URL fetch failed (non-fatal):', e.message);
+        }
+    }
+    // Fallback: plain HTTPS fetch + text strip
+    try {
+        const mod = url.startsWith('https') ? require('https') : require('http');
+        return await new Promise((resolve, reject) => {
+            const req = mod.get(url, { headers: { 'User-Agent': 'ApexAIOS/1.0' } }, (res) => {
+                let data = '';
+                res.on('data', c => { data += c; });
+                res.on('end', () => resolve(data.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, opts.maxChars || 2000)));
+            });
+            req.on('error', reject);
+            req.setTimeout(10000, () => { req.destroy(); reject(new Error('timeout')); });
+        });
+    } catch (e) {
+        console.warn('[Wiki] external URL fallback failed:', e.message);
+        return '';
+    }
+}
+
+module.exports = { getWikiContext, updateWikiAfterTask, consolidateWiki, checkVaultHealth, getEntityContext, fetchExternalUrl };

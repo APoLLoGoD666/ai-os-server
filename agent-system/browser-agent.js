@@ -9,6 +9,27 @@ const MODEL = 'claude-sonnet-4-6';
 const DEFAULT_TIMEOUT = 30000;
 const SESSION_DIR = '/tmp/browser-sessions';
 
+// Domain allowlist — if set, browser functions block URLs not on this list.
+// Populate via BROWSER_ALLOWED_DOMAINS env var (comma-separated) or runtime call.
+const _allowedDomains = process.env.BROWSER_ALLOWED_DOMAINS
+    ? new Set(process.env.BROWSER_ALLOWED_DOMAINS.split(',').map(d => d.trim().toLowerCase()))
+    : null;
+
+function _checkDomain(url) {
+    if (!_allowedDomains || _allowedDomains.size === 0) return;
+    try {
+        const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+        if (!_allowedDomains.has(host)) {
+            throw new Error(`Domain not in allowlist: ${host}`);
+        }
+    } catch (e) {
+        if (e.message.startsWith('Domain not in allowlist')) throw e;
+    }
+}
+
+// SOCKS5/HTTP proxy configuration — set PLAYWRIGHT_PROXY env var as "socks5://host:port"
+const _proxyConfig = process.env.PLAYWRIGHT_PROXY ? { server: process.env.PLAYWRIGHT_PROXY } : undefined;
+
 // Module-level Anthropic client — NOT new per call
 const _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -74,7 +95,7 @@ async function saveSessionState({ browser, context, sessionKey }) {
 
 // ── Core browser session ──────────────────────────────────────────
 async function createBrowser() {
-    return await chromium.launch({
+    const launchOpts = {
         headless: true,
         args: [
             '--no-sandbox',
@@ -85,7 +106,9 @@ async function createBrowser() {
             '--no-zygote',
             '--single-process'
         ]
-    });
+    };
+    if (_proxyConfig) launchOpts.proxy = _proxyConfig;
+    return await chromium.launch(launchOpts);
 }
 
 // ── Extract page content cleanly ─────────────────────────────────
@@ -829,11 +852,399 @@ async function screenshot(url, outputPath, options = {}) {
     }
 }
 
+// ── HAR recording — full network traffic log (agent-browser pattern) ─────────
+async function recordHar(url, options = {}) {
+    const harPath = options.outputPath || path.join(os.tmpdir(), `apex-har-${Date.now()}.har`);
+    let browser;
+    try {
+        browser = await createBrowser();
+        const context = await browser.newContext({ recordHar: { path: harPath, mode: 'full' } });
+        const page = await context.newPage();
+        await page.goto(url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
+        if (options.actions) {
+            for (const act of options.actions) {
+                if (act.type === 'click' && act.selector) await page.click(act.selector).catch(() => {});
+                if (act.type === 'wait') await page.waitForTimeout(act.ms || 1000);
+            }
+        }
+        await context.close();
+        const har = JSON.parse(fs.readFileSync(harPath, 'utf8'));
+        const entries = (har.log?.entries || []).map(e => ({
+            url: e.request.url, method: e.request.method,
+            status: e.response.status, mimeType: e.response.content.mimeType,
+            size: e.response.content.size, time: e.time
+        }));
+        return { success: true, entries, harPath };
+    } catch (e) {
+        return { success: false, error: e.message, harPath };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Request mocking — intercept and substitute responses ─────────────────────
+async function mockRoute(url, patterns, mockHandlers, action = 'scrape') {
+    let browser;
+    try {
+        browser = await createBrowser();
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        const mocks = Array.isArray(patterns) ? patterns : [patterns];
+        for (let i = 0; i < mocks.length; i++) {
+            const handler = mockHandlers[i] || mockHandlers[0];
+            await page.route(mocks[i], route => {
+                if (typeof handler === 'object') {
+                    route.fulfill({ status: handler.status || 200, contentType: handler.contentType || 'application/json', body: typeof handler.body === 'string' ? handler.body : JSON.stringify(handler.body) });
+                } else {
+                    route.continue();
+                }
+            });
+        }
+        await page.goto(url, { waitUntil: 'networkidle', timeout: DEFAULT_TIMEOUT });
+        const content = await extractPageContent(page);
+        return { success: true, content };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Keyboard press — key combos, shortcuts, modal dismissal ──────────────────
+async function pressKey(url, key, options = {}) {
+    let browser;
+    try {
+        const session = await createBrowserWithSession(options.sessionKey || null);
+        browser = session.browser;
+        const page = await session.context.newPage();
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+        if (options.selector) await page.focus(options.selector);
+        await page.keyboard.press(key);
+        if (options.screenshot) await page.screenshot({ path: options.screenshot });
+        const content = await extractPageContent(page);
+        return { success: true, key, content };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Realistic fill — type with per-character delay (bot-detection avoidance) ──
+async function fillSlow(url, selector, text, options = {}) {
+    let browser;
+    try {
+        const session = await createBrowserWithSession(options.sessionKey || null);
+        browser = session.browser;
+        const page = await session.context.newPage();
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+        await page.waitForSelector(selector, { timeout: 10000 });
+        await page.type(selector, text, { delay: options.delay || 60 });
+        if (options.pressEnter) await page.keyboard.press('Enter');
+        const content = await extractPageContent(page);
+        return { success: true, selector, content };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Select dropdown — pick option by value or label ──────────────────────────
+async function selectOption(url, selector, valueOrLabel, options = {}) {
+    let browser;
+    try {
+        const session = await createBrowserWithSession(options.sessionKey || null);
+        browser = session.browser;
+        const page = await session.context.newPage();
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+        await page.waitForSelector(selector, { timeout: 10000 });
+        await page.selectOption(selector, options.byLabel
+            ? { label: valueOrLabel }
+            : { value: valueOrLabel });
+        const content = await extractPageContent(page);
+        return { success: true, selector, selected: valueOrLabel, content };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Drag and drop — reorder elements ─────────────────────────────────────────
+async function dragDrop(url, sourceSelector, targetSelector, options = {}) {
+    let browser;
+    try {
+        const session = await createBrowserWithSession(options.sessionKey || null);
+        browser = session.browser;
+        const page = await session.context.newPage();
+        await page.goto(url, { waitUntil: 'networkidle', timeout: DEFAULT_TIMEOUT });
+        await page.waitForSelector(sourceSelector, { timeout: 10000 });
+        await page.waitForSelector(targetSelector, { timeout: 10000 });
+        await page.dragAndDrop(sourceSelector, targetSelector);
+        const content = await extractPageContent(page);
+        return { success: true, from: sourceSelector, to: targetSelector, content };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── JS evaluation — run script in page context with safety guards ─────────────
+const _EVAL_BLOCKLIST = /localStorage\.clear|sessionStorage\.clear|document\.cookie\s*=|fetch\s*\(/i;
+async function evalInPage(url, script, options = {}) {
+    if (_EVAL_BLOCKLIST.test(script) && !options.allowDangerous) {
+        return { success: false, error: 'Script blocked by safety policy. Pass allowDangerous:true to override.' };
+    }
+    let browser;
+    try {
+        browser = await createBrowser();
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+        const result = await page.evaluate(script);
+        return { success: true, result };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Console monitor — capture JS logs and errors during page load ─────────────
+async function consoleMonitor(url, options = {}) {
+    const filter = options.filter || 'all'; // 'all'|'error'|'warn'|'log'
+    let browser;
+    try {
+        browser = await createBrowser();
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        const logs = [];
+        page.on('console', msg => {
+            if (filter === 'all' || msg.type() === filter) {
+                logs.push({ type: msg.type(), text: msg.text(), location: msg.location() });
+            }
+        });
+        page.on('pageerror', err => logs.push({ type: 'pageerror', text: err.message }));
+        await page.goto(url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
+        return { success: true, url, logs, errorCount: logs.filter(l => l.type === 'error' || l.type === 'pageerror').length };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Core Web Vitals — LCP, CLS, FID, TTFB capture ────────────────────────────
+async function webVitals(url, options = {}) {
+    let browser;
+    try {
+        browser = await createBrowser();
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        await page.goto(url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
+        const vitals = await page.evaluate(() => {
+            return new Promise(resolve => {
+                const result = { lcp: null, cls: 0, fid: null, ttfb: null };
+                try {
+                    const navEntry = performance.getEntriesByType('navigation')[0];
+                    if (navEntry) result.ttfb = Math.round(navEntry.responseStart - navEntry.requestStart);
+                    new PerformanceObserver(list => {
+                        const entries = list.getEntries();
+                        result.lcp = Math.round(entries[entries.length - 1]?.startTime || 0);
+                    }).observe({ type: 'largest-contentful-paint', buffered: true });
+                    let clsVal = 0;
+                    new PerformanceObserver(list => {
+                        for (const e of list.getEntries()) {
+                            if (!e.hadRecentInput) clsVal += e.value;
+                        }
+                        result.cls = Math.round(clsVal * 1000) / 1000;
+                    }).observe({ type: 'layout-shift', buffered: true });
+                    setTimeout(() => resolve(result), 2000);
+                } catch { resolve(result); }
+            });
+        });
+        const ratings = {
+            lcp: vitals.lcp ? (vitals.lcp < 2500 ? 'good' : vitals.lcp < 4000 ? 'needs-improvement' : 'poor') : 'unknown',
+            cls: vitals.cls < 0.1 ? 'good' : vitals.cls < 0.25 ? 'needs-improvement' : 'poor',
+            ttfb: vitals.ttfb ? (vitals.ttfb < 800 ? 'good' : vitals.ttfb < 1800 ? 'needs-improvement' : 'poor') : 'unknown'
+        };
+        return { success: true, url, vitals, ratings };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Annotated snapshot — screenshot with numbered element overlays ────────────
+// Implements agent-browser --annotate pattern: @e1, @e2 labels on screenshot
+async function annotatedSnapshot(url, options = {}) {
+    let browser;
+    try {
+        browser = await createBrowser();
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: options.timeout || DEFAULT_TIMEOUT });
+        if (options.waitFor) await page.waitForSelector(options.waitFor, { timeout: 5000 }).catch(() => {});
+        const snapshot = await page.accessibility.snapshot({ interestingOnly: true });
+        const refs = [];
+        let refIdx = 1;
+        function _assignRefs(node) {
+            if (!node) return;
+            if (['button', 'link', 'textbox', 'checkbox', 'radio', 'combobox', 'searchbox'].includes(node.role)) {
+                node._ref = `@e${refIdx++}`;
+                refs.push({ ref: node._ref, role: node.role, name: node.name || '' });
+            }
+            (node.children || []).forEach(_assignRefs);
+        }
+        _assignRefs(snapshot);
+        const screenshotBuf = await page.screenshot({ type: 'png' });
+        return {
+            success: true, url,
+            refs,
+            screenshot: screenshotBuf.toString('base64'),
+            refMap: refs.reduce((m, r) => { m[r.ref] = r; return m; }, {})
+        };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Cookie management — set/get/clear cookies for session control ─────────────
+async function manageCookies(url, action, cookies = []) {
+    let browser;
+    try {
+        browser = await createBrowser();
+        const context = await browser.newContext();
+        if (action === 'set' && cookies.length) {
+            await context.addCookies(cookies.map(c => ({ ...c, url })));
+        }
+        const page = await context.newPage();
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+        const current = await context.cookies();
+        return { success: true, action, cookies: current };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Accessibility snapshot — LLM-optimised page representation ───────────────
+// Returns a compact role/name/value tree (playwright-cli pattern, no extra dep).
+async function ariaSnapshot(url, options = {}) {
+    try { _checkDomain(url); } catch (e) { return { success: false, error: e.message, url }; }
+    const browser = await createBrowser();
+    try {
+        const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' });
+        const page = await context.newPage();
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: options.timeout || DEFAULT_TIMEOUT });
+        if (options.waitFor) await page.waitForSelector(options.waitFor, { timeout: 5000 }).catch(() => {});
+
+        // page.accessibility.snapshot() returns the ARIA tree — ideal for LLM consumption
+        const snapshot = await page.accessibility.snapshot({ interestingOnly: options.interestingOnly !== false });
+        const title = await page.title();
+        const currentUrl = page.url();
+
+        // Flatten tree for token efficiency
+        function _flatten(node, depth = 0) {
+            if (!node) return '';
+            const indent = '  '.repeat(depth);
+            const name = node.name ? ` "${node.name}"` : '';
+            const value = node.value ? ` = ${node.value}` : '';
+            const checked = node.checked !== undefined ? ` [${node.checked ? 'checked' : 'unchecked'}]` : '';
+            let out = `${indent}${node.role}${name}${value}${checked}\n`;
+            if (node.children) out += node.children.map(c => _flatten(c, depth + 1)).join('');
+            return out;
+        }
+        const tree = snapshot ? _flatten(snapshot) : '(no accessible content)';
+        return { success: true, title, url: currentUrl, ariaTree: tree.slice(0, 8000) };
+    } catch (e) {
+        return { success: false, error: e.message, url };
+    } finally {
+        await browser.close().catch(() => {});
+    }
+}
+
+// ── CDP trace recording — captures full browser profile (perf, paint, V8) ────
+// Returns path to the .zip trace file for DevTools analysis.
+async function recordTrace(url, options = {}) {
+    const tracePath = options.outputPath || path.join(os.tmpdir(), `apex-trace-${Date.now()}.zip`);
+    let browser;
+    try {
+        browser = await createBrowser();
+        const context = await browser.newContext();
+        await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
+        const page = await context.newPage();
+        await page.goto(url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
+        if (options.actions) {
+            for (const act of options.actions) {
+                if (act.type === 'click' && act.selector) await page.click(act.selector).catch(() => {});
+                if (act.type === 'wait') await page.waitForTimeout(act.ms || 1000);
+                if (act.type === 'fill' && act.selector) await page.fill(act.selector, act.value || '').catch(() => {});
+            }
+        }
+        await context.tracing.stop({ path: tracePath });
+        const stats = fs.statSync(tracePath);
+        return { success: true, url, tracePath, sizeBytes: stats.size };
+    } catch (e) {
+        return { success: false, url, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+// ── Video recording — captures page interaction as WebM video ─────────────
+// Records full navigation + optional actions; returns base64 webm or path.
+async function recordVideo(url, options = {}) {
+    const videoDir = options.outputDir || os.tmpdir();
+    let browser;
+    try {
+        browser = await createBrowser();
+        const context = await browser.newContext({
+            recordVideo: {
+                dir: videoDir,
+                size: options.size || { width: 1280, height: 720 }
+            }
+        });
+        const page = await context.newPage();
+        await page.goto(url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
+        if (options.actions) {
+            for (const act of options.actions) {
+                if (act.type === 'click' && act.selector) await page.click(act.selector).catch(() => {});
+                if (act.type === 'wait') await page.waitForTimeout(act.ms || 1500);
+                if (act.type === 'fill' && act.selector) await page.fill(act.selector, act.value || '').catch(() => {});
+                if (act.type === 'scroll') await page.evaluate(({ x, y }) => window.scrollBy(x, y), { x: act.x || 0, y: act.y || 500 }).catch(() => {});
+            }
+        }
+        const videoPath = await page.video()?.path();
+        await context.close();
+        if (!videoPath) return { success: false, url, error: 'No video produced' };
+        const stats = fs.statSync(videoPath);
+        const result = { success: true, url, videoPath, sizeBytes: stats.size };
+        if (options.base64 && stats.size < 10 * 1024 * 1024) {
+            result.base64 = fs.readFileSync(videoPath).toString('base64');
+        }
+        return result;
+    } catch (e) {
+        return { success: false, url, error: e.message };
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
 module.exports = {
     research, researchParallel, researchEntity,
     fillForm, batchFillForm, clickAndExtract,
     downloadFile, generatePDF, auditAccessibility,
     monitorPage, discoverAPI, screenshot,
-    extractStructuredData, extractPageContent,
+    extractStructuredData, extractPageContent, ariaSnapshot, annotatedSnapshot,
+    recordHar, mockRoute, pressKey, fillSlow, selectOption, dragDrop,
+    evalInPage, consoleMonitor, webVitals, manageCookies,
+    recordTrace, recordVideo,
     createBrowser, createBrowserWithSession, checkResearchCache
 };

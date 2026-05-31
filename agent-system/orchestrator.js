@@ -243,18 +243,44 @@ function _buildRoutesMap() {
 
 // ── Agent: RESEARCHER (optional pre-ARCHITECT step) ────────────────────────────
 // Triggered when the objective contains research-indicating keywords or spec.requiresResearch=true.
-// Fetches live web context and injects it into obsidianContext before ARCHITECT runs.
+// Strategy: Firecrawl (rich markdown, no browser) → browser-agent fallback → skip.
 const _RESEARCH_TRIGGER = /\b(research|look.?up|find.?info|discover|competitive|what.?is|how.?does|latest|current|price|api.?docs?|documentation)\b/i;
 async function _researcher(spec) {
     const needsResearch = spec.requiresResearch || _RESEARCH_TRIGGER.test(spec.objective || '');
     if (!needsResearch) return null;
     const t0 = Date.now();
+
+    // Path 1 — Firecrawl: clean LLM-ready markdown, no browser overhead
+    try {
+        const fc = require('./firecrawl-bridge');
+        if (fc.isAvailable()) {
+            const r = await fc.researchTopic(spec.objective);
+            if (r.success && r.summary) {
+                obsidianContext = (obsidianContext ? obsidianContext + '\n\n---\n\n' : '') + `## Web Research\n${r.summary}`;
+                // Persist research to Obsidian Research/ vault for future runs
+                try {
+                    const { obsidianWrite } = require('./obsidian-client');
+                    const dateStr = new Date().toISOString().split('T')[0];
+                    const noteTitle = `Research/${dateStr}.md`;
+                    const existing = await require('./obsidian-client').obsidianRead(noteTitle).catch(() => '');
+                    const entry = `\n\n## ${spec.objective}\n${r.summary}\n\nSources: ${(r.sources || []).join(', ')}`;
+                    await obsidianWrite(noteTitle, (existing || `# Research ${dateStr}`) + entry);
+                } catch {}
+                console.log(`[Orchestrator] RESEARCHER/firecrawl (${Date.now() - t0}ms) — ${r.sources?.length || 0} sources`);
+                return { role: 'RESEARCHER', result: { summary: r.summary.slice(0, 200), sources: r.sources }, duration: Date.now() - t0 };
+            }
+        }
+    } catch (e) {
+        console.warn('[Orchestrator] RESEARCHER/firecrawl skipped:', e.message);
+    }
+
+    // Path 2 — browser-agent fallback
     try {
         const browserAgent = require('./browser-agent');
         const result = await browserAgent.research(spec.objective, `https://www.google.com/search?q=${encodeURIComponent(spec.objective)}`, { maxPages: 2, skipCache: false });
         if (result.success && result.summary) {
             obsidianContext = (obsidianContext ? obsidianContext + '\n\n---\n\n' : '') + `## Web Research\n${result.summary.slice(0, 1000)}`;
-            console.log(`[Orchestrator] RESEARCHER (${Date.now() - t0}ms) — ${result.pagesVisited || 0} pages, cache=${result.cached || false}`);
+            console.log(`[Orchestrator] RESEARCHER/browser (${Date.now() - t0}ms) — ${result.pagesVisited || 0} pages`);
             return { role: 'RESEARCHER', result: { summary: result.summary.slice(0, 200), cached: result.cached || false }, duration: Date.now() - t0 };
         }
     } catch (e) {
@@ -362,6 +388,16 @@ async function _developerWriteFile(spec, filename, architectAnalysis, failureCon
         ? `\n\nPREVIOUS ATTEMPT FAILED — FIX THIS:\n${failureContext}\nDo not repeat the same mistake.`
         : '';
 
+    const _isFE = _isFrontendTask(spec);
+    const _designMandate = _isFE ? `
+FRONTEND DESIGN MANDATE (this file touches the UI — non-negotiable):
+Motion: use transform/opacity only; 150-400ms; ease-out or spring; no bounce; prefers-reduced-motion respected.
+Motion restraint (Emil Kowalski lens): purposeful only — no pulsing loaders, no stagger spam, no hover bounce.
+Colors: all via CSS custom properties (--apex-* vars), never hardcoded hex. OKLCH preferred for new colors.
+Contrast: min 4.5:1 text, 3:1 UI components. Touch targets min 44×44px. :focus-visible on all interactive.
+Typography: use the existing type scale; no font-size <16px on mobile inputs.
+Anti-patterns forbidden: outline:none without replacement, hover-only interactions, z-index >100 without comment, emoji as nav icons.` : '';
+
     const SYSTEM = `You are the DEVELOPER agent for Apex AI OS — expert Node.js/Express backend engineer.
 Return ONLY the complete ${isNew ? 'new' : 'updated'} file content. No markdown fences, no explanation, no preamble.
 Your entire response IS the file, written to disk exactly as returned.
@@ -369,7 +405,7 @@ Your entire response IS the file, written to disk exactly as returned.
 PRINCIPLES: Simplicity First. Surgical Changes — preserve all existing code, add only what the spec requires. Goal-Driven.
 PATTERNS: Validate inputs at route level. Use proper HTTP codes (400/401/403/404/503). Wrap in try/catch with meaningful errors. Never log secrets.
 ROUTING: New API routes go in routes/<domain>.js using Express.Router(). Never modify server.js.
-NEVER touch: touchstart, touchend, getUserMedia, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.
+NEVER touch: touchstart, touchend, getUserMedia, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.${_designMandate}
 
 SPEC:
 ${JSON.stringify(spec, null, 2)}
@@ -453,6 +489,7 @@ Anti-patterns (flag as issues): emoji as navigation icons, hover-only interactio
     const SYSTEM = `You are the REVIEWER and SECURITY AUDITOR for Apex AI OS.
 Review for: spec correctness, missing error handling, proper HTTP status codes.
 Security (OWASP Top 10): injection vectors, broken auth, sensitive data exposure, XSS, missing input validation, secrets hardcoded in code, unvalidated external input.
+STRIDE threat model: Spoofing (auth bypass/impersonation), Tampering (unauthorised data mutation), Repudiation (missing audit trail), Information Disclosure (data leaks, verbose errors), Denial of Service (unbounded loops, missing rate limits), Elevation of Privilege (missing authz checks).
 Also check: no duplicate route paths, try/catch on async DB calls, no raw secrets in code.
 Protected (report as CRITICAL if touched): iOS HTT pipeline, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.${uiAudit}${priorDecisions}
 Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}`;
@@ -488,6 +525,22 @@ Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}
         if (!fileResult.passed) {
             allPassed = false;
             (fileResult.issues || []).forEach(i => allIssues.push(`${filename}: ${i}`));
+        }
+
+        // Impeccable static anti-pattern check for HTML/CSS files
+        if (/\.(html|css)$/i.test(filename)) {
+            try {
+                const impeccable = require('./impeccable-validator');
+                const filePath = path.join(_worktreeRoot, filename);
+                if (fs.existsSync(filePath)) {
+                    const imp = await impeccable.validateFile(filePath);
+                    if (!imp.skipped && imp.issues.length) {
+                        const high = imp.issues.filter(i => i.severity === 'high');
+                        if (high.length) { allPassed = false; }
+                        imp.issues.forEach(i => allIssues.push(`${filename} [impeccable]: ${i.message}`));
+                    }
+                }
+            } catch {}
         }
     }
 

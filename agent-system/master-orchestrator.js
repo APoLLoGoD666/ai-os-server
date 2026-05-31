@@ -585,4 +585,425 @@ async function autoApproveStandardPermissions() {
     }
 }
 
-module.exports = { runMasterOrchestrator, runFeature, parseRoadmap, runFeatureWithPermission, autoApproveStandardPermissions };
+// ── gstack-pattern: Office Hours — product interrogation before building ──────
+// Validates feature requirements with forcing questions before dev starts.
+async function officeHours(topic) {
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 1500,
+        system: `You are a senior product manager running office hours for Apex AI OS.
+Ask sharp, forcing questions that expose unstated assumptions, edge cases, and misaligned expectations.
+Format: numbered list of 5-8 questions the builder must answer before writing any code.
+Be direct. No preamble. Start immediately with Q1.`,
+        messages: [{ role: 'user', content: `Feature request: ${topic}\n\nWhat must I answer before we build this?` }]
+    });
+    const questions = res.content[0].text.trim();
+    memory.write(`Projects/OfficeHours-${Date.now()}.md`, `# Office Hours: ${topic}\n\n${questions}`);
+    return { questions, topic };
+}
+
+// ── gstack-pattern: QA Lead — pre-ship quality gate ──────────────────────────
+async function qaLead(featureId, filePaths = []) {
+    const fileContext = filePaths.map(fp => {
+        try { return `\n\`\`\`\n// ${fp}\n${require('fs').readFileSync(require('path').join(ROOT, fp), 'utf8').slice(0, 1500)}\n\`\`\``; }
+        catch { return `// ${fp} (not found)`; }
+    }).join('\n');
+
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 2000,
+        system: `You are the QA Lead for Apex AI OS. Produce a concrete test checklist for the feature.
+Include: happy path, error states, edge cases, mobile/voice, accessibility, rate limiting.
+Format: markdown checklist. No preamble.`,
+        messages: [{ role: 'user', content: `Feature: ${featureId}\n${fileContext}\n\nGenerate the QA checklist.` }]
+    });
+    const checklist = res.content[0].text.trim();
+    memory.write(`Projects/QA-${featureId}.md`, `# QA: ${featureId}\n\n${checklist}`);
+    return { checklist, featureId };
+}
+
+// ── gstack-pattern: Release Check — pre-deploy verification ──────────────────
+async function releaseCheck(features = []) {
+    const roadmap = parseRoadmap();
+    const completedIds = Object.values(roadmap).flatMap(ws => ws.completed.map(f => f.id));
+    const pendingCount = Object.values(roadmap).reduce((a, ws) => a + ws.pending.length, 0);
+
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 1000,
+        system: `You are the Release Manager for Apex AI OS. Produce a go/no-go release assessment.
+Check: completed features, pending blockers, known risks, recommended action.
+Format: ## Go/No-Go\n[decision]\n\n## Blockers\n[list]\n\n## Risks\n[list]\n\n## Recommended Action\n[action]`,
+        messages: [{ role: 'user', content: `Completed features: ${completedIds.join(', ')}\nPending features: ${pendingCount}\nFeatures in this release: ${features.join(', ') || 'unspecified'}\n\nGo/No-Go?` }]
+    });
+    const report = res.content[0].text.trim();
+    memory.write(`Projects/ReleaseCheck-${new Date().toISOString().split('T')[0]}.md`, report);
+    return { report, completedFeatures: completedIds.length, pendingFeatures: pendingCount };
+}
+
+// ── gstack-pattern: Retrospective — weekly learning capture ──────────────────
+async function retro(period = 'week') {
+    const lessons = memory.getLessons ? memory.getLessons() : '';
+    const decisions = (() => { try { return require('./obsidian-client').obsidianRead('System/Decisions.md'); } catch { return Promise.resolve(''); } })();
+
+    const [lessonsText, decisionsText] = await Promise.all([
+        typeof lessons === 'string' ? lessons : Promise.resolve(''),
+        decisions
+    ]);
+
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 1500,
+        system: `You are facilitating a ${period}ly retrospective for Apex AI OS.
+Format: ## What Worked\n## What Didn't\n## Surprises\n## Next ${period[0].toUpperCase()}${period.slice(1)} Actions (3 max)
+Be specific. Extract from lessons/decisions, not generic platitudes.`,
+        messages: [{ role: 'user', content: `Recent lessons:\n${String(lessonsText).slice(0, 1000)}\n\nRecent decisions:\n${String(decisionsText).slice(0, 1000)}\n\nRun the retro.` }]
+    });
+    const report = res.content[0].text.trim();
+    const date = new Date().toISOString().split('T')[0];
+    memory.write(`System/Retro-${date}.md`, `# Retrospective ${date}\n\n${report}`);
+    return { report, period };
+}
+
+// ── gstack-pattern: Investigate — systematic root-cause analysis ──────────────
+async function investigate(errorDescription, context = {}) {
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 2000,
+        system: `You are a systematic debugger for Apex AI OS (Node.js/Express/Supabase/Playwright).
+Use the 5-Whys method. Format:
+## Symptoms\n## Root Cause Hypothesis\n## Evidence Needed\n## 5-Whys\n## Fix Strategy\n## Rollback Plan
+Be specific. Name files and line numbers where possible.`,
+        messages: [{ role: 'user', content: `Error: ${errorDescription}\nContext: ${JSON.stringify(context, null, 2)}\n\nInvestigate.` }]
+    });
+    const report = res.content[0].text.trim();
+    memory.logLesson(`Investigation: ${errorDescription.slice(0, 100)} → ${report.split('\n')[0]}`);
+    return { report, error: errorDescription };
+}
+
+// ── gstack-pattern: Benchmark — performance baseline capture ─────────────────
+async function benchmark(urls = []) {
+    const browserAgent = (() => { try { return require('./browser-agent'); } catch { return null; } })();
+    if (!browserAgent) return { error: 'browser-agent not available' };
+
+    const results = [];
+    for (const url of urls.slice(0, 5)) {
+        try {
+            const vitals = await browserAgent.webVitals(url);
+            results.push(vitals);
+        } catch (e) {
+            results.push({ url, error: e.message });
+        }
+    }
+    const date = new Date().toISOString().split('T')[0];
+    memory.write(`Projects/Benchmark-${date}.md`,
+        `# Benchmark ${date}\n\n` + results.map(r =>
+            `## ${r.url}\n- LCP: ${r.vitals?.lcp}ms (${r.ratings?.lcp})\n- CLS: ${r.vitals?.cls} (${r.ratings?.cls})\n- TTFB: ${r.vitals?.ttfb}ms (${r.ratings?.ttfb})`
+        ).join('\n\n')
+    );
+    return { results, date };
+}
+
+// ── gstack-pattern: Code Review — structured peer review via Claude ───────────
+async function codeReview(filePaths = [], context = '') {
+    const fileContext = filePaths.map(fp => {
+        try {
+            const abs = path.isAbsolute(fp) ? fp : path.join(ROOT, fp);
+            return `\`\`\`\n// ${fp}\n${require('fs').readFileSync(abs, 'utf8').slice(0, 2000)}\n\`\`\``;
+        } catch { return `// ${fp} (not found)`; }
+    }).join('\n\n');
+
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 2500,
+        system: `You are a senior engineer reviewing code for Apex AI OS (Node.js/Express/Supabase).
+Review for: correctness, security (STRIDE), performance, maintainability, adherence to project style.
+Format: ## Summary\n## Critical Issues\n## Minor Issues\n## Security (STRIDE)\n## Recommendations
+Be specific — include line numbers and code snippets. No preamble.`,
+        messages: [{ role: 'user', content: `${context ? `Context: ${context}\n\n` : ''}${fileContext}\n\nReview this code.` }]
+    });
+    const report = res.content[0].text.trim();
+    const date = new Date().toISOString().split('T')[0];
+    memory.write(`Projects/CodeReview-${date}-${Date.now()}.md`, `# Code Review\n\n${report}`);
+    return { report, files: filePaths };
+}
+
+// ── gstack-pattern: Plan Eng Review — architecture and technical review ───────
+async function planEngReview(featureId, planObj = {}) {
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 2000,
+        system: `You are the engineering lead for Apex AI OS reviewing a feature plan.
+Check: feasibility, API design, data model impact, security risks, complexity accuracy, missing steps.
+Format: ## Verdict (approve/revise/reject)\n## Technical Concerns\n## Suggested Changes\n## Risk Rating (low/medium/high)
+Be blunt. If the plan has gaps, name them specifically.`,
+        messages: [{ role: 'user', content: `Feature: ${featureId}\n\nPlan:\n${JSON.stringify(planObj, null, 2)}\n\nEngineering review.` }]
+    });
+    const report = res.content[0].text.trim();
+    memory.write(`Projects/EngReview-${featureId}.md`, `# Engineering Review: ${featureId}\n\n${report}`);
+    return { report, featureId };
+}
+
+// ── gstack-pattern: Plan Design Review — UX and visual quality review ─────────
+async function planDesignReview(featureId, spec = '') {
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 2000,
+        system: `You are the design lead for Apex AI OS reviewing a feature's UX/UI specification.
+Apply: Emil Kowalski motion restraint, OKLCH color, 44px touch targets, WCAG AA.
+Check: information architecture, empty states, error states, loading states, voice-first considerations.
+Format: ## Verdict (approve/revise)\n## UX Issues\n## Visual Issues\n## Accessibility Gaps\n## Motion Notes`,
+        messages: [{ role: 'user', content: `Feature: ${featureId}\n\nSpec:\n${spec}\n\nDesign review.` }]
+    });
+    const report = res.content[0].text.trim();
+    memory.write(`Projects/DesignReview-${featureId}.md`, `# Design Review: ${featureId}\n\n${report}`);
+    return { report, featureId };
+}
+
+// ── gstack-pattern: Design Consultation — open-ended design ideation ──────────
+async function designConsultation(brief) {
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 2000,
+        system: `You are a product designer for Apex AI OS — voice-first, calm, purposeful.
+Reference: Emil Kowalski (motion restraint), OKLCH color, minimal but warm.
+For the brief below, provide: the core design principle, 3 direction options, tradeoffs, and recommended direction.
+Format: ## Core Principle\n## Direction A\n## Direction B\n## Direction C\n## Recommended\n## Key Tradeoffs`,
+        messages: [{ role: 'user', content: `Design brief: ${brief}` }]
+    });
+    const report = res.content[0].text.trim();
+    memory.write(`Projects/DesignConsult-${Date.now()}.md`, `# Design Consultation\n\n**Brief:** ${brief}\n\n${report}`);
+    return { report, brief };
+}
+
+// ── gstack-pattern: Design Shotgun — rapid multi-direction UI concept ─────────
+// Generates N distinct design directions for the same brief in one pass.
+async function designShotgun(brief, variants = 3) {
+    const n = Math.min(Math.max(variants, 2), 5);
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 3000,
+        system: `You are a product designer generating ${n} maximally distinct UI directions for Apex AI OS.
+Each direction should differ fundamentally in visual language, hierarchy, or interaction model.
+For each: name, one-sentence philosophy, key visual decisions, motion approach, risk.
+Format: ## Direction 1: [Name]\n...\n## Direction ${n}: [Name]\n...\n## Recommendation`,
+        messages: [{ role: 'user', content: `Brief: ${brief}\n\nGenerate ${n} distinct design directions.` }]
+    });
+    const report = res.content[0].text.trim();
+    memory.write(`Projects/DesignShotgun-${Date.now()}.md`, `# Design Shotgun: ${brief}\n\n${report}`);
+    return { report, brief, variants: n };
+}
+
+// ── gstack-pattern: Document Release — structured release notes ───────────────
+async function documentRelease(features = [], version = '') {
+    const roadmap = parseRoadmap();
+    const completedFeatures = Object.values(roadmap).flatMap(ws =>
+        ws.completed.filter(f => features.length === 0 || features.includes(f.id))
+    );
+
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 2000,
+        system: `You are writing release notes for Apex AI OS.
+Format: user-facing, clear, benefit-oriented. No jargon.
+Structure: ## What's New\n## Improvements\n## Bug Fixes\n## Breaking Changes (if any)\n## Upgrade Notes
+Each item: one sentence, user-benefit framing.`,
+        messages: [{ role: 'user', content: `Version: ${version || 'next'}\nFeatures:\n${completedFeatures.map(f => `- ${f.id}: ${f.title}`).join('\n') || 'See description'}\n\nWrite release notes.` }]
+    });
+    const notes = res.content[0].text.trim();
+    const date = new Date().toISOString().split('T')[0];
+    const v = version || date;
+    memory.write(`Projects/Release-${v}.md`, `# Release Notes — ${v}\n\n${notes}`);
+    return { notes, version: v, featureCount: completedFeatures.length };
+}
+
+// ── gstack-pattern: Canary — lightweight pre-deploy sanity check ──────────────
+// Checks live URLs for HTTP 200, response time, and basic content assertion.
+async function canary(urls = [], assertions = []) {
+    const https = require('https');
+    const http = require('http');
+    const results = [];
+
+    for (const url of urls.slice(0, 10)) {
+        const start = Date.now();
+        try {
+            await new Promise((resolve, reject) => {
+                const mod = url.startsWith('https') ? https : http;
+                const req = mod.get(url, { timeout: 8000 }, (res) => {
+                    res.resume();
+                    results.push({ url, status: res.statusCode, ms: Date.now() - start, ok: res.statusCode < 400 });
+                    resolve();
+                });
+                req.on('error', e => { results.push({ url, error: e.message, ok: false }); resolve(); });
+                req.on('timeout', () => { req.destroy(); results.push({ url, error: 'timeout', ok: false }); resolve(); });
+            });
+        } catch (e) {
+            results.push({ url, error: e.message, ok: false });
+        }
+    }
+
+    const allOk = results.every(r => r.ok);
+    const date = new Date().toISOString().split('T')[0];
+    memory.write(`Projects/Canary-${date}.md`,
+        `# Canary Check — ${date}\n\n` +
+        results.map(r => `- ${r.ok ? '✓' : '✗'} ${r.url} ${r.status || r.error} ${r.ms ? `(${r.ms}ms)` : ''}`).join('\n')
+    );
+    return { allOk, results };
+}
+
+// ── gstack-pattern: Ship — orchestrated deploy workflow ───────────────────────
+// Runs: canary → release-check → git tag → push
+async function ship(featureId, opts = {}) {
+    const releaseTag = opts.tag || `v${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16)}`;
+
+    // Pre-ship checks
+    const releaseResult = await releaseCheck([featureId]);
+    const goLine = (releaseResult.report || '').split('\n').find(l => /go\/no-go|decision/i.test(l));
+    const isGo = !goLine || !/no.go/i.test(goLine);
+
+    if (!isGo && !opts.force) {
+        return { shipped: false, featureId, reason: 'Release check returned No-Go', report: releaseResult.report };
+    }
+
+    // Git tag + push
+    let tagResult = 'skipped';
+    if (process.env.GITHUB_TOKEN) {
+        try {
+            const { execSync } = require('child_process');
+            const repoUrl = `https://apex-autopilot:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
+            execSync(`git tag ${releaseTag}`, { cwd: ROOT, stdio: 'pipe' });
+            execSync(`git push ${repoUrl} ${releaseTag}`, { cwd: ROOT, stdio: 'pipe' });
+            tagResult = releaseTag;
+        } catch (e) {
+            tagResult = `tag-failed: ${e.message.slice(0, 100)}`;
+        }
+    }
+
+    const notes = await documentRelease([featureId], releaseTag);
+    memory.write(`Projects/Ship-${releaseTag}.md`,
+        `# Ship: ${featureId}\n\n**Tag:** ${releaseTag}\n**Go/No-Go:** ${isGo ? 'GO' : 'NO-GO (forced)'}\n\n${notes.notes}`
+    );
+    return { shipped: true, featureId, tag: tagResult, releaseNotes: notes.notes };
+}
+
+// ── gstack-pattern: Codex — internal knowledge search ────────────────────────
+// Searches Obsidian vault + recent decisions/lessons for relevant context.
+async function codex(query) {
+    const memory_mod = require('./obsidian-memory');
+    const { obsidianRead } = require('./obsidian-client');
+
+    // Pull relevant vault pages
+    const candidates = ['System/WIKI.md', 'System/Decisions.md', 'System/Lessons.md', 'System/North-Star.md'];
+    const pages = await Promise.all(candidates.map(async p => {
+        try { return { path: p, content: (await obsidianRead(p) || '').slice(0, 1500) }; }
+        catch { return null; }
+    }));
+    const corpus = pages.filter(Boolean).map(p => `## ${p.path}\n${p.content}`).join('\n\n---\n\n');
+
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 1500,
+        system: `You are the institutional memory for Apex AI OS.
+Search the vault corpus for what's relevant to the query.
+Return: exact quotes, page references, synthesis of relevant context, and what's NOT found.
+Format: ## Found\n## Gaps\n## Synthesis`,
+        messages: [{ role: 'user', content: `Query: ${query}\n\nVault corpus:\n${corpus.slice(0, 3000)}` }]
+    });
+    return { answer: res.content[0].text.trim(), query };
+}
+
+// ── gstack-pattern: Autoplan — generate feature plan from natural language ────
+// Skips the roadmap lookup — useful for ad-hoc or experimental features.
+async function autoplan(description, workstream = 'Operations') {
+    const syntheticFeature = { id: `FEAT-AUTO-${Date.now()}`, title: description };
+    const plan = await planFeature(syntheticFeature, workstream);
+    memory.write(`Projects/Autoplan-${Date.now()}.md`,
+        `# Autoplan\n\n**Description:** ${description}\n\n` +
+        `**Approach:** ${plan.approach}\n\n` +
+        `**Steps:**\n${(plan.steps || []).map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\n` +
+        `**Complexity:** ${plan.estimatedComplexity}\n` +
+        `**Files to create:** ${(plan.filesToCreate || []).join(', ')}`
+    );
+    return { plan, description };
+}
+
+// ── gstack-pattern: Pair agent — interactive pair-programming session ─────────
+// Given a task + existing code, returns next concrete step + reasoning.
+async function pairAgent(task, currentCode = '', lastError = '') {
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 2000,
+        system: `You are a pair programmer for Apex AI OS (Node.js/Express/Supabase).
+Your role: give the next SINGLE concrete step to move the task forward.
+Rules: one step only, with exact code or command; no future planning; fix errors first.
+Format: ## Next Step\n[exact action]\n\n## Why\n[one sentence]\n\n## Code\n\`\`\`js\n...\n\`\`\``,
+        messages: [{ role: 'user', content: `Task: ${task}\n${lastError ? `\nLast error:\n${lastError}\n` : ''}${currentCode ? `\nCurrent code:\n${currentCode.slice(0, 1500)}` : ''}` }]
+    });
+    const step = res.content[0].text.trim();
+    return { step, task, hasError: !!lastError };
+}
+
+// ── gstack-pattern: Careful — pre-write review before applying file changes ───
+// Given intended changes, returns risk assessment before any code is written.
+async function careful(fileToChange, intendedChange, existingContent = '') {
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 1500,
+        system: `You are a careful senior engineer reviewing a proposed change before it is applied.
+Check: does it break anything? does it conflict with existing code? is there a safer approach?
+Format: ## Risk (low/medium/high)\n## Conflicts\n## Side Effects\n## Recommended Approach\n## Safe to Proceed? (yes/no/revise)`,
+        messages: [{ role: 'user', content: `File: ${fileToChange}\n\nIntended change:\n${intendedChange}\n\nExisting content (excerpt):\n${existingContent.slice(0, 1500)}` }]
+    });
+    const review = res.content[0].text.trim();
+    const safe = /safe to proceed\?\s*(yes)/i.test(review);
+    return { review, safe, fileToChange };
+}
+
+// ── gstack-pattern: Freeze — verify branch is release-ready before freeze ─────
+async function freeze(branchName = 'main') {
+    let gitStatus = '';
+    try {
+        const { execSync } = require('child_process');
+        gitStatus = execSync('git status --short && git log --oneline -5', { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' });
+    } catch (e) { gitStatus = `git error: ${e.message}`; }
+
+    const res = await _anthro.messages.create({
+        model: MODEL, max_tokens: 800,
+        system: `You are enforcing a branch freeze check for Apex AI OS.
+A freeze means: no new features, only critical bug fixes.
+Assess the git status and recent commits. Decide if it's safe to freeze.
+Format: ## Freeze Decision (SAFE/NOT SAFE)\n## Uncommitted Changes\n## Recent Commits Summary\n## Recommended Action`,
+        messages: [{ role: 'user', content: `Branch: ${branchName}\n\nGit state:\n${gitStatus}` }]
+    });
+    const report = res.content[0].text.trim();
+    const freezeSafe = /freeze decision.*safe/i.test(report) && !/not safe/i.test(report);
+    return { report, freezeSafe, branch: branchName };
+}
+
+// ── gstack-pattern: QA Run — execute QA checklist against live URLs ───────────
+// Distinct from qaLead (which generates the checklist) — this runs it.
+async function qaRun(featureId, urls = [], checklist = []) {
+    const browserAgent = (() => { try { return require('./browser-agent'); } catch { return null; } })();
+    const results = [];
+
+    for (const url of urls.slice(0, 5)) {
+        const urlResult = { url, checks: [] };
+        try {
+            const [vitals, aria, console_] = await Promise.all([
+                browserAgent ? browserAgent.webVitals(url) : Promise.resolve(null),
+                browserAgent ? browserAgent.ariaSnapshot(url) : Promise.resolve(null),
+                browserAgent ? browserAgent.consoleMonitor(url, { filter: 'error' }) : Promise.resolve(null)
+            ]);
+            if (vitals) urlResult.checks.push({ check: 'web-vitals', ratings: vitals.ratings, passed: vitals.ratings?.lcp !== 'poor' });
+            if (aria) urlResult.checks.push({ check: 'aria-accessible', passed: !!aria.ariaTree });
+            if (console_) urlResult.checks.push({ check: 'no-console-errors', passed: console_.errorCount === 0, errors: console_.logs?.slice(0, 5) });
+        } catch (e) {
+            urlResult.error = e.message;
+        }
+        results.push(urlResult);
+    }
+
+    const passedAll = results.every(r => r.checks?.every(c => c.passed));
+    const date = new Date().toISOString().split('T')[0];
+    memory.write(`Projects/QARunReport-${featureId}-${date}.md`,
+        `# QA Run: ${featureId}\n\n**Passed:** ${passedAll}\n\n` +
+        results.map(r => `## ${r.url}\n${r.checks?.map(c => `- [${c.passed ? 'x' : ' '}] ${c.check}`).join('\n') || r.error}`).join('\n\n')
+    );
+    return { passedAll, results, featureId };
+}
+
+module.exports = {
+    runMasterOrchestrator, runFeature, parseRoadmap,
+    runFeatureWithPermission, autoApproveStandardPermissions,
+    officeHours, qaLead, releaseCheck, retro, investigate, benchmark,
+    codeReview, planEngReview, planDesignReview,
+    designConsultation, designShotgun, documentRelease,
+    canary, ship, codex,
+    autoplan, pairAgent, careful, freeze, qaRun
+};

@@ -104,14 +104,32 @@ router.get('/cost-summary', async (req, res) => {
     }
 });
 
-// GET /api/intelligence/news — structured news feed (returns empty if no source configured)
+// GET /api/intelligence/news — structured news feed
 router.get('/news', async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_news_cache').select('title,source,category,url,published_at').order('published_at', { ascending: false }).limit(10);
+        const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+        const category = req.query.category;
+        let query = sb().from('apex_news_cache')
+            .select('title,source,category,url,summary,published_at')
+            .order('published_at', { ascending: false })
+            .limit(limit);
+        if (category) query = query.eq('category', category);
+        const { data, error } = await query;
         if (error || !data || !data.length) return res.json({ ok: true, articles: [] });
         res.json({ ok: true, articles: data });
     } catch (e) {
         res.json({ ok: true, articles: [], error: e.message });
+    }
+});
+
+// POST /api/intelligence/news/refresh — manually trigger news ingest
+router.post('/news/refresh', async (req, res) => {
+    try {
+        const { ingestNews } = require('../agent-system/news-ingest');
+        const count = await ingestNews();
+        res.json({ ok: true, new_articles: count, message: `Ingested ${count} new articles` });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
     }
 });
 

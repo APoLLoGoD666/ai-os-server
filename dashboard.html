@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1290,31 +1290,42 @@
 
 <!-- ══ APEX ENHANCED DESIGN SYSTEM ══════════════════════════════════════ -->
 <style>
-/* ── Enhanced root tokens ───────────────────────────────────────────── */
+/* ── APEX v11 Design Tokens ─────────────────────────────────────────── */
 :root {
-    --bg:           #080c10;
-    --bg2:          #0b1018;
-    --glass:        rgba(255,255,255,0.035);
-    --glass2:       rgba(0,212,255,0.045);
-    --border:       rgba(0,212,255,0.18);
-    --border-dim:   rgba(0,212,255,0.09);
-    --primary:      #00d4ff;
-    --primary-dim:  rgba(0,212,255,0.16);
-    --primary-glow: rgba(0,212,255,0.42);
-    --secondary:    #0066ff;
-    --accent:       #7b2fff;
-    --text:         #e8f4ff;
-    --muted:        rgba(232,244,255,0.42);
-    --muted2:       rgba(232,244,255,0.22);
-    --danger:       #ff4d6d;
-    --success:      #27ae60;
-    --warn:         #f59e0b;
-    --topbar-h:     52px;
-    --alerts-h:     26px;
-    --input-h:      56px;
-    --nav-h:        60px;
-    --orb-shell-sz: 160px;
-    --orb-sz:       104px;
+    --bg:            #000000;
+    --bg2:           #080808;
+    --bg3:           #0f0f0f;
+    --surface:       #0f0f0f;
+    --surface-2:     #1a1a1a;
+    --glass:         rgba(255,255,255,0.025);
+    --glass2:        rgba(94,106,210,0.04);
+    --border:        rgba(94,106,210,0.2);
+    --border-dim:    rgba(94,106,210,0.1);
+    --border-bright: rgba(94,106,210,0.4);
+    --primary:       #5e6ad2;
+    --primary-dim:   rgba(94,106,210,0.12);
+    --primary-glow:  rgba(94,106,210,0.3);
+    --secondary:     #7c3aed;
+    --accent:        #a78bfa;
+    --cyan:          #06b6d4;
+    --emerald:       #10b981;
+    --amber:         #f59e0b;
+    --text:          #f2f2f2;
+    --text-2:        rgba(242,242,242,0.65);
+    --text-mute:     rgba(242,242,242,0.35);
+    --muted:         rgba(242,242,242,0.38);
+    --muted2:        rgba(242,242,242,0.18);
+    --danger:        #ef4444;
+    --success:       #10b981;
+    --warn:          #f59e0b;
+    --green:         #10b981;
+    --red:           #ef4444;
+    --topbar-h:      52px;
+    --alerts-h:      0px;
+    --input-h:       54px;
+    --nav-h:         60px;
+    --orb-shell-sz:  160px;
+    --orb-sz:        100px;
 }
 
 /* ── Body & app shell ───────────────────────────────────────────────── */
@@ -1325,68 +1336,62 @@ html, body {
 }
 
 .app {
-    background:
-        radial-gradient(ellipse 70% 50% at 20% 10%, rgba(0,102,255,0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 85% 85%, rgba(123,47,255,0.05) 0%, transparent 55%),
-        radial-gradient(ellipse 80% 40% at 50% 0%,  rgba(0,212,255,0.04) 0%, transparent 50%),
-        var(--bg);
+    background: #000000;
     position: relative;
 }
 
-/* Scanline texture overlay */
+/* Animated dot grid — the signature APEX v11 background */
 .app::before {
     content: '';
     position: fixed;
     inset: 0;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,212,255,0.012) 2px,
-        rgba(0,212,255,0.012) 3px
-    );
+    background-image: radial-gradient(circle, rgba(94,106,210,0.13) 1px, transparent 1px);
+    background-size: 28px 28px;
     pointer-events: none;
-    z-index: 1;
+    z-index: 0;
+    animation: apex-grid-drift 50s linear infinite;
+}
+@keyframes apex-grid-drift {
+    0%   { background-position: 0 0; }
+    100% { background-position: 28px 28px; }
 }
 
-/* ── Topbar ─────────────────────────────────────────────────────────── */
+/* ── Topbar v11 ─────────────────────────────────────────────────────── */
 .topbar {
-    background: rgba(8,12,16,0.94);
-    border-bottom: 1px solid var(--border-dim);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background: rgba(0,0,0,0.97);
+    border-bottom: 1px solid rgba(94,106,210,0.15);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
     z-index: 20;
 }
 
-/* Holographic brand ring */
+/* Clean geometric brand mark */
 .brand-ring {
     width: 30px; height: 30px;
-    border: 1.5px solid var(--primary);
-    box-shadow: 0 0 12px var(--primary-glow), inset 0 0 10px rgba(0,212,255,0.08), 0 0 0 4px rgba(0,212,255,0.05);
-    animation: brand-pulse 2.8s ease-in-out infinite;
+    border: 1.5px solid #5e6ad2;
+    background: rgba(94,106,210,0.07);
+    box-shadow: none;
+    animation: none;
 }
-
+.brand-ring-dot {
+    background: #5e6ad2;
+    box-shadow: none;
+}
 @keyframes brand-pulse {
-    0%,100% { box-shadow: 0 0 10px var(--primary-glow), 0 0 0 3px rgba(0,212,255,0.05); }
-    50%      { box-shadow: 0 0 26px var(--primary-glow), 0 0 0 8px rgba(0,212,255,0.08), 0 0 50px rgba(0,212,255,0.12); }
+    0%,100% { opacity: 1; }
 }
 
-/* Gradient brand text */
+/* Clean brand text */
 .brand-copy strong {
-    background: linear-gradient(135deg, #00d4ff, #7b2fff, #00d4ff);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: brand-shift 4s linear infinite;
-    letter-spacing: 0.3em;
+    background: none;
+    -webkit-text-fill-color: #f2f2f2;
+    color: #f2f2f2;
+    animation: none;
+    letter-spacing: 0.32em;
     font-size: 11px;
+    font-weight: 800;
 }
-
-@keyframes brand-shift {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
-}
+@keyframes brand-shift { 0%,100% {} }
 
 .brand-copy span { color: var(--muted); letter-spacing: 0.18em; }
 
@@ -3689,9 +3694,1213 @@ select.as-pi { background:rgba(2,4,14,0.9); }
 .gw-cl-pr.p2 { color:#ffb547;background:rgba(255,183,71,0.06); }
 .gw-cl-pr.p3 { color:#4cc8ff;background:rgba(76,200,255,0.05); }
 .gw-news { background:rgba(6,12,32,0.88);border:1px solid rgba(76,160,255,0.18);border-radius:8px;overflow:hidden;min-width:240px;backdrop-filter:blur(12px); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   APEX OS v11 — Command Center Overrides & New Components
+   Pure black · Indigo structural accent · Terminal aesthetic
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Global overrides ──────────────────────────────────────────────── */
+html,body { background: #000 !important; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(94,106,210,0.22); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: rgba(94,106,210,0.4); }
+*:focus-visible { outline: 2px solid rgba(94,106,210,0.55) !important; outline-offset: 2px !important; }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; } }
+
+/* ── Navigation v11 ────────────────────────────────────────────────── */
+nav.bottom-nav,.bottom-nav {
+    background: rgba(0,0,0,0.98) !important;
+    border-right: 1px solid rgba(94,106,210,0.1) !important;
+    border-top: none !important;
+}
+.nav-btn { color: rgba(242,242,242,0.28) !important; border-radius: 0 !important; transition: color 0.15s, background 0.15s !important; }
+.nav-btn:hover { color: rgba(242,242,242,0.65) !important; background: rgba(94,106,210,0.04) !important; }
+.nav-btn.active { color: #5e6ad2 !important; background: rgba(94,106,210,0.07) !important; }
+.nav-btn.active::before { background: #5e6ad2 !important; box-shadow: none !important; }
+.nav-btn.active::after  { background: #5e6ad2 !important; box-shadow: none !important; }
+.nav-label { font-size: 8.5px !important; letter-spacing: 0.16em !important; font-weight: 600 !important; }
+.ds-sidebar-footer { border-top: 1px solid rgba(94,106,210,0.08) !important; }
+
+/* ── Input zone v11 ────────────────────────────────────────────────── */
+.input-zone { background: rgba(0,0,0,0.98) !important; border-top: 1px solid rgba(94,106,210,0.1) !important; }
+.chat-input { background: #0a0a0a !important; border: 1px solid rgba(94,106,210,0.14) !important; border-radius: 3px !important; color: #f2f2f2 !important; }
+.chat-input:focus { border-color: rgba(94,106,210,0.4) !important; background: #0f0f0f !important; box-shadow: 0 0 0 3px rgba(94,106,210,0.07) !important; outline: none !important; }
+.chat-input::placeholder { color: rgba(242,242,242,0.16) !important; }
+.send-btn { background: #5e6ad2 !important; border-radius: 3px !important; box-shadow: none !important; }
+.send-btn:hover { background: #6b78e0 !important; box-shadow: 0 0 12px rgba(94,106,210,0.35) !important; transform: none !important; }
+.mic-btn { border-radius: 3px !important; border-color: rgba(94,106,210,0.18) !important; }
+.mic-btn.listening,.mic-btn:hover { background: rgba(239,68,68,0.1) !important; border-color: rgba(239,68,68,0.35) !important; }
+.clear-chat-btn,.auto-listen-btn { border-radius: 3px !important; }
+.auto-listen-btn.on { border-color: rgba(94,106,210,0.3) !important; background: rgba(94,106,210,0.06) !important; color: #5e6ad2 !important; }
+
+/* ── Command stage ──────────────────────────────────────────────────── */
+#page-command { padding: 0 !important; overflow: hidden !important; }
+.cmd-stage { background: transparent !important; }
+
+/* ── Command split layout ───────────────────────────────────────────── */
+.cmd-split {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    height: 100%;
+    overflow: hidden;
+}
+@media (max-width: 1099px) { .cmd-split { grid-template-columns: 1fr; } .cmd-feed-col { display: none; } }
+.cmd-main-col { display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid rgba(94,106,210,0.07); }
+.cmd-feed-col { display: flex; flex-direction: column; overflow: hidden; background: #000; }
+
+/* ── Command stat strip v11 ─────────────────────────────────────────── */
+.cmd-strip {
+    display: grid !important;
+    grid-template-columns: repeat(4,1fr) !important;
+    gap: 0 !important;
+    background: rgba(94,106,210,0.08) !important;
+    border-top: 1px solid rgba(94,106,210,0.12) !important;
+    flex-shrink: 0;
+}
+.cmd-stat {
+    background: #000 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    border-right: 1px solid rgba(94,106,210,0.07) !important;
+    padding: 12px 14px !important;
+    position: relative;
+    transition: background 0.15s;
+}
+.cmd-stat:last-child { border-right: none !important; }
+.cmd-stat::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; }
+.cmd-stat.mint::before  { background: linear-gradient(90deg, #10b981, transparent); }
+.cmd-stat.cyan::before  { background: linear-gradient(90deg, #06b6d4, transparent); }
+.cmd-stat.amber::before { background: linear-gradient(90deg, #f59e0b, transparent); }
+.cmd-stat:hover { background: #060606 !important; }
+.stat-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.stat-lbl { font-size: 7.5px !important; font-weight: 700 !important; letter-spacing: 0.22em !important; text-transform: uppercase !important; color: rgba(242,242,242,0.28) !important; }
+.stat-ico svg { width:12px; height:12px; stroke: rgba(242,242,242,0.18); stroke-width:2; fill:none; }
+.stat-num { font-family:'JetBrains Mono',monospace !important; font-size:20px !important; font-weight:600 !important; color:#f2f2f2 !important; line-height:1.1 !important; margin:0 0 4px !important; }
+.stat-unit { font-size:9px !important; color:rgba(242,242,242,0.3) !important; margin-left:3px !important; font-weight:400 !important; }
+.stat-sub { font-size:8.5px !important; color:rgba(242,242,242,0.25) !important; font-family:'JetBrains Mono',monospace !important; display:flex; align-items:center; gap:4px; }
+.stat-sub .dot { width:4px; height:4px; border-radius:50%; background:rgba(242,242,242,0.2); flex-shrink:0; }
+.health-num { font-family:'JetBrains Mono',monospace !important; font-size:13px !important; font-weight:600 !important; color:#10b981 !important; margin:4px 0 !important; }
+
+/* Orb + status labels */
+.cmd-orb-label b { font-family:'JetBrains Mono',monospace !important; font-size:10px !important; letter-spacing:0.38em !important; color:rgba(242,242,242,0.85) !important; }
+#cmdOrbStateLabel { font-size:7px !important; letter-spacing:0.35em !important; color:#5e6ad2 !important; font-family:'JetBrains Mono',monospace !important; }
+.cmd-orb-status .state { font-family:'JetBrains Mono',monospace !important; font-size:9.5px !important; color:rgba(242,242,242,0.4) !important; letter-spacing:0.12em !important; }
+.cmd-orb-status .hint { font-size:8px !important; color:rgba(242,242,242,0.18) !important; letter-spacing:0.07em !important; }
+
+/* TTS / Live pills */
+#apexTtsToggle,#apexLivePill { background:rgba(0,0,0,0.88) !important; border-color:rgba(94,106,210,0.18) !important; border-radius:3px !important; }
+#apexTtsToggle:hover,#apexLivePill:hover { border-color:rgba(94,106,210,0.38) !important; }
+
+/* Waveform bars */
+.wb { background:#5e6ad2 !important; box-shadow:none !important; }
+
+/* Orb canvas indigo glow when active */
+#page-command canvas#cmdOrbCanvas { filter: none; }
+
+/* ── Topbar pills v11 ────────────────────────────────────────────────── */
+.topbar-pill {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 8px; border-radius:3px;
+    background:rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.06);
+    font-size:10px; font-family:'JetBrains Mono',monospace;
+    color:rgba(242,242,242,0.45); letter-spacing:0.04em;
+}
+.topbar-pill .num { color:#f2f2f2; font-weight:600; }
+
+/* Topbar metrics */
+.apex-metric { display:flex; flex-direction:column; align-items:center; gap:1px; padding:0 10px; border-left:1px solid rgba(94,106,210,0.07); }
+.apex-metric:first-child { border-left: none; }
+.apex-metric-val { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; color:#f2f2f2; }
+.apex-metric-lbl { font-size:7px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:rgba(242,242,242,0.2); }
+
+/* DS dot status indicators */
+.ds-dot { width:5px; height:5px; border-radius:50%; display:inline-block; flex-shrink:0; }
+.ds-dot.green   { background:#10b981; box-shadow:0 0 5px #10b981; }
+.ds-dot.cyan    { background:#06b6d4; box-shadow:0 0 5px rgba(6,182,212,0.7); }
+.ds-dot.amber   { background:#f59e0b; box-shadow:0 0 5px rgba(245,158,11,0.7); }
+.ds-dot.red,.ds-dot.danger { background:#ef4444; box-shadow:0 0 5px rgba(239,68,68,0.7); }
+.ds-dot.indigo  { background:#5e6ad2; box-shadow:0 0 5px rgba(94,106,210,0.7); }
+
+/* ── Live activity feed ─────────────────────────────────────────────── */
+.apex-feed { display:flex; flex-direction:column; height:100%; overflow:hidden; }
+.apex-feed-hdr { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid rgba(94,106,210,0.08); flex-shrink:0; }
+.apex-feed-title { font-size:7.5px; font-weight:700; letter-spacing:0.28em; text-transform:uppercase; color:rgba(242,242,242,0.28); display:flex; align-items:center; gap:7px; }
+.apex-feed-live { width:5px; height:5px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981; animation:apex-dot-pulse 2s ease-in-out infinite; }
+@keyframes apex-dot-pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+.apex-feed-body { flex:1; overflow-y:auto; display:flex; flex-direction:column; }
+.apex-feed-entry { display:grid; grid-template-columns:48px 1fr; gap:10px; padding:5px 14px; transition:background 0.1s; align-items:start; }
+.apex-feed-entry:hover { background:rgba(255,255,255,0.012); }
+.apex-feed-ts { font-family:'JetBrains Mono',monospace; font-size:8.5px; color:rgba(242,242,242,0.18); padding-top:1px; white-space:nowrap; }
+.apex-feed-msg { font-size:10.5px; color:rgba(242,242,242,0.5); line-height:1.55; }
+.apex-tag { font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:1px 5px; border-radius:2px; margin-right:5px; font-weight:700; letter-spacing:0.08em; display:inline; }
+.apex-tag-voice    { background:rgba(94,106,210,0.14);  color:#5e6ad2; }
+.apex-tag-agent    { background:rgba(124,58,237,0.14);  color:#a78bfa; }
+.apex-tag-system   { background:rgba(16,185,129,0.12);  color:#10b981; }
+.apex-tag-research { background:rgba(245,158,11,0.12);  color:#f59e0b; }
+.apex-tag-error    { background:rgba(239,68,68,0.12);   color:#ef4444; }
+.apex-tag-file     { background:rgba(6,182,212,0.12);   color:#06b6d4; }
+
+/* ── Research page ──────────────────────────────────────────────────── */
+#page-research { padding:0 !important; }
+.apex-research { display:flex; flex-direction:column; height:100%; overflow:hidden; }
+.apex-research-toolbar { display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid rgba(94,106,210,0.08); flex-shrink:0; flex-wrap:wrap; }
+.apex-research-input { flex:1; min-width:200px; height:34px; background:#0a0a0a; border:1px solid rgba(94,106,210,0.16); border-radius:3px; padding:0 12px; font-size:12px; color:#f2f2f2; font-family:'JetBrains Mono',monospace; outline:none; transition:border-color 0.15s; }
+.apex-research-input:focus { border-color:rgba(94,106,210,0.42); box-shadow:0 0 0 3px rgba(94,106,210,0.06); }
+.apex-research-input::placeholder { color:rgba(242,242,242,0.18); }
+.apex-res-btn { height:34px; padding:0 12px; background:rgba(94,106,210,0.08); border:1px solid rgba(94,106,210,0.2); border-radius:3px; color:rgba(94,106,210,0.85); font-size:8.5px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; cursor:pointer; white-space:nowrap; transition:all 0.15s; font-family:'JetBrains Mono',monospace; }
+.apex-res-btn:hover,.apex-res-btn.active { background:rgba(94,106,210,0.16); border-color:rgba(94,106,210,0.38); color:#5e6ad2; }
+.apex-res-btn:disabled { opacity:0.35; cursor:not-allowed; }
+
+.apex-file-drop { border:1px dashed rgba(94,106,210,0.2); padding:14px 16px; margin:10px 12px; text-align:center; cursor:pointer; transition:all 0.15s; background:rgba(94,106,210,0.02); border-radius:2px; flex-shrink:0; }
+.apex-file-drop:hover,.apex-file-drop.drag-over { border-color:rgba(94,106,210,0.45); background:rgba(94,106,210,0.05); }
+.apex-file-drop-icon { font-size:18px; opacity:0.35; margin-bottom:4px; }
+.apex-file-drop-text { font-size:8.5px; letter-spacing:0.2em; text-transform:uppercase; color:rgba(242,242,242,0.28); }
+.apex-file-drop-sub  { font-size:8px; color:rgba(242,242,242,0.15); margin-top:3px; font-family:'JetBrains Mono',monospace; }
+
+.apex-research-results { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
+.apex-research-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:8px; color:rgba(242,242,242,0.12); padding:40px 0; }
+.apex-research-empty-icon { font-size:24px; }
+.apex-research-empty-text { font-size:9px; letter-spacing:0.28em; text-transform:uppercase; }
+
+.apex-res-block { background:#060606; border:1px solid rgba(94,106,210,0.1); border-left:2px solid #5e6ad2; padding:10px 12px; border-radius:0 2px 2px 0; }
+.apex-res-block-title { font-size:11px; font-weight:600; color:#f2f2f2; margin-bottom:3px; }
+.apex-res-block-url { font-size:8.5px; color:rgba(94,106,210,0.7); margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:'JetBrains Mono',monospace; }
+.apex-res-block-body { font-size:10.5px; color:rgba(242,242,242,0.45); line-height:1.6; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+.apex-res-block.error { border-left-color:#ef4444; }
+.apex-res-terminal { font-family:'JetBrains Mono',monospace; font-size:10.5px; color:rgba(242,242,242,0.55); line-height:1.75; white-space:pre-wrap; word-break:break-word; background:#060606; padding:12px; border:1px solid rgba(94,106,210,0.08); border-radius:2px; }
+
+/* Research loading state */
+.apex-res-loading { display:flex; align-items:center; gap:10px; padding:14px 12px; color:rgba(242,242,242,0.3); font-size:10px; font-family:'JetBrains Mono',monospace; letter-spacing:0.08em; }
+.apex-res-spinner { width:14px; height:14px; border:1.5px solid rgba(94,106,210,0.2); border-top-color:#5e6ad2; border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Section headers (universal) ──────────────────────────────────────── */
+.apex-section-hdr { display:flex; align-items:center; justify-content:space-between; padding:9px 14px; border-bottom:1px solid rgba(94,106,210,0.07); flex-shrink:0; }
+.apex-section-label { font-size:7.5px; font-weight:700; letter-spacing:0.28em; text-transform:uppercase; color:rgba(242,242,242,0.28); display:flex; align-items:center; gap:7px; }
+.apex-section-meta  { font-family:'JetBrains Mono',monospace; font-size:8.5px; color:rgba(242,242,242,0.18); }
+
+/* ── Apex badges ──────────────────────────────────────────────────────── */
+.apex-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:2px; font-family:'JetBrains Mono',monospace; font-size:7.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; }
+.apex-badge-indigo  { background:rgba(94,106,210,0.1);  color:#5e6ad2;  border:1px solid rgba(94,106,210,0.2); }
+.apex-badge-emerald { background:rgba(16,185,129,0.09); color:#10b981;  border:1px solid rgba(16,185,129,0.18); }
+.apex-badge-amber   { background:rgba(245,158,11,0.09); color:#f59e0b;  border:1px solid rgba(245,158,11,0.18); }
+.apex-badge-red     { background:rgba(239,68,68,0.09);  color:#ef4444;  border:1px solid rgba(239,68,68,0.18); }
+
+/* ── Progress bar ─────────────────────────────────────────────────────── */
+.apex-progress { height:2px; background:rgba(94,106,210,0.1); overflow:hidden; }
+.apex-progress-bar { height:100%; background:#5e6ad2; transition:width 0.4s ease; }
+.apex-progress-bar.emerald { background:#10b981; }
+.apex-progress-bar.amber   { background:#f59e0b; }
+
+/* ── DS panel / card overrides ────────────────────────────────────────── */
+.ds-panel { background:#080808 !important; border:1px solid rgba(94,106,210,0.1) !important; border-radius:0 !important; border-top:1px solid rgba(94,106,210,0.22) !important; }
+.ds-btn { border-radius:2px !important; font-weight:600 !important; letter-spacing:0.06em !important; }
 </style>
 <link rel="stylesheet" href="/apex-v2.css">
 <link rel="stylesheet" href="/apex-custom.css">
+
+<style>
+/* ══════════════════════════════════════════════════════════════════════
+   APEX v12 · Obsidian Neural Interface
+   frontend-design@claude-plugins-official · 2026-05-31
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Tokens ──────────────────────────────────────────────────────────── */
+:root {
+  --v12-bg:        #000000;
+  --v12-s1:        #070707;
+  --v12-s2:        #0e0e0e;
+  --v12-s3:        #161616;
+  --v12-s4:        #202020;
+  --v12-tx0:       #f5f5f5;
+  --v12-tx1:       rgba(245,245,245,0.58);
+  --v12-tx2:       rgba(245,245,245,0.28);
+  --v12-tx3:       rgba(245,245,245,0.1);
+  --v12-bd:        rgba(255,255,255,0.055);
+  --v12-bd-h:      rgba(255,255,255,0.1);
+  --v12-bd-a:      rgba(99,102,241,0.22);
+  --v12-a:         #6366f1;
+  --v12-a2:        #818cf8;
+  --v12-a-dim:     rgba(99,102,241,0.1);
+  --v12-a-glow:    rgba(99,102,241,0.25);
+  --v12-ok:        #10b981;
+  --v12-warn:      #f59e0b;
+  --v12-err:       #ef4444;
+  --v12-info:      #38bdf8;
+  --v12-top:       48px;
+  --v12-nav:       178px;
+  --v12-inp:       54px;
+  --v12-f:         'Syne', system-ui, -apple-system, sans-serif;
+  --v12-mono:      'JetBrains Mono', 'Fira Code', monospace;
+  --v12-ease:      cubic-bezier(0.2, 0, 0, 1);
+
+  /* Bridge legacy variables to v12 */
+  --topbar-h:      var(--v12-top) !important;
+  --input-h:       var(--v12-inp) !important;
+}
+
+/* ── Reset & base ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--v12-bg) !important;
+  color: var(--v12-tx0) !important;
+  font-family: var(--v12-f) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Atmospheric mesh gradient ──────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 55% at 50% -5%,  rgba(99,102,241,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 55%  40% at 85% 75%,  rgba(139,92,246,0.04) 0%, transparent 48%),
+    radial-gradient(ellipse 40%  30% at  8% 65%,  rgba(99,102,241,0.03) 0%, transparent 45%),
+    radial-gradient(ellipse 30%  20% at 50% 110%, rgba(168,85,247,0.05) 0%, transparent 40%);
+  animation: v12-nebula 28s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+@keyframes v12-nebula {
+  0%   { transform: translate(0,0)      scale(1);    opacity: 1;   }
+  40%  { transform: translate(-1.5%,1%) scale(1.02); opacity: 0.8; }
+  100% { transform: translate(1.5%,-1%) scale(1.01); opacity: 0.9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+}
+
+/* ── App shell ──────────────────────────────────────────────────────── */
+.app {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+}
+
+@media (min-width: 900px) {
+  .app {
+    display: grid !important;
+    grid-template-rows: var(--v12-top) 1fr !important;
+    grid-template-columns: var(--v12-nav) 1fr !important;
+    grid-template-areas: "topbar topbar" "sidenav content" !important;
+    overflow: hidden !important;
+  }
+  .topbar          { grid-area: topbar   !important; }
+  .page-and-input  { grid-area: content  !important; }
+  .bottom-nav      { grid-area: sidenav  !important; }
+}
+
+/* ── Top bar ────────────────────────────────────────────────────────── */
+.topbar {
+  height: var(--v12-top) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 16px !important;
+  gap: 12px !important;
+  background: rgba(0,0,0,0.9) !important;
+  border-bottom: 1px solid var(--v12-bd) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  z-index: 100 !important;
+}
+
+/* Brand */
+.brand { display: flex !important; align-items: center !important; gap: 10px !important; flex-shrink: 0 !important; }
+
+.brand-ring {
+  width: 26px !important; height: 26px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid var(--v12-a) !important;
+  display: grid !important; place-items: center !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+.brand-ring-dot {
+  width: 6px !important; height: 6px !important;
+  border-radius: 50% !important;
+  background: var(--v12-a) !important;
+  box-shadow: none !important;
+}
+.brand-copy strong {
+  display: block !important;
+  font-family: var(--v12-f) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.3em !important;
+  color: var(--v12-tx0) !important;
+}
+.brand-copy span {
+  font-family: var(--v12-f) !important;
+  font-size: 7px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.22em !important;
+  text-transform: uppercase !important;
+  color: var(--v12-tx2) !important;
+}
+
+/* Topbar center metrics */
+.topbar-center {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0 !important;
+  flex: 1 !important;
+  justify-content: center !important;
+}
+.apex-metric {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 2px !important;
+  padding: 0 12px !important;
+  border-left: 1px solid var(--v12-bd) !important;
+}
+.apex-metric:first-child { border-left: none !important; }
+.apex-metric-val {
+  font-family: var(--v12-mono) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--v12-tx0) !important;
+  line-height: 1 !important;
+}
+.apex-metric-lbl {
+  font-size: 7px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.22em !important;
+  text-transform: uppercase !important;
+  color: var(--v12-tx2) !important;
+  white-space: nowrap !important;
+}
+.clock-time {
+  font-family: var(--v12-mono) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.06em !important;
+  color: var(--v12-tx0) !important;
+  line-height: 1 !important;
+}
+.clock-date {
+  font-size: 7px !important;
+  letter-spacing: 0.16em !important;
+  color: var(--v12-tx2) !important;
+  text-transform: uppercase !important;
+  line-height: 1 !important;
+  margin-top: 2px !important;
+}
+
+/* Topbar right pills */
+.topbar-right { display: flex !important; align-items: center !important; gap: 6px !important; flex-shrink: 0 !important; }
+.topbar-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 4px 9px !important;
+  border-radius: 2px !important;
+  background: rgba(255,255,255,0.025) !important;
+  border: 1px solid var(--v12-bd) !important;
+  font-family: var(--v12-mono) !important;
+  font-size: 9px !important;
+  color: var(--v12-tx1) !important;
+  letter-spacing: 0.05em !important;
+  transition: border-color 0.15s !important;
+}
+.topbar-pill:hover { border-color: var(--v12-bd-h) !important; }
+.topbar-pill .num { color: var(--v12-tx0) !important; font-weight: 600 !important; }
+
+/* ── Sidebar nav ────────────────────────────────────────────────────── */
+.bottom-nav {
+  background: rgba(0,0,0,0.88) !important;
+  border-top: none !important;
+  border-right: 1px solid var(--v12-bd) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  padding: 6px 0 0 0 !important;
+}
+.bottom-nav::-webkit-scrollbar { display: none !important; }
+
+.nav-btn {
+  flex: none !important;
+  height: 40px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  padding: 0 14px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  color: var(--v12-tx2) !important;
+  font-family: var(--v12-f) !important;
+  position: relative !important;
+  transition: color var(--v12-ease) 120ms, background var(--v12-ease) 120ms !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+.nav-btn::before, .nav-btn::after { display: none !important; }
+.nav-btn:hover {
+  color: var(--v12-tx0) !important;
+  background: rgba(255,255,255,0.025) !important;
+}
+.nav-btn.active {
+  color: var(--v12-a2) !important;
+  background: rgba(99,102,241,0.07) !important;
+}
+.nav-btn.active::before {
+  display: block !important;
+  content: '' !important;
+  position: absolute !important;
+  top: 18% !important; bottom: 18% !important; left: 0 !important;
+  width: 2px !important;
+  background: var(--v12-a) !important;
+  border-radius: 0 2px 2px 0 !important;
+  box-shadow: none !important;
+}
+.nav-icon {
+  font-size: 13px !important;
+  width: 18px !important;
+  text-align: center !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+  opacity: 0.7;
+}
+.nav-btn.active .nav-icon { opacity: 1; }
+.nav-label {
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+  flex: 1 !important;
+}
+.ds-notif-badge { border-radius: 2px !important; font-family: var(--v12-mono) !important; font-size: 8px !important; }
+
+.ds-sidebar-footer {
+  margin-top: auto !important;
+  padding: 10px 14px !important;
+  border-top: 1px solid var(--v12-bd) !important;
+}
+.ds-sidebar-meta {
+  display: flex !important;
+  justify-content: space-between !important;
+  font-family: var(--v12-mono) !important;
+  font-size: 8.5px !important;
+  color: var(--v12-tx2) !important;
+  margin-bottom: 3px !important;
+}
+
+/* ── Page area ──────────────────────────────────────────────────────── */
+.page-and-input {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.page-wrap { flex: 1 !important; min-height: 0 !important; position: relative !important; overflow: hidden !important; }
+
+.page {
+  position: absolute !important;
+  inset: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(6px) !important;
+  transition: opacity 200ms var(--v12-ease), transform 200ms var(--v12-ease) !important;
+  padding: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(99,102,241,0.2) transparent !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+.page::-webkit-scrollbar { width: 4px !important; }
+.page::-webkit-scrollbar-track { background: transparent !important; }
+.page::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.18) !important; border-radius: 2px !important; }
+.page::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.35) !important; }
+
+.page.active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) !important;
+}
+
+/* Command page: zero padding, clip overflow */
+#page-command {
+  padding: 0 !important;
+  overflow: hidden !important;
+  gap: 0 !important;
+}
+
+/* ── Command split layout ───────────────────────────────────────────── */
+.cmd-split {
+  display: grid !important;
+  grid-template-columns: 1fr 280px !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+@media (max-width: 1099px) {
+  .cmd-split { grid-template-columns: 1fr !important; }
+  .cmd-feed-col { display: none !important; }
+}
+.cmd-main-col {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border-right: 1px solid var(--v12-bd) !important;
+  min-height: 0 !important;
+}
+.cmd-feed-col {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: var(--v12-s1) !important;
+  min-height: 0 !important;
+}
+#cmd-main {
+  display: flex !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  flex-direction: column !important;
+}
+.cmd-stage {
+  position: relative !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  z-index: 1 !important;
+}
+.cmd-stage canvas { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; }
+
+/* Orb label + status — precise positioning to avoid overlap */
+.cmd-orb-label {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -60%) !important;
+  text-align: center !important;
+  z-index: 5 !important;
+  pointer-events: none !important;
+}
+.cmd-orb-label b {
+  display: block !important;
+  font-family: var(--v12-f) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.42em !important;
+  color: var(--v12-tx0) !important;
+  text-shadow: none !important;
+}
+#cmdOrbStateLabel {
+  display: block !important;
+  font-family: var(--v12-mono) !important;
+  font-size: 7px !important;
+  letter-spacing: 0.38em !important;
+  color: var(--v12-a) !important;
+  margin-top: 4px !important;
+}
+.cmd-orb-status {
+  position: absolute !important;
+  bottom: 90px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  text-align: center !important;
+  z-index: 5 !important;
+  pointer-events: none !important;
+  white-space: nowrap !important;
+}
+.cmd-orb-status .state {
+  font-family: var(--v12-mono) !important;
+  font-size: 9px !important;
+  color: var(--v12-tx1) !important;
+  letter-spacing: 0.14em !important;
+  display: block !important;
+}
+.cmd-orb-status .hint {
+  font-family: var(--v12-mono) !important;
+  font-size: 7.5px !important;
+  color: var(--v12-tx2) !important;
+  letter-spacing: 0.08em !important;
+  display: block !important;
+  margin-top: 2px !important;
+}
+
+/* TTS + Live pills */
+#apexTtsToggle, #apexLivePill {
+  background: rgba(0,0,0,0.75) !important;
+  border-color: var(--v12-bd) !important;
+  border-radius: 2px !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+#apexTtsToggle:hover, #apexLivePill:hover { border-color: var(--v12-bd-a) !important; }
+
+/* Waveform */
+.wb { background: var(--v12-a) !important; box-shadow: none !important; }
+
+/* ── Stat strip ─────────────────────────────────────────────────────── */
+.cmd-strip {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  flex-shrink: 0 !important;
+  border-top: 1px solid var(--v12-bd) !important;
+  background: var(--v12-s1) !important;
+}
+.cmd-stat {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  border-right: 1px solid var(--v12-bd) !important;
+  padding: 10px 13px !important;
+  position: relative !important;
+  transition: background 120ms !important;
+}
+.cmd-stat:last-child { border-right: none !important; }
+.cmd-stat::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  height: 1px !important;
+}
+.cmd-stat.mint::before  { background: linear-gradient(90deg, var(--v12-ok),   transparent) !important; }
+.cmd-stat.cyan::before  { background: linear-gradient(90deg, var(--v12-info),  transparent) !important; }
+.cmd-stat.amber::before { background: linear-gradient(90deg, var(--v12-warn),  transparent) !important; }
+.cmd-stat:hover { background: rgba(255,255,255,0.018) !important; }
+
+.stat-lbl {
+  font-family: var(--v12-f) !important;
+  font-size: 7px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.24em !important;
+  text-transform: uppercase !important;
+  color: var(--v12-tx2) !important;
+}
+.stat-num {
+  font-family: var(--v12-mono) !important;
+  font-size: 19px !important;
+  font-weight: 600 !important;
+  color: var(--v12-tx0) !important;
+  line-height: 1.1 !important;
+  margin: 4px 0 3px !important;
+}
+.stat-unit { font-size: 9px !important; color: var(--v12-tx2) !important; margin-left: 3px !important; font-weight: 400 !important; }
+.stat-sub { font-family: var(--v12-mono) !important; font-size: 8px !important; color: var(--v12-tx2) !important; display: flex !important; align-items: center !important; gap: 4px !important; }
+.stat-sub .dot { width: 3px !important; height: 3px !important; border-radius: 50% !important; background: var(--v12-tx3) !important; flex-shrink: 0 !important; }
+.health-num { font-family: var(--v12-mono) !important; font-size: 13px !important; font-weight: 600 !important; color: var(--v12-ok) !important; margin: 4px 0 !important; }
+
+/* ── Live feed ──────────────────────────────────────────────────────── */
+.apex-feed { display: flex !important; flex-direction: column !important; height: 100% !important; overflow: hidden !important; }
+.apex-feed-hdr {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 9px 13px !important;
+  border-bottom: 1px solid var(--v12-bd) !important;
+  flex-shrink: 0 !important;
+}
+.apex-feed-title {
+  font-family: var(--v12-f) !important;
+  font-size: 7px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3em !important;
+  text-transform: uppercase !important;
+  color: var(--v12-tx2) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+.apex-feed-live {
+  width: 5px !important; height: 5px !important;
+  border-radius: 50% !important;
+  background: var(--v12-ok) !important;
+  box-shadow: 0 0 5px var(--v12-ok) !important;
+  animation: v12-pulse 2.5s ease-in-out infinite !important;
+}
+@keyframes v12-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.apex-feed-body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  scrollbar-width: none !important;
+}
+.apex-feed-body::-webkit-scrollbar { display: none !important; }
+.apex-feed-entry {
+  display: grid !important;
+  grid-template-columns: 42px 1fr !important;
+  gap: 8px !important;
+  padding: 5px 13px !important;
+  border-bottom: 1px solid var(--v12-bd) !important;
+  transition: background 100ms !important;
+  align-items: start !important;
+}
+.apex-feed-entry:hover { background: rgba(255,255,255,0.01) !important; }
+.apex-feed-ts { font-family: var(--v12-mono) !important; font-size: 8px !important; color: var(--v12-tx2) !important; padding-top: 1px !important; white-space: nowrap !important; }
+.apex-feed-msg { font-family: var(--v12-f) !important; font-size: 10px !important; color: var(--v12-tx1) !important; line-height: 1.5 !important; }
+.apex-tag {
+  font-family: var(--v12-mono) !important;
+  font-size: 7px !important;
+  padding: 1px 5px !important;
+  border-radius: 2px !important;
+  margin-right: 5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  display: inline !important;
+  vertical-align: middle !important;
+}
+.apex-tag-voice    { background: rgba(99,102,241,0.12) !important;  color: var(--v12-a2) !important; }
+.apex-tag-agent    { background: rgba(139,92,246,0.12) !important;  color: #a78bfa !important; }
+.apex-tag-system   { background: rgba(16,185,129,0.1)  !important;  color: var(--v12-ok) !important; }
+.apex-tag-research { background: rgba(245,158,11,0.1)  !important;  color: var(--v12-warn) !important; }
+.apex-tag-error    { background: rgba(239,68,68,0.1)   !important;  color: var(--v12-err) !important; }
+.apex-tag-file     { background: rgba(56,189,248,0.1)  !important;  color: var(--v12-info) !important; }
+
+/* ── Input zone ─────────────────────────────────────────────────────── */
+.input-zone {
+  height: var(--v12-inp) !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 0 12px !important;
+  background: rgba(0,0,0,0.92) !important;
+  border-top: 1px solid var(--v12-bd) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+.chat-input {
+  flex: 1 !important;
+  height: 34px !important;
+  background: var(--v12-s2) !important;
+  border: 1px solid var(--v12-bd) !important;
+  border-radius: 3px !important;
+  padding: 0 13px !important;
+  font-size: 13px !important;
+  font-family: var(--v12-f) !important;
+  color: var(--v12-tx0) !important;
+  outline: none !important;
+  transition: border-color 150ms, background 150ms !important;
+  min-width: 0 !important;
+}
+.chat-input:focus {
+  border-color: var(--v12-bd-a) !important;
+  background: var(--v12-s3) !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.06) !important;
+}
+.chat-input::placeholder { color: var(--v12-tx2) !important; font-family: var(--v12-f) !important; }
+.send-btn {
+  width: 34px !important; height: 34px !important;
+  border-radius: 3px !important;
+  border: none !important;
+  background: var(--v12-a) !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  display: grid !important; place-items: center !important;
+  transition: background 150ms !important;
+  flex-shrink: 0 !important;
+  box-shadow: none !important;
+}
+.send-btn:hover { background: var(--v12-a2) !important; transform: none !important; box-shadow: none !important; }
+.mic-btn {
+  width: 34px !important; height: 34px !important;
+  border-radius: 3px !important;
+  border: 1px solid var(--v12-bd) !important;
+  background: transparent !important;
+  color: var(--v12-tx1) !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  display: grid !important; place-items: center !important;
+  transition: all 150ms !important;
+  flex-shrink: 0 !important;
+}
+.mic-btn:hover, .mic-btn.listening {
+  background: rgba(239,68,68,0.08) !important;
+  border-color: rgba(239,68,68,0.3) !important;
+}
+.clear-chat-btn, .auto-listen-btn {
+  height: 34px !important;
+  padding: 0 9px !important;
+  border-radius: 3px !important;
+  font-size: 9px !important;
+  font-family: var(--v12-f) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  border: 1px solid var(--v12-bd) !important;
+  background: transparent !important;
+  color: var(--v12-tx2) !important;
+  transition: all 150ms !important;
+  flex-shrink: 0 !important;
+}
+.clear-chat-btn:hover { color: var(--v12-tx1) !important; border-color: var(--v12-bd-h) !important; }
+.auto-listen-btn.on {
+  border-color: var(--v12-bd-a) !important;
+  background: var(--v12-a-dim) !important;
+  color: var(--v12-a2) !important;
+}
+
+/* ── Research page ──────────────────────────────────────────────────── */
+#page-research { padding: 0 !important; overflow: hidden !important; gap: 0 !important; }
+.apex-research { display: flex !important; flex-direction: column !important; height: 100% !important; overflow: hidden !important; }
+.apex-research-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 12px !important;
+  border-bottom: 1px solid var(--v12-bd) !important;
+  flex-shrink: 0 !important;
+  flex-wrap: wrap !important;
+  background: var(--v12-s1) !important;
+}
+.apex-research-input {
+  flex: 1 !important;
+  min-width: 180px !important;
+  height: 32px !important;
+  background: var(--v12-s2) !important;
+  border: 1px solid var(--v12-bd) !important;
+  border-radius: 2px !important;
+  padding: 0 11px !important;
+  font-size: 12px !important;
+  font-family: var(--v12-mono) !important;
+  color: var(--v12-tx0) !important;
+  outline: none !important;
+  transition: border-color 150ms !important;
+}
+.apex-research-input:focus { border-color: var(--v12-bd-a) !important; }
+.apex-research-input::placeholder { color: var(--v12-tx2) !important; }
+.apex-res-btn {
+  height: 32px !important;
+  padding: 0 11px !important;
+  background: transparent !important;
+  border: 1px solid var(--v12-bd) !important;
+  border-radius: 2px !important;
+  color: var(--v12-tx2) !important;
+  font-family: var(--v12-f) !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 150ms !important;
+}
+.apex-res-btn:hover, .apex-res-btn.active {
+  background: var(--v12-a-dim) !important;
+  border-color: var(--v12-bd-a) !important;
+  color: var(--v12-a2) !important;
+}
+.apex-res-btn:disabled { opacity: 0.3 !important; cursor: not-allowed !important; }
+
+.apex-file-drop {
+  border: 1px dashed rgba(255,255,255,0.08) !important;
+  margin: 10px 12px !important;
+  padding: 14px !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition: all 150ms !important;
+  border-radius: 2px !important;
+  flex-shrink: 0 !important;
+}
+.apex-file-drop:hover, .apex-file-drop.drag-over {
+  border-color: var(--v12-bd-a) !important;
+  background: var(--v12-a-dim) !important;
+}
+.apex-file-drop-icon { font-size: 16px !important; opacity: 0.25 !important; margin-bottom: 4px !important; }
+.apex-file-drop-text { font-family: var(--v12-f) !important; font-size: 8px !important; letter-spacing: 0.2em !important; text-transform: uppercase !important; color: var(--v12-tx2) !important; }
+.apex-file-drop-sub  { font-family: var(--v12-mono) !important; font-size: 8px !important; color: var(--v12-tx3) !important; margin-top: 3px !important; }
+
+.apex-research-results {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 10px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(99,102,241,0.15) transparent !important;
+}
+.apex-research-empty {
+  display: flex !important; flex-direction: column !important;
+  align-items: center !important; justify-content: center !important;
+  flex: 1 !important; gap: 8px !important; color: var(--v12-tx3) !important; padding: 40px 0 !important;
+}
+.apex-research-empty-icon { font-size: 22px !important; opacity: 0.4 !important; }
+.apex-research-empty-text { font-family: var(--v12-f) !important; font-size: 8px !important; letter-spacing: 0.28em !important; text-transform: uppercase !important; }
+
+.apex-res-block {
+  background: var(--v12-s1) !important;
+  border: 1px solid var(--v12-bd) !important;
+  border-left: 2px solid var(--v12-a) !important;
+  padding: 10px 12px !important;
+  border-radius: 0 2px 2px 0 !important;
+  transition: border-color 150ms !important;
+}
+.apex-res-block:hover { border-color: var(--v12-bd-h) !important; }
+.apex-res-block.error { border-left-color: var(--v12-err) !important; }
+.apex-res-block-title { font-family: var(--v12-f) !important; font-size: 11px !important; font-weight: 600 !important; color: var(--v12-tx0) !important; margin-bottom: 3px !important; }
+.apex-res-block-url { font-family: var(--v12-mono) !important; font-size: 8px !important; color: var(--v12-a) !important; margin-bottom: 6px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+.apex-res-block-body { font-family: var(--v12-f) !important; font-size: 10px !important; color: var(--v12-tx1) !important; line-height: 1.6 !important; display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; }
+.apex-res-terminal {
+  font-family: var(--v12-mono) !important;
+  font-size: 10px !important;
+  color: var(--v12-tx1) !important;
+  line-height: 1.7 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  background: var(--v12-s1) !important;
+  padding: 10px 12px !important;
+  border: 1px solid var(--v12-bd) !important;
+  border-radius: 2px !important;
+}
+.apex-res-loading {
+  display: flex !important; align-items: center !important; gap: 10px !important;
+  padding: 12px !important; color: var(--v12-tx2) !important;
+  font-family: var(--v12-mono) !important; font-size: 9px !important; letter-spacing: 0.1em !important;
+}
+.apex-res-spinner {
+  width: 12px !important; height: 12px !important;
+  border: 1.5px solid rgba(99,102,241,0.2) !important;
+  border-top-color: var(--v12-a) !important;
+  border-radius: 50% !important;
+  animation: v12-spin 0.65s linear infinite !important;
+  flex-shrink: 0 !important;
+}
+@keyframes v12-spin { to { transform: rotate(360deg); } }
+
+/* ── DS component overrides ─────────────────────────────────────────── */
+/* Panels */
+.ds-panel, .ds-panel-body {
+  background: var(--v12-s2) !important;
+  border: 1px solid var(--v12-bd) !important;
+  border-radius: 4px !important;
+  border-top: none !important;
+}
+.ds-panel { overflow: hidden !important; }
+.ds-panel-header {
+  display: flex !important; align-items: center !important; justify-content: space-between !important;
+  padding: 9px 12px !important;
+  border-bottom: 1px solid var(--v12-bd) !important;
+  background: transparent !important;
+}
+.ds-panel-header-left { display: flex !important; align-items: center !important; gap: 7px !important; }
+.ds-panel-header-right { display: flex !important; align-items: center !important; gap: 6px !important; }
+
+/* Buttons */
+.ds-btn {
+  font-family: var(--v12-f) !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  padding: 5px 11px !important;
+  border-radius: 2px !important;
+  border: 1px solid var(--v12-bd) !important;
+  background: transparent !important;
+  color: var(--v12-tx1) !important;
+  cursor: pointer !important;
+  transition: all 150ms !important;
+  white-space: nowrap !important;
+  line-height: 1.4 !important;
+}
+.ds-btn:hover { background: rgba(255,255,255,0.04) !important; color: var(--v12-tx0) !important; border-color: var(--v12-bd-h) !important; }
+.ds-btn.cyan, .ds-btn.primary { background: var(--v12-a) !important; border-color: var(--v12-a) !important; color: #fff !important; }
+.ds-btn.cyan:hover, .ds-btn.primary:hover { background: var(--v12-a2) !important; border-color: var(--v12-a2) !important; }
+.ds-btn.amber { border-color: rgba(245,158,11,0.3) !important; color: var(--v12-warn) !important; }
+.ds-btn.amber:hover { background: rgba(245,158,11,0.08) !important; }
+.ds-btn.red, .ds-btn.danger { border-color: rgba(239,68,68,0.3) !important; color: var(--v12-err) !important; }
+.ds-btn.red:hover { background: rgba(239,68,68,0.08) !important; }
+.ds-btn.purple { border-color: rgba(139,92,246,0.3) !important; color: #a78bfa !important; }
+.ds-btn.purple:hover { background: rgba(139,92,246,0.08) !important; }
+.ds-btn.xs, .ds-btn.btn--xs { padding: 3px 8px !important; font-size: 8px !important; }
+.ds-btn:disabled { opacity: 0.35 !important; cursor: not-allowed !important; }
+
+/* Inputs */
+.ds-input, .ds-select, .ds-textarea {
+  background: var(--v12-s2) !important;
+  border: 1px solid var(--v12-bd) !important;
+  border-radius: 2px !important;
+  color: var(--v12-tx0) !important;
+  font-family: var(--v12-f) !important;
+  font-size: 12px !important;
+  outline: none !important;
+  transition: border-color 150ms !important;
+  padding: 6px 10px !important;
+}
+.ds-input:focus, .ds-select:focus, .ds-textarea:focus {
+  border-color: var(--v12-bd-a) !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.06) !important;
+}
+.ds-input::placeholder, .ds-textarea::placeholder { color: var(--v12-tx2) !important; }
+
+/* Page headers */
+.ds-page-header {
+  display: flex !important; align-items: center !important; justify-content: space-between !important;
+  padding: 0 0 10px 0 !important;
+  border-bottom: 1px solid var(--v12-bd) !important;
+  margin-bottom: 2px !important;
+  flex-shrink: 0 !important;
+}
+.ds-page-title { font-family: var(--v12-f) !important; font-size: 16px !important; font-weight: 700 !important; color: var(--v12-tx0) !important; letter-spacing: -0.01em !important; }
+.ds-page-subtitle { font-family: var(--v12-f) !important; font-size: 10px !important; color: var(--v12-tx2) !important; letter-spacing: 0.06em !important; margin-top: 2px !important; }
+.ds-page-header-left { display: flex !important; flex-direction: column !important; gap: 1px !important; }
+
+/* Stat cards */
+.ds-grid-stats { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; gap: 8px !important; }
+.ds-stat-card {
+  background: var(--v12-s2) !important;
+  border: 1px solid var(--v12-bd) !important;
+  border-radius: 3px !important;
+  padding: 11px 12px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+.ds-stat-card::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  height: 1px !important;
+}
+.ds-stat-card.ac-cyan::before    { background: linear-gradient(90deg, var(--v12-info), transparent) !important; }
+.ds-stat-card.ac-purple::before  { background: linear-gradient(90deg, #a78bfa, transparent) !important; }
+.ds-stat-card.ac-amber::before   { background: linear-gradient(90deg, var(--v12-warn), transparent) !important; }
+.ds-stat-card.ac-green::before   { background: linear-gradient(90deg, var(--v12-ok), transparent) !important; }
+.ds-stat-card.ac-indigo::before  { background: linear-gradient(90deg, var(--v12-a), transparent) !important; }
+.ds-stat-label { font-family: var(--v12-f) !important; font-size: 7.5px !important; font-weight: 700 !important; letter-spacing: 0.22em !important; text-transform: uppercase !important; color: var(--v12-tx2) !important; margin-bottom: 6px !important; }
+.ds-stat-value { font-family: var(--v12-mono) !important; font-size: 24px !important; font-weight: 600 !important; line-height: 1 !important; }
+.ds-stat-value.cyan   { color: var(--v12-info) !important; }
+.ds-stat-value.purple { color: #a78bfa !important; }
+.ds-stat-value.amber  { color: var(--v12-warn) !important; }
+.ds-stat-value.green  { color: var(--v12-ok) !important; }
+.ds-stat-sub { font-family: var(--v12-mono) !important; font-size: 8.5px !important; color: var(--v12-tx2) !important; margin-top: 4px !important; }
+
+/* Badges */
+.ds-badge {
+  font-family: var(--v12-mono) !important;
+  font-size: 7.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  padding: 2px 6px !important;
+  border-radius: 2px !important;
+  text-transform: uppercase !important;
+  background: var(--v12-a-dim) !important;
+  color: var(--v12-a2) !important;
+  border: none !important;
+}
+.apex-badge { border-radius: 2px !important; font-family: var(--v12-mono) !important; font-size: 7px !important; font-weight: 700 !important; letter-spacing: 0.1em !important; }
+.apex-badge-indigo  { background: var(--v12-a-dim) !important;           color: var(--v12-a2) !important;  border: 1px solid rgba(99,102,241,0.18) !important; }
+.apex-badge-emerald { background: rgba(16,185,129,0.08) !important;      color: var(--v12-ok) !important;  border: 1px solid rgba(16,185,129,0.15) !important; }
+.apex-badge-amber   { background: rgba(245,158,11,0.08) !important;      color: var(--v12-warn) !important; border: 1px solid rgba(245,158,11,0.15) !important; }
+.apex-badge-red     { background: rgba(239,68,68,0.08) !important;       color: var(--v12-err) !important;  border: 1px solid rgba(239,68,68,0.15) !important; }
+
+/* Dots */
+.ds-dot { width: 5px !important; height: 5px !important; border-radius: 50% !important; display: inline-block !important; flex-shrink: 0 !important; }
+.ds-dot.green  { background: var(--v12-ok) !important;   box-shadow: 0 0 4px var(--v12-ok) !important; }
+.ds-dot.cyan   { background: var(--v12-info) !important; box-shadow: 0 0 4px rgba(56,189,248,0.6) !important; }
+.ds-dot.amber  { background: var(--v12-warn) !important; box-shadow: 0 0 4px rgba(245,158,11,0.6) !important; }
+.ds-dot.red, .ds-dot.danger { background: var(--v12-err) !important; box-shadow: 0 0 4px rgba(239,68,68,0.6) !important; }
+.ds-dot.indigo, .ds-dot.purple { background: var(--v12-a) !important; box-shadow: 0 0 4px var(--v12-a-glow) !important; }
+.ds-dot.grey   { background: var(--v12-tx2) !important; box-shadow: none !important; }
+
+/* Progress bars */
+.apex-progress { height: 2px !important; background: rgba(255,255,255,0.05) !important; border-radius: 1px !important; overflow: hidden !important; }
+.apex-progress-bar { height: 100% !important; background: var(--v12-a) !important; transition: width 0.4s var(--v12-ease) !important; border-radius: 1px !important; }
+.apex-progress-bar.emerald { background: var(--v12-ok) !important; }
+.apex-progress-bar.amber   { background: var(--v12-warn) !important; }
+
+/* Labels */
+.t-label, .ds-label {
+  font-family: var(--v12-f) !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase !important;
+  color: var(--v12-tx2) !important;
+}
+.t-h2 { font-family: var(--v12-f) !important; font-size: 14px !important; font-weight: 700 !important; color: var(--v12-tx0) !important; }
+.t-small { font-family: var(--v12-f) !important; font-size: 10px !important; color: var(--v12-tx1) !important; }
+.t-mono { font-family: var(--v12-mono) !important; }
+
+/* Agent drawer */
+.agent-drawer {
+  background: rgba(7,7,7,0.96) !important;
+  border-left: 1px solid var(--v12-bd) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+}
+.agent-drawer-header { border-bottom: 1px solid var(--v12-bd) !important; }
+.agent-drawer-close {
+  background: transparent !important;
+  border: 1px solid var(--v12-bd) !important;
+  border-radius: 2px !important;
+  color: var(--v12-tx2) !important;
+  width: 28px !important; height: 28px !important;
+  cursor: pointer !important;
+  transition: all 150ms !important;
+}
+.agent-drawer-close:hover { border-color: var(--v12-bd-h) !important; color: var(--v12-tx0) !important; }
+
+/* Help overlay */
+.help-overlay { backdrop-filter: blur(12px) !important; background: rgba(0,0,0,0.7) !important; }
+.help-box {
+  background: var(--v12-s2) !important;
+  border: 1px solid var(--v12-bd) !important;
+  border-radius: 4px !important;
+}
+
+/* Command palette */
+.cmd-palette { backdrop-filter: blur(20px) !important; background: rgba(0,0,0,0.7) !important; }
+.cmd-box {
+  background: var(--v12-s1) !important;
+  border: 1px solid var(--v12-bd-a) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.1) !important;
+}
+.cmd-input {
+  background: transparent !important;
+  border-bottom: 1px solid var(--v12-bd) !important;
+  color: var(--v12-tx0) !important;
+  font-family: var(--v12-f) !important;
+  font-size: 14px !important;
+}
+.cmd-item { font-family: var(--v12-f) !important; }
+.cmd-item.focused { background: var(--v12-a-dim) !important; }
+
+/* Skeletons */
+.skel { background: linear-gradient(90deg, var(--v12-s2) 25%, var(--v12-s3) 50%, var(--v12-s2) 75%) !important; background-size: 200% 100% !important; animation: v12-skel 1.5s ease infinite !important; border-radius: 2px !important; }
+@keyframes v12-skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Section header + meta */
+.apex-section-hdr { padding: 8px 13px !important; border-bottom: 1px solid var(--v12-bd) !important; display: flex !important; align-items: center !important; justify-content: space-between !important; flex-shrink: 0 !important; }
+.apex-section-label { font-family: var(--v12-f) !important; font-size: 7px !important; font-weight: 700 !important; letter-spacing: 0.3em !important; text-transform: uppercase !important; color: var(--v12-tx2) !important; display: flex !important; align-items: center !important; gap: 7px !important; }
+.apex-section-meta { font-family: var(--v12-mono) !important; font-size: 8px !important; color: var(--v12-tx2) !important; }
+
+/* DS grids */
+.ds-grid-2 { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+@media (max-width: 900px) { .ds-grid-2 { grid-template-columns: 1fr !important; } }
+</style>
 </head>
 <body>
 
@@ -3738,9 +4947,23 @@ select.as-pi { background:rgba(2,4,14,0.9); }
                 <span>Autonomous AI</span>
             </div>
         </div>
-        <div class="topbar-center">
-            <div class="clock-time" id="clockTime">--:--:--</div>
-            <div class="clock-date" id="clockDate">--</div>
+        <div class="topbar-center" style="display:flex;flex-direction:row;align-items:center;gap:0">
+            <div class="apex-metric">
+                <div class="apex-metric-val" id="tmAgents">—</div>
+                <div class="apex-metric-lbl">Agents</div>
+            </div>
+            <div class="apex-metric">
+                <div class="apex-metric-val" id="tmCost">—</div>
+                <div class="apex-metric-lbl">Cost/Day</div>
+            </div>
+            <div class="apex-metric" style="border-left:none;border-right:1px solid rgba(94,106,210,0.07);padding-right:12px;margin-right:12px">
+                <div class="apex-metric-val" id="tmLatency">—</div>
+                <div class="apex-metric-lbl">Latency</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+                <div class="clock-time" id="clockTime">--:--:--</div>
+                <div class="clock-date" id="clockDate">--</div>
+            </div>
         </div>
         <div class="topbar-right">
             <span class="topbar-pill"><span class="ds-dot cyan"></span><span>Email</span><span class="num" id="topbarEmailCount">—</span></span>
@@ -3753,12 +4976,6 @@ select.as-pi { background:rgba(2,4,14,0.9); }
         </div>
     </header>
 
-    <!-- ══ GREETING BAR ══ -->
-    <div class="greeting-bar" id="greetingBar">
-        <span class="greeting-bar-left" id="greetingText">Good morning, sir.</span>
-        <span class="greeting-bar-mid" id="greetingWeather"></span>
-        <span class="greeting-bar-right" id="greetingInsight"></span>
-    </div>
 
     <!-- ══ HELP OVERLAY ══ -->
     <div class="help-overlay" id="helpOverlay" onclick="if(event.target===this)toggleHelpOverlay()">
@@ -3802,6 +5019,10 @@ select.as-pi { background:rgba(2,4,14,0.9); }
             <!-- ══ PAGE: COMMAND ══ -->
             <div class="page active" id="page-command">
 
+            <div class="cmd-split">
+
+            <!-- LEFT: orb + stat strip -->
+            <div class="cmd-main-col">
                 <div id="cmd-main">
 
                     <!-- Canvas area: stars + orb + widgets -->
@@ -3823,12 +5044,11 @@ select.as-pi { background:rgba(2,4,14,0.9); }
                         </div>
 
                         <!-- TTS toggle pill -->
-                        <div id="apexTtsToggle" data-provider="deepgram"
-                             title="TTS: DEEPGRAM (click to switch)"
-                             onclick="(function(t){var next=t.dataset.provider==='deepgram'?'gemini':'deepgram';window.setTtsProvider(next);})(this)"
-                             style="position:absolute;bottom:22px;left:22px;z-index:10;display:flex;align-items:center;gap:6px;padding:4px 10px 4px 8px;border-radius:20px;background:rgba(10,18,40,0.7);border:1px solid rgba(76,160,255,0.18);backdrop-filter:blur(8px);cursor:pointer;transition:border-color 200ms;user-select:none">
-                            <span style="width:6px;height:6px;border-radius:50%;background:#46e7b3;box-shadow:0 0 6px #46e7b3;flex-shrink:0" id="apexTtsDot"></span>
-                            <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:rgba(180,205,240,0.55)" id="apexTtsLabel">TTS · DG</span>
+                        <div id="apexTtsToggle" data-provider="gemini"
+                             title="TTS: Gemini 2.5 Flash"
+                             style="position:absolute;bottom:22px;left:22px;z-index:10;display:flex;align-items:center;gap:6px;padding:4px 10px 4px 8px;border-radius:20px;background:rgba(10,18,40,0.7);border:1px solid rgba(94,106,210,0.25);backdrop-filter:blur(8px);user-select:none">
+                            <span style="width:6px;height:6px;border-radius:50%;background:#5e6ad2;box-shadow:0 0 6px rgba(94,106,210,0.8);flex-shrink:0" id="apexTtsDot"></span>
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:rgba(180,205,240,0.55)" id="apexTtsLabel">TTS · GEMINI</span>
                         </div>
                         <!-- Gemini Live pill -->
                         <div id="apexLivePill" title="Gemini 2.5 Natural Audio — end-to-end native voice (click to toggle)"
@@ -3883,7 +5103,30 @@ select.as-pi { background:rgba(2,4,14,0.9); }
                 <span id="orbStatus" style="display:none">Standby</span>
                 <span id="micBtn" style="display:none"></span>
 
+            </div><!-- .cmd-main-col -->
+
+            <!-- RIGHT: live activity feed -->
+            <div class="cmd-feed-col">
+                <div class="apex-feed">
+                    <div class="apex-feed-hdr">
+                        <div class="apex-feed-title">
+                            <div class="apex-feed-live"></div>
+                            ACTIVITY FEED
+                        </div>
+                        <button onclick="apexFeedClear()" style="background:none;border:none;color:rgba(242,242,242,0.15);font-size:8.5px;letter-spacing:0.12em;cursor:pointer;font-family:'JetBrains Mono',monospace;padding:0">CLR</button>
+                    </div>
+                    <div class="apex-feed-body" id="apexFeedBody">
+                        <div class="apex-feed-entry">
+                            <div class="apex-feed-ts" id="apexFeedInitTs">--:--</div>
+                            <div class="apex-feed-msg"><span class="apex-tag apex-tag-system">SYSTEM</span>Feed initialized</div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            </div><!-- .cmd-split -->
+
+            </div><!-- #page-command -->
 
             <!-- ══ PAGE: SYSTEM ══ -->
             <div class="page" id="page-system">
@@ -5250,7 +6493,42 @@ select.as-pi { background:rgba(2,4,14,0.9); }
 
             </div>
 
-            
+            <!-- ══ PAGE: RESEARCH ══ -->
+            <div class="page" id="page-research">
+                <div class="apex-research">
+                    <!-- Toolbar: query + action buttons -->
+                    <div class="apex-research-toolbar">
+                        <input class="apex-research-input" id="researchQuery" placeholder="URL, query, or topic…" onkeydown="if(event.key==='Enter')apexResearch('search')" />
+                        <button class="apex-res-btn" id="resBtnSearch" onclick="apexResearch('search')">⊹ Search</button>
+                        <button class="apex-res-btn" id="resBtnScrape" onclick="apexResearch('scrape')">⊘ Scrape URL</button>
+                        <button class="apex-res-btn" id="resBtnCrawl"  onclick="apexResearch('crawl')">⊛ Crawl Site</button>
+                        <button class="apex-res-btn" id="resBtnMap"    onclick="apexResearch('map')">⊕ Map</button>
+                        <button class="apex-res-btn" id="resBtnClear"  onclick="apexResClear()" style="border-color:rgba(239,68,68,0.2);color:rgba(239,68,68,0.6)">✕ Clear</button>
+                    </div>
+
+                    <!-- File drop zone (MarkItDown) -->
+                    <div class="apex-file-drop" id="apexFileDrop"
+                         onclick="document.getElementById('apexFileInput').click()"
+                         ondragover="event.preventDefault();this.classList.add('drag-over')"
+                         ondragleave="this.classList.remove('drag-over')"
+                         ondrop="apexFileDropHandler(event)">
+                        <div class="apex-file-drop-icon">⊞</div>
+                        <div class="apex-file-drop-text">Drop file to extract text</div>
+                        <div class="apex-file-drop-sub">PDF · DOCX · PPTX · XLSX · Images · Audio · HTML · …</div>
+                        <input type="file" id="apexFileInput" style="display:none" onchange="apexFileRead(this.files[0])" />
+                    </div>
+
+                    <!-- Results panel -->
+                    <div class="apex-research-results" id="apexResResults">
+                        <div class="apex-research-empty" id="apexResEmpty">
+                            <div class="apex-research-empty-icon">◈</div>
+                            <div class="apex-research-empty-text">No results yet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
         </div><!-- .page-wrap -->
 
         <!-- ══ INPUT ZONE ══ -->
@@ -5309,6 +6587,10 @@ select.as-pi { background:rgba(2,4,14,0.9); }
             <span class="nav-icon">◬</span>
             <span class="nav-label">Occult</span>
         </button>
+        <button class="nav-btn" id="nav-research" onclick="switchPage('research')">
+            <span class="nav-icon">◈</span>
+            <span class="nav-label">Research</span>
+        </button>
         <div class="ds-sidebar-footer">
             <div class="ds-sidebar-meta">
                 <span>v10.0.0</span>
@@ -5325,7 +6607,7 @@ select.as-pi { background:rgba(2,4,14,0.9); }
 
 <script>
 (function() {
-    var pages = ['command', 'overview', 'operation', 'system', 'communication', 'finance', 'business', 'university', 'health', 'occult'];
+    var pages = ['command', 'overview', 'operation', 'system', 'communication', 'finance', 'business', 'university', 'health', 'occult', 'research'];
     var activePage = 'command';
 
     window.switchPage = function(name) {
@@ -5382,7 +6664,7 @@ let speakQueue          = [];
 // ── TTS provider toggle ────────────────────────────────────────────────────
 // 'deepgram' (default) or 'gemini' — persisted in localStorage
 var _ttsProvider = (function(){
-    try { return localStorage.getItem('apex_tts_provider') || 'deepgram'; } catch(_){ return 'deepgram'; }
+    try { return localStorage.getItem('apex_tts_provider') || 'gemini'; } catch(_){ return 'gemini'; }
 })();
 function getTtsUrl()      { return _ttsProvider === 'gemini' ? '/api/tts/gemini' : '/api/tts'; }
 function getTtsMimeType() { return _ttsProvider === 'gemini' ? 'audio/wav' : 'audio/mpeg'; }
@@ -7206,14 +8488,6 @@ async function sendChatCommandFromText(command, options = {}) {
         const reply = data.reply || "No reply.";
         if (!silent) {
             renderChatMessage("ai", reply);
-            const ms = Date.now() - t0;
-            const log = document.getElementById("chatLog");
-            if (log) {
-                const lat = document.createElement("div");
-                lat.className = "apex-latency";
-                lat.textContent = `${ms}ms`;
-                log.appendChild(lat);
-            }
             setOrbState("speaking");
             speak(reply, { useFiller: wasVoice });
         } else {
@@ -7259,15 +8533,6 @@ async function sendVoiceChatCommand(msg) {
         const reply = data.reply || "Done.";
         console.log(`[Chat] appending AI: "${reply}"`);
         renderChatMessage("ai", reply);
-        const ms = Date.now() - _t0Voice;
-        const log = document.getElementById("chatLog");
-        if (log) {
-            const lat = document.createElement("div");
-            lat.className = "apex-latency";
-            lat.textContent = `${ms}ms`;
-            log.appendChild(lat);
-            log.scrollTop = log.scrollHeight;
-        }
         setOrbState("speaking");
         console.log("[Voice] passing to speak queue");
         speak(reply, { useFiller: true });
@@ -11437,9 +12702,9 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function loadCfg(){try{CMD.config=JSON.parse(localStorage.getItem('apex_cmd_cfg_v4')||'null')||clone(DC);}catch(e){CMD.config=clone(DC);}
   Object.keys(DC).forEach(function(k){if(!(k in CMD.config))CMD.config[k]=clone(DC[k]);});}
 function saveCfg(){try{localStorage.setItem('apex_cmd_cfg_v4',JSON.stringify(CMD.config));}catch(e){}}
-function loadWidgets(){try{CMD.widgets=JSON.parse(localStorage.getItem('apex_cmd_wids_v4')||'null');}catch(e){CMD.widgets=null;}
+function loadWidgets(){try{CMD.widgets=JSON.parse(localStorage.getItem('apex_cmd_wids_v5')||'null');}catch(e){CMD.widgets=null;}
   if(!CMD.widgets||!CMD.widgets.length)CMD.widgets=clone(DW);}
-function saveWidgets(){try{localStorage.setItem('apex_cmd_wids_v4',JSON.stringify(CMD.widgets));}catch(e){}}
+function saveWidgets(){try{localStorage.setItem('apex_cmd_wids_v5',JSON.stringify(CMD.widgets));}catch(e){}}
 
 window.cmdInitPage=function(){
   if(CMD.initialized){if(!CMD.starFrame)initStars();if(!CMD.orbFrame)initOrb();return;}
@@ -11488,12 +12753,6 @@ function buildWidget(w){
   el.className='cwid';
   el.dataset.wid=w.id;
   posWidget(el,w);
-
-  /* Delete × button */
-  var del=document.createElement('div');
-  del.className='cwid-del';del.textContent='×';
-  del.addEventListener('click',function(e){e.stopPropagation();cmdDeleteWidget(w.id);});
-  el.appendChild(del);
 
   /* Content */
   var body=document.createElement('div');
@@ -11950,9 +13209,8 @@ document.addEventListener('DOMContentLoaded',function(){
 
 </script>
 
-<!-- ══ APEX STUDIO — Global Widget Editor Panel ══ -->
-<div id="apexStudioHandle" onclick="apexStudioToggle()" title="APEX STUDIO">STUDIO</div>
-<div id="apexStudio">
+<!-- APEX STUDIO removed -->
+<div id="apexStudio" style="display:none">
   <div id="asHeader">
     <span class="as-title">Apex Studio</span>
     <span class="as-page-pill" id="asPagePill">Command</span>
@@ -12046,6 +13304,286 @@ window.selectWidget=function(wid){
 
 })();
 </script>
-<script src="/apex-visual-editor.js" defer></script>
+
+<!-- ══ APEX INTELLIGENCE LAYER ══ -->
+<script>
+(function(){
+'use strict';
+
+/* ─────────────────── Feed system ─────────────────── */
+var _feedMax = 120;
+
+function _feedTs(){
+    var d=new Date();
+    return (d.getHours()+'').padStart(2,'0')+':'+(d.getMinutes()+'').padStart(2,'0');
+}
+
+window.apexFeedPush = function(tag, msg, type){
+    var body=document.getElementById('apexFeedBody');
+    if(!body)return;
+    var empty=document.getElementById('apexResEmpty');
+    var initEntry=document.getElementById('apexFeedInitTs');
+    if(initEntry){initEntry.closest('.apex-feed-entry').remove();}
+    var entry=document.createElement('div');
+    entry.className='apex-feed-entry';
+    var tagClass='apex-tag-'+(type||'system');
+    entry.innerHTML='<div class="apex-feed-ts">'+_feedTs()+'</div>'
+        +'<div class="apex-feed-msg"><span class="apex-tag '+tagClass+'">'+tag.toUpperCase()+'</span>'+_escHtml(msg)+'</div>';
+    body.insertBefore(entry, body.firstChild);
+    var entries=body.querySelectorAll('.apex-feed-entry');
+    if(entries.length>_feedMax)entries[entries.length-1].remove();
+};
+
+window.apexFeedClear = function(){
+    var body=document.getElementById('apexFeedBody');
+    if(body)body.innerHTML='';
+};
+
+function _escHtml(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ─────────────────── Latency tracker ─────────────────── */
+var _latencies = [];
+
+window.apexTrackLatency = function(ms){
+    _latencies.push(ms);
+    if(_latencies.length>20)_latencies.shift();
+    var avg=Math.round(_latencies.reduce(function(a,b){return a+b;},0)/_latencies.length);
+    var el=document.getElementById('tmLatency');
+    if(el)el.textContent=avg+'ms';
+};
+
+/* ─────────────────── Topbar agent count ─────────────────── */
+function _updateTopbarAgents(){
+    var el=document.getElementById('tmAgents');
+    if(!el)return;
+    var running=document.querySelectorAll('.agent-status-running, [data-status="running"]').length;
+    el.textContent=running||'—';
+}
+
+/* Patch the global fetch to track latency on API calls */
+(function(){
+    var _origFetch=window.fetch;
+    window.fetch=function(url, opts){
+        var t0=Date.now();
+        return _origFetch.apply(this,arguments).then(function(r){
+            var ms=Date.now()-t0;
+            if(typeof url==='string'&&url.includes('/api/')){
+                window.apexTrackLatency(ms);
+                var tag=url.replace(/.*\/api\//,'').split('?')[0].split('/')[0].toUpperCase().slice(0,12);
+                if(ms>800)window.apexFeedPush(tag,'Slow response — '+ms+'ms','error');
+            }
+            return r;
+        });
+    };
+})();
+
+/* ─────────────────── Cost tracker ─────────────────── */
+(function(){
+    function _refreshCost(){
+        var el=document.getElementById('tmCost');
+        if(!el)return;
+        fetch('/api/cost/today').then(function(r){return r.ok?r.json():null;}).then(function(d){
+            if(d&&(d.total_cost!=null||d.cost!=null)){
+                var c=d.total_cost||d.cost||0;
+                el.textContent='$'+c.toFixed(2);
+            }
+        }).catch(function(){});
+    }
+    _refreshCost();
+    setInterval(_refreshCost, 120000);
+})();
+
+/* ─────────────────── Feed init time ─────────────────── */
+(function(){
+    var el=document.getElementById('apexFeedInitTs');
+    if(el)el.textContent=_feedTs();
+    window.apexFeedPush('SYSTEM','APEX Command Center ready','system');
+})();
+
+/* ─────────────────── Intercept sendChatCommand for feed ─────────────────── */
+(function(){
+    var _orig=window.sendChatCommand;
+    if(typeof _orig==='function'){
+        window.sendChatCommand=function(){
+            var inp=document.getElementById('chatInput');
+            var msg=inp?inp.value.trim():'';
+            if(msg)window.apexFeedPush('CHAT',msg.slice(0,80)+(msg.length>80?'…':''),'voice');
+            return _orig.apply(this,arguments);
+        };
+    }
+})();
+
+/* ─────────────────── Research (Firecrawl) ─────────────────── */
+window.apexResearch = function(mode){
+    var q=document.getElementById('researchQuery');
+    if(!q)return;
+    var query=q.value.trim();
+    if(!query){q.focus();return;}
+    var results=document.getElementById('apexResResults');
+    var empty=document.getElementById('apexResEmpty');
+    if(empty)empty.style.display='none';
+    var loader=document.createElement('div');
+    loader.className='apex-res-loading';
+    loader.innerHTML='<div class="apex-res-spinner"></div><span>'+mode.toUpperCase()+' · '+_escHtml(query.slice(0,50))+'</span>';
+    results.appendChild(loader);
+    _setBtnsDisabled(true);
+
+    var endpoint='/api/research/'+mode;
+    var body={};
+    if(mode==='scrape')       body={url:query,formats:['markdown']};
+    else if(mode==='search')  body={query:query,limit:8};
+    else if(mode==='crawl')   body={url:query,limit:10,maxDepth:2,formats:['markdown']};
+    else if(mode==='map')     body={url:query};
+
+    window.apexFeedPush('RESEARCH',mode+': '+query.slice(0,60),'research');
+
+    var t0=Date.now();
+    fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        loader.remove();
+        _setBtnsDisabled(false);
+        window.apexTrackLatency(Date.now()-t0);
+        _renderResearchResult(mode, query, d, results);
+        window.apexFeedPush('RESEARCH','Done in '+(Date.now()-t0)+'ms','research');
+    })
+    .catch(function(e){
+        loader.remove();
+        _setBtnsDisabled(false);
+        _renderResError(query, String(e), results);
+        window.apexFeedPush('RESEARCH','Error: '+String(e).slice(0,60),'error');
+    });
+};
+
+function _renderResearchResult(mode, query, d, container){
+    if(mode==='scrape'){
+        var block=document.createElement('div');
+        block.className='apex-res-block'+(d.error?' error':'');
+        var title=d.metadata&&d.metadata.title?d.metadata.title:query;
+        var url=d.metadata&&d.metadata.sourceURL?d.metadata.sourceURL:query;
+        var body=d.markdown||d.content||d.error||'No content returned.';
+        block.innerHTML='<div class="apex-res-block-title">'+_escHtml(title)+'</div>'
+            +'<div class="apex-res-block-url">'+_escHtml(url)+'</div>'
+            +'<div class="apex-res-block-body">'+_escHtml(body)+'</div>';
+        container.insertBefore(block,container.firstChild);
+    } else if(mode==='search'){
+        var items=d.data||d.results||[];
+        if(!items.length){_renderResError(query,'No results found.',container);return;}
+        items.forEach(function(item){
+            var block=document.createElement('div');
+            block.className='apex-res-block';
+            var title=item.title||item.metadata&&item.metadata.title||'Result';
+            var url=item.url||item.metadata&&item.metadata.sourceURL||'';
+            var body=item.markdown||item.description||item.content||'';
+            block.innerHTML='<div class="apex-res-block-title">'+_escHtml(title)+'</div>'
+                +'<div class="apex-res-block-url">'+_escHtml(url)+'</div>'
+                +'<div class="apex-res-block-body">'+_escHtml(body)+'</div>';
+            container.insertBefore(block,container.firstChild);
+        });
+    } else if(mode==='crawl'||mode==='map'){
+        var term=document.createElement('div');
+        term.className='apex-res-terminal';
+        term.textContent=JSON.stringify(d,null,2).slice(0,4000);
+        container.insertBefore(term,container.firstChild);
+    }
+}
+
+function _renderResError(query, msg, container){
+    var block=document.createElement('div');
+    block.className='apex-res-block error';
+    block.innerHTML='<div class="apex-res-block-title">Error</div>'
+        +'<div class="apex-res-block-url">'+_escHtml(query)+'</div>'
+        +'<div class="apex-res-block-body">'+_escHtml(msg)+'</div>';
+    container.insertBefore(block,container.firstChild);
+}
+
+window.apexResClear = function(){
+    var results=document.getElementById('apexResResults');
+    if(!results)return;
+    results.innerHTML='<div class="apex-research-empty" id="apexResEmpty">'
+        +'<div class="apex-research-empty-icon">◈</div>'
+        +'<div class="apex-research-empty-text">No results yet</div></div>';
+};
+
+function _setBtnsDisabled(v){
+    ['resBtnSearch','resBtnScrape','resBtnCrawl','resBtnMap'].forEach(function(id){
+        var el=document.getElementById(id);
+        if(el)el.disabled=v;
+    });
+}
+
+/* ─────────────────── File reader (MarkItDown) ─────────────────── */
+window.apexFileRead = function(file){
+    if(!file)return;
+    var drop=document.getElementById('apexFileDrop');
+    var results=document.getElementById('apexResResults');
+    var empty=document.getElementById('apexResEmpty');
+    if(empty)empty.style.display='none';
+    if(drop)drop.classList.add('drag-over');
+    window.apexFeedPush('FILE','Reading: '+file.name,'file');
+
+    var fd=new FormData();
+    fd.append('file',file);
+    var loader=document.createElement('div');
+    loader.className='apex-res-loading';
+    loader.innerHTML='<div class="apex-res-spinner"></div><span>READING · '+_escHtml(file.name.slice(0,40))+'</span>';
+    if(results)results.insertBefore(loader,results.firstChild);
+
+    var t0=Date.now();
+    fetch('/api/convert/file',{method:'POST',body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        loader.remove();
+        if(drop)drop.classList.remove('drag-over');
+        var text=d.markdown||d.text||d.content||JSON.stringify(d);
+        var block=document.createElement('div');
+        block.className='apex-res-block';
+        block.innerHTML='<div class="apex-res-block-title">'+_escHtml(file.name)+'</div>'
+            +'<div class="apex-res-block-url">'+_escHtml(file.type+' · '+(file.size/1024).toFixed(1)+' KB')+'</div>'
+            +'<div class="apex-res-terminal">'+_escHtml(text.slice(0,6000))+'</div>';
+        if(results)results.insertBefore(block,results.firstChild);
+        window.apexFeedPush('FILE','Extracted '+text.length+' chars in '+(Date.now()-t0)+'ms','file');
+    })
+    .catch(function(e){
+        loader.remove();
+        if(drop)drop.classList.remove('drag-over');
+        _renderResError(file.name,String(e),results);
+        window.apexFeedPush('FILE','Error: '+String(e).slice(0,60),'error');
+    });
+};
+
+window.apexFileDropHandler = function(e){
+    e.preventDefault();
+    var el=e.currentTarget||e.target;
+    if(el)el.classList.remove('drag-over');
+    var file=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+    if(file)window.apexFileRead(file);
+};
+
+/* ─────────────────── Agents active count (poll) ─────────────────── */
+(function(){
+    function _poll(){
+        fetch('/api/agent/status').then(function(r){return r.ok?r.json():null;}).then(function(d){
+            var el=document.getElementById('tmAgents');
+            if(!el)return;
+            var count=0;
+            if(d&&Array.isArray(d.agents)){
+                count=d.agents.filter(function(a){return a.status==='running'||a.state==='running';}).length;
+            } else if(d&&typeof d.running==='number'){
+                count=d.running;
+            }
+            el.textContent=count>0?count:'—';
+            if(count>0)window.apexFeedPush('AGENT',count+' agent(s) active','agent');
+        }).catch(function(){});
+    }
+    _poll();
+    setInterval(_poll, 30000);
+})();
+
+})();
+</script>
+<!-- apex-visual-editor removed -->
 </body>
 </html>
