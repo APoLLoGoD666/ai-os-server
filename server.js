@@ -8167,9 +8167,10 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         addToMemory("user", userMessage);
 
         // ── LangChain: memory + RAG + router — all parallel ──────────────────
-        const lcMemory  = require('./agent-system/langchain-memory');
-        const lcRag     = require('./agent-system/langchain-rag');
-        const lcRouter  = require('./agent-system/langchain-router');
+        let lcMemory, lcRag, lcRouter;
+        try { lcMemory = require('./agent-system/langchain-memory'); } catch { lcMemory = { getContext: async () => '', addExchange: async () => {} }; }
+        try { lcRag    = require('./agent-system/langchain-rag');    } catch { lcRag    = { retrieveContext: async () => '' }; }
+        try { lcRouter = require('./agent-system/langchain-router'); } catch { lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} }; }
 
         const [lcMemCtx, lcRagCtx, lcRoute, relevantDocs] = await Promise.all([
             lcMemory.getContext(userMessage).catch(() => ''),
