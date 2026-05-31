@@ -9736,17 +9736,40 @@ async function sendVoiceChatCommand(msg) {
     _t0Voice = Date.now();
     console.log("[LATENCY] +0ms request sent to server");
 
+    let _vcData = null;
     try {
-        const data = await fetchJson("/api/voice-chat", {
+        _vcData = await fetchJson("/api/voice-chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: msg })
         });
+    } catch (_vcErr) {
+        console.warn("[Voice] /api/voice-chat failed, falling back to /chat:", _vcErr.message);
+        try {
+            _vcData = await fetchJson("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: msg })
+            });
+        } catch (_chatErr) {
+            hideTypingIndicator();
+            console.error("[Voice] both endpoints failed:", _chatErr);
+            const errMsg = "Something went wrong — please try again.";
+            const detail = _chatErr?.message || "Unknown error";
+            renderChatMessage("system", `⚠ ${errMsg} — ${detail}`);
+            try { speak(errMsg); } catch (_) {}
+            unmuteDeepgram();
+            setOrbState(autoListen ? "waiting" : "ready");
+            setConnStatus(false);
+            return;
+        }
+    }
 
+    try {
         console.log(`[LATENCY] +${Date.now() - _t0Voice}ms reply received from server`);
-        console.log("[Voice] server reply:", data);
+        console.log("[Voice] server reply:", _vcData);
         hideTypingIndicator();
-        const reply = data.reply || "Done.";
+        const reply = _vcData.reply || "Done.";
         console.log(`[Chat] appending AI: "${reply}"`);
         renderChatMessage("ai", reply);
         setOrbState("speaking");
@@ -9757,10 +9780,9 @@ async function sendVoiceChatCommand(msg) {
         _smartRefresh(msg);
     } catch (error) {
         hideTypingIndicator();
-        console.error("[Voice] request failed:", error);
+        console.error("[Voice] processing reply failed:", error);
         const errMsg = "Something went wrong — please try again.";
         renderChatMessage("system", `⚠ ${errMsg}`);
-        try { speak(errMsg); } catch (_) {}
         unmuteDeepgram();
         setOrbState(autoListen ? "waiting" : "ready");
         setConnStatus(false);

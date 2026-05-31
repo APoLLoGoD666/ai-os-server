@@ -8158,6 +8158,10 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
             return res.status(500).json({ ok: false, reply: "Missing ANTHROPIC_API_KEY in .env" });
         }
 
+        const vcTimeout = setTimeout(() => {
+            if (!res.headersSent) res.status(504).json({ ok: false, reply: "Request timed out. Please try again." });
+        }, 25000);
+
         const t0 = Date.now();
         console.log("[LATENCY] +0ms request received");
 
@@ -8330,9 +8334,13 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
             console.warn('[Obsidian] write failed:', e.message)
         );
 
+        clearTimeout(vcTimeout);
+        if (res.headersSent) return;
         return res.status(200).json({ ok: true, reply });
     } catch (error) {
+        clearTimeout(vcTimeout);
         console.error("VOICE CHAT ERROR:", error);
+        if (res.headersSent) return;
         return res.status(error?.status || 500).json({
             ok: false,
             reply: error?.error?.message || error?.message || "Server error"
