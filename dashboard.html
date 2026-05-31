@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -4900,6 +4900,774 @@ body::before {
 /* DS grids */
 .ds-grid-2 { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
 @media (max-width: 900px) { .ds-grid-2 { grid-template-columns: 1fr !important; } }
+</style>
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════
+   APEX v13 · Dark Ops Intelligence
+   Bloomberg Terminal × Military Ops Centre
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Design Tokens ────────────────────────────────────────────────────── */
+:root {
+  --bg-base:      #0a0b0d;
+  --bg-surface:   #0f1114;
+  --bg-raised:    #1a1d24;
+  --bg-hover:     #1a1d24;
+  --bg-active:    #252830;
+
+  --bd:           rgba(255,255,255,0.06);
+  --bd-h:         rgba(255,255,255,0.12);
+  --bd-a:         rgba(0,212,255,0.25);
+
+  --tx0:          #e8eaf0;
+  --tx1:          #8891a0;
+  --tx2:          #4a5060;
+  --tx3:          #2a2e38;
+
+  --cyan:         #00d4ff;
+  --amber:        #f0a500;
+  --green:        #00e676;
+  --red:          #e53935;
+  --teal:         #00b4a0;
+  --indigo:       #5c6bc0;
+  --violet:       #7c4dff;
+  --purple:       #ab47bc;
+
+  --f-sans:       'IBM Plex Sans', system-ui, sans-serif;
+  --f-mono:       'JetBrains Mono', 'Fira Code', monospace;
+
+  --r:            4px;
+  --r-sm:         2px;
+
+  /* Bridge all legacy + v12 vars */
+  --topbar-h:     36px !important;
+  --input-h:      48px !important;
+  --nav-h:        36px !important;
+  --v12-top:      36px;
+  --v12-inp:      48px;
+  --v12-nav:      52px;
+  --v12-bg:       #0a0b0d;
+  --v12-s1:       #0f1114;
+  --v12-s2:       #1a1d24;
+  --v12-s3:       #252830;
+  --v12-s4:       #2f3340;
+  --v12-tx0:      #e8eaf0;
+  --v12-tx1:      #8891a0;
+  --v12-tx2:      #4a5060;
+  --v12-tx3:      #2a2e38;
+  --v12-bd:       rgba(255,255,255,0.06);
+  --v12-bd-h:     rgba(255,255,255,0.12);
+  --v12-bd-a:     rgba(0,212,255,0.25);
+  --v12-a:        #00d4ff;
+  --v12-a2:       #38e8ff;
+  --v12-a-dim:    rgba(0,212,255,0.08);
+  --v12-a-glow:   rgba(0,212,255,0.12);
+  --v12-ok:       #00e676;
+  --v12-warn:     #f0a500;
+  --v12-err:      #e53935;
+  --v12-info:     #00d4ff;
+  --v12-f:        'IBM Plex Sans', system-ui, sans-serif;
+  --v12-mono:     'JetBrains Mono', monospace;
+  --v12-ease:     cubic-bezier(0.2,0,0,1);
+  --bg:           #0a0b0d;
+  --bg2:          #0f1114;
+  --glass:        rgba(255,255,255,0.03);
+  --glass2:       rgba(0,212,255,0.04);
+  --border:       rgba(255,255,255,0.06);
+  --border-dim:   rgba(255,255,255,0.06);
+  --primary:      #00d4ff;
+  --primary-dim:  rgba(0,212,255,0.1);
+  --primary-glow: rgba(0,212,255,0.08);
+  --text:         #e8eaf0;
+  --muted:        #8891a0;
+  --muted2:       #4a5060;
+  --danger:       #e53935;
+  --success:      #00e676;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
+html, body {
+  background: var(--bg-base) !important;
+  color: var(--tx0) !important;
+  font-family: var(--f-sans) !important;
+  -webkit-font-smoothing: antialiased !important;
+}
+
+/* ── Matrix grid background (replaces all particle/nebula effects) ──── */
+body::before {
+  content: '' !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  background-color: var(--bg-base) !important;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px) !important;
+  background-size: 40px 40px !important;
+  animation: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+body::after {
+  content: '' !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+  background: radial-gradient(ellipse at center, transparent 0%, #0a0b0d 75%) !important;
+  animation: none !important;
+}
+
+/* ── App shell ────────────────────────────────────────────────────────── */
+.app {
+  background: transparent !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+@media (min-width: 900px) {
+  .app {
+    grid-template-columns: 52px 1fr !important;
+    grid-template-rows: 36px 1fr !important;
+  }
+}
+
+/* ── Kill star canvas ────────────────────────────────────────────────── */
+#cmdStars { display: none !important; }
+
+/* ── Top bar ─────────────────────────────────────────────────────────── */
+.topbar {
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  background: var(--bg-base) !important;
+  border-bottom: 1px solid var(--bd) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 12px !important;
+  gap: 10px !important;
+  z-index: 100 !important;
+}
+/* Progress line on topbar bottom */
+.topbar::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: rgba(0,212,255,0.2);
+  pointer-events: none;
+}
+
+/* Brand */
+.brand-ring {
+  width: 22px !important; height: 22px !important;
+  border-radius: 2px !important;
+  border: 1px solid var(--cyan) !important;
+  box-shadow: none !important;
+  animation: none !important;
+  background: transparent !important;
+}
+.brand-ring-dot {
+  width: 6px !important; height: 6px !important;
+  border-radius: 0 !important;
+  background: var(--cyan) !important;
+  box-shadow: none !important;
+}
+.brand-copy strong {
+  font-family: var(--f-mono) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2em !important;
+  color: var(--cyan) !important;
+}
+.brand-copy span {
+  font-family: var(--f-sans) !important;
+  font-size: 8px !important;
+  color: var(--tx2) !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* Topbar metrics */
+.apex-metric {
+  border-color: var(--bd) !important;
+  background: var(--bg-surface) !important;
+  border-radius: var(--r-sm) !important;
+  padding: 3px 8px !important;
+}
+.apex-metric-val {
+  font-family: var(--f-mono) !important;
+  font-size: 11px !important;
+  color: var(--tx0) !important;
+}
+.apex-metric-lbl {
+  font-family: var(--f-sans) !important;
+  font-size: 8px !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: var(--tx2) !important;
+}
+.clock-time {
+  font-family: var(--f-mono) !important;
+  font-size: 13px !important;
+  color: var(--tx0) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.04em !important;
+}
+.clock-date {
+  font-family: var(--f-mono) !important;
+  font-size: 8px !important;
+  color: var(--tx2) !important;
+  letter-spacing: 0.1em !important;
+}
+.topbar-pill {
+  font-family: var(--f-mono) !important;
+  font-size: 9px !important;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--bd) !important;
+  border-radius: var(--r-sm) !important;
+  color: var(--tx1) !important;
+  padding: 3px 7px !important;
+  gap: 5px !important;
+  letter-spacing: 0.06em !important;
+  box-shadow: none !important;
+}
+.topbar-pill .num {
+  font-family: var(--f-mono) !important;
+  color: var(--tx0) !important;
+}
+
+/* ── Sidebar / bottom nav ─────────────────────────────────────────────── */
+.bottom-nav {
+  background: var(--bg-base) !important;
+  border-color: var(--bd) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+@media (min-width: 900px) {
+  .bottom-nav {
+    width: 52px !important;
+    overflow: hidden !important;
+    transition: width 200ms ease !important;
+    border-right: 1px solid var(--bd) !important;
+    border-top: none !important;
+    z-index: 20 !important;
+  }
+  .bottom-nav:hover {
+    width: 200px !important;
+    box-shadow: 4px 0 32px rgba(0,0,0,0.5) !important;
+  }
+}
+.nav-btn {
+  color: var(--tx2) !important;
+  transition: color 100ms ease, background-color 100ms ease !important;
+  border-radius: 0 !important;
+}
+.nav-btn:hover { color: var(--tx1) !important; background: none !important; }
+.nav-btn.active {
+  color: var(--tx0) !important;
+  background: rgba(0,212,255,0.06) !important;
+  border-left: 2px solid var(--cyan) !important;
+}
+.nav-btn.active::after { display: none !important; }
+.nav-label {
+  font-family: var(--f-sans) !important;
+  font-size: 9px !important;
+  letter-spacing: 0.1em !important;
+  color: inherit !important;
+}
+
+/* ── Page transitions (opacity only) ────────────────────────────────── */
+.page {
+  transform: none !important;
+  transition: opacity 150ms ease !important;
+  background: transparent !important;
+}
+.page.active { opacity: 1 !important; transform: none !important; }
+
+/* ── Input zone ──────────────────────────────────────────────────────── */
+.input-zone, .apex-input-zone {
+  height: 48px !important;
+  min-height: 48px !important;
+  background: var(--bg-surface) !important;
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 10px !important;
+}
+.chat-input, .apex-chat-input, #chatInput {
+  font-family: var(--f-mono) !important;
+  font-size: 13px !important;
+  color: var(--tx0) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.chat-input::placeholder, .apex-chat-input::placeholder, #chatInput::placeholder {
+  color: var(--tx3) !important;
+  font-family: var(--f-mono) !important;
+}
+.send-btn, .apex-send-btn, [id*="sendBtn"], [class*="send-btn"] {
+  width: 28px !important; height: 28px !important;
+  background: var(--cyan) !important;
+  color: var(--bg-base) !important;
+  border: none !important;
+  border-radius: var(--r-sm) !important;
+  box-shadow: none !important;
+  font-family: var(--f-mono) !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  transition: box-shadow 100ms ease !important;
+  cursor: pointer !important;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+.glass-panel, .card, .ds-card, .apex-card, [class*="glass-panel"],
+.stat-card, .apex-stat-card, .panel, .subpanel {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--bd) !important;
+  border-radius: var(--r) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition: border-color 100ms ease, transform 100ms ease !important;
+}
+.glass-panel:hover, .card:hover, .ds-card:hover, .apex-card:hover {
+  border-color: var(--bd-h) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: none !important;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.ds-btn, button.ds-btn, .btn {
+  font-family: var(--f-mono) !important;
+  font-size: 9px !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  border-radius: var(--r-sm) !important;
+  height: 24px !important;
+  padding: 0 10px !important;
+  cursor: pointer !important;
+  transition: background-color 100ms ease, border-color 100ms ease, color 100ms ease !important;
+  box-shadow: none !important;
+}
+.ds-btn.primary, .btn-primary, .ds-btn.cyan {
+  background: var(--cyan) !important;
+  color: var(--bg-base) !important;
+  border: none !important;
+}
+.ds-btn.primary:hover, .btn-primary:hover {
+  background: #38e8ff !important;
+  box-shadow: none !important;
+}
+.ds-btn.grey, .ds-btn.secondary, .btn-secondary {
+  background: transparent !important;
+  color: var(--tx1) !important;
+  border: 1px solid var(--bd) !important;
+}
+.ds-btn.grey:hover, .ds-btn.secondary:hover {
+  border-color: var(--bd-h) !important;
+  color: var(--tx0) !important;
+}
+.ds-btn.danger, .btn-danger {
+  background: transparent !important;
+  color: var(--red) !important;
+  border: 1px solid var(--red) !important;
+}
+.ds-btn.warning, .btn-warning {
+  background: transparent !important;
+  color: var(--amber) !important;
+  border: 1px solid var(--amber) !important;
+}
+
+/* ── Status dots ─────────────────────────────────────────────────────── */
+.ds-dot, .status-dot {
+  width: 6px !important; height: 6px !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  flex-shrink: 0 !important;
+}
+.ds-dot.green, .status-dot.on  { background: var(--green) !important; animation: live-blink 2s ease-in-out infinite !important; }
+.ds-dot.cyan                    { background: var(--cyan)  !important; }
+.ds-dot.amber                   { background: var(--amber) !important; }
+.ds-dot.red                     { background: var(--red)   !important; }
+
+@keyframes live-blink {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+/* ── Pills / tags ────────────────────────────────────────────────────── */
+.ds-pill, .tag, .badge, .chip, [class*="-pill"], [class*="-badge"] {
+  font-family: var(--f-mono) !important;
+  font-size: 8px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  border-radius: var(--r-sm) !important;
+  padding: 2px 6px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.ds-pill.ok, .pill-ok, .badge-ok     { border: 1px solid var(--green) !important; color: var(--green) !important; }
+.ds-pill.err, .pill-err, .badge-err  { border: 1px solid var(--red)   !important; color: var(--red)   !important; }
+.ds-pill.warn, .pill-warn            { border: 1px solid var(--amber) !important; color: var(--amber) !important; }
+.ds-pill.info, .pill-info            { border: 1px solid var(--cyan)  !important; color: var(--cyan)  !important; }
+
+/* ── Tables ──────────────────────────────────────────────────────────── */
+.ds-table, table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-family: var(--f-sans) !important;
+}
+.ds-table th, table th {
+  font-family: var(--f-mono) !important;
+  font-size: 9px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--tx2) !important;
+  border-bottom: 1px solid var(--bd) !important;
+  padding: 6px 8px !important;
+  font-weight: 400 !important;
+  text-align: left !important;
+  background: transparent !important;
+}
+.ds-table td, table td {
+  font-family: var(--f-sans) !important;
+  font-size: 12px !important;
+  color: var(--tx1) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+  padding: 7px 8px !important;
+  height: 34px !important;
+}
+.ds-table tr:hover td, table tr:hover td {
+  background: var(--bg-raised) !important;
+}
+.ds-table td.mono, td.mono, td.num {
+  font-family: var(--f-mono) !important;
+}
+
+/* ── Inputs & textareas ──────────────────────────────────────────────── */
+input[type="text"], input[type="email"], input[type="password"],
+input[type="search"], input[type="number"], input[type="url"],
+textarea, select,
+.ds-input, .apex-search-input {
+  background: var(--bg-base) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: var(--r-sm) !important;
+  color: var(--tx0) !important;
+  font-family: var(--f-sans) !important;
+  font-size: 13px !important;
+  padding: 7px 10px !important;
+  outline: none !important;
+  transition: border-color 100ms ease !important;
+  box-shadow: none !important;
+}
+input[type="text"]:focus, input[type="email"]:focus,
+input[type="search"]:focus, textarea:focus,
+.ds-input:focus, .apex-search-input:focus {
+  border-color: var(--cyan) !important;
+  box-shadow: none !important;
+}
+input::placeholder, textarea::placeholder {
+  color: var(--tx3) !important;
+}
+
+/* ── Progress bars ───────────────────────────────────────────────────── */
+progress, .progress-bar, .ds-progress, [class*="progress"] {
+  border-radius: 0 !important;
+  height: 2px !important;
+}
+.progress-track {
+  background: rgba(255,255,255,0.06) !important;
+  border-radius: 0 !important;
+  height: 2px !important;
+  overflow: hidden !important;
+}
+.progress-fill {
+  background: var(--cyan) !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  transition: width 300ms ease !important;
+}
+
+/* ── Toggle switches ─────────────────────────────────────────────────── */
+.toggle, [class*="toggle"] {
+  border-radius: 9px !important;
+}
+input[type="checkbox"]:checked + .toggle,
+.toggle.active, .toggle[data-active="true"] {
+  border-color: var(--cyan) !important;
+  background: rgba(0,212,255,0.1) !important;
+}
+
+/* ── Checkboxes ──────────────────────────────────────────────────────── */
+input[type="checkbox"] {
+  width: 15px !important; height: 15px !important;
+  border-radius: var(--r-sm) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  accent-color: var(--cyan) !important;
+  cursor: pointer !important;
+}
+
+/* ── Section headers ─────────────────────────────────────────────────── */
+.section-title, .panel-title, .ds-section-title, .t-h1, .t-h2,
+h1, h2, h3, h4 {
+  font-family: var(--f-sans) !important;
+  color: var(--tx0) !important;
+  font-weight: 500 !important;
+}
+.label-upper, .ds-label, [class*="-label"]:not(.nav-label) {
+  font-family: var(--f-mono) !important;
+  font-size: 9px !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: var(--tx2) !important;
+}
+
+/* ── Approval / notification cards ──────────────────────────────────── */
+.approval-card, .notif-chip, .apq-card {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--bd) !important;
+  border-radius: var(--r) !important;
+  box-shadow: none !important;
+}
+.approve-btn {
+  background: transparent !important;
+  color: var(--green) !important;
+  border: 1px solid var(--green) !important;
+  border-radius: var(--r-sm) !important;
+  font-family: var(--f-mono) !important;
+  font-size: 8px !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  height: 22px !important;
+  padding: 0 8px !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: background-color 100ms ease !important;
+}
+.deny-btn {
+  background: transparent !important;
+  color: var(--red) !important;
+  border: 1px solid var(--red) !important;
+  border-radius: var(--r-sm) !important;
+  font-family: var(--f-mono) !important;
+  font-size: 8px !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  height: 22px !important;
+  padding: 0 8px !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: background-color 100ms ease !important;
+}
+.approve-btn:hover { background: rgba(0,230,118,0.1) !important; }
+.deny-btn:hover    { background: rgba(229,57,53,0.1) !important; }
+
+/* ── Chat bubbles ────────────────────────────────────────────────────── */
+.chat-bubble, .msg, .message {
+  border-radius: var(--r) !important;
+  box-shadow: none !important;
+}
+.chat-bubble.user, .msg.user {
+  background: var(--bg-raised) !important;
+  border: 1px solid var(--bd) !important;
+  color: var(--tx0) !important;
+  font-family: var(--f-sans) !important;
+}
+.chat-bubble.ai, .msg.ai, .chat-bubble.assistant {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--bd) !important;
+  color: var(--tx0) !important;
+  font-family: var(--f-sans) !important;
+}
+
+/* ── Orb / command stage ─────────────────────────────────────────────── */
+.cmd-stage {
+  background: transparent !important;
+}
+#cmdOrbCanvas { opacity: 0.4 !important; }
+.cmd-orb-label b {
+  font-family: var(--f-mono) !important;
+  color: var(--tx0) !important;
+  letter-spacing: 0.2em !important;
+}
+.cmd-orb-label span {
+  font-family: var(--f-mono) !important;
+  color: var(--tx2) !important;
+  font-size: 9px !important;
+  letter-spacing: 0.15em !important;
+}
+.cmd-orb-status .state {
+  font-family: var(--f-mono) !important;
+  color: var(--tx1) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.12em !important;
+}
+.cmd-orb-status .hint {
+  font-family: var(--f-sans) !important;
+  color: var(--tx2) !important;
+  font-size: 10px !important;
+}
+
+/* ── Standby ring animation (permitted) ─────────────────────────────── */
+@keyframes standby-pulse {
+  0%,100% { transform: scale(1);    opacity: 0.5; }
+  50%      { transform: scale(1.04); opacity: 0.8; }
+}
+
+/* ── Ticker / alerts bar ─────────────────────────────────────────────── */
+.ticker-bar, .alerts-bar, .apex-ticker {
+  background: var(--bg-surface) !important;
+  border-bottom: 1px solid var(--bd) !important;
+  box-shadow: none !important;
+}
+
+/* ── Toast notifications ─────────────────────────────────────────────── */
+.toast, .apex-toast {
+  background: var(--bg-raised) !important;
+  border: 1px solid var(--bd) !important;
+  border-radius: var(--r) !important;
+  box-shadow: none !important;
+  font-family: var(--f-sans) !important;
+  color: var(--tx0) !important;
+}
+
+/* ── Command palette ─────────────────────────────────────────────────── */
+.cmd-palette, .command-palette {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--bd) !important;
+  border-radius: var(--r) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px !important; height: 4px !important; }
+::-webkit-scrollbar-track { background: transparent !important; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08) !important; border-radius: 0 !important; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14) !important; }
+* { scrollbar-width: thin !important; scrollbar-color: rgba(255,255,255,0.08) transparent !important; }
+
+/* ── Remove ALL glows, box-shadows, blurs globally ───────────────────── */
+.brand-ring, .brand-ring-dot, .status-dot.on,
+[class*="glow"], [class*="-ring"], [id*="Orb"]:not(#cmdOrbCanvas) {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* ── Typography scale ────────────────────────────────────────────────── */
+.t-h1 { font-size: 20px !important; font-weight: 500 !important; }
+.t-h2 { font-size: 15px !important; font-weight: 500 !important; }
+.t-h3 { font-size: 13px !important; font-weight: 500 !important; }
+.t-body { font-size: 13px !important; font-family: var(--f-sans) !important; }
+.t-small { font-size: 11px !important; color: var(--tx1) !important; }
+.t-xs, .t-meta { font-size: 9px !important; color: var(--tx2) !important; font-family: var(--f-mono) !important; letter-spacing: 0.06em !important; }
+.mono, .t-mono { font-family: var(--f-mono) !important; }
+
+/* ── Agent library / system cards ───────────────────────────────────── */
+.agent-card {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--bd) !important;
+  border-radius: var(--r) !important;
+  box-shadow: none !important;
+  transition: border-color 100ms ease !important;
+}
+.agent-card.active, .agent-card[data-status="active"] {
+  border-color: rgba(0,212,255,0.25) !important;
+  border-left: 2px solid var(--cyan) !important;
+}
+.agent-card .agent-status-pill {
+  font-family: var(--f-mono) !important;
+  font-size: 8px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  border-radius: var(--r-sm) !important;
+  padding: 2px 5px !important;
+  background: transparent !important;
+}
+
+/* ── Finance colors ──────────────────────────────────────────────────── */
+.fin-positive, .text-green { color: var(--green) !important; font-family: var(--f-mono) !important; }
+.fin-negative, .text-red   { color: var(--red)   !important; font-family: var(--f-mono) !important; }
+.fin-amount, .text-amber   { color: var(--amber)  !important; font-family: var(--f-mono) !important; }
+.fin-amount { font-family: var(--f-mono) !important; }
+
+/* ── Research page ───────────────────────────────────────────────────── */
+.apex-search-bar {
+  background: var(--bg-surface) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: var(--r-sm) !important;
+  box-shadow: none !important;
+}
+.apex-res-block {
+  border-left-color: var(--cyan) !important;
+}
+.apex-res-block.error {
+  border-left-color: var(--red) !important;
+}
+.apex-file-drop:hover, .apex-file-drop.drag-over {
+  border-color: var(--cyan) !important;
+  background: rgba(0,212,255,0.04) !important;
+}
+.apex-res-btn.active {
+  background: rgba(0,212,255,0.08) !important;
+  border-color: rgba(0,212,255,0.3) !important;
+  color: var(--cyan) !important;
+}
+
+/* ── Help overlay ────────────────────────────────────────────────────── */
+.help-overlay {
+  background: rgba(10,11,13,0.85) !important;
+  backdrop-filter: none !important;
+}
+.help-box {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--bd) !important;
+  border-radius: var(--r) !important;
+  box-shadow: none !important;
+}
+.help-key {
+  font-family: var(--f-mono) !important;
+  background: var(--bg-raised) !important;
+  border: 1px solid var(--bd) !important;
+  border-radius: var(--r-sm) !important;
+  color: var(--tx0) !important;
+}
+
+/* ── Agent drawer ────────────────────────────────────────────────────── */
+.agent-drawer {
+  background: var(--bg-surface) !important;
+  border-left: 1px solid var(--bd) !important;
+  box-shadow: none !important;
+}
+
+/* ── Skeleton loading (replace with static dash) ─────────────────────── */
+.skel, .skeleton {
+  background: rgba(255,255,255,0.04) !important;
+  border-radius: var(--r-sm) !important;
+  animation: none !important;
+}
+
+/* ── Reduced motion compliance ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Override any remaining inline blue/purple gradients ─────────────── */
+.app { background: transparent !important; }
+[style*="radial-gradient"]:not(body::before):not(body::after) { background-image: none !important; }
+
 </style>
 </head>
 <body>
