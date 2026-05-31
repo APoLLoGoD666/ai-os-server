@@ -10809,8 +10809,8 @@ checkPendingMasterTasks();
         const _now = new Date(), _6am = new Date(_now);
         _6am.setHours(6, 0, 0, 0);
         if (_6am <= _now) _6am.setDate(_6am.getDate() + 1);
-        // Initial run after 30s (let DB settle after startup)
-        setTimeout(() => ingestNews().catch(e => console.warn('[News] startup ingest failed:', e.message)), 30000);
+        // Initial run after 5min (avoid OOM spike during server cold-start)
+        setTimeout(() => ingestNews().catch(e => console.warn('[News] startup ingest failed:', e.message)), 300000);
         setTimeout(function _dailyNews() {
             ingestNews().catch(e => console.warn('[News] ingest error:', e.message));
             setInterval(() => ingestNews().catch(e => console.warn('[News] ingest error:', e.message)), 24 * 60 * 60 * 1000);
@@ -10824,7 +10824,7 @@ checkPendingMasterTasks();
         const doSync = () => syncGoogleCalendar()
             .then(r => { if (r.count) console.log(`[Calendar] Auto-sync: ${r.count} events`); })
             .catch(e => console.warn('[Calendar] sync error:', e.message));
-        setTimeout(doSync, 45000); // initial run after 45s
+        setTimeout(doSync, 360000); // initial run after 6min (spread startup load)
         setInterval(doSync, 30 * 60 * 1000);
         console.log('[Calendar] Auto-sync every 30 minutes');
     })();
