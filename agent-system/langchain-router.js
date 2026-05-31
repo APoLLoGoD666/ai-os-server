@@ -28,7 +28,7 @@ Domains:
 - general: everything else — general conversation, questions, commands, system tasks
 
 Respond with this exact JSON shape:
-{"domain":"<one of the domains above>","confidence":<0.0-1.0>,"reasoning":"<max 80 chars>","needs_data":<true|false>}`],
+{{"domain":"<one of the domains above>","confidence":<0.0-1.0>,"reasoning":"<max 80 chars>","needs_data":<true|false>}}`],
     ["human", "{message}"],
 ]);
 

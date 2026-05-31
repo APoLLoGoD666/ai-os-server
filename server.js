@@ -10508,7 +10508,7 @@ app.post('/api/wiki/consolidate', requireAppAccess, async (req, res) => {
     const _rdir = path.join(__dirname, 'routes');
     if (!fs.existsSync(_rdir)) return;
     fs.readdirSync(_rdir)
-        .filter(f => f.endsWith('.js'))
+        .filter(f => f.endsWith('.js') && f !== 'gemini-live.js' && f !== 'tts-gemini.js')
         .sort()
         .forEach(f => {
             try {
