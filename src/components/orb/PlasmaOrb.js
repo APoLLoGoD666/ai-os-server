@@ -253,24 +253,91 @@
     ctx.stroke();
     ctx.shadowBlur  = 0;
 
-    // 10. Core radial glow
-    var cb  = (0.28 + 0.07 * Math.sin(frame * 0.038)) * lb;
-    var cg  = ctx.createRadialGradient(CX, CY, 0, CX, CY, 26);
-    cg.addColorStop(0,   'rgba(200,240,255,' + cb + ')');
-    cg.addColorStop(0.45,'rgba(0,200,255,'   + (cb * 0.55) + ')');
-    cg.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = cg;
-    ctx.fillRect(0, 0, W, H);
+    // 10. Solid core sphere
+    var breath  = Math.sin(frame * 0.038);
+    var coreR   = 36 + breath * 1.2;
 
-    // Core bright dot
-    var cr = 3.5 + 1.2 * Math.sin(frame * 0.038);
+    // Outer halo behind the sphere
+    var halo = ctx.createRadialGradient(CX, CY, coreR * 0.4, CX, CY, coreR * 2.6);
+    halo.addColorStop(0,   'rgba(0,140,255,' + (0.38 * lb) + ')');
+    halo.addColorStop(0.5, 'rgba(0,60,180,'  + (0.12 * lb) + ')');
+    halo.addColorStop(1,   'rgba(0,0,0,0)');
     ctx.beginPath();
-    ctx.arc(CX, CY, cr, 0, Math.PI * 2);
-    ctx.fillStyle   = 'rgba(225,248,255,' + (0.92 * lb) + ')';
-    ctx.shadowBlur  = 22;
-    ctx.shadowColor = '#00d4ff';
+    ctx.arc(CX, CY, coreR * 2.6, 0, Math.PI * 2);
+    ctx.fillStyle = halo;
     ctx.fill();
+
+    // Solid fill — dark navy sphere with subtle off-centre light source
+    var coreFill = ctx.createRadialGradient(
+      CX - coreR * 0.22, CY - coreR * 0.28, 0,
+      CX, CY, coreR
+    );
+    coreFill.addColorStop(0,    'rgb(22,55,145)');
+    coreFill.addColorStop(0.45, 'rgb(8,20,72)');
+    coreFill.addColorStop(0.82, 'rgb(3,8,38)');
+    coreFill.addColorStop(1,    'rgb(1,3,18)');
+    ctx.beginPath();
+    ctx.arc(CX, CY, coreR, 0, Math.PI * 2);
+    ctx.fillStyle = coreFill;
+    ctx.fill();
+
+    // Top-left specular glint (clipped to sphere)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(CX, CY, coreR, 0, Math.PI * 2);
+    ctx.clip();
+    var spec2 = ctx.createRadialGradient(CX - coreR*0.3, CY - coreR*0.32, 0, CX - coreR*0.1, CY - coreR*0.1, coreR*0.7);
+    spec2.addColorStop(0,   'rgba(180,225,255,0.32)');
+    spec2.addColorStop(0.5, 'rgba(80,160,255,0.06)');
+    spec2.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = spec2;
+    ctx.fillRect(CX - coreR, CY - coreR, coreR * 2, coreR * 2);
+    ctx.restore();
+
+    // Thin glowing rim
+    ctx.beginPath();
+    ctx.arc(CX, CY, coreR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0,190,255,' + (0.55 * lb) + ')';
+    ctx.lineWidth   = 0.9;
+    ctx.shadowBlur  = 10;
+    ctx.shadowColor = '#00d4ff';
+    ctx.stroke();
     ctx.shadowBlur  = 0;
+
+    // APEX text — drawn on top of core, manually letter-spaced
+    ctx.save();
+    ctx.font         = 'bold 11px "JetBrains Mono", monospace';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign    = 'left';
+    var letters  = ['A','P','E','X'];
+    var charW    = ctx.measureText('A').width;
+    var gap      = 3.5;
+    var totalTW  = letters.length * charW + (letters.length - 1) * gap;
+    var startLX  = CX - totalTW / 2;
+    ctx.shadowBlur  = 14;
+    ctx.shadowColor = '#00d4ff';
+    for (var li = 0; li < letters.length; li++) {
+      ctx.fillStyle = 'rgba(215,245,255,' + (0.94 * lb) + ')';
+      ctx.fillText(letters[li], startLX + li * (charW + gap), CY);
+    }
+    ctx.shadowBlur = 0;
+
+    // Flanking tick lines beside text
+    ctx.strokeStyle = 'rgba(0,180,255,' + (0.48 * lb) + ')';
+    ctx.lineWidth   = 0.8;
+    var tw2 = totalTW / 2 + 4;
+    ctx.beginPath(); ctx.moveTo(CX - tw2 - 7, CY); ctx.lineTo(CX - tw2 - 1, CY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(CX + tw2 + 1, CY); ctx.lineTo(CX + tw2 + 7, CY); ctx.stroke();
+
+    // Small status dot below text (blinks on non-standby)
+    var dotAlpha = currentState === 'standby'
+      ? 0.22 * lb
+      : (0.5 + 0.35 * Math.abs(Math.sin(frame * 0.08))) * lb;
+    ctx.beginPath();
+    ctx.arc(CX, CY + 12, 1.4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,212,255,' + dotAlpha + ')';
+    ctx.fill();
+    ctx.restore();
 
     // 11. Floating data readouts
     var hx = '0123456789ABCDEF';
