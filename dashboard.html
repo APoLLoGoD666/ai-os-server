@@ -9801,6 +9801,7 @@ async function sendChatCommand() {
 async function refreshMemory() {
     return runRefresh("memory", async () => {
         const container = document.getElementById("memoryList");
+        if (!container) return;
         try {
             const data   = await fetchJson("/memory");
             const memory = Array.isArray(data.memory) ? data.memory.slice(-MAX_ITEMS).reverse() : [];
@@ -9885,6 +9886,7 @@ async function loadTasks() {
 
 function renderApprovalQueue() {
     const container = document.getElementById("approvalQueue");
+    if (!container) return;
     const waiting   = cachedTasks.filter(t => t.status === "waiting_approval");
 
     if (!waiting.length) {
