@@ -9902,12 +9902,13 @@ app.get('/api/master/roadmap', requireAppAccess, async (req, res) => {
 
 app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
     try {
-        const roadmap = parseRoadmap();
+        let roadmap = {};
+        try { roadmap = parseRoadmap(); } catch {}
         const total = Object.values(roadmap).reduce((a, ws) => a + ws.pending.length + ws.completed.length, 0);
         const completed = Object.values(roadmap).reduce((a, ws) => a + ws.completed.length, 0);
         const [taskRes, timelineRes, runRes] = await Promise.all([
-            sbAdmin.from('apex_tasks').select('id', { count: 'exact', head: true }),
-            sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true }),
+            sbAdmin.from('apex_tasks').select('id', { count: 'exact', head: true }).catch(() => ({ count: 0 })),
+            sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true }).catch(() => ({ count: 0 })),
             sbAdmin.from('apex_agent_runs').select('task_id,success,cost_usd,duration_ms').catch(() => ({ data: null }))
         ]);
         const runs     = runRes.data || [];
@@ -9936,6 +9937,55 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
         res.status(500).json({ ok: false, error: e.message });
     }
 });
+
+// ── Intelligence / cost stub routes (dashboard polls these) ──────────────────
+app.get('/api/intelligence/agent-runs', requireAppAccess, async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 20;
+        const { data } = await sbAdmin.from('apex_agent_runs')
+            .select('*').order('created_at', { ascending: false }).limit(limit);
+        res.json({ ok: true, runs: data || [] });
+    } catch { res.json({ ok: true, runs: [] }); }
+});
+
+app.get('/api/intelligence/cost-summary', requireAppAccess, async (req, res) => {
+    try {
+        const { data } = await sbAdmin.from('apex_agent_runs').select('cost_usd,model');
+        const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
+        const byModel = {};
+        for (const r of (data || [])) {
+            if (r.model) byModel[r.model] = ((byModel[r.model] || 0) + (r.cost_usd || 0));
+        }
+        res.json({ ok: true, total_cost_usd: total.toFixed(4), by_model: byModel });
+    } catch { res.json({ ok: true, total_cost_usd: '0.0000', by_model: {} }); }
+});
+
+app.get('/api/intelligence/lessons', requireAppAccess, async (req, res) => {
+    try {
+        const n = parseInt(req.query.n) || 8;
+        const { data } = await sbAdmin.from('apex_lessons')
+            .select('*').order('created_at', { ascending: false }).limit(n);
+        res.json({ ok: true, lessons: data || [] });
+    } catch { res.json({ ok: true, lessons: [] }); }
+});
+
+app.get('/api/cost/today', requireAppAccess, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const { data } = await sbAdmin.from('apex_agent_runs')
+            .select('cost_usd').gte('created_at', today);
+        const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
+        res.json({ ok: true, cost_usd: total.toFixed(4), date: today });
+    } catch { res.json({ ok: true, cost_usd: '0.0000' }); }
+});
+
+app.get('/api/agent/status', requireAppAccess, async (req, res) => {
+    try {
+        const { data } = await sbAdmin.from('apex_agents').select('slug,name,status');
+        res.json({ ok: true, agents: data || [] });
+    } catch { res.json({ ok: true, agents: [] }); }
+});
+// ── End stub routes ───────────────────────────────────────────────────────────
 
 async function checkPendingMasterTasks() {
     try {
