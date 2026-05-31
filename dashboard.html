@@ -8625,7 +8625,7 @@ document.addEventListener('touchstart', async () => {
     }
     // ── iOS PWA: start voice pipeline on first gesture (getUserMedia requires gesture) ──
     if (isIOSPWA && !_iosPWARunning && autoListen) {
-        if (false) { await _iosPWAStartPipeline(); }
+        await _iosPWAStartPipeline();
     }
 }, { once: true });
 
@@ -9060,7 +9060,7 @@ async function _iosPWAStartPipeline() {
             console.log("[APEX iOS] Restart error:", startErr.message);
             if (_iosPWACycleInterval) clearInterval(_iosPWACycleInterval);
             _iosPWARunning = false;
-            setTimeout(() => { if (false) { _iosPWAStartPipeline(); } }, 2000);
+            setTimeout(() => { _iosPWAStartPipeline(); }, 2000);
         }
     };
 
@@ -9069,7 +9069,7 @@ async function _iosPWAStartPipeline() {
         iOSChunks = [];
         if (_iosPWACycleInterval) clearInterval(_iosPWACycleInterval);
         _iosPWARunning = false;
-        setTimeout(() => { if (false) { _iosPWAStartPipeline(); } }, 2000);
+        setTimeout(() => { _iosPWAStartPipeline(); }, 2000);
     };
 
     iOSRecorder.start();
@@ -9255,7 +9255,7 @@ function _rms(buf) {
 }
 
 async function startVoicePipeline() {
-    if (isIOSPWA) { if (false) { await _iosPWAStartPipeline(); } return; }
+    if (isIOSPWA) { await _iosPWAStartPipeline(); return; }
     if (srec) return;
     if (!autoListen && !_manualStart) return;
     _manualStart = false;
@@ -9539,12 +9539,13 @@ function _pauseVoiceForBackground() {
 
 async function _restoreVoiceFromBackground() {
     console.log("[Voice] page visible — restoring mic");
-    if (!autoListen) return;
+    if (!autoListen && !isListening) return;
     if (isIOSPWA) {
-        if (!_iosPWARunning) { if (false) { await _iosPWAStartPipeline(); } }
+        if (!_iosPWARunning) { await _iosPWAStartPipeline(); }
         return;
     }
     if (srec) return;
+    _manualStart = true;
     await startVoicePipeline();
 }
 
@@ -9580,7 +9581,7 @@ function unmuteDeepgram() {
         _iosPWASpeaking = false;
         _iosPWARunning = false;
         console.log('[APEX iOS] unmuteDeepgram — restarting full pipeline with fresh getUserMedia');
-        setTimeout(() => { if (false) { _iosPWAStartPipeline(); } }, 600);
+        setTimeout(() => { _iosPWAStartPipeline(); }, 600);
     }
 }
 
