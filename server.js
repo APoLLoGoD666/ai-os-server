@@ -47,6 +47,13 @@ const agentLib     = require('./agent-system/agent-library');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
+// ── LangChain agents — preloaded at startup to prevent per-request memory spike ─
+let lcMemory, lcRag, lcRouter;
+try { lcMemory = require('./agent-system/langchain-memory'); } catch { lcMemory = { getContext: async () => '', addExchange: async () => {} }; }
+try { lcRag    = require('./agent-system/langchain-rag');    } catch { lcRag    = { retrieveContext: async () => '' }; }
+try { lcRouter = require('./agent-system/langchain-router'); } catch { lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} }; }
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── Keyword-based domain detector (fast, zero API cost) ──────────────────────
 function detectDomain(text) {
     const t = text.toLowerCase();
@@ -8171,11 +8178,6 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         addToMemory("user", userMessage);
 
         // ── LangChain: memory + RAG + router — all parallel ──────────────────
-        let lcMemory, lcRag, lcRouter;
-        try { lcMemory = require('./agent-system/langchain-memory'); } catch { lcMemory = { getContext: async () => '', addExchange: async () => {} }; }
-        try { lcRag    = require('./agent-system/langchain-rag');    } catch { lcRag    = { retrieveContext: async () => '' }; }
-        try { lcRouter = require('./agent-system/langchain-router'); } catch { lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} }; }
-
         const [lcMemCtx, lcRagCtx, lcRoute, relevantDocs] = await Promise.all([
             lcMemory.getContext(userMessage).catch(() => ''),
             lcRag.retrieveContext(userMessage).catch(() => ''),
