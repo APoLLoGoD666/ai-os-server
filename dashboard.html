@@ -5689,53 +5689,71 @@ h1, h2, h3, h4 {
 .topbar .clock-date { font-size: 9px !important; }
 #tmAgents, #tmCost, #tmLatency { display: none !important; }
 
-/* ── GLOBAL TYPE SCALE INCREASE ─────────────────────────────────────── */
-/* Base body size */
-html, body { font-size: 16px !important; }
+/* ── GLOBAL TYPE SCALE ───────────────────────────────────────────────── */
+html, body { font-size: 20px !important; }
 
 /* Navigation */
-.nav-label          { font-size: 13px !important; }
-.nav-icon           { font-size: 20px !important; }
+.nav-label          { font-size: 15px !important; }
+.nav-icon           { font-size: 24px !important; }
 
 /* Topbar */
-.clock-time         { font-size: 18px !important; }
-.clock-date         { font-size: 12px !important; }
-.topbar-pill        { font-size: 12px !important; }
-.apex-metric-val    { font-size: 14px !important; }
-.apex-metric-lbl    { font-size: 11px !important; }
+.clock-time         { font-size: 24px !important; }
+.clock-date         { font-size: 15px !important; }
+.topbar-pill        { font-size: 15px !important; }
+.apex-metric-val    { font-size: 18px !important; }
+.apex-metric-lbl    { font-size: 14px !important; }
 
 /* Buttons */
-.ds-btn, button.ds-btn, .btn { font-size: 12px !important; height: 28px !important; padding: 0 14px !important; }
+.ds-btn, button.ds-btn, .btn { font-size: 15px !important; height: 36px !important; padding: 0 18px !important; }
 
 /* Pills & tags */
 .ds-pill, .tag, .badge, .chip,
 [class*="-pill"]:not(.topbar-pill),
-[class*="-badge"] { font-size: 11px !important; padding: 3px 8px !important; }
+[class*="-badge"] { font-size: 13px !important; padding: 4px 10px !important; }
 
 /* Tables */
-.ds-table th, table th { font-size: 12px !important; padding: 8px 10px !important; }
-.ds-table td, table td { font-size: 14px !important; padding: 9px 10px !important; height: 40px !important; }
+.ds-table th, table th { font-size: 14px !important; padding: 10px 12px !important; }
+.ds-table td, table td { font-size: 16px !important; padding: 11px 12px !important; height: 46px !important; }
 
 /* Section / label text */
 .label-upper, .ds-label, .t-xs, .t-meta,
 [class*="-label"]:not(.nav-label):not(.orb-label),
-[class*="section-title"], [class*="panel-title"] { font-size: 12px !important; }
-.t-small  { font-size: 13px !important; }
-.t-body   { font-size: 16px !important; }
-.t-h3     { font-size: 16px !important; }
-.t-h2     { font-size: 18px !important; }
-.t-h1     { font-size: 22px !important; }
+[class*="section-title"], [class*="panel-title"] { font-size: 14px !important; }
+.t-small  { font-size: 16px !important; }
+.t-body   { font-size: 20px !important; }
+.t-h3     { font-size: 20px !important; }
+.t-h2     { font-size: 24px !important; }
+.t-h1     { font-size: 28px !important; }
 
 /* Inputs */
 input[type="text"], input[type="email"], input[type="password"],
 input[type="search"], input[type="number"], input[type="url"],
 textarea, select, .ds-input, .apex-search-input,
-.chat-input, .apex-chat-input, #chatInput { font-size: 15px !important; }
+.chat-input, .apex-chat-input, #chatInput { font-size: 18px !important; }
 
 /* Chat / feed entries */
 .chat-bubble, .msg, .message,
-.apex-feed-msg, .apex-feed-ts { font-size: 14px !important; }
-.apex-tag { font-size: 11px !important; }
+.apex-feed-msg { font-size: 17px !important; }
+.apex-feed-ts  { font-size: 14px !important; }
+.apex-tag      { font-size: 13px !important; }
+
+/* Card stats & numbers */
+.stat-num, .stat-val, [class*="stat-num"],
+.cmd-stat .stat-num, #cmdStatVal0, #cmdStatVal1,
+#cmdStatVal2, #cmdStatVal3 { font-size: 22px !important; }
+.stat-lbl, .stat-sub, [class*="stat-lbl"],
+[class*="stat-sub"] { font-size: 13px !important; }
+
+/* Panel / page headings */
+h1, h2, h3, h4 { font-size: revert !important; }
+h1 { font-size: 28px !important; }
+h2 { font-size: 24px !important; }
+h3 { font-size: 20px !important; }
+h4 { font-size: 17px !important; }
+
+/* Catch-all: any element with a hardcoded tiny font */
+p, span:not([class*="orb"]):not([class*="plasma"]),
+li, td, th, div.label, div.value { font-size: inherit; }
 
 /* Card internals */
 .ds-card *, .glass-panel *, .apex-card * { }
