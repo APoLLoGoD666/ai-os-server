@@ -5681,6 +5681,9 @@ h1, h2, h3, h4 {
 .topbar .clock-date { font-size: 9px !important; }
 #tmAgents, #tmCost, #tmLatency { display: none !important; }
 
+/* ── Hide all nav notification badges ───────────────────────────────── */
+.ds-notif-badge, #navOpsBadge, #navIntelBadge, #navCommsBadge { display: none !important; }
+
 /* ── Sidebar: icons only when collapsed, labels on hover ─────────────── */
 @media (min-width: 900px) {
   .bottom-nav { overflow: hidden !important; }
@@ -7474,7 +7477,7 @@ h1, h2, h3, h4 {
         <button class="nav-btn" id="nav-operation" onclick="switchPage('operation')">
             <span class="nav-icon">⊞</span>
             <span class="nav-label">Operation</span>
-            <span class="ds-notif-badge red" id="navOpsBadge">7</span>
+            <span class="ds-notif-badge red" id="navOpsBadge" style="display:none"></span>
         </button>
         <button class="nav-btn" id="nav-system" onclick="switchPage('system')">
             <span class="nav-icon">◉</span>
