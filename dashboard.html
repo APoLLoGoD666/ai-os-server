@@ -8037,6 +8037,34 @@ li, td, th, div.label, div.value { font-size: inherit; }
             </div>
 
 
+            <!-- ══ BROWSER PAGE ══ -->
+            <div class="page" id="page-browser">
+                <div style="padding:16px;display:flex;flex-direction:column;gap:12px;height:100%;box-sizing:border-box;overflow-y:auto">
+
+                    <!-- URL + action buttons -->
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                        <input id="browserUrl" type="url" placeholder="https://…" style="flex:1;min-width:180px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:4px;font-size:13px;outline:none" />
+                        <button onclick="browserAction('research')" style="background:rgba(6,182,212,0.1);border:1px solid var(--cyan);color:var(--cyan);padding:8px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer">⊹ RESEARCH</button>
+                        <button onclick="browserAction('screenshot')" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);padding:8px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer">⊙ SCREENSHOT</button>
+                        <button onclick="browserAction('pdf')" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);padding:8px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer">⊘ PDF</button>
+                    </div>
+
+                    <!-- Form fill -->
+                    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:8px">
+                        <div style="font-size:11px;letter-spacing:0.12em;color:var(--text-mute);margin-bottom:2px">FORM FILL</div>
+                        <input id="browserFillUrl" type="url" placeholder="Page URL" style="background:var(--surface);border:1px solid var(--border-dim);color:var(--text);padding:7px 10px;border-radius:4px;font-size:12px;outline:none" />
+                        <input id="browserFillSelector" type="text" placeholder="CSS selector  e.g. #email" style="background:var(--surface);border:1px solid var(--border-dim);color:var(--text);padding:7px 10px;border-radius:4px;font-size:12px;outline:none" />
+                        <input id="browserFillText" type="text" placeholder="Value to fill" style="background:var(--surface);border:1px solid var(--border-dim);color:var(--text);padding:7px 10px;border-radius:4px;font-size:12px;outline:none" />
+                        <button onclick="browserFill()" style="background:rgba(6,182,212,0.1);border:1px solid var(--cyan);color:var(--cyan);padding:7px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer;align-self:flex-start">⊕ FILL FORM</button>
+                    </div>
+
+                    <!-- Results -->
+                    <div id="browserResults" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:12px;font-size:12px;color:var(--text-2);white-space:pre-wrap;overflow-y:auto;min-height:120px;line-height:1.6">
+                        <span style="color:var(--text-mute)">Results will appear here…</span>
+                    </div>
+                </div>
+            </div>
+
         </div><!-- .page-wrap -->
 
         <!-- ══ INPUT ZONE ══ -->
@@ -8099,6 +8127,10 @@ li, td, th, div.label, div.value { font-size: inherit; }
             <span class="nav-icon">◈</span>
             <span class="nav-label">Research</span>
         </button>
+        <button class="nav-btn" id="nav-browser" onclick="switchPage('browser')">
+            <span class="nav-icon">⊡</span>
+            <span class="nav-label">Browser</span>
+        </button>
         <button class="nav-btn" id="nav-more" style="display:none" onclick="toggleMobileMore()" aria-label="More pages">
             <span class="nav-icon" style="letter-spacing:-1px">•••</span>
             <span class="nav-label">More</span>
@@ -8109,7 +8141,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
 <script>
 (function() {
-    var pages = ['command', 'overview', 'operation', 'system', 'communication', 'finance', 'business', 'university', 'health', 'occult', 'research'];
+    var pages = ['command', 'overview', 'operation', 'system', 'communication', 'finance', 'business', 'university', 'health', 'occult', 'research', 'browser'];
     var activePage = 'command';
 
     window.switchPage = function(name) {
@@ -15029,6 +15061,45 @@ function _updateTopbarAgents(){
 })();
 
 /* ─────────────────── Research (Firecrawl) ─────────────────── */
+// ── Browser automation panel ──────────────────────────────────────────────
+window.browserAction = async function(action) {
+    var url = (document.getElementById('browserUrl').value || '').trim();
+    if (!url) { document.getElementById('browserUrl').focus(); return; }
+    var out = document.getElementById('browserResults');
+    out.textContent = 'Running ' + action + '…';
+    try {
+        var endpointMap = { research: '/api/browser/research', screenshot: '/api/browser/screenshot', pdf: '/api/browser/pdf' };
+        var r = await fetch(buildApiUrl(endpointMap[action]), {
+            method: 'POST', headers: buildApiHeaders({'Content-Type':'application/json'}),
+            body: JSON.stringify({ url: url })
+        });
+        var data = await r.json();
+        if (action === 'screenshot' && data.screenshot) {
+            out.innerHTML = '<img src="data:image/png;base64,' + data.screenshot + '" style="max-width:100%;border-radius:4px" />';
+        } else if (action === 'pdf' && data.url) {
+            out.innerHTML = '<a href="' + data.url + '" target="_blank" style="color:var(--cyan)">⊘ Open PDF</a>';
+        } else {
+            out.textContent = JSON.stringify(data, null, 2);
+        }
+    } catch(e) { out.textContent = 'Error: ' + e.message; }
+};
+window.browserFill = async function() {
+    var url      = (document.getElementById('browserFillUrl').value || '').trim();
+    var selector = (document.getElementById('browserFillSelector').value || '').trim();
+    var text     = (document.getElementById('browserFillText').value || '').trim();
+    if (!url || !selector) return;
+    var out = document.getElementById('browserResults');
+    out.textContent = 'Filling form…';
+    try {
+        var r = await fetch(buildApiUrl('/api/browser/fill'), {
+            method: 'POST', headers: buildApiHeaders({'Content-Type':'application/json'}),
+            body: JSON.stringify({ url: url, selector: selector, text: text })
+        });
+        var data = await r.json();
+        out.textContent = JSON.stringify(data, null, 2);
+    } catch(e) { out.textContent = 'Error: ' + e.message; }
+};
+
 window.apexResearch = function(mode){
     var q=document.getElementById('researchQuery');
     if(!q)return;
