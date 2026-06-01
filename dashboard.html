@@ -6122,6 +6122,111 @@ li, td, th, div.label, div.value { font-size: inherit; }
 @media (max-width: 700px)  { .ds-grid-3 { grid-template-columns: 1fr !important; } }
 @media (max-width: 700px)  { .ds-grid-stats { grid-template-columns: repeat(2,1fr) !important; } }
 
+/* ══ MOBILE / iOS ════════════════════════════════════════════════ */
+@media (max-width: 899px) {
+    /* — Nav: collapse to 5 primary tabs + More — */
+    #nav-system,
+    #nav-communication,
+    #nav-finance,
+    #nav-business,
+    #nav-university,
+    #nav-occult,
+    #nav-research { display: none !important; }
+
+    #nav-more { display: flex !important; }
+
+    /* — Nav sizing — */
+    .bottom-nav { height: 72px; padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px); }
+    .nav-btn    { min-height: 58px; }
+    .nav-icon   { font-size: 21px; }
+    .nav-label  { font-size: 10px; letter-spacing: 0.11em; }
+
+    /* — Input zone — */
+    .input-zone  { height: 64px; padding: 0 14px; gap: 10px; }
+    .chat-input  { font-size: 16px; height: 44px; border-radius: 22px; } /* 16px prevents iOS zoom */
+    .mic-btn, .send-btn { width: 44px; height: 44px; font-size: 18px; }
+    .clear-chat-btn, .auto-listen-btn { height: 36px; padding: 0 10px; font-size: 11px; border-radius: 8px; }
+
+    /* — Page content — */
+    .page { padding: 12px; gap: 12px; }
+
+    /* — Topbar — */
+    .clock-time { font-size: 15px; }
+    .clock-date { font-size: 9px; }
+}
+
+/* ── More Sheet (mobile only) ─────────────────────────────────── */
+.more-sheet-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 9100;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+.more-sheet-overlay.open { display: block; }
+
+.more-sheet {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #070b14;
+    border-top: 1px solid rgba(0,212,255,0.2);
+    border-radius: 20px 20px 0 0;
+    z-index: 9101;
+    padding: 0 16px;
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px);
+    transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0,0,0.2,1);
+}
+.more-sheet.open { transform: translateY(0); }
+
+.more-sheet-handle {
+    width: 36px; height: 4px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 2px;
+    margin: 12px auto 14px;
+}
+
+.more-sheet-title {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(232,244,255,0.3);
+    text-align: center; margin-bottom: 12px;
+}
+
+.more-sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 8px;
+    padding-bottom: 8px;
+}
+
+.more-sheet-btn {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px; padding: 14px 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(0,212,255,0.1);
+    border-radius: 12px;
+    color: rgba(232,244,255,0.5);
+    cursor: pointer; min-height: 72px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    font-family: inherit;
+}
+.more-sheet-btn:active {
+    background: rgba(0,212,255,0.1);
+    border-color: rgba(0,212,255,0.3);
+    color: var(--primary);
+}
+.more-sheet-btn.active {
+    color: var(--primary);
+    border-color: rgba(0,212,255,0.4);
+    background: rgba(0,212,255,0.07);
+}
+.more-sheet-icon  { font-size: 22px; line-height: 1; }
+.more-sheet-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+
 /* ── Page header ─────────────────────────────────────────────── */
 .ds-page-header { display: flex !important; align-items: center !important; justify-content: space-between !important; padding-bottom: 4px !important; flex-shrink: 0 !important; }
 .ds-page-header-left { display: flex !important; flex-direction: column !important; gap: 2px !important; }
@@ -7796,6 +7901,10 @@ li, td, th, div.label, div.value { font-size: inherit; }
             <span class="nav-icon">◈</span>
             <span class="nav-label">Research</span>
         </button>
+        <button class="nav-btn" id="nav-more" style="display:none" onclick="toggleMobileMore()" aria-label="More pages">
+            <span class="nav-icon" style="letter-spacing:-1px">•••</span>
+            <span class="nav-label">More</span>
+        </button>
     </nav>
 
 </div><!-- .app -->
@@ -9211,16 +9320,28 @@ function _iosPWAHandleTranscript(transcript) {
     }
     if (dgMuted) return;
     lastSpeechMs = Date.now();
+    const _IOS_PAGES = {command:'command',overview:'overview',operation:'operation',operations:'operation',system:'system',communication:'communication',comms:'communication',finance:'finance',business:'business',university:'university',uni:'university',health:'health',occult:'occult',research:'research'};
     if (dgMode === "wake") {
         console.log(`[iOS] wake check: "${transcript}" — matched: ${/\bapex\b/i.test(transcript)}`);
         if (/\bapex\b/i.test(transcript)) {
             console.log("[iOS Wake] wake word matched → conversation");
-            console.log("[APEX iOS] Wake word APEX detected");
-            dgMode = "conversation";
-            lastSpeechMs = Date.now();
-            setOrbState("listening");
-            speak("Yes?");
-            renderChatMessage("system", "Listening…");
+            const _iosWk = transcript.trim().toLowerCase();
+            const _iosWkInline = _iosWk.slice(_iosWk.indexOf('apex') + 4).replace(/^[\s,;.!?]+/, '').trim();
+            const _iosWkPageMatch = _iosWkInline.match(/^(?:(?:go|switch|navigate)\s+to\s+|open\s+|show\s+)?(\w+)(?:\s+page)?$/);
+            const _iosWkTarget = _iosWkPageMatch && _IOS_PAGES[_iosWkPageMatch[1]];
+            if (_iosWkTarget) {
+                console.log(`[iOS Wake] page switch → ${_iosWkTarget}`);
+                dgMode = "conversation";
+                switchPage(_iosWkTarget);
+                renderChatMessage('system', 'Switching to ' + _iosWkTarget + '.');
+            } else {
+                console.log("[APEX iOS] Wake word APEX detected");
+                dgMode = "conversation";
+                lastSpeechMs = Date.now();
+                setOrbState("listening");
+                speak("Yes?");
+                renderChatMessage("system", "Listening…");
+            }
         }
     } else {
         console.log(`[iOS Conv] "${transcript}"`);
@@ -9228,6 +9349,15 @@ function _iosPWAHandleTranscript(transcript) {
             interruptSpeech();
             dgMode = "wake";
             setOrbState("waiting");
+            return;
+        }
+        // Page navigation
+        const _iosPgMatch = transcript.match(/^(?:(?:go|switch|navigate)\s+to\s+|open\s+|show\s+)?(\w+)(?:\s+page)?$/i);
+        const _iosPgTarget = _iosPgMatch && _IOS_PAGES[_iosPgMatch[1].toLowerCase()];
+        if (_iosPgTarget) {
+            console.log(`[iOS Conv] page switch → ${_iosPgTarget}`);
+            switchPage(_iosPgTarget);
+            renderChatMessage('system', 'Switching to ' + _iosPgTarget + '.');
             return;
         }
         document.getElementById("chatInput").value = transcript;
@@ -9287,7 +9417,16 @@ async function startVoicePipeline() {
                 const _wakeIdx = _wakeTranscript.indexOf('apex');
                 const _inlineCmd = _wakeTranscript.slice(_wakeIdx + 4).replace(/^[\s,;.!?]+/, '').trim();
                 const _inlineWords = _inlineCmd.split(/\s+/).filter(Boolean);
-                if (_inlineWords.length >= 2) {
+                // Page navigation: "apex command", "apex go to health", etc.
+                const _WAKE_PAGES = {command:'command',overview:'overview',operation:'operation',operations:'operation',system:'system',communication:'communication',comms:'communication',finance:'finance',business:'business',university:'university',uni:'university',health:'health',occult:'occult',research:'research'};
+                const _wakePageMatch = _inlineCmd.match(/^(?:(?:go|switch|navigate)\s+to\s+|open\s+|show\s+)?(\w+)(?:\s+page)?$/);
+                const _wakeTargetPage = _wakePageMatch && _WAKE_PAGES[_wakePageMatch[1]];
+                if (_wakeTargetPage) {
+                    console.log(`[Wake] page switch → ${_wakeTargetPage}`);
+                    dgMode = "conversation";
+                    switchPage(_wakeTargetPage);
+                    renderChatMessage('system', 'Switching to ' + _wakeTargetPage + '.');
+                } else if (_inlineWords.length >= 2) {
                     console.log(`[Wake] inline command: "${_inlineCmd}" — routing direct`);
                     dgMode = "conversation";
                     sendVoiceChatCommand(_inlineCmd);
@@ -9322,6 +9461,17 @@ async function startVoicePipeline() {
                 setOrbState("waiting");
                 return;
             }
+            // ── Page navigation — checked before word-count filter ────────────────────
+            const _CONV_PAGES = {command:'command',overview:'overview',operation:'operation',operations:'operation',system:'system',communication:'communication',comms:'communication',finance:'finance',business:'business',university:'university',uni:'university',health:'health',occult:'occult',research:'research'};
+            const _convPageMatch = transcript.match(/^(?:(?:go|switch|navigate)\s+to\s+|open\s+|show\s+)?(\w+)(?:\s+page)?$/i);
+            const _convTargetPage = _convPageMatch && _CONV_PAGES[_convPageMatch[1].toLowerCase()];
+            if (_convTargetPage) {
+                console.log(`[SR] page switch → ${_convTargetPage}`);
+                switchPage(_convTargetPage);
+                renderChatMessage('system', 'Switching to ' + _convTargetPage + '.');
+                return;
+            }
+            // ─────────────────────────────────────────────────────────────────────────
             const _convWords = transcript.split(/\s+/).filter(Boolean).length;
             if (_convWords < 2) {
                 console.log('[SR] conversation: too short, ignoring:', transcript);
@@ -14820,5 +14970,74 @@ window.apexFileDropHandler = function(e){
 <!-- Plasma Orb Canvas Engine -->
 <script src="/src/components/orb/PlasmaOrb.js"></script>
 <!-- apex-visual-editor removed -->
+
+<!-- ══ MOBILE MORE SHEET ══ -->
+<div class="more-sheet-overlay" id="moreSheetOverlay" onclick="closeMobileMore()"></div>
+<div class="more-sheet" id="moreSheet" role="dialog" aria-label="More pages">
+    <div class="more-sheet-handle"></div>
+    <div class="more-sheet-title">Pages</div>
+    <div class="more-sheet-grid">
+        <button class="more-sheet-btn" id="more-nav-system"        onclick="moreNavTo('system')"        aria-label="System"><span class="more-sheet-icon">◉</span><span class="more-sheet-label">System</span></button>
+        <button class="more-sheet-btn" id="more-nav-communication" onclick="moreNavTo('communication')" aria-label="Communication"><span class="more-sheet-icon">✉</span><span class="more-sheet-label">Comms</span></button>
+        <button class="more-sheet-btn" id="more-nav-finance"       onclick="moreNavTo('finance')"       aria-label="Finance"><span class="more-sheet-icon">◎</span><span class="more-sheet-label">Finance</span></button>
+        <button class="more-sheet-btn" id="more-nav-business"      onclick="moreNavTo('business')"      aria-label="Business"><span class="more-sheet-icon">◧</span><span class="more-sheet-label">Business</span></button>
+        <button class="more-sheet-btn" id="more-nav-university"    onclick="moreNavTo('university')"    aria-label="University"><span class="more-sheet-icon">◫</span><span class="more-sheet-label">Uni</span></button>
+        <button class="more-sheet-btn" id="more-nav-occult"        onclick="moreNavTo('occult')"        aria-label="Occult"><span class="more-sheet-icon">◬</span><span class="more-sheet-label">Occult</span></button>
+        <button class="more-sheet-btn" id="more-nav-research"      onclick="moreNavTo('research')"      aria-label="Research"><span class="more-sheet-icon">◈</span><span class="more-sheet-label">Research</span></button>
+    </div>
+</div>
+
+<script>
+/* ── Mobile More Sheet + switchPage patch ── */
+(function() {
+    var _morePages = ['system','communication','finance','business','university','occult','research'];
+
+    function _updateMoreState(name) {
+        var moreBtn = document.getElementById('nav-more');
+        if (!moreBtn) return;
+        var isMorePage = _morePages.indexOf(name) >= 0;
+        moreBtn.classList.toggle('active', isMorePage);
+        _morePages.forEach(function(p) {
+            var btn = document.getElementById('more-nav-' + p);
+            if (btn) btn.classList.toggle('active', p === name);
+        });
+    }
+
+    window.toggleMobileMore = function() {
+        var sheet = document.getElementById('moreSheet');
+        if (sheet.classList.contains('open')) {
+            closeMobileMore();
+        } else {
+            document.getElementById('moreSheetOverlay').classList.add('open');
+            sheet.classList.add('open');
+            document.getElementById('nav-more').classList.add('active');
+        }
+    };
+
+    window.closeMobileMore = function() {
+        document.getElementById('moreSheetOverlay').classList.remove('open');
+        document.getElementById('moreSheet').classList.remove('open');
+        var activePg = document.querySelector('.page.active');
+        var activeId = activePg ? activePg.id.replace('page-', '') : '';
+        if (_morePages.indexOf(activeId) < 0) {
+            var moreBtn = document.getElementById('nav-more');
+            if (moreBtn) moreBtn.classList.remove('active');
+        }
+    };
+
+    window.moreNavTo = function(page) {
+        switchPage(page);
+        document.getElementById('moreSheetOverlay').classList.remove('open');
+        document.getElementById('moreSheet').classList.remove('open');
+    };
+
+    // Patch switchPage so More button tracks active state
+    var _origSwitch = window.switchPage;
+    window.switchPage = function(name) {
+        _origSwitch(name);
+        _updateMoreState(name);
+    };
+})();
+</script>
 </body>
 </html>
