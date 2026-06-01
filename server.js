@@ -8186,9 +8186,10 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         addToMemory("user", userMessage);
 
         // ── Context fetch — parallel, all non-blocking ───────────────────────
-        const [lcMemCtx, lcRagCtx, relevantDocs] = await Promise.all([
+        const [memSummary, recentMem, alexContext, relevantDocs] = await Promise.all([
+            getMemorySummary().catch(() => ''),
             formatRecentMemory().catch(() => ''),
-            lcRag.retrieveContext(userMessage).catch(() => ''),
+            buildAlexContext().catch(() => ''),
             pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
         ]);
         console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done`);
@@ -8203,32 +8204,15 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         // Build enriched context block for system prompt
         const contextParts = [];
-        if (lcMemCtx)  contextParts.push(`CONVERSATION HISTORY:\n${lcMemCtx}`);
-        if (lcRagCtx)  contextParts.push(`VAULT KNOWLEDGE:\n${lcRagCtx}`);
-        if (docsText)  contextParts.push(`WORKSPACE DOCUMENTS:\n${docsText}`);
+        if (memSummary)  contextParts.push(`MEMORY SUMMARY:\n${memSummary}`);
+        if (recentMem)   contextParts.push(`RECENT CONVERSATION:\n${recentMem}`);
+        if (docsText)    contextParts.push(`WORKSPACE DOCUMENTS:\n${docsText}`);
         const enrichedContext = contextParts.join('\n\n---\n\n');
 
-        // Include tools when query looks action-oriented
-        const needsTools = !!_kwDomain
-            || /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment|remember|follow.?up|what.*task|pending|news|health|workout|weather/i.test(userMessage);
-        console.log(`[LATENCY] +${Date.now() - t0}ms building request | domain:${lcRoute.domain} needsTools:${needsTools}`);
-
-        // Ruflo agent routing hint
-        const _rufloAgent = (() => {
-            const domainMap = { finance: 'apex-finance-agent', health: 'apex-finance-agent', university: 'apex-system-agent', business: 'apex-finance-agent', communications: 'apex-email-agent' };
-            return domainMap[lcRoute.domain] || 'apex-system-agent';
-        })();
-
-        // Alex context (profile)
-        let alexContext = '';
-        try { alexContext = await buildAlexContext(); } catch {}
+        console.log(`[LATENCY] +${Date.now() - t0}ms building request | domain:${lcRoute.domain}`);
 
         // Domain agent routing — dispatch to specialist when intent is clear
-        // Prefer LangChain slug (high confidence); fall back to keyword detection.
-        const _lcSlug    = lcRouter.DOMAIN_SLUG_MAP[lcRoute.domain];
-        const _domainSlug = (_lcSlug && lcRoute.confidence >= 0.75)
-            ? _lcSlug
-            : detectDomain(userMessage);
+        const _domainSlug = detectDomain(userMessage);
         let finalReply = '';
 
         if (_domainSlug && Object.prototype.hasOwnProperty.call(_DOMAIN_AGENTS, _domainSlug)) {
@@ -8242,23 +8226,24 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         }
 
         if (!finalReply) {
-            // Agentic tool-use loop — generic fallback when no domain agent handled it
+            // Agentic tool-use loop with full intelligence
             const messages = [{ role: 'user', content: userMessage }];
             let loopCount = 0;
-            const maxLoops = 5;
+            const maxLoops = 8;
 
             while (loopCount < maxLoops) {
                 loopCount++;
                 const response = await client.messages.create({
-                    model: HAIKU_MODEL,
-                    max_tokens: 1024,
+                    model: SONNET_MODEL,
+                    max_tokens: 2048,
                     system: [
                         enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
-                        `You are Apex, a precise, professional AI operating system. Always address the user as sir. Be concise — voice responses should be under 3 sentences unless detail is needed. Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is based in Leamington Spa, Warwickshire, England, UK.`,
-                        `You have tools available — use them proactively: get_notifications when the user greets you or asks what is happening. list_emails for inbox queries. get_weather for weather. web_search for current facts. create_task for reminders. get_news for headlines. get_calendar_events for schedule. get_finance_summary for money queries. get_health_summary for fitness and nutrition.`,
                         alexContext,
-                        `Respond in plain spoken English only. No markdown, no bullet points, no dashes, no numbered lists, no asterisks. All responses will be read aloud.`,
-                    ].filter(Boolean).join(' '),
+                        `You are Apex — an advanced AI intelligence system and the user's personal operating mind. Always address the user as "sir". Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is Alex, based in Leamington Spa, Warwickshire, England, UK.`,
+                        `You have full access to Alex's world: calendar, emails, tasks, files, finances, health data, notifications, the web, and persistent memory of every past conversation. Use your tools aggressively and without hesitation. When greeted, call get_notifications and get_calendar_events simultaneously. When asked about money, call get_finance_summary. When asked about health, call get_health_summary. Never say you cannot access something without trying a tool first.`,
+                        `You reason deeply and speak with authority. Match response length to complexity — brief and sharp for simple queries, thorough and detailed for complex ones. You remember everything Alex has told you. Draw on memory and facts freely.`,
+                        `Speak in natural, flowing English only. No markdown, no bullet points, no asterisks, no numbered lists. All responses are read aloud by a voice engine.`,
+                    ].filter(Boolean).join('\n\n'),
                     tools: APEX_TOOLS,
                     messages
                 });
