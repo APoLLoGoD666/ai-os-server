@@ -2,16 +2,21 @@
 const router = require('express').Router();
 const crypto = require('crypto');
 
-// Google Cloud Text-to-Speech — production-stable Neural2 voice
-// Enable at: console.cloud.google.com → APIs & Services → Cloud Text-to-Speech API
-const TTS_URL       = 'https://texttospeech.googleapis.com/v1/text:synthesize';
-const VOICE_NAME    = 'en-GB-Neural2-B';   // British male, closest to Orus character
-const LANGUAGE_CODE = 'en-GB';
+const MODEL         = 'gemini-2.5-flash-preview-tts';
+const DEFAULT_VOICE = 'Orus';
 const SAMPLE_RATE   = 24000;
-const CACHE_TTL_MS  = 5 * 60 * 1000;
+const CACHE_TTL_MS  = 5 * 60 * 1000;  // 5 min
 const CACHE_MAX     = 30;
 
-// In-memory WAV cache — avoids re-calling Cloud TTS for repeated phrases
+const VOICES = new Set([
+    'Achernar','Achird','Algenib','Algieba','Alnilam','Aoede','Autonoe',
+    'Callirrhoe','Charon','Despina','Enceladus','Erinome','Fenrir','Gacrux',
+    'Iapetus','Kore','Laomedeia','Leda','Orus','Pulcherrima','Puck',
+    'Rasalgethi','Sadachbia','Sadaltager','Schedar','Sulafat','Umbriel',
+    'Vindemiatrix','Zephyr','Zubenelgenubi',
+]);
+
+// In-memory WAV cache keyed by SHA-1 of text — avoids re-calling Gemini for repeated phrases
 const _cache = new Map();
 function cacheGet(key) {
     const entry = _cache.get(key);
@@ -20,11 +25,14 @@ function cacheGet(key) {
     return entry.wav;
 }
 function cacheSet(key, wav) {
-    if (_cache.size >= CACHE_MAX) _cache.delete(_cache.keys().next().value);
+    if (_cache.size >= CACHE_MAX) {
+        // evict oldest
+        _cache.delete(_cache.keys().next().value);
+    }
     _cache.set(key, { wav, ts: Date.now() });
 }
 
-// Prepend 44-byte WAV/RIFF header to raw LINEAR16 PCM (24kHz, 16-bit, mono)
+// Prepend a 44-byte WAV/RIFF header to raw PCM data (24kHz, 16-bit, mono)
 function pcmToWav(pcm) {
     const buf = Buffer.alloc(44 + pcm.length);
     buf.write('RIFF', 0);
@@ -44,40 +52,32 @@ function pcmToWav(pcm) {
     return buf;
 }
 
-async function callCloudTTS(apiKey, text) {
-    const res = await fetch(`${TTS_URL}?key=${apiKey}`, {
+async function callGeminiTTS(url, payload) {
+    const gRes = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            input: { text },
-            voice: { languageCode: LANGUAGE_CODE, name: VOICE_NAME },
-            audioConfig: {
-                audioEncoding: 'LINEAR16',
-                sampleRateHertz: SAMPLE_RATE,
-                speakingRate: 1.05,
-                pitch: -1.0
-            }
-        })
+        body: JSON.stringify(payload)
     });
-    return res;
+    return gRes;
 }
 
-// POST /api/tts/gemini  (endpoint name preserved — no frontend changes needed)
+// POST /api/tts/gemini
 // Body: { text: string }
-// Returns: audio/wav
+// Returns: audio/wav buffer (PCM 24kHz 16-bit mono with WAV header)
 router.post('/tts/gemini', async (req, res) => {
     const t0 = Date.now();
     try {
         const text = (req.body?.text || '').trim();
         if (!text) return res.status(400).json({ error: 'No text provided' });
-        if (text.length > 5000) return res.status(400).json({ error: 'Text too long' });
+        if (text.length > 4000) return res.status(400).json({ error: 'Text exceeds 4000 char limit' });
 
-        const apiKey = process.env.GOOGLE_CLOUD_TTS_KEY || process.env.GOOGLE_API_KEY;
+        const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            console.error('[TTS/Cloud] No API key — set GOOGLE_CLOUD_TTS_KEY or GOOGLE_API_KEY');
-            return res.status(503).json({ error: 'TTS API key not configured' });
+            console.error('[APEX-UI] Gemini TTS: GOOGLE_API_KEY / GEMINI_API_KEY not set');
+            return res.status(503).json({ error: 'Gemini API key not configured — set GOOGLE_API_KEY or GEMINI_API_KEY' });
         }
 
+        // Return cached WAV if available
         const cacheKey = crypto.createHash('sha1').update(text).digest('hex');
         const cached = cacheGet(cacheKey);
         if (cached) {
@@ -89,37 +89,52 @@ router.post('/tts/gemini', async (req, res) => {
             return res.send(cached);
         }
 
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+        const payload = {
+            contents: [{ parts: [{ text }] }],
+            generationConfig: {
+                responseModalities: ['AUDIO'],
+                speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: DEFAULT_VOICE } } }
+            }
+        };
+
         let gRes;
         try {
-            gRes = await callCloudTTS(apiKey, text);
-            // Single retry on transient errors
+            gRes = await callGeminiTTS(url, payload);
+            // Single retry after 1.5s on 429 (rate limit) or 503 (transient)
             if ((gRes.status === 429 || gRes.status === 503) && !res.headersSent) {
-                console.warn(`[TTS/Cloud] ${gRes.status} — retrying in 1.5s`);
+                console.warn(`[TTS/Gemini] ${gRes.status} — retrying in 1.5s`);
                 await new Promise(r => setTimeout(r, 1500));
-                gRes = await callCloudTTS(apiKey, text);
+                gRes = await callGeminiTTS(url, payload);
             }
         } catch (netErr) {
-            console.error('[TTS/Cloud] Network error:', netErr.message);
-            return res.status(502).json({ error: 'Network error reaching Cloud TTS', detail: netErr.message });
+            console.error('[APEX-UI] Gemini TTS network error:', netErr.message);
+            return res.status(502).json({ error: 'Network error reaching Gemini API', detail: netErr.message });
         }
 
         if (!gRes.ok) {
             const errText = await gRes.text().catch(() => '');
-            console.error('[TTS/Cloud] API error:', gRes.status, errText.slice(0, 300));
+            console.error('[APEX-UI] Gemini TTS API error:', gRes.status, errText.slice(0, 300));
+            // Pass 429 through so the client knows to back off
             const status = gRes.status === 429 ? 429 : 502;
-            return res.status(status).json({ error: 'Cloud TTS returned ' + gRes.status, detail: errText.slice(0, 300) });
+            return res.status(status).json({ error: 'Gemini API returned ' + gRes.status, detail: errText.slice(0, 300) });
         }
 
         let json;
-        try { json = await gRes.json(); }
-        catch (e) { return res.status(502).json({ error: 'Invalid JSON from Cloud TTS' }); }
-
-        if (!json?.audioContent) {
-            console.error('[TTS/Cloud] No audioContent in response');
-            return res.status(502).json({ error: 'No audio in Cloud TTS response' });
+        try {
+            json = await gRes.json();
+        } catch (parseErr) {
+            console.error('[APEX-UI] Gemini TTS JSON parse error:', parseErr.message);
+            return res.status(502).json({ error: 'Invalid JSON from Gemini API' });
         }
 
-        const pcm = Buffer.from(json.audioContent, 'base64');
+        const inlineData = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+        if (!inlineData?.data) {
+            console.error('[APEX-UI] Gemini TTS: no audio in response —', JSON.stringify(json).slice(0, 300));
+            return res.status(502).json({ error: 'No audio data in Gemini response' });
+        }
+
+        const pcm = Buffer.from(inlineData.data, 'base64');
         const wav = pcmToWav(pcm);
         const latency = Date.now() - t0;
 
@@ -131,16 +146,16 @@ router.post('/tts/gemini', async (req, res) => {
         res.set('X-Apex-Latency-Ms', String(latency));
         res.send(wav);
 
-        console.log(`[TTS/Cloud] ${latency}ms · ${wav.length}B · "${text.slice(0, 50)}"`);
+        console.log(`[TTS/Gemini] ${latency}ms · ${wav.length}B · "${text.slice(0, 50)}"`);
     } catch (err) {
-        console.error('[TTS/Cloud] Unhandled exception:', err.message);
+        console.error('[APEX-UI] Gemini TTS unhandled exception:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
-// GET /api/tts/gemini/voices
+// GET /api/tts/gemini/voices — list available voices
 router.get('/tts/gemini/voices', (_req, res) => {
-    res.json({ provider: 'google-cloud-tts', voice: VOICE_NAME, language: LANGUAGE_CODE });
+    res.json({ voices: [...VOICES].sort(), default: DEFAULT_VOICE, model: MODEL });
 });
 
 module.exports = router;
