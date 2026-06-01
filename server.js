@@ -15,16 +15,47 @@ Sentry.init({ dsn: process.env.SENTRY_DSN || "", tracesSampleRate: 0.1 });
     if (!process.env.CRON_SECRET)  console.warn('[STARTUP] CRON_SECRET not set — cron endpoints are unprotected');
 })();
 
+// Error sink — writes to apex_notifications when Sentry DSN is absent
+const _errBuffer = [];
+function _sinkError(label, err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const entry = { label, msg, stack: err?.stack?.split('\n').slice(0,4).join(' | '), ts: new Date().toISOString() };
+    _errBuffer.push(entry);
+    if (_errBuffer.length > 20) _errBuffer.shift();
+    if (!process.env.SENTRY_DSN) {
+        // Deferred write — sbAdmin may not be ready yet at startup
+        setImmediate(() => {
+            try {
+                const { createClient } = require('@supabase/supabase-js');
+                const _sb = process.env.SUPABASE_URL
+                    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || '')
+                    : null;
+                if (_sb) {
+                    _sb.from('apex_notifications').insert({
+                        id: `err-${Date.now()}`,
+                        message: `[${label}] ${msg}`,
+                        type: 'error',
+                        read: false
+                    }).then(() => {}).catch(() => {});
+                }
+            } catch (_) {}
+        });
+    }
+}
+
 // Prevent silent crashes from taking down the server
 process.on('uncaughtException', (err) => {
     console.error('[FATAL] uncaughtException:', err.message, err.stack);
     Sentry.captureException(err);
+    _sinkError('uncaughtException', err);
     // Give Sentry time to flush before exiting — Render will restart immediately
     setTimeout(() => process.exit(1), 1000);
 });
 process.on('unhandledRejection', (reason) => {
     console.error('[FATAL] unhandledRejection:', reason);
-    Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
+    const e = reason instanceof Error ? reason : new Error(String(reason));
+    Sentry.captureException(e);
+    _sinkError('unhandledRejection', e);
 });
 
 const express = require("express");
@@ -261,8 +292,23 @@ app.get('/health', async (req, res) => {
             }
         }
     } catch {}
-    const status = dbOk ? 'ok' : 'degraded';
-    res.status(dbOk ? 200 : 503).json({ status, uptime: process.uptime(), timestamp: Date.now(), db: dbOk });
+    const mem     = process.memoryUsage();
+    const heapMb  = Math.round(mem.heapUsed  / 1024 / 1024);
+    const rssM    = Math.round(mem.rss        / 1024 / 1024);
+    const ttsOk   = !!(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
+    const aiOk    = !!process.env.ANTHROPIC_API_KEY;
+    const allOk   = dbOk && ttsOk && aiOk;
+    const status  = allOk ? 'ok' : (dbOk ? 'degraded' : 'down');
+    res.status(dbOk ? 200 : 503).json({
+        status,
+        uptime:    process.uptime(),
+        timestamp: Date.now(),
+        db:        dbOk,
+        tts:       ttsOk,
+        ai:        aiOk,
+        memory:    { heapMb, rssMb: rssM, warning: heapMb > 400 },
+        recentErrors: _errBuffer.slice(-3)
+    });
 });
 
 app.get('/', requireAuth, (req, res) => {
@@ -605,7 +651,8 @@ function ensureSetup() {
 
 function hasAppAccess(req) {
     if (!APP_ACCESS_KEY) {
-        return true;
+        // LOCAL_MODE without a key: allow for dev convenience; production: fail closed
+        return process.env.LOCAL_MODE === 'true';
     }
 
     const headerKey = req.get("x-app-key");
@@ -698,7 +745,7 @@ const LOGIN_HTML = `<!DOCTYPE html>
 
 function requireAuth(req, res, next) {
     const secret = process.env.JWT_SECRET;
-    if (!secret) return next();
+    if (!secret) return res.status(503).json({ ok: false, reply: 'Auth not configured.' });
 
     if (hasAppAccess(req)) return next();
 
@@ -6799,7 +6846,7 @@ app.get("/editor", (req, res) => {
     res.sendFile(path.join(__dirname, "editor.html"));
 });
 
-app.get("/test", (req, res) => {
+app.get("/test", requireAppAccess, (req, res) => {
     res.status(200).json({
         ok: true,
         message: "Server works",
@@ -6819,7 +6866,7 @@ app.get("/test-db", requireAppAccess, async (req, res) => {
     }
 });
 
-app.get("/version", (req, res) => {
+app.get("/version", requireAppAccess, (req, res) => {
     res.status(200).json({
         ok: true,
         version: "postgres-documents-v1",
@@ -7024,7 +7071,7 @@ app.get("/files", requireAppAccess, async (req, res) => {
     res.status(200).json({ ok: true, count: files.length, files });
 });
 
-app.get("/load-layout", (req, res) => {
+app.get("/load-layout", requireAppAccess, (req, res) => {
     try {
         if (!fs.existsSync(LAYOUT_FILE)) {
             return res.json({ html: "", css: "" });
@@ -7046,7 +7093,7 @@ app.get("/load-layout", (req, res) => {
     }
 });
 
-app.post("/save-layout", (req, res) => {
+app.post("/save-layout", requireAppAccess, (req, res) => {
     try {
         const html = req.body?.html || "";
         const css = req.body?.css || "";
