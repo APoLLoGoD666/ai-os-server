@@ -1188,27 +1188,39 @@ function searchDocuments(keyword) {
 let _voyage429Until = 0;
 
 async function embedText(text) {
-    if (!process.env.VOYAGE_API_KEY) return null;
-    if (Date.now() < _voyage429Until) {
-        console.warn("VOYAGE: circuit breaker active — skipping embed");
-        return null;
-    }
-    try {
-        const resp = await axios.post(
-            "https://api.voyageai.com/v1/embeddings",
-            { model: "voyage-3-lite", input: [text.slice(0, 2000)] },
-            { headers: { Authorization: `Bearer ${process.env.VOYAGE_API_KEY}` }, timeout: 5000 }
-        );
-        return resp.data?.data?.[0]?.embedding || null;
-    } catch (err) {
-        if (err.response?.status === 429) {
-            _voyage429Until = Date.now() + 60000;
-            console.warn("VOYAGE: 429 rate limit — circuit breaker active for 60s");
-        } else {
-            console.error("VOYAGE EMBED ERROR:", err.message);
+    // Voyage (primary — higher quality)
+    if (process.env.VOYAGE_API_KEY && Date.now() >= _voyage429Until) {
+        try {
+            const resp = await axios.post(
+                "https://api.voyageai.com/v1/embeddings",
+                { model: "voyage-3-lite", input: [text.slice(0, 2000)] },
+                { headers: { Authorization: `Bearer ${process.env.VOYAGE_API_KEY}` }, timeout: 5000 }
+            );
+            return resp.data?.data?.[0]?.embedding || null;
+        } catch (err) {
+            if (err.response?.status === 429) {
+                _voyage429Until = Date.now() + 60000;
+                console.warn("VOYAGE: 429 rate limit — circuit breaker active for 60s");
+            } else {
+                console.error("VOYAGE EMBED ERROR:", err.message);
+            }
         }
-        return null;
     }
+    // Gemini fallback (text-embedding-004, 768-dim)
+    const googleKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+    if (googleKey) {
+        try {
+            const resp = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${googleKey}`,
+                { model: 'models/text-embedding-004', content: { parts: [{ text: text.slice(0, 2000) }] } },
+                { timeout: 8000 }
+            );
+            return resp.data?.embedding?.values || null;
+        } catch (err) {
+            console.error("GEMINI EMBED ERROR:", err.message);
+        }
+    }
+    return null;
 }
 
 async function embedAndStoreDocument(filename, content) {
@@ -8356,11 +8368,13 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         addToMemory("user", userMessage);
 
         // ── Context fetch — parallel, all non-blocking ───────────────────────
-        const [memSummary, recentMem, alexContext, relevantDocs] = await Promise.all([
+        const _wikiReader = (() => { try { return require('./agent-system/wiki-reader'); } catch { return null; } })();
+        const [memSummary, recentMem, alexContext, relevantDocs, wikiCtx] = await Promise.all([
             getMemorySummary().catch(() => ''),
             formatRecentMemory().catch(() => ''),
             buildAlexContext().catch(() => ''),
             pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
+            _wikiReader ? _wikiReader.getWikiContext(userMessage).catch(() => '') : Promise.resolve(''),
         ]);
         console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done`);
 
@@ -8374,6 +8388,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         // Build enriched context block for system prompt
         const contextParts = [];
+        if (wikiCtx)     contextParts.push(`VAULT CONTEXT:\n${wikiCtx}`);
         if (memSummary)  contextParts.push(`MEMORY SUMMARY:\n${memSummary}`);
         if (recentMem)   contextParts.push(`RECENT CONVERSATION:\n${recentMem}`);
         if (docsText)    contextParts.push(`WORKSPACE DOCUMENTS:\n${docsText}`);
