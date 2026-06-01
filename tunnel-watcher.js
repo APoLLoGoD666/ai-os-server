@@ -10,8 +10,11 @@ if (process.env.LOCAL_MODE === "true") {
 
 const { spawn } = require("child_process");
 const https = require("https");
+const path = require("path");
 
-const RENDER_API_KEY = process.env.RENDER_API_KEY || "rnd_iMcUEW4InprhDdkaLV6mlNT79qRG";
+try { require("dotenv").config({ path: path.join(__dirname, ".env") }); } catch {}
+
+const RENDER_API_KEY = process.env.RENDER_API_KEY || "";
 const RENDER_SERVICE_ID = process.env.RENDER_SERVICE_ID || "srv-d7idj1gsfn5c738hpsc0";
 
 function ts() {
