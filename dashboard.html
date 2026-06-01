@@ -8302,7 +8302,7 @@ async function _glStart() {
 
     // Build WebSocket URL
     var proto  = location.protocol === 'https:' ? 'wss' : 'ws';
-    var appKey = window._apexAppKey || '';
+    var appKey = (function(){ try { return sessionStorage.getItem('apex_app_key') || window._apexAppKey || ''; } catch(_){ return window._apexAppKey || ''; } })();
     var wsUrl  = proto + '://' + location.host + '/ws/gemini-live' + (appKey ? '?app_key=' + encodeURIComponent(appKey) : '');
 
     GL.ws = new WebSocket(wsUrl);
@@ -8334,9 +8334,11 @@ async function _glStart() {
         } else if (msg.type === 'transcript_user') {
             var el = document.getElementById('apexLiveUserText');
             if (el) el.textContent = msg.text;
+            if (msg.text && typeof renderChatMessage === 'function') renderChatMessage('user', msg.text);
         } else if (msg.type === 'transcript_apex') {
             var el2 = document.getElementById('apexLiveApexText');
             if (el2) el2.textContent = msg.text;
+            if (msg.text && typeof renderChatMessage === 'function') renderChatMessage('ai', msg.text);
         } else if (msg.type === 'turn_complete') {
             _glSetStatus('Listening…');
         } else if (msg.type === 'error') {
@@ -8430,21 +8432,42 @@ function _glSetStatus(msg) {
 }
 
 window.toggleGeminiLive = function() {
-    if (GL.active) { _glStop(true); }
-    else           { _glStart(); }
+    if (GL.active) {
+        _glStop(true);
+        try { localStorage.setItem('apex_gemini_live', '0'); } catch(_){}
+    } else {
+        _glStart();
+        try { localStorage.setItem('apex_gemini_live', '1'); } catch(_){}
+    }
 };
 
-// Orb click handler — tap the plasma orb to toggle voice listening
-window.startVoice = function() { toggleListening(); };
-
-// Restore Live state from localStorage if user left it on
-(function() {
-    try {
-        if (localStorage.getItem('apex_gemini_live') === '1') {
-            // Don't auto-start — requires user gesture for getUserMedia
-        }
-    } catch(_){}
-})();
+// Orb click — Gemini Live is the primary voice path (single-hop, no STT/TTS latency)
+// Falls back to legacy pipeline if GL fails to connect within 5 seconds
+window.startVoice = function() {
+    if (GL.active) {
+        _glStop(true);
+        try { localStorage.setItem('apex_gemini_live', '0'); } catch(_){}
+    } else {
+        var glTimeout = setTimeout(function() {
+            if (!GL.ws || GL.ws.readyState !== WebSocket.OPEN) {
+                console.warn('[GeminiLive] connection timeout — falling back to legacy pipeline');
+                _glStop(false);
+                toggleListening();
+            }
+        }, 5000);
+        var _origOnMessage = function(ev) {
+            var msg; try { msg = JSON.parse(ev.data); } catch { return; }
+            if (msg.type === 'ready') clearTimeout(glTimeout);
+        };
+        _glStart().then(function() {
+            if (GL.ws) GL.ws.addEventListener('message', _origOnMessage, { once: true });
+        }).catch(function() {
+            clearTimeout(glTimeout);
+            toggleListening();
+        });
+        try { localStorage.setItem('apex_gemini_live', '1'); } catch(_){}
+    }
+};
 
 let isSpeakingNow       = false;
 let vadAnalyser         = null;
