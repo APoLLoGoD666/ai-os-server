@@ -9893,36 +9893,37 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
     try {
         let roadmap = {};
         try { roadmap = parseRoadmap(); } catch {}
-        const total = Object.values(roadmap).reduce((a, ws) => a + ws.pending.length + ws.completed.length, 0);
-        const completed = Object.values(roadmap).reduce((a, ws) => a + ws.completed.length, 0);
+        const total = Object.values(roadmap).reduce((a, ws) => a + (ws.pending || []).length + (ws.completed || []).length, 0);
+        const completed = Object.values(roadmap).reduce((a, ws) => a + (ws.completed || []).length, 0);
+        const safeCount = r => (r && typeof r.count === 'number') ? r.count : 0;
         const [taskRes, timelineRes, runRes] = await Promise.all([
             sbAdmin.from('apex_tasks').select('id', { count: 'exact', head: true }).catch(() => ({ count: 0 })),
             sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true }).catch(() => ({ count: 0 })),
-            sbAdmin.from('apex_agent_runs').select('task_id,success,cost_usd,duration_ms').catch(() => ({ data: null }))
+            sbAdmin.from('apex_agent_runs').select('task_id,success,cost_usd,duration_ms').catch(() => ({ data: [] }))
         ]);
-        const runs     = runRes.data || [];
+        const runs     = (runRes && Array.isArray(runRes.data)) ? runRes.data : [];
         const runCount = runs.length;
         const succeded = runs.filter(r => r.success).length;
-        const spend    = runs.reduce((s, r) => s + (r.cost_usd || 0), 0);
-        // Per-workstream cost breakdown — task_id starts with FEAT-X where X is the workstream prefix
+        const spend    = runs.reduce((s, r) => s + (Number(r.cost_usd) || 0), 0);
         const wsPrefix = { C: 'Communications', F: 'Finance', H: 'Health', B: 'Business', D: 'Daily', S: 'Spiritual', U: 'University', J: 'Journaling' };
         const wsCost = {};
         for (const run of runs) {
             const prefix = (run.task_id || '').replace(/^FEAT-/, '')[0];
             const ws = wsPrefix[prefix] || 'Other';
-            wsCost[ws] = (wsCost[ws] || 0) + (run.cost_usd || 0);
+            wsCost[ws] = (wsCost[ws] || 0) + (Number(run.cost_usd) || 0);
         }
         res.json({
             ok: true,
             roadmap:        { total, completed, pending: total - completed, pct: total ? Math.round(completed / total * 100) : 0 },
-            tasks:          taskRes.count || 0,
-            pipelineRuns:   timelineRes.count || runCount,
+            tasks:          safeCount(taskRes),
+            pipelineRuns:   safeCount(timelineRes) || runCount,
             agentRuns:      runCount,
             successRate:    runCount ? Math.round(succeded / runCount * 100) : null,
             totalCostUsd:   spend.toFixed(4),
-            costByWorkstream: Object.fromEntries(Object.entries(wsCost).map(([k, v]) => [k, v.toFixed(4)]))
+            costByWorkstream: Object.fromEntries(Object.entries(wsCost).map(([k, v]) => [k, Number(v).toFixed(4)]))
         });
     } catch (e) {
+        console.error('[metrics] 500:', e.message, e.stack);
         res.status(500).json({ ok: false, error: e.message });
     }
 });
