@@ -6135,7 +6135,6 @@ li, td, th, div.label, div.value { font-size: inherit; }
     #nav-university,
     #nav-occult,
     #nav-research { display: none !important; }
-
     #nav-more { display: flex !important; }
 
     /* — Nav sizing — */
@@ -6144,23 +6143,44 @@ li, td, th, div.label, div.value { font-size: inherit; }
     .nav-icon   { font-size: 21px; }
     .nav-label  { font-size: 10px; letter-spacing: 0.11em; }
 
-    /* — Input zone — */
-    .input-zone  { height: 64px; padding: 0 14px; gap: 10px; }
-    .chat-input  { font-size: 16px; height: 44px; border-radius: 22px; }
-    .mic-btn, .send-btn { width: 44px; height: 44px; font-size: 18px; }
-    .clear-chat-btn, .auto-listen-btn { height: 36px; padding: 0 10px; font-size: 11px; border-radius: 8px; }
+    /* — Input zone and command chrome: hidden on mobile — */
+    .input-zone { display: none !important; }
+    .cmd-strip  { display: none !important; }
+    .cmd-feed-col { display: none !important; }
 
-    /* — Page content — no horizontal overflow — */
-    .page { padding: 12px; gap: 12px; overflow-x: hidden; }
-    .page > * { min-width: 0; box-sizing: border-box; }
-    table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+    /* — All pages: overflow prevention — */
+    .page { padding: 12px; gap: 12px; overflow-x: hidden !important; }
+    .page > *  { max-width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
+    .ds-panel, .ds-card { max-width: 100% !important; overflow-x: hidden !important; }
+    .ds-grid-3, .ds-grid-2 { grid-template-columns: 1fr !important; }
+    .ds-grid-stats-6 { grid-template-columns: repeat(2,1fr) !important; }
+    table { display: block !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; width: 100%; }
 
-    /* — Mobile page name in topbar — */
+    /* — System page: collapse 5-col domain agent grid — */
+    #page-system [style*="repeat(5"] { grid-template-columns: repeat(2,1fr) !important; }
+    #domainAgentModal > div { width: min(90vw,480px) !important; max-width: calc(100vw - 32px) !important; }
+
+    /* — Finance page: hero section → stacked — */
+    #page-finance > [style*="space-between"] { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+    #page-finance [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; text-align: left !important; }
+
+    /* — Life/Health page: fixed-width nutrition ring — */
+    #page-health [style*="grid-template-columns:110px"] { grid-template-columns: 80px 1fr !important; }
+    #page-health [style*="width:110px;height:110px"] { width: 80px !important; height: 80px !important; }
+
+    /* — Orb recording animation — */
+    #plasmaOrb.orb-recording { filter: hue-rotate(150deg) brightness(1.5) saturate(1.3) !important; }
+
+    /* — Topbar: clock stays centered, page name absolute right — */
+    .topbar { justify-content: center !important; position: relative !important; }
     #mobilePageName {
+        position: absolute !important;
+        right: 14px !important; top: 50% !important;
+        transform: translateY(-50%) !important;
         display: block !important;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 11px; font-weight: 700;
-        letter-spacing: 0.2em; text-transform: uppercase;
+        font-size: 10px; font-weight: 700;
+        letter-spacing: 0.18em; text-transform: uppercase;
         color: var(--primary);
     }
 
@@ -6170,7 +6190,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
         bottom: calc(72px + max(env(safe-area-inset-bottom, 0px), 10px) + 14px);
     }
 
-    /* — Topbar — */
+    /* — Topbar clock — */
     .clock-time { font-size: 15px; }
     .clock-date { font-size: 9px; }
 }
@@ -6322,8 +6342,8 @@ li, td, th, div.label, div.value { font-size: inherit; }
         <div class="topbar-center" style="display:flex;flex-direction:row;align-items:center;gap:10px">
             <div class="clock-time" id="clockTime">--:--:--</div>
             <div class="clock-date" id="clockDate">--</div>
-            <span id="mobilePageName" style="display:none">COMMAND</span>
         </div>
+        <span id="mobilePageName" style="display:none">COMMAND</span>
         <!-- hidden stubs JS may reference -->
         <div style="display:none">
             <span id="topbarEmailCount"></span><span id="topbarTaskCount"></span>
@@ -15100,7 +15120,7 @@ window.apexFileDropHandler = function(e){
         document.getElementById('moreSheet').classList.remove('open');
     };
 
-    /* ── Patch switchPage — page name + More state + PTT visibility ── */
+    /* ── Patch switchPage: page name + scroll reset + More state ── */
     var _origSwitch = window.switchPage;
     window.switchPage = function(name) {
         _origSwitch(name);
@@ -15108,31 +15128,38 @@ window.apexFileDropHandler = function(e){
         // Update mobile page name in topbar
         var pnEl = document.getElementById('mobilePageName');
         if (pnEl) pnEl.textContent = name.toUpperCase();
-        // Show floating PTT on all pages (hidden via CSS on desktop)
-        var ptt = document.getElementById('floatingPTT');
-        if (ptt) ptt.style.display = '';  // let CSS media query decide
+        // Reset page scroll to top on every navigation
+        var pg = document.getElementById('page-' + name);
+        if (pg) pg.scrollTop = 0;
     };
 
     if (!_isMobile) return; // touch-specific init below
 
-    /* ── Orb hold-to-speak ── */
+    /* ── Stop auto-listen on mobile — PTT-only mode ── */
+    setTimeout(function() {
+        if (typeof stopListening === 'function') stopListening();
+    }, 800);
+
+    var _orbLbl = document.getElementById('plasmaOrbSubLabel');
+    if (_orbLbl) _orbLbl.textContent = 'HOLD TO SPEAK';
+
+    /* ── Orb hold-to-speak (synchronous getUserMedia — no setTimeout) ── */
     var orb = document.getElementById('plasmaOrb');
     if (orb) {
-        var _orbTimer = null;
         orb.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            _orbTimer = setTimeout(function() {
-                if (typeof startListening === 'function') startListening();
-            }, 120);
+            e.preventDefault(); // prevent ghost click
+            if (typeof startListening === 'function') startListening();
+            orb.classList.add('orb-recording');
+            if (_orbLbl) _orbLbl.textContent = 'LISTENING · RELEASE TO SEND';
         }, { passive: false });
-        orb.addEventListener('touchend', function() {
-            clearTimeout(_orbTimer);
-            // Short tap = toggle; held tap already started listening
+
+        function _orbRelease() {
+            orb.classList.remove('orb-recording');
+            if (_orbLbl) _orbLbl.textContent = 'HOLD TO SPEAK';
             if (typeof stopListening === 'function') stopListening();
-        }, { passive: true });
-        orb.addEventListener('touchcancel', function() {
-            clearTimeout(_orbTimer);
-        }, { passive: true });
+        }
+        orb.addEventListener('touchend',    _orbRelease, { passive: true });
+        orb.addEventListener('touchcancel', _orbRelease, { passive: true });
     }
 
     /* ── Floating PTT button ── */
