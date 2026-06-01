@@ -6263,6 +6263,18 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
     /* — Stat cards: ensure readable on 375px — */
     .ds-stat-value { font-size: clamp(18px, 5vw, 28px) !important; }
+
+    /* — Finance: tax row 4-col → 2-col — */
+    #fin-tax-row { grid-template-columns: repeat(2,1fr) !important; }
+
+    /* — Overview: comms snap JS-generated 4-col inner grid → 2-col — */
+    #ovr-comms-snap [style*="grid-template-columns"] { grid-template-columns: repeat(2,1fr) !important; }
+
+    /* — Overview: summary row 3-col → 1-col — */
+    #ovr-summary-row { grid-template-columns: 1fr !important; }
+
+    /* — Login: reduce excessive padding on narrow screens — */
+    #apexLoginOverlay > div { padding: 28px 20px !important; }
 }
 
 /* ── Mobile nav dropdown button style ─────────────────────────── */
@@ -15176,13 +15188,6 @@ window.apexFileDropHandler = function(e){
 <!-- ══ FLOATING PTT ══ -->
 <button id="floatingPTT" aria-label="Push to talk"></button>
 
-<!-- ══ MOBILE ACTIVATION OVERLAY ══ -->
-<div id="mobileActivationOverlay" style="display:none;position:fixed;inset:0;z-index:99000;background:rgba(0,0,0,0.94);align-items:center;justify-content:center;flex-direction:column;gap:24px;">
-    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.22em;color:rgba(0,212,255,0.7);text-transform:uppercase;text-align:center;">APEX AI OS</div>
-    <button id="mobileActivateBtn" style="width:130px;height:130px;border-radius:50%;background:radial-gradient(circle at 38% 38%,rgba(80,200,255,0.28),rgba(0,80,200,0.12));border:2px solid rgba(0,212,255,0.65);color:#00d4ff;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.18em;line-height:1.6;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 0 48px rgba(0,212,255,0.22),inset 0 0 20px rgba(0,212,255,0.06);outline:none;" aria-label="Activate Apex">TAP TO<br>ACTIVATE</button>
-    <div style="font-size:9px;color:rgba(0,212,255,0.4);font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;text-align:center;">INITIALIZING VOICE PIPELINE</div>
-</div>
-
 <!-- ══ MOBILE MORE SHEET ══ -->
 <div class="more-sheet-overlay" id="moreSheetOverlay" onclick="closeMobileMore()"></div>
 <div class="more-sheet" id="moreSheet" role="dialog" aria-label="More pages">
@@ -15300,28 +15305,6 @@ window.apexFileDropHandler = function(e){
                 _navToggle.setAttribute('aria-expanded', 'false');
             }
         }, { passive: true });
-    }
-
-    /* ── Activation overlay: one tap pre-grants permission (stream released after) ── */
-    var _activationOverlay = document.getElementById('mobileActivationOverlay');
-    var _activateBtn       = document.getElementById('mobileActivateBtn');
-    if (_activationOverlay) {
-        _activationOverlay.style.display = 'flex';
-
-        if (_activateBtn) {
-            _activateBtn.addEventListener('touchend', function _onActivate(e) {
-                e.preventDefault();
-                _activateBtn.removeEventListener('touchend', _onActivate);
-                _activateBtn.textContent = 'ACTIVATING…';
-                navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false }).then(function(stream) {
-                    // Stop tracks immediately — permission granted, mic indicator goes off
-                    stream.getTracks().forEach(function(t) { t.stop(); });
-                    _activationOverlay.style.display = 'none';
-                }).catch(function() {
-                    _activationOverlay.style.display = 'none';
-                });
-            }, { passive: false });
-        }
     }
 
     /* ── Custom PTT pipeline — keeps stream alive to avoid iOS re-prompt ──
