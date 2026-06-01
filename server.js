@@ -47,12 +47,12 @@ const agentLib     = require('./agent-system/agent-library');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
-// ── LangChain agents — stubs at startup, real modules loaded after server settles ─
+// ── LangChain agents — lazy-loaded on first voice-chat request ───────────────
 let lcMemory = { getContext: async () => '', addExchange: async () => {} };
 let lcRag    = { retrieveContext: async () => '' };
 let lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} };
-// Real modules are loaded via staggered setTimeouts in server.listen (see below)
-// ──────────────────────────────────────────────────────────────────────────────
+let _lcLoaded = false;
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ── Keyword-based domain detector (fast, zero API cost) ──────────────────────
 function detectDomain(text) {
@@ -116,7 +116,9 @@ const {
 const { runAutoCoder } = require("./auto_coder");
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
 const { checkEmails, sendEmailReply, initEmailAgent } = require("./email_agent");
-const { initMastra, getMastraStatus } = require("./mastra_agents");
+// mastra_agents is lazy-loaded after server stabilises to avoid startup OOM
+let initMastra = () => null;
+let getMastraStatus = () => ({ apex: false, email: false, finance: false, routine: false, research: false, mastra: false, details: { status: 'not yet loaded' } });
 const { categoriseTransaction, checkBudgetAlerts, parseCsvTransactions, FINANCE_CATEGORIES } = require("./finance_agent");
 const { initRoutineAgent } = require("./routine_agent");
 const { runReflectionCheck } = require("./reflection_agent");
@@ -8177,6 +8179,14 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         // Fire-and-forget legacy memory write (kept for compatibility)
         addToMemory("user", userMessage);
 
+        // ── LangChain: lazy-load real modules on first request (cached after) ──
+        if (!_lcLoaded) {
+            _lcLoaded = true;
+            try { lcMemory = require('./agent-system/langchain-memory'); } catch { lcMemory = { getContext: async () => '', addExchange: async () => {} }; }
+            try { lcRag    = require('./agent-system/langchain-rag');    } catch { lcRag    = { retrieveContext: async () => '' }; }
+            try { lcRouter = require('./agent-system/langchain-router'); } catch { lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} }; }
+            console.log('[LCWARM] LangChain modules loaded on first voice request');
+        }
         // ── LangChain: memory + RAG + router — all parallel ──────────────────
         const [lcMemCtx, lcRagCtx, lcRoute, relevantDocs] = await Promise.all([
             lcMemory.getContext(userMessage).catch(() => ''),
@@ -10739,11 +10749,17 @@ app.use('/api', require('./routes/tts-gemini'));
 server.listen(PORT, () => {
     ensureSetup();
 
-    // Staggered LangChain warm-up — load each module separately so GC has breathing
-    // room between them. Stubs above are used for voice-chat in the first 30s.
-    setTimeout(() => { try { lcMemory = require('./agent-system/langchain-memory'); console.log('[WARMUP] langchain-memory ready'); } catch (e) { console.warn('[WARMUP] langchain-memory:', e.message); } }, 10000);
-    setTimeout(() => { try { lcRag    = require('./agent-system/langchain-rag');    console.log('[WARMUP] langchain-rag ready');    } catch (e) { console.warn('[WARMUP] langchain-rag:',    e.message); } }, 25000);
-    setTimeout(() => { try { lcRouter = require('./agent-system/langchain-router'); console.log('[WARMUP] langchain-router ready'); } catch (e) { console.warn('[WARMUP] langchain-router:', e.message); } }, 45000);
+    // Mastra agents — deferred 5 minutes after startup to avoid OOM (loads @mastra/core)
+    // All mastra routes null-check mastraAgents so they degrade gracefully until ready.
+    setTimeout(() => {
+        try {
+            const _m = require('./mastra_agents');
+            initMastra = _m.initMastra;
+            getMastraStatus = _m.getMastraStatus;
+            mastraAgents = initMastra(handleCommand);
+            console.log('🤖 Mastra agents initialised (deferred).');
+        } catch (err) { console.error('MASTRA INIT ERROR (deferred):', err.message); }
+    }, 300000); // 5 minutes
 
     // Agent library — load index from Supabase on startup (fast), then background-sync from GitHub if empty
     setImmediate(async () => {
@@ -10901,17 +10917,23 @@ checkPendingMasterTasks();
         console.error("MASTRA INIT ERROR:", err.message);
     }
 
-    // Ruflo: auto-start daemon on server boot (non-blocking; child exits ~7.5s after daemon forks)
-    try {
-        const { spawn: rfSpawnDaemon } = require('child_process');
-        const rfDaemon = rfSpawnDaemon(process.execPath, [
-            'node_modules/ruflo/bin/ruflo.js', 'daemon', 'start'
-        ], { cwd: __dirname, stdio: 'pipe' });
-        rfDaemon.stdout.on('data', d => console.log('[Ruflo daemon]', d.toString().trim()));
-        rfDaemon.stderr.on('data', d => console.log('[Ruflo daemon warn]', d.toString().trim()));
-        rfDaemon.on('close', code => console.log(`[Ruflo daemon] start exited (code ${code})`));
-    } catch (err) {
-        console.error('[Ruflo daemon] auto-start failed (non-fatal):', err.message);
+    // Ruflo daemon — opt-in only (set ENABLE_RUFLO_DAEMON=true to activate)
+    // Auto-start disabled: spawning a second Node.js process on a 512MB container
+    // causes container OOM. Enable locally when needed via npm run local.
+    if (process.env.ENABLE_RUFLO_DAEMON === 'true') {
+        try {
+            const { spawn: rfSpawnDaemon } = require('child_process');
+            const rfDaemon = rfSpawnDaemon(process.execPath, [
+                'node_modules/ruflo/bin/ruflo.js', 'daemon', 'start'
+            ], { cwd: __dirname, stdio: 'pipe' });
+            rfDaemon.stdout.on('data', d => console.log('[Ruflo daemon]', d.toString().trim()));
+            rfDaemon.stderr.on('data', d => console.log('[Ruflo daemon warn]', d.toString().trim()));
+            rfDaemon.on('close', code => console.log(`[Ruflo daemon] start exited (code ${code})`));
+        } catch (err) {
+            console.error('[Ruflo daemon] start failed:', err.message);
+        }
+    } else {
+        console.log('[Ruflo] daemon not started (set ENABLE_RUFLO_DAEMON=true to enable)');
     }
 });
 
