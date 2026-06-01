@@ -8177,9 +8177,9 @@ li, td, th, div.label, div.value { font-size: inherit; }
 <script>
 // ══ CONFIG ════════════════════════════════════════════════════════════
 const API_BASE = "";
-let APP_KEY = sessionStorage.getItem('apex_app_key') || new URLSearchParams(window.location.search).get("app_key") || "";
+let APP_KEY = localStorage.getItem('apex_app_key') || new URLSearchParams(window.location.search).get("app_key") || "";
 if (APP_KEY) {
-    sessionStorage.setItem('apex_app_key', APP_KEY);
+    localStorage.setItem('apex_app_key', APP_KEY);
     const _u = new URL(window.location.href);
     if (_u.searchParams.has('app_key')) {
         _u.searchParams.delete('app_key');
@@ -8187,6 +8187,7 @@ if (APP_KEY) {
     }
 }
 window._apexAppKey = APP_KEY;
+window._appKey = APP_KEY;
 const MAX_ITEMS           = 5;
 const REFRESH_INTERVAL_MS = 18000;
 
@@ -8302,7 +8303,7 @@ async function _glStart() {
 
     // Build WebSocket URL
     var proto  = location.protocol === 'https:' ? 'wss' : 'ws';
-    var appKey = (function(){ try { return sessionStorage.getItem('apex_app_key') || window._apexAppKey || ''; } catch(_){ return window._apexAppKey || ''; } })();
+    var appKey = (function(){ try { return localStorage.getItem('apex_app_key') || window._apexAppKey || ''; } catch(_){ return window._apexAppKey || ''; } })();
     var wsUrl  = proto + '://' + location.host + '/ws/gemini-live' + (appKey ? '?app_key=' + encodeURIComponent(appKey) : '');
 
     GL.ws = new WebSocket(wsUrl);
