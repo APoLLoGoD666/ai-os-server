@@ -1,5 +1,15 @@
 # AI OS — Claude Code Instructions
 
+## Karpathy Coding Guidelines
+
+**Think Before Coding** — State assumptions explicitly. If multiple interpretations exist, present them. Push back when a simpler approach exists. Stop and ask when confused.
+
+**Simplicity First** — Minimum code that solves the problem. No speculative features, no abstractions for single-use code, no error handling for impossible scenarios. If 200 lines could be 50, rewrite it.
+
+**Surgical Changes** — Touch only what the task requires. Don't improve adjacent code, reformat, or refactor things that aren't broken. Every changed line must trace directly to the user's request.
+
+**Goal-Driven Execution** — Transform tasks into verifiable goals. For multi-step work, state a brief plan with verification steps before starting.
+
 ## Project
 This is a Render-hosted Node/Express AI OS.
 
@@ -62,7 +72,7 @@ Ruflo v3.7.0-alpha.72 is installed as the agent orchestration backbone.
 - `.claude/` — 23 agent definitions, 10 command groups, hooks, helpers
 - `.claude-flow/` — runtime config, sessions, logs, daemon state
 - `.swarm/memory.db` — hybrid vector + SQLite memory store
-- `.mcp.json` — MCP server config (ruflo, ruv-swarm, flow-nexus)
+- `.mcp.json` — MCP server config (gitnexus, ruflo, ruv-swarm, flow-nexus)
 
 ### Ruflo CLI (via local binary)
 - `node_modules/.bin/ruflo status` — check system state
@@ -83,12 +93,53 @@ Shell commands route through rtk automatically via the PreToolUse hook.
 - When a test or lint command fails, run `rtk err <cmd>` to filter to errors only.
 - After sessions with 5+ shell commands, run `rtk gain` to report savings.
 
-## graphify
+## graphify (secondary — use GitNexus MCP first)
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+Graphify knowledge graph lives at graphify-out/. Use it only when GitNexus MCP tools are unavailable.
+- `graphify query "<question>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concept>"`
+- `graphify-out/wiki/index.md` for broad navigation.
+- `graphify update .` after code changes (AST-only, no API cost).
 
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+<!-- gitnexus:start -->
+# GitNexus — Code Intelligence
+
+This project is indexed by GitNexus as **ai-os-server** (3614 symbols, 17201 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+
+> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+
+## Always Do
+
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
+- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
+- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
+- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+
+## Never Do
+
+- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
+- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
+- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
+- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
+
+## Resources
+
+| Resource | Use for |
+|----------|---------|
+| `gitnexus://repo/ai-os-server/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/ai-os-server/clusters` | All functional areas |
+| `gitnexus://repo/ai-os-server/processes` | All execution flows |
+| `gitnexus://repo/ai-os-server/process/{name}` | Step-by-step execution trace |
+
+## CLI
+
+| Task | Read this skill file |
+|------|---------------------|
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
+| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
+| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
+| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
+| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+
+<!-- gitnexus:end -->
