@@ -49,7 +49,7 @@ router.post('/tts/gemini', async (req, res) => {
             return res.status(503).json({ error: 'Gemini API key not configured — set GOOGLE_API_KEY or GEMINI_API_KEY' });
         }
 
-        const voiceName = VOICES.has(req.body?.voice) ? req.body.voice : DEFAULT_VOICE;
+        const voiceName = DEFAULT_VOICE;
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
         const payload = {

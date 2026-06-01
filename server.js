@@ -7532,7 +7532,7 @@ app.post("/api/speak", async (req, res) => {
         const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) return res.status(500).json({ ok: false, reply: "GOOGLE_API_KEY not configured." });
 
-        const voiceName = req.body?.voice || 'Orus';
+        const voiceName = 'Orus';
         const t0 = Date.now();
         const gRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
@@ -8295,16 +8295,18 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         setImmediate(() => extractAndSaveFacts(userMessage, reply).catch(() => {}));
 
         // Voice-to-task: detect action intent and log to apex_tasks
-        setImmediate(() => {
+        setImmediate(async () => {
             const actionWords = /\b(remind|add|schedule|book|create|set|buy|order|call|email|text|send|check|research|find|draft|write|plan|note|do|make)\b/i;
             if (actionWords.test(userMessage)) {
-                sbAdmin.from('apex_tasks').insert({
-                    id: `voice-task-${Date.now()}`,
-                    title: userMessage.slice(0, 200),
-                    status: 'pending',
-                    source: 'voice',
-                    created_at: new Date().toISOString()
-                }).catch(() => {});
+                try {
+                    await sbAdmin.from('apex_tasks').insert({
+                        id: `voice-task-${Date.now()}`,
+                        title: userMessage.slice(0, 200),
+                        status: 'pending',
+                        source: 'voice',
+                        created_at: new Date().toISOString()
+                    });
+                } catch {}
             }
         });
 
@@ -8384,7 +8386,7 @@ app.post('/api/tts', async (req, res) => {
         const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) return res.status(503).json({ error: 'GOOGLE_API_KEY not configured' });
 
-        const voiceName = req.body?.voice || 'Orus';
+        const voiceName = 'Orus';
         const t0 = Date.now();
         const gRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,

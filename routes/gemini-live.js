@@ -171,6 +171,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
                     model: `models/${GEMINI_MODEL}`,
                     generationConfig: {
                         responseModalities: ['AUDIO'],
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Orus' } } },
                     },
                     systemInstruction: { parts: [{ text: systemPrompt }] },
                     tools: [{ functionDeclarations: APEX_FUNCTION_DECLARATIONS }]
