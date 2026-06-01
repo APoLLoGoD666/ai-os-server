@@ -255,7 +255,7 @@
 
     // 10. Solid core sphere
     var breath  = Math.sin(frame * 0.038);
-    var coreR   = 36 + breath * 1.2;
+    var coreR   = 72 + breath * 2.4;
 
     // Outer halo behind the sphere
     var halo = ctx.createRadialGradient(CX, CY, coreR * 0.4, CX, CY, coreR * 2.6);
