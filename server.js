@@ -8316,24 +8316,8 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
             }
         });
 
-        // Ruflo: bridge this exchange into swarm memory + create task when tools ran
-        try {
-            const rfSpawn = require('child_process').spawn;
-            const memVal = `user: ${userMessage.slice(0,200)} | apex: ${reply.slice(0,200)}`;
-            rfSpawn(process.execPath, [
-                'node_modules/ruflo/bin/ruflo.js', 'memory', 'store',
-                '-k', `apex-conv-${Date.now()}`,
-                '-v', memVal
-            ], { cwd: __dirname, detached: true, stdio: 'ignore' }).unref();
-            if (needsTools) {
-                rfSpawn(process.execPath, [
-                    'node_modules/ruflo/bin/ruflo.js', 'task', 'create',
-                    '-t', 'custom',
-                    '-d', userMessage.slice(0, 400).replace(/['"]/g, ' '),
-                    '--tags', _rufloAgent
-                ], { cwd: __dirname, detached: true, stdio: 'ignore' }).unref();
-            }
-        } catch {}
+        // Ruflo spawn removed — spawning a Node.js subprocess per voice request
+        // consumes ~150MB on top of the main process, causing container OOM on Render.
 
         const today = new Date().toISOString().split('T')[0];
         const noteTitle = `Conversations/${today}.md`;
