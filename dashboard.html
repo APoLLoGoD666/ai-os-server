@@ -8753,7 +8753,7 @@ async function _speakInternal(text, useFiller) {
     try {
         muteDeepgram();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
-        const phrase = summariseForSpeech(text);
+        const phrase = cleanForSpeech(text);
         if (!phrase) return;
 
         setOrbState("speaking");
@@ -8808,7 +8808,7 @@ async function _processSpeak() {
         console.log('[Speak] safety timer → unmuteDeepgram, 3s silence countdown begins');
         unmuteDeepgram();
         setOrbState(autoListen && isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
-    }, isIOSPWA ? Math.min(8000, Math.max(2500, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(' ').length : 3) * 500) + 2000)) : 30000);
+    }, isIOSPWA ? Math.min(8000, Math.max(2500, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(' ').length : 3) * 500) + 2000)) : Math.max(45000, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(/\s+/).length : 100) * 400) + 10000));
 
     while (speakQueue.length) {
         const { text, useFiller } = speakQueue.shift();
@@ -8871,14 +8871,9 @@ function startVAD() {
             const db  = rms > 0 ? 20 * Math.log10(rms) : -Infinity;
             // -20 dB: raised from -28 to prevent speechSynthesis AEC residual from triggering VAD
             if (db > -20) {
-                console.log('[VAD] user voice detected', db.toFixed(1), 'dB — interrupting');
-                stopVAD();
-                interruptSpeech();
-                // Restart SR immediately so it captures the user's words (TTS is now stopped)
-                if (srec && isListening && !_srecActive) {
-                    _srecActive = true;
-                    try { srec.start(); } catch (_) { _srecActive = false; }
-                }
+                _lastHighDbMs = Date.now();
+                // VAD detects audio level only — SR interrupt handles actual interruption
+                // to avoid background noise stopping Apex mid-sentence
             }
         }, 80);
     } catch (e) {
@@ -8914,7 +8909,7 @@ function _startInterruptListener() {
         const msSinceVoice = Date.now() - _lastHighDbMs;
         console.log(`[Interrupt] "${transcript}" — words:${wordCount} lastHighDb:${msSinceVoice}ms ago`);
         if (!isSpeakingNow) { _stopInterruptListener(); return; }
-        if (wordCount >= 2 && msSinceVoice < 1500) {
+        if (wordCount > 2) {
             _vadInterruptSR = null;
             interruptSpeech();
             document.getElementById("chatInput").value = transcript;

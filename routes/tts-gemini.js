@@ -2,7 +2,7 @@
 const router = require('express').Router();
 
 const MODEL         = 'gemini-2.5-flash-preview-tts';
-const DEFAULT_VOICE = 'Kore';
+const DEFAULT_VOICE = 'Fenrir';
 const SAMPLE_RATE   = 24000;
 
 const VOICES = new Set([
