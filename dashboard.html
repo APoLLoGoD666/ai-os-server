@@ -6215,6 +6215,54 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
     /* — More sheet: scrollable with max height — */
     .more-sheet { max-height: 75vh !important; overflow-y: auto !important; }
+
+    /* ══ PER-PAGE OVERFLOW FIXES ══════════════════════════════════ */
+
+    /* — System: strip outer 20px padding, collapse 4-col pipeline grid — */
+    #page-system > div { padding: 0 !important; }
+    #sys-agent-grid { grid-template-columns: repeat(2,1fr) !important; }
+
+    /* — Finance: stack net-worth hero, collapse donut chart flex row — */
+    #page-finance [style*="width:130px;height:130px"] { width: 80px !important; height: 80px !important; }
+    #page-finance canvas[style*="width:130px"] { width: 80px !important; height: 80px !important; }
+    #page-finance [style*="align-items:center"][style*="gap:16px"] { flex-direction: column !important; align-items: flex-start !important; }
+    #page-finance [style*="font-size:32px"] { font-size: 24px !important; }
+
+    /* — Communication: pill rows wrap, calendar cells shrink — */
+    .ds-pill-row { flex-wrap: wrap !important; gap: 4px !important; }
+    #comms-cal-grid { gap: 2px !important; }
+    #comms-cal-grid > * { font-size: 9px !important; padding: 2px 1px !important; min-height: 20px !important; }
+
+    /* — Overview: stack greeting hero text + motivational — */
+    #page-overview [style*="justify-content:space-between"][style*="gap:20px"] { flex-direction: column !important; gap: 8px !important; align-items: flex-start !important; }
+    #ovr-motivational { max-width: 100% !important; text-align: left !important; font-size: 11px !important; }
+    #ovr-greeting { font-size: 17px !important; }
+
+    /* — Business: Kanban scrolls horizontally, each col has min-width — */
+    #bizCrmKanban { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+    #bizCrmKanban > div { min-width: max(560px, 100%) !important; }
+
+    /* — University: flashcard modal responsive — */
+    #uni-fc-modal > div { width: min(440px, calc(100vw - 24px)) !important; padding: 16px !important; }
+    #uni-fc-modal [style*="width:440px"] { width: 100% !important; }
+
+    /* — Health: Pomodoro row stacks vertically, wrap mindfulness 2-col — */
+    #page-health .ds-panel[style*="display:flex"][style*="gap:24px"] { flex-direction: column !important; gap: 16px !important; align-items: stretch !important; }
+
+    /* — Domain agent modal responsive — */
+    #domainAgentModal > div { width: min(520px, calc(100vw - 20px)) !important; max-height: 80vh !important; }
+
+    /* — Panel headers with multiple right-side buttons: wrap — */
+    .ds-panel-header-right { flex-wrap: wrap !important; gap: 4px !important; }
+    .ds-panel-header { flex-wrap: wrap !important; }
+
+    /* — Prevent any inline-style fixed widths from overflowing — */
+    [style*="min-width:600"] { min-width: 0 !important; }
+    [style*="width:520px"] { width: min(520px, calc(100vw - 24px)) !important; }
+    [style*="width:440px"] { width: min(440px, calc(100vw - 24px)) !important; }
+
+    /* — Stat cards: ensure readable on 375px — */
+    .ds-stat-value { font-size: clamp(18px, 5vw, 28px) !important; }
 }
 
 /* ── Mobile nav dropdown button style ─────────────────────────── */
