@@ -1,14 +1,9 @@
 ﻿'use strict';
 const router = require('express').Router();
-const { createClient } = require('@supabase/supabase-js');
+const { getSupabaseClient } = require('../lib/clients');
 const _auth = require('../lib/app-auth');
 
-function sb() {
-    return createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-    );
-}
+const sb = getSupabaseClient;
 router.get('/health/workouts', _auth, async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 91;

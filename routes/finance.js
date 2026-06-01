@@ -1,14 +1,9 @@
 ﻿'use strict';
 const router = require('express').Router();
-const { createClient } = require('@supabase/supabase-js');
+const { getSupabaseClient } = require('../lib/clients');
 const _auth = require('../lib/app-auth');
 
-function sb() {
-    return createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-    );
-}
+const sb = getSupabaseClient;
 router.get('/finance/invoices', _auth, async (req, res) => {
     try {
         const { data, error } = await sb().from('apex_invoices').select('*').order('created_at', { ascending: false }).limit(20);

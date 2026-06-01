@@ -1305,17 +1305,8 @@ ${limitedDocs.join("\n\n----------------------\n\n")}`
 async function getRecentDocumentsForAnalysis(limit = 10) {
     const recentDocs = await pgListDocuments();
     const selectedDocs = recentDocs.slice(0, limit);
-    const fullDocs = [];
-
-    for (const doc of selectedDocs) {
-        const fullDoc = await pgGetDocument(doc.filename);
-
-        if (fullDoc && fullDoc.content) {
-            fullDocs.push(fullDoc);
-        }
-    }
-
-    return fullDocs;
+    const results = await Promise.all(selectedDocs.map(d => pgGetDocument(d.filename)));
+    return results.filter(d => d && d.content);
 }
 
 function getLatestCompletedAgentTask(tasks = []) {
@@ -2083,13 +2074,8 @@ async function collectDocumentsForCleanupProposal(discoveryState) {
 
     if (!collected.size) {
         const docs = await pgListDocuments();
-
-        for (const doc of docs) {
-            const fullDoc = await getDocumentSnapshotForUndo(doc.filename);
-            if (fullDoc) {
-                collected.set(fullDoc.filename, fullDoc);
-            }
-        }
+        const snaps = await Promise.all(docs.map(d => getDocumentSnapshotForUndo(d.filename)));
+        snaps.filter(Boolean).forEach(s => collected.set(s.filename, s));
     }
 
     return Array.from(collected.values());
@@ -9731,10 +9717,9 @@ app.post('/api/editor/lens', requireAppAccess, async (req, res) => {
             brutalist: 'Brutalist style: raw contrast, visible borders, intentional asymmetry, bold typography, no rounded corners.'
         };
 
-        const Anthropic = require('@anthropic-ai/sdk');
-        const _a = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-        const res_ = await _a.messages.create({
-            model: 'claude-haiku-4-5-20251001', max_tokens: 1500,
+        const { getAnthropicClient } = require('./lib/clients');
+        const res_ = await getAnthropicClient().messages.create({
+            model: HAIKU_MODEL, max_tokens: 1500,
             system: `You are a UI design critic applying a specific design lens to HTML.
 ${LENS_DESCRIPTIONS[lens] || LENS_DESCRIPTIONS.kowalski}
 ${STYLE_DESCRIPTIONS[styleVariant] || STYLE_DESCRIPTIONS.soft}
@@ -9862,10 +9847,9 @@ app.post('/api/voice/pipeline', requireAppAccess, async (req, res) => {
         const _rag = require('./agent-system/rag-bridge');
 
         // 1. Intent classification
-        const Anthropic = require('@anthropic-ai/sdk');
-        const _anthro = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-        const intentRes = await _anthro.messages.create({
-            model: 'claude-haiku-4-5-20251001', max_tokens: 200,
+        const { getAnthropicClient: _gac } = require('./lib/clients');
+        const intentRes = await _gac().messages.create({
+            model: HAIKU_MODEL, max_tokens: 200,
             system: 'Classify the user intent. Reply with JSON only: {"intent":"research|browser|rag|direct","query":"refined query or null"}',
             messages: [{ role: 'user', content: transcript }]
         });
@@ -10340,7 +10324,7 @@ app.get('/api/wiki/status', requireAppAccess, async (req, res) => {
         const obsidianMemory = require('./agent-system/obsidian-memory');
         const fs = require('fs');
         const path = require('path');
-        const VAULT = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
+        const { OBSIDIAN_VAULT_PATH: VAULT } = require('./config');
         let lastWrite = null;
         let noteCount = 0;
         try {
@@ -10391,9 +10375,9 @@ app.post('/api/wiki/voice-note', requireAppAccess, async (req, res) => {
         if (!content) return res.json({ ok: true, saved: false, reason: 'Empty content after stripping trigger' });
 
         // Classify via the wiki ingest route logic (inline)
-        const wikiClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-        const classifyRes = await wikiClient.messages.create({
-            model: 'claude-haiku-4-5-20251001', max_tokens: 80,
+        const { getAnthropicClient: _wikiAc } = require('./lib/clients');
+        const classifyRes = await _wikiAc().messages.create({
+            model: HAIKU_MODEL, max_tokens: 80,
             messages: [{ role: 'user', content:
                 `Classify this spoken note into a wiki page path.\nOptions: People/User.md, System/Decisions.md, System/WIKI.md, Entities/<Name>.md, Concepts/<Name>.md\nNote: "${content.slice(0, 300)}"\nReply ONLY with the path.`
             }]
@@ -10520,11 +10504,12 @@ app.post('/api/wiki/ingest', requireAppAccess, async (req, res) => {
     const { content, source } = req.body || {};
     if (!content) return res.status(400).json({ ok: false, error: 'content required' });
     try {
+        const { getAnthropicClient: _wikiIngestAc } = require('./lib/clients');
         const wikiClient = process.env.OPENROUTER_API_KEY
             ? new Anthropic({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: 'https://openrouter.ai/api/v1' })
-            : new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+            : _wikiIngestAc();
         const wikiModel = process.env.OPENROUTER_API_KEY
-            ? 'meta-llama/llama-3.1-8b-instruct:free' : 'claude-haiku-4-5-20251001';
+            ? 'meta-llama/llama-3.1-8b-instruct:free' : HAIKU_MODEL;
         const { obsidianRead, obsidianWrite } = require('./agent-system/obsidian-client');
         const today = new Date().toISOString().split('T')[0];
 
