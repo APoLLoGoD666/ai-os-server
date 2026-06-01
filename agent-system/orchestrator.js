@@ -428,14 +428,15 @@ ${architectAnalysis}${failureSection}`;
 
 async function _developer(spec, architectLog, failureContext) {
     const t0 = Date.now();
+    const failureHint = failureContext ? `\nPREVIOUS ATTEMPT: ${failureContext.slice(0, 200)}` : '';
     const SYSTEM = `You are the DEVELOPER routing agent for Apex AI OS.
-Decide which files actually need changes to complete the task.
+Decide which files need changes to complete the task. You MUST select at least one file.
 Output ONLY raw JSON: {"filesModified":["path/to/file"],"summary":"one sentence"}
 Rules:
-- Only files genuinely needing changes to satisfy the spec.
-- filesModified must be a subset of the spec filesToModify list.
-- Never include files touching: touchstart, getUserMedia, /api/transcribe, /api/tts, requireAppAccess, .env.
-- If no safe changes possible: {"filesModified":[],"summary":"unsafe — skipped"}`;
+- filesModified MUST be a non-empty subset of the spec filesToModify list.
+- NEVER return an empty filesModified array — always select the most appropriate file.
+- Only exclude a file if it is literally one of: server.js, dashboard.html, pg_helpers.js, .env.
+- If the file does not exist yet, include it — the DEVELOPER will create it.${failureHint}`;
 
     // Routing decision uses architect-level model (same tier — it's a reasoning call)
     const res = await _callClaude(_agentModels.architect, SYSTEM,
@@ -907,6 +908,12 @@ async function runAgentTeam(spec, taskId) {
             developerLog = await _developer(spec, architectLog, attempt > 1 ? lastFailure : null);
             agentLogs.push(developerLog);
             console.log(`[Orchestrator] DEVELOPER (${developerLog.duration}ms) — ${developerLog.result.applied?.length || 0} files written`);
+
+            if (!developerLog.result.applied?.length) {
+                lastFailure = `DEVELOPER wrote no files (routing returned empty). You MUST write at least one file from filesToModify: [${(spec.filesToModify || []).join(', ')}]. Create the file if it does not exist — return only the complete file content.`;
+                if (attempt < MAX_ATTEMPTS) { console.log('[Orchestrator] retrying — DEVELOPER wrote no files'); continue; }
+                return _fail('DEVELOPER made no file changes after all retries');
+            }
 
             // Step 3 — REVIEWER + SECURITY AUDIT
             reviewerLog = await _reviewer(spec, developerLog);
