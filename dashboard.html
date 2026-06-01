@@ -8,6 +8,7 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -6208,7 +6209,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
     /* — Overview: tighten, show page title, hide refresh button — */
     #page-overview { gap: 8px !important; padding-top: 0 !important; }
-    #page-overview .ds-page-header { margin-bottom: 0 !important; padding-bottom: 0 !important; }
+    #page-overview .ds-page-header { margin-bottom: 0 !important; padding-top: 14px !important; padding-bottom: 12px !important; }
     #page-overview .ds-page-header button { display: none !important; }
     #page-overview .ds-page-subtitle { display: none !important; }
     #ovr-summary-row { grid-template-columns: 1fr !important; }
@@ -13422,7 +13423,7 @@ function buildWeekCalendar() {
 function fetchCommsEmails() {
     var el = document.getElementById('emailList');
     if (!el) return;
-    fetch('/api/email/inbox').then(function(r){return r.json();}).then(function(d){
+    fetch('/api/emails').then(function(r){return r.json();}).then(function(d){
         if (!d.ok || !d.emails || !d.emails.length) {
             el.innerHTML = '<div style="color:var(--text-faint);padding:20px;text-align:center;font-style:italic">No emails · inbox empty or not yet configured</div>';
             return;

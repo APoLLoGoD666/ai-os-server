@@ -9888,10 +9888,11 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
         const total = Object.values(roadmap).reduce((a, ws) => a + (ws.pending || []).length + (ws.completed || []).length, 0);
         const completed = Object.values(roadmap).reduce((a, ws) => a + (ws.completed || []).length, 0);
         const safeCount = r => (r && typeof r.count === 'number') ? r.count : 0;
+        const safeQ = async (fn) => { try { return await fn(); } catch (e) { console.warn('[metrics] query fallback:', e.message); return {}; } };
         const [taskRes, timelineRes, runRes] = await Promise.all([
-            sbAdmin.from('apex_tasks').select('id', { count: 'exact', head: true }).catch(() => ({ count: 0 })),
-            sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true }).catch(() => ({ count: 0 })),
-            sbAdmin.from('apex_agent_runs').select('task_id,success,cost_usd,duration_ms').catch(() => ({ data: [] }))
+            safeQ(() => sbAdmin.from('apex_tasks').select('id', { count: 'exact', head: true })),
+            safeQ(() => sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true })),
+            safeQ(() => sbAdmin.from('apex_agent_runs').select('task_id,success,cost_usd,duration_ms'))
         ]);
         const runs     = (runRes && Array.isArray(runRes.data)) ? runRes.data : [];
         const runCount = runs.length;
