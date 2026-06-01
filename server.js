@@ -47,12 +47,12 @@ const agentLib     = require('./agent-system/agent-library');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
-// ── LangChain agents — preloaded at startup to prevent per-request memory spike ─
-let lcMemory, lcRag, lcRouter;
-try { lcMemory = require('./agent-system/langchain-memory'); } catch { lcMemory = { getContext: async () => '', addExchange: async () => {} }; }
-try { lcRag    = require('./agent-system/langchain-rag');    } catch { lcRag    = { retrieveContext: async () => '' }; }
-try { lcRouter = require('./agent-system/langchain-router'); } catch { lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} }; }
-// ─────────────────────────────────────────────────────────────────────────────
+// ── LangChain agents — stubs at startup, real modules loaded after server settles ─
+let lcMemory = { getContext: async () => '', addExchange: async () => {} };
+let lcRag    = { retrieveContext: async () => '' };
+let lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} };
+// Real modules are loaded via staggered setTimeouts in server.listen (see below)
+// ──────────────────────────────────────────────────────────────────────────────
 
 // ── Keyword-based domain detector (fast, zero API cost) ──────────────────────
 function detectDomain(text) {
@@ -10738,6 +10738,12 @@ app.use('/api', require('./routes/tts-gemini'));
 
 server.listen(PORT, () => {
     ensureSetup();
+
+    // Staggered LangChain warm-up — load each module separately so GC has breathing
+    // room between them. Stubs above are used for voice-chat in the first 30s.
+    setTimeout(() => { try { lcMemory = require('./agent-system/langchain-memory'); console.log('[WARMUP] langchain-memory ready'); } catch (e) { console.warn('[WARMUP] langchain-memory:', e.message); } }, 10000);
+    setTimeout(() => { try { lcRag    = require('./agent-system/langchain-rag');    console.log('[WARMUP] langchain-rag ready');    } catch (e) { console.warn('[WARMUP] langchain-rag:',    e.message); } }, 25000);
+    setTimeout(() => { try { lcRouter = require('./agent-system/langchain-router'); console.log('[WARMUP] langchain-router ready'); } catch (e) { console.warn('[WARMUP] langchain-router:', e.message); } }, 45000);
 
     // Agent library — load index from Supabase on startup (fast), then background-sync from GitHub if empty
     setImmediate(async () => {
