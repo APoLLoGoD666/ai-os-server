@@ -6297,6 +6297,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
 ._mnav-btn.active { color: #00d4ff; background: rgba(0,212,255,0.08); }
 
 /* ── Floating PTT orb ─────────────────────────────────────────── */
+#floatingPTT.ptt-hidden { display: none !important; }
 #floatingPTT {
     position: fixed;
     right: 16px;
@@ -15278,7 +15279,15 @@ window.apexFileDropHandler = function(e){
         document.querySelectorAll('._mnav-btn').forEach(function(b) { b.classList.remove('active'); });
         var activeBtn = document.querySelector('._mnav-btn[onclick*=\'' + name + '\']');
         if (activeBtn) activeBtn.classList.add('active');
+        // Hide PTT on command page; show on all others
+        var _ptt = document.getElementById('floatingPTT');
+        if (_ptt) _ptt.classList.toggle('ptt-hidden', name === 'command');
     };
+    // Set initial PTT state (command page is default)
+    (function() {
+        var _ptt = document.getElementById('floatingPTT');
+        if (_ptt) _ptt.classList.add('ptt-hidden');
+    })();
 
     if (!_isMobile) return; // touch-specific init below
 
