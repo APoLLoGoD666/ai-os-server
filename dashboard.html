@@ -6196,6 +6196,18 @@ li, td, th, div.label, div.value { font-size: inherit; }
     /* — Topbar clock — */
     .clock-time { font-size: 15px; }
     .clock-date { font-size: 9px; }
+
+    /* — Hide orb sublabel (APEX / HOLD TO SPEAK text below orb) — */
+    #plasmaOrbSubLabel { display: none !important; }
+
+    /* — Page headers: wrap button onto new line on narrow screens — */
+    .ds-page-header { flex-wrap: wrap !important; gap: 8px !important; }
+
+    /* — Overview: tighten gap, remove extra top padding — */
+    #page-overview { gap: 8px !important; padding-top: 0 !important; }
+    #page-overview .ds-page-header { margin-bottom: 0 !important; padding-bottom: 0 !important; display: none !important; }
+    #ovr-summary-row { grid-template-columns: 1fr !important; }
+    #page-overview .ds-panel { padding: 10px !important; }
 }
 
 /* ── Floating PTT orb ─────────────────────────────────────────── */
@@ -8039,6 +8051,7 @@ let isListening         = false;
 let _manualStart        = false;
 const _isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 let autoListen          = _isTouchDevice;
+window._apexSetAutoListen = function(v) { autoListen = v; };
 let lastSendWasVoice    = false;
 let cachedTasks         = [];
 let cachedNotifications = [];
@@ -9426,7 +9439,7 @@ function _iosPWAHandleTranscript(transcript) {
                 dgMode = "conversation";
                 lastSpeechMs = Date.now();
                 setOrbState("listening");
-                speak("Yes?");
+                speak("How can I help?");
                 renderChatMessage("system", "Listening…");
             }
         }
@@ -9532,7 +9545,7 @@ async function startVoicePipeline() {
                     dgMode = "conversation";
                     lastSpeechMs = Date.now();
                     setOrbState("listening");
-                    speak("Yes?");
+                    speak("How can I help?");
                     renderChatMessage("system", "Listening…");
                 }
             } else {
@@ -15071,6 +15084,13 @@ window.apexFileDropHandler = function(e){
 <!-- ══ FLOATING PTT ══ -->
 <button id="floatingPTT" aria-label="Push to talk"></button>
 
+<!-- ══ MOBILE ACTIVATION OVERLAY ══ -->
+<div id="mobileActivationOverlay" style="display:none;position:fixed;inset:0;z-index:99000;background:rgba(0,0,0,0.94);align-items:center;justify-content:center;flex-direction:column;gap:24px;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.22em;color:rgba(0,212,255,0.7);text-transform:uppercase;text-align:center;">APEX AI OS</div>
+    <button id="mobileActivateBtn" style="width:130px;height:130px;border-radius:50%;background:radial-gradient(circle at 38% 38%,rgba(80,200,255,0.28),rgba(0,80,200,0.12));border:2px solid rgba(0,212,255,0.65);color:#00d4ff;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.18em;line-height:1.6;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 0 48px rgba(0,212,255,0.22),inset 0 0 20px rgba(0,212,255,0.06);outline:none;" aria-label="Activate Apex">TAP TO<br>ACTIVATE</button>
+    <div style="font-size:9px;color:rgba(0,212,255,0.4);font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;text-align:center;">INITIALIZING VOICE PIPELINE</div>
+</div>
+
 <!-- ══ MOBILE MORE SHEET ══ -->
 <div class="more-sheet-overlay" id="moreSheetOverlay" onclick="closeMobileMore()"></div>
 <div class="more-sheet" id="moreSheet" role="dialog" aria-label="More pages">
@@ -15146,11 +15166,30 @@ window.apexFileDropHandler = function(e){
 
     if (!_isMobile) return; // touch-specific init below
 
-    /* ── Stop auto-listen — PTT-only mode on mobile ── */
-    setTimeout(function() { if (typeof stopListening === 'function') stopListening(); }, 600);
+    /* ── Disable autoListen so the iOS PWA pipeline never auto-starts ── */
+    if (typeof window._apexSetAutoListen === 'function') window._apexSetAutoListen(false);
+    setTimeout(function() { if (typeof stopListening === 'function') stopListening(); }, 300);
 
-    var _orbLbl = document.getElementById('plasmaOrbSubLabel');
-    if (_orbLbl) _orbLbl.textContent = 'HOLD TO SPEAK';
+    /* ── Activation overlay: one tap pre-warms mic permission ── */
+    var _activationOverlay = document.getElementById('mobileActivationOverlay');
+    var _activateBtn       = document.getElementById('mobileActivateBtn');
+    if (_activationOverlay) {
+        _activationOverlay.style.display = 'flex';
+
+        if (_activateBtn) {
+            _activateBtn.addEventListener('touchend', function _onActivate(e) {
+                e.preventDefault();
+                _activateBtn.removeEventListener('touchend', _onActivate);
+                _activateBtn.textContent = 'STARTING…';
+                navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(stream) {
+                    _mStream = stream;   // pre-warm; PTT will reuse this
+                    _activationOverlay.style.display = 'none';
+                }).catch(function() {
+                    _activationOverlay.style.display = 'none'; // hide anyway — user can still tap PTT
+                });
+            }, { passive: false });
+        }
+    }
 
     /* ── Custom PTT pipeline — keeps stream alive to avoid iOS re-prompt ──
        Bypasses dgMode/wake system; sends audio directly to voice-chat.    */
