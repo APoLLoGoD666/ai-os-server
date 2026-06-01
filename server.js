@@ -481,6 +481,76 @@ const TOOLS = [
         name: "list_emails",
         description: "List the processed email queue — subjects, senders, summaries, priorities.",
         input_schema: { type: "object", properties: {} }
+    },
+    {
+        name: "browser_research",
+        description: "Research a URL or topic using the browser — extracts content, follows links, returns a summary.",
+        input_schema: {
+            type: "object",
+            properties: {
+                objective: { type: "string", description: "What to research or find." },
+                url: { type: "string", description: "Optional starting URL." }
+            },
+            required: ["objective"]
+        }
+    },
+    {
+        name: "browser_screenshot",
+        description: "Take a screenshot of a webpage and return the image path.",
+        input_schema: {
+            type: "object",
+            properties: {
+                url: { type: "string", description: "URL to screenshot." }
+            },
+            required: ["url"]
+        }
+    },
+    {
+        name: "browser_pdf",
+        description: "Generate a PDF of a webpage.",
+        input_schema: {
+            type: "object",
+            properties: {
+                url: { type: "string", description: "URL to convert to PDF." }
+            },
+            required: ["url"]
+        }
+    },
+    {
+        name: "browser_scrape",
+        description: "Extract structured data from a webpage (text, links, tables, headings).",
+        input_schema: {
+            type: "object",
+            properties: {
+                url: { type: "string", description: "URL to scrape." }
+            },
+            required: ["url"]
+        }
+    },
+    {
+        name: "browser_fill_form",
+        description: "Fill and submit a web form at a given URL.",
+        input_schema: {
+            type: "object",
+            properties: {
+                url: { type: "string", description: "URL of the page with the form." },
+                fields: { type: "object", description: "Map of CSS selector to value, e.g. {\"#email\": \"me@x.com\"}." },
+                submit_selector: { type: "string", description: "CSS selector for the submit button." }
+            },
+            required: ["url", "fields"]
+        }
+    },
+    {
+        name: "browser_click",
+        description: "Click an element on a webpage and extract the resulting content.",
+        input_schema: {
+            type: "object",
+            properties: {
+                url: { type: "string", description: "URL of the page." },
+                selector: { type: "string", description: "CSS selector of the element to click." }
+            },
+            required: ["url", "selector"]
+        }
     }
 ];
 
@@ -8141,6 +8211,59 @@ async function toolGetHealthSummary() {
     }
 }
 
+async function toolBrowserResearch(objective, url) {
+    try {
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.research(objective, url || null, { maxPages: 3 });
+        return { summary: result.summary, pages: result.pages?.length || 0, success: result.success };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolBrowserScreenshot(url) {
+    try {
+        const ba = require('./agent-system/browser-agent');
+        const outPath = `/tmp/screenshot-${Date.now()}.png`;
+        const result = await ba.screenshot(url, outPath);
+        return { path: result.path || outPath, success: result.success };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolBrowserPdf(url) {
+    try {
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.generatePDF(url, { outputPath: `/tmp/page-${Date.now()}.pdf` });
+        return { path: result.path, success: result.success };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolBrowserScrape(url) {
+    try {
+        const ba = require('./agent-system/browser-agent');
+        const browser = await ba.createBrowser();
+        const page = await browser.newPage();
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        const data = await ba.extractStructuredData(page);
+        await browser.close();
+        return { ...data, success: true };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolBrowserFillForm(url, fields, submitSelector) {
+    try {
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.fillForm(url, fields, submitSelector || null);
+        return { success: result.success, message: result.message };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolBrowserClick(url, selector) {
+    try {
+        const ba = require('./agent-system/browser-agent');
+        const result = await ba.clickAndExtract(url, selector);
+        return { content: result.content, success: result.success };
+    } catch (e) { return { error: e.message }; }
+}
+
 async function executeApexTool(name, input) {
     if (name === 'web_search') return await toolWebSearch(input.query);
     if (name === 'get_weather') return await toolWeather(input.location);
@@ -8157,6 +8280,12 @@ async function executeApexTool(name, input) {
     if (name === 'get_calendar_events') return await toolGetCalendarEvents(input.days || 7);
     if (name === 'get_finance_summary') return await toolGetFinanceSummary();
     if (name === 'get_health_summary') return await toolGetHealthSummary();
+    if (name === 'browser_research') return await toolBrowserResearch(input.objective, input.url);
+    if (name === 'browser_screenshot') return await toolBrowserScreenshot(input.url);
+    if (name === 'browser_pdf') return await toolBrowserPdf(input.url);
+    if (name === 'browser_scrape') return await toolBrowserScrape(input.url);
+    if (name === 'browser_fill_form') return await toolBrowserFillForm(input.url, input.fields, input.submit_selector);
+    if (name === 'browser_click') return await toolBrowserClick(input.url, input.selector);
     return { error: 'Unknown tool' };
 }
 
