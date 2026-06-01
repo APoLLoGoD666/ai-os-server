@@ -8175,7 +8175,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         const vcTimeout = setTimeout(() => {
             if (!res.headersSent) res.status(504).json({ ok: false, reply: "Request timed out. Please try again." });
-        }, 25000);
+        }, 45000);
 
         const t0 = Date.now();
         console.log("[LATENCY] +0ms request received");
@@ -8185,22 +8185,17 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         // Fire-and-forget legacy memory write (kept for compatibility)
         addToMemory("user", userMessage);
 
-        // ── LangChain: lazy-load real modules on first request (cached after) ──
-        if (!_lcLoaded) {
-            _lcLoaded = true;
-            try { lcMemory = require('./agent-system/langchain-memory'); } catch { lcMemory = { getContext: async () => '', addExchange: async () => {} }; }
-            try { lcRag    = require('./agent-system/langchain-rag');    } catch { lcRag    = { retrieveContext: async () => '' }; }
-            try { lcRouter = require('./agent-system/langchain-router'); } catch { lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} }; }
-            console.log('[LCWARM] LangChain modules loaded on first voice request');
-        }
-        // ── LangChain: memory + RAG + router — all parallel ──────────────────
-        const [lcMemCtx, lcRagCtx, lcRoute, relevantDocs] = await Promise.all([
+        // ── Context fetch — parallel, all non-blocking ───────────────────────
+        const [lcMemCtx, lcRagCtx, relevantDocs] = await Promise.all([
             lcMemory.getContext(userMessage).catch(() => ''),
             lcRag.retrieveContext(userMessage).catch(() => ''),
-            lcRouter.routeMessage(userMessage).catch(() => ({ domain: 'general', confidence: 0, needs_data: false })),
             pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
         ]);
-        console.log(`[LATENCY] +${Date.now() - t0}ms LC parallel fetch | domain:${lcRoute.domain} conf:${lcRoute.confidence?.toFixed(2)}`);
+        console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done`);
+
+        // Keyword-only domain routing — zero latency, no extra API call
+        const _kwDomain = detectDomain(userMessage);
+        const lcRoute = { domain: _kwDomain || 'general', confidence: _kwDomain ? 0.8 : 0, needs_data: !!_kwDomain };
 
         const docsText = relevantDocs.length
             ? relevantDocs.map((doc, i) => `DOC ${i + 1}: ${doc.filename} — ${doc.summary || "No summary"}`).join("\n")
@@ -8211,14 +8206,10 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         if (lcMemCtx)  contextParts.push(`CONVERSATION HISTORY:\n${lcMemCtx}`);
         if (lcRagCtx)  contextParts.push(`VAULT KNOWLEDGE:\n${lcRagCtx}`);
         if (docsText)  contextParts.push(`WORKSPACE DOCUMENTS:\n${docsText}`);
-        if (lcRoute.domain !== 'general' && lcRoute.confidence > 0.6) {
-            contextParts.push(`ROUTING: This query is classified as [${lcRoute.domain.toUpperCase()}] domain (confidence: ${Math.round(lcRoute.confidence * 100)}%). Use the appropriate data tools for this domain.`);
-        }
         const enrichedContext = contextParts.join('\n\n---\n\n');
 
-        // Only include tools if message looks like an action request OR LC router detected a data domain
-        const needsTools = lcRoute.needs_data
-            || lcRoute.confidence > 0.7
+        // Include tools when query looks action-oriented
+        const needsTools = !!_kwDomain
             || /email|file|financ|routine|reminder|calendar|task|schedule|budget|document|invoice|payment|remember|follow.?up|what.*task|pending|news|health|workout|weather/i.test(userMessage);
         console.log(`[LATENCY] +${Date.now() - t0}ms building request | domain:${lcRoute.domain} needsTools:${needsTools}`);
 
@@ -8259,7 +8250,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
             while (loopCount < maxLoops) {
                 loopCount++;
                 const response = await client.messages.create({
-                    model: MODEL,
+                    model: HAIKU_MODEL,
                     max_tokens: 1024,
                     system: [
                         enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
@@ -10770,6 +10761,16 @@ server.listen(PORT, () => {
             console.log('🤖 Mastra agents initialised (deferred).');
         } catch (err) { console.error('MASTRA INIT ERROR (deferred):', err.message); }
     }, 300000); // 5 minutes
+
+    // LangChain — deferred 2 minutes after startup to avoid OOM on cold-start voice requests
+    setTimeout(() => {
+        if (_lcLoaded) return;
+        _lcLoaded = true;
+        try { lcMemory = require('./agent-system/langchain-memory'); } catch { lcMemory = { getContext: async () => '', addExchange: async () => {} }; }
+        try { lcRag    = require('./agent-system/langchain-rag');    } catch { lcRag    = { retrieveContext: async () => '' }; }
+        try { lcRouter = require('./agent-system/langchain-router'); } catch { lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} }; }
+        console.log('[LC] LangChain modules loaded (deferred startup).');
+    }, 120000); // 2 minutes
 
     // Agent library — load index from Supabase on startup (fast), then background-sync from GitHub if empty
     setImmediate(async () => {
