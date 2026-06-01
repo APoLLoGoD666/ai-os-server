@@ -5854,7 +5854,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
   width: 100% !important; height: 100% !important;
 }
 .cmd-feed-col { display: none !important; }
-.cmd-strip    { display: none !important; }
+/* cmd-strip hidden in mobile block and page block — single source below */
 #cmdWidgetLayer { display: none !important; }
 #apexTtsToggle  { display: none !important; }
 #apexLiveTranscript { display: none !important; }
@@ -6127,86 +6127,94 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
 /* ══ MOBILE / iOS ════════════════════════════════════════════════ */
 @media (max-width: 899px) {
-    /* — Hide bottom nav entirely on mobile — */
+    /* — Hide bottom nav entirely — */
     .bottom-nav { display: none !important; }
 
-    /* — Show nav toggle button on mobile — */
-    #mobileNavToggle { display: block !important; }
+    /* — Topbar: flex space-between so toggle/clock/pagename are evenly placed — */
+    .topbar { display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 0 12px !important; position: relative !important; }
+    #mobileNavToggle { display: block !important; position: static !important; transform: none !important; top: auto !important; left: auto !important; z-index: 2000 !important; flex-shrink: 0; }
+    #mobilePageName {
+        position: static !important; transform: none !important; top: auto !important; right: auto !important;
+        display: flex !important; align-items: center !important; flex-shrink: 0;
+        max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
+        color: var(--primary);
+    }
+    .topbar-center { flex: 1; text-align: center; }
 
-    /* — System page: collapse fixed-width 2-col layout — */
-    #page-system [style*="1fr 360px"] { grid-template-columns: 1fr !important; }
-    #page-system [style*="min-width:960px"] { min-width: 0 !important; width: 100% !important; }
-    #sys-stack-canvas { height: 180px !important; }
-    #page-system [style*="repeat(3,1fr)"] { grid-template-columns: repeat(2,1fr) !important; }
+    /* — Topbar clock — */
+    .clock-time { font-size: 15px; }
+    .clock-date { font-size: 11px; }
 
-    /* — Instant page transitions on mobile — */
+    /* — Instant page transitions — */
     .page { transition: none !important; }
 
-    /* — Input zone and command chrome: hidden on mobile — */
+    /* — Input zone and command chrome: hidden — */
     .input-zone { display: none !important; }
     .cmd-strip, #cmdStrip { display: none !important; }
     .cmd-feed-col { display: none !important; }
 
-    /* — All pages: overflow prevention — */
+    /* — All pages: overflow prevention + safe padding for PTT — */
     .page { padding: 12px; gap: 12px; overflow-x: hidden !important; }
-    .page > *  { max-width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
+    .page { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), 16px) + 44px) !important; }
+    .page > * { max-width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
     .ds-panel, .ds-card { max-width: 100% !important; overflow-x: hidden !important; }
     .ds-grid-3, .ds-grid-2 { grid-template-columns: 1fr !important; }
     .ds-grid-stats-6 { grid-template-columns: repeat(2,1fr) !important; }
-    table { display: block !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; width: 100%; }
+    table { display: block !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; touch-action: pan-x; width: 100%; }
+    table th, table td { font-size: 11px !important; }
 
-    /* — System page: collapse 5-col domain agent grid — */
+    /* — Page headers: wrap + vertical on very narrow screens — */
+    .ds-page-header { flex-wrap: wrap !important; gap: 8px !important; }
+    @media (max-width: 380px) { .ds-page-header { flex-direction: column !important; align-items: flex-start !important; } }
+
+    /* — System page fixes — */
     #page-system [style*="repeat(5"] { grid-template-columns: repeat(2,1fr) !important; }
+    #page-system [style*="1fr 360px"] { grid-template-columns: 1fr !important; }
+    #page-system [style*="repeat(3,1fr)"] { grid-template-columns: repeat(2,1fr) !important; }
+    #page-system [style*="min-width:960px"] { min-width: 0 !important; width: 100% !important; }
+    #sys-timeline > div { min-width: 0 !important; width: 100% !important; overflow-x: auto; }
+    #sys-stack-canvas { height: min(180px, 30vh) !important; }
     #domainAgentModal > div { width: min(90vw,480px) !important; max-width: calc(100vw - 32px) !important; }
 
-    /* — Finance page: hero section → stacked — */
+    /* — Finance page — */
     #page-finance > [style*="space-between"] { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
     #page-finance [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; text-align: left !important; }
 
-    /* — Life/Health page: fixed-width nutrition ring — */
+    /* — Life/Health page — */
     #page-health [style*="grid-template-columns:110px"] { grid-template-columns: 80px 1fr !important; }
     #page-health [style*="width:110px;height:110px"] { width: 80px !important; height: 80px !important; }
 
-    /* — Orb recording: strong blue pulse — */
-    #plasmaOrb.orb-recording { filter: brightness(1.9) saturate(2) drop-shadow(0 0 22px rgba(0,212,255,1)) !important; }
+    /* — University: pomodoro row stacks vertically — */
+    #page-university [style*="gap:24px"][style*="flex"] { flex-direction: column !important; gap: 12px !important; }
 
-    /* — Topbar: clock stays centered, page name absolute right — */
-    .topbar { justify-content: center !important; position: relative !important; }
-    #mobilePageName {
-        position: absolute !important;
-        right: 14px !important; top: 50% !important;
-        transform: translateY(-50%) !important;
-        display: block !important;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10px; font-weight: 700;
-        letter-spacing: 0.18em; text-transform: uppercase;
-        color: var(--primary);
-    }
+    /* — Communications: any inline 3-col grids collapse — */
+    #page-communication [style*="repeat(3,1fr)"] { grid-template-columns: 1fr !important; }
 
-    /* — Floating PTT: sit above safe-area bottom (no nav bar to clear) — */
+    /* — Orb recording: single drop-shadow for performance (no triple filter stack) — */
+    #plasmaOrb.orb-recording { filter: drop-shadow(0 0 20px rgba(0,212,255,0.95)) drop-shadow(0 0 6px rgba(0,212,255,1)) !important; }
+
+    /* — Floating PTT: clear of safe areas including Dynamic Island — */
     #floatingPTT {
         display: flex !important;
         bottom: calc(max(env(safe-area-inset-bottom, 0px), 16px) + 14px);
+        right: max(16px, env(safe-area-inset-right, 16px)) !important;
     }
 
-    /* — Give pages breathing room above safe-area / PTT button — */
-    .page { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), 16px) + 80px) !important; }
-
-    /* — Topbar clock — */
-    .clock-time { font-size: 15px; }
-    .clock-date { font-size: 9px; }
-
-    /* — Hide orb sublabel (APEX / HOLD TO SPEAK text below orb) — */
+    /* — Hide orb sublabel — */
     #plasmaOrbSubLabel { display: none !important; }
 
-    /* — Page headers: wrap button onto new line on narrow screens — */
-    .ds-page-header { flex-wrap: wrap !important; gap: 8px !important; }
-
-    /* — Overview: tighten gap, remove extra top padding — */
+    /* — Overview: tighten, show page title, hide refresh button — */
     #page-overview { gap: 8px !important; padding-top: 0 !important; }
-    #page-overview .ds-page-header { margin-bottom: 0 !important; padding-bottom: 0 !important; display: none !important; }
+    #page-overview .ds-page-header { margin-bottom: 0 !important; padding-bottom: 0 !important; }
+    #page-overview .ds-page-header button { display: none !important; }
+    #page-overview .ds-page-subtitle { display: none !important; }
     #ovr-summary-row { grid-template-columns: 1fr !important; }
     #page-overview .ds-panel { padding: 10px !important; }
+
+    /* — More sheet: scrollable with max height — */
+    .more-sheet { max-height: 75vh !important; overflow-y: auto !important; }
 }
 
 /* ── Mobile nav dropdown button style ─────────────────────────── */
@@ -6234,7 +6242,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
     border-radius: 50%;
     background: radial-gradient(circle at 38% 38%, rgba(80,200,255,0.3), rgba(0,80,200,0.1));
     border: 1.5px solid rgba(0,212,255,0.5);
-    z-index: 500;
+    z-index: 9050;
     display: none; /* shown via media query */
     align-items: center; justify-content: center;
     cursor: pointer; touch-action: none;
@@ -6363,7 +6371,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
 </div>
 
 <!-- ══ COMMAND PALETTE ══ -->
-<div class="cmd-palette" id="cmdPalette" onclick="if(event.target===this)closeCommandPalette()">
+<div class="cmd-palette" id="cmdPalette" onclick="if(!event.target.closest('.cmd-box'))closeCommandPalette()">
     <div class="cmd-box">
         <input class="cmd-input" id="cmdInput" placeholder="Search commands…" oninput="renderCmdList(this.value)" onkeydown="cmdKeyNav(event)" autocomplete="off" spellcheck="false">
         <div class="cmd-list" id="cmdList"></div>
@@ -8045,12 +8053,6 @@ li, td, th, div.label, div.value { font-size: inherit; }
         if (page) page.classList.add('active');
         if (btn)  btn.classList.add('active');
         activePage = name;
-        // Force sidebar to collapse on navigation
-        var nav = document.querySelector('.bottom-nav');
-        if (nav) {
-            nav.classList.add('nav-collapsed');
-            setTimeout(function() { nav.classList.remove('nav-collapsed'); }, 400);
-        }
     };
 
     var startX = 0, startY = 0;
@@ -9130,7 +9132,7 @@ function _startInterruptListener() {
     const r = new SR();
     r.continuous     = false;
     r.interimResults = false;
-    r.lang           = "en-GB";
+    r.lang           = navigator.language || "en-GB";
     _vadInterruptSR  = r;
     r.onresult = ev => {
         if (!ev.results[ev.resultIndex].isFinal) return;
@@ -9457,7 +9459,7 @@ function _iosPWAHandleTranscript(transcript) {
             renderChatMessage('system', 'Switching to ' + _iosDpTarget + '.');
             return;
         }
-        if (/\bapex\b/i.test(transcript)) {
+        if (/\bapex[,!?.;:\s]*/i.test(transcript)) {
             console.log("[iOS Wake] wake word matched → conversation");
             const _iosWk = transcript.trim().toLowerCase();
             const _iosWkInline = _iosWk.slice(_iosWk.indexOf('apex') + 4).replace(/^[\s,;.!?]+/, '').trim();
@@ -9526,7 +9528,7 @@ async function startVoicePipeline() {
     srec = new SR();
     srec.continuous = true;
     srec.interimResults = false;
-    srec.lang = "en-GB";
+    srec.lang = navigator.language || "en-GB";
 
     srec.onresult = e => {
         const _transcript = (e.results[e.results.length - 1][0].transcript || '').trim();
@@ -9556,7 +9558,7 @@ async function startVoicePipeline() {
                 renderChatMessage('system', 'Switching to ' + _directPgTarget + '.');
                 return;
             }
-            if (/\bapex\b/i.test(transcript)) {
+            if (/\bapex[,!?.;:\s]*/i.test(transcript)) {
                 const _wakeTranscript = transcript.trim().toLowerCase();
                 const _wakeIdx = _wakeTranscript.indexOf('apex');
                 const _inlineCmd = _wakeTranscript.slice(_wakeIdx + 4).replace(/^[\s,;.!?]+/, '').trim();
@@ -9835,9 +9837,16 @@ async function _restoreVoiceFromBackground() {
     await startVoicePipeline();
 }
 
+let _dgMuteSafetyTimer = null;
 function muteDeepgram() {
     dgMuted = true;
     setOrbState("thinking");
+    // Safety: if speak() never completes (network failure), unmute after 12s
+    if (_dgMuteSafetyTimer) clearTimeout(_dgMuteSafetyTimer);
+    _dgMuteSafetyTimer = setTimeout(function() {
+        if (dgMuted) { dgMuted = false; unmuteDeepgram(); }
+        _dgMuteSafetyTimer = null;
+    }, 12000);
     if (isIOSPWA && _iosPWAActiveRecorder && _iosPWAActiveRecorder.state === 'recording') {
         _iosPWASpeaking = true;
         if (_iosPWACycleInterval) { clearInterval(_iosPWACycleInterval); _iosPWACycleInterval = null; }
@@ -9857,6 +9866,7 @@ function muteDeepgram() {
 
 function unmuteDeepgram() {
     stopVAD();
+    if (_dgMuteSafetyTimer) { clearTimeout(_dgMuteSafetyTimer); _dgMuteSafetyTimer = null; }
     dgMuted = false;
     if (dgAudioCtx && dgAudioCtx.state !== 'running') { dgAudioCtx.resume().catch(() => {}); }
     lastSpeechMs = _isTouchDevice ? Date.now() : Date.now() + 2000;
@@ -15212,18 +15222,36 @@ window.apexFileDropHandler = function(e){
     /* ── Mobile page nav dropdown ── */
     var _navDropdown = document.getElementById('mobileNavDropdown');
     var _navToggle   = document.getElementById('mobileNavToggle');
+    // Sync dropdown top to actual topbar height (handles landscape/reflow)
+    function _syncNavDropdownTop() {
+        var tb = document.querySelector('.topbar');
+        if (_navDropdown && tb) _navDropdown.style.top = tb.offsetHeight + 'px';
+    }
     window._mobileNavTo = function(page) {
         if (typeof switchPage === 'function') switchPage(page);
         if (_navDropdown) _navDropdown.style.display = 'none';
-        if (_navToggle)   _navToggle.textContent = '☰';
+        if (_navToggle)   { _navToggle.textContent = '☰'; _navToggle.setAttribute('aria-expanded', 'false'); }
     };
     if (_navToggle && _navDropdown) {
+        _syncNavDropdownTop();
+        window.addEventListener('resize', _syncNavDropdownTop);
+        _navToggle.setAttribute('aria-expanded', 'false');
         _navToggle.addEventListener('touchend', function(e) {
             e.preventDefault();
             var open = _navDropdown.style.display !== 'none';
+            _syncNavDropdownTop();
             _navDropdown.style.display = open ? 'none' : 'block';
             _navToggle.textContent = open ? '☰' : '✕';
+            _navToggle.setAttribute('aria-expanded', open ? 'false' : 'true');
         }, { passive: false });
+        // Close nav when tapping outside
+        document.addEventListener('touchstart', function(e) {
+            if (_navDropdown.style.display !== 'none' && !_navDropdown.contains(e.target) && e.target !== _navToggle) {
+                _navDropdown.style.display = 'none';
+                _navToggle.textContent = '☰';
+                _navToggle.setAttribute('aria-expanded', 'false');
+            }
+        }, { passive: true });
     }
 
     /* ── Activation overlay: one tap pre-grants permission (stream released after) ── */
@@ -15237,8 +15265,8 @@ window.apexFileDropHandler = function(e){
                 e.preventDefault();
                 _activateBtn.removeEventListener('touchend', _onActivate);
                 _activateBtn.textContent = 'ACTIVATING…';
-                navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(stream) {
-                    // Stop tracks immediately — permission is now granted, mic indicator off
+                navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false }).then(function(stream) {
+                    // Stop tracks immediately — permission granted, mic indicator goes off
                     stream.getTracks().forEach(function(t) { t.stop(); });
                     _activationOverlay.style.display = 'none';
                 }).catch(function() {
@@ -15259,10 +15287,10 @@ window.apexFileDropHandler = function(e){
         if (_mActive) return;
         _mActive = true;
 
-        // Acquire mic once; reuse stream on all subsequent presses
+        // Acquire mic; reuse if still active, otherwise open fresh (permission already granted)
         if (!_mStream || !_mStream.active) {
             try {
-                _mStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                _mStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
             } catch(e) {
                 console.error('[PTT] mic denied:', e);
                 _mActive = false;
@@ -15335,16 +15363,16 @@ window.apexFileDropHandler = function(e){
     var orb = document.getElementById('plasmaOrb');
     if (orb) {
         orb.addEventListener('touchstart', function(e) { e.preventDefault(); _pttBegin(orb); }, { passive: false });
-        orb.addEventListener('touchend',    function() { _pttEnd(orb); },   { passive: true });
-        orb.addEventListener('touchcancel', function() { _pttEnd(orb); },   { passive: true });
+        orb.addEventListener('touchend',    function(e) { e.preventDefault(); _pttEnd(orb); },  { passive: false });
+        orb.addEventListener('touchcancel', function(e) { e.preventDefault(); _pttEnd(orb); },  { passive: false });
     }
 
     /* ── Wire floating PTT button ── */
     var ptt = document.getElementById('floatingPTT');
     if (ptt) {
         ptt.addEventListener('touchstart', function(e) { e.preventDefault(); _pttBegin(ptt); }, { passive: false });
-        ptt.addEventListener('touchend',    function() { _pttEnd(ptt); },  { passive: true });
-        ptt.addEventListener('touchcancel', function() { _pttEnd(ptt); },  { passive: true });
+        ptt.addEventListener('touchend',    function(e) { e.preventDefault(); _pttEnd(ptt); },  { passive: false });
+        ptt.addEventListener('touchcancel', function(e) { e.preventDefault(); _pttEnd(ptt); },  { passive: false });
     }
 })();
 </script>
