@@ -250,9 +250,15 @@ app.get('/health', async (req, res) => {
             const { error } = await sbAdmin.from('notifications').select('id').limit(1);
             dbOk = !error;
         } else {
-            const pgPool = require('./pg_database');
-            await pgPool.query('SELECT 1');
-            dbOk = true;
+            try {
+                const pgPool = require('./pg_database');
+                await pgPool.query('SELECT 1');
+                dbOk = true;
+            } catch {
+                // pg pool unavailable (e.g. DATABASE_URL not yet set) — fall back to Supabase JS client
+                const { error } = await sbAdmin.from('notifications').select('id').limit(1);
+                dbOk = !error;
+            }
         }
     } catch {}
     const status = dbOk ? 'ok' : 'degraded';
@@ -6802,7 +6808,7 @@ app.get("/test", (req, res) => {
     });
 });
 
-app.get("/test-db", async (req, res) => {
+app.get("/test-db", requireAppAccess, async (req, res) => {
     try {
         const { data, error } = await sbAdmin.from('agent_tasks').select('id').limit(1);
         if (error) throw new Error(error.message);
@@ -6821,7 +6827,7 @@ app.get("/version", (req, res) => {
     });
 });
 
-app.get("/debug-storage", async (req, res) => {
+app.get("/debug-storage", requireAppAccess, async (req, res) => {
     const debug = await getWorkspaceStorageDebug();
     res.status(debug.ok ? 200 : 500).json(debug);
 });
@@ -7013,7 +7019,7 @@ app.post("/cron/run-schedules", requireCronAccess, async (req, res) => {
     }
 });
 
-app.get("/files", async (req, res) => {
+app.get("/files", requireAppAccess, async (req, res) => {
     const files = await listWorkspaceFiles();
     res.status(200).json({ ok: true, count: files.length, files });
 });
@@ -7594,7 +7600,7 @@ app.get("/icon-512.png", (req, res) => {
     res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=604800").send(_icon512);
 });
 
-app.post("/api/speak", async (req, res) => {
+app.post("/api/speak", requireAppAccess, async (req, res) => {
     try {
         const text = String(req.body?.text || "").trim();
         if (!text) return res.status(400).json({ ok: false, reply: "No text provided." });
@@ -8507,7 +8513,7 @@ app.post("/api/transcribe", requireAppAccess, multerUpload.single("audio"), asyn
     }
 });
 
-app.post('/api/tts', async (req, res) => {
+app.post('/api/tts', requireAppAccess, async (req, res) => {
     try {
         const text = (req.body?.text || '').trim();
         if (!text) return res.status(400).json({ error: 'No text provided' });

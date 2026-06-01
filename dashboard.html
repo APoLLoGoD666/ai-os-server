@@ -3,6 +3,7 @@
 <head>
     <meta name="apex-version" content="v10" />
     <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' wss: https:; img-src 'self' data: blob:; media-src 'self' blob: data:; worker-src 'self';" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <title>APEX AI OS</title>
     <link rel="manifest" href="/manifest.json">
@@ -8176,7 +8177,15 @@ li, td, th, div.label, div.value { font-size: inherit; }
 <script>
 // ══ CONFIG ════════════════════════════════════════════════════════════
 const API_BASE = "";
-const APP_KEY  = new URLSearchParams(window.location.search).get("app_key") || "";
+let APP_KEY = sessionStorage.getItem('apex_app_key') || new URLSearchParams(window.location.search).get("app_key") || "";
+if (APP_KEY) {
+    sessionStorage.setItem('apex_app_key', APP_KEY);
+    const _u = new URL(window.location.href);
+    if (_u.searchParams.has('app_key')) {
+        _u.searchParams.delete('app_key');
+        history.replaceState(null, '', _u.pathname + (_u.search || '') + _u.hash);
+    }
+}
 window._apexAppKey = APP_KEY;
 const MAX_ITEMS           = 5;
 const REFRESH_INTERVAL_MS = 18000;
@@ -8579,7 +8588,7 @@ async function _httBegin() {
                 fd.append('audio', blob, 'recording.mp4');
                 fd.append('mimeType', _httRecorder.mimeType);
 
-                const tRes  = await fetch(buildApiUrl('/api/transcribe'), { method: 'POST', body: fd });
+                const tRes  = await fetch(buildApiUrl('/api/transcribe'), { method: 'POST', headers: buildApiHeaders(), body: fd });
                 const tData = await tRes.json();
                 const transcript = (tData.transcript || '').trim();
 
@@ -8595,7 +8604,7 @@ async function _httBegin() {
                 // Get AI reply
                 const aRes  = await fetch(buildApiUrl('/api/voice-chat'), {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: buildApiHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ message: transcript })
                 });
                 const aData = await aRes.json();
@@ -8658,7 +8667,7 @@ function _httSpeak(text) {
     const safetyMs  = Math.min(60000, Math.max(8000, wordCount * 1000 + 6000));
     fetch(buildApiUrl(getTtsUrl()), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ text })
     })
     .then(res => {
@@ -8712,9 +8721,7 @@ function _httSpeak(text) {
 
 // ══ UTILITIES ═════════════════════════════════════════════════════════
 function buildApiUrl(path) {
-    if (!APP_KEY) return `${API_BASE}${path}`;
-    const sep = path.includes("?") ? "&" : "?";
-    return `${API_BASE}${path}${sep}app_key=${encodeURIComponent(APP_KEY)}`;
+    return `${API_BASE}${path}`;
 }
 
 function buildApiHeaders(extra = {}) {
@@ -9297,7 +9304,12 @@ function _showBanner(id, html) {
     const el = document.createElement("div");
     el.id = id;
     el.className = "apex-banner";
-    el.innerHTML = html + `<span class="apex-banner-close" onclick="document.getElementById('${id}').remove()">✕</span>`;
+    const close = document.createElement("span");
+    close.className = "apex-banner-close";
+    close.textContent = "✕";
+    close.addEventListener("click", () => el.remove());
+    el.innerHTML = html;
+    el.appendChild(close);
     document.body.appendChild(el);
 }
 
@@ -11426,9 +11438,6 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       console.log('[SW] Controller changed — new version active');
     });
-  });
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => r.unregister());
   });
 }
 initSupabaseRealtime();
