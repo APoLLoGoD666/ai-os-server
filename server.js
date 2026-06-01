@@ -7531,7 +7531,7 @@ app.post("/api/speak", async (req, res) => {
         const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) return res.status(500).json({ ok: false, reply: "GOOGLE_API_KEY not configured." });
 
-        const voiceName = req.body?.voice || 'Fenrir';
+        const voiceName = req.body?.voice || 'Orus';
         const t0 = Date.now();
         const gRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
@@ -8392,7 +8392,7 @@ app.post('/api/tts', async (req, res) => {
         const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) return res.status(503).json({ error: 'GOOGLE_API_KEY not configured' });
 
-        const voiceName = req.body?.voice || 'Fenrir';
+        const voiceName = req.body?.voice || 'Orus';
         const t0 = Date.now();
         const gRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,

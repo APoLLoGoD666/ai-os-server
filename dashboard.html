@@ -8683,6 +8683,7 @@ async function speakWithElevenLabs(text) {
             if (dgAudioCtx) dgAudioCtx.resume().catch(() => {});
             _apexAudio.load();
             if (isIOSPWA) console.log('[iOS] audio playing');
+            window._ttsPlayStartMs = Date.now();
             _apexAudio.play().catch(e => { if (isIOSPWA) console.error('[iOS] play() error:', e.message || String(e)); cleanup(); currentAudio = null; rej(e); });
         });
         return true;
@@ -8909,7 +8910,7 @@ function _startInterruptListener() {
         const msSinceVoice = Date.now() - _lastHighDbMs;
         console.log(`[Interrupt] "${transcript}" — words:${wordCount} lastHighDb:${msSinceVoice}ms ago`);
         if (!isSpeakingNow) { _stopInterruptListener(); return; }
-        if (wordCount > 2) {
+        if (wordCount > 2 && (Date.now() - (window._ttsPlayStartMs || 0)) > 2000) {
             _vadInterruptSR = null;
             interruptSpeech();
             document.getElementById("chatInput").value = transcript;
@@ -14437,7 +14438,7 @@ document.addEventListener('DOMContentLoaded',function(){
     var p=$id('page-command');
     if(p&&p.classList.contains('active'))window.cmdInitPage();
     if(typeof window.setTtsProvider==='function'){
-      try{window.setTtsProvider(localStorage.getItem('apex_tts_provider')||'deepgram');}catch(_){}
+      try{localStorage.setItem('apex_tts_provider','gemini');window.setTtsProvider('gemini');}catch(_){}
     }
   },250);
 });
