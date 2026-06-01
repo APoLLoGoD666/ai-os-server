@@ -25,6 +25,36 @@ function log(msg) {
     console.log(`[${ts()}] ${msg}`);
 }
 
+function renderRequest(method, pathStr, body) {
+    return new Promise((resolve, reject) => {
+        const bodyStr = body ? JSON.stringify(body) : null;
+        const options = {
+            hostname: "api.render.com",
+            path: pathStr,
+            method,
+            headers: {
+                "Authorization": `Bearer ${RENDER_API_KEY}`,
+                "Content-Type": "application/json",
+                ...(bodyStr ? { "Content-Length": Buffer.byteLength(bodyStr) } : {})
+            }
+        };
+        const req = https.request(options, (res) => {
+            let data = "";
+            res.on("data", chunk => data += chunk);
+            res.on("end", () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    try { resolve(JSON.parse(data)); } catch { resolve(data); }
+                } else {
+                    reject(new Error(`Render API error ${res.statusCode}: ${data}`));
+                }
+            });
+        });
+        req.on("error", reject);
+        if (bodyStr) req.write(bodyStr);
+        req.end();
+    });
+}
+
 async function updateRender(url, attempt = 1) {
     if (!RENDER_API_KEY || !RENDER_SERVICE_ID) {
         log("[Tunnel] RENDER_API_KEY or RENDER_SERVICE_ID not set — skipping Render update.");
@@ -35,33 +65,14 @@ async function updateRender(url, attempt = 1) {
     const RETRY_DELAY = 8000;
 
     try {
-        await new Promise((resolve, reject) => {
-            const body = JSON.stringify([{ key: "OBSIDIAN_URL", value: url }]);
-            const options = {
-                hostname: "api.render.com",
-                path: `/v1/services/${RENDER_SERVICE_ID}/env-vars`,
-                method: "PUT",
-                headers: {
-                    "Authorization": `Bearer ${RENDER_API_KEY}`,
-                    "Content-Type": "application/json",
-                    "Content-Length": Buffer.byteLength(body)
-                }
-            };
-            const req = https.request(options, (res) => {
-                let data = "";
-                res.on("data", chunk => data += chunk);
-                res.on("end", () => {
-                    if (res.statusCode >= 200 && res.statusCode < 300) {
-                        resolve();
-                    } else {
-                        reject(new Error(`Render API error ${res.statusCode}: ${data}`));
-                    }
-                });
-            });
-            req.on("error", reject);
-            req.write(body);
-            req.end();
-        });
+        // GET existing env vars first — PUT replaces all, so we must merge
+        const existing = await renderRequest("GET", `/v1/services/${RENDER_SERVICE_ID}/env-vars`);
+        const vars = (Array.isArray(existing) ? existing : [])
+            .map(e => ({ key: e.envVar?.key || e.key, value: e.envVar?.value || e.value }))
+            .filter(e => e.key && e.key !== "OBSIDIAN_URL");
+        vars.push({ key: "OBSIDIAN_URL", value: url });
+
+        await renderRequest("PUT", `/v1/services/${RENDER_SERVICE_ID}/env-vars`, vars);
     } catch (err) {
         if (attempt < MAX_ATTEMPTS) {
             log(`[Tunnel] Render update failed (attempt ${attempt}/${MAX_ATTEMPTS}): ${err.message} — retrying in ${RETRY_DELAY / 1000}s...`);
