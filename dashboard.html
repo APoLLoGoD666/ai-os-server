@@ -329,6 +329,9 @@
             }
 
             .page { padding: 14px; gap: 12px; }
+
+            /* Mobile-only elements — force off on desktop */
+            #nav-more, #mobilePageName, #floatingPTT { display: none !important; }
         }
 
         /* ══ INPUT ZONE ════════════════════════════════════════════════ */
@@ -6143,16 +6146,59 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
     /* — Input zone — */
     .input-zone  { height: 64px; padding: 0 14px; gap: 10px; }
-    .chat-input  { font-size: 16px; height: 44px; border-radius: 22px; } /* 16px prevents iOS zoom */
+    .chat-input  { font-size: 16px; height: 44px; border-radius: 22px; }
     .mic-btn, .send-btn { width: 44px; height: 44px; font-size: 18px; }
     .clear-chat-btn, .auto-listen-btn { height: 36px; padding: 0 10px; font-size: 11px; border-radius: 8px; }
 
-    /* — Page content — */
-    .page { padding: 12px; gap: 12px; }
+    /* — Page content — no horizontal overflow — */
+    .page { padding: 12px; gap: 12px; overflow-x: hidden; }
+    .page > * { min-width: 0; box-sizing: border-box; }
+    table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+
+    /* — Mobile page name in topbar — */
+    #mobilePageName {
+        display: block !important;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; font-weight: 700;
+        letter-spacing: 0.2em; text-transform: uppercase;
+        color: var(--primary);
+    }
+
+    /* — Floating PTT — */
+    #floatingPTT {
+        display: flex !important;
+        bottom: calc(72px + max(env(safe-area-inset-bottom, 0px), 10px) + 14px);
+    }
 
     /* — Topbar — */
     .clock-time { font-size: 15px; }
     .clock-date { font-size: 9px; }
+}
+
+/* ── Floating PTT button ──────────────────────────────────────── */
+#floatingPTT {
+    position: fixed;
+    right: 16px;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: rgba(0,212,255,0.12);
+    border: 1.5px solid rgba(0,212,255,0.35);
+    color: var(--primary);
+    font-size: 20px;
+    z-index: 500;
+    display: none; /* shown via media query */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 14px rgba(0,212,255,0.15);
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+#floatingPTT.ptt-active {
+    background: rgba(255,77,109,0.25);
+    border-color: rgba(255,77,109,0.7);
+    box-shadow: 0 0 20px rgba(255,77,109,0.35);
 }
 
 /* ── More Sheet (mobile only) ─────────────────────────────────── */
@@ -6276,6 +6322,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
         <div class="topbar-center" style="display:flex;flex-direction:row;align-items:center;gap:10px">
             <div class="clock-time" id="clockTime">--:--:--</div>
             <div class="clock-date" id="clockDate">--</div>
+            <span id="mobilePageName" style="display:none">COMMAND</span>
         </div>
         <!-- hidden stubs JS may reference -->
         <div style="display:none">
@@ -9323,6 +9370,15 @@ function _iosPWAHandleTranscript(transcript) {
     const _IOS_PAGES = {command:'command',overview:'overview',operation:'operation',operations:'operation',system:'system',communication:'communication',comms:'communication',finance:'finance',business:'business',university:'university',uni:'university',health:'health',occult:'occult',research:'research'};
     if (dgMode === "wake") {
         console.log(`[iOS] wake check: "${transcript}" — matched: ${/\bapex\b/i.test(transcript)}`);
+        // Direct page nav — no wake word required
+        const _iosDpMatch = transcript.match(/^(?:(?:go|switch|navigate)\s+to\s+|open\s+|show\s+)?(\w+)(?:\s+page)?$/i);
+        const _iosDpTarget = _iosDpMatch && _IOS_PAGES[_iosDpMatch[1].toLowerCase()];
+        if (_iosDpTarget) {
+            console.log(`[iOS Wake] direct page nav → ${_iosDpTarget}`);
+            switchPage(_iosDpTarget);
+            renderChatMessage('system', 'Switching to ' + _iosDpTarget + '.');
+            return;
+        }
         if (/\bapex\b/i.test(transcript)) {
             console.log("[iOS Wake] wake word matched → conversation");
             const _iosWk = transcript.trim().toLowerCase();
@@ -9412,6 +9468,16 @@ async function startVoicePipeline() {
         if (dgMuted) return; // block transcripts during thinking phase
         if (dgMode === "wake") {
             console.log(`[Wake] transcript: "${transcript}"`);
+            // Direct page nav — no wake word required
+            const _DIRECT_PAGES = {command:'command',overview:'overview',operation:'operation',operations:'operation',system:'system',communication:'communication',comms:'communication',finance:'finance',business:'business',university:'university',uni:'university',health:'health',occult:'occult',research:'research'};
+            const _directPgMatch = transcript.match(/^(?:(?:go|switch|navigate)\s+to\s+|open\s+|show\s+)?(\w+)(?:\s+page)?$/i);
+            const _directPgTarget = _directPgMatch && _DIRECT_PAGES[_directPgMatch[1].toLowerCase()];
+            if (_directPgTarget) {
+                console.log(`[Wake] direct page nav → ${_directPgTarget}`);
+                switchPage(_directPgTarget);
+                renderChatMessage('system', 'Switching to ' + _directPgTarget + '.');
+                return;
+            }
             if (/\bapex\b/i.test(transcript)) {
                 const _wakeTranscript = transcript.trim().toLowerCase();
                 const _wakeIdx = _wakeTranscript.indexOf('apex');
@@ -14971,6 +15037,9 @@ window.apexFileDropHandler = function(e){
 <script src="/src/components/orb/PlasmaOrb.js"></script>
 <!-- apex-visual-editor removed -->
 
+<!-- ══ FLOATING PTT ══ -->
+<button id="floatingPTT" aria-label="Push to talk">🎤</button>
+
 <!-- ══ MOBILE MORE SHEET ══ -->
 <div class="more-sheet-overlay" id="moreSheetOverlay" onclick="closeMobileMore()"></div>
 <div class="more-sheet" id="moreSheet" role="dialog" aria-label="More pages">
@@ -14988,42 +15057,42 @@ window.apexFileDropHandler = function(e){
 </div>
 
 <script>
-/* ── Mobile More Sheet + switchPage patch ── */
+/* ── Mobile enhancements: More Sheet, PTT, orb hold, page name ── */
 (function() {
     var _morePages = ['system','communication','finance','business','university','occult','research'];
+    var _isMobile  = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
+    /* ── More sheet helpers ── */
     function _updateMoreState(name) {
         var moreBtn = document.getElementById('nav-more');
         if (!moreBtn) return;
-        var isMorePage = _morePages.indexOf(name) >= 0;
-        moreBtn.classList.toggle('active', isMorePage);
+        moreBtn.classList.toggle('active', _morePages.indexOf(name) >= 0);
         _morePages.forEach(function(p) {
-            var btn = document.getElementById('more-nav-' + p);
-            if (btn) btn.classList.toggle('active', p === name);
+            var b = document.getElementById('more-nav-' + p);
+            if (b) b.classList.toggle('active', p === name);
         });
     }
 
-    window.toggleMobileMore = function() {
-        var sheet = document.getElementById('moreSheet');
-        if (sheet.classList.contains('open')) {
-            closeMobileMore();
-        } else {
-            document.getElementById('moreSheetOverlay').classList.add('open');
-            sheet.classList.add('open');
-            document.getElementById('nav-more').classList.add('active');
-        }
-    };
-
-    window.closeMobileMore = function() {
+    function _closeSheet() {
         document.getElementById('moreSheetOverlay').classList.remove('open');
         document.getElementById('moreSheet').classList.remove('open');
         var activePg = document.querySelector('.page.active');
         var activeId = activePg ? activePg.id.replace('page-', '') : '';
         if (_morePages.indexOf(activeId) < 0) {
-            var moreBtn = document.getElementById('nav-more');
-            if (moreBtn) moreBtn.classList.remove('active');
+            var mb = document.getElementById('nav-more');
+            if (mb) mb.classList.remove('active');
         }
+    }
+
+    window.toggleMobileMore = function() {
+        var sheet = document.getElementById('moreSheet');
+        if (sheet.classList.contains('open')) { _closeSheet(); return; }
+        document.getElementById('moreSheetOverlay').classList.add('open');
+        sheet.classList.add('open');
+        document.getElementById('nav-more').classList.add('active');
     };
+
+    window.closeMobileMore = _closeSheet;
 
     window.moreNavTo = function(page) {
         switchPage(page);
@@ -15031,12 +15100,60 @@ window.apexFileDropHandler = function(e){
         document.getElementById('moreSheet').classList.remove('open');
     };
 
-    // Patch switchPage so More button tracks active state
+    /* ── Patch switchPage — page name + More state + PTT visibility ── */
     var _origSwitch = window.switchPage;
     window.switchPage = function(name) {
         _origSwitch(name);
         _updateMoreState(name);
+        // Update mobile page name in topbar
+        var pnEl = document.getElementById('mobilePageName');
+        if (pnEl) pnEl.textContent = name.toUpperCase();
+        // Show floating PTT on all pages (hidden via CSS on desktop)
+        var ptt = document.getElementById('floatingPTT');
+        if (ptt) ptt.style.display = '';  // let CSS media query decide
     };
+
+    if (!_isMobile) return; // touch-specific init below
+
+    /* ── Orb hold-to-speak ── */
+    var orb = document.getElementById('plasmaOrb');
+    if (orb) {
+        var _orbTimer = null;
+        orb.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            _orbTimer = setTimeout(function() {
+                if (typeof startListening === 'function') startListening();
+            }, 120);
+        }, { passive: false });
+        orb.addEventListener('touchend', function() {
+            clearTimeout(_orbTimer);
+            // Short tap = toggle; held tap already started listening
+            if (typeof stopListening === 'function') stopListening();
+        }, { passive: true });
+        orb.addEventListener('touchcancel', function() {
+            clearTimeout(_orbTimer);
+        }, { passive: true });
+    }
+
+    /* ── Floating PTT button ── */
+    var ptt = document.getElementById('floatingPTT');
+    if (ptt) {
+        var _pttHeld = false;
+        ptt.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            _pttHeld = true;
+            ptt.classList.add('ptt-active');
+            if (typeof startListening === 'function') startListening();
+        }, { passive: false });
+        function _pttRelease() {
+            if (!_pttHeld) return;
+            _pttHeld = false;
+            ptt.classList.remove('ptt-active');
+            if (typeof stopListening === 'function') stopListening();
+        }
+        ptt.addEventListener('touchend',    _pttRelease, { passive: true });
+        ptt.addEventListener('touchcancel', _pttRelease, { passive: true });
+    }
 })();
 </script>
 </body>
