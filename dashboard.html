@@ -6130,6 +6130,15 @@ li, td, th, div.label, div.value { font-size: inherit; }
     /* — Hide bottom nav entirely on mobile — */
     .bottom-nav { display: none !important; }
 
+    /* — Show nav toggle button on mobile — */
+    #mobileNavToggle { display: block !important; }
+
+    /* — System page: collapse fixed-width 2-col layout — */
+    #page-system [style*="1fr 360px"] { grid-template-columns: 1fr !important; }
+    #page-system [style*="min-width:960px"] { min-width: 0 !important; width: 100% !important; }
+    #sys-stack-canvas { height: 180px !important; }
+    #page-system [style*="repeat(3,1fr)"] { grid-template-columns: repeat(2,1fr) !important; }
+
     /* — Instant page transitions on mobile — */
     .page { transition: none !important; }
 
@@ -6199,6 +6208,23 @@ li, td, th, div.label, div.value { font-size: inherit; }
     #ovr-summary-row { grid-template-columns: 1fr !important; }
     #page-overview .ds-panel { padding: 10px !important; }
 }
+
+/* ── Mobile nav dropdown button style ─────────────────────────── */
+._mnav-btn {
+    background: rgba(0,0,0,0.6);
+    border: none; outline: none;
+    color: rgba(0,212,255,0.8);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.16em;
+    padding: 14px 8px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    text-align: center;
+    transition: background 0.1s, color 0.1s;
+}
+._mnav-btn:active { background: rgba(0,212,255,0.12); color: #00d4ff; }
+._mnav-btn.active { color: #00d4ff; background: rgba(0,212,255,0.08); }
 
 /* ── Floating PTT orb ─────────────────────────────────────────── */
 #floatingPTT {
@@ -6351,11 +6377,12 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
     <!-- ══ TOP BAR ══ -->
     <header class="topbar">
+        <button id="mobileNavToggle" aria-label="Open page navigation" style="display:none;position:absolute;left:14px;top:50%;transform:translateY(-50%);background:none;border:1.5px solid rgba(0,212,255,0.4);border-radius:4px;color:#00d4ff;font-size:16px;line-height:1;padding:4px 8px;cursor:pointer;-webkit-tap-highlight-color:transparent;z-index:10;">&#9776;</button>
         <div class="topbar-center" style="display:flex;flex-direction:row;align-items:center;gap:10px">
             <div class="clock-time" id="clockTime">--:--:--</div>
             <div class="clock-date" id="clockDate">--</div>
         </div>
-        <span id="mobilePageName" style="display:none">COMMAND</span>
+        <span id="mobilePageName" style="display:none">CMD</span>
         <!-- hidden stubs JS may reference -->
         <div style="display:none">
             <span id="topbarEmailCount"></span><span id="topbarTaskCount"></span>
@@ -6364,6 +6391,23 @@ li, td, th, div.label, div.value { font-size: inherit; }
         </div>
     </header>
 
+
+    <!-- ══ MOBILE PAGE NAV DROPDOWN (mobile only) ══ -->
+    <div id="mobileNavDropdown" style="display:none;position:fixed;top:var(--topbar-h,48px);left:0;right:0;z-index:8000;background:rgba(6,8,12,0.97);border-bottom:1px solid rgba(0,212,255,0.15);padding:8px 0;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(0,212,255,0.06);">
+            <button class="_mnav-btn" onclick="window._mobileNavTo('command')">COMMAND</button>
+            <button class="_mnav-btn" onclick="window._mobileNavTo('overview')">OVERVIEW</button>
+            <button class="_mnav-btn" onclick="window._mobileNavTo('operation')">OPS</button>
+            <button class="_mnav-btn" onclick="window._mobileNavTo('system')">SYSTEM</button>
+            <button class="_mnav-btn" onclick="window._mobileNavTo('communication')">COMMS</button>
+            <button class="_mnav-btn" onclick="window._mobileNavTo('finance')">FINANCE</button>
+            <button class="_mnav-btn" onclick="window._mobileNavTo('business')">BUSINESS</button>
+            <button class="_mnav-btn" onclick="window._mobileNavTo('university')">UNI</button>
+            <button class="_mnav-btn" onclick="window._mobileNavTo('health')">LIFE</button>
+            <button class="_mnav-btn" onclick="window._mobileNavTo('occult')">OCCULT</button>
+            <button class="_mnav-btn" onclick="window._mobileNavTo('research')">RESEARCH</button>
+        </div>
+    </div>
 
     <!-- ══ HELP OVERLAY ══ -->
     <div class="help-overlay" id="helpOverlay" onclick="if(event.target===this)toggleHelpOverlay()">
@@ -15141,17 +15185,24 @@ window.apexFileDropHandler = function(e){
         document.getElementById('moreSheet').classList.remove('open');
     };
 
-    /* ── Patch switchPage: page name + scroll reset + More state ── */
+    /* ── Patch switchPage: abbreviated page name + scroll reset ── */
+    var _pageLabels = {
+        command:'CMD', overview:'OVR', operation:'OPS', system:'SYS',
+        communication:'COMMS', finance:'FIN', business:'BIZ',
+        university:'UNI', health:'LIFE', occult:'OCCULT', research:'RSRCH'
+    };
     var _origSwitch = window.switchPage;
     window.switchPage = function(name) {
         _origSwitch(name);
         _updateMoreState(name);
-        // Update mobile page name in topbar
         var pnEl = document.getElementById('mobilePageName');
-        if (pnEl) pnEl.textContent = name.toUpperCase();
-        // Reset page scroll to top on every navigation
+        if (pnEl) pnEl.textContent = _pageLabels[name] || name.toUpperCase().slice(0,6);
         var pg = document.getElementById('page-' + name);
         if (pg) pg.scrollTop = 0;
+        // Update active state on nav dropdown buttons
+        document.querySelectorAll('._mnav-btn').forEach(function(b) { b.classList.remove('active'); });
+        var activeBtn = document.querySelector('._mnav-btn[onclick*=\'' + name + '\']');
+        if (activeBtn) activeBtn.classList.add('active');
     };
 
     if (!_isMobile) return; // touch-specific init below
@@ -15160,7 +15211,24 @@ window.apexFileDropHandler = function(e){
     if (typeof window._apexSetAutoListen === 'function') window._apexSetAutoListen(false);
     setTimeout(function() { if (typeof stopListening === 'function') stopListening(); }, 300);
 
-    /* ── Activation overlay: one tap pre-warms mic permission ── */
+    /* ── Mobile page nav dropdown ── */
+    var _navDropdown = document.getElementById('mobileNavDropdown');
+    var _navToggle   = document.getElementById('mobileNavToggle');
+    window._mobileNavTo = function(page) {
+        if (typeof switchPage === 'function') switchPage(page);
+        if (_navDropdown) _navDropdown.style.display = 'none';
+        if (_navToggle)   _navToggle.textContent = '☰';
+    };
+    if (_navToggle && _navDropdown) {
+        _navToggle.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            var open = _navDropdown.style.display !== 'none';
+            _navDropdown.style.display = open ? 'none' : 'block';
+            _navToggle.textContent = open ? '☰' : '✕';
+        }, { passive: false });
+    }
+
+    /* ── Activation overlay: one tap pre-grants permission (stream released after) ── */
     var _activationOverlay = document.getElementById('mobileActivationOverlay');
     var _activateBtn       = document.getElementById('mobileActivateBtn');
     if (_activationOverlay) {
@@ -15170,12 +15238,13 @@ window.apexFileDropHandler = function(e){
             _activateBtn.addEventListener('touchend', function _onActivate(e) {
                 e.preventDefault();
                 _activateBtn.removeEventListener('touchend', _onActivate);
-                _activateBtn.textContent = 'STARTING…';
+                _activateBtn.textContent = 'ACTIVATING…';
                 navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(stream) {
-                    _mStream = stream;   // pre-warm; PTT will reuse this
+                    // Stop tracks immediately — permission is now granted, mic indicator off
+                    stream.getTracks().forEach(function(t) { t.stop(); });
                     _activationOverlay.style.display = 'none';
                 }).catch(function() {
-                    _activationOverlay.style.display = 'none'; // hide anyway — user can still tap PTT
+                    _activationOverlay.style.display = 'none';
                 });
             }, { passive: false });
         }
@@ -15234,6 +15303,12 @@ window.apexFileDropHandler = function(e){
             };
             _mRecorder.stop();
         });
+
+        // Release mic immediately — iOS indicator goes off between presses
+        if (_mStream) {
+            try { _mStream.getTracks().forEach(function(t) { t.stop(); }); } catch(_) {}
+            _mStream = null;
+        }
 
         if (!blob || blob.size < 800) { if (_orbLbl) _orbLbl.textContent = 'HOLD TO SPEAK'; return; }
 
