@@ -9236,12 +9236,20 @@ app.post('/api/browser/aria-snapshot', requireAppAccess, async (req, res) => {
 // Env: RAG_SIDECAR_URL (default: http://localhost:8001)
 const _rag = require('./agent-system/rag-bridge');
 
-app.get('/api/rag/health', requireAppAccess, async (req, res) => {
+// Guard: return 503 immediately if sidecar isn't configured (avoids 30s timeout + 500 on Render)
+function requireRagSidecar(req, res, next) {
+    if (!process.env.RAG_SIDECAR_URL) {
+        return res.status(503).json({ ok: false, error: 'RAG sidecar not configured', hint: 'Set RAG_SIDECAR_URL env var and deploy sidecar service' });
+    }
+    next();
+}
+
+app.get('/api/rag/health', requireAppAccess, requireRagSidecar, async (req, res) => {
     const status = await _rag.health();
     res.json(status);
 });
 
-app.post('/api/rag/ingest', requireAppAccess, multerUpload.single('file'), async (req, res) => {
+app.post('/api/rag/ingest', requireAppAccess, requireRagSidecar, multerUpload.single('file'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ ok: false, error: 'file required' });
         const result = await _rag.ingest(req.file.buffer, req.file.originalname);
@@ -9260,7 +9268,7 @@ app.post('/api/rag/ingest', requireAppAccess, multerUpload.single('file'), async
     }
 });
 
-app.post('/api/rag/query', requireAppAccess, async (req, res) => {
+app.post('/api/rag/query', requireAppAccess, requireRagSidecar, async (req, res) => {
     try {
         const { query, mode, topK } = req.body;
         if (!query) return res.status(400).json({ ok: false, error: 'query required' });
@@ -9271,7 +9279,7 @@ app.post('/api/rag/query', requireAppAccess, async (req, res) => {
     }
 });
 
-app.post('/api/rag/query/multimodal', requireAppAccess, async (req, res) => {
+app.post('/api/rag/query/multimodal', requireAppAccess, requireRagSidecar, async (req, res) => {
     try {
         const { query } = req.body;
         if (!query) return res.status(400).json({ ok: false, error: 'query required' });
@@ -9541,7 +9549,7 @@ app.post('/api/browser/cookies', requireAppAccess, async (req, res) => {
 });
 
 // ── Extended RAG routes ───────────────────────────────────────────────────────
-app.post('/api/rag/insert', requireAppAccess, async (req, res) => {
+app.post('/api/rag/insert', requireAppAccess, requireRagSidecar, async (req, res) => {
     try {
         const { items } = req.body;
         if (!Array.isArray(items) || !items.length) return res.status(400).json({ ok: false, error: 'items array required' });
@@ -9550,7 +9558,7 @@ app.post('/api/rag/insert', requireAppAccess, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-app.post('/api/rag/ingest/url', requireAppAccess, async (req, res) => {
+app.post('/api/rag/ingest/url', requireAppAccess, requireRagSidecar, async (req, res) => {
     try {
         const { url } = req.body;
         if (!url) return res.status(400).json({ ok: false, error: 'url required' });
@@ -9559,7 +9567,7 @@ app.post('/api/rag/ingest/url', requireAppAccess, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-app.post('/api/rag/ingest/folder', requireAppAccess, async (req, res) => {
+app.post('/api/rag/ingest/folder', requireAppAccess, requireRagSidecar, async (req, res) => {
     try {
         const { path: folderPath } = req.body;
         if (!folderPath) return res.status(400).json({ ok: false, error: 'path required' });
@@ -9568,7 +9576,7 @@ app.post('/api/rag/ingest/folder', requireAppAccess, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-app.post('/api/rag/reset', requireAppAccess, async (req, res) => {
+app.post('/api/rag/reset', requireAppAccess, requireRagSidecar, async (req, res) => {
     try {
         const result = await _rag.reset();
         res.json({ ok: true, ...result });
