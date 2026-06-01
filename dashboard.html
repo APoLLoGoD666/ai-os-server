@@ -7192,25 +7192,28 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
                 <!-- APPROVALS -->
                 <div class="ds-panel">
-                    <div class="ds-panel-header">
+                    <div class="ds-panel-header" style="cursor:pointer" onclick="toggleOpsApprovals()">
                         <span class="ds-panel-dot" style="background:var(--red)"></span>
                         <span class="ds-panel-title">Permission approvals</span>
                         <div class="ds-panel-right">
                             <span class="ds-badge red">7 pending</span>
-                            <button class="ds-btn red btn--xs" onclick="denyAllApprovals()">Deny all</button>
+                            <button class="ds-btn red btn--xs" onclick="event.stopPropagation();denyAllApprovals()">Deny all</button>
+                            <span id="opsApprovalsChev" style="color:var(--text-mute);font-size:12px;margin-left:4px">&#9660;</span>
                         </div>
                     </div>
-                    <div class="ds-pill-row" style="margin-bottom:14px">
-                        <button class="ds-pill active" onclick="filterOpsApprovals('all')">All <span class="ds-pill-count" id="opsCountAll">7</span></button>
-                        <button class="ds-pill" onclick="filterOpsApprovals('comms')">Comms <span class="ds-pill-count" id="opsCountComms">2</span></button>
-                        <button class="ds-pill" onclick="filterOpsApprovals('finance')">Finance <span class="ds-pill-count" id="opsCountFinance">2</span></button>
-                        <button class="ds-pill" onclick="filterOpsApprovals('health')">Health <span class="ds-pill-count" id="opsCountHealth">2</span></button>
-                        <button class="ds-pill" onclick="filterOpsApprovals('ops')">Ops <span class="ds-pill-count" id="opsCountOps">1</span></button>
-                        <button class="ds-pill" onclick="filterOpsApprovals('simple-first')">Simple first</button>
-                        <button class="ds-pill" onclick="filterOpsApprovals('complex-last')">Complex last</button>
-                    </div>
-                    <div id="permissionCards" style="display:flex;flex-direction:column;gap:12px">
-                            <!-- populated by pollPermissions() -->
+                    <div id="opsApprovalsBody">
+                        <div class="ds-pill-row" style="margin-bottom:14px">
+                            <button class="ds-pill active" onclick="filterOpsApprovals('all')">All <span class="ds-pill-count" id="opsCountAll">7</span></button>
+                            <button class="ds-pill" onclick="filterOpsApprovals('comms')">Comms <span class="ds-pill-count" id="opsCountComms">2</span></button>
+                            <button class="ds-pill" onclick="filterOpsApprovals('finance')">Finance <span class="ds-pill-count" id="opsCountFinance">2</span></button>
+                            <button class="ds-pill" onclick="filterOpsApprovals('health')">Health <span class="ds-pill-count" id="opsCountHealth">2</span></button>
+                            <button class="ds-pill" onclick="filterOpsApprovals('ops')">Ops <span class="ds-pill-count" id="opsCountOps">1</span></button>
+                            <button class="ds-pill" onclick="filterOpsApprovals('simple-first')">Simple first</button>
+                            <button class="ds-pill" onclick="filterOpsApprovals('complex-last')">Complex last</button>
+                        </div>
+                        <div id="permissionCards" style="display:flex;flex-direction:column;gap:12px">
+                                <!-- populated by pollPermissions() -->
+                        </div>
                     </div>
                 </div>
 
@@ -11468,6 +11471,15 @@ function masterRunNext() { masterRunFeature && masterRunFeature(); }
 function filterEmails(type, btn) {
     document.querySelectorAll('#emailFilterPills .ds-pill').forEach(function(b) { b.classList.remove('active'); });
     if (btn) btn.classList.add('active');
+}
+
+function toggleOpsApprovals() {
+    var body = document.getElementById('opsApprovalsBody');
+    var chev = document.getElementById('opsApprovalsChev');
+    if (!body) return;
+    var collapsed = body.style.display === 'none';
+    body.style.display = collapsed ? '' : 'none';
+    if (chev) chev.innerHTML = collapsed ? '&#9660;' : '&#9654;';
 }
 
 function filterOpsApprovals(type) {
