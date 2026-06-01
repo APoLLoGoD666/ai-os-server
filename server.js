@@ -10563,6 +10563,8 @@ app.post('/api/wiki/consolidate', requireAppAccess, async (req, res) => {
         });
 })();
 
+app.use('/api', require('./routes/tts-gemini'));
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,
@@ -10729,7 +10731,6 @@ require('./routes/gemini-live').attach(server, {
     buildAlexContext,
     obsidianAppend,
 });
-app.use('/api', require('./routes/tts-gemini'));
 
 
 server.listen(PORT, () => {
