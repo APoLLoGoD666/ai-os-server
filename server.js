@@ -7108,20 +7108,7 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         }
         // ── End agent intent ───────────────────────────────────────────────────
 
-        // ── Domain agent routing (keyword-based) ───────────────────────────────
-        const _chatDomainSlug = detectDomain(userMessage);
-        if (_chatDomainSlug && Object.prototype.hasOwnProperty.call(_DOMAIN_AGENTS, _chatDomainSlug)) {
-            try {
-                const _domRes = await _invokeDomainAgent(_chatDomainSlug, userMessage);
-                clearTimeout(chatTimeout);
-                const _domReply = `[${_domRes.agent.name}]\n\n${_domRes.reply}`;
-                setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _domReply); });
-                return res.status(200).json({ ok: true, reply: _domReply, domain: _chatDomainSlug });
-            } catch (_domErr) {
-                console.warn('[CHAT] domain agent failed, falling through to general:', _domErr.message);
-            }
-        }
-        // ── End domain routing ─────────────────────────────────────────────────
+        // ── Domain routing: uses full memory+tools loop below ─────────────────
 
         const memory = await loadMemory();
         setImmediate(() => addToMemory("user", userMessage));
@@ -8347,19 +8334,11 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         console.log(`[LATENCY] +${Date.now() - t0}ms building request | domain:${lcRoute.domain}`);
 
-        // Domain agent routing — dispatch to specialist when intent is clear
+        // Domain agent routing — inject specialist context into tool-use loop
         const _domainSlug = detectDomain(userMessage);
+        const _domainAgent = _domainSlug ? _DOMAIN_AGENTS[_domainSlug] : null;
+        if (_domainAgent) console.log(`[LATENCY] +${Date.now() - t0}ms domain: ${_domainAgent.name}`);
         let finalReply = '';
-
-        if (_domainSlug && Object.prototype.hasOwnProperty.call(_DOMAIN_AGENTS, _domainSlug)) {
-            try {
-                const domResult = await _invokeDomainAgent(_domainSlug, userMessage);
-                finalReply = domResult.reply;
-                console.log(`[LATENCY] +${Date.now() - t0}ms domain agent: ${domResult.agent.name} | stop: ${domResult.stopReason}`);
-            } catch (domErr) {
-                console.warn('[VOICE-CHAT] domain agent failed, falling through to generic:', domErr.message);
-            }
-        }
 
         if (!finalReply) {
             // Complexity routing: Haiku for trivial queries, Sonnet for everything else
@@ -8385,6 +8364,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                         `You have full access to Alex's world: calendar, emails, tasks, files, finances, health data, notifications, the web, and persistent memory of every past conversation. Use your tools aggressively and without hesitation. When greeted, call get_notifications and get_calendar_events simultaneously. When asked about money, call get_finance_summary. When asked about health, call get_health_summary. Never say you cannot access something without trying a tool first.`,
                         `You reason deeply and speak with authority. Match response length to complexity — brief and sharp for simple queries, thorough and detailed for complex ones. You remember everything Alex has told you. Draw on memory and facts freely.`,
                         `Speak in natural, flowing English only. No markdown, no bullet points, no asterisks, no numbered lists. All responses are read aloud by a voice engine.`,
+                        _domainAgent ? `SPECIALIST CONTEXT — ${_domainAgent.name.toUpperCase()}:\n${_domainAgent.system_prompt}` : '',
                     ].filter(Boolean).join('\n\n'),
                     tools: APEX_TOOLS,
                     messages
