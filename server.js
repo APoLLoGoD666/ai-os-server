@@ -8187,7 +8187,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         // ── Context fetch — parallel, all non-blocking ───────────────────────
         const [lcMemCtx, lcRagCtx, relevantDocs] = await Promise.all([
-            lcMemory.getContext(userMessage).catch(() => ''),
+            formatRecentMemory().catch(() => ''),
             lcRag.retrieveContext(userMessage).catch(() => ''),
             pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
         ]);
