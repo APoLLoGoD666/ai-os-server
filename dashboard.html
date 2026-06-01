@@ -15187,16 +15187,14 @@ window.apexFileDropHandler = function(e){
 
     /* ── Patch switchPage: abbreviated page name + scroll reset ── */
     var _pageLabels = {
-        command:'CMD', overview:'OVR', operation:'OPS', system:'SYS',
-        communication:'COMMS', finance:'FIN', business:'BIZ',
-        university:'UNI', health:'LIFE', occult:'OCCULT', research:'RSRCH'
+        communication:'COMMS'
     };
     var _origSwitch = window.switchPage;
     window.switchPage = function(name) {
         _origSwitch(name);
         _updateMoreState(name);
         var pnEl = document.getElementById('mobilePageName');
-        if (pnEl) pnEl.textContent = _pageLabels[name] || name.toUpperCase().slice(0,6);
+        if (pnEl) pnEl.textContent = _pageLabels[name] || name.toUpperCase();
         var pg = document.getElementById('page-' + name);
         if (pg) pg.scrollTop = 0;
         // Update active state on nav dropdown buttons
