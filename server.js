@@ -10762,16 +10762,6 @@ server.listen(PORT, () => {
         } catch (err) { console.error('MASTRA INIT ERROR (deferred):', err.message); }
     }, 300000); // 5 minutes
 
-    // LangChain — deferred 2 minutes after startup to avoid OOM on cold-start voice requests
-    setTimeout(() => {
-        if (_lcLoaded) return;
-        _lcLoaded = true;
-        try { lcMemory = require('./agent-system/langchain-memory'); } catch { lcMemory = { getContext: async () => '', addExchange: async () => {} }; }
-        try { lcRag    = require('./agent-system/langchain-rag');    } catch { lcRag    = { retrieveContext: async () => '' }; }
-        try { lcRouter = require('./agent-system/langchain-router'); } catch { lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} }; }
-        console.log('[LC] LangChain modules loaded (deferred startup).');
-    }, 120000); // 2 minutes
-
     // Agent library — load index from Supabase on startup (fast), then background-sync from GitHub if empty
     setImmediate(async () => {
         try {

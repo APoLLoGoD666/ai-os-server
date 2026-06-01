@@ -3,4 +3,4 @@ services:
     name: ai-os-server
     env: node
     buildCommand: pip install graphifyy; npm install --legacy-peer-deps && npx playwright install chromium --with-deps
-    startCommand: node server.js
+    startCommand: node --max-old-space-size=460 server.js
