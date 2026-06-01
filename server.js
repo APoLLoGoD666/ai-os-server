@@ -7688,22 +7688,42 @@ Respond with one fact per line, each starting with "Alex".`;
         for (const fact of facts) {
             await pgAddMemory('fact', fact);
         }
-        if (facts.length) console.log(`[FACTS] Extracted ${facts.length} fact(s).`);
+        if (facts.length) {
+            console.log(`[FACTS] Extracted ${facts.length} fact(s).`);
+            // Mirror to Obsidian Alex profile for persistent second-brain context
+            const date = new Date().toLocaleDateString('en-GB');
+            const lines = facts.map(f => `- ${f} *(${date})*`).join('\n');
+            obsidianAppend('People/Alex.md', `\n${lines}`).catch(() => {});
+        }
     } catch (err) {
         console.error('[FACTS] extractAndSaveFacts error:', err.message);
     }
 }
 
-// ── UPGRADE 2: Alex Context Builder ─────────────────────────────────────────
+// ── Alex Context Builder — reads Obsidian profile + Postgres facts ───────────
 async function buildAlexContext() {
+    const parts = [];
     try {
+        // Primary: structured profile from Obsidian vault
+        const profile = await obsidianRead('People/Alex.md').catch(() => null);
+        if (profile && profile.length > 50) {
+            // Strip frontmatter and markdown headers for clean injection
+            const cleaned = profile
+                .replace(/^---[\s\S]*?---\n?/, '')
+                .replace(/^# .+\n?/m, '')
+                .trim();
+            if (cleaned) parts.push(cleaned);
+        }
+    } catch {}
+    try {
+        // Secondary: real-time facts from Postgres (extracted from conversations)
         const facts = await pgLoadFacts();
-        if (!facts || !facts.length) return '';
-        const factLines = facts.map(f => `• ${f.message}`).join('\n');
-        return `\n\nKnown facts about Alex:\n${factLines}`;
-    } catch {
-        return '';
-    }
+        if (facts && facts.length) {
+            const factLines = facts.slice(0, 30).map(f => `• ${f.message}`).join('\n');
+            parts.push(`Recent learnings:\n${factLines}`);
+        }
+    } catch {}
+    return parts.join('\n\n');
 }
 
 // ── APEX TOOLS ──────────────────────────────────────────────────────────────
@@ -10742,7 +10762,12 @@ global._wsBroadcast = wsBroadcast;
 global._wsSend = wsSend;
 server.headersTimeout   = 70000; // must be > keepAliveTimeout
 
-require('./routes/gemini-live').attach(server, { appKey: APP_ACCESS_KEY });
+require('./routes/gemini-live').attach(server, {
+    appKey:           APP_ACCESS_KEY,
+    executeApexTool,
+    buildAlexContext,
+    obsidianAppend,
+});
 app.use('/api', require('./routes/tts-gemini'));
 
 
