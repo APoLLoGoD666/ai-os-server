@@ -323,6 +323,7 @@ const client = new Anthropic({
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+const SONNET_MODEL = "claude-sonnet-4-6";
 const AUTONOMY_LEVEL = String(process.env.AUTONOMY_LEVEL || "1");
 
 let mastraAgents = null;
@@ -8226,6 +8227,12 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         }
 
         if (!finalReply) {
+            // Complexity routing: Haiku for trivial queries, Sonnet for everything else
+            const _words = userMessage.trim().split(/\s+/);
+            const _isSimple = _words.length <= 5 &&
+                /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|yep|nope|sure|what time|what date|what day|how are you|good morning|good evening|good night|bye|goodbye)[\s?!.]*$/i.test(userMessage.trim());
+            const _voiceModel = _isSimple ? HAIKU_MODEL : SONNET_MODEL;
+
             // Agentic tool-use loop with full intelligence
             const messages = [{ role: 'user', content: userMessage }];
             let loopCount = 0;
@@ -8234,7 +8241,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
             while (loopCount < maxLoops) {
                 loopCount++;
                 const response = await client.messages.create({
-                    model: SONNET_MODEL,
+                    model: _voiceModel,
                     max_tokens: 2048,
                     system: [
                         enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
