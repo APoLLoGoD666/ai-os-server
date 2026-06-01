@@ -6127,21 +6127,8 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
 /* ══ MOBILE / iOS ════════════════════════════════════════════════ */
 @media (max-width: 899px) {
-    /* — Nav: collapse to 5 primary tabs + More — */
-    #nav-system,
-    #nav-communication,
-    #nav-finance,
-    #nav-business,
-    #nav-university,
-    #nav-occult,
-    #nav-research { display: none !important; }
-    #nav-more { display: flex !important; }
-
-    /* — Nav sizing — */
-    .bottom-nav { height: 72px; padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px); }
-    .nav-btn    { min-height: 58px; }
-    .nav-icon   { font-size: 21px; }
-    .nav-label  { font-size: 10px; letter-spacing: 0.11em; }
+    /* — Hide bottom nav entirely on mobile — */
+    .bottom-nav { display: none !important; }
 
     /* — Instant page transitions on mobile — */
     .page { transition: none !important; }
@@ -6187,11 +6174,14 @@ li, td, th, div.label, div.value { font-size: inherit; }
         color: var(--primary);
     }
 
-    /* — Floating PTT — */
+    /* — Floating PTT: sit above safe-area bottom (no nav bar to clear) — */
     #floatingPTT {
         display: flex !important;
-        bottom: calc(72px + max(env(safe-area-inset-bottom, 0px), 10px) + 14px);
+        bottom: calc(max(env(safe-area-inset-bottom, 0px), 16px) + 14px);
     }
+
+    /* — Give pages breathing room above safe-area / PTT button — */
+    .page { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), 16px) + 80px) !important; }
 
     /* — Topbar clock — */
     .clock-time { font-size: 15px; }
