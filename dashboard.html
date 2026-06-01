@@ -6157,9 +6157,10 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
     /* — All pages: overflow prevention + safe padding for PTT — */
     .page { padding: 12px; gap: 12px; overflow-x: hidden !important; }
-    .page { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), 16px) + 44px) !important; }
+    .page { padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), 16px) + 90px) !important; }
     .page > * { max-width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
-    .ds-panel, .ds-card { max-width: 100% !important; overflow-x: hidden !important; }
+    .ds-panel, .ds-card { max-width: 100% !important; box-sizing: border-box; overflow-x: visible; }
+    .ds-panel-header, .ds-panel-header-left { min-width: 0; overflow: visible; }
     .ds-grid-3, .ds-grid-2 { grid-template-columns: 1fr !important; }
     .ds-grid-stats-6 { grid-template-columns: repeat(2,1fr) !important; }
     table { display: block !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; touch-action: pan-x; width: 100%; }
@@ -6175,7 +6176,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
     #page-system [style*="repeat(3,1fr)"] { grid-template-columns: repeat(2,1fr) !important; }
     #page-system [style*="min-width:960px"] { min-width: 0 !important; width: 100% !important; }
     #sys-timeline > div { min-width: 0 !important; width: 100% !important; overflow-x: auto; }
-    #sys-stack-canvas { height: min(180px, 30vh) !important; }
+    #sys-stack-canvas { height: 220px !important; }
     #domainAgentModal > div { width: min(90vw,480px) !important; max-width: calc(100vw - 32px) !important; }
 
     /* — Finance page — */
@@ -6254,7 +6255,8 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
     /* — Panel headers with multiple right-side buttons: wrap — */
     .ds-panel-header-right { flex-wrap: wrap !important; gap: 4px !important; }
-    .ds-panel-header { flex-wrap: wrap !important; }
+    .ds-panel-right { flex-wrap: wrap !important; gap: 4px !important; }
+    .ds-panel-header { flex-wrap: wrap !important; align-items: flex-start !important; }
 
     /* — Prevent any inline-style fixed widths from overflowing — */
     [style*="min-width:600"] { min-width: 0 !important; }
@@ -12613,7 +12615,7 @@ async function initOverviewPage() {
                 '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
                 + '<div style="width:6px;height:6px;border-radius:50%;background:var(--cyan)"></div>'
                 + '<span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute);flex:1">Communications</span>'
-                + '<span onclick="switchPage(\'comms\')" style="font-size:10px;color:var(--cyan);cursor:pointer">→ Go to Comms</span>'
+                + '<span onclick="switchPage(\'communication\')" style="font-size:10px;color:var(--cyan);cursor:pointer">→ Go to Comms</span>'
                 + '</div>'
                 + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">'
                 + '<div><div style="font-size:9px;color:var(--text-mute)">EMAIL</div>'
