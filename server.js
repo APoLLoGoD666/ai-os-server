@@ -10917,24 +10917,19 @@ checkPendingMasterTasks();
         console.error("MASTRA INIT ERROR:", err.message);
     }
 
-    // Ruflo daemon — opt-in only (set ENABLE_RUFLO_DAEMON=true to activate)
-    // Auto-start disabled: spawning a second Node.js process on a 512MB container
-    // causes container OOM. Enable locally when needed via npm run local.
-    if (process.env.ENABLE_RUFLO_DAEMON === 'true') {
+    // Ruflo daemon — auto-starts 10 min after server stabilises
+    // Detached so it runs independently and doesn't hold the event loop.
+    setTimeout(() => {
         try {
             const { spawn: rfSpawnDaemon } = require('child_process');
-            const rfDaemon = rfSpawnDaemon(process.execPath, [
+            rfSpawnDaemon(process.execPath, [
                 'node_modules/ruflo/bin/ruflo.js', 'daemon', 'start'
-            ], { cwd: __dirname, stdio: 'pipe' });
-            rfDaemon.stdout.on('data', d => console.log('[Ruflo daemon]', d.toString().trim()));
-            rfDaemon.stderr.on('data', d => console.log('[Ruflo daemon warn]', d.toString().trim()));
-            rfDaemon.on('close', code => console.log(`[Ruflo daemon] start exited (code ${code})`));
+            ], { cwd: __dirname, detached: true, stdio: 'ignore' }).unref();
+            console.log('[Ruflo] daemon started (deferred 10 min)');
         } catch (err) {
-            console.error('[Ruflo daemon] start failed:', err.message);
+            console.warn('[Ruflo] daemon start failed (non-fatal):', err.message);
         }
-    } else {
-        console.log('[Ruflo] daemon not started (set ENABLE_RUFLO_DAEMON=true to enable)');
-    }
+    }, 600000); // 10 minutes
 });
 
 // Graceful shutdown — stop accepting connections, drain in-flight requests, then exit
