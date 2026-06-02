@@ -78,11 +78,24 @@ const agentLib     = require('./agent-system/agent-library');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
-// ── LangChain agents — lazy-loaded on first voice-chat request ───────────────
-let lcMemory = { getContext: async () => '', addExchange: async () => {} };
-let lcRag    = { retrieveContext: async () => '' };
-let lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} };
-let _lcLoaded = false;
+// ── LangChain modules — loaded at startup, fail-safe fallbacks ───────────────
+let lcMemory;
+try {
+    lcMemory = require('./agent-system/langchain-memory');
+    console.log('[LC] langchain-memory loaded');
+} catch (e) {
+    console.warn('[LC] langchain-memory failed to load:', e.message);
+    lcMemory = { getContext: async () => '', addExchange: async () => {}, clearMemory: async () => {} };
+}
+let lcRag;
+try {
+    lcRag = require('./agent-system/langchain-rag');
+    console.log('[LC] langchain-rag loaded');
+} catch (e) {
+    console.warn('[LC] langchain-rag failed to load:', e.message);
+    lcRag = { retrieveContext: async () => '' };
+}
+const lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} };
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Keyword-based domain detector (fast, zero API cost) ──────────────────────
@@ -8375,12 +8388,14 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         // ── Context fetch — parallel, all non-blocking ───────────────────────
         const _wikiReader = (() => { try { return require('./agent-system/wiki-reader'); } catch { return null; } })();
-        const [memSummary, recentMem, alexContext, relevantDocs, wikiCtx] = await Promise.all([
+        const [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx] = await Promise.all([
             getMemorySummary().catch(() => ''),
             formatRecentMemory().catch(() => ''),
             buildAlexContext().catch(() => ''),
             pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
             _wikiReader ? _wikiReader.getWikiContext(userMessage).catch(() => '') : Promise.resolve(''),
+            lcMemory.getContext(userMessage).catch(() => ''),
+            lcRag.retrieveContext(userMessage).catch(() => ''),
         ]);
         console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done`);
 
@@ -8395,6 +8410,8 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         // Build enriched context block for system prompt
         const contextParts = [];
         if (wikiCtx)     contextParts.push(`VAULT CONTEXT:\n${wikiCtx}`);
+        if (lcMemCtx)    contextParts.push(`CONVERSATION HISTORY:\n${lcMemCtx}`);
+        if (lcRagCtx)    contextParts.push(`VAULT SEARCH:\n${lcRagCtx}`);
         if (memSummary)  contextParts.push(`MEMORY SUMMARY:\n${memSummary}`);
         if (recentMem)   contextParts.push(`RECENT CONVERSATION:\n${recentMem}`);
         if (docsText)    contextParts.push(`WORKSPACE DOCUMENTS:\n${docsText}`);

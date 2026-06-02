@@ -1,5 +1,10 @@
 {
   "mcpServers": {
+    "gitnexus": {
+      "command": "cmd",
+      "args": ["/c", "gitnexus", "mcp"],
+      "env": {}
+    },
     "ruflo": {
       "command": "cmd",
       "args": [

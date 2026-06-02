@@ -495,15 +495,14 @@ Also check: no duplicate route paths, try/catch on async DB calls, no raw secret
 Protected (report as CRITICAL if touched): iOS HTT pipeline, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.${uiAudit}${priorDecisions}
 Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}`;
 
-    const allIssues = [];
-    let allPassed = true;
-
-    for (const entry of filesModified) {
+    const fileResults = await Promise.all(filesModified.map(async (entry) => {
         const filename = entry.file || entry;
         let fileContent = '(not found on disk)';
         try { fileContent = fs.readFileSync(path.join(_worktreeRoot, filename), 'utf8'); } catch {}
 
-        let fileResult;
+        const issues = [];
+        let passed = true;
+
         try {
             const reviewerClient = _clientFor(_agentModels.reviewer);
             const response = await Promise.race([
@@ -517,15 +516,16 @@ Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}
             ]);
             _trackCost(response.usage, _agentModels.reviewer, 'REVIEWER');
             const text = response.content[0]?.text?.trim();
+            let fileResult;
             try { fileResult = _parseJSON(text); }
             catch { fileResult = { file: filename, passed: true, issues: [] }; }
+            if (!fileResult.passed) {
+                passed = false;
+                (fileResult.issues || []).forEach(i => issues.push(`${filename}: ${i}`));
+            }
         } catch (e) {
-            fileResult = { file: filename, passed: false, issues: [e.message] };
-        }
-
-        if (!fileResult.passed) {
-            allPassed = false;
-            (fileResult.issues || []).forEach(i => allIssues.push(`${filename}: ${i}`));
+            passed = false;
+            issues.push(`${filename}: ${e.message}`);
         }
 
         // Impeccable static anti-pattern check for HTML/CSS files
@@ -537,13 +537,18 @@ Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}
                     const imp = await impeccable.validateFile(filePath);
                     if (!imp.skipped && imp.issues.length) {
                         const high = imp.issues.filter(i => i.severity === 'high');
-                        if (high.length) { allPassed = false; }
-                        imp.issues.forEach(i => allIssues.push(`${filename} [impeccable]: ${i.message}`));
+                        if (high.length) passed = false;
+                        imp.issues.forEach(i => issues.push(`${filename} [impeccable]: ${i.message}`));
                     }
                 }
             } catch {}
         }
-    }
+
+        return { passed, issues };
+    }));
+
+    const allIssues = fileResults.flatMap(r => r.issues);
+    const allPassed = fileResults.every(r => r.passed);
 
     console.log(`[Reviewer] passed=${allPassed}${allIssues.length ? ' issues: ' + allIssues[0] : ''}`);
     return { role: 'REVIEWER', result: { passed: allPassed, issues: allIssues }, duration: Date.now() - t0 };
@@ -924,21 +929,20 @@ async function runAgentTeam(spec, taskId) {
                 return _fail('DEVELOPER made no file changes after all retries');
             }
 
-            // Step 3 — REVIEWER + SECURITY AUDIT
-            reviewerLog = await _reviewer(spec, developerLog);
-            agentLogs.push(reviewerLog);
-            console.log(`[Orchestrator] REVIEWER (${reviewerLog.duration}ms) — passed=${reviewerLog.result.passed}`);
+            // Step 3 — REVIEWER + VALIDATOR in parallel (neither depends on the other)
+            [reviewerLog, validatorLog] = await Promise.all([
+                _reviewer(spec, developerLog),
+                _validator(spec, architectLog, developerLog),
+            ]);
+            agentLogs.push(reviewerLog, validatorLog);
+            console.log(`[Orchestrator] REVIEWER (${reviewerLog.duration}ms) passed=${reviewerLog.result.passed} | VALIDATOR (${validatorLog.duration}ms) passed=${validatorLog.result.passed}`);
+
             if (!reviewerLog.result.passed) {
                 _rollback();
                 lastFailure = `REVIEWER: ${(reviewerLog.result.issues || []).join('; ')}`;
                 if (attempt < MAX_ATTEMPTS) { console.log('[Orchestrator] retrying after review failure...'); continue; }
                 return _fail(lastFailure);
             }
-
-            // Step 3.5 — VALIDATOR (tdd-guard)
-            validatorLog = await _validator(spec, architectLog, developerLog);
-            agentLogs.push(validatorLog);
-            console.log(`[Orchestrator] VALIDATOR (${validatorLog.duration}ms) — passed=${validatorLog.result.passed}`);
             if (!validatorLog.result.passed && (validatorLog.result.failedCases || []).length > 0) {
                 _rollback();
                 lastFailure = `VALIDATOR: ${(validatorLog.result.failedCases || []).join('; ')}`;

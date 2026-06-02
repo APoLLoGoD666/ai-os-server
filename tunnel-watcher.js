@@ -8,6 +8,12 @@ if (process.env.LOCAL_MODE === "true") {
     return;
 }
 
+// On Render, OBSIDIAN_URL is already set as an env var — no tunnel needed.
+if (process.env.RENDER && process.env.OBSIDIAN_URL) {
+    console.log("[Tunnel] Running on Render with OBSIDIAN_URL set — tunnel skipped.");
+    return;
+}
+
 const { spawn } = require("child_process");
 const https = require("https");
 const path = require("path");
