@@ -651,7 +651,7 @@ async function _committer(spec, branchName) {
         console.log(`[COMMITTER] merged ${branchName} → main (${finalHash})`);
     }
 
-    const repoUrl = `https://apex-autopilot:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
+    const repoUrl = `https://oauth2:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
 
     // Rebase onto latest remote before pushing to avoid non-fast-forward rejection
     const pull = spawnSync('git', ['pull', '--rebase', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
@@ -665,7 +665,7 @@ async function _committer(spec, branchName) {
 
     if (push.status !== 0) {
         console.error('[COMMITTER] push failed:', push.stderr);
-        return { role: 'COMMITTER', result: { commitHash: finalHash, error: `push failed: ${push.stderr}` }, duration: Date.now() - t0 };
+        return { role: 'COMMITTER', result: { commitHash: null, error: `push failed: ${push.stderr?.slice(0, 200)}` }, duration: Date.now() - t0 };
     }
 
     // Trigger Render deploy
