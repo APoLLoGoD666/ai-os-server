@@ -746,19 +746,15 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity) {
         agent_summary: JSON.stringify(agentSummary),
         created_at:    new Date().toISOString()
     };
-    try {
-        await _sb.from('apex_agent_runs').upsert({
-            ...baseRow,
-            duration_ms: durationMs,
-            token_usage: JSON.stringify(_agentTokens),
-        }, { onConflict: 'task_id' });
-    } catch (e) {
-        // Retry without optional columns — handles schema lag when new columns not yet migrated
-        try {
-            await _sb.from('apex_agent_runs').upsert(baseRow, { onConflict: 'task_id' });
-        } catch (e2) {
-            console.warn('[Audit] log skipped (non-fatal):', e2.message);
-        }
+    const { error: e1 } = await _sb.from('apex_agent_runs').upsert({
+        ...baseRow,
+        duration_ms: durationMs,
+        token_usage: JSON.stringify(_agentTokens),
+    }, { onConflict: 'task_id' });
+    if (e1) {
+        // Retry without optional columns — handles schema lag when columns not yet migrated
+        const { error: e2 } = await _sb.from('apex_agent_runs').upsert(baseRow, { onConflict: 'task_id' });
+        if (e2) console.warn('[Audit] log skipped (non-fatal):', e2.message);
     }
 }
 
