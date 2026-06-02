@@ -9014,7 +9014,8 @@ async function speakWithElevenLabs(text) {
 
         // arrayBuffer → Blob approach is the only path that reliably works on iOS Safari
         const buf  = await fetchRes.arrayBuffer();
-        const blob = new Blob([buf], { type: getTtsMimeType() });
+        const mimeType = fetchRes.headers.get('content-type') || getTtsMimeType();
+        const blob = new Blob([buf], { type: mimeType.split(';')[0].trim() });
 
         // Revoke the previous blob URL before creating the new one
         if (_apexBlobUrl) { try { URL.revokeObjectURL(_apexBlobUrl); } catch (_) {} }

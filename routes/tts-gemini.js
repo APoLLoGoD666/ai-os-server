@@ -115,7 +115,39 @@ router.post('/tts/gemini', async (req, res) => {
         if (!gRes.ok) {
             const errText = await gRes.text().catch(() => '');
             console.error('[APEX-UI] Gemini TTS API error:', gRes.status, errText.slice(0, 300));
-            // Pass 429 through so the client knows to back off
+
+            // On 429 rate limit — try ElevenLabs as fallback before giving up
+            if (gRes.status === 429 && process.env.ELEVENLABS_API_KEY) {
+                try {
+                    console.log('[TTS/Gemini] 429 — falling back to ElevenLabs');
+                    const elRes = await fetch(
+                        'https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM/stream',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'xi-api-key': process.env.ELEVENLABS_API_KEY,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                text: text.slice(0, 500),
+                                model_id: 'eleven_turbo_v2',
+                                voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+                            })
+                        }
+                    );
+                    if (elRes.ok) {
+                        const mp3 = Buffer.from(await elRes.arrayBuffer());
+                        res.set('Content-Type', 'audio/mpeg');
+                        res.set('Content-Length', String(mp3.length));
+                        res.set('Cache-Control', 'no-store');
+                        res.set('X-Apex-TTS-Fallback', 'elevenlabs');
+                        return res.send(mp3);
+                    }
+                } catch (elErr) {
+                    console.error('[TTS/ElevenLabs] fallback error:', elErr.message);
+                }
+            }
+
             const status = gRes.status === 429 ? 429 : 502;
             return res.status(status).json({ error: 'Gemini API returned ' + gRes.status, detail: errText.slice(0, 300) });
         }
