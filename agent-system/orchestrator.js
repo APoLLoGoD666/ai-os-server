@@ -662,10 +662,15 @@ async function _committer(spec, branchName) {
     }
 
     const push = spawnSync('git', ['push', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+    console.log(`[COMMITTER] push status:${push.status} stdout:${push.stdout?.trim().slice(0,100)} stderr:${push.stderr?.trim().slice(0,100)}`);
 
     if (push.status !== 0) {
         console.error('[COMMITTER] push failed:', push.stderr);
         return { role: 'COMMITTER', result: { commitHash: null, error: `push failed: ${push.stderr?.slice(0, 200)}` }, duration: Date.now() - t0 };
+    }
+    if (push.stderr?.includes('Everything up-to-date')) {
+        console.error('[COMMITTER] push no-op — worktree changes not in ROOT');
+        return { role: 'COMMITTER', result: { commitHash: null, error: 'push up-to-date: file changes were not in ROOT git index' }, duration: Date.now() - t0 };
     }
 
     // Trigger Render deploy
