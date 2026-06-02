@@ -95,6 +95,15 @@ router.get('/university/flashcards', _auth, async (req, res) => {
     } catch (e) { res.json({ ok: true, flashcards: [], due: 0, error: e.message }); }
 });
 
+router.get('/university/sessions', _auth, async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+        const { data, error } = await sb().from('apex_university_sessions').select('*').order('created_at', { ascending: false }).limit(limit);
+        if (error) return res.json({ ok: true, sessions: [] });
+        res.json({ ok: true, sessions: data || [] });
+    } catch (e) { res.json({ ok: true, sessions: [], error: e.message }); }
+});
+
 router.post('/university/sessions', _auth, async (req, res) => {
     try {
         const { module_id, duration_seconds, session_type, notes } = req.body || {};
@@ -132,6 +141,26 @@ router.post('/habits/log', _auth, async (req, res) => {
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, log: data });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// /api/life/* aliases — dashboard prefixes life-workstream paths with /life/
+router.get('/life/university/modules', _auth, async (req, res) => {
+    try { const { data, error } = await sb().from('apex_university_modules').select('*').order('name',{ascending:true}); res.json({ ok: true, modules: error ? [] : (data||[]) }); } catch(e) { res.json({ok:true,modules:[]}); }
+});
+router.get('/life/university/assignments', _auth, async (req, res) => {
+    try { const { data, error } = await sb().from('apex_university_assignments').select('*').order('due_date',{ascending:true}); res.json({ ok: true, assignments: error ? [] : (data||[]) }); } catch(e) { res.json({ok:true,assignments:[]}); }
+});
+router.get('/life/university/flashcards', _auth, async (req, res) => {
+    try { const { data, error } = await sb().from('apex_university_flashcards').select('id,front,back,module_id,next_review_at').lte('next_review_at',new Date().toISOString()).order('next_review_at',{ascending:true}).limit(50); res.json({ ok: true, flashcards: error ? [] : (data||[]), due: (data||[]).length }); } catch(e) { res.json({ok:true,flashcards:[],due:0}); }
+});
+router.get('/life/university/sessions', _auth, async (req, res) => {
+    try { const limit=Math.min(parseInt(req.query.limit)||20,100); const { data, error } = await sb().from('apex_university_sessions').select('*').order('created_at',{ascending:false}).limit(limit); res.json({ ok: true, sessions: error ? [] : (data||[]) }); } catch(e) { res.json({ok:true,sessions:[]}); }
+});
+router.get('/life/university/reading-list', _auth, async (req, res) => {
+    try { const { data, error } = await sb().from('apex_reading_list').select('*').order('created_at',{ascending:false}); res.json({ ok: true, books: error ? [] : (data||[]) }); } catch(e) { res.json({ok:true,books:[]}); }
+});
+router.get('/life/spiritual/sessions', _auth, async (req, res) => {
+    try { const { data, error } = await sb().from('apex_spiritual_sessions').select('*').order('created_at',{ascending:false}).limit(20); res.json({ ok: true, sessions: error ? [] : (data||[]) }); } catch(e) { res.json({ok:true,sessions:[]}); }
 });
 
 module.exports = router;
