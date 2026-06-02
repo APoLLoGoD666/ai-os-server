@@ -15046,7 +15046,7 @@ function _updateTopbarAgents(){
     var _origFetch=window.fetch;
     window.fetch=function(url, opts){
         var t0=Date.now();
-        var isApi=typeof url==='string'&&url.includes('/api/');
+        var isApi=typeof url==='string'&&(url.includes('/api/')||url.startsWith('/notifications')||url.startsWith('/agent-tasks'));
         if(isApi){
             var key=window._appKey||window._apexAppKey||APP_KEY||'';
             if(key){
