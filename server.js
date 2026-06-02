@@ -1241,13 +1241,19 @@ async function getRelevantDocuments(question) {
         return pgSearchDocuments(q).catch(() => []);
     }
 
-    // Try semantic vector search first
-    if (process.env.VOYAGE_API_KEY && q) {
+    // Try semantic vector search (Voyage primary, Gemini fallback)
+    if (q) {
         try {
             const embedding = await embedText(q);
             if (embedding) {
-                // Vector cosine search requires raw SQL (<=> operator) — not available via Supabase JS client
-                // Falling through to keyword search
+                const { data, error } = await sbAdmin.rpc('match_documents', {
+                    query_embedding: embedding,
+                    match_count: 5
+                });
+                if (!error && data?.length) {
+                    console.log(`[VectorSearch] ${data.length} results for: ${q.slice(0, 40)}`);
+                    return data;
+                }
             }
         } catch (err) {
             console.error("VECTOR SEARCH ERROR:", err.message);
@@ -10940,7 +10946,36 @@ server.listen(PORT, () => {
     });
 
     console.log('[Email] Backfill skipped — using Supabase client');
-    console.log('[PGVector] Skipping — managed via Supabase dashboard');
+
+    // Ensure pgvector match function exists (idempotent — safe to re-run)
+    setImmediate(async () => {
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query(`
+                CREATE EXTENSION IF NOT EXISTS vector;
+                ALTER TABLE documents ADD COLUMN IF NOT EXISTS embedding vector(768);
+                CREATE OR REPLACE FUNCTION match_documents(
+                    query_embedding vector(768), match_count int DEFAULT 5
+                ) RETURNS TABLE(
+                    filename text, classification text, summary text,
+                    content text, created_at timestamptz, similarity float
+                ) LANGUAGE plpgsql AS $$
+                BEGIN
+                    RETURN QUERY
+                    SELECT d.filename, d.classification, d.summary, d.content, d.created_at,
+                           1 - (d.embedding <=> query_embedding) AS similarity
+                    FROM documents d
+                    WHERE d.embedding IS NOT NULL
+                    ORDER BY d.embedding <=> query_embedding
+                    LIMIT match_count;
+                END;
+                $$;
+            `);
+            console.log('[PGVector] match_documents function ready');
+        } catch (e) {
+            console.warn('[PGVector] setup skipped:', e.message);
+        }
+    });
 
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🤖 Model: ${MODEL}`);
