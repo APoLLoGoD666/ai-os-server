@@ -8188,30 +8188,30 @@ if (APP_KEY) {
 }
 window._apexAppKey = APP_KEY;
 window._appKey = APP_KEY;
-if (!APP_KEY) {
-    document.addEventListener('DOMContentLoaded', function(){
-        var overlay = document.createElement('div');
-        overlay.id = 'apexKeyOverlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(8,9,14,0.97);display:flex;align-items:center;justify-content:center;z-index:99999;font-family:monospace';
-        overlay.innerHTML = '<div style="background:#0d0e14;border:1px solid #1e2235;border-radius:12px;padding:36px 40px;max-width:380px;width:90%;text-align:center"><div style="color:#7b8cff;font-size:13px;letter-spacing:3px;text-transform:uppercase;margin-bottom:20px">APEX AI OS</div><div style="color:#888;font-size:12px;margin-bottom:20px">Enter your access key to continue</div><input id="apexKeyInput" type="password" placeholder="Access key…" style="width:100%;background:#0a0b10;border:1px solid #2a2f45;border-radius:8px;color:#e0e0e0;font-family:monospace;font-size:14px;padding:12px 14px;box-sizing:border-box;outline:none;margin-bottom:12px"><button id="apexKeyBtn" style="width:100%;background:#7b8cff;border:none;border-radius:8px;color:#fff;font-family:monospace;font-size:13px;font-weight:600;padding:12px;cursor:pointer;letter-spacing:1px">UNLOCK</button><div id="apexKeyErr" style="color:#ff6b6b;font-size:11px;margin-top:10px;min-height:16px"></div></div>';
-        document.body.appendChild(overlay);
-        function tryKey(){
-            var k=(document.getElementById('apexKeyInput').value||'').trim();
-            if(!k){document.getElementById('apexKeyErr').textContent='Key required';return;}
-            fetch('/health',{headers:{'x-app-key':k}}).then(function(r){
-                if(r.ok){
-                    localStorage.setItem('apex_app_key',k);
-                    APP_KEY=k;window._appKey=k;window._apexAppKey=k;
-                    overlay.remove();
-                    if(typeof refreshFast==='function')refreshFast();
-                } else { document.getElementById('apexKeyErr').textContent='Invalid key — try again'; }
-            }).catch(function(){document.getElementById('apexKeyErr').textContent='Cannot reach server';});
-        }
-        document.getElementById('apexKeyBtn').addEventListener('click',tryKey);
-        document.getElementById('apexKeyInput').addEventListener('keydown',function(e){if(e.key==='Enter')tryKey();});
-        setTimeout(function(){var i=document.getElementById('apexKeyInput');if(i)i.focus();},100);
-    });
+function _showKeyModal() {
+    if (document.getElementById('apexKeyOverlay')) return;
+    var overlay = document.createElement('div');
+    overlay.id = 'apexKeyOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(8,9,14,0.97);display:flex;align-items:center;justify-content:center;z-index:99999;font-family:monospace';
+    overlay.innerHTML = '<div style="background:#0d0e14;border:1px solid #1e2235;border-radius:12px;padding:36px 40px;max-width:380px;width:90%;text-align:center"><div style="color:#7b8cff;font-size:13px;letter-spacing:3px;text-transform:uppercase;margin-bottom:20px">APEX AI OS</div><div style="color:#888;font-size:12px;margin-bottom:20px">Enter your access key to continue</div><input id="apexKeyInput" type="password" placeholder="Access key…" style="width:100%;background:#0a0b10;border:1px solid #2a2f45;border-radius:8px;color:#e0e0e0;font-family:monospace;font-size:14px;padding:12px 14px;box-sizing:border-box;outline:none;margin-bottom:12px"><button id="apexKeyBtn" style="width:100%;background:#7b8cff;border:none;border-radius:8px;color:#fff;font-family:monospace;font-size:13px;font-weight:600;padding:12px;cursor:pointer;letter-spacing:1px">UNLOCK</button><div id="apexKeyErr" style="color:#ff6b6b;font-size:11px;margin-top:10px;min-height:16px"></div></div>';
+    document.body.appendChild(overlay);
+    function tryKey(){
+        var k=(document.getElementById('apexKeyInput').value||'').trim();
+        if(!k){document.getElementById('apexKeyErr').textContent='Key required';return;}
+        fetch('/api/config',{headers:{'x-app-key':k}}).then(function(r){
+            if(r.ok){
+                localStorage.setItem('apex_app_key',k);
+                APP_KEY=k;window._appKey=k;window._apexAppKey=k;
+                overlay.remove();
+                if(typeof refreshFast==='function')refreshFast();
+            } else { document.getElementById('apexKeyErr').textContent='Invalid key — try again'; }
+        }).catch(function(){document.getElementById('apexKeyErr').textContent='Cannot reach server';});
+    }
+    document.getElementById('apexKeyBtn').addEventListener('click',tryKey);
+    document.getElementById('apexKeyInput').addEventListener('keydown',function(e){if(e.key==='Enter')tryKey();});
+    setTimeout(function(){var i=document.getElementById('apexKeyInput');if(i)i.focus();},100);
 }
+if (!APP_KEY) { _showKeyModal(); }
 const MAX_ITEMS           = 5;
 const REFRESH_INTERVAL_MS = 18000;
 
@@ -8773,7 +8773,8 @@ function buildApiUrl(path) {
 }
 
 function buildApiHeaders(extra = {}) {
-    return APP_KEY ? { ...extra, "x-app-key": APP_KEY } : extra;
+    const key = APP_KEY || window._appKey || window._apexAppKey || '';
+    return key ? { ...extra, "x-app-key": key } : extra;
 }
 
 function escapeHtml(v) {
@@ -8805,6 +8806,11 @@ async function fetchJson(path, options = {}) {
     }
     let data;
     try { data = text ? JSON.parse(text) : {}; } catch { throw new Error(`Invalid JSON from ${path}.`); }
+    if (res.status === 401) {
+        APP_KEY = ''; window._appKey = ''; window._apexAppKey = '';
+        localStorage.removeItem('apex_app_key');
+        _showKeyModal();
+    }
     if (!res.ok) throw new Error(data.reply || data.error || "Request failed.");
     return data;
 }
@@ -9028,7 +9034,7 @@ async function speakWithElevenLabs(text) {
         const ac = new AbortController();
         currentAbort = ac;
         let fetchRes;
-        const _retryDelays = [1000, 3000];
+        const _retryDelays = [2000, 8000];
         for (let _attempt = 0; _attempt <= _retryDelays.length; _attempt++) {
             fetchRes = await fetch(buildApiUrl(getTtsUrl()), {
                 method: "POST",

@@ -101,12 +101,6 @@ router.post('/tts/gemini', async (req, res) => {
         let gRes;
         try {
             gRes = await callGeminiTTS(url, payload);
-            // Single retry after 1.5s on 429 (rate limit) or 503 (transient)
-            if ((gRes.status === 429 || gRes.status === 503) && !res.headersSent) {
-                console.warn(`[TTS/Gemini] ${gRes.status} — retrying in 1.5s`);
-                await new Promise(r => setTimeout(r, 1500));
-                gRes = await callGeminiTTS(url, payload);
-            }
         } catch (netErr) {
             console.error('[APEX-UI] Gemini TTS network error:', netErr.message);
             return res.status(502).json({ error: 'Network error reaching Gemini API', detail: netErr.message });
