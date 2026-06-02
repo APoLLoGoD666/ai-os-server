@@ -732,25 +732,33 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
 // ── Audit log — records each pipeline run to Supabase for cost tracking ────────
 async function _auditLog(taskId, spec, success, agentLogs, cost, complexity) {
     if (!_sb) return; // Supabase not configured — skip silently
+    const agentSummary = agentLogs.map(l => ({
+        role: l.role, duration: l.duration,
+        passed: l.result?.passed, error: l.result?.error || l.result?.commitHash
+    }));
+    const durationMs = _startTime ? Date.now() - _startTime : null;
+    const baseRow = {
+        task_id:       taskId,
+        objective:     (spec.objective || '').slice(0, 255),
+        success,
+        cost_usd:      parseFloat(cost) || 0,
+        complexity:    complexity || 'moderate',
+        agent_summary: JSON.stringify(agentSummary),
+        created_at:    new Date().toISOString()
+    };
     try {
-        const agentSummary = agentLogs.map(l => ({
-            role: l.role, duration: l.duration,
-            passed: l.result?.passed, error: l.result?.error || l.result?.commitHash
-        }));
-        const durationMs = _startTime ? Date.now() - _startTime : null;
         await _sb.from('apex_agent_runs').upsert({
-            task_id:       taskId,
-            objective:     (spec.objective || '').slice(0, 255),
-            success,
-            cost_usd:      parseFloat(cost) || 0,
-            complexity:    complexity || 'moderate',
-            agent_summary: JSON.stringify(agentSummary),
-            duration_ms:   durationMs,
-            token_usage:   JSON.stringify(_agentTokens),
-            created_at:    new Date().toISOString()
+            ...baseRow,
+            duration_ms: durationMs,
+            token_usage: JSON.stringify(_agentTokens),
         }, { onConflict: 'task_id' });
     } catch (e) {
-        console.warn('[Audit] log skipped (non-fatal):', e.message);
+        // Retry without optional columns — handles schema lag when new columns not yet migrated
+        try {
+            await _sb.from('apex_agent_runs').upsert(baseRow, { onConflict: 'task_id' });
+        } catch (e2) {
+            console.warn('[Audit] log skipped (non-fatal):', e2.message);
+        }
     }
 }
 
