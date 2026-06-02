@@ -15040,14 +15040,24 @@ function _updateTopbarAgents(){
     el.textContent=running||'—';
 }
 
-/* Patch the global fetch to track latency on API calls */
+/* Patch global fetch: auto-inject x-app-key on /api/ calls + latency tracking */
 (function(){
     var _origFetch=window.fetch;
     window.fetch=function(url, opts){
         var t0=Date.now();
-        return _origFetch.apply(this,arguments).then(function(r){
-            var ms=Date.now()-t0;
-            if(typeof url==='string'&&url.includes('/api/')){
+        var isApi=typeof url==='string'&&url.includes('/api/');
+        if(isApi){
+            var key=window._appKey||window._apexAppKey||APP_KEY||'';
+            if(key){
+                opts=opts||{};
+                var existing=opts.headers||{};
+                var merged=Object.assign({'x-app-key':key},existing);
+                opts=Object.assign({},opts,{headers:merged});
+            }
+        }
+        return _origFetch.call(this,url,opts).then(function(r){
+            if(isApi){
+                var ms=Date.now()-t0;
                 window.apexTrackLatency(ms);
                 var tag=url.replace(/.*\/api\//,'').split('?')[0].split('/')[0].toUpperCase().slice(0,12);
                 if(ms>800)window.apexFeedPush(tag,'Slow response — '+ms+'ms','error');
