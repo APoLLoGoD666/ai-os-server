@@ -99,15 +99,17 @@ function markFeatureComplete(featureId) {
         '- [x] $1'
     );
     fs.writeFileSync(ROADMAP_FILE, content, 'utf8');
+    const _mTok = process.env.GITHUB_TOKEN || '';
+    const _mMask = (s) => _mTok ? String(s || '').replace(_mTok, '[REDACTED]') : String(s || '');
     try {
-        const repoUrl = `https://oauth2:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
+        const repoUrl = `https://oauth2:${_mTok}@github.com/APoLLoGoD666/ai-os-server.git`;
         execSync('git add ROADMAP.md', { cwd: ROOT, stdio: 'pipe' });
         execSync(`git commit -m "roadmap: mark ${featureId} complete [skip ci]"`, { cwd: ROOT, stdio: 'pipe' });
         execSync(`git pull --rebase ${repoUrl} main`, { cwd: ROOT, stdio: 'pipe' });
         execSync(`git push ${repoUrl} main`, { cwd: ROOT, stdio: 'pipe' });
         console.log(`[Master] ROADMAP.md pushed — ${featureId} marked [x]`);
     } catch (e) {
-        console.warn(`[Master] ROADMAP.md push failed (non-fatal): ${e.message}`);
+        console.warn(`[Master] ROADMAP.md push failed (non-fatal): ${_mMask(e.message)}`);
     }
 }
 
@@ -859,14 +861,16 @@ async function ship(featureId, opts = {}) {
     // Git tag + push
     let tagResult = 'skipped';
     if (process.env.GITHUB_TOKEN) {
+        const _rTok = process.env.GITHUB_TOKEN;
+        const _rMask = (s) => String(s || '').replace(_rTok, '[REDACTED]');
         try {
             const { execSync } = require('child_process');
-            const repoUrl = `https://oauth2:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
+            const repoUrl = `https://oauth2:${_rTok}@github.com/APoLLoGoD666/ai-os-server.git`;
             execSync(`git tag ${releaseTag}`, { cwd: ROOT, stdio: 'pipe' });
             execSync(`git push ${repoUrl} ${releaseTag}`, { cwd: ROOT, stdio: 'pipe' });
             tagResult = releaseTag;
         } catch (e) {
-            tagResult = `tag-failed: ${e.message.slice(0, 100)}`;
+            tagResult = `tag-failed: ${_rMask(e.message).slice(0, 100)}`;
         }
     }
 

@@ -11943,6 +11943,12 @@ function hasCookie(){return document.cookie.split(';').some(c=>c.trim().startsWi
   var pw=document.getElementById('apexLoginPw');
   if(pw){pw.addEventListener('keydown',function(e){if(e.key==='Enter')apexDoLogin();});}
 })();
+setInterval(function() {
+    if (!hasCookie()) {
+        var overlay = document.getElementById('apexLoginOverlay');
+        if (overlay && overlay.style.display === 'none') { overlay.style.display = 'flex'; }
+    }
+}, 60000);
 
 async function apexDoLogin(){
   var pw=document.getElementById('apexLoginPw').value;

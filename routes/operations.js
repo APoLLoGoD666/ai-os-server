@@ -14,10 +14,10 @@ router.get('/operations/clients', _auth, async (req, res) => {
             .select('*')
             .order('created_at', { ascending: false })
             .limit(50);
-        if (error) return res.json({ ok: true, clients: [] });
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, clients: data || [] });
     } catch (e) {
-        res.json({ ok: true, clients: [], error: e.message });
+        res.status(500).json({ ok: false, error: e.message });
     }
 });
 
@@ -52,10 +52,10 @@ router.get('/operations/projects', _auth, async (req, res) => {
             .select('*')
             .order('created_at', { ascending: false })
             .limit(20);
-        if (error) return res.json({ ok: true, projects: [] });
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, projects: data || [] });
     } catch (e) {
-        res.json({ ok: true, projects: [], error: e.message });
+        res.status(500).json({ ok: false, error: e.message });
     }
 });
 
@@ -67,10 +67,10 @@ router.get('/operations/documents', _auth, async (req, res) => {
             .select('id,name,status,doc_type,created_at,updated_at')
             .order('created_at', { ascending: false })
             .limit(30);
-        if (error) return res.json({ ok: true, documents: [] });
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, documents: data || [] });
     } catch (e) {
-        res.json({ ok: true, documents: [], error: e.message });
+        res.status(500).json({ ok: false, error: e.message });
     }
 });
 
@@ -82,10 +82,10 @@ router.get('/operations/proposals', _auth, async (req, res) => {
             .select('*')
             .order('created_at', { ascending: false })
             .limit(20);
-        if (error) return res.json({ ok: true, proposals: [] });
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, proposals: data || [] });
     } catch (e) {
-        res.json({ ok: true, proposals: [], error: e.message });
+        res.status(500).json({ ok: false, error: e.message });
     }
 });
 

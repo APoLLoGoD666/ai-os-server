@@ -10143,19 +10143,19 @@ app.get('/api/intelligence/agent-runs', requireAppAccess, async (req, res) => {
         const { data } = await sbAdmin.from('apex_agent_runs')
             .select('*').order('created_at', { ascending: false }).limit(limit);
         res.json({ ok: true, runs: data || [] });
-    } catch { res.json({ ok: true, runs: [] }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get('/api/intelligence/cost-summary', requireAppAccess, async (req, res) => {
     try {
-        const { data } = await sbAdmin.from('apex_agent_runs').select('cost_usd,model');
+        const { data } = await sbAdmin.from('apex_agent_runs').select('cost_usd,model').limit(1000);
         const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
         const byModel = {};
         for (const r of (data || [])) {
             if (r.model) byModel[r.model] = ((byModel[r.model] || 0) + (r.cost_usd || 0));
         }
         res.json({ ok: true, total_cost_usd: total.toFixed(4), by_model: byModel });
-    } catch { res.json({ ok: true, total_cost_usd: '0.0000', by_model: {} }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get('/api/intelligence/lessons', requireAppAccess, async (req, res) => {
@@ -10164,7 +10164,7 @@ app.get('/api/intelligence/lessons', requireAppAccess, async (req, res) => {
         const { data } = await sbAdmin.from('apex_lessons')
             .select('*').order('created_at', { ascending: false }).limit(n);
         res.json({ ok: true, lessons: data || [] });
-    } catch { res.json({ ok: true, lessons: [] }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get('/api/cost/today', requireAppAccess, async (req, res) => {
@@ -10174,14 +10174,14 @@ app.get('/api/cost/today', requireAppAccess, async (req, res) => {
             .select('cost_usd').gte('created_at', today);
         const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
         res.json({ ok: true, cost_usd: total.toFixed(4), date: today });
-    } catch { res.json({ ok: true, cost_usd: '0.0000' }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get('/api/agent/status', requireAppAccess, async (req, res) => {
     try {
         const { data } = await sbAdmin.from('apex_agents').select('slug,name,status');
         res.json({ ok: true, agents: data || [] });
-    } catch { res.json({ ok: true, agents: [] }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 // ── End stub routes ───────────────────────────────────────────────────────────
 

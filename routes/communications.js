@@ -22,10 +22,10 @@ async function getGCalClient() {
 
 router.get('/contacts', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_contacts').select('*').order('name', { ascending: true }).limit(50);
-        if (error) return res.json({ ok: true, contacts: [] });
+        const { data, error } = await sb().from('apex_contacts').select('id,name,email,phone,company,created_at').order('name', { ascending: true }).limit(50);
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, contacts: data || [] });
-    } catch (e) { res.json({ ok: true, contacts: [], error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 router.get('/calendar/events', _auth, async (req, res) => {
@@ -35,14 +35,14 @@ router.get('/calendar/events', _auth, async (req, res) => {
         const endDate  = new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
         const { data, error } = await sb()
             .from('apex_calendar_events')
-            .select('*')
+            .select('id,title,event_date,start_time,end_time,all_day,location,status')
             .gte('event_date', today)
             .lte('event_date', endDate)
             .order('event_date', { ascending: true })
             .limit(50);
-        if (error) return res.json({ ok: true, events: [] });
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, events: data || [] });
-    } catch (e) { res.json({ ok: true, events: [], error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // POST /api/calendar/sync — pull events from Google Calendar into apex_calendar_events

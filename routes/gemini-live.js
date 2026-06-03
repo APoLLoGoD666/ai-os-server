@@ -156,7 +156,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
         // Build context-aware system prompt fresh on each session
         let alexContext = '';
         if (buildAlexContext) {
-            try { alexContext = await buildAlexContext(); } catch {}
+            try { alexContext = await buildAlexContext(); } catch (e) { console.error('[GeminiLive] buildAlexContext failed:', e.message); }
         }
         const systemPrompt = buildSystemPrompt(alexContext);
 
@@ -283,8 +283,9 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
             if (browserWs.readyState === WebSocket.OPEN) browserWs.close();
         });
         geminiWs.on('error', e => {
-            console.error('[GeminiLive] Gemini error:', e.message);
-            safeSend(browserWs, { type: 'error', message: e.message });
+            const safeMsg = resolvedKey ? e.message.replace(resolvedKey, '[REDACTED]') : e.message;
+            console.error('[GeminiLive] Gemini error:', safeMsg);
+            safeSend(browserWs, { type: 'error', message: safeMsg });
         });
     });
 
