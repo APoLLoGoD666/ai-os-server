@@ -78,24 +78,19 @@ const agentLib     = require('./agent-system/agent-library');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
-// ── LangChain modules — loaded at startup, fail-safe fallbacks ───────────────
-let lcMemory;
-try {
-    lcMemory = require('./agent-system/langchain-memory');
-    console.log('[LC] langchain-memory loaded');
-} catch (e) {
-    console.warn('[LC] langchain-memory failed to load:', e.message);
-    lcMemory = { getContext: async () => '', addExchange: async () => {}, clearMemory: async () => {} };
-}
-let lcRag;
-try {
-    lcRag = require('./agent-system/langchain-rag');
-    console.log('[LC] langchain-rag loaded');
-} catch (e) {
-    console.warn('[LC] langchain-rag failed to load:', e.message);
-    lcRag = { retrieveContext: async () => '' };
-}
+// ── LangChain modules — lazy-loaded on first voice-chat to avoid startup RSS hit
+let lcMemory = { getContext: async () => '', addExchange: async () => {}, clearMemory: async () => {} };
+let lcRag    = { retrieveContext: async () => '' };
 const lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} };
+let _lcLoaded = false;
+async function _ensureLCLoaded() {
+    if (_lcLoaded) return;
+    _lcLoaded = true;
+    try { lcMemory = require('./agent-system/langchain-memory'); console.log('[LC] memory loaded'); }
+    catch (e) { console.warn('[LC] memory load failed:', e.message); }
+    try { lcRag = require('./agent-system/langchain-rag'); console.log('[LC] rag loaded'); }
+    catch (e) { console.warn('[LC] rag load failed:', e.message); }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Keyword-based domain detector (fast, zero API cost) ──────────────────────
@@ -8380,6 +8375,9 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         const t0 = Date.now();
         console.log("[LATENCY] +0ms request received");
+
+        // Lazy-load LangChain on first request — avoids startup RSS hit
+        _ensureLCLoaded().catch(() => {});
 
         const userMessage = rawMessage.trim();
 
