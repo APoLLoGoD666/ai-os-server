@@ -656,22 +656,24 @@ async function _committer(spec, branchName) {
         console.log(`[COMMITTER] merged ${branchName} → main (${finalHash})`);
     }
 
-    const repoUrl = `https://oauth2:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
+    const _ghToken = process.env.GITHUB_TOKEN || '';
+    const repoUrl = `https://oauth2:${_ghToken}@github.com/APoLLoGoD666/ai-os-server.git`;
+    const _mask = (s) => _ghToken ? String(s || '').replace(_ghToken, '[REDACTED]') : String(s || '');
 
     // Rebase onto latest remote before pushing to avoid non-fast-forward rejection
     const pull = spawnSync('git', ['pull', '--rebase', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
     if (pull.status !== 0) {
-        console.warn('[COMMITTER] rebase failed, attempting push anyway:', pull.stderr?.slice(0, 200));
+        console.warn('[COMMITTER] rebase failed, attempting push anyway:', _mask(pull.stderr?.slice(0, 200)));
     } else {
         finalHash = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout?.trim() || finalHash;
     }
 
     const push = spawnSync('git', ['push', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
-    console.log(`[COMMITTER] push status:${push.status} stdout:${push.stdout?.trim().slice(0,100)} stderr:${push.stderr?.trim().slice(0,100)}`);
+    console.log(`[COMMITTER] push status:${push.status} stdout:${_mask(push.stdout?.trim().slice(0,100))} stderr:${_mask(push.stderr?.trim().slice(0,100))}`);
 
     if (push.status !== 0) {
-        console.error('[COMMITTER] push failed:', push.stderr);
-        return { role: 'COMMITTER', result: { commitHash: null, error: `push failed: ${push.stderr?.slice(0, 200)}` }, duration: Date.now() - t0 };
+        console.error('[COMMITTER] push failed:', _mask(push.stderr));
+        return { role: 'COMMITTER', result: { commitHash: null, error: `push failed: ${_mask(push.stderr?.slice(0, 200))}` }, duration: Date.now() - t0 };
     }
     const pushOut = (push.stdout || '') + (push.stderr || '');
     if (pushOut.includes('Everything up-to-date')) {

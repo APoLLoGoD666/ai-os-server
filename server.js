@@ -364,20 +364,20 @@ app.post('/auth/login', (req, res) => {
     if (!password || password !== correctPw) {
         return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
     }
-    const token = jwt.sign({ apex: true }, secret, { expiresIn: '1h' });
+    const token = jwt.sign({ apex: true }, secret, { expiresIn: '7d' });
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('apex_token', token, {
         httpOnly: true,
         secure: isSecure,
         sameSite: 'Lax',
-        maxAge: 60 * 60 * 1000
+        maxAge: 7 * 24 * 60 * 60 * 1000
     });
     // Non-secret session indicator — JS-readable so the login overlay can detect auth state
     res.cookie('apex_session', '1', {
         httpOnly: false,
         secure: isSecure,
         sameSite: 'Lax',
-        maxAge: 60 * 60 * 1000
+        maxAge: 7 * 24 * 60 * 60 * 1000
     });
     return res.json({ ok: true });
 });
@@ -668,11 +668,8 @@ let pendingDuplicateDecision = null;
 let latestAgentCleanupPreview = null;
 let latestObviousAgentCleanupPreview = null;
 
-if (!AGENT_SECRET) {
-}
-
-if (!APP_ACCESS_KEY) {
-}
+if (!AGENT_SECRET)    console.warn('[Startup] AGENT_SECRET not set — agent auth endpoints are unprotected');
+if (!APP_ACCESS_KEY)  console.warn('[Startup] APP_ACCESS_KEY not set — app auth is disabled');
 
 if (!CRON_SECRET) {
     console.warn("CRON_SECRET not set. Cron route is unprotected.");
@@ -785,7 +782,7 @@ function requireAuth(req, res, next) {
     if (hasAppAccess(req)) return next();
 
     const cookies = parseCookies(req);
-    console.log('[Auth] cookie present:', !!cookies.apex_token);
+    // Do not log token presence to avoid leaking auth state to logs
     const token = cookies.apex_token;
     if (token) {
         try {
@@ -1406,22 +1403,17 @@ async function moveFileToCategory(filename, category) {
 }
 
 async function summariseText(text) {
-    const response = await client.messages.create({
-        model: HAIKU_MODEL,
-        max_tokens: 200,
-        messages: [
-            {
-                role: "user",
-                content: `Summarise this file clearly in 3-5 bullet points:\n\n${text}`
-            }
-        ]
-    });
-
-    return (response.content || [])
-        .filter(part => part.type === "text")
-        .map(part => part.text || "")
-        .join("\n")
-        .trim();
+    try {
+        const response = await client.messages.create({
+            model: HAIKU_MODEL,
+            max_tokens: 200,
+            messages: [{ role: "user", content: `Summarise this file clearly in 3-5 bullet points:\n\n${text}` }]
+        });
+        return (response.content || []).filter(p => p.type === "text").map(p => p.text || "").join("\n").trim();
+    } catch (e) {
+        console.warn('[summariseText] AI call failed:', e.message);
+        return '';
+    }
 }
 
 async function analyseDocumentsWithAI(documents) {
@@ -1451,32 +1443,20 @@ async function analyseDocumentsWithAI(documents) {
         combinedLength += contentPreview.length;
     }
 
-    const response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 700,
-        messages: [
-            {
+    try {
+        const response = await client.messages.create({
+            model: MODEL,
+            max_tokens: 700,
+            messages: [{
                 role: "user",
-                content: `Analyse these documents. Return key themes, important points, duplicates, cleanup suggestions, and next actions.
-
-Return a structured response with these exact sections:
-1. Key Insights
-2. Main Themes
-3. Important Points
-4. Duplicate Or Cleanup Signals
-5. Suggested Next Actions
-
-DOCUMENTS:
-${limitedDocs.join("\n\n----------------------\n\n")}`
-            }
-        ]
-    });
-
-    return (response.content || [])
-        .filter(part => part.type === "text")
-        .map(part => part.text || "")
-        .join("\n")
-        .trim();
+                content: `Analyse these documents. Return key themes, important points, duplicates, cleanup suggestions, and next actions.\n\nReturn a structured response with these exact sections:\n1. Key Insights\n2. Main Themes\n3. Important Points\n4. Duplicate Or Cleanup Signals\n5. Suggested Next Actions\n\nDOCUMENTS:\n${limitedDocs.join("\n\n----------------------\n\n")}`
+            }]
+        });
+        return (response.content || []).filter(p => p.type === "text").map(p => p.text || "").join("\n").trim();
+    } catch (e) {
+        console.warn('[analyseDocumentsWithAI] AI call failed:', e.message);
+        return '';
+    }
 }
 
 async function getRecentDocumentsForAnalysis(limit = 10) {
@@ -3906,8 +3886,8 @@ async function applyAgentCleanupPreview(preview) {
 Deleted task IDs: ${taskIds.length ? taskIds.join(", ") : "None"}
 Deleted schedule IDs: ${scheduleIds.length ? scheduleIds.join(", ") : "None"}`
         };
-    } catch (error) {
-        throw error;
+    } catch (e) {
+        return { ok: false, reply: `Cleanup failed: ${e.message}` };
     }
 }
 
@@ -7097,12 +7077,8 @@ app.post("/run-schedules-now", requireAppAccess, async (req, res) => {
     }
 });
 
-app.get("/cron/health", (req, res) => {
-    return res.status(200).json({
-        ok: true,
-        cronReady: true,
-        hasCronSecret: Boolean(CRON_SECRET)
-    });
+app.get("/cron/health", requireAppAccess, (req, res) => {
+    return res.status(200).json({ ok: true, cronReady: true });
 });
 
 app.post("/cron/run-schedules", requireCronAccess, async (req, res) => {
