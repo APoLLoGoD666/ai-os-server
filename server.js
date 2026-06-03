@@ -80,6 +80,7 @@ const _agentQueue  = require('./lib/agent-queue');
 const _cogOrch     = require('./lib/cognitive-orchestrator');
 const _sessionReg  = require('./lib/session-state-registry');
 const _timingEng   = require('./lib/response-timing-engine');
+const _pcm         = require('./lib/persistent-cognition-manager');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
@@ -7185,6 +7186,9 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         }, 25000);
 
         const userMessage = rawMessage.trim();
+        // Stage 3.3 — load relevant cognitive threads from prior turns
+        const _pcmCtx  = _pcm.resumeRelevantThreads({ userMessage, sessionId: req.requestId });
+        const _pcmMeta = { resumed_cognition: _pcmCtx.hasResumed, resume_hint: _pcmCtx.resumeHint };
 
         // ── Agent library intent detection ─────────────────────────────────────
         // Intercept messages like "ask the security engineer to review this"
@@ -7195,9 +7199,9 @@ app.post("/chat", requireAppAccess, async (req, res) => {
                 clearTimeout(chatTimeout);
                 const _agentReplyRaw = `[${_agentResult.agent.name}]\n\n${_agentResult.reply}`;
                 const { reply: _agentReply, mode: _agentMode, intent: _agentIntent2 } = _cogOrch.shape(userMessage, _agentReplyRaw, req.executionClass || 'EXECUTIVE', req.requestId);
-                const _agentSnap = _sessionReg.getDerivedCognitiveSnapshot(req.requestId);
+                const _agentSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.requestId), ..._pcmMeta };
                 const _agentPlan = _timingEng.buildStreamPlan(_agentReply, _agentIntent2, req.executionClass || 'EXECUTIVE', _agentSnap);
-                setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
+                setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _agentIntent2, userMessage, reply: _agentReply, mode: _agentMode, executionClass: req.executionClass }); addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
                 return res.status(200).json({ ok: true, reply: _agentReply, response_mode: _agentMode, stream_plan: _agentPlan });
             } catch (e) {
                 if (res.headersSent) return;
@@ -7244,9 +7248,9 @@ ${preview}
             clearTimeout(chatTimeout);
             const _mastraRaw = result.text || "No response from AI";
             const { reply, mode: _mastraMode, intent: _mastraIntent } = _cogOrch.shape(userMessage, _mastraRaw, req.executionClass || 'EXECUTIVE', req.requestId);
-            const _mastraSnap = _sessionReg.getDerivedCognitiveSnapshot(req.requestId);
+            const _mastraSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.requestId), ..._pcmMeta };
             const _mastraPlan = _timingEng.buildStreamPlan(reply, _mastraIntent, req.executionClass || 'EXECUTIVE', _mastraSnap);
-            setImmediate(() => addToMemory("ai", reply));
+            setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _mastraIntent, userMessage, reply, mode: _mastraMode, executionClass: req.executionClass }); addToMemory("ai", reply); });
             return res.status(200).json({
                 ok: true,
                 reply,
@@ -7286,9 +7290,9 @@ ${preview}
             .trim() || "No response from AI";
 
         const { reply, mode: _sdkMode, intent: _sdkIntent } = _cogOrch.shape(userMessage, _rawReply, req.executionClass || 'EXECUTIVE', req.requestId);
-        const _sdkSnap = _sessionReg.getDerivedCognitiveSnapshot(req.requestId);
+        const _sdkSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.requestId), ..._pcmMeta };
         const _sdkPlan = _timingEng.buildStreamPlan(reply, _sdkIntent, req.executionClass || 'EXECUTIVE', _sdkSnap);
-        setImmediate(() => addToMemory("ai", reply));
+        setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _sdkIntent, userMessage, reply, mode: _sdkMode, executionClass: req.executionClass }); addToMemory("ai", reply); });
 
         return res.status(200).json({
             ok: true,
@@ -10620,6 +10624,12 @@ app.get('/api/system/state', requireAppAccess, (req, res) => {
 app.get('/api/system/state/:sessionId', requireAppAccess, (req, res) => {
     const snap = _sessionReg.getDerivedCognitiveSnapshot(req.params.sessionId);
     res.json({ ok: true, snapshot: snap });
+});
+
+// Stage 3.3 — persistent cognition thread stats
+app.get('/api/system/cognition/threads', requireAppAccess, (req, res) => {
+    const sessionId = req.query.session || null;
+    res.json({ ok: true, ..._pcm.stats(sessionId) });
 });
 
 // Voice-to-note: classify spoken text and write to correct vault note
