@@ -10241,6 +10241,35 @@ function renderChatMessage(role, message) {
     }
 }
 
+/**
+ * Progressive response renderer — Stage 3.2
+ * Reveals stream_plan chunks with their configured delays on a single bubble.
+ * Creates "thinking out loud" perception from a single HTTP response.
+ */
+async function renderProgressiveResponse(chunks) {
+    const log = document.getElementById('chatLog');
+    if (!log || !chunks || !chunks.length) return;
+
+    const nearBottom = (log.scrollHeight - log.scrollTop - log.clientHeight) < 160;
+
+    // Create bubble immediately (replaces typing indicator feel)
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble ai';
+    log.appendChild(bubble);
+    if (nearBottom) log.scrollTop = log.scrollHeight;
+
+    for (var i = 0; i < chunks.length; i++) {
+        var chunk = chunks[i];
+        if (chunk.delay > 0) {
+            await new Promise(function(r) { setTimeout(r, chunk.delay); });
+        }
+        var sep = bubble.textContent ? '\n\n' : '';
+        bubble.textContent += sep + (chunk.content || '');
+        log.scrollTop = log.scrollHeight;
+    }
+}
+window.renderProgressiveResponse = renderProgressiveResponse;
+
 function renderCentreApprovalCard(message) {
     const existing = document.getElementById("centreApproval");
     if (existing) existing.remove();
@@ -10289,9 +10318,16 @@ async function sendChatCommandFromText(command, options = {}) {
         hideTypingIndicator();
         const reply = data.reply || "No reply.";
         if (!silent) {
-            renderChatMessage("ai", reply);
-            setOrbState("speaking");
-            speak(reply, { useFiller: wasVoice });
+            const plan = data.stream_plan;
+            if (plan && plan.enabled && plan.chunks && plan.chunks.length > 1) {
+                setOrbState("speaking");
+                await renderProgressiveResponse(plan.chunks);
+                speak(reply, { useFiller: wasVoice });
+            } else {
+                renderChatMessage("ai", reply);
+                setOrbState("speaking");
+                speak(reply, { useFiller: wasVoice });
+            }
         } else {
             setOrbState("ready");
         }

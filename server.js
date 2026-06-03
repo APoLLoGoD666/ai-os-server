@@ -79,6 +79,7 @@ const _bus         = require('./lib/event-bus');
 const _agentQueue  = require('./lib/agent-queue');
 const _cogOrch     = require('./lib/cognitive-orchestrator');
 const _sessionReg  = require('./lib/session-state-registry');
+const _timingEng   = require('./lib/response-timing-engine');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
@@ -7193,9 +7194,11 @@ app.post("/chat", requireAppAccess, async (req, res) => {
                 const _agentResult = await agentLib.invokeAgent(_agentIntent.slug, _agentIntent.task);
                 clearTimeout(chatTimeout);
                 const _agentReplyRaw = `[${_agentResult.agent.name}]\n\n${_agentResult.reply}`;
-                const { reply: _agentReply, mode: _agentMode } = _cogOrch.shape(userMessage, _agentReplyRaw, req.executionClass || 'EXECUTIVE', req.requestId);
+                const { reply: _agentReply, mode: _agentMode, intent: _agentIntent2 } = _cogOrch.shape(userMessage, _agentReplyRaw, req.executionClass || 'EXECUTIVE', req.requestId);
+                const _agentSnap = _sessionReg.getDerivedCognitiveSnapshot(req.requestId);
+                const _agentPlan = _timingEng.buildStreamPlan(_agentReply, _agentIntent2, req.executionClass || 'EXECUTIVE', _agentSnap);
                 setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
-                return res.status(200).json({ ok: true, reply: _agentReply, response_mode: _agentMode });
+                return res.status(200).json({ ok: true, reply: _agentReply, response_mode: _agentMode, stream_plan: _agentPlan });
             } catch (e) {
                 if (res.headersSent) return;
                 console.warn('[AgentLib] intent invoke failed, falling through to normal chat:', e.message);
@@ -7240,12 +7243,15 @@ ${preview}
             ]);
             clearTimeout(chatTimeout);
             const _mastraRaw = result.text || "No response from AI";
-            const { reply, mode: _mastraMode } = _cogOrch.shape(userMessage, _mastraRaw, req.executionClass || 'EXECUTIVE', req.requestId);
+            const { reply, mode: _mastraMode, intent: _mastraIntent } = _cogOrch.shape(userMessage, _mastraRaw, req.executionClass || 'EXECUTIVE', req.requestId);
+            const _mastraSnap = _sessionReg.getDerivedCognitiveSnapshot(req.requestId);
+            const _mastraPlan = _timingEng.buildStreamPlan(reply, _mastraIntent, req.executionClass || 'EXECUTIVE', _mastraSnap);
             setImmediate(() => addToMemory("ai", reply));
             return res.status(200).json({
                 ok: true,
                 reply,
                 response_mode: _mastraMode,
+                stream_plan: _mastraPlan,
                 memoryUsed: true,
                 documentsUsed: relevantDocs.length
             });
@@ -7279,13 +7285,16 @@ ${preview}
             .join("\n")
             .trim() || "No response from AI";
 
-        const { reply, mode: _sdkMode } = _cogOrch.shape(userMessage, _rawReply, req.executionClass || 'EXECUTIVE', req.requestId);
+        const { reply, mode: _sdkMode, intent: _sdkIntent } = _cogOrch.shape(userMessage, _rawReply, req.executionClass || 'EXECUTIVE', req.requestId);
+        const _sdkSnap = _sessionReg.getDerivedCognitiveSnapshot(req.requestId);
+        const _sdkPlan = _timingEng.buildStreamPlan(reply, _sdkIntent, req.executionClass || 'EXECUTIVE', _sdkSnap);
         setImmediate(() => addToMemory("ai", reply));
 
         return res.status(200).json({
             ok: true,
             reply,
             response_mode: _sdkMode,
+            stream_plan: _sdkPlan,
             memoryUsed: true,
             documentsUsed: relevantDocs.length
         });
