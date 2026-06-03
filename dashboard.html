@@ -8285,15 +8285,6 @@ li, td, th, div.label, div.value { font-size: inherit; }
     if (e.key === 'Enter' && typeof sendDomainAgentMsg === 'function') sendDomainAgentMsg();
   };
 
-  // quickReply — reads to address from data-to attribute
-  window.quickReply = (function(_orig) {
-    return function(to) {
-      // When called from dispatcher, `this` is the element with data-to
-      var dest = to || (this && this.dataset && this.dataset.to) || '';
-      if (_orig) _orig.call(this, dest);
-    };
-  })(window.quickReply);
-
   // viewNotification — reads args from individual data-* attrs
   window._apexViewNotifProxy = function() {
     if (typeof viewNotification !== 'function') return;
@@ -13662,6 +13653,8 @@ function fetchCommsEmails() {
 }
 
 function quickReply(to) {
+    // When called via dispatcher, `this` is the button element; read data-to if arg not passed
+    to = to || (this && this.dataset && this.dataset.to) || '';
     var existing = document.getElementById('comms-qr-modal');
     if (existing) existing.remove();
     var modal = document.createElement('div');
