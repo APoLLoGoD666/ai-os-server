@@ -4,12 +4,8 @@ const { createClient } = require('@supabase/supabase-js');
 const { google } = require('googleapis');
 const _auth = require('../lib/app-auth');
 
-function sb() {
-    return createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-    );
-}
+const _sbClient = (() => { let c; return () => { if (!c) c = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY); return c; }; })();
+function sb() { return _sbClient(); }
 
 async function getGCalClient() {
     const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET } = process.env;

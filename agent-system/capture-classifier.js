@@ -10,8 +10,9 @@ const _CLASSIFY_SYSTEM = `You classify inputs for Apex AI OS into workstreams.
 Workstreams: ${WORKSTREAMS.join(', ')}.
 Output ONLY JSON: {"workstream":"name","confidence":0.0-1.0,"priority":"high|medium|low","action":"one sentence"}`;
 
+let _client;
 async function classifyCapture({ type, content, source }) {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const res = await client.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 200,

@@ -335,7 +335,9 @@ app.get('/sw.js', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.sendFile(path.join(__dirname, 'sw.js'));
 });
-app.use(express.static(__dirname));
+// Serve only specific static assets — never expose .env, server.js, package.json etc.
+app.get('/apex-v2.css',   (req, res) => res.sendFile(path.join(__dirname, 'apex-v2.css')));
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
 
 app.post('/auth/login', (req, res) => {
     const secret = process.env.JWT_SECRET;
