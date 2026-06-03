@@ -6761,6 +6761,45 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         </div>
                     </div>
 
+                    <!-- Section 6: Latency Trace Viewer -->
+                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden">
+                        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div style="width:6px;height:6px;border-radius:50%;background:var(--cyan)"></div>
+                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Latency Traces</span>
+                                <span id="trace-live-dot" style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(0,212,255,0.10);color:var(--cyan)">Live</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span id="trace-session-count" style="font-size:10px;color:var(--text-mute)">— sessions</span>
+                                <span id="trace-flow-score" style="font-size:10px;color:var(--text-mute)">flow: —</span>
+                                <span id="trace-abandon-rate" style="font-size:10px;color:var(--text-mute)">abandon: —</span>
+                                <button class="ds-btn xs" data-fn="loadLatencyTraces">&#8635;</button>
+                            </div>
+                        </div>
+                        <!-- Stats bar -->
+                        <div id="trace-stats-bar" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)">
+                            <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
+                                <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Ack Latency</div>
+                                <div id="trace-stat-ack" style="font-size:13px;font-weight:600;color:var(--cyan);font-variant-numeric:tabular-nums">&#8212;</div>
+                                <div id="trace-stat-ack-p95" style="font-size:9px;color:var(--text-mute);margin-top:2px">p95: &#8212;</div>
+                            </div>
+                            <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
+                                <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Meaningful</div>
+                                <div id="trace-stat-meaningful" style="font-size:13px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums">&#8212;</div>
+                                <div id="trace-stat-meaningful-p95" style="font-size:9px;color:var(--text-mute);margin-top:2px">p95: &#8212;</div>
+                            </div>
+                            <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
+                                <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Completion</div>
+                                <div id="trace-stat-completion" style="font-size:13px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums">&#8212;</div>
+                                <div id="trace-stat-completion-p95" style="font-size:9px;color:var(--text-mute);margin-top:2px">p95: &#8212;</div>
+                            </div>
+                        </div>
+                        <!-- Session traces -->
+                        <div id="trace-session-list" style="max-height:420px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px">
+                            <div style="font-size:11px;color:var(--text-mute);padding:20px 0;text-align:center">No sessions yet — traces appear after voice interactions</div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -13557,6 +13596,150 @@ async function triggerCs249rIngest() {
 }
 window.triggerCs249rIngest = triggerCs249rIngest;
 
+// ── Latency Trace Viewer ──────────────────────────────────────────────────────
+var _TRACE_SPANS = [
+    'audio_received','memory_lookup_start','memory_lookup_end',
+    'claude_start','claude_first_token','tool_dispatch','tool_complete',
+    'tts_start','first_audio','first_meaningful_output','user_interrupted','completed'
+];
+var _SPAN_COLOR = {
+    audio_received:'#00d4ff', memory_lookup_start:'#6366f1', memory_lookup_end:'#6366f1',
+    claude_start:'#8b5cf6', claude_first_token:'#22c55e', tool_dispatch:'#f59e0b',
+    tool_complete:'#f59e0b', tts_start:'#06b6d4', first_audio:'#00d4ff',
+    first_meaningful_output:'#22c55e', user_interrupted:'#ef4444', completed:'#71717a'
+};
+
+function _msLabel(v) { return v == null ? '—' : v + 'ms'; }
+
+function _traceCard(s) {
+    var base = s.spans.audio_received || s.start;
+    var total = (s.spans.completed || (base + 1)) - base;
+    var interrupted = s.interrupted;
+
+    // Find bottleneck: largest gap between consecutive present spans
+    var presentSpans = _TRACE_SPANS.filter(function(n) { return s.spans[n] != null; });
+    var maxGap = 0, bottleneckSpan = null;
+    for (var i = 1; i < presentSpans.length; i++) {
+        var gap = s.spans[presentSpans[i]] - s.spans[presentSpans[i-1]];
+        if (gap > maxGap) { maxGap = gap; bottleneckSpan = presentSpans[i]; }
+    }
+
+    // Waterfall bars
+    var bars = presentSpans.map(function(n) {
+        var t = s.spans[n] - base;
+        var pct = Math.min(100, total > 0 ? (t / total) * 100 : 0).toFixed(1);
+        var col = _SPAN_COLOR[n] || '#aaa';
+        var isBottleneck = n === bottleneckSpan;
+        var labelColor = isBottleneck ? '#f59e0b' : 'var(--text-mute)';
+        var dotStyle = isBottleneck
+            ? 'width:8px;height:8px;border-radius:50%;background:' + col + ';flex-shrink:0;box-shadow:0 0 6px ' + col
+            : 'width:6px;height:6px;border-radius:50%;background:' + col + ';flex-shrink:0';
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
+            + '<div style="' + dotStyle + '"></div>'
+            + '<div style="flex:1;position:relative;height:3px;background:rgba(255,255,255,0.05);border-radius:2px">'
+            + '<div style="position:absolute;left:0;top:0;height:3px;width:' + pct + '%;background:' + col + ';border-radius:2px;opacity:0.7"></div>'
+            + '</div>'
+            + '<span style="font-size:9px;color:' + labelColor + ';min-width:70px;text-align:right">'
+            + n.replace(/_/g,' ') + '</span>'
+            + '<span style="font-size:9px;color:' + (isBottleneck ? '#f59e0b' : 'var(--text)') + ';min-width:48px;text-align:right;font-weight:' + (isBottleneck ? '700' : '400') + '">'
+            + _msLabel(Math.round(t)) + '</span>'
+            + '</div>';
+    }).join('');
+
+    var execBadgeColor = {REFLEX:'var(--cyan)',EXECUTIVE:'var(--accent)',BACKGROUND:'var(--text-mute)'}[s.execution_class] || 'var(--text-mute)';
+    var snapshotHtml = '';
+    if (s.snapshots && s.snapshots.claude_start) {
+        var snap = s.snapshots.claude_start;
+        snapshotHtml = '<span style="font-size:9px;color:var(--text-mute)">agents:' + (snap.active_agent_runs||0) + ' tools:' + (snap.pending_tool_calls||0) + '</span>';
+    }
+
+    return '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;' + (interrupted ? 'border-left:3px solid #ef4444' : '') + '">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+        + '<div style="display:flex;align-items:center;gap:8px">'
+        + '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,0.06);color:' + execBadgeColor + '">' + (s.execution_class||'—') + '</span>'
+        + (interrupted ? '<span style="font-size:9px;color:#ef4444">&#9888; interrupted</span>' : '')
+        + snapshotHtml
+        + '</div>'
+        + '<div style="display:flex;gap:12px">'
+        + '<span style="font-size:9px;color:var(--text-mute)">ack <span style="color:var(--cyan)">' + _msLabel(s.ack_latency) + '</span></span>'
+        + '<span style="font-size:9px;color:var(--text-mute)">real <span style="color:var(--accent)">' + _msLabel(s.meaningful_latency) + '</span></span>'
+        + '<span style="font-size:9px;color:var(--text-mute)">total <span style="color:var(--text)">' + _msLabel(s.completion_latency) + '</span></span>'
+        + '</div>'
+        + '</div>'
+        + bars
+        + (bottleneckSpan ? '<div style="margin-top:6px;font-size:9px;color:#f59e0b">&#9654; bottleneck: ' + bottleneckSpan.replace(/_/g,' ') + ' (+' + maxGap + 'ms)</div>' : '')
+        + '</div>';
+}
+
+async function loadLatencyTraces() {
+    try {
+        var stats = await fetchJson('/api/latency-stats');
+        var traces = await fetchJson('/api/latency-traces');
+
+        // Update header counts
+        var countEl = document.getElementById('trace-session-count');
+        if (countEl) countEl.textContent = (stats.total_sessions || 0) + ' sessions';
+
+        var flowEl = document.getElementById('trace-flow-score');
+        if (flowEl) {
+            var fs = stats.conversation_flow_score;
+            flowEl.textContent = 'flow: ' + (fs != null ? (fs * 100).toFixed(0) + '%' : '—');
+            flowEl.style.color = fs == null ? 'var(--text-mute)' : fs >= 0.9 ? 'var(--green)' : fs >= 0.7 ? 'var(--amber)' : 'var(--red)';
+        }
+
+        var abandEl = document.getElementById('trace-abandon-rate');
+        if (abandEl) {
+            var ar = stats.abandonment_rate;
+            abandEl.textContent = 'abandon: ' + (ar != null ? (ar * 100).toFixed(0) + '%' : '—');
+            abandEl.style.color = ar == null ? 'var(--text-mute)' : ar <= 0.05 ? 'var(--green)' : ar <= 0.15 ? 'var(--amber)' : 'var(--red)';
+        }
+
+        // Stats bar
+        function _fillStat(elId, p95Id, metric) {
+            var el = document.getElementById(elId);
+            var p95el = document.getElementById(p95Id);
+            if (!el) return;
+            if (!metric) { el.textContent = '—'; if (p95el) p95el.textContent = 'p95: —'; return; }
+            el.textContent = _msLabel(metric.p50);
+            if (p95el) p95el.textContent = 'p95: ' + _msLabel(metric.p95);
+        }
+        var ov = stats.overall || {};
+        _fillStat('trace-stat-ack', 'trace-stat-ack-p95', ov.ack_latency);
+        _fillStat('trace-stat-meaningful', 'trace-stat-meaningful-p95', ov.meaningful_latency);
+        _fillStat('trace-stat-completion', 'trace-stat-completion-p95', ov.completion_latency);
+
+        // Session list — most recent first
+        var list = document.getElementById('trace-session-list');
+        if (!list) return;
+        var sessions = (traces.sessions || []).slice().reverse();
+        var active = traces.active || [];
+
+        if (!sessions.length && !active.length) {
+            list.innerHTML = '<div style="font-size:11px;color:var(--text-mute);padding:20px 0;text-align:center">No sessions yet — traces appear after voice interactions</div>';
+            return;
+        }
+
+        var html = '';
+        // Active sessions first (in-flight)
+        active.forEach(function(s) {
+            html += '<div style="background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:10px 12px">'
+                + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+                + '<div style="width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:pulse 1s infinite"></div>'
+                + '<span style="font-size:9px;color:var(--cyan)">IN FLIGHT</span>'
+                + '<span style="font-size:9px;color:var(--text-mute)">' + (s.execution_class||'EXECUTIVE') + '</span>'
+                + '</div>'
+                + '<div style="font-size:9px;color:var(--text-mute)">running ' + Math.round((Date.now() - s.start) / 1000) + 's</div>'
+                + '</div>';
+        });
+        sessions.forEach(function(s) { html += _traceCard(s); });
+        list.innerHTML = html;
+    } catch(e) {
+        var list2 = document.getElementById('trace-session-list');
+        if (list2) list2.innerHTML = '<div style="font-size:11px;color:var(--red);padding:12px">Error loading traces: ' + e.message + '</div>';
+    }
+}
+window.loadLatencyTraces = loadLatencyTraces;
+
 async function initSystemPage() {
     initDomainAgentGrid();
     buildAgentGrid();
@@ -13567,11 +13750,14 @@ async function initSystemPage() {
     buildSystemSuggestions();
     fetchVaultStatus();
 
+    loadLatencyTraces();
+
     if (!_sysPageInited) {
         _sysPageInited = true;
         var id1 = setInterval(fetchSystemAgents, 45000);
         var id2 = setInterval(fetchSystemCosts, 120000);
-        if (window._apexIntervals) window._apexIntervals.push(id1, id2);
+        var id3 = setInterval(loadLatencyTraces, 2000);
+        if (window._apexIntervals) window._apexIntervals.push(id1, id2, id3);
     }
 }
 

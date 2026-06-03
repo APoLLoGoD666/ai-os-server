@@ -10554,6 +10554,10 @@ app.get('/api/latency-stats', requireAppAccess, (req, res) => {
     res.json({ ok: true, ...(_tracker.stats()) });
 });
 
+app.get('/api/latency-traces', requireAppAccess, (req, res) => {
+    res.json({ ok: true, sessions: _tracker.getSessions(50), active: _tracker.getActive() });
+});
+
 // Voice-to-note: classify spoken text and write to correct vault note
 app.post('/api/wiki/voice-note', requireAppAccess, async (req, res) => {
     const { text, source } = req.body || {};
