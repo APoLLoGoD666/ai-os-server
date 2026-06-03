@@ -223,7 +223,20 @@ app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
 app.use(helmet({
-    contentSecurityPolicy: false, // Dashboard uses inline scripts — CSP requires separate config
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc:  ["'self'"],
+            scriptSrc:   ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.jsdelivr.net'],
+            styleSrc:    ["'self'", "'unsafe-inline'"],
+            connectSrc:  ["'self'", 'wss:', 'https:'],
+            imgSrc:      ["'self'", 'data:', 'blob:'],
+            mediaSrc:    ["'self'", 'blob:'],
+            workerSrc:   ["'self'", 'blob:'],
+            fontSrc:     ["'self'", 'data:'],
+            objectSrc:   ["'none'"],
+            frameSrc:    ["'none'"],
+        }
+    },
     crossOriginEmbedderPolicy: false
 }));
 app.use(cors({
@@ -336,8 +349,10 @@ app.get('/sw.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'sw.js'));
 });
 // Serve only specific static assets — never expose .env, server.js, package.json etc.
-app.get('/apex-v2.css',   (req, res) => res.sendFile(path.join(__dirname, 'apex-v2.css')));
-app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
+app.get('/apex-v2.css',     (req, res) => res.sendFile(path.join(__dirname, 'apex-v2.css')));
+app.get('/apex-custom.css', (req, res) => res.sendFile(path.join(__dirname, 'apex-custom.css')));
+app.get('/manifest.json',   (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
+app.use('/src/components',  express.static(path.join(__dirname, 'src', 'components')));
 
 app.post('/auth/login', (req, res) => {
     const secret = process.env.JWT_SECRET;
@@ -357,11 +372,19 @@ app.post('/auth/login', (req, res) => {
         sameSite: 'Lax',
         maxAge: 60 * 60 * 1000
     });
+    // Non-secret session indicator — JS-readable so the login overlay can detect auth state
+    res.cookie('apex_session', '1', {
+        httpOnly: false,
+        secure: isSecure,
+        sameSite: 'Lax',
+        maxAge: 60 * 60 * 1000
+    });
     return res.json({ ok: true });
 });
 
 app.post('/auth/logout', (req, res) => {
-    res.clearCookie('apex_token', { path: '/' });
+    res.clearCookie('apex_token',  { path: '/' });
+    res.clearCookie('apex_session', { path: '/' });
     return res.json({ ok: true });
 });
 
@@ -11127,6 +11150,10 @@ checkPendingMasterTasks();
         console.log('[Calendar] Auto-sync every 30 minutes');
     })();
 
+    // Schedule fallback — run due agent schedules every 5 min in-process
+    // Primary trigger is Render Cron; this ensures schedules fire even if cron misses
+    setInterval(() => runDueSchedules().catch(e => console.warn('[ScheduleFallback] error:', e.message)), 5 * 60 * 1000);
+
     // Phase 2 agents
     initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
     initRoutineAgent(client).catch(err => console.error("ROUTINE AGENT INIT ERROR:", err.message));
@@ -11168,6 +11195,8 @@ function _gracefulShutdown(sig) {
             if (_pid > 0) { process.kill(_pid, 'SIGTERM'); fs.unlinkSync(_pidFile); }
         }
     } catch {}
+    // Stop the WebSocket keepalive immediately — no point pinging during shutdown
+    clearInterval(_wsKeepalive);
     // Stop accepting new connections; exit when drain completes or after 15s
     server.close(() => { console.log('[Shutdown] all connections drained — exiting'); process.exit(0); });
     setTimeout(() => { console.warn('[Shutdown] drain timeout — forcing exit'); process.exit(1); }, 15000);

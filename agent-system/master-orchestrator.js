@@ -59,7 +59,9 @@ async function _insertNotification(row) {
 
 // ── Parse ROADMAP.md into structured workstreams ──────────────────
 function parseRoadmap() {
-    const content = fs.readFileSync(ROADMAP_FILE, 'utf8');
+    let content;
+    try { content = fs.readFileSync(ROADMAP_FILE, 'utf8'); }
+    catch { console.warn('[Master] ROADMAP.md not found — returning empty workstreams'); return {}; }
     const workstreams = {};
     let current = null;
 

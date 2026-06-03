@@ -8408,9 +8408,13 @@ async function _glStartMic() {
                     samples[i] = Math.max(-32768, Math.min(32767, pcmF32[i] * 32768));
                 }
             }
-            // Base64 encode
+            // Base64 encode — chunked to avoid stack overflow on large buffers
             var bytes = new Uint8Array(samples.buffer);
-            var b64   = btoa(String.fromCharCode.apply(null, bytes));
+            var b64 = (function(u8) {
+                var s = '', i = 0, n = u8.length, chunk = 8192;
+                for (; i < n; i += chunk) s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+                return btoa(s);
+            })(bytes);
             GL.ws.send(JSON.stringify({ type: 'audio', data: b64 }));
         };
 
@@ -9092,50 +9096,7 @@ async function speakWithElevenLabs(text) {
     }
 }
 
-function _speakDesktop(phrase, { onEnd } = {}) {
-    window.speechSynthesis.cancel();
-    if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
-    const utt = new SpeechSynthesisUtterance(phrase);
-    utt.rate = 1.08; utt.pitch = 0.95; utt.volume = 1;
-    const voice = _selectedVoice || _pickVoice();
-    if (voice) utt.voice = voice;
-    console.log(`[Speak] _speakDesktop — voice:"${voice ? voice.name : 'default'}" phrase:"${phrase.slice(0, 60)}"`);
-    utt.onstart = () => { console.log('[Speak] _speakDesktop started'); };
-    utt.onend   = () => {
-        console.log('[Speak] _speakDesktop ended');
-        if (onEnd) onEnd();
-    };
-    utt.onerror = (ev) => {
-        console.warn('[Speak] _speakDesktop error:', ev.error);
-        if (onEnd) onEnd();
-    };
-    window.speechSynthesis.speak(utt);
-}
-
-function _speakFallback(phrase, { onEnd } = {}) {
-    if (isIOSPWA) console.log("[APEX iOS] _speakFallback called, text:", phrase.slice(0, 50));
-    window.speechSynthesis.cancel();
-    if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
-    const _truncated = (phrase.split(/[.!?]/)[0] || phrase).slice(0, 160).trim();
-    console.log('[Speak] speechSynthesis truncated to:', _truncated);
-    const utt = new SpeechSynthesisUtterance(_truncated);
-    utt.rate = 1.08; utt.pitch = 0.95; utt.volume = 1;
-    const voice = _selectedVoice || _pickVoice();
-    if (voice) utt.voice = voice;
-    console.log(`[Speak] speechSynthesis fallback — voice:"${voice ? voice.name : 'default'}" phrase:"${_truncated.slice(0, 60)}"`);
-    utt.onstart = () => { console.log('[Speak] speechSynthesis started'); };
-    utt.onend   = () => {
-        console.log('[Speak] speechSynthesis ended');
-        if (onEnd) onEnd();
-    };
-    utt.onerror = (ev) => {
-        console.warn('[Speak] speechSynthesis error:', ev.error);
-        if (onEnd) onEnd();
-    };
-    if (isIOSPWA) console.log(`[iOS] speechSynthesis speaking: "${phrase.slice(0, 60)}"`);
-    if (isIOSPWA && 'audioSession' in navigator) navigator.audioSession.type = 'play-and-record';
-    setTimeout(() => { if (isIOSPWA) console.log("[APEX iOS] speechSynthesis.speak fired"); window.speechSynthesis.speak(utt); }, 100);
-}
+// _speakDesktop and _speakFallback removed — TTS is locked to Gemini (/api/tts/gemini)
 
 function showTypingIndicator() {
     const el = document.getElementById("typingIndicator");
@@ -11973,8 +11934,9 @@ window.addEventListener('unload', function() {
 ">HOLD TO TALK</button>
 
 <script>
-// ── Login overlay — shown when apex_token cookie is absent ──
-function hasCookie(){return document.cookie.split(';').some(c=>c.trim().startsWith('apex_token='));}
+// ── Login overlay — shown when session cookie is absent ──
+// apex_token is httpOnly (XSS-safe); apex_session=1 is the JS-readable indicator
+function hasCookie(){return document.cookie.split(';').some(c=>c.trim().startsWith('apex_session='));}
 (function(){
   var overlay=document.getElementById('apexLoginOverlay');
   if(overlay){overlay.style.display=hasCookie()?'none':'flex';}
