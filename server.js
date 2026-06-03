@@ -78,6 +78,7 @@ const agentLib     = require('./agent-system/agent-library');
 const _bus         = require('./lib/event-bus');
 const _agentQueue  = require('./lib/agent-queue');
 const _cogOrch     = require('./lib/cognitive-orchestrator');
+const _sessionReg  = require('./lib/session-state-registry');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
@@ -10599,6 +10600,17 @@ app.get('/api/system/tools', requireAppAccess, (req, res) => {
 // Stage 3 — cognitive orchestrator state + counters
 app.get('/api/system/cognition', requireAppAccess, (req, res) => {
     res.json({ ok: true, counters: _cogOrch.counters(), intents: _cogOrch.INTENT, modes: _cogOrch.MODE });
+});
+
+// Stage 3.1 — canonical system-wide session state
+app.get('/api/system/state', requireAppAccess, (req, res) => {
+    res.json({ ok: true, ..._sessionReg.getSystemWideSnapshot() });
+});
+
+// Stage 3.1 — canonical state for a specific session
+app.get('/api/system/state/:sessionId', requireAppAccess, (req, res) => {
+    const snap = _sessionReg.getDerivedCognitiveSnapshot(req.params.sessionId);
+    res.json({ ok: true, snapshot: snap });
 });
 
 // Voice-to-note: classify spoken text and write to correct vault note
