@@ -8878,7 +8878,10 @@ async function _startAutoPipeline(taskId) {
         console.log(`[AutoPipeline] ${taskId} — expanding prompt: "${task.title}"`);
         const spec = await expandPrompt(task.title);
         console.log(`[AutoPipeline] ${taskId} — spec ready, running agent team`);
-        const result = await runAgentTeam(spec, taskId);
+        _tracker.activeAgentRuns++;
+        let result;
+        try { result = await runAgentTeam(spec, taskId); }
+        finally { _tracker.activeAgentRuns = Math.max(0, _tracker.activeAgentRuns - 1); }
         const duration = Date.now() - t0;
 
         if (result.success) {
@@ -10542,6 +10545,13 @@ app.post('/api/wiki/search', requireAppAccess, async (req, res) => {
         const results = obsidianMemory.searchVault(query);
         res.json({ ok: true, results });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Latency instrumentation ───────────────────────────────────────────────────
+const _tracker = require('./lib/latency-tracker');
+
+app.get('/api/latency-stats', requireAppAccess, (req, res) => {
+    res.json({ ok: true, ...(_tracker.stats()) });
 });
 
 // Voice-to-note: classify spoken text and write to correct vault note
