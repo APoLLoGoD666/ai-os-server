@@ -82,6 +82,7 @@ const _sessionReg  = require('./lib/session-state-registry');
 const _timingEng   = require('./lib/response-timing-engine');
 const _pcm         = require('./lib/persistent-cognition-manager');
 const _eae         = require('./lib/executive-arbitration-engine');
+const _spe         = require('./lib/strategic-planning-engine');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
@@ -7189,13 +7190,20 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         const userMessage = rawMessage.trim();
         // Stage 3.3 — load relevant cognitive threads from prior turns
         const _pcmCtx  = _pcm.resumeRelevantThreads({ userMessage, sessionId: req.requestId });
-        // Stage 3.4 — executive arbitration; combine PCM resume + EAE focus into single context meta
+        // Stage 3.4/3.5 — combine PCM + EAE + SPE context into single meta object
         const _eaeSnap = _eae.generateExecutiveSnapshot(req.requestId);
+        const _speCtx  = _spe.resumeStrategicContext({ sessionId: req.requestId, userMessage });
         const _ctxMeta = {
             resumed_cognition: _pcmCtx.hasResumed,
             resume_hint:       _pcmCtx.resumeHint,
             executive_focus:   _eaeSnap.current_focus,
             executive_summary: _eaeSnap.executive_summary,
+            strategic_hint:    _speCtx.hasStrategicContext ? _speCtx.hint : null,
+            strategic_context: _speCtx.activeObjective ? {
+                objective_id:   _speCtx.activeObjective.objective_id,
+                title:          _speCtx.activeObjective.title,
+                progress_score: _speCtx.activeObjective.progress_score,
+            } : null,
         };
 
         // ── Agent library intent detection ─────────────────────────────────────
@@ -7209,7 +7217,7 @@ app.post("/chat", requireAppAccess, async (req, res) => {
                 const { reply: _agentReply, mode: _agentMode, intent: _agentIntent2 } = _cogOrch.shape(userMessage, _agentReplyRaw, req.executionClass || 'EXECUTIVE', req.requestId);
                 const _agentSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.requestId), ..._ctxMeta };
                 const _agentPlan = _timingEng.buildStreamPlan(_agentReply, _agentIntent2, req.executionClass || 'EXECUTIVE', _agentSnap);
-                setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _agentIntent2, userMessage, reply: _agentReply, mode: _agentMode, executionClass: req.executionClass }); _eae.recordTransition({ sessionId: req.requestId }); addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
+                setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _agentIntent2, userMessage, reply: _agentReply, mode: _agentMode, executionClass: req.executionClass }); _eae.recordTransition({ sessionId: req.requestId }); _spe.updateFromResponse({ sessionId: req.requestId, userMessage, reply: _agentReply, intent: _agentIntent2, mode: _agentMode }); addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
                 return res.status(200).json({ ok: true, reply: _agentReply, response_mode: _agentMode, stream_plan: _agentPlan });
             } catch (e) {
                 if (res.headersSent) return;
@@ -7258,7 +7266,7 @@ ${preview}
             const { reply, mode: _mastraMode, intent: _mastraIntent } = _cogOrch.shape(userMessage, _mastraRaw, req.executionClass || 'EXECUTIVE', req.requestId);
             const _mastraSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.requestId), ..._ctxMeta };
             const _mastraPlan = _timingEng.buildStreamPlan(reply, _mastraIntent, req.executionClass || 'EXECUTIVE', _mastraSnap);
-            setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _mastraIntent, userMessage, reply, mode: _mastraMode, executionClass: req.executionClass }); _eae.recordTransition({ sessionId: req.requestId }); addToMemory("ai", reply); });
+            setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _mastraIntent, userMessage, reply, mode: _mastraMode, executionClass: req.executionClass }); _eae.recordTransition({ sessionId: req.requestId }); _spe.updateFromResponse({ sessionId: req.requestId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode }); addToMemory("ai", reply); });
             return res.status(200).json({
                 ok: true,
                 reply,
@@ -7300,7 +7308,7 @@ ${preview}
         const { reply, mode: _sdkMode, intent: _sdkIntent } = _cogOrch.shape(userMessage, _rawReply, req.executionClass || 'EXECUTIVE', req.requestId);
         const _sdkSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.requestId), ..._ctxMeta };
         const _sdkPlan = _timingEng.buildStreamPlan(reply, _sdkIntent, req.executionClass || 'EXECUTIVE', _sdkSnap);
-        setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _sdkIntent, userMessage, reply, mode: _sdkMode, executionClass: req.executionClass }); _eae.recordTransition({ sessionId: req.requestId }); addToMemory("ai", reply); });
+        setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _sdkIntent, userMessage, reply, mode: _sdkMode, executionClass: req.executionClass }); _eae.recordTransition({ sessionId: req.requestId }); _spe.updateFromResponse({ sessionId: req.requestId, userMessage, reply, intent: _sdkIntent, mode: _sdkMode }); addToMemory("ai", reply); });
 
         return res.status(200).json({
             ok: true,
@@ -10648,6 +10656,16 @@ app.get('/api/system/arbitration', requireAppAccess, (req, res) => {
 // Stage 3.4 — executive snapshot for a specific session
 app.get('/api/system/arbitration/:sessionId', requireAppAccess, (req, res) => {
     res.json({ ok: true, snapshot: _eae.generateExecutiveSnapshot(req.params.sessionId) });
+});
+
+// Stage 3.5 — strategic planning engine global stats
+app.get('/api/system/strategy', requireAppAccess, (req, res) => {
+    res.json({ ok: true, ..._spe.stats() });
+});
+
+// Stage 3.5 — strategic context for a specific session
+app.get('/api/system/strategy/:sessionId', requireAppAccess, (req, res) => {
+    res.json({ ok: true, ..._spe.stats(req.params.sessionId) });
 });
 
 // Voice-to-note: classify spoken text and write to correct vault note
