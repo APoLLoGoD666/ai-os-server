@@ -152,7 +152,7 @@ const {
     getWorkspaceStorageDebug
 } = require("./storage");
 
-const { runAutoCoder } = require("./auto_coder");
+const runAutoCoder = async () => ({ skipped: true, reason: "auto_coder removed", summary: "", changedFiles: [] });
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
 const { checkEmails, sendEmailReply, initEmailAgent } = require("./email_agent");
 // mastra_agents is lazy-loaded after server stabilises to avoid startup OOM
