@@ -5,7 +5,6 @@ const memory = require('./obsidian-memory');
 let _anthropicClient;
 
 const MODEL = 'claude-haiku-4-5-20251001';
-const OPENROUTER_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
 
 const SYSTEM_PROMPT = `You are a senior developer working on Apex AI OS — a Node.js/Express voice-first AI operating system on Render. The stack is: Node.js, Express, Supabase JS client, Anthropic Claude API, Deepgram STT/TTS, Gmail OAuth2, Ruflo agent orchestration.
 

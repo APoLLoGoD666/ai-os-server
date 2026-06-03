@@ -12,12 +12,14 @@ const _auth = require('../lib/app-auth');
 
 // GET /api/agents/status
 router.get('/agents/status', _auth, (req, res) => {
-    res.json({ ok: true, ..._lib().status() });
+    try { res.json({ ok: true, ..._lib().status() }); }
+    catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // GET /api/agents/categories
 router.get('/agents/categories', _auth, (req, res) => {
-    res.json({ ok: true, categories: _lib().getCategories() });
+    try { res.json({ ok: true, categories: _lib().getCategories() }); }
+    catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // GET /api/agents?category=engineering
@@ -40,9 +42,13 @@ router.get('/agents', _auth, (req, res) => {
 
 // GET /api/agents/:slug
 router.get('/agents/:slug', _auth, (req, res) => {
-    const agent = _lib().getAgent(req.params.slug);
-    if (!agent) return res.status(404).json({ ok: false, error: 'Agent not found' });
-    res.json({ ok: true, agent });
+    try {
+        const { slug } = req.params;
+        if (!slug || slug.length > 100) return res.status(400).json({ ok: false, error: 'Invalid slug' });
+        const agent = _lib().getAgent(slug);
+        if (!agent) return res.status(404).json({ ok: false, error: 'Agent not found' });
+        res.json({ ok: true, agent });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // POST /api/agents/invoke  { agentSlug, message }
@@ -50,13 +56,15 @@ router.post('/agents/invoke', _auth, async (req, res) => {
     const { agentSlug, message } = req.body || {};
     if (!agentSlug || !message)
         return res.status(400).json({ ok: false, error: 'agentSlug and message required' });
+    if (typeof message !== 'string' || message.length > 8000)
+        return res.status(400).json({ ok: false, error: 'message must be a string ≤ 8000 chars' });
     try {
         const result = await _lib().invokeAgent(agentSlug, message);
         res.json({ ok: true, ...result });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// GET /api/agents/domain — list Apex domain agents (System, File, Uni, Finance, Business)
+// GET /api/agents/domain — list Apex domain agents
 router.get('/agents/domain', _auth, (req, res) => {
     try { res.json({ ok: true, agents: _domain().listDomainAgents() }); }
     catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -67,6 +75,10 @@ router.post('/agents/domain/invoke', _auth, async (req, res) => {
     const { slug, message, history } = req.body || {};
     if (!slug || !message)
         return res.status(400).json({ ok: false, error: 'slug and message required' });
+    if (typeof message !== 'string' || message.length > 8000)
+        return res.status(400).json({ ok: false, error: 'message must be a string ≤ 8000 chars' });
+    if (history !== undefined && !Array.isArray(history))
+        return res.status(400).json({ ok: false, error: 'history must be an array' });
     try {
         const result = await _domain().invokeDomainAgent(slug, message, { history: history || [] });
         res.json({ ok: true, ...result });

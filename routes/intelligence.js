@@ -89,11 +89,14 @@ router.get('/agent-runs', requireAppAccess, async (req, res) => {
 });
 
 // GET /api/intelligence/cost-summary — total spend and success rate
+// Uses a capped recent window (last 1000 runs) to avoid full-table scans as history grows
 router.get('/cost-summary', requireAppAccess, async (req, res) => {
     try {
         const { data, error } = await _sbClient()
             .from('apex_agent_runs')
-            .select('success,cost_usd');
+            .select('success,cost_usd')
+            .order('created_at', { ascending: false })
+            .limit(1000);
         if (error) throw new Error(error.message);
         const total      = data.length;
         const succeeded  = data.filter(r => r.success).length;
@@ -105,7 +108,7 @@ router.get('/cost-summary', requireAppAccess, async (req, res) => {
             totalCostUsd: totalCost.toFixed(4)
         });
     } catch (e) {
-        res.json({ ok: false, error: e.message });
+        res.status(500).json({ ok: false, error: e.message });
     }
 });
 
@@ -120,10 +123,10 @@ router.get('/news', requireAppAccess, async (req, res) => {
             .limit(limit);
         if (category) query = query.eq('category', category);
         const { data, error } = await query;
-        if (error || !data || !data.length) return res.json({ ok: true, articles: [] });
-        res.json({ ok: true, articles: data });
+        if (error) return res.status(500).json({ ok: false, error: error.message, articles: [] });
+        res.json({ ok: true, articles: data || [] });
     } catch (e) {
-        res.json({ ok: true, articles: [], error: e.message });
+        res.status(500).json({ ok: false, error: e.message, articles: [] });
     }
 });
 

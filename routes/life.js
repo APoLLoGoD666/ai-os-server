@@ -39,7 +39,7 @@ router.post('/journal/entries', _auth, async (req, res) => {
 // ── Habits ─────────────────────────────────────────────────────────────────────
 router.get('/habits', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_habits').select('*').order('habit_name', { ascending: true });
+        const { data, error } = await sb().from('apex_habits').select('*').order('habit_name', { ascending: true }).limit(200);
         if (error) return res.json({ ok: true, habits: [] });
         res.json({ ok: true, habits: data || [] });
     } catch (e) { res.json({ ok: true, habits: [], error: e.message }); }
@@ -52,10 +52,12 @@ router.post('/habits/:id/toggle', _auth, async (req, res) => {
         const { data: existing } = await sb().from('apex_habit_logs').select('id,completed').eq('habit_id', id).eq('log_date', today).maybeSingle();
         let result;
         if (existing) {
-            const { data } = await sb().from('apex_habit_logs').update({ completed: !existing.completed }).eq('id', existing.id).select().single();
+            const { data, error } = await sb().from('apex_habit_logs').update({ completed: !existing.completed }).eq('id', existing.id).select().single();
+            if (error) return res.status(500).json({ ok: false, error: error.message });
             result = data;
         } else {
-            const { data } = await sb().from('apex_habit_logs').insert({ habit_id: id, log_date: today, completed: true }).select().single();
+            const { data, error } = await sb().from('apex_habit_logs').insert({ habit_id: id, log_date: today, completed: true }).select().single();
+            if (error) return res.status(500).json({ ok: false, error: error.message });
             result = data;
         }
         res.json({ ok: true, log: result });
@@ -106,7 +108,7 @@ router.post('/spiritual/log', _auth, async (req, res) => {
 // ── University ─────────────────────────────────────────────────────────────────
 router.get('/university/modules', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_university_modules').select('*').order('name', { ascending: true });
+        const { data, error } = await sb().from('apex_university_modules').select('*').order('name', { ascending: true }).limit(100);
         if (error) return res.json({ ok: true, modules: [] });
         res.json({ ok: true, modules: data || [] });
     } catch (e) { res.json({ ok: true, modules: [], error: e.message }); }
@@ -114,7 +116,7 @@ router.get('/university/modules', _auth, async (req, res) => {
 
 router.get('/university/assignments', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_university_assignments').select('*').order('due_date', { ascending: true });
+        const { data, error } = await sb().from('apex_university_assignments').select('*').order('due_date', { ascending: true }).limit(100);
         if (error) return res.json({ ok: true, assignments: [] });
         res.json({ ok: true, assignments: data || [] });
     } catch (e) { res.json({ ok: true, assignments: [], error: e.message }); }
@@ -159,7 +161,7 @@ router.post('/university/sessions', _auth, async (req, res) => {
 
 router.get('/university/reading-list', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_reading_list').select('*').order('created_at', { ascending: false });
+        const { data, error } = await sb().from('apex_reading_list').select('*').order('created_at', { ascending: false }).limit(100);
         if (error) return res.json({ ok: true, books: [] });
         res.json({ ok: true, books: data || [] });
     } catch (e) { res.json({ ok: true, books: [], error: e.message }); }

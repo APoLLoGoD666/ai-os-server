@@ -110,10 +110,15 @@ async function syncGoogleCalendar() {
     });
 
     if (error) {
-        // No unique constraint on google_event_id — delete future rows and re-insert
-        await client.from('apex_calendar_events').delete().gte('event_date', now.toISOString().split('T')[0]);
+        // No unique constraint on google_event_id — insert new rows first, then remove stale ones
+        const syncStart = new Date().toISOString();
         const { error: insertErr } = await client.from('apex_calendar_events').insert(rows);
         if (insertErr) throw new Error(insertErr.message);
+        // Delete only rows that pre-date this sync (brief duplicates are acceptable, data loss is not)
+        await client.from('apex_calendar_events')
+            .delete()
+            .gte('event_date', now.toISOString().split('T')[0])
+            .lt('created_at', syncStart);
     }
 
     console.log(`[Calendar] Synced ${rows.length} events from Google Calendar`);

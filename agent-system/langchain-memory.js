@@ -39,7 +39,6 @@ function _llm() {
 
 async function _load() {
     if (_loaded) return;
-    _loaded = true;
     try {
         const { data } = await _sb()
             .from(MEMORY_TABLE)
@@ -48,8 +47,9 @@ async function _load() {
             .single();
         if (data?.summary)  _summary  = data.summary;
         if (Array.isArray(data?.messages)) _messages = data.messages;
+        _loaded = true;
     } catch {
-        // Table may not exist yet — first run
+        // Table may not exist yet — first run; allow retry on next call
     }
 }
 

@@ -8,7 +8,7 @@ router.get('/health/workouts', _auth, async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 91;
         const since = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
-        const { data, error } = await sb().from('apex_workouts').select('workout_date,type,duration_minutes,notes').gte('workout_date', since).order('workout_date', { ascending: true });
+        const { data, error } = await sb().from('apex_workouts').select('workout_date,type,duration_minutes,notes').gte('workout_date', since).order('workout_date', { ascending: true }).limit(200);
         if (error) return res.json({ ok: true, workouts: [] });
         res.json({ ok: true, workouts: data || [] });
     } catch (e) { res.json({ ok: true, workouts: [], error: e.message }); }
@@ -74,11 +74,13 @@ router.get('/health/sleep', _auth, async (req, res) => {
 router.post('/health/sleep', _auth, async (req, res) => {
     try {
         const { hours, quality_score, notes, date } = req.body || {};
-        if (!hours) return res.status(400).json({ ok: false, error: 'hours required' });
+        if (hours == null || hours === '') return res.status(400).json({ ok: false, error: 'hours required' });
+        const hoursNum = Number(hours);
+        if (isNaN(hoursNum)) return res.status(400).json({ ok: false, error: 'hours must be a number' });
         const logDate = date || new Date().toISOString().split('T')[0];
         const { data, error } = await sb().from('apex_sleep_log').upsert({
             date: logDate,
-            hours: Number(hours),
+            hours: hoursNum,
             quality_score: quality_score || null,
             notes: notes || null
         }, { onConflict: 'date' }).select().single();
@@ -99,8 +101,10 @@ router.get('/mood', _auth, async (req, res) => {
 router.post('/mood', _auth, async (req, res) => {
     try {
         const { score, date } = req.body || {};
-        if (!score) return res.status(400).json({ ok: false, error: 'score required' });
-        const { data, error } = await sb().from('apex_mood_log').upsert({ date: date || new Date().toISOString().split('T')[0], score: Number(score) }, { onConflict: 'date' }).select().single();
+        if (score == null || score === '') return res.status(400).json({ ok: false, error: 'score required' });
+        const scoreNum = Number(score);
+        if (isNaN(scoreNum)) return res.status(400).json({ ok: false, error: 'score must be a number' });
+        const { data, error } = await sb().from('apex_mood_log').upsert({ date: date || new Date().toISOString().split('T')[0], score: scoreNum }, { onConflict: 'date' }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, mood: data });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -127,6 +131,7 @@ router.get('/health/supplements', _auth, async (req, res) => {
 router.post('/health/supplements', _auth, async (req, res) => {
     try {
         const { supplement_id, taken } = req.body || {};
+        if (!supplement_id) return res.status(400).json({ ok: false, error: 'supplement_id required' });
         const today = new Date().toISOString().split('T')[0];
         const { data, error } = await sb().from('apex_supplements').upsert({ id: supplement_id, log_date: today, taken: !!taken }, { onConflict: 'id,log_date' }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });

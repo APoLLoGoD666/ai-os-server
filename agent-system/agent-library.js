@@ -1,7 +1,8 @@
 'use strict';
 
-const https = require('https');
-const path  = require('path');
+const https     = require('https');
+const path      = require('path');
+const Anthropic = require('@anthropic-ai/sdk');
 
 const GITHUB_TREE = 'https://api.github.com/repos/msitarzewski/agency-agents/git/trees/main?recursive=1';
 const RAW_BASE    = 'https://raw.githubusercontent.com/msitarzewski/agency-agents/main/';
@@ -258,8 +259,7 @@ async function invokeAgent(slugOrKeyword, userMessage, { anthropicClient } = {})
     const agent = getAgent(slugOrKeyword);
     if (!agent) throw new Error(`Agent "${slugOrKeyword}" not found. Call /api/agents/sync first.`);
 
-    const Anthropic = require('@anthropic-ai/sdk');
-    const client    = anthropicClient || new Anthropic();
+    const client = anthropicClient || new Anthropic();
 
     const response = await client.messages.create({
         model:      'claude-haiku-4-5-20251001',

@@ -6898,7 +6898,7 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "dashboard.html"));
 });
 
-app.get("/editor", (req, res) => {
+app.get("/editor", requireAppAccess, (req, res) => {
     res.sendFile(path.join(__dirname, "editor.html"));
 });
 
@@ -10084,7 +10084,8 @@ app.post('/api/voice/pipeline', requireAppAccess, async (req, res) => {
         }
 
         // 3. Generate response via Claude
-        const finalRes = await _anthro.messages.create({
+        const { getAnthropicClient: _voiceAc } = require('./lib/clients');
+        const finalRes = await _voiceAc().messages.create({
             model: 'claude-haiku-4-5-20251001', max_tokens: 500,
             system: 'You are Apex, a concise voice assistant. Respond in 1-3 sentences suitable for speech synthesis. No markdown, no bullet points.',
             messages: [{ role: 'user', content: `${context ? `Context:\n${context}\n\n` : ''}User: ${transcript}` }]

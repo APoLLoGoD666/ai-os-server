@@ -116,6 +116,6 @@ async function retrieveContext(query, k = TOP_K) {
 
 // Build index on module load (non-blocking)
 setTimeout(() => _buildIndex().catch(() => {}), 5000);
-setInterval(() => _buildIndex().catch(() => {}), REINDEX_MS);
+setInterval(() => _buildIndex().catch(() => {}), REINDEX_MS).unref();
 
 module.exports = { retrieveContext };

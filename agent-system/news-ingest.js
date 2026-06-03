@@ -36,11 +36,20 @@ const RSS_FEEDS = [
     { url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", source: "BBC News", category: "science" },
 ];
 
+const _SAFE_URL = /^https?:\/\//i;
+const _PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.0\.0\.0)/i;
+
+function _isSafeRedirect(location) {
+    if (!_SAFE_URL.test(location)) return false;
+    try { return !_PRIVATE_HOST.test(new URL(location).hostname); } catch { return false; }
+}
+
 function fetchUrl(url, maxRedirects = 3) {
     return new Promise((resolve, reject) => {
         const mod = url.startsWith("https") ? https : http;
-        const req = mod.get(url, { headers: { "User-Agent": "ApexAIOS/1.0 (+http://localhost:3000)" } }, (res) => {
+        const req = mod.get(url, { headers: { "User-Agent": "ApexAIOS/1.0 (+https://apex.app)" } }, (res) => {
             if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && maxRedirects > 0) {
+                if (!_isSafeRedirect(res.headers.location)) return reject(new Error(`Blocked redirect to: ${res.headers.location}`));
                 return resolve(fetchUrl(res.headers.location, maxRedirects - 1));
             }
             let data = "";

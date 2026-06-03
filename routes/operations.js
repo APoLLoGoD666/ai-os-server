@@ -25,10 +25,16 @@ router.get('/operations/clients', _auth, async (req, res) => {
 router.post('/operations/clients', _auth, async (req, res) => {
     try {
         const { name, stage, value, contact_email, follow_up_date } = req.body || {};
-        if (!name) return res.status(400).json({ ok: false, error: 'name required' });
+        if (!name || !name.trim()) return res.status(400).json({ ok: false, error: 'name required' });
+        if (contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact_email))
+            return res.status(400).json({ ok: false, error: 'contact_email is not a valid email address' });
+        if (value !== undefined && value !== null && isNaN(Number(value)))
+            return res.status(400).json({ ok: false, error: 'value must be a number' });
+        if (follow_up_date && !/^\d{4}-\d{2}-\d{2}$/.test(follow_up_date))
+            return res.status(400).json({ ok: false, error: 'follow_up_date must be YYYY-MM-DD' });
         const { data, error } = await sb()
             .from('apex_clients')
-            .insert({ name, stage: stage || 'qualifying', value: value || null, contact_email: contact_email || null, follow_up_date: follow_up_date || null })
+            .insert({ name: name.trim(), stage: stage || 'qualifying', value: value != null ? Number(value) : null, contact_email: contact_email || null, follow_up_date: follow_up_date || null })
             .select()
             .single();
         if (error) return res.status(500).json({ ok: false, error: error.message });

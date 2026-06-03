@@ -203,7 +203,7 @@ function interceptNetwork(page) {
             const raw = request.postData();
             if (raw) postData = raw.slice(0, 500);
         } catch (_) {}
-        captured.push({
+        if (captured.length < 100) captured.push({
             method: request.method(),
             url: reqUrl,
             headers: filteredHeaders,

@@ -1,6 +1,7 @@
 'use strict';
 const router = require('express').Router();
 const crypto = require('crypto');
+const _auth  = require('../lib/app-auth');
 
 const MODEL         = 'gemini-2.5-flash-preview-tts';
 const DEFAULT_VOICE = 'Orus';
@@ -42,7 +43,7 @@ function pcmToWav(pcm) {
 // POST /api/tts/gemini
 // Body: { text: string }
 // Returns: audio/wav (Gemini 2.5 Flash TTS, 24kHz PCM)
-router.post('/tts/gemini', async (req, res) => {
+router.post('/tts/gemini', _auth, async (req, res) => {
     const t0 = Date.now();
     try {
         const text = (req.body?.text || '').trim();
@@ -115,11 +116,11 @@ router.post('/tts/gemini', async (req, res) => {
         console.log(`[TTS/Gemini] ${latency}ms · ${wav.length}B · "${text.slice(0, 50)}"`);
     } catch (err) {
         console.error('[TTS/Gemini] unhandled:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-router.get('/tts/gemini/voices', (_req, res) => {
+router.get('/tts/gemini/voices', _auth, (_req, res) => {
     res.json({ voices: ['Orus'], default: DEFAULT_VOICE, model: MODEL });
 });
 
