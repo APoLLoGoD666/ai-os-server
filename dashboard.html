@@ -12854,7 +12854,7 @@ async function initOverviewPage() {
         var summaryRow = document.getElementById('ovr-summary-row');
         if (summaryRow) {
             summaryRow.innerHTML = summaryCards.map(function(c) {
-                return '<div data-fn="switchPage" data-args='["'+c.page+'"]' '
+                return '<div data-fn="switchPage" data-args=\'["'+c.page+'"]\' '
                     + ' style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:border-color 0.15s"'
                     + ''
                     + '>'
@@ -12901,7 +12901,7 @@ function buildAgentGrid() {
             + ' style="background:var(--surface);border-radius:10px;padding:12px 14px;'
             + 'border:1px solid var(--border);border-top:2px solid ' + a.color + ';'
             + 'cursor:pointer;transition:border-color 0.15s,transform 0.15s"'
-            + ' data-fn="openAgentDrawer" data-args='["'+a.role+'"]' '
+            + ' data-fn="openAgentDrawer" data-args=\'["'+a.role+'"]\' '
             + ''
             + '>'
             + '<div style="display:flex;align-items:center;justify-content:space-between">'
@@ -13149,7 +13149,7 @@ async function buildSystemSuggestions() {
                 return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-faint)">'
                     + '<div style="width:5px;height:5px;border-radius:50%;background:var(--amber);flex-shrink:0"></div>'
                     + '<span style="font-size:11px;color:var(--text-mute);flex:1">'+s.text+'</span>'
-                    + '<button class="ds-btn xs" data-fn="switchPage" data-args='["'+s.page+'"]' >'+s.btn+'</button>'
+                    + '<button class="ds-btn xs" data-fn="switchPage" data-args=\'["'+s.page+'"]\' >'+s.btn+'</button>'
                     + '</div>';
             }).join('');
         }
@@ -13424,7 +13424,7 @@ function initDomainAgentGrid() {
         var m = _DA_META[s] || {icon:'?',color:'var(--cyan)',label:s};
         return '<div style="background:var(--surface);border-radius:10px;padding:14px;border:1px solid var(--border);border-top:2px solid '+m.color+';cursor:pointer;transition:transform 150ms;text-align:center"'
             +''
-            +' data-fn="openDomainAgent" data-args='["'+s+'"]' >'
+            +' data-fn="openDomainAgent" data-args=\'["'+s+'"]\' >'
             + '<div style="font-size:22px;margin-bottom:6px">'+m.icon+'</div>'
             + '<div style="font-size:11px;font-weight:600;color:var(--text)">'+m.label+'</div>'
             + '<div style="font-size:9px;color:var(--text-mute);margin-top:2px;text-transform:uppercase;letter-spacing:0.1em">Agent</div>'
@@ -13878,8 +13878,8 @@ function fetchBizApprovals() {
             return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2);border:1px solid rgba(255,77,106,0.2);border-radius:8px">'
                 + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text)">'+(a.description||a.task||'Task')+'</div>'
                 + '<div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+(a.category||'general')+' · '+(a.risk||'medium')+' risk</div></div>'
-                + '<button class="ds-btn xs green" data-fn="approveTask" data-args='["'+a.id+'"]' >Approve</button>'
-                + '<button class="ds-btn xs red" data-fn="denyTask" data-args='["'+a.id+'"]' >Deny</button>'
+                + '<button class="ds-btn xs green" data-fn="approveTask" data-args=\'["'+a.id+'"]\' >Approve</button>'
+                + '<button class="ds-btn xs red" data-fn="denyTask" data-args=\'["'+a.id+'"]\' >Deny</button>'
                 + '</div>';
         }).join('');
     }).catch(function(){
@@ -13902,7 +13902,7 @@ function fetchBizCrm() {
         }
         tb.innerHTML = clients.map(function(c){
             var stageBadge = { lead:'cyan', proposal:'amber', negotiation:'purple', won:'green' }[c.stage||'lead'] || 'cyan';
-            return '<tr><td style="font-weight:600">'+(c.name||c.client_name||'—')+'</td><td><span class="ds-badge '+stageBadge+'">'+(c.stage||'lead')+'</span></td><td class="t-mono">'+(c.value?'£'+c.value:'—')+'</td><td style="color:var(--text-mute)">'+(c.follow_up||'—')+'</td><td><button class="ds-btn xs" data-fn="editCrmClient" data-args='["'+c.id+'"]' >Edit</button></td></tr>';
+            return '<tr><td style="font-weight:600">'+(c.name||c.client_name||'—')+'</td><td><span class="ds-badge '+stageBadge+'">'+(c.stage||'lead')+'</span></td><td class="t-mono">'+(c.value?'£'+c.value:'—')+'</td><td style="color:var(--text-mute)">'+(c.follow_up||'—')+'</td><td><button class="ds-btn xs" data-fn="editCrmClient" data-args=\'["'+c.id+'"]\' >Edit</button></td></tr>';
         }).join('');
         if (_bizCrmView === 'kanban') buildKanban(clients);
     }).catch(function(){});
@@ -14187,7 +14187,7 @@ function fetchHealthSupplements() {
         }
         panel.innerHTML = sups.map(function(s){
             var taken = s.taken_today || false;
-            return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px" data-fn="toggleSupplement" data-args='["'+s.id+'"]'  style="cursor:pointer"><span style="width:16px;height:16px;border:1.5px solid '+(taken?'var(--green)':'var(--border-strong)')+';border-radius:4px;background:'+(taken?'var(--green)':'transparent')+';color:#06080c;display:grid;place-items:center;font-size:11px;font-weight:700">'+(taken?'&#10003;':'')+'</span><span class="t-small" style="color:var(--text)">'+(s.name||'Supplement')+(s.dose?' &#183; '+s.dose:'')+'</span><span class="t-mono" style="color:'+(taken?'var(--green)':'var(--text-mute)')+'">'+( taken?'taken':'pending')+'</span></div>';
+            return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px" data-fn="toggleSupplement" data-args=\'["'+s.id+'"]\' style="cursor:pointer"><span style="width:16px;height:16px;border:1.5px solid '+(taken?'var(--green)':'var(--border-strong)')+';border-radius:4px;background:'+(taken?'var(--green)':'transparent')+';color:#06080c;display:grid;place-items:center;font-size:11px;font-weight:700">'+(taken?'&#10003;':'')+'</span><span class="t-small" style="color:var(--text)">'+(s.name||'Supplement')+(s.dose?' &#183; '+s.dose:'')+'</span><span class="t-mono" style="color:'+(taken?'var(--green)':'var(--text-mute)')+'">'+( taken?'taken':'pending')+'</span></div>';
         }).join('');
     }).catch(function(){
         var panel = document.getElementById('hlthSupplementList');
