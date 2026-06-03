@@ -21,6 +21,13 @@ const https = require("https");
 const http  = require("http");
 const { createClient } = require("@supabase/supabase-js");
 
+// Singleton — created on first ingestNews() call to ensure env vars are loaded
+let _sb;
+function _getSb() {
+    if (!_sb) _sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    return _sb;
+}
+
 const RSS_FEEDS = [
     { url: "https://feeds.bbci.co.uk/news/uk/rss.xml",         source: "BBC News", category: "uk"         },
     { url: "https://feeds.bbci.co.uk/news/world/rss.xml",      source: "BBC News", category: "world"      },
@@ -75,10 +82,7 @@ function stripCDATA(s) {
 }
 
 async function ingestNews() {
-    const sb = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const sb = _getSb();
 
     // Fetch URLs already in the last 48h to avoid re-inserting
     const cutoff48h = new Date(Date.now() - 48 * 3600 * 1000).toISOString();

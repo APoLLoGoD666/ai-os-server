@@ -98,7 +98,7 @@ function markFeatureComplete(featureId) {
     );
     fs.writeFileSync(ROADMAP_FILE, content, 'utf8');
     try {
-        const repoUrl = `https://apex-autopilot:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
+        const repoUrl = `https://oauth2:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
         execSync('git add ROADMAP.md', { cwd: ROOT, stdio: 'pipe' });
         execSync(`git commit -m "roadmap: mark ${featureId} complete [skip ci]"`, { cwd: ROOT, stdio: 'pipe' });
         execSync(`git pull --rebase ${repoUrl} main`, { cwd: ROOT, stdio: 'pipe' });
@@ -859,7 +859,7 @@ async function ship(featureId, opts = {}) {
     if (process.env.GITHUB_TOKEN) {
         try {
             const { execSync } = require('child_process');
-            const repoUrl = `https://apex-autopilot:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
+            const repoUrl = `https://oauth2:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
             execSync(`git tag ${releaseTag}`, { cwd: ROOT, stdio: 'pipe' });
             execSync(`git push ${repoUrl} ${releaseTag}`, { cwd: ROOT, stdio: 'pipe' });
             tagResult = releaseTag;

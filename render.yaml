@@ -2,8 +2,9 @@ services:
   - type: web
     name: ai-os-server
     env: node
-    buildCommand: pip install graphifyy; npm install --legacy-peer-deps && npx playwright install chromium --with-deps
+    buildCommand: pip install graphifyy; npm install --legacy-peer-deps && (npx playwright install chromium --with-deps || true)
     startCommand: node --max-old-space-size=460 server.js
+    healthCheckPath: /health
 
   - type: web
     name: apex-ai-sidecar

@@ -19,9 +19,14 @@ let _messages = [];       // recent verbatim messages [{role,content}]
 let _summary  = "";       // rolling summary of older messages
 let _loaded   = false;
 
-function _sb() {
-    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
+// Singleton client — created once, not on every call
+const _sb = (() => {
+    let _client;
+    return () => {
+        if (!_client) _client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        return _client;
+    };
+})();
 
 function _llm() {
     return new ChatAnthropic({

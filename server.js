@@ -350,7 +350,7 @@ app.post('/auth/login', (req, res) => {
     const token = jwt.sign({ apex: true }, secret, { expiresIn: '1h' });
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('apex_token', token, {
-        httpOnly: false,
+        httpOnly: true,
         secure: isSecure,
         sameSite: 'Lax',
         maxAge: 60 * 60 * 1000
@@ -399,6 +399,8 @@ function getCached(key) {
 }
 function setCache(key, data) { apiCache.set(key, { ts: Date.now(), data }); }
 function clearCache(...keys) { keys.forEach(k => apiCache.delete(k)); }
+// Prune stale entries every 60s to prevent unbounded growth
+setInterval(() => { const now = Date.now(); for (const [k, v] of apiCache) if (now - v.ts > CACHE_TTL) apiCache.delete(k); }, 60_000).unref();
 
 const TOOLS = [
     {
@@ -1380,7 +1382,7 @@ async function moveFileToCategory(filename, category) {
 
 async function summariseText(text) {
     const response = await client.messages.create({
-        model: MODEL,
+        model: HAIKU_MODEL,
         max_tokens: 200,
         messages: [
             {
@@ -1465,7 +1467,7 @@ function getLatestCompletedAgentTask(tasks = []) {
 
 async function generateReflectionForTask(task) {
     const response = await client.messages.create({
-        model: MODEL,
+        model: HAIKU_MODEL,
         max_tokens: 400,
         messages: [
             {
@@ -3952,8 +3954,11 @@ function getAgentAccessError(command) {
         "approve_reflection"
     ]);
 
-    if (!protectedTypes.has(command.type) || !AGENT_SECRET) {
+    if (!protectedTypes.has(command.type)) {
         return null;
+    }
+    if (!AGENT_SECRET) {
+        return `Agent approval is disabled (AGENT_SECRET not set).`;
     }
 
     if (command.secret !== AGENT_SECRET) {
@@ -4397,7 +4402,7 @@ function buildDirectSafeAgentStepsFromRequest(request = "") {
 
 async function getApprovedAgentActions(latestPlan) {
     const response = await client.messages.create({
-        model: MODEL,
+        model: SONNET_MODEL,
         max_tokens: 700,
         messages: [
             {

@@ -4,6 +4,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const memory = require('./obsidian-memory');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const MODEL = 'claude-sonnet-4-6';
 const DEFAULT_TIMEOUT = 30000;

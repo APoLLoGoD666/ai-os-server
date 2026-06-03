@@ -1,14 +1,20 @@
 "use strict";
 const router   = require('express').Router();
 const { createClient } = require('@supabase/supabase-js');
+const requireAppAccess = require('../lib/app-auth');
 const memory   = require('../agent-system/obsidian-memory');
 
-function sb() {
-    return createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-    );
-}
+// Singleton Supabase client
+const _sbClient = (() => {
+    let c;
+    return () => {
+        if (!c) c = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+        );
+        return c;
+    };
+})();
 
 // ── Voice pipeline state (shared across all WebSocket sessions) ───────────────
 const voiceState = {
@@ -27,22 +33,21 @@ function broadcastVoiceState() {
 }
 
 // POST /api/intelligence/interrupt — barge-in: stop TTS and clear queue
-router.post('/interrupt', (req, res) => {
+router.post('/interrupt', requireAppAccess, (req, res) => {
     voiceState.interrupted = true;
     voiceState.ttsPlaying  = false;
     broadcastVoiceState();
-    // Signal will be consumed by the active voice session on next tick
     setTimeout(() => { voiceState.interrupted = false; }, 3000);
     res.json({ ok: true, action: 'interrupted' });
 });
 
 // GET /api/intelligence/voice-status — current voice pipeline state
-router.get('/voice-status', (req, res) => {
+router.get('/voice-status', requireAppAccess, (req, res) => {
     res.json({ ok: true, ...voiceState, listeners: voiceState.listeners.size });
 });
 
 // POST /api/intelligence/voice-state — update state (called by voice pipeline internally)
-router.post('/voice-state', (req, res) => {
+router.post('/voice-state', requireAppAccess, (req, res) => {
     const { active, ttsPlaying, sessionId } = req.body || {};
     if (active      !== undefined) voiceState.active     = !!active;
     if (ttsPlaying  !== undefined) voiceState.ttsPlaying = !!ttsPlaying;
@@ -52,7 +57,7 @@ router.post('/voice-state', (req, res) => {
 });
 
 // GET /api/intelligence/lessons — recent agent reflexion lessons
-router.get('/lessons', (req, res) => {
+router.get('/lessons', requireAppAccess, (req, res) => {
     try {
         const n = Math.min(parseInt(req.query.n) || 20, 50);
         const raw = memory.getRecentLessons(n);
@@ -68,10 +73,10 @@ router.get('/lessons', (req, res) => {
 });
 
 // GET /api/intelligence/agent-runs — recent pipeline runs from audit log
-router.get('/agent-runs', async (req, res) => {
+router.get('/agent-runs', requireAppAccess, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-        const { data, error } = await sb()
+        const { data, error } = await _sbClient()
             .from('apex_agent_runs')
             .select('task_id,objective,success,cost_usd,complexity,created_at')
             .order('created_at', { ascending: false })
@@ -84,9 +89,9 @@ router.get('/agent-runs', async (req, res) => {
 });
 
 // GET /api/intelligence/cost-summary — total spend and success rate
-router.get('/cost-summary', async (req, res) => {
+router.get('/cost-summary', requireAppAccess, async (req, res) => {
     try {
-        const { data, error } = await sb()
+        const { data, error } = await _sbClient()
             .from('apex_agent_runs')
             .select('success,cost_usd');
         if (error) throw new Error(error.message);
@@ -105,11 +110,11 @@ router.get('/cost-summary', async (req, res) => {
 });
 
 // GET /api/intelligence/news — structured news feed
-router.get('/news', async (req, res) => {
+router.get('/news', requireAppAccess, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 20, 50);
         const category = req.query.category;
-        let query = sb().from('apex_news_cache')
+        let query = _sbClient().from('apex_news_cache')
             .select('title,source,category,url,summary,published_at')
             .order('published_at', { ascending: false })
             .limit(limit);
@@ -123,7 +128,7 @@ router.get('/news', async (req, res) => {
 });
 
 // POST /api/intelligence/news/refresh — manually trigger news ingest
-router.post('/news/refresh', async (req, res) => {
+router.post('/news/refresh', requireAppAccess, async (req, res) => {
     try {
         const { ingestNews } = require('../agent-system/news-ingest');
         const count = await ingestNews();

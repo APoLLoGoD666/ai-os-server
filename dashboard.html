@@ -8213,7 +8213,7 @@ function _showKeyModal() {
 }
 if (!APP_KEY) { _showKeyModal(); }
 const MAX_ITEMS           = 5;
-const REFRESH_INTERVAL_MS = 18000;
+const REFRESH_INTERVAL_MS = 30000;
 
 // ══ STATE ═════════════════════════════════════════════════════════════
 let isListening         = false;
@@ -8230,15 +8230,12 @@ let dgMuted             = false;  // true while AI is speaking — ignore SR tra
 let currentAudio        = null;
 let currentAbort        = null;
 let speakQueue          = [];
-// ── TTS provider toggle ────────────────────────────────────────────────────
-// 'deepgram' (default) or 'gemini' — persisted in localStorage
-var _ttsProvider = (function(){
-    try { return localStorage.getItem('apex_tts_provider') || 'gemini'; } catch(_){ return 'gemini'; }
-})();
-function getTtsUrl()      { return _ttsProvider === 'gemini' ? '/api/tts/gemini' : '/api/tts'; }
-function getTtsMimeType() { return _ttsProvider === 'gemini' ? 'audio/wav' : 'audio/mpeg'; }
+// ── TTS provider — locked to Gemini 2.5 (Orus voice) ─────────────────────────
+var _ttsProvider = 'gemini';
+function getTtsUrl()      { return '/api/tts/gemini'; }
+function getTtsMimeType() { return 'audio/wav'; }
 window.setTtsProvider = function(p) {
-    _ttsProvider = (p === 'gemini') ? 'gemini' : 'deepgram';
+    _ttsProvider = 'gemini'; // always Gemini — no fallback
     try { localStorage.setItem('apex_tts_provider', _ttsProvider); } catch(_){}
     var tog  = document.getElementById('apexTtsToggle');
     var dot  = document.getElementById('apexTtsDot');
@@ -10732,11 +10729,11 @@ async function addRoutineQuick() {
 }
 
 async function refreshFast() {
-    await Promise.all([refreshMemory(), loadNotifications(), loadTasks()]);
+    await Promise.allSettled([refreshMemory(), loadNotifications(), loadTasks()]);
 }
 
 async function refreshSlow() {
-    await Promise.all([refreshEmailPanel(), refreshFinancePanel(), refreshRoutinesPanel()]);
+    await Promise.allSettled([refreshEmailPanel(), refreshFinancePanel(), refreshRoutinesPanel()]);
 }
 
 async function refreshAll() {
@@ -13559,7 +13556,7 @@ function quickReply(ev, to) {
 function sendQuickReply(to) {
     var body = (document.getElementById('commsReplyBody')||{}).value||'';
     if (!body.trim()) return;
-    fetch('/api/email/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:to,body:body})})
+    fetch('/api/send-reply',{method:'POST',headers:{'Content-Type':'application/json','x-app-key':APP_KEY,'x-user-confirmed':'true'},body:JSON.stringify({to:to,body:body})})
         .then(function(r){return r.json();}).then(function(d){
             var m = document.getElementById('comms-qr-modal');
             if (m) m.remove();
@@ -13763,7 +13760,7 @@ function fetchBizApprovals() {
 }
 
 function fetchBizCrm() {
-    fetch('/api/crm/clients').then(function(r){return r.json();}).then(function(d){
+    fetch('/api/operations/clients',{headers:{'x-app-key':APP_KEY}}).then(function(r){return r.json();}).then(function(d){
         var clients = d.clients || d.data || [];
         _bizCrmData = clients;
         var tb = document.getElementById('bizCrmTbody');
@@ -13783,7 +13780,7 @@ function fetchBizCrm() {
 }
 
 function fetchBizProjects() {
-    fetch('/api/projects').then(function(r){return r.json();}).then(function(d){
+    fetch('/api/operations/projects',{headers:{'x-app-key':APP_KEY}}).then(function(r){return r.json();}).then(function(d){
         var projects = d.projects || d.data || [];
         var panel = document.getElementById('bizProjectsPanel');
         var statEl = document.getElementById('bizStatProjects');
@@ -14353,7 +14350,7 @@ function sendComposedEmail() {
     var subject = (document.getElementById('composeSubject')||{}).value||'';
     var body = (document.getElementById('composeBody')||{}).value||'';
     if (!to.trim() || !body.trim()) return;
-    fetch('/api/email/send', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({to:to,subject:subject,body:body}) })
+    fetch('/api/send-reply', { method:'POST', headers:{'Content-Type':'application/json','x-app-key':APP_KEY,'x-user-confirmed':'true'}, body:JSON.stringify({to:to,subject:subject,body:body}) })
         .then(function(r){return r.json();}).then(function(d){
             var m = document.getElementById('compose-modal'); if (m) m.remove();
             if (typeof showToast==='function') showToast(d.ok?'Email sent':'Send failed');
@@ -14361,7 +14358,7 @@ function sendComposedEmail() {
 }
 
 function approveTask(id) {
-    fetch('/api/tasks/'+id+'/approve', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({approved:true}) })
+    fetch('/api/tasks/approve', { method:'POST', headers:{'Content-Type':'application/json','x-app-key':APP_KEY}, body:JSON.stringify({taskId:id,approved:true}) })
         .then(function(r){return r.json();}).then(function(d){
             if (d.ok) { fetchBizApprovals(); if(typeof pollPermissions==='function') pollPermissions(); }
         }).catch(function(){});

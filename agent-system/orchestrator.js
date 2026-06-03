@@ -673,7 +673,8 @@ async function _committer(spec, branchName) {
         console.error('[COMMITTER] push failed:', push.stderr);
         return { role: 'COMMITTER', result: { commitHash: null, error: `push failed: ${push.stderr?.slice(0, 200)}` }, duration: Date.now() - t0 };
     }
-    if (push.stderr?.includes('Everything up-to-date')) {
+    const pushOut = (push.stdout || '') + (push.stderr || '');
+    if (pushOut.includes('Everything up-to-date')) {
         console.error('[COMMITTER] push no-op — worktree changes not in ROOT');
         return { role: 'COMMITTER', result: { commitHash: null, error: 'push up-to-date: file changes were not in ROOT git index' }, duration: Date.now() - t0 };
     }
@@ -867,8 +868,8 @@ async function runAgentTeam(spec, taskId) {
     const _fail = (error) => {
         _cleanup();
         const cost = _costUsd.toFixed(5);
-        setImmediate(() => _reflector(spec, agentLogs, false));
-        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity));
+        setImmediate(() => _reflector(spec, agentLogs, false).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
+        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         // North Star proposal — if failures cluster around a pattern, propose a constraint
         setImmediate(async () => {
             try {
@@ -1004,8 +1005,8 @@ async function runAgentTeam(spec, taskId) {
         }
         console.log(`[Orchestrator] ── ${taskId} COMPLETE — ${committerLog.result.commitHash} ──`);
 
-        setImmediate(() => _reflector(spec, agentLogs, true));
-        setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity));
+        setImmediate(() => _reflector(spec, agentLogs, true).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
+        setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
 
         return {
             success:    true,
@@ -1022,8 +1023,8 @@ async function runAgentTeam(spec, taskId) {
         _cleanup();
         const cost = _costUsd.toFixed(5);
         memory.logLesson(`Task ${taskId} failed: ${err.message}`);
-        setImmediate(() => _reflector(spec, agentLogs, false));
-        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity));
+        setImmediate(() => _reflector(spec, agentLogs, false).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
+        setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         return { success: false, commitHash: null, agentLogs, error: err.message, complexity, models: _agentModels };
     }
 }
