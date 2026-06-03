@@ -77,6 +77,7 @@ const runAgentTeam = require('./agent-system/orchestrator');
 const agentLib     = require('./agent-system/agent-library');
 const _bus         = require('./lib/event-bus');
 const _agentQueue  = require('./lib/agent-queue');
+const _cogOrch     = require('./lib/cognitive-orchestrator');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
@@ -7190,9 +7191,10 @@ app.post("/chat", requireAppAccess, async (req, res) => {
             try {
                 const _agentResult = await agentLib.invokeAgent(_agentIntent.slug, _agentIntent.task);
                 clearTimeout(chatTimeout);
-                const _agentReply  = `[${_agentResult.agent.name}]\n\n${_agentResult.reply}`;
+                const _agentReplyRaw = `[${_agentResult.agent.name}]\n\n${_agentResult.reply}`;
+                const { reply: _agentReply, mode: _agentMode } = _cogOrch.shape(userMessage, _agentReplyRaw, req.executionClass || 'EXECUTIVE', req.requestId);
                 setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
-                return res.status(200).json({ ok: true, reply: _agentReply });
+                return res.status(200).json({ ok: true, reply: _agentReply, response_mode: _agentMode });
             } catch (e) {
                 if (res.headersSent) return;
                 console.warn('[AgentLib] intent invoke failed, falling through to normal chat:', e.message);
@@ -7236,11 +7238,13 @@ ${preview}
                 { role: "user", content: prompt }
             ]);
             clearTimeout(chatTimeout);
-            const reply = result.text || "No response from AI";
+            const _mastraRaw = result.text || "No response from AI";
+            const { reply, mode: _mastraMode } = _cogOrch.shape(userMessage, _mastraRaw, req.executionClass || 'EXECUTIVE', req.requestId);
             setImmediate(() => addToMemory("ai", reply));
             return res.status(200).json({
                 ok: true,
                 reply,
+                response_mode: _mastraMode,
                 memoryUsed: true,
                 documentsUsed: relevantDocs.length
             });
@@ -7268,17 +7272,19 @@ ${preview}
             }
         }
 
-        const reply = (streamMsg.content || [])
+        const _rawReply = (streamMsg.content || [])
             .filter(part => part.type === "text")
             .map(part => part.text || "")
             .join("\n")
             .trim() || "No response from AI";
 
+        const { reply, mode: _sdkMode } = _cogOrch.shape(userMessage, _rawReply, req.executionClass || 'EXECUTIVE', req.requestId);
         setImmediate(() => addToMemory("ai", reply));
 
         return res.status(200).json({
             ok: true,
             reply,
+            response_mode: _sdkMode,
             memoryUsed: true,
             documentsUsed: relevantDocs.length
         });
@@ -10588,6 +10594,11 @@ app.get('/api/system/queue', requireAppAccess, (req, res) => {
 app.get('/api/system/tools', requireAppAccess, (req, res) => {
     const toolExecutor = require('./lib/tool-executor');
     res.json({ ok: true, tools: toolExecutor.list() });
+});
+
+// Stage 3 — cognitive orchestrator state + counters
+app.get('/api/system/cognition', requireAppAccess, (req, res) => {
+    res.json({ ok: true, counters: _cogOrch.counters(), intents: _cogOrch.INTENT, modes: _cogOrch.MODE });
 });
 
 // Voice-to-note: classify spoken text and write to correct vault note
