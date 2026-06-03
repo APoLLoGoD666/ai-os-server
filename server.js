@@ -75,6 +75,8 @@ const db = require("./database");
 const expandPrompt = require('./agent-system/prompt-expander');
 const runAgentTeam = require('./agent-system/orchestrator');
 const agentLib     = require('./agent-system/agent-library');
+const _bus         = require('./lib/event-bus');
+const _agentQueue  = require('./lib/agent-queue');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
@@ -290,6 +292,17 @@ app.use('/api/', (req, res, next) => {
             return res.status(415).json({ ok: false, reply: 'Unsupported Media Type — send application/json' });
         }
     }
+    next();
+});
+
+// ── Execution class tagger — tags every request with REFLEX/EXECUTIVE/BACKGROUND
+// Used by latency tracker + event bus for aggregated metrics.
+const _BACKGROUND_PATHS = /^\/api\/(tasks\/run|master\/|research\/|browser\/|cloud-autopilot|agent\/run|wiki\/ingest|rag\/)/;
+const _REFLEX_PATHS     = /^\/(?:health|api\/latency-stats|api\/latency-traces|api\/system\/events)$/;
+app.use((req, res, next) => {
+    if (_REFLEX_PATHS.test(req.path))          req.executionClass = 'REFLEX';
+    else if (_BACKGROUND_PATHS.test(req.path)) req.executionClass = 'BACKGROUND';
+    else                                        req.executionClass = 'EXECUTIVE';
     next();
 });
 
@@ -8878,11 +8891,10 @@ async function _startAutoPipeline(taskId) {
         console.log(`[AutoPipeline] ${taskId} — expanding prompt: "${task.title}"`);
         const spec = await expandPrompt(task.title);
         console.log(`[AutoPipeline] ${taskId} — spec ready, running agent team`);
-        _tracker.activeAgentRuns++;
-        let result;
-        try { result = await runAgentTeam(spec, taskId); }
-        finally { _tracker.activeAgentRuns = Math.max(0, _tracker.activeAgentRuns - 1); }
+        _bus.emit(_bus.E.AGENT_STARTED, { task_id: taskId, label: spec.objective });
+        const result = await runAgentTeam(spec, taskId);
         const duration = Date.now() - t0;
+        _bus.emit(_bus.E.AGENT_COMPLETED, { task_id: taskId, elapsed_ms: duration, ok: result.success });
 
         if (result.success) {
             await sbAdmin.from('apex_tasks')
@@ -9009,7 +9021,7 @@ app.post('/api/tasks/run', requireAppAccess, async (req, res) => {
         .update({ status: 'in_progress', updated_at: new Date().toISOString() })
         .eq('id', taskId);
     res.json({ ok: true, status: 'running', taskId });
-    setImmediate(() => _startAutoPipeline(taskId).catch(e => console.error('[AutoPipeline] unhandled:', e.message)));
+    _agentQueue.enqueue(taskId, () => _startAutoPipeline(taskId), { label: tasks.title || taskId });
 });
 
 app.post('/api/tasks/notify', requireAppAccess, async (req, res) => {
@@ -10556,6 +10568,26 @@ app.get('/api/latency-stats', requireAppAccess, (req, res) => {
 
 app.get('/api/latency-traces', requireAppAccess, (req, res) => {
     res.json({ ok: true, sessions: _tracker.getSessions(50), active: _tracker.getActive() });
+});
+
+// Recent events from the internal event bus (last 100)
+app.get('/api/system/events', requireAppAccess, (req, res) => {
+    const n = Math.min(parseInt(req.query.n) || 100, 200);
+    const type = req.query.type || null;
+    let events = _bus.recent(n);
+    if (type) events = events.filter(e => e.type === type);
+    res.json({ ok: true, events, total: _bus.recent(200).length });
+});
+
+// Agent queue status
+app.get('/api/system/queue', requireAppAccess, (req, res) => {
+    res.json({ ok: true, queue: _agentQueue.status() });
+});
+
+// Registered tool registry
+app.get('/api/system/tools', requireAppAccess, (req, res) => {
+    const toolExecutor = require('./lib/tool-executor');
+    res.json({ ok: true, tools: toolExecutor.list() });
 });
 
 // Voice-to-note: classify spoken text and write to correct vault note
