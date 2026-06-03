@@ -2,6 +2,9 @@
 
 const express = require('express');
 const router  = express.Router();
+const { createClient } = require('@supabase/supabase-js');
+
+const _sbSync = (() => { let c; return () => { if (!c) c = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); return c; }; })();
 
 function _lib()    { return require('../agent-system/agent-library'); }
 function _domain() { return require('../agent-system/domain-agents'); }
@@ -75,12 +78,7 @@ router.post('/agents/sync', _auth, async (req, res) => {
     res.json({ ok: true, status: 'syncing', message: 'Full sync started — 150+ agents incoming' });
     setImmediate(async () => {
         try {
-            const { createClient } = require('@supabase/supabase-js');
-            const sb = createClient(
-                process.env.SUPABASE_URL,
-                process.env.SUPABASE_SERVICE_ROLE_KEY
-            );
-            await _lib().syncFromGitHub(sb, { obsidian: true });
+            await _lib().syncFromGitHub(_sbSync(), { obsidian: true });
         } catch (e) { console.error('[AgentLib] sync error:', e.message); }
     });
 });

@@ -2,6 +2,8 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const memory = require('./obsidian-memory');
 
+let _anthropicClient;
+
 const MODEL = 'claude-haiku-4-5-20251001';
 const OPENROUTER_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
 
@@ -43,7 +45,8 @@ Output format (strict JSON, no other text):
 }`;
 
 async function expandPrompt(simplePrompt) {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    if (!_anthropicClient) _anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = _anthropicClient;
     const model = MODEL;
 
     const northStar = memory.getNorthStar();

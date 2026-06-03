@@ -15,6 +15,8 @@ async function obsidianRead(notePath) {
                 { headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` } }
             );
             if (res.ok) return await res.text();
+            if (res.status === 401) console.warn(`[ObsidianClient] 401 Unauthorized — check OBSIDIAN_API_KEY`);
+            else if (res.status !== 404) console.warn(`[ObsidianClient] API returned ${res.status} for ${notePath}`);
         } catch {}
     }
     try {

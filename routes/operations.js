@@ -3,12 +3,8 @@ const router = require('express').Router();
 const { createClient } = require('@supabase/supabase-js');
 const _auth = require('../lib/app-auth');
 
-function sb() {
-    return createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-    );
-}
+const _sbClient = (() => { let c; return () => { if (!c) c = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY); return c; }; })();
+function sb() { return _sbClient(); }
 
 // GET /api/operations/clients
 router.get('/operations/clients', _auth, async (req, res) => {
