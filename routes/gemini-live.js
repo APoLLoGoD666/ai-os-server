@@ -1,11 +1,13 @@
 'use strict';
-const WebSocket = require('ws');
+const https      = require('https');
+const WebSocket  = require('ws');
 
-const GEMINI_MODEL   = 'gemini-2.5-flash-preview-native-audio-dialog';
-const GEMINI_WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
+const GEMINI_MODEL     = 'gemini-2.5-flash-preview-native-audio-dialog';
+const GEMINI_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
+const GEMINI_WS_BASE   = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 const _maskKey = (key, s) => key ? String(s || '').replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[REDACTED]') : String(s || '');
-const INPUT_RATE     = 16000;
-const OUTPUT_RATE    = 24000;
+const INPUT_RATE  = 16000;
+const OUTPUT_RATE = 24000;
 
 // ── Apex tools as Gemini function declarations ────────────────────────────────
 const APEX_FUNCTION_DECLARATIONS = [
@@ -95,6 +97,101 @@ const APEX_FUNCTION_DECLARATIONS = [
     }
 ];
 
+// ── Voice intent routing ──────────────────────────────────────────────────────
+const _TOOL_RE = /\b(weather|email|calendar|news|task|remind|reminder|files?|search|health|fitness|finance|time|date|notifications?)\b/i;
+const _DEEP_RE = /\b(think|analyse|analyze|plan|write|explain|code|help me|should i|advise|strategy|review|compare|summarize|summarise|decide|suggest|recommend)\b/i;
+
+function _classifyIntent(text) {
+    const words = text.trim().split(/\s+/).length;
+    if (words <= 5 || _TOOL_RE.test(text)) return 'gemini';
+    if (_DEEP_RE.test(text) || words > 20) return 'sonnet';
+    return 'haiku';
+}
+
+async function _ttsChunk(text, apiKey) {
+    const body = JSON.stringify({
+        contents: [{ parts: [{ text }] }],
+        generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Orus' } } }
+        }
+    });
+    return new Promise((resolve, reject) => {
+        const req = https.request({
+            hostname: 'generativelanguage.googleapis.com',
+            path:     `/v1beta/models/${GEMINI_TTS_MODEL}:generateContent?key=${apiKey}`,
+            method:   'POST',
+            headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+        }, res => {
+            const parts = [];
+            res.on('data', d => parts.push(d));
+            res.on('end', () => {
+                try {
+                    const json = JSON.parse(Buffer.concat(parts).toString());
+                    const b64  = json.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                    if (!b64) return reject(new Error('no audio in TTS response'));
+                    const buf  = Buffer.from(b64, 'base64');
+                    // Strip 44-byte WAV header if present
+                    resolve(buf.slice(0, 4).toString('ascii') === 'RIFF' ? buf.slice(44) : buf);
+                } catch (e) { reject(e); }
+            });
+        });
+        req.on('error', reject);
+        req.write(body);
+        req.end();
+    });
+}
+
+async function _claudeVoiceStream(text, model, anthropicClient, systemPrompt, geminiApiKey, onAudio, onTranscript) {
+    const sentenceRe = /([^.!?]{8,}[.!?]+)(?=\s|$)/g;
+    let buffer = '';
+    let fullText = '';
+
+    const stream = anthropicClient.messages.stream({
+        model,
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: text }]
+    });
+
+    for await (const chunk of stream) {
+        if (chunk.type !== 'content_block_delta' || chunk.delta?.type !== 'text_delta') continue;
+        const token = chunk.delta.text;
+        buffer   += token;
+        fullText += token;
+
+        sentenceRe.lastIndex = 0;
+        let match;
+        let consumed = 0;
+        while ((match = sentenceRe.exec(buffer)) !== null) {
+            const sentence = match[1].trim();
+            if (sentence) {
+                try {
+                    const pcm = await _ttsChunk(sentence, geminiApiKey);
+                    onAudio(pcm.toString('base64'));
+                } catch (e) {
+                    console.warn('[GeminiLive] TTS chunk failed:', e.message);
+                }
+            }
+            consumed = match.index + match[0].length;
+            sentenceRe.lastIndex = 0;
+        }
+        if (consumed) buffer = buffer.slice(consumed);
+    }
+
+    // Flush remainder
+    if (buffer.trim()) {
+        try {
+            const pcm = await _ttsChunk(buffer.trim(), geminiApiKey);
+            onAudio(pcm.toString('base64'));
+        } catch (e) {
+            console.warn('[GeminiLive] TTS tail flush failed:', e.message);
+        }
+    }
+
+    if (fullText) onTranscript(fullText);
+}
+
 // ── Dynamic system prompt ─────────────────────────────────────────────────────
 function buildSystemPrompt(alexContext) {
     const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -126,7 +223,7 @@ VOICE RULES — this is a spoken conversation:
 }
 
 // ── Attach to http.Server ─────────────────────────────────────────────────────
-function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianAppend } = {}) {
+function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianAppend, anthropicClient } = {}) {
     const wss = new WebSocket.Server({ noServer: true });
 
     server.on('upgrade', (req, socket, head) => {
@@ -163,7 +260,8 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
 
         const geminiUrl = `${GEMINI_WS_BASE}?key=${resolvedKey}`;
         const geminiWs  = new WebSocket(geminiUrl);
-        let ready        = false;
+        let ready                = false;
+        let _suppressGeminiAudio = false;
         const _sessionTranscript = [];
 
         geminiWs.once('open', () => {
@@ -218,25 +316,51 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
             const sc = msg.serverContent;
             if (!sc) return;
 
-            // Audio output
-            for (const p of (sc.modelTurn?.parts || [])) {
-                if (p.inlineData?.data && p.inlineData.mimeType?.startsWith('audio/pcm')) {
-                    safeSend(browserWs, { type: 'audio', data: p.inlineData.data, rate: OUTPUT_RATE });
+            // Audio output — skip if Claude is handling this turn
+            if (!_suppressGeminiAudio) {
+                for (const p of (sc.modelTurn?.parts || [])) {
+                    if (p.inlineData?.data && p.inlineData.mimeType?.startsWith('audio/pcm')) {
+                        safeSend(browserWs, { type: 'audio', data: p.inlineData.data, rate: OUTPUT_RATE });
+                    }
                 }
             }
 
-            // Transcripts — buffer for Obsidian logging
+            // User transcript — route decision happens here
             if (sc.inputTranscription?.text) {
-                safeSend(browserWs, { type: 'transcript_user', text: sc.inputTranscription.text });
-                _sessionTranscript.push({ role: 'user', text: sc.inputTranscription.text });
+                const userText = sc.inputTranscription.text;
+                safeSend(browserWs, { type: 'transcript_user', text: userText });
+                _sessionTranscript.push({ role: 'user', text: userText });
+
+                const route = anthropicClient ? _classifyIntent(userText) : 'gemini';
+                if (route !== 'gemini') {
+                    _suppressGeminiAudio = true;
+                    const model = route === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
+                    console.log(`[GeminiLive] routing "${userText.slice(0, 60)}" → Claude ${route}`);
+                    _claudeVoiceStream(
+                        userText, model, anthropicClient, systemPrompt, resolvedKey,
+                        (b64pcm) => safeSend(browserWs, { type: 'audio', data: b64pcm, rate: OUTPUT_RATE }),
+                        (apexText) => {
+                            safeSend(browserWs, { type: 'transcript_apex', text: apexText });
+                            _sessionTranscript.push({ role: 'apex', text: apexText });
+                            safeSend(browserWs, { type: 'turn_complete' });
+                            _suppressGeminiAudio = false;
+                            _logTurnToObsidian(_sessionTranscript, obsidianAppend);
+                        }
+                    ).catch(e => {
+                        console.error('[GeminiLive] Claude voice stream failed:', e.message);
+                        _suppressGeminiAudio = false;
+                    });
+                }
             }
-            if (sc.outputTranscription?.text) {
+
+            // Apex transcript (Gemini-handled turns)
+            if (!_suppressGeminiAudio && sc.outputTranscription?.text) {
                 safeSend(browserWs, { type: 'transcript_apex', text: sc.outputTranscription.text });
                 _sessionTranscript.push({ role: 'apex', text: sc.outputTranscription.text });
             }
 
-            // Turn complete — log exchange to Obsidian
-            if (sc.turnComplete) {
+            // Turn complete for Gemini-handled turns
+            if (!_suppressGeminiAudio && sc.turnComplete) {
                 safeSend(browserWs, { type: 'turn_complete' });
                 _logTurnToObsidian(_sessionTranscript, obsidianAppend);
             }

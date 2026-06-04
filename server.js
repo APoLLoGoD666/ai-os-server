@@ -11099,6 +11099,7 @@ require('./routes/gemini-live').attach(server, {
     executeApexTool,
     buildAlexContext,
     obsidianAppend,
+    anthropicClient:  client,
 });
 
 
