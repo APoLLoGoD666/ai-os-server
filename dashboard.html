@@ -13705,7 +13705,9 @@ function _traceCard(s) {
     var maxGap = 0, bottleneckSpan = null;
     for (var i = 1; i < presentSpans.length; i++) {
         var gap = s.spans[presentSpans[i]] - s.spans[presentSpans[i-1]];
-        if (gap > maxGap) { maxGap = gap; bottleneckSpan = presentSpans[i]; }
+        // Discard negative or impossibly large gaps (> 1 hour) — these indicate
+        // clock-source mismatch or a stale span value, not a real bottleneck.
+        if (gap > 0 && gap < 3600000 && gap > maxGap) { maxGap = gap; bottleneckSpan = presentSpans[i]; }
     }
 
     // Waterfall bars

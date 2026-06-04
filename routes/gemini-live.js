@@ -224,7 +224,13 @@ function _ttsChunk(text, apiKey, signal) {
             });
         });
         req.on('error', reject);
-        if (signal) signal.addEventListener('abort', () => { req.destroy(); reject(new Error('aborted')); }, { once: true });
+        // Destroy the underlying socket directly so the https.Agent removes it from
+        // its pool immediately — prevents 'close'/'end' listener accumulation on
+        // keep-alive sockets that are reused across many sequential TTS requests.
+        if (signal) signal.addEventListener('abort', () => {
+            if (req.socket) req.socket.destroy(); else req.destroy();
+            reject(new Error('aborted'));
+        }, { once: true });
         req.write(body);
         req.end();
     });
@@ -507,8 +513,11 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
                                     tracker.endSession(turnId);
                                 }
                                 // R-1 fix: re-check signal after async _speakFallback yield —
-                                // a barge-in arriving during that await has already installed new state
+                                // a barge-in arriving during that await has already installed new state.
+                                // BUG-5 fix: clear _activeTurnId so stale Gemini turnComplete for this
+                                // user input cannot send a second turn_complete after suppression lifts.
                                 if (!signal.aborted) {
+                                    if (_activeTurnId === turnId) _activeTurnId = null;
                                     _suppressGeminiAudio = false;
                                     _activeAbort = null;
                                 }
@@ -538,18 +547,24 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
                 }
             }
 
-            // Apex transcript (Gemini-native turns only)
-            if (!_suppressGeminiAudio && sc.outputTranscription?.text) {
+            // Apex transcript (Gemini-native turns only).
+            // BUG-6 guard: _activeTurnId check prevents stale Gemini outputTranscription
+            // arriving after a Claude IIFE has already sent transcript_apex_final and
+            // cleared _activeTurnId — avoids double transcript on the same turn.
+            if (!_suppressGeminiAudio && _activeTurnId && sc.outputTranscription?.text) {
                 const apexText = sc.outputTranscription.text;
                 safeSend(browserWs, { type: 'transcript_apex_final', text: apexText });
                 _trimTranscript();
                 _sessionTranscript.push({ role: 'apex', text: apexText });
             }
 
-            // Turn complete (Gemini-native turns)
-            if (!_suppressGeminiAudio && sc.turnComplete) {
+            // Turn complete (Gemini-native turns).
+            // BUG-5 guard: _activeTurnId check prevents stale Gemini turnComplete from
+            // sending a second turn_complete after a Claude turn has already completed.
+            if (!_suppressGeminiAudio && _activeTurnId && sc.turnComplete) {
                 safeSend(browserWs, { type: 'turn_complete' });
-                if (_activeTurnId) { tracker.endSession(_activeTurnId); _activeTurnId = null; }
+                tracker.endSession(_activeTurnId);
+                _activeTurnId = null;
                 _logTurnToObsidian(_sessionTranscript, obsidianAppend);
             }
         });

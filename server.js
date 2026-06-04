@@ -11080,13 +11080,19 @@ function wsChunkedSend(ws, data, chunkSize = 64 * 1024) {
 }
 global._wsChunkedSend = wsChunkedSend;
 
-// Upgrade HTTP → WS on /ws path
+// Upgrade HTTP → WS on /ws path.
+// IMPORTANT: do NOT destroy /ws/* sub-routes — gemini-live registers its own
+// upgrade handler for /ws/gemini-live AFTER this block. Destroying the socket
+// here would kill it before gemini-live can claim it.
 server.on('upgrade', (req, socket, head) => {
-    if (req.url === '/ws' || req.url?.startsWith('/ws?')) {
+    const urlPath = (req.url || '').split('?')[0];
+    if (urlPath === '/ws') {
         _wss.handleUpgrade(req, socket, head, ws => _wss.emit('connection', ws, req));
-    } else {
+    } else if (!urlPath.startsWith('/ws/')) {
+        // Only destroy paths that no registered handler owns
         socket.destroy();
     }
+    // /ws/* paths fall through to sub-route handlers (e.g. /ws/gemini-live)
 });
 
 // Export broadcast so routes can push events to clients
