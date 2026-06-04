@@ -19,6 +19,9 @@ const ROOT = path.join(__dirname, '..');
 const MODEL = 'claude-haiku-4-5-20251001';
 const ROADMAP_FILE = path.join(ROOT, 'ROADMAP.md');
 
+const _ghToken = process.env.GITHUB_TOKEN || '';
+const _mask = (s) => _ghToken ? String(s || '').replace(new RegExp(_ghToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[REDACTED]') : String(s || '');
+
 // Escape special regex characters in featureId strings
 function _escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -99,17 +102,15 @@ function markFeatureComplete(featureId) {
         '- [x] $1'
     );
     fs.writeFileSync(ROADMAP_FILE, content, 'utf8');
-    const _mTok = process.env.GITHUB_TOKEN || '';
-    const _mMask = (s) => _mTok ? String(s || '').replace(_mTok, '[REDACTED]') : String(s || '');
     try {
-        const repoUrl = `https://oauth2:${_mTok}@github.com/APoLLoGoD666/ai-os-server.git`;
+        const repoUrl = `https://oauth2:${_ghToken}@github.com/APoLLoGoD666/ai-os-server.git`;
         execSync('git add ROADMAP.md', { cwd: ROOT, stdio: 'pipe' });
         execSync(`git commit -m "roadmap: mark ${featureId} complete [skip ci]"`, { cwd: ROOT, stdio: 'pipe' });
         execSync(`git pull --rebase ${repoUrl} main`, { cwd: ROOT, stdio: 'pipe' });
         execSync(`git push ${repoUrl} main`, { cwd: ROOT, stdio: 'pipe' });
         console.log(`[Master] ROADMAP.md pushed — ${featureId} marked [x]`);
     } catch (e) {
-        console.warn(`[Master] ROADMAP.md push failed (non-fatal): ${_mMask(e.message)}`);
+        console.warn(`[Master] ROADMAP.md push failed (non-fatal): ${_mask(e.message)} ${_mask(e.stderr?.toString())}`);
     }
 }
 
@@ -860,17 +861,15 @@ async function ship(featureId, opts = {}) {
 
     // Git tag + push
     let tagResult = 'skipped';
-    if (process.env.GITHUB_TOKEN) {
-        const _rTok = process.env.GITHUB_TOKEN;
-        const _rMask = (s) => String(s || '').replace(_rTok, '[REDACTED]');
+    if (_ghToken) {
         try {
             const { execSync } = require('child_process');
-            const repoUrl = `https://oauth2:${_rTok}@github.com/APoLLoGoD666/ai-os-server.git`;
+            const repoUrl = `https://oauth2:${_ghToken}@github.com/APoLLoGoD666/ai-os-server.git`;
             execSync(`git tag ${releaseTag}`, { cwd: ROOT, stdio: 'pipe' });
             execSync(`git push ${repoUrl} ${releaseTag}`, { cwd: ROOT, stdio: 'pipe' });
             tagResult = releaseTag;
         } catch (e) {
-            tagResult = `tag-failed: ${_rMask(e.message).slice(0, 100)}`;
+            tagResult = `tag-failed: ${_mask(e.message).slice(0, 100)}`;
         }
     }
 

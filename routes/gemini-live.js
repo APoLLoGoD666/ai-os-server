@@ -3,6 +3,7 @@ const WebSocket = require('ws');
 
 const GEMINI_MODEL   = 'gemini-2.5-flash-preview-native-audio-dialog';
 const GEMINI_WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
+const _maskKey = (key, s) => key ? String(s || '').replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[REDACTED]') : String(s || '');
 const INPUT_RATE     = 16000;
 const OUTPUT_RATE    = 24000;
 
@@ -283,7 +284,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
             if (browserWs.readyState === WebSocket.OPEN) browserWs.close();
         });
         geminiWs.on('error', e => {
-            const safeMsg = resolvedKey ? e.message.replace(resolvedKey, '[REDACTED]') : e.message;
+            const safeMsg = _maskKey(resolvedKey, e.message);
             console.error('[GeminiLive] Gemini error:', safeMsg);
             safeSend(browserWs, { type: 'error', message: safeMsg });
         });
