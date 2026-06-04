@@ -8338,7 +8338,7 @@ async function toolGetHealthSummary() {
         const week  = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
         const [workouts, nutrition, sleep, mood] = await Promise.all([
             sbAdmin.from('apex_workouts').select('type,duration_min,calories_burned,date').gte('date', week).order('date', { ascending: false }).limit(5),
-            sbAdmin.from('apex_nutrition_log').select('food_name,calories,protein_g,carbs_g,fat_g').eq('date', today),
+            sbAdmin.from('apex_nutrition_log').select('food_name,calories,protein_g,carbs_g,fat_g').eq('date', today).limit(100),
             sbAdmin.from('apex_sleep_log').select('date,duration_h,quality_score').order('date', { ascending: false }).limit(3),
             sbAdmin.from('apex_mood_log').select('date,score,notes').order('date', { ascending: false }).limit(1),
         ]);

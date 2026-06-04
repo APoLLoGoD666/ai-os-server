@@ -643,7 +643,22 @@ async function _committer(spec, branchName) {
 
     let finalHash = afterHash;
 
-    // Merge worktree branch back into main (Superpowers pattern)
+    const _ghToken = process.env.GITHUB_TOKEN || '';
+    const repoUrl = `https://oauth2:${_ghToken}@github.com/APoLLoGoD666/ai-os-server.git`;
+    const _mask = (s) => _ghToken ? String(s || '').replace(_ghToken, '[REDACTED]') : String(s || '');
+
+    // Pull first — sync ROOT with remote before merging so the merge commit lands on top of
+    // the latest remote HEAD. Doing this after merge caused git to rebase away the merge commit
+    // when the remote had diverged, producing "Everything up-to-date" on push.
+    const pull = spawnSync('git', ['pull', '--rebase', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+    if (pull.status !== 0) {
+        console.warn('[COMMITTER] pre-merge rebase failed — aborting:', _mask(pull.stderr?.slice(0, 200)));
+        spawnSync('git', ['rebase', '--abort'], { cwd: ROOT, encoding: 'utf8' });
+    } else {
+        finalHash = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout?.trim() || finalHash;
+    }
+
+    // Merge worktree branch on top of the now-synced ROOT main
     if (usingWorktree && branchName) {
         spawnSync('git', ['config', 'user.email', 'apex@ai-os.local'], { cwd: ROOT, encoding: 'utf8' });
         spawnSync('git', ['config', 'user.name', 'Apex AutoPilot'], { cwd: ROOT, encoding: 'utf8' });
@@ -654,18 +669,6 @@ async function _committer(spec, branchName) {
         }
         finalHash = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout?.trim() || afterHash;
         console.log(`[COMMITTER] merged ${branchName} → main (${finalHash})`);
-    }
-
-    const _ghToken = process.env.GITHUB_TOKEN || '';
-    const repoUrl = `https://oauth2:${_ghToken}@github.com/APoLLoGoD666/ai-os-server.git`;
-    const _mask = (s) => _ghToken ? String(s || '').replace(_ghToken, '[REDACTED]') : String(s || '');
-
-    // Rebase onto latest remote before pushing to avoid non-fast-forward rejection
-    const pull = spawnSync('git', ['pull', '--rebase', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
-    if (pull.status !== 0) {
-        console.warn('[COMMITTER] rebase failed, attempting push anyway:', _mask(pull.stderr?.slice(0, 200)));
-    } else {
-        finalHash = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout?.trim() || finalHash;
     }
 
     const push = spawnSync('git', ['push', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
