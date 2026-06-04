@@ -112,6 +112,10 @@ class SemanticChunker {
         if (this._buf.trim().length > 0) { this._flush(this._buf); this._buf = ''; }
     }
 
+    // BUG-7: kill the timer and discard buffer without flushing — used when the
+    // Claude stream throws so the pending setTimeout can't fire stale TTS chunks.
+    discard() { this._clearTimer(); this._buf = ''; }
+
     // Phrase-final: any terminal punctuation (includes comma, colon) — used for first chunk only
     _isPhraseEnd(t) { return /[,;:.!?]\s*$/.test(t); }
 
@@ -277,24 +281,32 @@ async function _claudeVoiceStream({ text, model, anthropicClient, systemPrompt, 
         messages:   _buildMessages(sessionTranscript, text),
     });
 
-    for await (const chunk of stream) {
-        if (signal.aborted) break;
-        if (chunk.type !== 'content_block_delta' || chunk.delta?.type !== 'text_delta') continue;
-        const token = chunk.delta.text;
-        fullText   += token;
-        partialBuf += token;
-        if (firstToken) {
-            firstToken = false;
-            tracker.mark(turnId, 'claude_first_token', { model });
+    let _streamError = null;
+    try {
+        for await (const chunk of stream) {
+            if (signal.aborted) break;
+            if (chunk.type !== 'content_block_delta' || chunk.delta?.type !== 'text_delta') continue;
+            const token = chunk.delta.text;
+            fullText   += token;
+            partialBuf += token;
+            if (firstToken) {
+                firstToken = false;
+                tracker.mark(turnId, 'claude_first_token', { model });
+            }
+            chunker.push(token);
+            if (partialBuf.length >= 50) { onPartialTranscript(fullText); partialBuf = ''; }
         }
-        chunker.push(token);
-        if (partialBuf.length >= 50) { onPartialTranscript(fullText); partialBuf = ''; }
+    } catch (e) {
+        // BUG-7: discard kills the pending setTimeout so it can't fire stale TTS chunks
+        // after the IIFE's catch block has already played the fallback audio.
+        _streamError = e;
+        chunker.discard();
     }
-
-    chunker.end();
+    if (!_streamError) chunker.end();
     await ttsQueue.waitDone();
 
     if (!signal.aborted && fullText.trim()) onTranscript(fullText);
+    if (_streamError) throw _streamError;
 }
 
 // ── Never-silence fallback ────────────────────────────────────────────────────
@@ -379,6 +391,10 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
         }
         const systemPrompt = buildSystemPrompt(alexContext);
 
+        // BUG-8: browser may have disconnected during the buildAlexContext() await.
+        // Without this guard, geminiWs would be created and never cleaned up.
+        if (browserWs.readyState !== WebSocket.OPEN) return;
+
         const geminiWs = new WebSocket(`${GEMINI_WS_BASE}?key=${resolvedKey}`);
 
         geminiWs.once('open', () => {
@@ -434,6 +450,11 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
             // _suppressGeminiAudio BEFORE audio parts are forwarded below.
             // This eliminates the race where Gemini audio leaks through on Claude turns.
             if (sc.inputTranscription?.text) {
+                // Sticky suppression: clear the previous turn's Claude suppression flag here,
+                // at the start of the NEXT turn, not when the Claude IIFE completes.
+                // This eliminates the race window where stale Gemini audio/transcript/turnComplete
+                // can leak through between Claude turn completion and the next user utterance.
+                _suppressGeminiAudio = false;
                 const userText   = sc.inputTranscription.text;
                 const prevTurnId = _activeTurnId; // capture before overwrite — needed for barge-in interrupt
 
@@ -518,16 +539,14 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
                                 // user input cannot send a second turn_complete after suppression lifts.
                                 if (!signal.aborted) {
                                     if (_activeTurnId === turnId) _activeTurnId = null;
-                                    _suppressGeminiAudio = false;
                                     _activeAbort = null;
+                                    // _suppressGeminiAudio stays true until next inputTranscription (sticky suppression)
                                 }
                             }
                         }
                     })().catch(e => console.error('[GeminiLive] turn lifecycle error:', e.message));
 
                 } else {
-                    // Gemini native path — ensure suppression is cleared
-                    _suppressGeminiAudio = false;
                     console.log(`[GeminiLive] route → gemini ("${userText.slice(0, 60)}")`);
                 }
             }
