@@ -10195,7 +10195,7 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
         const [taskRes, timelineRes, runRes] = await Promise.all([
             safeQ(() => sbAdmin.from('apex_tasks').select('id', { count: 'exact', head: true })),
             safeQ(() => sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true })),
-            safeQ(() => sbAdmin.from('apex_agent_runs').select('task_id,success,cost_usd,duration_ms'))
+            safeQ(() => sbAdmin.from('apex_agent_runs').select('task_id,success,cost_usd,duration_ms').limit(500))
         ]);
         const runs     = (runRes && Array.isArray(runRes.data)) ? runRes.data : [];
         const runCount = runs.length;

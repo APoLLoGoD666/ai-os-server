@@ -10,6 +10,10 @@ get_gmail_token.js
 temp-*
 backups/
 
+# Local MCP config — may contain API tokens, never commit
+.mcp.json
+.claude-session-lock.json
+
 # Ruflo runtime databases and ephemeral state
 ruvector.db
 .swarm/*.db
