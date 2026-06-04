@@ -40,18 +40,13 @@ router.get('/agents', _auth, (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// GET /api/agents/:slug
-router.get('/agents/:slug', _auth, (req, res) => {
-    try {
-        const { slug } = req.params;
-        if (!slug || slug.length > 100) return res.status(400).json({ ok: false, error: 'Invalid slug' });
-        const agent = _lib().getAgent(slug);
-        if (!agent) return res.status(404).json({ ok: false, error: 'Agent not found' });
-        res.json({ ok: true, agent });
-    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+// GET /api/agents/domain — list Apex domain agents (MUST be before /:slug to avoid shadowing)
+router.get('/agents/domain', _auth, (req, res) => {
+    try { res.json({ ok: true, agents: _domain().listDomainAgents() }); }
+    catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// POST /api/agents/invoke  { agentSlug, message }
+// POST /api/agents/invoke  { agentSlug, message } (MUST be before /:slug)
 router.post('/agents/invoke', _auth, async (req, res) => {
     const { agentSlug, message } = req.body || {};
     if (!agentSlug || !message)
@@ -64,10 +59,15 @@ router.post('/agents/invoke', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// GET /api/agents/domain — list Apex domain agents
-router.get('/agents/domain', _auth, (req, res) => {
-    try { res.json({ ok: true, agents: _domain().listDomainAgents() }); }
-    catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+// GET /api/agents/:slug
+router.get('/agents/:slug', _auth, (req, res) => {
+    try {
+        const { slug } = req.params;
+        if (!slug || slug.length > 100) return res.status(400).json({ ok: false, error: 'Invalid slug' });
+        const agent = _lib().getAgent(slug);
+        if (!agent) return res.status(404).json({ ok: false, error: 'Agent not found' });
+        res.json({ ok: true, agent });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // POST /api/agents/domain/invoke  { slug, message, history? }

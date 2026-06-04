@@ -4,7 +4,6 @@ logs/
 ai_pipeline.db
 local_ai_backups
 local_ai_proposals
-ai_pipeline.db
 get_gmail_token.js
 *.bak
 temp-*

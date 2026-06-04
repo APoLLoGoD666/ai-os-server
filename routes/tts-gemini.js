@@ -67,7 +67,7 @@ router.post('/tts/gemini', _auth, async (req, res) => {
             return res.send(cached);
         }
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
         const payload = {
             contents: [{ parts: [{ text }] }],
             generationConfig: {
@@ -78,7 +78,7 @@ router.post('/tts/gemini', _auth, async (req, res) => {
 
         let gRes;
         try {
-            gRes = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            gRes = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(payload) });
         } catch (netErr) {
             console.error('[TTS/Gemini] network error:', netErr.message);
             return res.status(502).json({ error: 'Network error reaching Gemini API' });

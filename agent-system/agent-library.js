@@ -79,7 +79,7 @@ function _parse(content, githubPath) {
 function _writeToObsidian(agent) {
     try {
         const mem      = require('./obsidian-memory');
-        const vaultPath = `Agents/${agent.category}/${agent.slug}.md`;
+        const vaultPath = `11 Agents/Specifications/${agent.category}/${agent.slug}.md`;
         const frontmatter = [
             '---',
             `slug: "${agent.slug}"`,
@@ -184,7 +184,7 @@ async function syncFromGitHub(sbAdmin, { obsidian = true } = {}) {
                     if (vp) agents[i + j].vault_path = vp;
                 });
             }
-            console.log('[AgentLib] Agents written to Obsidian vault under Agents/');
+            console.log('[AgentLib] Agents written to Obsidian vault under 11 Agents/Specifications/');
         }
 
         // Populate memory cache

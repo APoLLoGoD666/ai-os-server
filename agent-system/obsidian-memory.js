@@ -55,7 +55,7 @@ module.exports = {
         const date = new Date().toISOString().split('T')[0];
         const time = new Date().toLocaleTimeString('en-GB',
             { hour: '2-digit', minute: '2-digit' });
-        this.append('System/Lessons.md',
+        this.append('01 Executive/Lessons.md',
             `## ${date} ${time}\n${lesson}`);
         _lessonBuffer.push(`${date} ${time}: ${lesson}`);
         if (_lessonBuffer.length > 50) _lessonBuffer.shift();
@@ -63,18 +63,18 @@ module.exports = {
 
     logDecision(decision, reason) {
         const date = new Date().toISOString().split('T')[0];
-        this.append('System/Decisions.md',
+        this.append('01 Executive/Decisions.md',
             `## ${date} — ${decision}\n**Reason:** ${reason}`);
     },
 
     logFeature(featureId, title, commitHash, details) {
         const date = new Date().toISOString().split('T')[0];
-        this.append('System/Features.md',
+        this.append('01 Executive/Features.md',
             `## ${featureId}: ${title}\n` +
             `**Completed:** ${date}\n` +
             `**Commit:** ${commitHash}\n` +
             `**Details:** ${details}`);
-        this.write(`Features/${featureId}.md`,
+        this.write(`02 Projects/Completed/${featureId}.md`,
             `---\n` +
             `id: ${featureId}\n` +
             `title: ${title}\n` +
@@ -90,16 +90,16 @@ module.exports = {
     },
 
     getNorthStar() {
-        return this.read('System/North-Star.md') || '';
+        return this.read('01 Executive/North-Star.md') || '';
     },
 
     getLessons() {
-        return this.read('System/Lessons.md') || '';
+        return this.read('01 Executive/Lessons.md') || '';
     },
 
     // Returns the last N lessons — merges disk content with in-memory buffer
     getRecentLessons(n = 12) {
-        const raw = this.read('System/Lessons.md') || '';
+        const raw = this.read('01 Executive/Lessons.md') || '';
         const sections = raw.split(/\n---\n/).filter(Boolean);
         // Append buffer entries not already present in disk content
         for (const entry of _lessonBuffer) {
@@ -111,9 +111,9 @@ module.exports = {
     },
 
     getFullContext() {
-        const northStar = this.read('System/North-Star.md');
-        const lessons = this.read('System/Lessons.md');
-        const features = this.read('System/Features.md');
+        const northStar = this.read('01 Executive/North-Star.md');
+        const lessons = this.read('01 Executive/Lessons.md');
+        const features = this.read('01 Executive/Features.md');
         const parts = [];
         if (northStar) parts.push('# NORTH STAR\n' + northStar);
         if (lessons) parts.push('# LESSONS LEARNED\n' + lessons);
@@ -181,9 +181,9 @@ module.exports = {
                 const sections = raw.split(/\n---\n/).filter(Boolean);
                 return sections.slice(-n).join('\n---\n');
             };
-            const features = lastN('System/Features.md', 3);
-            const decisions = lastN('System/Decisions.md', 3);
-            const lessons = lastN('System/Lessons.md', 5);
+            const features = lastN('01 Executive/Features.md', 3);
+            const decisions = lastN('01 Executive/Decisions.md', 3);
+            const lessons = lastN('01 Executive/Lessons.md', 5);
             return `# Daily Briefing — ${date}\n\n` +
                 `## Recent Features\n${features || '_None recorded._'}\n\n` +
                 `## Recent Decisions\n${decisions || '_None recorded._'}\n\n` +

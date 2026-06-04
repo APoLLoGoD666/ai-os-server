@@ -1,5 +1,6 @@
 'use strict';
 const https     = require('https');
+const crypto    = require('crypto');
 const WebSocket = require('ws');
 const tracker   = require('../lib/latency-tracker');
 
@@ -7,6 +8,10 @@ const tracker   = require('../lib/latency-tracker');
 // Eliminates ~100-200ms TLS handshake overhead on 2nd+ chunks per session
 // and on 1st chunk when a prior session's connection is still alive.
 const _tlsAgent = new https.Agent({ keepAlive: true, keepAliveMsecs: 3000, maxSockets: 6 });
+
+// Lazy-load intelligence module — updates shared voiceState on session open/close.
+// Wrapped in try/catch so gemini-live remains functional even if intelligence.js fails to load.
+const _intel = (() => { try { return require('./intelligence'); } catch { return null; } })();
 
 const GEMINI_MODEL     = 'gemini-2.5-flash-preview-native-audio-dialog';
 const GEMINI_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
@@ -203,10 +208,10 @@ function _ttsChunk(text, apiKey, signal) {
         if (signal?.aborted) return reject(new Error('aborted'));
         const req = https.request({
             hostname: 'generativelanguage.googleapis.com',
-            path:     `/v1beta/models/${GEMINI_TTS_MODEL}:generateContent?key=${apiKey}`,
+            path:     `/v1beta/models/${GEMINI_TTS_MODEL}:generateContent`,
             method:   'POST',
             agent:    _tlsAgent,    // reuse TLS connection — eliminates 100-200ms handshake per chunk
-            headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+            headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'x-goog-api-key': apiKey }
         }, res => {
             const parts = [];
             res.on('data', d => parts.push(d));
@@ -315,7 +320,7 @@ async function _speakFallback(browserWs, geminiApiKey, turnId) {
     try {
         const b64pcm = await _ttsChunk(text, geminiApiKey, null);
         safeSend(browserWs, { type: 'audio', data: b64pcm, rate: OUTPUT_RATE });
-    } catch {}
+    } catch (e) { console.warn('[TTS] _speakFallback audio failed:', e.message); }
     safeSend(browserWs, { type: 'transcript_apex_final', text });
     safeSend(browserWs, { type: 'turn_complete' });
     if (turnId) tracker.endSession(turnId, { timed_out: true });
@@ -357,9 +362,10 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
         const url = new URL(req.url, 'http://localhost');
         if (url.pathname !== '/ws/gemini-live') return;
         if (appKey) {
-            const qKey = url.searchParams.get('app_key');
-            const hKey = req.headers['x-app-key'];
-            if (qKey !== appKey && hKey !== appKey) {
+            const qKey = url.searchParams.get('app_key') || '';
+            const hKey = req.headers['x-app-key'] || '';
+            const _safe = (k) => { try { return crypto.timingSafeEqual(Buffer.from(k), Buffer.from(appKey)); } catch { return false; } };
+            if (!_safe(qKey) && !_safe(hKey)) {
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
                 socket.destroy();
                 return;
@@ -396,6 +402,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
         if (browserWs.readyState !== WebSocket.OPEN) return;
 
         const geminiWs = new WebSocket(`${GEMINI_WS_BASE}?key=${resolvedKey}`);
+        let _setupTimer = null;
 
         geminiWs.once('open', () => {
             geminiWs.send(JSON.stringify({
@@ -409,6 +416,13 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
                     tools: [{ functionDeclarations: APEX_FUNCTION_DECLARATIONS }]
                 }
             }));
+            _setupTimer = setTimeout(() => {
+                if (!ready) {
+                    console.warn('[GeminiLive] setup timeout — no setupComplete from Gemini after 10s');
+                    safeSend(browserWs, { type: 'error', message: 'Gemini session setup timed out' });
+                    geminiWs.close();
+                }
+            }, 10000);
         });
 
         // ── Gemini → browser ──────────────────────────────────────────────────
@@ -417,8 +431,10 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
             try { msg = JSON.parse(raw); } catch { return; }
 
             if ('setupComplete' in msg) {
+                clearTimeout(_setupTimer);
                 ready = true;
                 safeSend(browserWs, { type: 'ready' });
+                if (_intel) { _intel.voiceState.active = true; _intel.voiceState.sessionId = connId; _intel.broadcastVoiceState(); }
                 console.log('[GeminiLive] session ready — tools active, Alex context injected');
                 return;
             }
@@ -610,6 +626,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
 
         // ── Cleanup ───────────────────────────────────────────────────────────
         const closeGemini = () => {
+            clearTimeout(_setupTimer);
             if (geminiWs.readyState === WebSocket.OPEN || geminiWs.readyState === WebSocket.CONNECTING)
                 geminiWs.close();
         };
@@ -618,6 +635,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
             if (_activeAbort) { _activeAbort.abort(); _activeAbort = null; }
             _suppressGeminiAudio = false;
             if (_activeTurnId) { tracker.endSession(_activeTurnId); _activeTurnId = null; }
+            if (_intel) { _intel.voiceState.active = false; _intel.voiceState.sessionId = null; _intel.voiceState.ttsPlaying = false; _intel.broadcastVoiceState(); }
             closeGemini();
         });
         browserWs.on('error', e => { console.error('[GeminiLive] browser error:', e.message); closeGemini(); });
@@ -625,6 +643,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
         geminiWs.on('close', code => {
             console.log(`[GeminiLive] Gemini session closed ${code}`);
             safeSend(browserWs, { type: 'disconnected', code });
+            if (_intel) { _intel.voiceState.active = false; _intel.voiceState.sessionId = null; _intel.voiceState.ttsPlaying = false; _intel.broadcastVoiceState(); }
             if (browserWs.readyState === WebSocket.OPEN) browserWs.close();
         });
         geminiWs.on('error', e => {
@@ -651,7 +670,7 @@ function _logTurnToObsidian(transcript, obsidianAppend) {
     if (!user || !apex) return;
     const today = new Date().toISOString().split('T')[0];
     const time  = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    obsidianAppend(`Conversations/${today}.md`, `## ${time} *(Gemini Live)*\n\n**Alex:** ${user.text}\n\n**Apex:** ${apex.text}\n`).catch(() => {});
+    obsidianAppend(`13 Briefings/Conversations/${today}.md`, `## ${time} *(Gemini Live)*\n\n**Alex:** ${user.text}\n\n**Apex:** ${apex.text}\n`).catch(() => {});
 }
 
 function safeSend(ws, obj) {

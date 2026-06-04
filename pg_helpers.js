@@ -92,7 +92,7 @@ async function pgAddMemory(role, message) {
         'pgAddMemory insert'
     );
     const all = check(
-        await supabase.from('memory').select('id').order('id', { ascending: false }),
+        await supabase.from('memory').select('id').order('id', { ascending: false }).limit(100),
         'pgAddMemory select'
     );
     if (all && all.length > 20) {
@@ -326,7 +326,7 @@ async function pgUpdateAgentScheduleLastRun(id) {
 
 async function pgGetDueAgentSchedules() {
     const data = check(
-        await supabase.from('agent_schedules').select().eq('enabled', true),
+        await supabase.from('agent_schedules').select().eq('enabled', true).limit(200),
         'pgGetDueAgentSchedules'
     );
     const now = Date.now();
@@ -470,7 +470,8 @@ async function pgGetEnabledStandingApprovals(actionType = null) {
     let q = supabase.from('standing_approvals')
         .select()
         .eq('enabled', true)
-        .order('id', { ascending: false });
+        .order('id', { ascending: false })
+        .limit(100);
     if (actionType) q = q.eq('action_type', actionType);
     const data = check(await q, 'pgGetEnabledStandingApprovals');
     return data || [];
@@ -658,11 +659,14 @@ async function pgMarkRoutineRun(id) {
 
 async function pgSaveGmailToken(refreshToken) {
     try {
-        await supabase.from('gmail_tokens').delete().not('id', 'is', null);
-        check(
-            await supabase.from('gmail_tokens').insert({ refresh_token: refreshToken }),
-            'pgSaveGmailToken insert'
-        );
+        // Insert first — only delete old rows after new token is persisted
+        const { data: inserted, error: insertErr } = await supabase
+            .from('gmail_tokens')
+            .insert({ refresh_token: refreshToken })
+            .select('id')
+            .single();
+        if (insertErr) throw new Error(insertErr.message);
+        await supabase.from('gmail_tokens').delete().neq('id', inserted.id);
         console.log('[Gmail] Token saved to database successfully');
     } catch (err) {
         console.error('[Gmail] Failed to save token to database:', err.message, err.stack);

@@ -143,3 +143,4 @@ router.post('/news/refresh', requireAppAccess, async (req, res) => {
 
 module.exports = router;
 module.exports.voiceState = voiceState;
+module.exports.broadcastVoiceState = broadcastVoiceState;

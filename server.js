@@ -61,6 +61,7 @@ process.on('unhandledRejection', (reason) => {
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const cors = require("cors");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
@@ -84,12 +85,11 @@ const _pcm         = require('./lib/persistent-cognition-manager');
 const _eae         = require('./lib/executive-arbitration-engine');
 const _spe         = require('./lib/strategic-planning-engine');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
-const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
+const { DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
 // ── LangChain modules — lazy-loaded on first voice-chat to avoid startup RSS hit
 let lcMemory = { getContext: async () => '', addExchange: async () => {}, clearMemory: async () => {} };
 let lcRag    = { retrieveContext: async () => '' };
-const lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} };
 let _lcLoaded = false;
 async function _ensureLCLoaded() {
     if (_lcLoaded) return;
@@ -359,7 +359,7 @@ app.get('/health', async (req, res) => {
                 dbOk = !error;
             }
         }
-    } catch {}
+    } catch (e) { console.warn('[Health] db check error:', e.message); }
     const mem     = process.memoryUsage();
     const heapMb  = Math.round(mem.heapUsed  / 1024 / 1024);
     const rssM    = Math.round(mem.rss        / 1024 / 1024);
@@ -377,6 +377,91 @@ app.get('/health', async (req, res) => {
         memory:    { heapMb, rssMb: rssM, warning: heapMb > 400 },
         recentErrors: _errBuffer.slice(-3)
     });
+});
+
+// GET /api/system/health/detailed — unified observability snapshot
+app.get('/api/system/health/detailed', requireAppAccess, async (req, res) => {
+    const t0 = Date.now();
+    const result = {
+        timestamp:  Date.now(),
+        uptime:     process.uptime(),
+        memory:     null,
+        db:         { ok: false, latencyMs: null },
+        supabase:   { ok: false },
+        voice:      null,
+        agentQueue: null,
+        agents:     null,
+        obsidian:   { ok: false },
+        latency:    null,
+    };
+
+    // Memory
+    const mem = process.memoryUsage();
+    result.memory = {
+        heapMb:  Math.round(mem.heapUsed  / 1024 / 1024),
+        rssMb:   Math.round(mem.rss       / 1024 / 1024),
+        warning: Math.round(mem.heapUsed  / 1024 / 1024) > 400,
+    };
+
+    // DB (pg pool)
+    await (async () => {
+        const t = Date.now();
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query('SELECT 1');
+            result.db = { ok: true, latencyMs: Date.now() - t };
+        } catch (e) {
+            result.db = { ok: false, error: e.message };
+        }
+    })();
+
+    // Supabase
+    await (async () => {
+        try {
+            const { error } = await sbAdmin.from('notifications').select('id').limit(1);
+            result.supabase = { ok: !error, error: error?.message };
+        } catch (e) { result.supabase = { ok: false, error: e.message }; }
+    })();
+
+    // Voice state
+    try {
+        const intel = require('./routes/intelligence');
+        const vs = intel.voiceState;
+        result.voice = { active: vs.active, sessionId: vs.sessionId, ttsPlaying: vs.ttsPlaying, listeners: vs.listeners.size };
+    } catch { result.voice = { active: false }; }
+
+    // Agent queue
+    try { result.agentQueue = _agentQueue.status(); } catch {}
+
+    // Agent library
+    try { result.agents = require('./agent-system/agent-library').status(); } catch {}
+
+    // Obsidian vault reachability
+    try {
+        const vaultPath = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
+        const fs = require('fs');
+        result.obsidian = { ok: fs.existsSync(vaultPath), path: vaultPath };
+    } catch {}
+
+    // Latency tracker stats
+    try {
+        const trackerStats = require('./lib/latency-tracker').stats();
+        const ov = trackerStats.overall;
+        result.latency = {
+            total_sessions:   trackerStats.total_sessions,
+            active:           trackerStats.active_voice_sessions,
+            ack_p50:          ov?.ack_latency?.p50         ?? null,
+            ack_p95:          ov?.ack_latency?.p95         ?? null,
+            meaningful_p50:   ov?.meaningful_latency?.p50  ?? null,
+            meaningful_p95:   ov?.meaningful_latency?.p95  ?? null,
+            completion_p50:   ov?.completion_latency?.p50  ?? null,
+            completion_p95:   ov?.completion_latency?.p95  ?? null,
+            abandonment_rate: trackerStats.abandonment_rate,
+        };
+    } catch {}
+
+    const allOk = result.db.ok && result.supabase.ok;
+    res.status(allOk ? 200 : 503).json({ ok: allOk, probe_ms: Date.now() - t0, ...result });
 });
 
 app.get('/', requireAuth, (req, res) => {
@@ -753,7 +838,10 @@ function requireAppAccess(req, res, next) {
 
 function hasCronAccess(req) {
     if (!CRON_SECRET) return false;
-    return req.get("x-cron-secret") === CRON_SECRET;
+    const provided = req.get("x-cron-secret") || "";
+    try {
+        return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(CRON_SECRET));
+    } catch { return false; }
 }
 
 function requireCronAccess(req, res, next) {
@@ -909,7 +997,7 @@ async function _compressMemory() {
         });
         const summary = (res.content[0]?.text || "").trim();
         if (summary) await pgAddMemory("summary", summary);
-    } catch (_) {}
+    } catch (e) { console.warn('[Memory] compress failed:', e.message); }
 }
 
 async function formatRecentMemory() {
@@ -1290,9 +1378,9 @@ async function embedText(text) {
     if (googleKey) {
         try {
             const resp = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${googleKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent`,
                 { model: 'models/text-embedding-004', content: { parts: [{ text: text.slice(0, 2000) }] } },
-                { timeout: 8000 }
+                { timeout: 8000, headers: { 'x-goog-api-key': googleKey } }
             );
             return resp.data?.embedding?.values || null;
         } catch (err) {
@@ -2871,7 +2959,6 @@ async function runSingleScheduleOnce(schedule) {
     };
 }
 
-// TODO: wire runDueSchedules() to Render Cron Job or a background worker.
 async function runDueSchedules() {
     const dueSchedules = await pgGetDueAgentSchedules();
     const results = [];
@@ -6921,10 +7008,6 @@ async function backgroundClassifyAndSummarise(filename, content) {
    ROUTES
 ========================= */
 
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "dashboard.html"));
-});
-
 app.get("/editor", requireAppAccess, (req, res) => {
     res.sendFile(path.join(__dirname, "editor.html"));
 });
@@ -6958,8 +7041,10 @@ app.get("/version", requireAppAccess, (req, res) => {
 });
 
 app.get("/debug-storage", requireAppAccess, async (req, res) => {
-    const debug = await getWorkspaceStorageDebug();
-    res.status(debug.ok ? 200 : 500).json(debug);
+    try {
+        const debug = await getWorkspaceStorageDebug();
+        res.status(debug.ok ? 200 : 500).json(debug);
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get("/memory", requireAppAccess, async (req, res) => {
@@ -7146,8 +7231,10 @@ app.post("/cron/run-schedules", requireCronAccess, async (req, res) => {
 });
 
 app.get("/files", requireAppAccess, async (req, res) => {
-    const files = await listWorkspaceFiles();
-    res.status(200).json({ ok: true, count: files.length, files });
+    try {
+        const files = await listWorkspaceFiles();
+        res.status(200).json({ ok: true, count: files.length, files });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get("/load-layout", requireAppAccess, (req, res) => {
@@ -7763,10 +7850,10 @@ app.post("/api/speak", requireAppAccess, async (req, res) => {
         const voiceName = 'Orus';
         const t0 = Date.now();
         const gRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`,
             {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text }] }],
                     generationConfig: {
@@ -7908,7 +7995,7 @@ Respond with one fact per line, each starting with "Alex".`;
             // Mirror to Obsidian Alex profile for persistent second-brain context
             const date = new Date().toLocaleDateString('en-GB');
             const lines = facts.map(f => `- ${f} *(${date})*`).join('\n');
-            obsidianAppend('People/Alex.md', `\n${lines}`).catch(() => {});
+            obsidianAppend('12 Memory/Identity/Alex.md', `\n${lines}`).catch(() => {});
         }
     } catch (err) {
         console.error('[FACTS] extractAndSaveFacts error:', err.message);
@@ -7920,7 +8007,7 @@ async function buildAlexContext() {
     const parts = [];
     try {
         // Primary: structured profile from Obsidian vault
-        const profile = await obsidianRead('People/Alex.md').catch(() => null);
+        const profile = await obsidianRead('12 Memory/Identity/Alex.md').catch(() => null);
         if (profile && profile.length > 50) {
             // Strip frontmatter and markdown headers for clean injection
             const cleaned = profile
@@ -8604,7 +8691,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         // consumes ~150MB on top of the main process, causing container OOM on Render.
 
         const today = new Date().toISOString().split('T')[0];
-        const noteTitle = `Conversations/${today}.md`;
+        const noteTitle = `13 Briefings/Conversations/${today}.md`;
         const timestamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
         const noteContent = `## ${timestamp}\n\n**You:** ${userMessage}\n\n**Apex:** ${reply}\n`;
         obsidianAppend(noteTitle, noteContent).catch(e =>
@@ -8639,10 +8726,10 @@ app.post("/api/transcribe", requireAppAccess, multerUpload.single("audio"), asyn
         console.log("[APEX transcribe] mimeType:", mimeType, "size:", audioBuffer.length);
 
         const gRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
             {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
                 body: JSON.stringify({
                     contents: [{
                         parts: [
@@ -8679,10 +8766,10 @@ app.post('/api/tts', requireAppAccess, async (req, res) => {
         const voiceName = 'Orus';
         const t0 = Date.now();
         const gRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`,
             {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text }] }],
                     generationConfig: {
@@ -9373,8 +9460,9 @@ app.post('/api/rag/ingest', requireAppAccess, requireRagSidecar, multerUpload.si
             const mdResult = await _mkd.convertBuffer(req.file.buffer, req.file.originalname);
             if (mdResult.success && mdResult.markdown) {
                 const { obsidianWrite } = require('./agent-system/obsidian-client');
-                const noteName = `References/${req.file.originalname.replace(/\.[^.]+$/, '')}.md`;
-                await obsidianWrite(noteName, `# ${req.file.originalname}\n\n${mdResult.markdown}`);
+                const safeName = path.basename(req.file.originalname || 'file').replace(/[<>:"|?*\x00-\x1f]/g, '_');
+                const noteName = `09 Knowledge/References/${safeName.replace(/\.[^.]+$/, '')}.md`;
+                await obsidianWrite(noteName, `# ${safeName}\n\n${mdResult.markdown}`);
             }
         } catch {}
         res.json({ ok: true, ...result });
@@ -9412,8 +9500,9 @@ app.post('/api/convert/ingest', requireAppAccess, multerUpload.single('file'), a
         const mdResult = await _mkd.convertBuffer(req.file.buffer, req.file.originalname);
         if (!mdResult.success) throw new Error('conversion failed');
         const { obsidianWrite } = require('./agent-system/obsidian-client');
-        const noteName = `References/${req.file.originalname.replace(/\.[^.]+$/, '')}.md`;
-        await obsidianWrite(noteName, `# ${req.file.originalname}\n\n${mdResult.markdown}`);
+        const safeName = path.basename(req.file.originalname || 'file').replace(/[<>:"|?*\x00-\x1f]/g, '_');
+        const noteName = `References/${safeName.replace(/\.[^.]+$/, '')}.md`;
+        await obsidianWrite(noteName, `# ${safeName}\n\n${mdResult.markdown}`);
         res.json({ ok: true, note: noteName, chars: mdResult.markdown.length });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
@@ -9879,7 +9968,7 @@ app.post('/api/master/quality-gate', requireAppAccess, async (req, res) => {
 
         if (featureId) {
             const _mem = require('./agent-system/obsidian-memory');
-            _mem.write(`Projects/QualityGate-${featureId}.md`,
+            _mem.write(`11 Agents/Reports/QualityGate-${featureId}.md`,
                 `# Quality Gate: ${featureId}\n\n**Passed:** ${passed}\n\n` +
                 (results.impeccable ? `## Impeccable\n${JSON.stringify(results.impeccable.summary, null, 2)}\n\n` : '') +
                 (results.vitals ? `## Web Vitals\n${results.vitals.map(v => `- ${v.url}: LCP=${v.vitals?.lcp}ms (${v.ratings?.lcp})`).join('\n')}` : '')
@@ -10600,11 +10689,11 @@ app.get('/api/wiki/status', requireAppAccess, async (req, res) => {
         let lastWrite = null;
         let noteCount = 0;
         try {
-            const stat = fs.statSync(path.join(VAULT, 'System/Lessons.md'));
+            const stat = fs.statSync(path.join(VAULT, '01 Executive/Lessons.md'));
             lastWrite = stat.mtime.toISOString();
         } catch {}
         try {
-            const health = fs.readFileSync(path.join(VAULT, 'System/VaultHealth.md'), 'utf8');
+            const health = fs.readFileSync(path.join(VAULT, '01 Executive/VaultHealth.md'), 'utf8');
             const m = health.match(/Total notes:\*\* (\d+)/);
             if (m) noteCount = parseInt(m[1]);
         } catch {}
@@ -10788,7 +10877,7 @@ app.post('/api/wiki/ingest-cs249r', requireAppAccess, async (req, res) => {
             const result = await cs249r.ingestAllToVault(obsidianMemory);
             await sbAdmin.from('apex_notifications').insert({
                 id: `cs249r-ingest-${Date.now()}`, type: 'success', read: false,
-                message: `CS249R ingest complete — ${result.succeeded}/${result.total} chapters written to References/CS249R/`
+                message: `CS249R ingest complete — ${result.succeeded}/${result.total} chapters written to 09 Knowledge/CS249R/`
             });
         } catch (e) {
             console.error('[CS249R] ingest error:', e.message);
@@ -10863,16 +10952,17 @@ app.post('/api/wiki/ingest', requireAppAccess, async (req, res) => {
             model: wikiModel, max_tokens: 80,
             messages: [{ role: 'user', content:
                 `Classify this content into the best wiki page path. Options:\n` +
-                `System/North-Star.md\nSystem/Decisions.md\nProjects/Apex-AI-OS.md\n` +
-                `People/Alex.md\nSystem/WIKI.md\n` +
+                `01 Executive/North-Star.md\n01 Executive/Decisions.md\n02 Projects/Active/Apex-AI-OS.md\n` +
+                `12 Memory/Identity/Alex.md\n01 Executive/WIKI.md\n` +
                 `Entities/<Name>.md  (tools, services, companies, APIs)\n` +
                 `Concepts/<Name>.md  (ideas, patterns, techniques)\n` +
-                `People/<Name>.md    (other people)\n\n` +
+                `07 Relationships/People/<Name>.md    (other people)\n\n` +
                 `Content: ${content.slice(0, 400)}\n\n` +
                 `Reply with ONLY the page path. Replace <Name> with the actual name.`
             }]
         });
-        const page = classifyRes.content[0]?.text?.trim() || 'System/Decisions.md';
+        const _rawPage = (classifyRes.content[0]?.text?.trim() || '').replace(/\.\.\//g, '').replace(/^\/+/, '').replace(/[<>:"|?*\x00-\x1f]/g, '_');
+        const page = (_rawPage.endsWith('.md') ? _rawPage : (_rawPage || '01 Executive/Decisions.md') + '.md').slice(0, 200);
 
         // Read existing — if no page exists, create it with structure
         const existing = await obsidianRead(page).catch(() => null);
@@ -11246,7 +11336,7 @@ checkPendingMasterTasks();
                 const briefing = obsidianMemory.generateDailyBriefing();
                 if (briefing) {
                     const date = new Date().toISOString().split('T')[0];
-                    obsidianWrite(`Daily/${date}.md`, briefing)
+                    obsidianWrite(`13 Briefings/Daily/${date}.md`, briefing)
                         .catch(e => console.warn('[DailyBriefing] write error:', e.message));
                     console.log('[DailyBriefing] Written for', date);
                 }
@@ -11258,9 +11348,9 @@ checkPendingMasterTasks();
                     const briefing = obsidianMemory.generateDailyBriefing();
                     if (briefing) {
                         const date = new Date().toISOString().split('T')[0];
-                        obsidianWrite(`Daily/${date}.md`, briefing).catch(() => {});
+                        obsidianWrite(`13 Briefings/Daily/${date}.md`, briefing).catch(e => console.warn('[DailyBriefing] write error:', e.message));
                     }
-                } catch {}
+                } catch (e) { console.warn('[DailyBriefing] interval error:', e.message); }
             }, 24 * 60 * 60 * 1000);
         }, _7am.getTime() - _now.getTime());
         console.log(`[DailyBriefing] Scheduled in ${Math.round((_7am.getTime() - _now.getTime()) / 60000)}min`);
@@ -11279,9 +11369,75 @@ checkPendingMasterTasks();
             require('./agent-system/wiki-reader').checkVaultHealth()
                 .catch(e => console.warn('[VaultHealth] error:', e.message));
             setInterval(() => require('./agent-system/wiki-reader').checkVaultHealth()
-                .catch(() => {}), 7 * 24 * 60 * 60 * 1000);
+                .catch(e => console.warn('[VaultHealth] interval error:', e.message)), 7 * 24 * 60 * 60 * 1000);
         }, _next.getTime() - Date.now());
         console.log(`[VaultHealth] Weekly check scheduled for ${_next.toDateString()}`);
+    })();
+
+    // Weekly review — Sundays at 8am (after 4am vault health check)
+    (function _scheduleWeeklyReview() {
+        async function _generateWeeklyReview() {
+            if (!process.env.ANTHROPIC_API_KEY) return;
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+            try {
+                const [tasksRes, runsRes, finRes, healthRes] = await Promise.allSettled([
+                    sbAdmin.from('apex_tasks').select('title,status,created_at').gte('created_at', weekAgo).limit(50),
+                    sbAdmin.from('apex_agent_runs').select('cost_usd,success,model').gte('created_at', weekAgo).limit(200),
+                    sbAdmin.from('apex_transactions').select('description,amount,category').gte('date', weekAgo).limit(50),
+                    sbAdmin.from('apex_workouts').select('type,duration_min,date').gte('date', weekAgo).limit(20),
+                ]);
+                const tasks    = tasksRes.value?.data    || [];
+                const runs     = runsRes.value?.data     || [];
+                const finance  = finRes.value?.data      || [];
+                const workouts = healthRes.value?.data   || [];
+                const totalCost  = runs.reduce((s, r) => s + (r.cost_usd || 0), 0);
+                const successRate = runs.length ? (runs.filter(r => r.success).length / runs.length * 100).toFixed(0) : 'N/A';
+                const prompt = [
+                    `Week ending ${today}. Produce a concise Apex AI OS weekly review in markdown.`,
+                    '',
+                    `## Tasks (${tasks.length})`,
+                    tasks.slice(0, 20).map(t => `- [${t.status}] ${t.title}`).join('\n') || 'None',
+                    '',
+                    `## AI Agent Activity`,
+                    `- ${runs.length} runs · success rate ${successRate}% · total cost $${totalCost.toFixed(4)}`,
+                    '',
+                    `## Finance (${finance.length} transactions)`,
+                    finance.slice(0, 10).map(t => `- ${t.category}: £${t.amount} — ${t.description}`).join('\n') || 'No data',
+                    '',
+                    `## Health (${workouts.length} workouts)`,
+                    workouts.map(w => `- ${w.date}: ${w.type} ${w.duration_min}min`).join('\n') || 'No workouts logged',
+                    '',
+                    'Write the review with: Executive Summary (3 bullets), Wins, Concerns, Next Week Focus.',
+                ].join('\n');
+                const Anthropic = require('@anthropic-ai/sdk');
+                const _anth = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+                const msg = await _anth.messages.create({
+                    model: 'claude-haiku-4-5-20251001', max_tokens: 1200,
+                    messages: [{ role: 'user', content: prompt }]
+                });
+                const review = msg.content[0]?.text?.trim();
+                if (review) {
+                    await require('./agent-system/obsidian-client').obsidianWrite(
+                        `13 Briefings/Weekly/Weekly-Review-${today}.md`,
+                        `# Weekly Review — ${today}\n\n${review}`
+                    );
+                    console.log(`[WeeklyReview] Written to 13 Briefings/Weekly/Weekly-Review-${today}.md`);
+                }
+            } catch (e) { console.warn('[WeeklyReview] error (non-fatal):', e.message); }
+        }
+        function _nextSunday8am() {
+            const d = new Date(); d.setHours(8, 0, 0, 0);
+            const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + daysUntilSunday);
+            return d;
+        }
+        const _next = _nextSunday8am();
+        setTimeout(function _weeklyReview() {
+            _generateWeeklyReview();
+            setInterval(_generateWeeklyReview, 7 * 24 * 60 * 60 * 1000);
+        }, _next.getTime() - Date.now());
+        console.log(`[WeeklyReview] Scheduled for ${_next.toDateString()} 08:00`);
     })();
 
     // News ingest — runs at 6am daily, plus an immediate run on startup
