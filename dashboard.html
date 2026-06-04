@@ -8490,6 +8490,25 @@ function _glStopAudio() {
     GL.nextPlayAt = GL.playCtx ? GL.playCtx.currentTime : 0;
 }
 
+// Inline AudioWorklet processor — avoids serving a separate file.
+// Sends 128-sample chunks (8ms at 16kHz) vs ScriptProcessor's 4096 (256ms),
+// reducing speech_end → VAD detection latency by up to 248ms.
+var _micWorkletUrl = (function() {
+    try {
+        var src = [
+            'class MicProcessor extends AudioWorkletProcessor {',
+            '    process(inputs) {',
+            '        var ch = inputs[0] && inputs[0][0];',
+            '        if (ch) this.port.postMessage(ch.slice(0));',
+            '        return true;',
+            '    }',
+            '}',
+            'registerProcessor("mic-processor", MicProcessor);',
+        ].join('\n');
+        return URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
+    } catch(_) { return null; }
+})();
+
 async function _glStart() {
     if (GL.active) return;
     GL.active = true;
@@ -8530,14 +8549,27 @@ async function _glStart() {
             _glSetStatus('Listening…');
         } else if (msg.type === 'audio') {
             _glPlayPCM(msg.data);
+        } else if (msg.type === 'cancel_audio') {
+            // Barge-in: clear buffered Gemini audio before Claude audio arrives
+            _glStopAudio();
+            _glSetStatus('Processing…');
         } else if (msg.type === 'transcript_user') {
             var el = document.getElementById('apexLiveUserText');
             if (el) el.textContent = msg.text;
             if (msg.text && typeof renderChatMessage === 'function') renderChatMessage('user', msg.text);
-        } else if (msg.type === 'transcript_apex') {
+        } else if (msg.type === 'transcript_apex_partial') {
+            // Progressive update during Claude streaming — live transcript bar only
+            var el2p = document.getElementById('apexLiveApexText');
+            if (el2p) el2p.textContent = msg.text;
+        } else if (msg.type === 'transcript_apex_final' || msg.type === 'transcript_apex') {
+            // Final transcript — update bar and append to chat log
             var el2 = document.getElementById('apexLiveApexText');
             if (el2) el2.textContent = msg.text;
             if (msg.text && typeof renderChatMessage === 'function') renderChatMessage('ai', msg.text);
+        } else if (msg.type === 'route') {
+            // Show which model handled this turn (optional UI indicator)
+            var indicator = document.getElementById('apexLiveRouteIndicator');
+            if (indicator) indicator.textContent = msg.route === 'gemini' ? '◆ Gemini' : '◆ Claude ' + msg.route;
         } else if (msg.type === 'turn_complete') {
             _glSetStatus('Listening…');
         } else if (msg.type === 'error') {
@@ -8551,6 +8583,32 @@ async function _glStart() {
     GL.nextPlayAt = 0;
 }
 
+// Shared PCM sender — used by both AudioWorkletNode and ScriptProcessorNode paths.
+function _glSendPCMChunk(pcmF32, actualRate) {
+    if (!GL.ws || GL.ws.readyState !== WebSocket.OPEN) return;
+    var samples;
+    if (actualRate !== 16000) {
+        var ratio  = actualRate / 16000;
+        var outLen = Math.floor(pcmF32.length / ratio);
+        samples = new Int16Array(outLen);
+        for (var i = 0; i < outLen; i++) {
+            samples[i] = Math.max(-32768, Math.min(32767, pcmF32[Math.floor(i * ratio)] * 32768));
+        }
+    } else {
+        samples = new Int16Array(pcmF32.length);
+        for (var i = 0; i < pcmF32.length; i++) {
+            samples[i] = Math.max(-32768, Math.min(32767, pcmF32[i] * 32768));
+        }
+    }
+    var bytes = new Uint8Array(samples.buffer);
+    var b64 = (function(u8) {
+        var s = '', i = 0, n = u8.length, chunk = 8192;
+        for (; i < n; i += chunk) s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+        return btoa(s);
+    })(bytes);
+    GL.ws.send(JSON.stringify({ type: 'audio', data: b64 }));
+}
+
 async function _glStartMic() {
     try {
         GL.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
@@ -8562,42 +8620,32 @@ async function _glStartMic() {
             GL.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
 
-        GL.source    = GL.audioCtx.createMediaStreamSource(GL.stream);
-        GL.processor = GL.audioCtx.createScriptProcessor(4096, 1, 1);
-
+        GL.source = GL.audioCtx.createMediaStreamSource(GL.stream);
         var actualRate = GL.audioCtx.sampleRate;
-        GL.processor.onaudioprocess = function(e) {
-            if (!GL.ws || GL.ws.readyState !== WebSocket.OPEN) return;
-            var pcmF32 = e.inputBuffer.getChannelData(0);
-            var samples;
-            // Downsample to 16 kHz if AudioContext is at a higher rate
-            if (actualRate !== 16000) {
-                var ratio   = actualRate / 16000;
-                var outLen  = Math.floor(pcmF32.length / ratio);
-                samples = new Int16Array(outLen);
-                for (var i = 0; i < outLen; i++) {
-                    var idx = Math.floor(i * ratio);
-                    samples[i] = Math.max(-32768, Math.min(32767, pcmF32[idx] * 32768));
-                }
-            } else {
-                samples = new Int16Array(pcmF32.length);
-                for (var i = 0; i < pcmF32.length; i++) {
-                    samples[i] = Math.max(-32768, Math.min(32767, pcmF32[i] * 32768));
-                }
-            }
-            // Base64 encode — chunked to avoid stack overflow on large buffers
-            var bytes = new Uint8Array(samples.buffer);
-            var b64 = (function(u8) {
-                var s = '', i = 0, n = u8.length, chunk = 8192;
-                for (; i < n; i += chunk) s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
-                return btoa(s);
-            })(bytes);
-            GL.ws.send(JSON.stringify({ type: 'audio', data: b64 }));
-        };
 
+        // AudioWorklet path — 128-sample chunks (8ms at 16kHz).
+        // Reduces mic-capture latency from 256ms (ScriptProcessor) to ~8ms.
+        if (_micWorkletUrl && window.AudioWorklet && GL.audioCtx.audioWorklet) {
+            try {
+                await GL.audioCtx.audioWorklet.addModule(_micWorkletUrl);
+                GL.processor = new AudioWorkletNode(GL.audioCtx, 'mic-processor');
+                GL.processor.port.onmessage = function(ev) { _glSendPCMChunk(ev.data, actualRate); };
+                GL.source.connect(GL.processor);
+                GL.processor.connect(GL.audioCtx.destination);
+                console.log('[GeminiLive] AudioWorklet mic at', actualRate, 'Hz (8ms chunks)');
+                return;
+            } catch (wletErr) {
+                console.warn('[GeminiLive] AudioWorklet failed, falling back to ScriptProcessor:', wletErr.message);
+                if (GL.processor) { try { GL.processor.disconnect(); } catch(_){} GL.processor = null; }
+            }
+        }
+
+        // ScriptProcessorNode fallback — 4096 samples (256ms at 16kHz)
+        GL.processor = GL.audioCtx.createScriptProcessor(4096, 1, 1);
+        GL.processor.onaudioprocess = function(e) { _glSendPCMChunk(e.inputBuffer.getChannelData(0), actualRate); };
         GL.source.connect(GL.processor);
         GL.processor.connect(GL.audioCtx.destination);
-        console.log('[GeminiLive] mic running at', actualRate, 'Hz →', actualRate !== 16000 ? 'downsampled to 16k' : '16k native');
+        console.log('[GeminiLive] ScriptProcessor mic at', actualRate, 'Hz (256ms chunks)');
     } catch(err) {
         console.error('[GeminiLive] mic error:', err);
         _glSetStatus('Mic error: ' + err.message);
