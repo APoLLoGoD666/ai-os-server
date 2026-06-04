@@ -277,11 +277,39 @@ app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// Stable conversation ID — persists across turns for PCM/EAE/SPE state continuity
+// Priority: x-conversation-id header > x-session-id header > Authorization JWT sub >
+//           apex_token cookie JWT sub > per-request fallback
+function _resolveConversationId(req) {
+    if (req.headers['x-conversation-id']) return req.headers['x-conversation-id'];
+    if (req.headers['x-session-id'])      return req.headers['x-session-id'];
+    // Authorization header JWT
+    try {
+        const auth = req.headers['authorization'] || '';
+        if (auth.startsWith('Bearer ')) {
+            const payload = JSON.parse(Buffer.from(auth.slice(7).split('.')[1], 'base64url').toString());
+            if (typeof payload.sub === 'string' && payload.sub.length > 0) return payload.sub;
+        }
+    } catch (_) {}
+    // Cookie JWT — primary path for dashboard traffic (apex_token cookie)
+    try {
+        const cookies = parseCookies(req);
+        const cookieToken = cookies.apex_token;
+        if (cookieToken) {
+            const payload = JSON.parse(Buffer.from(cookieToken.split('.')[1], 'base64url').toString());
+            if (typeof payload.sub === 'string' && payload.sub.length > 0) return payload.sub;
+        }
+    } catch (_) {}
+    return req.requestId; // last resort — per-request only, no cross-turn continuity
+}
+
 // Request correlation ID — injected on every request, echoed in response headers
 app.use((req, res, next) => {
     const id = req.headers['x-request-id'] || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-    req.requestId = id;
+    req.requestId    = id;
+    req.conversationId = _resolveConversationId(req);
     res.setHeader('X-Request-ID', id);
+    res.setHeader('X-Conversation-ID', req.conversationId);
     if (req.path.startsWith('/api/')) {
         const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
         console.log(`[REQUEST] ${req.method} ${req.path} — ${ip} — ${id} — ${new Date().toISOString()}`);
@@ -383,7 +411,7 @@ app.post('/auth/login', (req, res) => {
     if (!password || password !== correctPw) {
         return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
     }
-    const token = jwt.sign({ apex: true }, secret, { expiresIn: '7d' });
+    const token = jwt.sign({ apex: true, sub: 'apex-user' }, secret, { expiresIn: '7d' });
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('apex_token', token, {
         httpOnly: true,
@@ -7189,10 +7217,10 @@ app.post("/chat", requireAppAccess, async (req, res) => {
 
         const userMessage = rawMessage.trim();
         // Stage 3.3 — load relevant cognitive threads from prior turns
-        const _pcmCtx  = _pcm.resumeRelevantThreads({ userMessage, sessionId: req.requestId });
+        const _pcmCtx  = _pcm.resumeRelevantThreads({ userMessage, sessionId: req.conversationId });
         // Stage 3.4/3.5 — combine PCM + EAE + SPE context into single meta object
-        const _eaeSnap = _eae.generateExecutiveSnapshot(req.requestId);
-        const _speCtx  = _spe.resumeStrategicContext({ sessionId: req.requestId, userMessage });
+        const _eaeSnap = _eae.generateExecutiveSnapshot(req.conversationId);
+        const _speCtx  = _spe.resumeStrategicContext({ sessionId: req.conversationId, userMessage });
         const _ctxMeta = {
             resumed_cognition: _pcmCtx.hasResumed,
             resume_hint:       _pcmCtx.resumeHint,
@@ -7214,10 +7242,13 @@ app.post("/chat", requireAppAccess, async (req, res) => {
                 const _agentResult = await agentLib.invokeAgent(_agentIntent.slug, _agentIntent.task);
                 clearTimeout(chatTimeout);
                 const _agentReplyRaw = `[${_agentResult.agent.name}]\n\n${_agentResult.reply}`;
-                const { reply: _agentReply, mode: _agentMode, intent: _agentIntent2 } = _cogOrch.shape(userMessage, _agentReplyRaw, req.executionClass || 'EXECUTIVE', req.requestId);
-                const _agentSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.requestId), ..._ctxMeta };
+                const { reply: _agentReply, mode: _agentMode, intent: _agentIntent2 } = _cogOrch.shape(userMessage, _agentReplyRaw, req.executionClass || 'EXECUTIVE', req.conversationId);
+                const _agentSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
                 const _agentPlan = _timingEng.buildStreamPlan(_agentReply, _agentIntent2, req.executionClass || 'EXECUTIVE', _agentSnap);
-                setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _agentIntent2, userMessage, reply: _agentReply, mode: _agentMode, executionClass: req.executionClass }); _eae.recordTransition({ sessionId: req.requestId }); _spe.updateFromResponse({ sessionId: req.requestId, userMessage, reply: _agentReply, intent: _agentIntent2, mode: _agentMode }); addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
+                _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _agentIntent2, userMessage, reply: _agentReply, mode: _agentMode, executionClass: req.executionClass });
+                _eae.recordTransition({ sessionId: req.conversationId });
+                _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply: _agentReply, intent: _agentIntent2, mode: _agentMode });
+                setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
                 return res.status(200).json({ ok: true, reply: _agentReply, response_mode: _agentMode, stream_plan: _agentPlan });
             } catch (e) {
                 if (res.headersSent) return;
@@ -7263,10 +7294,13 @@ ${preview}
             ]);
             clearTimeout(chatTimeout);
             const _mastraRaw = result.text || "No response from AI";
-            const { reply, mode: _mastraMode, intent: _mastraIntent } = _cogOrch.shape(userMessage, _mastraRaw, req.executionClass || 'EXECUTIVE', req.requestId);
-            const _mastraSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.requestId), ..._ctxMeta };
+            const { reply, mode: _mastraMode, intent: _mastraIntent } = _cogOrch.shape(userMessage, _mastraRaw, req.executionClass || 'EXECUTIVE', req.conversationId);
+            const _mastraSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
             const _mastraPlan = _timingEng.buildStreamPlan(reply, _mastraIntent, req.executionClass || 'EXECUTIVE', _mastraSnap);
-            setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _mastraIntent, userMessage, reply, mode: _mastraMode, executionClass: req.executionClass }); _eae.recordTransition({ sessionId: req.requestId }); _spe.updateFromResponse({ sessionId: req.requestId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode }); addToMemory("ai", reply); });
+            _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _mastraIntent, userMessage, reply, mode: _mastraMode, executionClass: req.executionClass });
+            _eae.recordTransition({ sessionId: req.conversationId });
+            _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode });
+            setImmediate(() => { addToMemory("ai", reply); });
             return res.status(200).json({
                 ok: true,
                 reply,
@@ -7305,10 +7339,13 @@ ${preview}
             .join("\n")
             .trim() || "No response from AI";
 
-        const { reply, mode: _sdkMode, intent: _sdkIntent } = _cogOrch.shape(userMessage, _rawReply, req.executionClass || 'EXECUTIVE', req.requestId);
-        const _sdkSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.requestId), ..._ctxMeta };
+        const { reply, mode: _sdkMode, intent: _sdkIntent } = _cogOrch.shape(userMessage, _rawReply, req.executionClass || 'EXECUTIVE', req.conversationId);
+        const _sdkSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
         const _sdkPlan = _timingEng.buildStreamPlan(reply, _sdkIntent, req.executionClass || 'EXECUTIVE', _sdkSnap);
-        setImmediate(() => { _pcm.updateFromResponse({ sessionId: req.requestId, intent: _sdkIntent, userMessage, reply, mode: _sdkMode, executionClass: req.executionClass }); _eae.recordTransition({ sessionId: req.requestId }); _spe.updateFromResponse({ sessionId: req.requestId, userMessage, reply, intent: _sdkIntent, mode: _sdkMode }); addToMemory("ai", reply); });
+        _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _sdkIntent, userMessage, reply, mode: _sdkMode, executionClass: req.executionClass });
+        _eae.recordTransition({ sessionId: req.conversationId });
+        _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _sdkIntent, mode: _sdkMode });
+        setImmediate(() => { addToMemory("ai", reply); });
 
         return res.status(200).json({
             ok: true,
