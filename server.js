@@ -11160,6 +11160,21 @@ server.listen(PORT, () => {
         }
     });
 
+    // Schema migration — apex_agent_runs: add duration_ms + token_usage if missing
+    setImmediate(async () => {
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query(`
+                ALTER TABLE apex_agent_runs
+                    ADD COLUMN IF NOT EXISTS duration_ms bigint,
+                    ADD COLUMN IF NOT EXISTS token_usage jsonb;
+            `);
+            console.log('[Migration] apex_agent_runs: duration_ms + token_usage ready');
+        } catch (e) {
+            console.warn('[Migration] apex_agent_runs schema migration skipped:', e.message);
+        }
+    });
+
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🤖 Model: ${MODEL}`);
     console.log(`🔑 API KEY LOADED: ${!!process.env.ANTHROPIC_API_KEY}`);
