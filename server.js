@@ -10359,6 +10359,65 @@ app.get('/api/intelligence/lessons', requireAppAccess, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// GET /api/intelligence/self-check — Phase 10 autonomous diagnostics (10-subsystem health report)
+app.get('/api/intelligence/self-check', requireAppAccess, async (req, res) => {
+    const checks = {};
+    const t0 = Date.now();
+    const mem = process.memoryUsage();
+    const heapPct = Math.round(mem.heapUsed / mem.heapTotal * 100);
+    checks.memory = { ok: heapPct < 85, heap_pct: heapPct, rss_mb: Math.round(mem.rss / 1024 / 1024), hint: heapPct >= 85 ? 'Heap critical — consider restart' : null };
+    try {
+        const { data, error } = await sbAdmin.from('apex_notifications').select('id').limit(1);
+        checks.supabase = { ok: !error, latency_ms: Date.now() - t0, error: error?.message || null };
+    } catch (e) { checks.supabase = { ok: false, error: e.message }; }
+    try {
+        const bus = require('./lib/event-bus');
+        const ev = bus.recent(10);
+        const age = ev.length ? Date.now() - ev[ev.length - 1].timestamp : null;
+        checks.event_bus = { ok: true, recent_events: ev.length, last_event_age_s: age !== null ? Math.round(age / 1000) : null };
+    } catch (e) { checks.event_bus = { ok: false, error: e.message }; }
+    try {
+        const aq = require('./lib/agent-queue'); const qs = aq.status();
+        checks.agent_queue = { ok: qs.queued < 40, ...qs, hint: qs.queued >= 40 ? 'Queue near capacity' : null };
+    } catch (e) { checks.agent_queue = { ok: false, error: e.message }; }
+    if (process.env.OBSIDIAN_URL) {
+        try {
+            const { obsidianRead } = require('./agent-system/obsidian-client');
+            const s = Date.now(); await obsidianRead('System/Claude-Memory/MEMORY.md');
+            checks.obsidian = { ok: true, latency_ms: Date.now() - s };
+        } catch (e) { checks.obsidian = { ok: false, error: e.message, hint: 'Check OBSIDIAN_URL tunnel' }; }
+    } else { checks.obsidian = { ok: false, error: 'OBSIDIAN_URL not set', hint: 'Add OBSIDIAN_URL to Render env vars' }; }
+    try {
+        const pgPool = require('./pg_database'); const pt = Date.now();
+        await pgPool.query('SELECT 1'); checks.postgres = { ok: true, latency_ms: Date.now() - pt };
+    } catch (e) { checks.postgres = { ok: false, error: e.message }; }
+    try {
+        const { retrieveContext } = require('./agent-system/langchain-rag');
+        const [rp, vc] = await Promise.allSettled([
+            retrieveContext('health check ping', 1),
+            sbAdmin ? sbAdmin.from('vault_embeddings').select('id', { count: 'exact', head: true }) : Promise.resolve(null),
+        ]);
+        checks.rag = { ok: true, vault_reachable: rp.status === 'fulfilled', vector_chunks: vc.value?.count ?? null, hint: vc.value?.count === 0 ? 'vault_embeddings empty' : null };
+    } catch (e) { checks.rag = { ok: false, error: e.message }; }
+    if (process.env.NOTION_API_KEY) {
+        try {
+            const t = Date.now(); const r = await fetch('https://api.notion.com/v1/users/me', { headers: { Authorization: `Bearer ${process.env.NOTION_API_KEY}`, 'Notion-Version': '2022-06-28' }, signal: AbortSignal.timeout(5000) });
+            checks.notion = { ok: r.ok, latency_ms: Date.now() - t, status: r.status };
+        } catch (e) { checks.notion = { ok: false, error: e.message }; }
+    } else { checks.notion = { ok: false, error: 'NOTION_API_KEY not set' }; }
+    if (process.env.SLACK_BOT_TOKEN) {
+        try {
+            const t = Date.now(); const r = await fetch('https://slack.com/api/auth.test', { method: 'POST', headers: { Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) });
+            const b = await r.json(); checks.slack = { ok: !!b.ok, latency_ms: Date.now() - t, team: b.team || null, error: b.error || null };
+        } catch (e) { checks.slack = { ok: false, error: e.message }; }
+    } else { checks.slack = { ok: false, error: 'SLACK_BOT_TOKEN not set' }; }
+    checks.sentry = { ok: !!process.env.SENTRY_DSN, dsn_set: !!process.env.SENTRY_DSN, hint: !process.env.SENTRY_DSN ? 'Set SENTRY_DSN env var' : null };
+    const allOk = Object.values(checks).every(c => c.ok);
+    const total = Object.keys(checks).length;
+    const passed = Object.values(checks).filter(c => c.ok).length;
+    res.json({ ok: allOk, status: allOk ? 'healthy' : 'degraded', score: `${Math.round(passed / total * 100)}%`, issues: Object.entries(checks).filter(([, c]) => !c.ok).map(([k, c]) => `${k}: ${c.error || c.hint || 'failed'}`), checks, latency_ms: Date.now() - t0, ts: new Date().toISOString() });
+});
+
 app.get('/api/cost/today', requireAppAccess, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
