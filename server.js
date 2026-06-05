@@ -11038,6 +11038,7 @@ app.post('/api/wiki/consolidate', requireAppAccess, async (req, res) => {
 })();
 
 app.use('/api', require('./routes/tts-gemini'));
+app.use('/api/intelligence', require('./routes/intelligence'));
 
 app.use((req, res) => {
     res.status(404).json({
