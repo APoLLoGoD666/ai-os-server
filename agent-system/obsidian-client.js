@@ -9,15 +9,18 @@ const _mtimeCache = new Map();
 
 async function obsidianRead(notePath) {
     if (process.env.OBSIDIAN_URL && process.env.OBSIDIAN_API_KEY) {
+        const ctrl = new AbortController();
+        const _t = setTimeout(() => ctrl.abort(), 5000);
         try {
             const res = await fetch(
                 `${process.env.OBSIDIAN_URL}/vault/${encodeURIComponent(notePath)}`,
-                { headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` } }
+                { headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` }, signal: ctrl.signal }
             );
+            clearTimeout(_t);
             if (res.ok) return await res.text();
             if (res.status === 401) console.warn(`[ObsidianClient] 401 Unauthorized — check OBSIDIAN_API_KEY`);
             else if (res.status !== 404) console.warn(`[ObsidianClient] API returned ${res.status} for ${notePath}`);
-        } catch {}
+        } catch (e) { clearTimeout(_t); if (e.name !== 'AbortError') throw e; console.warn('[ObsidianClient] read timeout — falling back to local'); }
     }
     try {
         return fs.readFileSync(path.join(VAULT, notePath), 'utf8');
@@ -28,6 +31,8 @@ async function obsidianRead(notePath) {
 
 async function obsidianWrite(notePath, content) {
     if (process.env.OBSIDIAN_URL && process.env.OBSIDIAN_API_KEY) {
+        const ctrl = new AbortController();
+        const _t = setTimeout(() => ctrl.abort(), 5000);
         try {
             await fetch(
                 `${process.env.OBSIDIAN_URL}/vault/${encodeURIComponent(notePath)}`,
@@ -37,11 +42,13 @@ async function obsidianWrite(notePath, content) {
                         'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}`,
                         'Content-Type': 'text/markdown'
                     },
-                    body: content
+                    body: content,
+                    signal: ctrl.signal
                 }
             );
+            clearTimeout(_t);
             return;
-        } catch {}
+        } catch (e) { clearTimeout(_t); if (e.name !== 'AbortError') throw e; console.warn('[ObsidianClient] write timeout — falling back to local'); }
     }
     try {
         const full = path.join(VAULT, notePath);

@@ -6,6 +6,7 @@ const os = require('os');
 const { spawnSync, execSync } = require('child_process');
 const memory = require('./obsidian-memory');
 const { z } = require('zod');
+const _hooks = require('./agent-pipeline-hooks');
 
 const ROOT = path.join(__dirname, '..');
 const MAX_FILE_BYTES = 20 * 1024;
@@ -889,10 +890,13 @@ async function runAgentTeam(spec, taskId) {
                 }
             } catch {}
         });
+        setImmediate(() => _hooks.onPipelineFailed(new Error(error), { taskId, description: spec.objective }).catch(() => {}));
         return { success: false, commitHash: null, agentLogs, error, complexity, models: _agentModels };
     };
 
+    const _pipelineStart = Date.now();
     try {
+        setImmediate(() => _hooks.onPipelineStart({ taskId, description: spec.objective, agentCount: 8, model: _agentModels.developer }).catch(() => {}));
         console.log(`[Orchestrator] ── Starting ${taskId} ──`);
         console.log(`[Orchestrator] Budget cap: $${PIPELINE_BUDGET_USD}`);
 
@@ -1010,6 +1014,7 @@ async function runAgentTeam(spec, taskId) {
         }
         console.log(`[Orchestrator] ── ${taskId} COMPLETE — ${committerLog.result.commitHash} ──`);
 
+        setImmediate(() => _hooks.onPipelineComplete({ success: true, commitHash: committerLog.result.commitHash, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart, taskId }).catch(() => {}));
         setImmediate(() => _reflector(spec, agentLogs, true).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
 
@@ -1025,6 +1030,7 @@ async function runAgentTeam(spec, taskId) {
 
     } catch (err) {
         console.error('[Orchestrator] pipeline error:', err.message);
+        setImmediate(() => _hooks.onPipelineFailed(err, { taskId, description: spec.objective }).catch(() => {}));
         _cleanup();
         const cost = _costUsd.toFixed(5);
         memory.logLesson(`Task ${taskId} failed: ${err.message}`);

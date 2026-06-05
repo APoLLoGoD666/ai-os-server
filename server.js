@@ -11,8 +11,10 @@ Sentry.init({ dsn: process.env.SENTRY_DSN || "", tracesSampleRate: 0.1 });
         console.error(`[STARTUP] FATAL — missing required env vars: ${missing.join(', ')}`);
         process.exit(1);
     }
-    if (!process.env.GITHUB_TOKEN) console.warn('[STARTUP] GITHUB_TOKEN not set — agent git push will fail');
-    if (!process.env.CRON_SECRET)  console.warn('[STARTUP] CRON_SECRET not set — cron endpoints are unprotected');
+    if (!process.env.GITHUB_TOKEN)    console.warn('[STARTUP] GITHUB_TOKEN not set — agent git push will fail');
+    if (!process.env.CRON_SECRET)     console.warn('[STARTUP] CRON_SECRET not set — cron endpoints are unprotected');
+    if (!process.env.NOTION_API_KEY)  console.warn('[STARTUP] NOTION_API_KEY not set — Notion integration disabled');
+    if (!process.env.SLACK_BOT_TOKEN) console.warn('[STARTUP] SLACK_BOT_TOKEN not set — Slack integration disabled');
 })();
 
 // Error sink — writes to apex_notifications when Sentry DSN is absent
@@ -375,6 +377,7 @@ app.get('/health', async (req, res) => {
         tts:       ttsOk,
         ai:        aiOk,
         memory:    { heapMb, rssMb: rssM, warning: heapMb > 400 },
+        mastra:    getMastraStatus(),
         recentErrors: _errBuffer.slice(-3)
     });
 });
@@ -11064,6 +11067,8 @@ const _wss = new WebSocketServer({
 
 // Session registry — maps sessionId → ws connection + metadata
 const _wsSessions = new Map();
+// Expose live WS count to services layer without circular require
+Object.defineProperty(global, '_apexWsCount', { get: () => _wsSessions.size, configurable: true });
 
 // Broadcast fan-out: serialize ONCE, send same buffer to all (gws frame-reuse pattern)
 function wsBroadcast(data, filter = null) {
@@ -11227,6 +11232,13 @@ server.listen(PORT, () => {
 
     console.log('[Email] Backfill skipped — using Supabase client');
 
+    // Initialize Notion + Slack integration layer
+    setImmediate(() => {
+        try {
+            require('./services/init').init(app, sbAdmin);
+        } catch (e) { console.warn('[Services] init failed (non-fatal):', e.message); }
+    });
+
     // Ensure pgvector match function exists (idempotent — safe to re-run)
     setImmediate(async () => {
         try {
@@ -11279,7 +11291,8 @@ server.listen(PORT, () => {
 
     setInterval(() => {
         const mem = process.memoryUsage();
-        console.log(`[HEALTH] uptime=${Math.floor(process.uptime())}s rss=${Math.round(mem.rss/1024/1024)}MB heap=${Math.round(mem.heapUsed/1024/1024)}MB ts=${new Date().toISOString()}`);
+        const cpu = process.cpuUsage();
+        console.log(`[HEALTH] uptime=${Math.floor(process.uptime())}s rss=${Math.round(mem.rss/1024/1024)}MB heap=${Math.round(mem.heapUsed/1024/1024)}MB cpu_user=${Math.round(cpu.user/1000)}ms cpu_sys=${Math.round(cpu.system/1000)}ms ws=${global._apexWsCount||0} ts=${new Date().toISOString()}`);
     }, 300000);
 
     // Purge old read notifications — keep table lean (cap at 200 unread + delete read > 7 days)
@@ -11289,6 +11302,16 @@ server.listen(PORT, () => {
             await sbAdmin.from('apex_notifications').delete().eq('read', true).lt('created_at', cutoff);
             console.log('[Notifications] purged read notifications older than 7 days');
         } catch (e) { console.warn('[Notifications] purge failed (non-fatal):', e.message); }
+        try {
+            const runsCutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('apex_agent_runs').delete().lt('created_at', runsCutoff);
+            console.log('[Retention] apex_agent_runs: purged records older than 90 days');
+        } catch (e) { console.warn('[Retention] apex_agent_runs purge failed (non-fatal):', e.message); }
+        try {
+            const tasksCutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('agent_tasks').delete().in('status', ['done', 'cancelled']).lt('updated_at', tasksCutoff);
+            console.log('[Retention] agent_tasks: purged completed records older than 90 days');
+        } catch (e) { console.warn('[Retention] agent_tasks purge failed (non-fatal):', e.message); }
     }, 6 * 60 * 60 * 1000); // every 6 hours
 
     // Pick up any master tasks that were queued before a cold-start restart
@@ -11315,9 +11338,9 @@ checkPendingMasterTasks();
         if (_3am <= _now) _3am.setDate(_3am.getDate() + 1);
         const _delay = _3am.getTime() - _now.getTime();
         setTimeout(function _nightlyWiki() {
-            require('./agent-system/wiki-reader').consolidateWiki()
+            require('./lib/cron-logger').wrapCron('wiki_consolidation', () => require('./agent-system/wiki-reader').consolidateWiki())
                 .catch(e => console.warn('[Wiki] nightly consolidation error:', e.message));
-            setInterval(() => require('./agent-system/wiki-reader').consolidateWiki()
+            setInterval(() => require('./lib/cron-logger').wrapCron('wiki_consolidation', () => require('./agent-system/wiki-reader').consolidateWiki())
                 .catch(e => console.warn('[Wiki] nightly consolidation error:', e.message)),
                 24 * 60 * 60 * 1000);
         }, _delay);
@@ -11339,8 +11362,15 @@ checkPendingMasterTasks();
                     obsidianWrite(`13 Briefings/Daily/${date}.md`, briefing)
                         .catch(e => console.warn('[DailyBriefing] write error:', e.message));
                     console.log('[DailyBriefing] Written for', date);
+                    require('./lib/cron-logger').record('daily_briefing', 'ok').catch(() => {});
+                    // Post to Slack #apex-executive (non-blocking)
+                    try {
+                        require('./services/slack/slack-briefings').postDailyBriefing({
+                            date: new Date(date).toLocaleDateString('en-GB'),
+                        }).catch(e => console.warn('[DailyBriefing] Slack post failed:', e.message));
+                    } catch (_) {}
                 }
-            } catch (e) { console.warn('[DailyBriefing] error (non-fatal):', e.message); }
+            } catch (e) { console.warn('[DailyBriefing] error (non-fatal):', e.message); require('./lib/cron-logger').record('daily_briefing', 'error', e.message).catch(() => {}); }
             setInterval(() => {
                 try {
                     const obsidianMemory = require('./agent-system/obsidian-memory');
@@ -11366,9 +11396,9 @@ checkPendingMasterTasks();
         }
         const _next = _nextSunday4am();
         setTimeout(function _vaultHealth() {
-            require('./agent-system/wiki-reader').checkVaultHealth()
+            require('./lib/cron-logger').wrapCron('vault_health', () => require('./agent-system/wiki-reader').checkVaultHealth())
                 .catch(e => console.warn('[VaultHealth] error:', e.message));
-            setInterval(() => require('./agent-system/wiki-reader').checkVaultHealth()
+            setInterval(() => require('./lib/cron-logger').wrapCron('vault_health', () => require('./agent-system/wiki-reader').checkVaultHealth())
                 .catch(e => console.warn('[VaultHealth] interval error:', e.message)), 7 * 24 * 60 * 60 * 1000);
         }, _next.getTime() - Date.now());
         console.log(`[VaultHealth] Weekly check scheduled for ${_next.toDateString()}`);
@@ -11423,8 +11453,22 @@ checkPendingMasterTasks();
                         `# Weekly Review — ${today}\n\n${review}`
                     );
                     console.log(`[WeeklyReview] Written to 13 Briefings/Weekly/Weekly-Review-${today}.md`);
+                    require('./lib/cron-logger').record('weekly_review', 'ok').catch(() => {});
+                    // Post to Slack #apex-weekly-review (non-blocking)
+                    try {
+                        const _slackBrief = require('./services/slack/slack-briefings');
+                        const _wkOf = today;
+                        _slackBrief.postWeeklyReview({
+                            weekOf: _wkOf,
+                            completedTasks: tasks.filter(t => t.status === 'done').length,
+                            totalAgentRuns: runs.length,
+                            totalApiSpend: totalCost,
+                            healthSummary: `${workouts.length} workouts`,
+                            financeSummary: `${finance.length} transactions`,
+                        }).catch(e => console.warn('[WeeklyReview] Slack post failed:', e.message));
+                    } catch (_) {}
                 }
-            } catch (e) { console.warn('[WeeklyReview] error (non-fatal):', e.message); }
+            } catch (e) { console.warn('[WeeklyReview] error (non-fatal):', e.message); require('./lib/cron-logger').record('weekly_review', 'error', e.message).catch(() => {}); }
         }
         function _nextSunday8am() {
             const d = new Date(); d.setHours(8, 0, 0, 0);
@@ -11447,10 +11491,10 @@ checkPendingMasterTasks();
         _6am.setHours(6, 0, 0, 0);
         if (_6am <= _now) _6am.setDate(_6am.getDate() + 1);
         // Initial run after 5min (avoid OOM spike during server cold-start)
-        setTimeout(() => ingestNews().catch(e => console.warn('[News] startup ingest failed:', e.message)), 300000);
+        setTimeout(() => require('./lib/cron-logger').wrapCron('news_ingest', () => ingestNews()).catch(e => console.warn('[News] startup ingest failed:', e.message)), 300000);
         setTimeout(function _dailyNews() {
-            ingestNews().catch(e => console.warn('[News] ingest error:', e.message));
-            setInterval(() => ingestNews().catch(e => console.warn('[News] ingest error:', e.message)), 24 * 60 * 60 * 1000);
+            require('./lib/cron-logger').wrapCron('news_ingest', () => ingestNews()).catch(e => console.warn('[News] ingest error:', e.message));
+            setInterval(() => require('./lib/cron-logger').wrapCron('news_ingest', () => ingestNews()).catch(e => console.warn('[News] ingest error:', e.message)), 24 * 60 * 60 * 1000);
         }, _6am.getTime() - _now.getTime());
         console.log(`[News] Daily ingest scheduled for 06:00, initial run in 30s`);
     })();
@@ -11458,8 +11502,8 @@ checkPendingMasterTasks();
     // Calendar sync — every 30 minutes
     (function _scheduleCalendarSync() {
         const { syncGoogleCalendar } = require('./routes/communications');
-        const doSync = () => syncGoogleCalendar()
-            .then(r => { if (r.count) console.log(`[Calendar] Auto-sync: ${r.count} events`); })
+        const doSync = () => require('./lib/cron-logger').wrapCron('calendar_sync', () => syncGoogleCalendar()
+            .then(r => { if (r.count) console.log(`[Calendar] Auto-sync: ${r.count} events`); }))
             .catch(e => console.warn('[Calendar] sync error:', e.message));
         setTimeout(doSync, 360000); // initial run after 6min (spread startup load)
         setInterval(doSync, 30 * 60 * 1000);
@@ -11468,13 +11512,13 @@ checkPendingMasterTasks();
 
     // Schedule fallback — run due agent schedules every 5 min in-process
     // Primary trigger is Render Cron; this ensures schedules fire even if cron misses
-    setInterval(() => runDueSchedules().catch(e => console.warn('[ScheduleFallback] error:', e.message)), 5 * 60 * 1000);
+    setInterval(() => require('./lib/cron-logger').wrapCron('schedule_fallback', () => runDueSchedules()).catch(e => console.warn('[ScheduleFallback] error:', e.message)), 5 * 60 * 1000);
 
     // Phase 2 agents
     initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
     initRoutineAgent(client).catch(err => console.error("ROUTINE AGENT INIT ERROR:", err.message));
     // Upgrade 3: Proactive reflection agent — runs every 30 minutes
-    setInterval(() => runReflectionCheck(client).catch(err => console.error("REFLECTION ERROR:", err.message)), 30 * 60 * 1000);
+    setInterval(() => require('./lib/cron-logger').wrapCron('reflection_check', () => runReflectionCheck(client)).catch(err => console.error("REFLECTION ERROR:", err.message)), 30 * 60 * 1000);
 
     // Mastra agent framework
     try {
