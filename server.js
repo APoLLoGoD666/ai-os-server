@@ -1,7 +1,7 @@
+require("./instrument.js");
 require("dotenv").config();
 
 const Sentry = require("@sentry/node");
-Sentry.init({ dsn: process.env.SENTRY_DSN || "", tracesSampleRate: 0.1 });
 
 // Fail fast if critical env vars are missing — prevents silent runtime failures
 (function _validateEnv() {
