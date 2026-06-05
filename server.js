@@ -10329,6 +10329,7 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
 });
 
 // ── Intelligence / cost stub routes (dashboard polls these) ──────────────────
+app.get('/api/deploy-probe', (req, res) => res.json({ v: '8a352e0-probe', ts: Date.now() }));
 app.get('/api/intelligence/agent-runs', requireAppAccess, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 20;
