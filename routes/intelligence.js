@@ -226,12 +226,77 @@ router.get('/self-check', requireAppAccess, async (req, res) => {
         checks.postgres = { ok: false, error: e.message };
     }
 
+    // RAG system — vault chunk count + vector index size
+    try {
+        const { retrieveContext } = require('../agent-system/langchain-rag');
+        const ragSb = _sbClient();
+        const [ragPing, vecCount] = await Promise.allSettled([
+            retrieveContext('health check ping', 1),
+            ragSb ? ragSb.from('vault_embeddings').select('id', { count: 'exact', head: true }) : Promise.resolve(null),
+        ]);
+        checks.rag = {
+            ok: true,
+            vault_reachable: ragPing.status === 'fulfilled',
+            vector_chunks: vecCount.value?.count ?? null,
+            hint: vecCount.value?.count === 0 ? 'vault_embeddings empty — run local index to populate' : null,
+        };
+    } catch (e) {
+        checks.rag = { ok: false, error: e.message };
+    }
+
+    // Notion API
+    if (process.env.NOTION_API_KEY) {
+        try {
+            const t = Date.now();
+            const resp = await fetch('https://api.notion.com/v1/users/me', {
+                headers: { Authorization: `Bearer ${process.env.NOTION_API_KEY}`, 'Notion-Version': '2022-06-28' },
+                signal: AbortSignal.timeout(5000),
+            });
+            checks.notion = { ok: resp.ok, latency_ms: Date.now() - t, status: resp.status };
+        } catch (e) {
+            checks.notion = { ok: false, error: e.message };
+        }
+    } else {
+        checks.notion = { ok: false, error: 'NOTION_API_KEY not set' };
+    }
+
+    // Slack (check bot token validity via auth.test)
+    if (process.env.SLACK_BOT_TOKEN) {
+        try {
+            const t = Date.now();
+            const resp = await fetch('https://slack.com/api/auth.test', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+                signal: AbortSignal.timeout(5000),
+            });
+            const body = await resp.json();
+            checks.slack = { ok: !!body.ok, latency_ms: Date.now() - t, team: body.team || null, error: body.error || null };
+        } catch (e) {
+            checks.slack = { ok: false, error: e.message };
+        }
+    } else {
+        checks.slack = { ok: false, error: 'SLACK_BOT_TOKEN not set' };
+    }
+
+    // Sentry (verify DSN is set — SDK initialised at startup)
+    checks.sentry = {
+        ok: !!process.env.SENTRY_DSN,
+        dsn_set: !!process.env.SENTRY_DSN,
+        hint: !process.env.SENTRY_DSN ? 'Set SENTRY_DSN env var' : null,
+    };
+
     const allOk = Object.values(checks).every(c => c.ok);
     const issues = Object.entries(checks).filter(([, c]) => !c.ok).map(([k, c]) => `${k}: ${c.error || c.hint || 'failed'}`);
+
+    // Health score: percentage of subsystems passing
+    const total  = Object.keys(checks).length;
+    const passed = Object.values(checks).filter(c => c.ok).length;
+    const score  = Math.round((passed / total) * 100);
 
     res.json({
         ok: allOk,
         status: allOk ? 'healthy' : 'degraded',
+        score: `${score}%`,
         issues,
         checks,
         latency_ms: Date.now() - t0,

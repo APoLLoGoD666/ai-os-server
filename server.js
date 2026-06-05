@@ -11290,6 +11290,66 @@ server.listen(PORT, () => {
         }
     });
 
+    // vault_embeddings table for hybrid vault RAG (Phase 28)
+    setImmediate(async () => {
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query(`
+                CREATE TABLE IF NOT EXISTS vault_embeddings (
+                    id BIGSERIAL PRIMARY KEY,
+                    source TEXT NOT NULL,
+                    chunk_hash TEXT NOT NULL,
+                    chunk_text TEXT NOT NULL,
+                    embedding vector(768),
+                    mtime BIGINT,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    CONSTRAINT vault_embeddings_uniq UNIQUE (source, chunk_hash)
+                );
+                CREATE INDEX IF NOT EXISTS vault_emb_vec_idx
+                    ON vault_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
+                CREATE OR REPLACE FUNCTION match_vault_embeddings(
+                    query_embedding vector(768), match_count int DEFAULT 5
+                ) RETURNS TABLE(source text, chunk_text text, mtime bigint, similarity float)
+                LANGUAGE SQL STABLE AS $$
+                    SELECT source, chunk_text, mtime,
+                           1 - (embedding <=> query_embedding) AS similarity
+                    FROM vault_embeddings
+                    WHERE embedding IS NOT NULL
+                    ORDER BY embedding <=> query_embedding
+                    LIMIT match_count;
+                $$;
+            `);
+            console.log('[PGVector] vault_embeddings table + RPC ready');
+        } catch (e) {
+            console.warn('[PGVector] vault_embeddings setup skipped:', e.message);
+        }
+    });
+
+    // apex_agent_stages table for per-stage failure analytics (Phase 28)
+    setImmediate(async () => {
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query(`
+                CREATE TABLE IF NOT EXISTS apex_agent_stages (
+                    id BIGSERIAL PRIMARY KEY,
+                    task_id TEXT NOT NULL,
+                    stage TEXT NOT NULL,
+                    success BOOLEAN NOT NULL DEFAULT FALSE,
+                    error TEXT,
+                    duration_ms INTEGER,
+                    attempt INTEGER DEFAULT 1,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS apex_agent_stages_task_id_idx ON apex_agent_stages(task_id);
+                CREATE INDEX IF NOT EXISTS apex_agent_stages_stage_idx ON apex_agent_stages(stage, success);
+                CREATE INDEX IF NOT EXISTS apex_agent_stages_created_at_idx ON apex_agent_stages(created_at);
+            `);
+            console.log('[Schema] apex_agent_stages table ready');
+        } catch (e) {
+            console.warn('[Schema] apex_agent_stages setup skipped:', e.message);
+        }
+    });
+
     // Schema migration — apex_agent_runs: add duration_ms + token_usage if missing
     setImmediate(async () => {
         try {
@@ -11503,6 +11563,94 @@ checkPendingMasterTasks();
             setInterval(_generateWeeklyReview, 7 * 24 * 60 * 60 * 1000);
         }, _next.getTime() - Date.now());
         console.log(`[WeeklyReview] Scheduled for ${_next.toDateString()} 08:00`);
+    })();
+
+    // Weekly technical debt audit — Sundays at 2am
+    (function _scheduleTechDebtAudit() {
+        function _nextSunday2am() {
+            const d = new Date(); d.setHours(2, 0, 0, 0);
+            const daysUntil = (7 - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + daysUntil);
+            return d;
+        }
+        async function _runTechDebtAudit() {
+            if (!process.env.ANTHROPIC_API_KEY) return;
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+            try {
+                // Collect agent run stats
+                const [runsRes, stagesRes] = await Promise.allSettled([
+                    sbAdmin.from('apex_agent_runs')
+                        .select('task_id,success,cost_usd,complexity,duration_ms,created_at,agent_summary')
+                        .gte('created_at', weekAgo).limit(500),
+                    sbAdmin.from('apex_agent_stages')
+                        .select('stage,success,error,duration_ms')
+                        .gte('created_at', weekAgo).limit(2000),
+                ]);
+                const runs   = runsRes.value?.data   || [];
+                const stages = stagesRes.value?.data || [];
+
+                if (!runs.length) return;
+
+                const totalRuns    = runs.length;
+                const failedRuns   = runs.filter(r => !r.success).length;
+                const totalCost    = runs.reduce((s, r) => s + (r.cost_usd || 0), 0);
+                const avgDurMs     = runs.reduce((s, r) => s + (r.duration_ms || 0), 0) / totalRuns;
+                const slowRuns     = runs.filter(r => (r.duration_ms || 0) > 120000).length;
+
+                // Stage-level failure hotspots
+                const stageFailures = {};
+                for (const s of stages) {
+                    if (!s.success) stageFailures[s.stage] = (stageFailures[s.stage] || 0) + 1;
+                }
+                const hotspots = Object.entries(stageFailures)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([stage, count]) => `${stage}: ${count} failures`)
+                    .join(', ') || 'none';
+
+                const report = [
+                    `# Technical Debt Audit — ${today}`,
+                    `*Generated by APEX AI OS automated debt engine*`,
+                    '',
+                    `## Agent Pipeline Health`,
+                    `- **Runs this week:** ${totalRuns}`,
+                    `- **Failure rate:** ${failedRuns}/${totalRuns} (${totalRuns ? Math.round(failedRuns/totalRuns*100) : 0}%)`,
+                    `- **Total AI cost:** $${totalCost.toFixed(4)}`,
+                    `- **Avg duration:** ${Math.round(avgDurMs / 1000)}s`,
+                    `- **Slow runs (>2min):** ${slowRuns}`,
+                    `- **Failure hotspots:** ${hotspots}`,
+                    '',
+                    `## Recommended Actions`,
+                    failedRuns / Math.max(totalRuns, 1) > 0.3 ? `- ⚠️ Failure rate >30% — investigate recurring errors in apex_agent_stages` : `- ✅ Failure rate acceptable`,
+                    slowRuns > 5 ? `- ⚠️ ${slowRuns} slow runs — check DEVELOPER agent retry escalation` : `- ✅ Pipeline speed normal`,
+                    totalCost > 5 ? `- ⚠️ High weekly cost $${totalCost.toFixed(2)} — review complexity routing` : `- ✅ Cost within budget`,
+                ].join('\n');
+
+                // Write to Obsidian vault
+                const { obsidianWrite } = require('./agent-system/obsidian-client');
+                await obsidianWrite(`15 System/TechDebt/${today}.md`, report)
+                    .catch(e => console.warn('[TechDebt] vault write failed:', e.message));
+
+                // Persist to Supabase
+                await sbAdmin.from('apex_notifications').insert({
+                    title: `Weekly Tech Debt Audit — ${today}`,
+                    body: `${failedRuns}/${totalRuns} failures · $${totalCost.toFixed(4)} cost · hotspots: ${hotspots}`,
+                    type: 'system', read: false, created_at: new Date().toISOString(),
+                }).catch(() => {});
+
+                require('./lib/cron-logger').record('tech_debt_audit', 'ok').catch(() => {});
+                console.log(`[TechDebt] Weekly audit complete — ${failedRuns}/${totalRuns} failures, $${totalCost.toFixed(4)}`);
+            } catch (e) {
+                console.warn('[TechDebt] audit error (non-fatal):', e.message);
+                require('./lib/cron-logger').record('tech_debt_audit', 'error', e.message).catch(() => {});
+            }
+        }
+        const _next = _nextSunday2am();
+        setTimeout(function _techDebt() {
+            _runTechDebtAudit();
+            setInterval(_runTechDebtAudit, 7 * 24 * 60 * 60 * 1000);
+        }, _next.getTime() - Date.now());
+        console.log(`[TechDebt] Weekly audit scheduled for ${_next.toDateString()} 02:00`);
     })();
 
     // News ingest — runs at 6am daily, plus an immediate run on startup

@@ -773,6 +773,28 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity) {
         const { error: e2 } = await _sb.from('apex_agent_runs').upsert(baseRow, { onConflict: 'task_id' });
         if (e2) console.warn('[Audit] log skipped (non-fatal):', e2.message);
     }
+
+    // Per-stage failure tracking → apex_agent_stages
+    if (agentLogs.length > 0) {
+        const stageRows = agentLogs.map(l => {
+            let stageSuccess;
+            if (l.role === 'COMMITTER') stageSuccess = !!l.result?.commitHash;
+            else if (l.role === 'DEVELOPER') stageSuccess = !!(l.result?.applied?.length);
+            else stageSuccess = l.result?.passed !== false && !l.result?.error;
+            return {
+                task_id:     taskId,
+                stage:       l.role || 'UNKNOWN',
+                success:     !!stageSuccess,
+                error:       l.result?.error ? String(l.result.error).slice(0, 500) : null,
+                duration_ms: l.duration || null,
+                attempt:     1,
+                created_at:  new Date().toISOString(),
+            };
+        });
+        _sb.from('apex_agent_stages').insert(stageRows).then(({ error: se }) => {
+            if (se) console.warn('[Audit] stage log non-fatal:', se.message);
+        }).catch(() => {});
+    }
 }
 
 // ── Per-run cost cap — aborts pipeline if budget exceeded ─────────────────────
