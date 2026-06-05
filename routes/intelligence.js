@@ -328,12 +328,16 @@ router.get('/agent-performance', requireAppAccess, async (req, res) => {
               .limit(1000),
         ]);
 
-        if (stagesRes.error) throw new Error(stagesRes.error.message);
-        if (runsRes.error)   throw new Error(runsRes.error.message);
+        // Tolerate missing tables (schema migration requires pg direct connection)
+        const stagesData = stagesRes.error ? [] : (stagesRes.data || []);
+        const runsData   = runsRes.error   ? [] : (runsRes.data   || []);
+        const warnings   = [];
+        if (stagesRes.error) warnings.push(`apex_agent_stages: ${stagesRes.error.message}`);
+        if (runsRes.error)   warnings.push(`apex_agent_runs: ${runsRes.error.message}`);
 
         // Per-role stats from stages
         const byRole = {};
-        for (const s of stagesRes.data || []) {
+        for (const s of stagesData) {
             const r = byRole[s.stage] || (byRole[s.stage] = { runs: 0, succeeded: 0, failed: 0, totalDurationMs: 0, errors: {} });
             r.runs++;
             if (s.success) r.succeeded++; else r.failed++;
@@ -351,7 +355,7 @@ router.get('/agent-performance', requireAppAccess, async (req, res) => {
         }
 
         // Pipeline-level stats from runs
-        const runs = runsRes.data || [];
+        const runs = runsData;
         const pipeline = {
             total:       runs.length,
             succeeded:   runs.filter(r => r.success).length,
@@ -371,7 +375,7 @@ router.get('/agent-performance', requireAppAccess, async (req, res) => {
             b.successRate = b.runs ? Math.round(b.succeeded / b.runs * 100) : 0;
         }
 
-        res.json({ ok: true, days, pipeline, byRole });
+        res.json({ ok: true, days, pipeline, byRole, ...(warnings.length ? { warnings } : {}) });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
     }
