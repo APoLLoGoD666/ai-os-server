@@ -33,17 +33,29 @@ function _walkMd(dir, files = []) {
     return files;
 }
 
+// Recency boost: 1.0 for files modified today, 0.7 for 90+ days old
+// Lessons/Briefings/Decisions directories get an extra 1.15× source boost
+const _SOURCE_BOOST = /\/(Lessons|Briefings|Decisions|Projects|Executive)\//;
+function _recencyBoost(mtime) {
+    const ageMs = Date.now() - mtime;
+    const ageDays = ageMs / 86400000;
+    return 1.0 - Math.min(ageDays / 90, 1) * 0.3; // 1.0 → 0.7 over 90 days
+}
+
 // Tokenize for BM25-style overlap scoring
 function _tokenize(text) {
     return text.toLowerCase().match(/\b\w{3,}\b/g) || [];
 }
 
-function _score(queryTokens, chunkText) {
+function _score(queryTokens, chunkText, mtime, source) {
     const chunkTokens = _tokenize(chunkText);
     const chunkSet    = new Set(chunkTokens);
     let hits = 0;
     for (const t of queryTokens) if (chunkSet.has(t)) hits++;
-    return hits / (queryTokens.length || 1);
+    const termScore = hits / (queryTokens.length || 1);
+    const recency   = mtime ? _recencyBoost(mtime) : 0.85;
+    const srcBoost  = source && _SOURCE_BOOST.test(source) ? 1.15 : 1.0;
+    return termScore * recency * srcBoost;
 }
 
 async function _buildIndex() {
@@ -64,13 +76,14 @@ async function _buildIndex() {
         const chunks = [];
         for (const filePath of mdFiles) {
             try {
+                const stat    = fs.statSync(filePath);
                 const content = fs.readFileSync(filePath, "utf-8").trim();
                 if (!content) continue;
                 const relPath  = path.relative(VAULT_PATH, filePath);
                 const filename = path.basename(filePath, ".md");
                 const docs     = await splitter.createDocuments([content]);
                 for (const doc of docs) {
-                    chunks.push({ text: doc.pageContent, source: relPath, filename });
+                    chunks.push({ text: doc.pageContent, source: relPath, filename, mtime: stat.mtimeMs });
                 }
             } catch {}
         }
@@ -98,7 +111,7 @@ async function retrieveContext(query, k = TOP_K) {
 
         const queryTokens = _tokenize(query);
         const scored = _chunks
-            .map(c => ({ ...c, score: _score(queryTokens, c.text) }))
+            .map(c => ({ ...c, score: _score(queryTokens, c.text, c.mtime, c.source) }))
             .filter(c => c.score > 0)
             .sort((a, b) => b.score - a.score)
             .slice(0, k);

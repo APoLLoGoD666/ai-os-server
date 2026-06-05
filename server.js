@@ -306,6 +306,7 @@ function _resolveConversationId(req) {
 }
 
 // Request correlation ID — injected on every request, echoed in response headers
+const _log = require('./lib/logger');
 app.use((req, res, next) => {
     const id = req.headers['x-request-id'] || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
     req.requestId    = id;
@@ -314,7 +315,11 @@ app.use((req, res, next) => {
     res.setHeader('X-Conversation-ID', req.conversationId);
     if (req.path.startsWith('/api/')) {
         const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-        console.log(`[REQUEST] ${req.method} ${req.path} — ${ip} — ${id} — ${new Date().toISOString()}`);
+        const t0 = Date.now();
+        _log.info('request', `${req.method} ${req.path}`, { request_id: id, ip, conversation_id: req.conversationId });
+        res.on('finish', () => {
+            _log.info('response', `${req.method} ${req.path} ${res.statusCode}`, { request_id: id, status: res.statusCode, latency_ms: Date.now() - t0 });
+        });
     }
     next();
 });
@@ -1018,6 +1023,7 @@ async function formatRecentMemory() {
 // Memory summary cache — regenerate only if >10 new messages OR >5 minutes since last
 let _memorySummaryCache = null;
 let _lastSummaryMsgCount = 0;
+let _summaryInFlight = null; // Promise guard — prevents parallel Haiku summarization calls
 const SUMMARY_TTL_MS = 300000; // 5 minutes hard ceiling
 const SUMMARY_MSG_DELTA = 10;  // also regenerate after 10 new messages
 async function getMemorySummary() {
@@ -1026,26 +1032,32 @@ async function getMemorySummary() {
     if (_memorySummaryCache && (now - _memorySummaryCache.ts) < SUMMARY_TTL_MS && msgDelta < SUMMARY_MSG_DELTA) {
         return _memorySummaryCache.summary;
     }
-    const memory = await loadMemory();
-    if (!memory.length) return "No recent memory.";
-    const raw = memory.slice(-15).map(item => {
-        const when = timeAgo(item.time);
-        return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${item.message}`;
-    }).join("\n");
-    try {
-        const res = await client.messages.create({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 60,
-            temperature: 0,
-            messages: [{ role: "user", content: `Summarise this conversation history into one compact paragraph (max 60 words). Focus on facts, preferences, and recent context only.\n\n${raw}` }]
-        });
-        const summary = res.content?.find(b => b.type === "text")?.text?.trim() || raw;
-        _memorySummaryCache = { summary, ts: Date.now() };
-        _lastSummaryMsgCount = _memMsgCount;
-        return summary;
-    } catch (_) {
-        return raw;
-    }
+    if (_summaryInFlight) return _summaryInFlight;
+    _summaryInFlight = (async () => {
+        const memory = await loadMemory();
+        if (!memory.length) return "No recent memory.";
+        const raw = memory.slice(-15).map(item => {
+            const when = timeAgo(item.time);
+            return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${item.message}`;
+        }).join("\n");
+        try {
+            const res = await client.messages.create({
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 60,
+                temperature: 0,
+                messages: [{ role: "user", content: `Summarise this conversation history into one compact paragraph (max 60 words). Focus on facts, preferences, and recent context only.\n\n${raw}` }]
+            });
+            const summary = res.content?.find(b => b.type === "text")?.text?.trim() || raw;
+            _memorySummaryCache = { summary, ts: Date.now() };
+            _lastSummaryMsgCount = _memMsgCount;
+            return summary;
+        } catch (_) {
+            return raw;
+        } finally {
+            _summaryInFlight = null;
+        }
+    })();
+    return _summaryInFlight;
 }
 
 // Minimal solid-colour PNG generator (no external deps)
@@ -11209,15 +11221,24 @@ server.listen(PORT, () => {
 
     // Mastra agents — deferred 5 minutes after startup to avoid OOM (loads @mastra/core)
     // All mastra routes null-check mastraAgents so they degrade gracefully until ready.
-    setTimeout(() => {
+    function _loadMastra() {
         try {
+            // Guard: skip if heap usage > 75% to prevent OOM kill on constrained instances
+            const mem = process.memoryUsage();
+            const heapPct = mem.heapUsed / mem.heapTotal;
+            if (heapPct > 0.75) {
+                console.warn(`[Mastra] load skipped — heap at ${(heapPct * 100).toFixed(0)}% (>75% threshold). Retry in 10 min.`);
+                setTimeout(_loadMastra, 600000);
+                return;
+            }
             const _m = require('./mastra_agents');
             initMastra = _m.initMastra;
             getMastraStatus = _m.getMastraStatus;
             mastraAgents = initMastra(handleCommand);
-            console.log('🤖 Mastra agents initialised (deferred).');
-        } catch (err) { console.error('MASTRA INIT ERROR (deferred):', err.message); }
-    }, 300000); // 5 minutes
+            console.log('[Mastra] agents initialised (deferred).');
+        } catch (err) { console.error('[Mastra] INIT ERROR (deferred):', err.message); }
+    }
+    setTimeout(_loadMastra, 300000); // 5 minutes
 
     // Agent library — load index from Supabase on startup (fast), then background-sync from GitHub if empty
     setImmediate(async () => {

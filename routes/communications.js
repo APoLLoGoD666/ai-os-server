@@ -65,14 +65,18 @@ async function syncGoogleCalendar() {
 
     let events = [];
     try {
-        const res = await cal.events.list({
-            calendarId: 'primary',
-            timeMin:    now.toISOString(),
-            timeMax:    maxDate.toISOString(),
-            singleEvents: true,
-            orderBy: 'startTime',
-            maxResults: 100,
-        });
+        const res = await Promise.race([
+            cal.events.list({
+                calendarId: 'primary',
+                timeMin:    now.toISOString(),
+                timeMax:    maxDate.toISOString(),
+                singleEvents: true,
+                orderBy: 'startTime',
+                maxResults: 100,
+                timeout:    15000,
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Google Calendar API timeout (15s)')), 15000)),
+        ]);
         events = res.data.items || [];
     } catch (e) {
         if (/insufficient.*scope|accessNotConfigured|forbidden/i.test(e.message)) {

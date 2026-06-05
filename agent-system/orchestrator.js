@@ -646,7 +646,7 @@ async function _committer(spec, branchName) {
 
     const _ghToken = process.env.GITHUB_TOKEN || '';
     const repoUrl = `https://oauth2:${_ghToken}@github.com/APoLLoGoD666/ai-os-server.git`;
-    const _mask = (s) => _ghToken ? String(s || '').replace(_ghToken, '[REDACTED]') : String(s || '');
+    const _mask = (s) => _ghToken ? String(s || '').replace(new RegExp(_ghToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[REDACTED]') : String(s || '');
 
     // Pull first — sync ROOT with remote before merging so the merge commit lands on top of
     // the latest remote HEAD. Doing this after merge caused git to rebase away the merge commit

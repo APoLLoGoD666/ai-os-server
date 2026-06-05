@@ -16,7 +16,8 @@ const _anthro = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const _planCache = new Map();
 
 const ROOT = path.join(__dirname, '..');
-const MODEL = 'claude-haiku-4-5-20251001';
+const MODEL  = 'claude-haiku-4-5-20251001';
+const _SONNET = 'claude-sonnet-4-6';
 const ROADMAP_FILE = path.join(ROOT, 'ROADMAP.md');
 
 const _ghToken = process.env.GITHUB_TOKEN || '';
@@ -25,6 +26,16 @@ const _mask = (s) => _ghToken ? String(s || '').replace(new RegExp(_ghToken.repl
 // Escape special regex characters in featureId strings
 function _escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Pre-classify feature before planning — selects model tier for planFeature
+function _preClassifyFeature(feature) {
+    const t = `${feature.id} ${feature.title}`.toLowerCase();
+    if (/\b(auth|password|secret|api.?key|jwt|oauth|stripe|payment|security|encrypt|rls|rbac|permiss|hash|session)\b/.test(t))
+        return 'critical';
+    if (/\b(refactor|architect|orchestrat|pipeline|rebuild|multi.?step|integrat|vector|embed|agent.system|workflow|migration)\b/.test(t))
+        return 'complex';
+    return 'simple';
 }
 
 // Run an array of async task functions with bounded concurrency
@@ -121,7 +132,9 @@ async function planFeature(feature, workstream) {
         return _planCache.get(feature.id);
     }
 
-    const planModel = MODEL;
+    const _featureClass = _preClassifyFeature(feature);
+    const planModel = (_featureClass === 'critical' || _featureClass === 'complex') ? _SONNET : MODEL;
+    console.log(`[Master] planFeature ${feature.id} — class: ${_featureClass}, model: ${planModel}`);
     const context = memory.getFullContext();
 
     const res = await Promise.race([
