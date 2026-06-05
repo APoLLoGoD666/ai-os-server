@@ -164,14 +164,20 @@ router.get('/self-check', requireAppAccess, async (req, res) => {
     const checks = {};
     const t0 = Date.now();
 
-    // Memory
-    const mem = process.memoryUsage();
-    const heapPct = Math.round(mem.heapUsed / mem.heapTotal * 100);
+    // Memory — use RSS vs container limit (512 MB on Render Starter).
+    // heapUsed/heapTotal is misleading: V8 starts with a small heapTotal and expands
+    // it dynamically, producing 90%+ readings even on a healthy server.
+    const mem    = process.memoryUsage();
+    const rssMb  = Math.round(mem.rss / 1024 / 1024);
+    const CONTAINER_MB = parseInt(process.env.CONTAINER_MEMORY_MB || '512', 10);
+    const rssPct = Math.round(rssMb / CONTAINER_MB * 100);
     checks.memory = {
-        ok: heapPct < 85,
-        heap_pct: heapPct,
-        rss_mb:   Math.round(mem.rss / 1024 / 1024),
-        hint: heapPct >= 85 ? 'Heap critical — Mastra load deferred, consider restart' : null,
+        ok:           rssPct < 85,
+        rss_mb:       rssMb,
+        rss_pct:      rssPct,
+        heap_used_mb: Math.round(mem.heapUsed / 1024 / 1024),
+        container_mb: CONTAINER_MB,
+        hint: rssPct >= 85 ? `RSS ${rssMb} MB exceeds 85% of ${CONTAINER_MB} MB container — consider restart` : null,
     };
 
     // Supabase
@@ -302,6 +308,129 @@ router.get('/self-check', requireAppAccess, async (req, res) => {
         latency_ms: Date.now() - t0,
         ts: new Date().toISOString(),
     });
+});
+
+// GET /api/intelligence/agent-performance — per-role breakdown from apex_agent_stages
+router.get('/agent-performance', requireAppAccess, async (req, res) => {
+    try {
+        const days  = Math.min(parseInt(req.query.days) || 30, 90);
+        const since = new Date(Date.now() - days * 86400000).toISOString();
+        const sb    = _sbClient();
+
+        const [stagesRes, runsRes] = await Promise.all([
+            sb.from('apex_agent_stages')
+              .select('stage,success,error,duration_ms,created_at')
+              .gte('created_at', since)
+              .limit(5000),
+            sb.from('apex_agent_runs')
+              .select('success,cost_usd,complexity,duration_ms,created_at')
+              .gte('created_at', since)
+              .limit(1000),
+        ]);
+
+        if (stagesRes.error) throw new Error(stagesRes.error.message);
+        if (runsRes.error)   throw new Error(runsRes.error.message);
+
+        // Per-role stats from stages
+        const byRole = {};
+        for (const s of stagesRes.data || []) {
+            const r = byRole[s.stage] || (byRole[s.stage] = { runs: 0, succeeded: 0, failed: 0, totalDurationMs: 0, errors: {} });
+            r.runs++;
+            if (s.success) r.succeeded++; else r.failed++;
+            if (s.duration_ms) r.totalDurationMs += s.duration_ms;
+            if (!s.success && s.error) {
+                const key = s.error.slice(0, 80);
+                r.errors[key] = (r.errors[key] || 0) + 1;
+            }
+        }
+        for (const r of Object.values(byRole)) {
+            r.successRate  = r.runs ? Math.round(r.succeeded / r.runs * 100) : 0;
+            r.avgDurationMs = r.runs ? Math.round(r.totalDurationMs / r.runs) : 0;
+            r.topErrors    = Object.entries(r.errors).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([e, n]) => ({ error: e, count: n }));
+            delete r.errors; delete r.totalDurationMs;
+        }
+
+        // Pipeline-level stats from runs
+        const runs = runsRes.data || [];
+        const pipeline = {
+            total:       runs.length,
+            succeeded:   runs.filter(r => r.success).length,
+            successRate: runs.length ? Math.round(runs.filter(r => r.success).length / runs.length * 100) : 0,
+            totalCostUsd: runs.reduce((s, r) => s + (r.cost_usd || 0), 0).toFixed(4),
+            avgDurationMs: runs.length ? Math.round(runs.reduce((s, r) => s + (r.duration_ms || 0), 0) / runs.length) : 0,
+            byComplexity: {},
+        };
+        for (const r of runs) {
+            const t = r.complexity || 'unknown';
+            if (!pipeline.byComplexity[t]) pipeline.byComplexity[t] = { runs: 0, succeeded: 0 };
+            pipeline.byComplexity[t].runs++;
+            if (r.success) pipeline.byComplexity[t].succeeded++;
+        }
+        for (const t of Object.keys(pipeline.byComplexity)) {
+            const b = pipeline.byComplexity[t];
+            b.successRate = b.runs ? Math.round(b.succeeded / b.runs * 100) : 0;
+        }
+
+        res.json({ ok: true, days, pipeline, byRole });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// GET /api/intelligence/performance — latency stats and external dependency timings
+router.get('/performance', requireAppAccess, async (req, res) => {
+    try {
+        const tracker = require('../lib/latency-tracker');
+        const stats   = tracker.stats();
+        const ov      = stats.overall || {};
+
+        // Measure live external dependency latencies
+        const t0 = Date.now();
+        const [sbPing, notionPing, slackPing] = await Promise.allSettled([
+            _sbClient().from('apex_notifications').select('id').limit(1),
+            process.env.NOTION_API_KEY
+                ? fetch('https://api.notion.com/v1/users/me', {
+                    headers: { Authorization: `Bearer ${process.env.NOTION_API_KEY}`, 'Notion-Version': '2022-06-28' },
+                    signal: AbortSignal.timeout(5000),
+                })
+                : Promise.reject(new Error('not configured')),
+            process.env.SLACK_BOT_TOKEN
+                ? fetch('https://slack.com/api/auth.test', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+                    signal: AbortSignal.timeout(5000),
+                })
+                : Promise.reject(new Error('not configured')),
+        ]);
+
+        res.json({
+            ok: true,
+            ts: new Date().toISOString(),
+            voice: {
+                total_sessions:   stats.total_sessions,
+                active:           stats.active_voice_sessions,
+                ack_p50_ms:       ov.ack_latency?.p50      ?? null,
+                ack_p95_ms:       ov.ack_latency?.p95      ?? null,
+                meaningful_p50_ms: ov.meaningful_latency?.p50 ?? null,
+                meaningful_p95_ms: ov.meaningful_latency?.p95 ?? null,
+                completion_p50_ms: ov.completion_latency?.p50 ?? null,
+                completion_p95_ms: ov.completion_latency?.p95 ?? null,
+                abandonment_rate: stats.abandonment_rate ?? null,
+            },
+            dependencies: {
+                supabase_ms: sbPing.status === 'fulfilled' ? Date.now() - t0 : null,
+                notion_ms:   notionPing.status === 'fulfilled' ? notionPing.value.status !== undefined ? (Date.now() - t0 - (slackPing.status !== 'pending' ? 0 : 0)) : null : null,
+                slack_ms:    slackPing.status === 'fulfilled' ? (slackPing.value.ok !== undefined ? Date.now() - t0 : null) : null,
+            },
+            memory: {
+                rss_mb:  Math.round(process.memoryUsage().rss / 1024 / 1024),
+                heap_mb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+                uptime_s: Math.round(process.uptime()),
+            },
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
 });
 
 module.exports = router;

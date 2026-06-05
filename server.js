@@ -10367,9 +10367,11 @@ app.get('/api/intelligence/lessons', requireAppAccess, async (req, res) => {
 app.get('/api/intelligence/self-check', requireAppAccess, async (req, res) => {
     const checks = {};
     const t0 = Date.now();
-    const mem = process.memoryUsage();
-    const heapPct = Math.round(mem.heapUsed / mem.heapTotal * 100);
-    checks.memory = { ok: heapPct < 85, heap_pct: heapPct, rss_mb: Math.round(mem.rss / 1024 / 1024), hint: heapPct >= 85 ? 'Heap critical — consider restart' : null };
+    const mem    = process.memoryUsage();
+    const rssMb  = Math.round(mem.rss / 1024 / 1024);
+    const CONTAINER_MB = parseInt(process.env.CONTAINER_MEMORY_MB || '512', 10);
+    const rssPct = Math.round(rssMb / CONTAINER_MB * 100);
+    checks.memory = { ok: rssPct < 85, rss_mb: rssMb, rss_pct: rssPct, heap_used_mb: Math.round(mem.heapUsed / 1024 / 1024), container_mb: CONTAINER_MB, hint: rssPct >= 85 ? `RSS ${rssMb} MB exceeds 85% of ${CONTAINER_MB} MB container — consider restart` : null };
     try {
         const { data, error } = await sbAdmin.from('apex_notifications').select('id').limit(1);
         checks.supabase = { ok: !error, latency_ms: Date.now() - t0, error: error?.message || null };

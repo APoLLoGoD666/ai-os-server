@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireAppAccess } = require('../lib/app-auth');
+const requireAppAccess = require('../lib/app-auth');
 
 // ── Lazy service accessors (won't crash if env vars missing at load time) ──────
 function _notion(mod) {
