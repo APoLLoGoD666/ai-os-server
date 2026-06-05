@@ -5,6 +5,9 @@ services:
     buildCommand: npm install --legacy-peer-deps
     startCommand: node --max-old-space-size=220 server.js
     healthCheckPath: /health
+    # Disable zero-downtime deploys so the new instance has full 512MB available
+    # (old instance at ~280MB RSS + new startup peak ~340MB = OOM on Starter)
+    zeroDowntimeDeploys: false
 
   - type: web
     name: apex-ai-sidecar
