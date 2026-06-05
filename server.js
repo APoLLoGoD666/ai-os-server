@@ -376,6 +376,7 @@ app.get('/health', async (req, res) => {
     const status  = allOk ? 'ok' : (dbOk ? 'degraded' : 'down');
     res.status(dbOk ? 200 : 503).json({
         status,
+        version:   'af8de5e',
         uptime:    process.uptime(),
         timestamp: Date.now(),
         db:        dbOk,
