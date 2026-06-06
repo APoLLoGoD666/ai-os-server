@@ -44,6 +44,15 @@ router.get('/ping', (req, res) => {
     }
 });
 
+// GET /api/ready — deployment readiness verification endpoint
+router.get('/ready', (req, res) => {
+    try {
+        res.json({ status: 'ready', timestamp: new Date().toISOString() });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // GET /api/metrics — request counter diagnostics
 router.get('/metrics', (req, res) => {
     try {
