@@ -11175,25 +11175,39 @@ app.post('/api/wiki/ingest-cs249r', requireAppAccess, async (req, res) => {
 // ── Setup Agent Routes ────────────────────────────────────────────
 const supabaseSetup = require('./agent-system/supabase-setup');
 
-// Targeted migration: create apex_agent_stages (idempotent, uses pg pool directly)
+// Targeted migration: create apex_agent_stages via Supabase Management API (pg pool is blocked on Render)
 app.post('/api/setup/migrate-stages', requireAppAccess, async (req, res) => {
-    const steps = [];
+    const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
+    const PROJECT_ID   = 'devmtexqjstappalqbeg';
+    if (!ACCESS_TOKEN) {
+        return res.status(503).json({ ok: false, error: 'SUPABASE_ACCESS_TOKEN not set — add it to Render env vars' });
+    }
+    const https = require('https');
+    async function runSQL(sql) {
+        return new Promise((resolve, reject) => {
+            const body = JSON.stringify({ query: sql });
+            const options = {
+                hostname: 'api.supabase.com',
+                path: `/v1/projects/${PROJECT_ID}/database/query`,
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+            };
+            const req2 = https.request(options, r2 => {
+                let d = ''; r2.on('data', c => d += c);
+                r2.on('end', () => { try { const p = JSON.parse(d); if (r2.statusCode >= 400) reject(new Error(JSON.stringify(p))); else resolve(p); } catch(e){ reject(new Error(d)); } });
+            });
+            req2.on('error', reject); req2.write(body); req2.end();
+        });
+    }
     try {
-        const pgPool = require('./pg_database');
-        await pgPool.query(`CREATE TABLE IF NOT EXISTS apex_agent_stages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), task_id TEXT NOT NULL, stage TEXT NOT NULL, success BOOLEAN DEFAULT FALSE, error TEXT, duration_ms INTEGER, attempt INTEGER DEFAULT 1, created_at TIMESTAMPTZ DEFAULT NOW())`);
-        steps.push('create_table');
-        await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC)`);
-        steps.push('idx_created_at');
-        await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage)`);
-        steps.push('idx_stage');
-        const { rows } = await pgPool.query(`SELECT COUNT(*) FROM apex_agent_stages`);
-        steps.push('verify');
-        console.log('[Migration] apex_agent_stages created via route, row_count=' + rows[0].count);
-        res.json({ ok: true, message: 'apex_agent_stages ready', steps, row_count: rows[0].count });
+        await runSQL(`CREATE TABLE IF NOT EXISTS apex_agent_stages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), task_id TEXT NOT NULL, stage TEXT NOT NULL, success BOOLEAN DEFAULT FALSE, error TEXT, duration_ms INTEGER, attempt INTEGER DEFAULT 1, created_at TIMESTAMPTZ DEFAULT NOW())`);
+        await runSQL(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC)`);
+        await runSQL(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage)`);
+        console.log('[Migration] apex_agent_stages created via Management API');
+        res.json({ ok: true, message: 'apex_agent_stages ready' });
     } catch (e) {
-        const detail = { message: e.message, code: e.code, detail: e.detail, steps_completed: steps, stack: (e.stack||'').split('\n').slice(0,3).join(' | ') };
-        console.error('[Migration] apex_agent_stages route error:', JSON.stringify(detail));
-        res.status(500).json({ ok: false, error: e.message || String(e), detail });
+        console.error('[Migration] apex_agent_stages Management API error:', e.message);
+        res.status(500).json({ ok: false, error: e.message });
     }
 });
 
@@ -11615,13 +11629,22 @@ server.listen(PORT, () => {
         } catch (e) { console.warn('[Services] init failed (non-fatal):', e.message); }
     });
 
-    // Ensure apex_agent_stages exists — migration omission fix (idempotent, split for pgBouncer compat)
+    // Ensure apex_agent_stages exists — migration omission fix (uses Management API; pg pool blocked on Render)
     setImmediate(async () => {
+        const _token = process.env.SUPABASE_ACCESS_TOKEN;
+        if (!_token) { console.warn('[Migration] apex_agent_stages skipped: SUPABASE_ACCESS_TOKEN not set'); return; }
+        const _https = require('https');
+        async function _runSQL(sql) {
+            return new Promise((resolve, reject) => {
+                const body = JSON.stringify({ query: sql });
+                const opts = { hostname:'api.supabase.com', path:'/v1/projects/devmtexqjstappalqbeg/database/query', method:'POST', headers:{ Authorization:'Bearer '+_token, 'Content-Type':'application/json', 'Content-Length':Buffer.byteLength(body) } };
+                const r = _https.request(opts, res2 => { let d=''; res2.on('data',c=>d+=c); res2.on('end',()=>{ try{ const p=JSON.parse(d); if(res2.statusCode>=400) reject(new Error(JSON.stringify(p))); else resolve(p); }catch(e){reject(new Error(d));} }); }); r.on('error',reject); r.write(body); r.end();
+            });
+        }
         try {
-            const pgPool = require('./pg_database');
-            await pgPool.query(`CREATE TABLE IF NOT EXISTS apex_agent_stages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), task_id TEXT NOT NULL, stage TEXT NOT NULL, success BOOLEAN DEFAULT FALSE, error TEXT, duration_ms INTEGER, attempt INTEGER DEFAULT 1, created_at TIMESTAMPTZ DEFAULT NOW())`);
-            await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC)`);
-            await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage)`);
+            await _runSQL(`CREATE TABLE IF NOT EXISTS apex_agent_stages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), task_id TEXT NOT NULL, stage TEXT NOT NULL, success BOOLEAN DEFAULT FALSE, error TEXT, duration_ms INTEGER, attempt INTEGER DEFAULT 1, created_at TIMESTAMPTZ DEFAULT NOW())`);
+            await _runSQL(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC)`);
+            await _runSQL(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage)`);
             console.log('[Migration] apex_agent_stages ready');
         } catch (e) {
             console.warn('[Migration] apex_agent_stages setup (non-fatal):', e.message);
