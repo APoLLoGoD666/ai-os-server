@@ -6,7 +6,8 @@ const os = require('os');
 const { spawnSync, execSync } = require('child_process');
 const memory = require('./obsidian-memory');
 const { z } = require('zod');
-const _hooks = require('./agent-pipeline-hooks');
+const _hooks      = require('./agent-pipeline-hooks');
+const _reputation = require('./agent-reputation');
 
 const ROOT = path.join(__dirname, '..');
 const MAX_FILE_BYTES = 20 * 1024;
@@ -59,7 +60,8 @@ const ArchitectSchema = z.object({
     summary:           z.string().min(1),
     relevantFunctions: z.array(z.string()).default([]),
     warnings:          z.array(z.string()).default([]),
-    testCases:         z.array(z.string()).default([])
+    testCases:         z.array(z.string()).default([]),
+    confidence:        z.number().min(0).max(1).optional().default(0.7),
 });
 
 // Module-level Supabase client — created once, reused across all pipeline runs
@@ -301,7 +303,7 @@ PRINCIPLES (Karpathy):
 3. Surgical Changes — touch only what is necessary; leave everything else untouched
 4. Goal-Driven — implement the success criteria, nothing more
 
-Output JSON: { "summary": string, "relevantFunctions": string[], "warnings": string[], "testCases": string[] }
+Output JSON: { "summary": string, "relevantFunctions": string[], "warnings": string[], "testCases": string[], "confidence": number }
 
 "summary": state WHAT EXISTS → WHAT CHANGES → WHAT MUST NOT BE TOUCHED.
 "testCases": 2-3 concrete verifiable behaviors the implementation must satisfy.
@@ -841,6 +843,16 @@ async function runAgentTeam(spec, taskId) {
     const ceilByTier = { simple: '$0.01', moderate: '$0.15', complex: '$0.80', critical: '$2.50' };
     console.log(`[Orchestrator] Expected cost ceiling: ~${ceilByTier[complexity]}`);
 
+    // Reputation-aware pre-escalation: skip HAIKU if DEVELOPER historically fails >60% (min 15 samples)
+    try {
+        if (await _reputation.shouldPreEscalate('DEVELOPER', 0.6, 15)) {
+            if (_agentModels.developer === M.HAIKU) {
+                _agentModels.developer = M.SONNET;
+                console.log('[Orchestrator] reputation pre-escalation: DEVELOPER → SONNET (historical failure rate >60%)');
+            }
+        }
+    } catch {}
+
     // Wiki context — capped at 1500 chars
     try {
         const { getWikiContext } = require('./wiki-reader');
@@ -935,6 +947,8 @@ async function runAgentTeam(spec, taskId) {
         const MAX_ATTEMPTS = 3;
         let lastFailure = null;
         let developerLog, reviewerLog, validatorLog, testerLog;
+        const _escalations   = []; // tracks model escalation events for visibility
+        let   _successAttempt = 1;
 
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             console.log(`[Orchestrator] ── Attempt ${attempt}/${MAX_ATTEMPTS} ──`);
@@ -942,9 +956,11 @@ async function runAgentTeam(spec, taskId) {
             // Escalate developer model on retry: Haiku → Sonnet → Opus
             // This avoids burning expensive tokens on the first attempt while ensuring retries have more power
             if (attempt === 2 && _agentModels.developer === M.HAIKU) {
+                _escalations.push({ attempt, from: M.HAIKU, to: M.SONNET, reason: 'retry' });
                 _agentModels.developer = M.SONNET;
                 console.log(`[Orchestrator] retry escalation: DEVELOPER → ${M.SONNET}`);
             } else if (attempt === 3 && _agentModels.developer !== M.OPUS) {
+                _escalations.push({ attempt, from: _agentModels.developer, to: M.OPUS, reason: 'retry' });
                 _agentModels.developer = M.OPUS;
                 console.log(`[Orchestrator] retry escalation: DEVELOPER → ${M.OPUS}`);
             }
@@ -995,6 +1011,7 @@ async function runAgentTeam(spec, taskId) {
             }
 
             lastFailure = null;
+            _successAttempt = attempt;
             break;
         }
 
@@ -1039,6 +1056,7 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _hooks.onPipelineComplete({ success: true, commitHash: committerLog.result.commitHash, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart, taskId }).catch(() => {}));
         setImmediate(() => _reflector(spec, agentLogs, true).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
+        setImmediate(() => _reputation.invalidateCache());
 
         return {
             success:    true,
@@ -1047,7 +1065,9 @@ async function runAgentTeam(spec, taskId) {
             error:      null,
             cost,
             complexity,
-            models:     _agentModels
+            models:     _agentModels,
+            attempts:   _successAttempt,
+            escalations: _escalations,
         };
 
     } catch (err) {
