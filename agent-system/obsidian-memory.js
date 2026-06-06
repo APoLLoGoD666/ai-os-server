@@ -8,6 +8,20 @@ const VAULT = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI 
 // without waiting for a disk round-trip. Capped at 50 entries.
 const _lessonBuffer = [];
 
+// Lazy Supabase client for lesson persistence across restarts
+let _sb = null;
+let _sbLessonsMissing = false;
+function _getSb() {
+    if (_sb) return _sb;
+    if (!process.env.SUPABASE_URL) return null;
+    const { createClient } = require('@supabase/supabase-js');
+    _sb = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || ''
+    );
+    return _sb;
+}
+
 module.exports = {
 
     read(notePath) {
@@ -52,13 +66,26 @@ module.exports = {
     },
 
     logLesson(lesson) {
-        const date = new Date().toISOString().split('T')[0];
-        const time = new Date().toLocaleTimeString('en-GB',
-            { hour: '2-digit', minute: '2-digit' });
-        this.append('01 Executive/Lessons.md',
-            `## ${date} ${time}\n${lesson}`);
+        const now  = new Date();
+        const date = now.toISOString().split('T')[0];
+        const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        this.append('01 Executive/Lessons.md', `## ${date} ${time}\n${lesson}`);
         _lessonBuffer.push(`${date} ${time}: ${lesson}`);
         if (_lessonBuffer.length > 50) _lessonBuffer.shift();
+
+        // Fire-and-forget Supabase persistence — survives Render restarts
+        if (!_sbLessonsMissing) {
+            const sb = _getSb();
+            if (sb) {
+                sb.from('apex_lessons').insert({ lesson, created_at: now.toISOString() })
+                    .then(({ error }) => {
+                        if (error && error.message.includes('does not exist')) {
+                            _sbLessonsMissing = true;
+                        }
+                    })
+                    .catch(() => {});
+            }
+        }
     },
 
     logDecision(decision, reason) {
@@ -97,17 +124,44 @@ module.exports = {
         return this.read('01 Executive/Lessons.md') || '';
     },
 
-    // Returns the last N lessons — merges disk content with in-memory buffer
+    // Returns the last N lessons — merges disk content with in-memory buffer.
+    // Async variant also pulls from Supabase to recover lessons from prior restarts.
     getRecentLessons(n = 12) {
         const raw = this.read('01 Executive/Lessons.md') || '';
         const sections = raw.split(/\n---\n/).filter(Boolean);
-        // Append buffer entries not already present in disk content
         for (const entry of _lessonBuffer) {
-            if (!raw.includes(entry)) {
-                sections.push(entry);
-            }
+            if (!raw.includes(entry)) sections.push(entry);
         }
         return sections.slice(-n).join('\n---\n');
+    },
+
+    async getRecentLessonsAsync(n = 12) {
+        const diskContent = this.getRecentLessons(n);
+        if (_sbLessonsMissing) return diskContent;
+        const sb = _getSb();
+        if (!sb) return diskContent;
+        try {
+            const { data, error } = await sb.from('apex_lessons')
+                .select('lesson, created_at')
+                .order('created_at', { ascending: false })
+                .limit(n);
+            if (error) {
+                if (error.message.includes('does not exist')) _sbLessonsMissing = true;
+                return diskContent;
+            }
+            const sbEntries = (data || []).map(r => {
+                const d = r.created_at ? r.created_at.slice(0, 10) : '';
+                return `${d}: ${r.lesson}`;
+            });
+            // Merge: Supabase entries not already in disk content
+            const allEntries = diskContent ? diskContent.split(/\n---\n/).filter(Boolean) : [];
+            for (const entry of sbEntries) {
+                if (!diskContent.includes(entry)) allEntries.push(entry);
+            }
+            return allEntries.slice(-n).join('\n---\n');
+        } catch {
+            return diskContent;
+        }
     },
 
     getFullContext() {
