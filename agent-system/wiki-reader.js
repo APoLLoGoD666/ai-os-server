@@ -46,9 +46,17 @@ async function getWikiContext(taskTitle) {
     const results = await Promise.all([...coreReads, ...entityReads]);
     const pages = results.filter(Boolean);
 
-    // Append recent auto-reflexion lessons (last 12, capped at 800 chars)
-    const recentLessons = localMemory.getRecentLessons(12);
-    if (recentLessons) pages.push(`## Recent Agent Lessons\n${recentLessons.slice(0, 800)}`);
+    // Ranked agent lessons — task-relevant lessons surfaced first (max 20 fetched, top 8 returned)
+    const rawLessons = localMemory.getRecentLessons(20);
+    if (rawLessons) {
+        try {
+            const { getRankedLessons } = require('./reflection-engine');
+            const ranked = taskTitle ? getRankedLessons(taskTitle, rawLessons, 8) : rawLessons;
+            pages.push(`## Recent Agent Lessons\n${ranked.slice(0, 800)}`);
+        } catch {
+            pages.push(`## Recent Agent Lessons\n${rawLessons.slice(0, 800)}`);
+        }
+    }
 
     // CS249R book context — injected when task objective is ML/AI related
     try {

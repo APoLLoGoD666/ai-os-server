@@ -6,7 +6,14 @@ const os = require('os');
 const { spawnSync, execSync } = require('child_process');
 const memory = require('./obsidian-memory');
 const { z } = require('zod');
-const _hooks = require('./agent-pipeline-hooks');
+const _hooks        = require('./agent-pipeline-hooks');
+const _reputation   = require('./agent-reputation');
+const _episodic     = require('./episodic-memory');
+const _indexer      = require('./memory-indexer');
+const _dynSelector  = require('./dynamic-agent-selector');
+const _execVerifier = require('./execution-verifier');
+const _goalTracker  = require('./goal-tracker');
+const _adaptEngine  = require('./adaptation-engine');
 
 const ROOT = path.join(__dirname, '..');
 const MAX_FILE_BYTES = 20 * 1024;
@@ -59,7 +66,8 @@ const ArchitectSchema = z.object({
     summary:           z.string().min(1),
     relevantFunctions: z.array(z.string()).default([]),
     warnings:          z.array(z.string()).default([]),
-    testCases:         z.array(z.string()).default([])
+    testCases:         z.array(z.string()).default([]),
+    confidence:        z.number().min(0).max(1).optional().default(0.7),
 });
 
 // Module-level Supabase client — created once, reused across all pipeline runs
@@ -301,7 +309,7 @@ PRINCIPLES (Karpathy):
 3. Surgical Changes — touch only what is necessary; leave everything else untouched
 4. Goal-Driven — implement the success criteria, nothing more
 
-Output JSON: { "summary": string, "relevantFunctions": string[], "warnings": string[], "testCases": string[] }
+Output JSON: { "summary": string, "relevantFunctions": string[], "warnings": string[], "testCases": string[], "confidence": number }
 
 "summary": state WHAT EXISTS → WHAT CHANGES → WHAT MUST NOT BE TOUCHED.
 "testCases": 2-3 concrete verifiable behaviors the implementation must satisfy.
@@ -348,12 +356,19 @@ Frontend testCases MUST include:
 
     const routesMap = _buildRoutesMap();
 
+    let _adaptCtx = '';
+    try {
+        const _recs = _adaptEngine.getRecommendationsFor({ category: _dynSelector.detectCategory(spec.objective), stage: 'ARCHITECT' });
+        _adaptCtx = _adaptEngine.formatRecsAsContext(_recs);
+    } catch {}
+
     const res = await _callClaude(_agentModels.architect, SYSTEM + uiMandate,
         `SPEC:\n${JSON.stringify(spec, null, 2)}\n\n` +
         (routesMap ? routesMap + '\n\n' : '') +
         `FILE CONTENTS:\n${archFileContents}` +
         (graphContext ? '\n\nKNOWLEDGE GRAPH:\n' + graphContext : '') +
-        (obsidianContext ? '\n\nSYSTEM MEMORY:\n' + obsidianContext : ''),
+        (obsidianContext ? '\n\nSYSTEM MEMORY:\n' + obsidianContext : '') +
+        (_adaptCtx ? '\n\n' + _adaptCtx : ''),
         800, 'ARCHITECT'
     );
 
@@ -646,7 +661,11 @@ async function _committer(spec, branchName) {
 
     const _ghToken = process.env.GITHUB_TOKEN || '';
     const repoUrl = `https://oauth2:${_ghToken}@github.com/APoLLoGoD666/ai-os-server.git`;
-    const _mask = (s) => _ghToken ? String(s || '').replace(new RegExp(_ghToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[REDACTED]') : String(s || '');
+    const _mask = (s) => {
+        let out = String(s || '');
+        if (_ghToken) out = out.replace(new RegExp(_ghToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[REDACTED]');
+        return out.replace(/https?:\/\/[^:@\s]+:[^@\s]+@github\.com/g, 'https://[REDACTED]@github.com');
+    };
 
     // Pull first — sync ROOT with remote before merging so the merge commit lands on top of
     // the latest remote HEAD. Doing this after merge caused git to rebase away the merge commit
@@ -739,6 +758,7 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
         const lesson = res.content[0]?.text?.trim();
         if (lesson && lesson.length > 10) {
             memory.logLesson(`[Auto-Reflexion] ${lesson}`);
+            try { _indexer.indexLesson(`[Auto-Reflexion] ${lesson}`); } catch {}
             console.log('[Reflector] lesson:', lesson.slice(0, 80));
         }
     } catch (e) {
@@ -841,6 +861,20 @@ async function runAgentTeam(spec, taskId) {
     const ceilByTier = { simple: '$0.01', moderate: '$0.15', complex: '$0.80', critical: '$2.50' };
     console.log(`[Orchestrator] Expected cost ceiling: ~${ceilByTier[complexity]}`);
 
+    // Dynamic agent selection — category-aware + stage health + risk-based tier escalation
+    try {
+        const agentConfig = await _dynSelector.selectAgentConfig(spec, {
+            baseComplexity: complexity,
+            riskScore:      spec._planRisk,
+        });
+        if (agentConfig.escalated) {
+            if (agentConfig.models.architect) _agentModels.architect = agentConfig.models.architect;
+            if (agentConfig.models.developer) _agentModels.developer = agentConfig.models.developer;
+            if (agentConfig.models.reviewer)  _agentModels.reviewer  = agentConfig.models.reviewer;
+        }
+        console.log(_dynSelector.formatSelection(agentConfig));
+    } catch {}
+
     // Wiki context — capped at 1500 chars
     try {
         const { getWikiContext } = require('./wiki-reader');
@@ -849,6 +883,17 @@ async function runAgentTeam(spec, taskId) {
         console.warn('[Orchestrator] wiki read failed:', e.message);
         obsidianContext = '';
     }
+
+    // Semantic memory context — similar experiences + relevant lessons via embedding search
+    // Falls back to keyword scoring when embeddings not yet available (e.g. fresh deploy)
+    try {
+        const _retriever = require('./memory-retriever');
+        const memCtx = await _retriever.retrieve(spec.objective, {
+            episodes: true, lessons: true, episodeLimit: 3, lessonLimit: 5,
+        });
+        const formatted = _retriever.formatForContext(memCtx, 500);
+        if (formatted) obsidianContext = (obsidianContext ? obsidianContext + '\n\n' : '') + formatted;
+    } catch {}
 
     // ── Git worktree isolation (Superpowers pattern) ──────────────────────────
     const ts          = Date.now().toString(36); // base-36 timestamp suffix prevents branch collision on re-run
@@ -898,6 +943,8 @@ async function runAgentTeam(spec, taskId) {
         const cost = _costUsd.toFixed(5);
         setImmediate(() => _reflector(spec, agentLogs, false).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
+        setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs, models: _agentModels, failureReason: error }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
+        setImmediate(() => { try { _adaptEngine.learn(spec, { success: false, complexity, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs }); } catch {} });
         // North Star proposal — if failures cluster around a pattern, propose a constraint
         setImmediate(async () => {
             try {
@@ -913,12 +960,14 @@ async function runAgentTeam(spec, taskId) {
             } catch {}
         });
         setImmediate(() => _hooks.onPipelineFailed(new Error(error), { taskId, description: spec.objective }).catch(() => {}));
+        setImmediate(() => { try { _goalTracker.blockGoal(taskId, error); } catch {} });
         return { success: false, commitHash: null, agentLogs, error, complexity, models: _agentModels };
     };
 
     const _pipelineStart = Date.now();
     try {
         setImmediate(() => _hooks.onPipelineStart({ taskId, description: spec.objective, agentCount: 8, model: _agentModels.developer }).catch(() => {}));
+        setImmediate(() => { try { _goalTracker.startGoal(taskId); } catch {} });
         console.log(`[Orchestrator] ── Starting ${taskId} ──`);
         console.log(`[Orchestrator] Budget cap: $${PIPELINE_BUDGET_USD}`);
 
@@ -935,6 +984,8 @@ async function runAgentTeam(spec, taskId) {
         const MAX_ATTEMPTS = 3;
         let lastFailure = null;
         let developerLog, reviewerLog, validatorLog, testerLog;
+        const _escalations   = []; // tracks model escalation events for visibility
+        let   _successAttempt = 1;
 
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             console.log(`[Orchestrator] ── Attempt ${attempt}/${MAX_ATTEMPTS} ──`);
@@ -942,9 +993,11 @@ async function runAgentTeam(spec, taskId) {
             // Escalate developer model on retry: Haiku → Sonnet → Opus
             // This avoids burning expensive tokens on the first attempt while ensuring retries have more power
             if (attempt === 2 && _agentModels.developer === M.HAIKU) {
+                _escalations.push({ attempt, from: M.HAIKU, to: M.SONNET, reason: 'retry' });
                 _agentModels.developer = M.SONNET;
                 console.log(`[Orchestrator] retry escalation: DEVELOPER → ${M.SONNET}`);
             } else if (attempt === 3 && _agentModels.developer !== M.OPUS) {
+                _escalations.push({ attempt, from: _agentModels.developer, to: M.OPUS, reason: 'retry' });
                 _agentModels.developer = M.OPUS;
                 console.log(`[Orchestrator] retry escalation: DEVELOPER → ${M.OPUS}`);
             }
@@ -960,6 +1013,22 @@ async function runAgentTeam(spec, taskId) {
                 if (attempt < MAX_ATTEMPTS) { console.log('[Orchestrator] retrying — DEVELOPER wrote no files'); continue; }
                 return _fail('DEVELOPER made no file changes after all retries');
             }
+
+            // Structural output verification — catch empty/missing files before spending tokens on REVIEWER
+            try {
+                const outputCheck = _execVerifier.verifyOutput(spec, developerLog, _worktreeRoot);
+                if (outputCheck.emptyFiles.length > 0 || outputCheck.missedTargets.length > 0) {
+                    const detail = [
+                        outputCheck.emptyFiles.length    ? `empty: ${outputCheck.emptyFiles.join(', ')}` : '',
+                        outputCheck.missedTargets.length ? `missed: ${outputCheck.missedTargets.join(', ')}` : '',
+                    ].filter(Boolean).join('; ');
+                    lastFailure = `[StructuralCheck] ${detail}`;
+                    console.warn('[Orchestrator] structural check failed:', detail);
+                    _rollback();
+                    if (attempt < MAX_ATTEMPTS) continue;
+                    return _fail(lastFailure);
+                }
+            } catch {}
 
             // Step 3 — REVIEWER + VALIDATOR in parallel (neither depends on the other)
             [reviewerLog, validatorLog] = await Promise.all([
@@ -995,6 +1064,7 @@ async function runAgentTeam(spec, taskId) {
             }
 
             lastFailure = null;
+            _successAttempt = attempt;
             break;
         }
 
@@ -1039,6 +1109,10 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _hooks.onPipelineComplete({ success: true, commitHash: committerLog.result.commitHash, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart, taskId }).catch(() => {}));
         setImmediate(() => _reflector(spec, agentLogs, true).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
+        setImmediate(() => _reputation.invalidateCache());
+        setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: true, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs, models: _agentModels }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
+        setImmediate(() => { try { _adaptEngine.learn(spec, { success: true, complexity, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs }); } catch {} });
+        setImmediate(() => { try { _goalTracker.completeGoal(taskId, { commitHash: committerLog.result.commitHash, cost }); } catch {} });
 
         return {
             success:    true,
@@ -1047,7 +1121,9 @@ async function runAgentTeam(spec, taskId) {
             error:      null,
             cost,
             complexity,
-            models:     _agentModels
+            models:     _agentModels,
+            attempts:   _successAttempt,
+            escalations: _escalations,
         };
 
     } catch (err) {
@@ -1058,11 +1134,28 @@ async function runAgentTeam(spec, taskId) {
         memory.logLesson(`Task ${taskId} failed: ${err.message}`);
         setImmediate(() => _reflector(spec, agentLogs, false).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
+        setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: _startTime ? Date.now() - _startTime : null, failureReason: err.message }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
+        setImmediate(() => { try { _adaptEngine.learn(spec, { success: false, complexity, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs }); } catch {} });
+        setImmediate(() => { try { _goalTracker.blockGoal(taskId, err.message); } catch {} });
         return { success: false, commitHash: null, agentLogs, error: err.message, complexity, models: _agentModels };
     }
 }
 
+function getOrchestratorStatus() {
+    return {
+        circuitBreaker: {
+            open:         _cb.isOpen(),
+            failures:     _cb.failures,
+            threshold:    _cb.threshold,
+            cooldownMs:   _cb.isOpen() ? _cb.cooldown() : 0,
+        },
+        lastRunModels:  { ..._agentModels },
+        supabaseReady:  !!_sb,
+    };
+}
+
 module.exports = runAgentTeam;
+module.exports.getOrchestratorStatus = getOrchestratorStatus;
 
 // Purge old backups every 24 hours (fire-and-forget, non-fatal)
 setInterval(() => {
