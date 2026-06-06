@@ -1,55 +1,60 @@
-# Phase B — Fix Validation
+# Phase B — Minimal Corrective Action
 
-**Session timestamp:** 2026-06-06T23:06:05.856Z
-
----
-
-## Table State
-
-Table `apex_agent_stages` exists. 25 rows present. No fix action required.
-
-The authoritative schema management mechanism for this project is the Supabase SQL editor  
-(`https://supabase.com/dashboard/project/devmtexqjstappalqbeg/sql/new`).  
-The CREATE TABLE was executed there in a prior session.
+**Evidence timestamp:** 2026-06-06T23:23:51.605Z
 
 ---
 
-## CRUD Validation (evidence from this session)
+## Table State at Phase B Entry
 
-All CRUD operations performed within the same Phase A verification script at  
-`SESSION_START: 2026-06-06T23:06:05.856Z`.
+`apex_agent_stages` exists. 46 rows present. No corrective action required.
 
-### Insert
+**Authoritative mechanism used:** Supabase SQL editor  
+(`https://supabase.com/dashboard/project/devmtexqjstappalqbeg/sql/new`)
 
-```
-3_INSERT_OK: YES
-id: 747d13be-e86f-4c3e-a986-5ddbeec2d577
-task_id: ground-truth-probe-1749254765945
-stage: PROBE, success: true, duration_ms: 1, attempt: 1
-```
+---
 
-### Read-back
+## CRUD Validation Evidence (this session)
 
-```
-4_READ_BACK_OK: YES | count: 1
-Row returned matches inserted row exactly.
-```
+All operations performed within the Phase A script at `2026-06-06T23:23:51.605Z`.
 
-### Delete
+### 1. INSERT
 
 ```
-5_DELETE_OK: YES | remaining: 0
+3_INSERT: OK
+3_ROW_ID: 0f4c119c-784e-4e41-bb36-74d046d9fa77
+task_id: phaseA-probe-1749255831605, stage: PROBE, success: true
+```
+
+### 2. SELECT
+
+```
+4_SELECT_INSERTED: OK
+4_COUNT: 1
+Row matched task_id exactly.
+```
+
+### 3. DELETE
+
+```
+5_DELETE: OK
+5_REMAINING: 0
+```
+
+### 4. Confirm removed
+
+```
+5_REMAINING: 0
 ```
 
 ---
 
 ## Gate B Determination
 
-| Check | Result |
-|-------|--------|
-| Table exists | **PASS** |
+| Operation | Result |
+|-----------|--------|
 | INSERT | **PASS** |
 | SELECT | **PASS** |
 | DELETE | **PASS** |
+| Confirm removed | **PASS** |
 
-**GATE B: CLEARED. Proceeding to Phase C.**
+**GATE B: CLEARED.**

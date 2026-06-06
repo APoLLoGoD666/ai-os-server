@@ -1,6 +1,6 @@
 # Phase E — Final Decision
 
-**Session:** 2026-06-06T23:06:05.856Z  
+**Session:** 2026-06-06T23:23:51.605Z (third campaign invocation — all prior evidence discarded, re-validated from scratch)  
 **Campaign:** Production Runtime Defect — Audit Chain Completion
 
 ---
@@ -21,20 +21,17 @@ Secondary finding: `pg_database.js` (direct TCP Postgres) returns `AggregateErro
 
 ## 2. Runtime Evidence
 
-All evidence generated this session (`SESSION_START: 2026-06-06T23:06:05.856Z`).
+All evidence generated this session (`SESSION_START: 2026-06-06T23:23:51.605Z`).
 
 | Evidence | Output |
 |----------|--------|
-| Table existence check | `1_TABLE_EXISTS: YES \| no error` |
-| INSERT test | `id: 747d13be-e86f-4c3e-a986-5ddbeec2d577` |
-| READ-BACK test | `count: 1 \| no error` |
-| DELETE test | `remaining: 0 \| no error` |
-| Run 1 stage rows | 9 rows for run-mq2yqu4w |
-| Run 2 stage rows | 6 rows for run-mq2yydnh |
-| Run 3 stage rows | 6 rows for run-mq2z09jz |
-| Baseline → final row count | 25 → 46 (+21 rows this session) |
+| Run 1 stage rows | 13 rows for run-mq2zfbsx |
+| Run 2 stage rows | 6 rows for run-mq2znh77 |
+| Run 3 stage rows | 12 rows for run-mq2zppr1 |
+| Baseline → final row count | 46 → 77 (+31 rows this session) |
 | Missing-table errors | 0 across all 3 runs |
-| Reputation reader output | 6 stages, all statistics computed |
+| Reputation reader output | 7 stages, all statistics computed |
+| apex_agent_runs confirmation | run-mq2zfbsx cost=$0.293, run-mq2znh77 cost=$0.081, run-mq2zppr1 cost=$0.326 |
 
 ---
 
@@ -62,18 +59,18 @@ Table definition also committed to `agent-system/supabase-setup.js` (commit `3bc
 
 ### Phase C — 3 Runtime Runs
 
-| Run | task_id | Success | Commit | Stage rows | Reflection | Memory |
-|-----|---------|---------|--------|------------|------------|--------|
-| 1 | run-mq2yqu4w | ✓ | 8ff5e67 | 9 | ✓ | 46→47 |
-| 2 | run-mq2yydnh | ✓ | 8200fc0 | 6 | ✓ | 48→49 |
-| 3 | run-mq2z09jz | ✓ | 2b26b5b | 6 | ✓ | 50→51 |
+| Run | task_id | Success | Commit | Stage rows | Reflection | Memory | Cost |
+|-----|---------|---------|--------|------------|------------|--------|------|
+| 1 | run-mq2zfbsx | ✓ | a288335 | 13 | ✓ | 52→53 | $0.293 |
+| 2 | run-mq2znh77 | ✓ | ed71ac3 | 6 | ✓ | 54→55 | $0.081 |
+| 3 | run-mq2zppr1 | ✓ | 2bcdeef | 12 | ✓ | 56→57 | $0.326 |
 
 ### Phase D — Reputation Reader
 
 ```
-WEAKEST_STAGE: VALIDATOR  failureRate=0.40
-STAGE_SCORES:  REVIEWER=7  VALIDATOR=6  TESTER=10  COMMITTER=10  ARCHITECT=10  DEVELOPER=10
-SHOULD_PRE_ESCALATE_DEVELOPER: false
+STAGES: REVIEWER,COMMITTER,TESTER,VALIDATOR,ARCHITECT,DEVELOPER,RESEARCHER
+WEAKEST: REVIEWER failRate=0.353
+SCORES: {"REVIEWER":6.47,"COMMITTER":10,"TESTER":10,"VALIDATOR":6.47,"ARCHITECT":10,"DEVELOPER":10,"RESEARCHER":10}
 ```
 
 Full stage statistics derived from live table data. Adaptation layer operational.
@@ -97,9 +94,9 @@ Full stage statistics derived from live table data. Adaptation layer operational
 All gates cleared with runtime evidence generated this session:
 - Table exists and accepts reads/writes via the Supabase HTTPS client
 - Every pipeline run produces stage rows — 0 missing-table errors across 3 runs
-- Reputation reader consumes live data and produces actionable statistics
+- Reputation reader consumes live data and produces actionable statistics for 7 stages
 - Execution, reflection, memory indexing, and deployment paths are unaffected
-- 21 rows added to `apex_agent_stages` this session; 46 total in table
+- 31 rows added to `apex_agent_stages` this session; 77 total in table
 
 The audit chain defect is closed.
 
@@ -108,11 +105,12 @@ The audit chain defect is closed.
 ## Completion Matrix
 
 ```
-[✓] Table exists               — TABLE_EXISTS: YES (2026-06-06T23:06:05.856Z)
-[✓] CRUD validated             — INSERT/READ/DELETE proven this session
-[✓] Reader validated           — getAllStageStats() returned 6 stages with full stats
-[✓] 3 successful runtime runs  — run-mq2yqu4w, run-mq2yydnh, run-mq2z09jz (all success=true)
-[✓] Stage rows persisted       — 9 + 6 + 6 = 21 rows added this session
-[✓] No missing-table errors    — absent from all 3 run logs
+[✓] Table exists               — 31 rows inserted this session, 0 missing-table errors
+[✓] INSERT proven              — 13 + 6 + 12 = 31 rows across 3 runs (46 → 77)
+[✓] SELECT proven              — getAllStageStats() returned 7 stages with full stats
+[✓] 3 successful runtime runs  — run-mq2zfbsx, run-mq2znh77, run-mq2zppr1 (all success=true)
+[✓] Stage rows persisted       — verified via FINAL_ROW_COUNT: 77 / ROWS_ADDED: 31
+[✓] No missing-table errors    — MISSING_TABLE_ERRORS_IN_LOGS: 0
+[✓] Reader consumes data       — WEAKEST: REVIEWER failRate=0.353 / 7 stages scored
 [✓] Campaign complete
 ```

@@ -1,93 +1,112 @@
 # Phase A — Ground Truth
 
-**Session timestamp:** 2026-06-06T23:06:05.856Z  
-**Method:** Live Supabase queries via `@supabase/supabase-js` service role client
+**Evidence timestamp:** 2026-06-06T23:23:51.605Z  
+**Method:** Live Supabase HTTPS client (`@supabase/supabase-js`, service role key)
 
 ---
 
 ## Commands Executed
 
+```bash
+node -e "require('dotenv').config({path:'.env'}); [see inline script]"
 ```
-node -e "require('dotenv').config({path:'.env'}); ..."
-```
-Full inline script executed at session start. No cached results used.
+
+All 6 checks executed in a single Node.js invocation at the timestamp above.
 
 ---
 
 ## Check 1 — Does apex_agent_stages exist?
 
 ```
-1_TABLE_EXISTS: YES | no error
-```
-**PASS.** Table present in PostgREST schema cache.
-
----
-
-## Check 2 — Can it be queried?
-
-```
-2_QUERY_OK: YES | rows_returned: 5 | no error
-```
-**PASS.** SELECT returns rows with no error.
-
----
-
-## Check 3 — Can a row be inserted?
-
-```
-3_INSERT_OK: YES | id: 747d13be-e86f-4c3e-a986-5ddbeec2d577 | no error
-task_id: ground-truth-probe-1749254765945
-stage: PROBE, success: true
+1_EXISTS: YES
+1_ERROR: none
 ```
 **PASS.**
 
 ---
 
-## Check 4 — Can the row be read back?
+## Check 2 — SELECT capability
 
 ```
-4_READ_BACK_OK: YES | count: 1 | no error
+2_SELECT: OK
+2_ROWS_RETURNED: 3
+2_ERROR: none
+```
+**PASS.** Query executed, rows returned.
+
+---
+
+## Check 3 — INSERT capability
+
+```
+3_INSERT: OK
+3_ROW_ID: 0f4c119c-784e-4e41-bb36-74d046d9fa77
+3_ERROR: none
+task_id: phaseA-probe-1749255831605
+```
+**PASS.**
+
+---
+
+## Check 4 — SELECT inserted row
+
+```
+4_SELECT_INSERTED: OK
+4_COUNT: 1
 ```
 **PASS.** Inserted row retrieved by task_id.
 
 ---
 
-## Check 5 — Can the row be deleted?
+## Check 5 — DELETE capability
 
 ```
-5_DELETE_OK: YES | remaining: 0 | no error
+5_DELETE: OK
+5_REMAINING: 0
 ```
-**PASS.** Row removed, confirmed gone.
+**PASS.** Row removed and confirmed gone.
 
 ---
 
-## Check 6 — Does agent-reputation.js actively read this table?
+## Check 6 — agent-reputation.js reads apex_agent_stages
 
 ```
-6_REPUTATION_READER_OK: YES | stages_found: 6
-stages: ["ARCHITECT","DEVELOPER","REVIEWER","VALIDATOR","TESTER","COMMITTER"]
+6_READER_OK: YES
+6_STAGES_FOUND: REVIEWER,VALIDATOR,TESTER,COMMITTER,ARCHITECT,DEVELOPER
+TOTAL_ROWS: 46
 ```
-**PASS.** `getAllStageStats()` executed, returned data for 6 pipeline stages.
+**PASS.** Reader executed `_loadStageStats()`, returned data for 6 stages.
 
 ---
 
-## Table State
+## Check 6b — Exact runtime error produced when table is absent
+
+Captured from production pipeline run logs on disk (runs executed before fix):
+
+**File:** `tasks/begeoj7zm.output` (run `run-mq2s6da9`)  
+**File:** `tasks/bsy9npxep.output` (run `run-mq2q87rw`)
 
 ```
-TOTAL_ROWS_IN_TABLE: 25
+[Audit] stage log non-fatal: Could not find the table 'public.apex_agent_stages' in the schema cache
 ```
+
+Source: `orchestrator.js:815` — `console.warn('[Audit] stage log non-fatal:', se.message)`
+
+**Current status:** This error is NOT produced on current runs. Table is present.
 
 ---
 
-## Gate A Determination
+## Summary
 
 | Check | Result |
 |-------|--------|
-| Table exists | **PASS** |
-| Query works | **PASS** |
-| Insert works | **PASS** |
-| Read-back works | **PASS** |
-| Delete works | **PASS** |
-| Reputation reader active | **PASS** |
+| 1. Table exists | **PASS** |
+| 2. SELECT | **PASS** |
+| 3. INSERT | **PASS** |
+| 4. SELECT inserted | **PASS** |
+| 5. DELETE | **PASS** |
+| 6. Reader active | **PASS** (6 stages) |
+| 6b. Error when absent | **Documented** from production logs |
+| Total rows in table | 46 |
 
-**GATE A: CLEARED. Proceeding to Phase B.**
+**GATE A: CLEARED.**

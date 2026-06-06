@@ -1,56 +1,64 @@
 # Phase C — Runtime Validation
 
-**Session:** 2026-06-06T23:06:05.856Z  
-**Baseline row count (before runs):** 25
+**Session:** 2026-06-06T23:23:51.605Z  
+**Baseline row count:** 46 (captured at 2026-06-06T23:26:02.625Z)
 
 ---
 
 ## Run Results
 
-| # | task_id | success | commit | stages written | execution | reflection | memory |
-|---|---------|---------|--------|----------------|-----------|------------|--------|
-| 1 | run-mq2yqu4w | **true** | 8ff5e67 | **9** | ✓ | ✓ | 46→47 entries |
-| 2 | run-mq2yydnh | **true** | 8200fc0 | **6** | ✓ | ✓ | 48→49 entries |
-| 3 | run-mq2z09jz | **true** | 2b26b5b | **6** | ✓ | ✓ | 50→51 entries |
-
-All 3 runs succeeded. All 3 deployed to Render.
+| # | task_id | success | commit | stage rows | reflection | memory | deploy |
+|---|---------|---------|--------|------------|------------|--------|--------|
+| 1 | run-mq2zfbsx | **true** | a288335 | **13** | ✓ | 52→53 | ✓ |
+| 2 | run-mq2znh77 | **true** | ed71ac3 | **6** | ✓ | 54→55 | ✓ |
+| 3 | run-mq2zppr1 | **true** | 2bcdeef | **12** | ✓ | 56→57 | ✓ |
 
 ---
 
-## Stage Rows — Run 1 (run-mq2yqu4w, 9 rows)
+## Stage Rows — Run 1 (run-mq2zfbsx, 13 rows)
 
 ```
-ARCHITECT  PASS  12465ms
-DEVELOPER  PASS  15204ms
-REVIEWER   FAIL  6575ms    ← attempt 1 (retry triggered)
-VALIDATOR  PASS  4111ms
-DEVELOPER  PASS  13814ms
-REVIEWER   PASS  6713ms
-VALIDATOR  PASS  3742ms
-TESTER     PASS  579ms
-COMMITTER  PASS  6096ms
+RESEARCHER  PASS  22455ms
+ARCHITECT   PASS  10513ms
+DEVELOPER   PASS  15582ms
+REVIEWER    FAIL  7309ms
+VALIDATOR   PASS  3001ms
+DEVELOPER   PASS  18269ms
+REVIEWER    FAIL  7883ms
+VALIDATOR   PASS  3065ms
+DEVELOPER   PASS  19147ms
+REVIEWER    PASS  8999ms
+VALIDATOR   PASS  3367ms
+TESTER      PASS  524ms
+COMMITTER   PASS  6039ms
 ```
 
-## Stage Rows — Run 2 (run-mq2yydnh, 6 rows)
+## Stage Rows — Run 2 (run-mq2znh77, 6 rows)
 
 ```
-ARCHITECT  PASS  12362ms
-DEVELOPER  PASS  13859ms
-REVIEWER   PASS  6448ms
-VALIDATOR  PASS  0ms
-TESTER     PASS  528ms
-COMMITTER  PASS  7046ms
+ARCHITECT  PASS  18836ms
+DEVELOPER  PASS  18326ms
+REVIEWER   PASS  12420ms
+VALIDATOR  PASS  3927ms
+TESTER     PASS  651ms
+COMMITTER  PASS  6097ms
 ```
 
-## Stage Rows — Run 3 (run-mq2z09jz, 6 rows)
+## Stage Rows — Run 3 (run-mq2zppr1, 12 rows)
 
 ```
-ARCHITECT  PASS  21548ms
-DEVELOPER  PASS  18426ms
-REVIEWER   PASS  13267ms
-VALIDATOR  PASS  0ms
-TESTER     PASS  528ms
-COMMITTER  PASS  6755ms
+ARCHITECT  PASS  12371ms
+DEVELOPER  PASS  20313ms
+REVIEWER   PASS  6611ms
+VALIDATOR  FAIL  3851ms
+DEVELOPER  PASS  17026ms
+REVIEWER   FAIL  6457ms
+VALIDATOR  FAIL  3833ms
+DEVELOPER  PASS  20798ms
+REVIEWER   PASS  5953ms
+VALIDATOR  PASS  3754ms
+TESTER     PASS  1114ms
+COMMITTER  PASS  5941ms
 ```
 
 ---
@@ -58,38 +66,44 @@ COMMITTER  PASS  6755ms
 ## Row Count Evidence
 
 ```
-BASELINE_ROW_COUNT:       25
-FINAL_ROW_COUNT:          46
-ROWS_ADDED_THIS_SESSION:  21
+BASELINE_ROW_COUNT:  46  (2026-06-06T23:26:02.625Z)
+FINAL_ROW_COUNT:     77
+ROWS_ADDED:          31
 ```
-
----
-
-## Audit Capture Rate
-
-| Metric | Value |
-|--------|-------|
-| Runs executed | 3 |
-| Runs with stage rows written | **3 / 3** |
-| Missing-table errors | **0** |
-| Audit capture rate | **100%** |
-
----
-
-## Stage Log Error Check
-
-Searched full output of all 3 run logs. String `stage log non-fatal` is absent from all 3.
 
 ---
 
 ## apex_agent_runs Confirmation
 
 ```
-RUNS_IN_APEX_AGENT_RUNS:
-  run-mq2yqu4w  success=true  cost=$0.074
-  run-mq2yydnh  success=true  cost=$0.039
-  run-mq2z09jz  success=true  cost=$0.092
+APEX_RUNS:
+  run-mq2zfbsx  success=true  cost=$0.293
+  run-mq2znh77  success=true  cost=$0.081
+  run-mq2zppr1  success=true  cost=$0.326
 ```
+
+---
+
+## Missing-Table Error Check
+
+Searched run output files for `stage log non-fatal`:
+
+```
+MISSING_TABLE_ERRORS_IN_LOGS: 0
+```
+
+---
+
+## Metrics
+
+| Metric | Value |
+|--------|-------|
+| Runs executed | 3 |
+| Execution success rate | **100%** (3/3) |
+| Runs with stage rows written | **3/3** |
+| Audit capture rate | **100%** |
+| Missing-table errors | **0** |
+| Storage growth | +31 rows (46 → 77) |
 
 ---
 
@@ -98,7 +112,9 @@ RUNS_IN_APEX_AGENT_RUNS:
 | Check | Result |
 |-------|--------|
 | 3 successful runs | **PASS** |
-| Stage rows persisted | **PASS** (21 rows added) |
+| Stage rows persisted | **PASS** |
+| Rows queryable | **PASS** |
 | No missing-table errors | **PASS** |
+| Audit capture > 0 | **PASS** (31 rows) |
 
-**GATE C: CLEARED. Proceeding to Phase D.**
+**GATE C: CLEARED.**
