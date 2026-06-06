@@ -11910,6 +11910,33 @@ checkPendingMasterTasks();
         console.log(`[WeeklyReview] Scheduled for ${_next.toDateString()} 08:00`);
     })();
 
+    // Weekly adaptation refresh — Sundays at 1am (adaptations have 7-day TTL; refresh before expiry)
+    (function _scheduleAdaptationRefresh() {
+        function _nextSunday1am() {
+            const d = new Date(); d.setHours(1, 0, 0, 0);
+            const daysUntil = (7 - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + daysUntil);
+            return d;
+        }
+        async function _runAdaptationRefresh() {
+            try {
+                const ae = require('./agent-system/adaptation-engine');
+                const result = await ae.runCycle();
+                console.log(`[AdaptCron] Cycle complete — totalActive=${result.totalActive} avgConf=${result.avgConfidence}`);
+                require('./lib/cron-logger').record('adaptation_refresh', 'ok').catch(() => {});
+            } catch (e) {
+                console.warn('[AdaptCron] refresh error (non-fatal):', e.message);
+                require('./lib/cron-logger').record('adaptation_refresh', 'error', e.message).catch(() => {});
+            }
+        }
+        const _next = _nextSunday1am();
+        setTimeout(function _adaptationRefresh() {
+            _runAdaptationRefresh();
+            setInterval(_runAdaptationRefresh, 7 * 24 * 60 * 60 * 1000);
+        }, _next.getTime() - Date.now());
+        console.log(`[AdaptCron] Weekly refresh scheduled for ${_next.toDateString()} 01:00`);
+    })();
+
     // Weekly technical debt audit — Sundays at 2am
     (function _scheduleTechDebtAudit() {
         function _nextSunday2am() {

@@ -8,7 +8,7 @@ const _reputation = require('./agent-reputation');
 
 // Task category patterns — maps objective text to domain buckets
 const CATEGORIES = Object.freeze({
-    auth:     /\b(auth|password|jwt|oauth|session|login|logout|token|secret|rbac|permission)\b/i,
+    auth:     /\b(auth|password|jwt|oauth|session|login|logout|token|secret|rbac|permission|totp|2fa)\b/i,
     database: /\b(sql|postgres|supabase|schema|migration|table|index|query|rls|constraint)\b/i,
     frontend: /\b(dashboard|html|css|ui|component|modal|button|chart|page|style|layout)\b/i,
     api:      /\b(route|endpoint|api|rest|webhook|handler|middleware|express|router)\b/i,
