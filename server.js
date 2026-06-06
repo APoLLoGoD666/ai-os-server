@@ -11177,16 +11177,23 @@ const supabaseSetup = require('./agent-system/supabase-setup');
 
 // Targeted migration: create apex_agent_stages (idempotent, uses pg pool directly)
 app.post('/api/setup/migrate-stages', requireAppAccess, async (req, res) => {
+    const steps = [];
     try {
         const pgPool = require('./pg_database');
         await pgPool.query(`CREATE TABLE IF NOT EXISTS apex_agent_stages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), task_id TEXT NOT NULL, stage TEXT NOT NULL, success BOOLEAN DEFAULT FALSE, error TEXT, duration_ms INTEGER, attempt INTEGER DEFAULT 1, created_at TIMESTAMPTZ DEFAULT NOW())`);
+        steps.push('create_table');
         await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC)`);
+        steps.push('idx_created_at');
         await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage)`);
-        console.log('[Migration] apex_agent_stages created via route');
-        res.json({ ok: true, message: 'apex_agent_stages ready' });
+        steps.push('idx_stage');
+        const { rows } = await pgPool.query(`SELECT COUNT(*) FROM apex_agent_stages`);
+        steps.push('verify');
+        console.log('[Migration] apex_agent_stages created via route, row_count=' + rows[0].count);
+        res.json({ ok: true, message: 'apex_agent_stages ready', steps, row_count: rows[0].count });
     } catch (e) {
-        console.error('[Migration] apex_agent_stages route error:', e.message);
-        res.status(500).json({ ok: false, error: e.message });
+        const detail = { message: e.message, code: e.code, detail: e.detail, steps_completed: steps, stack: (e.stack||'').split('\n').slice(0,3).join(' | ') };
+        console.error('[Migration] apex_agent_stages route error:', JSON.stringify(detail));
+        res.status(500).json({ ok: false, error: e.message || String(e), detail });
     }
 });
 
