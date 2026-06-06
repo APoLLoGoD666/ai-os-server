@@ -243,8 +243,9 @@ app.use(helmet({
             mediaSrc:    ["'self'", 'blob:'],
             workerSrc:   ["'self'", 'blob:'],
             fontSrc:     ["'self'", 'data:'],
-            objectSrc:   ["'none'"],
-            frameSrc:    ["'none'"],
+            objectSrc:      ["'none'"],
+            frameSrc:       ["'none'"],
+            scriptSrcAttr:  ["'none'"],
         }
     },
     crossOriginEmbedderPolicy: false
@@ -378,15 +379,18 @@ app.get('/health', async (req, res) => {
     // DB failures are visible in body but don't block new deploys.
     res.status(200).json({
         status,
-        version:   '383cc62',
-        uptime:    process.uptime(),
-        timestamp: Date.now(),
-        db:        dbOk,
-        tts:       ttsOk,
-        ai:        aiOk,
-        memory:    { heapMb, rssMb: rssM, warning: heapMb > 400 },
-        mastra:    getMastraStatus(),
-        recentErrors: _errBuffer.slice(-3)
+        version:        '383cc62',
+        uptime:         process.uptime(),
+        timestamp:      Date.now(),
+        db:             dbOk,
+        tts:            ttsOk,
+        ai:             aiOk,
+        memory:         { heapMb, rssMb: rssM, warning: heapMb > 400 },
+        mastra:         getMastraStatus(),
+        ws:             global._apexWsCount || 0,
+        sentry:         !!process.env.SENTRY_DSN,
+        correlationIds: true,
+        recentErrors:   _errBuffer.slice(-3)
     });
 });
 
@@ -11439,7 +11443,14 @@ server.listen(PORT, () => {
     setInterval(() => {
         const mem = process.memoryUsage();
         const cpu = process.cpuUsage();
-        console.log(`[HEALTH] uptime=${Math.floor(process.uptime())}s rss=${Math.round(mem.rss/1024/1024)}MB heap=${Math.round(mem.heapUsed/1024/1024)}MB cpu_user=${Math.round(cpu.user/1000)}ms cpu_sys=${Math.round(cpu.system/1000)}ms ws=${global._apexWsCount||0} ts=${new Date().toISOString()}`);
+        _log.info('health', 'periodic telemetry', {
+            uptime_s:    Math.floor(process.uptime()),
+            rss_mb:      Math.round(mem.rss      / 1024 / 1024),
+            heap_mb:     Math.round(mem.heapUsed  / 1024 / 1024),
+            cpu_user_ms: Math.round(cpu.user      / 1000),
+            cpu_sys_ms:  Math.round(cpu.system    / 1000),
+            ws:          global._apexWsCount || 0,
+        });
     }, 300000);
 
     // Purge old read notifications — keep table lean (cap at 200 unread + delete read > 7 days)
@@ -11447,18 +11458,23 @@ server.listen(PORT, () => {
         try {
             const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
             await sbAdmin.from('apex_notifications').delete().eq('read', true).lt('created_at', cutoff);
-            console.log('[Notifications] purged read notifications older than 7 days');
-        } catch (e) { console.warn('[Notifications] purge failed (non-fatal):', e.message); }
+            _log.info('retention', 'apex_notifications: purged read records > 7 days');
+        } catch (e) { _log.warn('retention', 'apex_notifications purge failed', { error: e.message }); }
         try {
             const runsCutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
             await sbAdmin.from('apex_agent_runs').delete().lt('created_at', runsCutoff);
-            console.log('[Retention] apex_agent_runs: purged records older than 90 days');
-        } catch (e) { console.warn('[Retention] apex_agent_runs purge failed (non-fatal):', e.message); }
+            _log.info('retention', 'apex_agent_runs: purged records > 90 days');
+        } catch (e) { _log.warn('retention', 'apex_agent_runs purge failed', { error: e.message }); }
         try {
             const tasksCutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
             await sbAdmin.from('agent_tasks').delete().in('status', ['done', 'cancelled']).lt('updated_at', tasksCutoff);
-            console.log('[Retention] agent_tasks: purged completed records older than 90 days');
-        } catch (e) { console.warn('[Retention] agent_tasks purge failed (non-fatal):', e.message); }
+            _log.info('retention', 'agent_tasks: purged done/cancelled records > 90 days');
+        } catch (e) { _log.warn('retention', 'agent_tasks purge failed', { error: e.message }); }
+        try {
+            const emailCutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('email_queue').delete().in('status', ['done', 'error']).lt('updated_at', emailCutoff);
+            _log.info('retention', 'email_queue: purged done/error records > 30 days');
+        } catch (e) { _log.warn('retention', 'email_queue purge failed', { error: e.message }); }
     }, 6 * 60 * 60 * 1000); // every 6 hours
 
     // Pick up any master tasks that were queued before a cold-start restart
