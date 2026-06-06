@@ -1,0 +1,786 @@
+I need to read the existing files first to understand the current structure before creating dashboard.html.
+
+Let me analyze what I know from the spec and architect analysis:
+
+1. There's a login overlay mechanism
+2. There's a requireAppAccess middleware
+3. Routes exist in routes/operations.js
+4. I need to add /api/auth/check endpoint awareness
+5. The dashboard needs a 60-second polling interval
+
+Since I'm creating this file fresh and need to build a complete, functional dashboard with all the specified behaviors, here is the complete dashboard.html:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apex AI OS — Dashboard</title>
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root {
+      --apex-bg:            oklch(14% 0.02 265);
+      --apex-surface:       oklch(18% 0.025 265);
+      --apex-surface-raised:oklch(22% 0.03 265);
+      --apex-border:        oklch(30% 0.03 265);
+      --apex-text-primary:  oklch(95% 0.01 265);
+      --apex-text-secondary:oklch(65% 0.02 265);
+      --apex-text-muted:    oklch(45% 0.02 265);
+      --apex-accent:        oklch(65% 0.2 265);
+      --apex-accent-hover:  oklch(70% 0.22 265);
+      --apex-accent-subtle: oklch(25% 0.06 265);
+      --apex-danger:        oklch(60% 0.22 25);
+      --apex-danger-subtle: oklch(22% 0.06 25);
+      --apex-success:       oklch(65% 0.18 145);
+      --apex-warning:       oklch(72% 0.18 75);
+      --apex-overlay-bg:    oklch(8% 0.015 265 / 0.92);
+      --apex-radius-sm:     6px;
+      --apex-radius-md:     10px;
+      --apex-radius-lg:     16px;
+      --apex-radius-xl:     24px;
+      --apex-shadow-sm:     0 1px 3px oklch(0% 0 0 / 0.4);
+      --apex-shadow-md:     0 4px 16px oklch(0% 0 0 / 0.5);
+      --apex-shadow-lg:     0 12px 40px oklch(0% 0 0 / 0.6);
+      --apex-font:          'Inter', system-ui, -apple-system, sans-serif;
+      --apex-font-mono:     'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+      --apex-transition-fast: 150ms ease-out;
+      --apex-transition-base: 250ms ease-out;
+      --apex-transition-slow: 400ms ease-out;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --apex-bg:            oklch(97% 0.005 265);
+        --apex-surface:       oklch(100% 0 0);
+        --apex-surface-raised:oklch(96% 0.008 265);
+        --apex-border:        oklch(88% 0.01 265);
+        --apex-text-primary:  oklch(15% 0.02 265);
+        --apex-text-secondary:oklch(40% 0.02 265);
+        --apex-text-muted:    oklch(60% 0.015 265);
+        --apex-accent:        oklch(50% 0.22 265);
+        --apex-accent-hover:  oklch(45% 0.24 265);
+        --apex-accent-subtle: oklch(93% 0.04 265);
+        --apex-danger:        oklch(50% 0.22 25);
+        --apex-danger-subtle: oklch(96% 0.04 25);
+        --apex-overlay-bg:    oklch(97% 0.005 265 / 0.94);
+      }
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; font-size: 16px; -webkit-text-size-adjust: 100%; }
+    body {
+      height: 100%;
+      font-family: var(--apex-font);
+      background: var(--apex-bg);
+      color: var(--apex-text-primary);
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+    a { color: var(--apex-accent); text-decoration: none; }
+    a:hover { color: var(--apex-accent-hover); }
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+    input, textarea, select {
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    [hidden] { display: none !important; }
+
+    /* ── Focus visible ─────────────────────────────────────────── */
+    :focus-visible {
+      outline: 2px solid var(--apex-accent);
+      outline-offset: 3px;
+      border-radius: var(--apex-radius-sm);
+    }
+
+    /* ── Reduced motion ────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       LOGIN OVERLAY
+    ══════════════════════════════════════════════════════════════ */
+    #loginOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 90; /* below 100 per mandate */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--apex-overlay-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      /* motion: opacity only */
+      opacity: 1;
+      transition: opacity var(--apex-transition-base);
+    }
+    #loginOverlay.apex-overlay--hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #loginOverlay.apex-overlay--visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .apex-login-card {
+      background: var(--apex-surface);
+      border: 1px solid var(--apex-border);
+      border-radius: var(--apex-radius-xl);
+      padding: 2.5rem 2rem;
+      width: min(420px, calc(100vw - 2rem));
+      box-shadow: var(--apex-shadow-lg);
+      /* motion: transform + opacity from below */
+      transform: translateY(0);
+      opacity: 1;
+      transition:
+        transform var(--apex-transition-slow),
+        opacity var(--apex-transition-slow);
+    }
+    #loginOverlay.apex-overlay--hidden .apex-login-card {
+      transform: translateY(12px);
+      opacity: 0;
+    }
+
+    .apex-login-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      margin-bottom: 1.75rem;
+    }
+    .apex-login-logo svg {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+    .apex-login-logo-text {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--apex-text-primary);
+    }
+    .apex-login-logo-text span {
+      color: var(--apex-accent);
+    }
+
+    .apex-login-heading {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--apex-text-primary);
+      margin-bottom: 0.375rem;
+    }
+    .apex-login-sub {
+      font-size: 0.9375rem;
+      color: var(--apex-text-secondary);
+      margin-bottom: 1.75rem;
+    }
+
+    .apex-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      margin-bottom: 1rem;
+    }
+    .apex-field label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--apex-text-secondary);
+    }
+    .apex-field input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--apex-surface-raised);
+      border: 1px solid var(--apex-border);
+      border-radius: var(--apex-radius-md);
+      color: var(--apex-text-primary);
+      font-size: 1rem;
+      transition: border-color var(--apex-transition-fast);
+      min-height: 44px;
+    }
+    .apex-field input::placeholder {
+      color: var(--apex-text-muted);
+    }
+    .apex-field input:hover {
+      border-color: var(--apex-accent);
+    }
+    .apex-field input:focus {
+      border-color: var(--apex-accent);
+      outline: none;
+      box-shadow: 0 0 0 3px var(--apex-accent-subtle);
+    }
+
+    .apex-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      min-height: 44px;
+      border-radius: var(--apex-radius-md);
+      font-size: 1rem;
+      font-weight: 600;
+      transition:
+        opacity var(--apex-transition-fast),
+        transform var(--apex-transition-fast),
+        background var(--apex-transition-fast);
+      cursor: pointer;
+    }
+    .apex-btn:active { transform: scale(0.98); }
+    .apex-btn--primary {
+      background: var(--apex-accent);
+      color: oklch(100% 0 0);
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    .apex-btn--primary:hover { background: var(--apex-accent-hover); }
+    .apex-btn--primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .apex-btn--ghost {
+      background: transparent;
+      color: var(--apex-text-secondary);
+      border: 1px solid var(--apex-border);
+    }
+    .apex-btn--ghost:hover {
+      background: var(--apex-surface-raised);
+      color: var(--apex-text-primary);
+    }
+    .apex-btn--danger {
+      background: var(--apex-danger-subtle);
+      color: var(--apex-danger);
+      border: 1px solid var(--apex-danger);
+    }
+    .apex-btn--danger:hover { opacity: 0.8; }
+
+    .apex-login-error {
+      display: none;
+      margin-top: 0.875rem;
+      padding: 0.75rem 1rem;
+      background: var(--apex-danger-subtle);
+      border: 1px solid var(--apex-danger);
+      border-radius: var(--apex-radius-md);
+      color: var(--apex-danger);
+      font-size: 0.9rem;
+    }
+    .apex-login-error.is-visible { display: block; }
+
+    /* session-expired banner inside overlay */
+    .apex-session-banner {
+      display: none;
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--apex-warning);
+      color: oklch(15% 0.02 75);
+      border-radius: var(--apex-radius-md);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .apex-session-banner.is-visible { display: block; }
+
+    /* ══════════════════════════════════════════════════════════════
+       LAYOUT SHELL
+    ══════════════════════════════════════════════════════════════ */
+    #appShell {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      transition: opacity var(--apex-transition-base);
+    }
+    #appShell.is-blurred { opacity: 0.4; pointer-events: none; }
+
+    /* ── Top bar ───────────────────────────────────────────────── */
+    .apex-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      height: 56px;
+      background: var(--apex-surface);
+      border-bottom: 1px solid var(--apex-border);
+      flex-shrink: 0;
+    }
+    .apex-topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+      color: var(--apex-text-primary);
+    }
+    .apex-topbar-brand svg {
+      width: 24px;
+      height: 24px;
+    }
+    .apex-topbar-brand span { color: var(--apex-accent); }
+    .apex-topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* status indicator */
+    .apex-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--apex-success);
+      flex-shrink: 0;
+    }
+    .apex-status-dot--offline { background: var(--apex-danger); }
+    .apex-status-dot--checking { background: var(--apex-warning); }
+
+    .apex-topbar-user {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--apex-text-secondary);
+    }
+
+    /* ── Main content ──────────────────────────────────────────── */
+    .apex-main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      overflow: hidden;
+    }
+
+    @media (max-width: 768px) {
+      .apex-main { grid-template-columns: 1fr; }
+      .apex-sidebar { display: none; }
+    }
+
+    /* ── Sidebar ───────────────────────────────────────────────── */
+    .apex-sidebar {
+      background: var(--apex-surface);
+      border-right: 1px solid var(--apex-border);
+      overflow-y: auto;
+      padding: 1rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .apex-sidebar-section {
+      padding: 0 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .apex-sidebar-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--apex-text-muted);
+      padding: 0.5rem 0.75rem 0.25rem;
+    }
+    .apex-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.625rem 0.75rem;
+      border-radius: var(--apex-radius-md);
+      font-size: 0.9375rem;
+      color: var(--apex-text-secondary);
+      cursor: pointer;
+      transition:
+        background var(--apex-transition-fast),
+        color var(--apex-transition-fast);
+      min-height: 44px;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+    .apex-nav-item:hover {
+      background: var(--apex-surface-raised);
+      color: var(--apex-text-primary);
+    }
+    .apex-nav-item.is-active {
+      background: var(--apex-accent-subtle);
+      color: var(--apex-accent);
+      font-weight: 500;
+    }
+    .apex-nav-item svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+    .apex-nav-item.is-active svg { opacity: 1; }
+
+    /* ── Content area ──────────────────────────────────────────── */
+    .apex-content {
+      overflow-y: auto;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ── Panel / card ──────────────────────────────────────────── */
+    .apex-panel {
+      background: var(--apex-surface);
+      border: 1px solid var(--apex-border);
+      border-radius: var(--apex-radius-lg);
+      overflow: hidden;
+    }
+    .apex-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--apex-border);
+    }
+    .apex-panel-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--apex-text-primary);
+    }
+    .apex-panel-body {
+      padding: 1.25rem;
+    }
+
+    /* ── Stats grid ────────────────────────────────────────────── */
+    .apex-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+    .apex-stat-card {
+      background: var(--apex-surface-raised);
+      border: 1px solid var(--apex-border);
+      border-radius: var(--apex-radius-md);
+      padding: 1rem 1.25rem;
+    }
+    .apex-stat-label {
+      font-size: 0.8125rem;
+      color: var(--apex-text-muted);
+      margin-bottom: 0.25rem;
+    }
+    .apex-stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--apex-text-primary);
+      line-height: 1.1;
+    }
+    .apex-stat-delta {
+      font-size: 0.8rem;
+      margin-top: 0.25rem;
+      color: var(--apex-success);
+    }
+
+    /* ── Operations list ───────────────────────────────────────── */
+    .apex-op-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .apex-op-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1.25rem;
+      border-bottom: 1px solid var(--apex-border);
+      transition: background var(--apex-transition-fast);
+    }
+    .apex-op-item:last-child { border-bottom: none; }
+    .apex-op-item:hover { background: var(--apex-surface-raised); }
+    .apex-op-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.55rem;
+      border-radius: var(--apex-radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .apex-op-badge--active {
+      background: var(--apex-accent-subtle);
+      color: var(--apex-accent);
+    }
+    .apex-op-badge--complete {
+      background: oklch(22% 0.04 145);
+      color: var(--apex-success);
+    }
+    .apex-op-badge--pending {
+      background: oklch(22% 0.04 75);
+      color: var(--apex-warning);
+    }
+    .apex-op-name {
+      flex: 1;
+      font-size: 0.9375rem;
+      color: var(--apex-text-primary);
+    }
+    .apex-op-meta {
+      font-size: 0.8125rem;
+      color: var(--apex-text-muted);
+      font-family: var(--apex-font-mono);
+    }
+
+    /* ── Input row ─────────────────────────────────────────────── */
+    .apex-input-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+    .apex-textarea-wrap {
+      flex: 1;
+      position: relative;
+    }
+    .apex-textarea {
+      width: 100%;
+      resize: none;
+      background: var(--apex-surface-raised);
+      border: 1px solid var(--apex-border);
+      border-radius: var(--apex-radius-md);
+      padding: 0.75rem 1rem;
+      color: var(--apex-text-primary);
+      font-size: 1rem;
+      min-height: 44px;
+      max-height: 200px;
+      overflow-y: auto;
+      transition: border-color var(--apex-transition-fast);
+      line-height: 1.5;
+    }
+    .apex-textarea:hover { border-color: var(--apex-accent); }
+    .apex-textarea:focus {
+      border-color: var(--apex-accent);
+      outline: none;
+      box-shadow: 0 0 0 3px var(--apex-accent-subtle);
+    }
+    .apex-textarea::placeholder { color: var(--apex-text-muted); }
+
+    /* ── Voice button ──────────────────────────────────────────── */
+    .apex-voice-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--apex-radius-md);
+      background: var(--apex-surface-raised);
+      border: 1px solid var(--apex-border);
+      color: var(--apex-text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition:
+        background var(--apex-transition-fast),
+        color var(--apex-transition-fast),
+        border-color var(--apex-transition-fast);
+      flex-shrink: 0;
+    }
+    .apex-voice-btn:hover {
+      background: var(--apex-accent-subtle);
+      color: var(--apex-accent);
+      border-color: var(--apex-accent);
+    }
+    .apex-voice-btn.is-recording {
+      background: var(--apex-danger-subtle);
+      color: var(--apex-danger);
+      border-color: var(--apex-danger);
+    }
+    .apex-voice-btn svg { width: 20px; height: 20px; }
+
+    /* ── Response area ─────────────────────────────────────────── */
+    .apex-response {
+      background: var(--apex-surface-raised);
+      border: 1px solid var(--apex-border);
+      border-radius: var(--apex-radius-md);
+      padding: 1rem 1.25rem;
+      font-size: 0.9375rem;
+      line-height: 1.65;
+      color: var(--apex-text-primary);
+      min-height: 80px;
+      white-space: pre-wrap;
+      font-family: var(--apex-font);
+    }
+    .apex-response:empty::before {
+      content: 'Response will appear here…';
+      color: var(--apex-text-muted);
+    }
+
+    /* ── Skeleton / loading states ─────────────────────────────── */
+    .apex-skeleton {
+      background: var(--apex-surface-raised);
+      border-radius: var(--apex-radius-sm);
+      /* purposeful: content-loading indicator only, no pulse */
+      opacity: 0.6;
+    }
+
+    /* ── Utility ───────────────────────────────────────────────── */
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+    .apex-divider {
+      height: 1px;
+      background: var(--apex-border);
+      margin: 0.5rem 0;
+    }
+    .apex-text-muted { color: var(--apex-text-muted); font-size: 0.875rem; }
+
+    /* ── Session check indicator ───────────────────────────────── */
+    #sessionCheckIndicator {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--apex-surface);
+      border: 1px solid var(--apex-border);
+      border-radius: var(--apex-radius-md);
+      padding: 0.5rem 0.875rem;
+      font-size: 0.8125rem;
+      color: var(--apex-text-muted);
+      box-shadow: var(--apex-shadow-sm);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(4px);
+      transition:
+        opacity var(--apex-transition-fast),
+        transform var(--apex-transition-fast);
+      z-index: 50;
+    }
+    #sessionCheckIndicator.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       LOGIN OVERLAY
+  ══════════════════════════════════════════════════════════════ -->
+  <div
+    id="loginOverlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="loginHeading"
+    class="apex-overlay--visible"
+  >
+    <div class="apex-login-card">
+      <!-- logo -->
+      <div class="apex-login-logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="oklch(65% 0.2 265 / 0.15)"/>
+          <path
+            d="M8 24 L16 8 L24 24 M11.5 18.5 H20.5"
+            stroke="oklch(65% 0.2 265)"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span class="apex-login-logo-text">Apex <span>AI OS</span></span>
+      </div>
+
+      <!-- session-expired banner (hidden by default, shown by JS) -->
+      <div
+        id="sessionExpiredBanner"
+        class="apex-session-banner"
+        role="status"
+        aria-live="polite"
+      >
+        Your session has expired. Please sign in to continue.
+      </div>
+
+      <h1 id="loginHeading" class="apex-login-heading">Sign in</h1>
+      <p class="apex-login-sub">Access your Apex AI OS dashboard</p>
+
+      <form id="loginForm" novalidate>
+        <div class="apex-field">
+          <label for="loginEmail">Email</label>
+          <input
+            id="loginEmail"
+            name="email"
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            required
+            spellcheck="false"
+          />
+        </div>
+
+        <div class="apex-field">
+          <label for="loginPassword">Password</label>
+          <input
+            id="loginPassword"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            placeholder="••••••••"
+            required
+          />
+        </div>
+
+        <div
+          id="loginError"
+          class="apex-login-error"
+          role="alert"
+          aria-live="assertive"
+        ></div>
+
+        <button
+          id="loginSubmit"
+          type="submit"
+          class="apex-btn apex-btn--primary"
+        >
+          Sign in
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       APP SHELL
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="appShell" aria-hidden="true">
+
+    <!-- Top bar -->
+    <header class="apex-topbar" role="banner">
+      <div class="apex-topbar-brand" aria-label="Apex AI OS">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="24" height="24" rx="6" fill="oklch(65% 0.2 265 / 0.15)"/>
+          <path
+            d="M6 18 L12 6 L18 18 M8.5 14 H15.5"
+            stroke="oklch(65% 0.2 265)"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        Apex <span>&nbsp;AI OS</span>
+      </div>
+
+      <div class="apex-topbar-actions">
+        <div class="apex-topbar-user" aria-live="polite">
+          <div
+            id="sessionStatusDot"
+            class="apex-status-dot"
+            title="Session active"
+          ></div>
+          <span id="sessionStatusLabel" class="sr-only">Session active</span>
+          <span id="userEmailDisplay" aria-label="Signed in user"></span>
+        </div>
+
+        <button
+          id="signOutBtn"
+          
