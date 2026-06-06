@@ -21,6 +21,19 @@ router.get('/version', (req, res) => {
     }
 });
 
+// GET /api/status — public system diagnostics endpoint
+router.get('/status', (req, res) => {
+    try {
+        res.json({
+            name: _pkg.name,
+            version: _pkg.version,
+            uptime: process.uptime()
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // GET /api/operations/clients
 router.get('/operations/clients', _auth, async (req, res) => {
     try {
