@@ -10841,6 +10841,30 @@ app.get('/api/system/cognition', requireAppAccess, (req, res) => {
     res.json({ ok: true, counters: _cogOrch.counters(), intents: _cogOrch.INTENT, modes: _cogOrch.MODE });
 });
 
+// Cognition layer — episodic performance summary + failure patterns
+app.get('/api/cognition/performance', requireAppAccess, (req, res) => {
+    try {
+        const episodic = require('./agent-system/episodic-memory');
+        const engine   = require('./agent-system/reflection-engine');
+        const limit    = Math.min(parseInt(req.query.limit) || 50, 200);
+        const episodes = episodic.getSimilarExperiences('', { limit }) // empty query → all recent
+            .concat(episodic.getFailureEpisodes(limit))
+            .filter((ep, i, arr) => arr.findIndex(e => e.id === ep.id) === i); // dedupe
+        const allEpisodes = episodes.slice(0, limit);
+        const failures  = allEpisodes.filter(ep => !ep.success);
+        res.json({
+            ok:          true,
+            episodeCount: episodic.episodeCount(),
+            successRate: episodic.getSuccessRate(limit),
+            summary:     engine.buildPerformanceSummary(allEpisodes),
+            failures:    engine.analyzeFailures(failures),
+            successes:   engine.analyzeSuccesses(allEpisodes.filter(ep => ep.success)),
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // Stage 3.1 — canonical system-wide session state
 app.get('/api/system/state', requireAppAccess, (req, res) => {
     res.json({ ok: true, ..._sessionReg.getSystemWideSnapshot() });
@@ -11369,6 +11393,14 @@ server.listen(PORT, () => {
             _checkResult.push({ name: 'orchestrator', ok });
         } catch (e) { console.warn('[Boot] ✗ orchestrator status FAILED:', e.message); _checkResult.push({ name: 'orchestrator', ok: false }); }
 
+        // 6. Episodic memory accessible
+        try {
+            const episodic = require('./agent-system/episodic-memory');
+            const count = episodic.episodeCount();
+            console.log(`[Boot] ✓ episodic-memory: ${count} stored episodes`);
+            _checkResult.push({ name: 'episodic', ok: true });
+        } catch (e) { console.warn('[Boot] ✗ episodic-memory FAILED:', e.message); _checkResult.push({ name: 'episodic', ok: false }); }
+
         const passed = _checkResult.filter(r => r.ok).length;
         console.log(`[Boot] Integration verification: ${passed}/${_checkResult.length} checks passed`);
     }, 8000); // 8s after listen — after immediate startup tasks settle
@@ -11784,6 +11816,37 @@ checkPendingMasterTasks();
             setInterval(_runTechDebtAudit, 7 * 24 * 60 * 60 * 1000);
         }, _next.getTime() - Date.now());
         console.log(`[TechDebt] Weekly audit scheduled for ${_next.toDateString()} 02:00`);
+    })();
+
+    // Weekly lesson consolidation — Sundays at 3am (between tech-debt at 2am and vault-health at 4am)
+    (function _scheduleLessonConsolidation() {
+        async function _runLessonConsolidation() {
+            try {
+                const mem    = require('./agent-system/obsidian-memory');
+                const engine = require('./agent-system/reflection-engine');
+                const raw    = mem.getLessons();
+                if (!raw || raw.length < 3000) return; // skip if Lessons.md is still small
+                const consolidated = engine.consolidateLessons(raw, 30);
+                mem.write('01 Executive/Lessons.md', consolidated);
+                console.log('[LessonCron] Lessons.md consolidated to 30 entries');
+                await require('./lib/cron-logger').record('lesson_consolidation', 'ok').catch(() => {});
+            } catch (e) {
+                console.warn('[LessonCron] consolidation failed (non-fatal):', e.message);
+                await require('./lib/cron-logger').record('lesson_consolidation', 'error', e.message).catch(() => {});
+            }
+        }
+        function _nextSunday3am() {
+            const d = new Date(); d.setHours(3, 0, 0, 0);
+            const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + daysUntilSunday);
+            return d;
+        }
+        const _next = _nextSunday3am();
+        setTimeout(function _lessonConsolidation() {
+            _runLessonConsolidation();
+            setInterval(_runLessonConsolidation, 7 * 24 * 60 * 60 * 1000);
+        }, _next.getTime() - Date.now());
+        console.log(`[LessonCron] Weekly consolidation scheduled for ${_next.toDateString()} 03:00`);
     })();
 
     // News ingest — runs at 6am daily, plus an immediate run on startup

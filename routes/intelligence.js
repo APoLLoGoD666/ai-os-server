@@ -514,6 +514,18 @@ router.get('/system-status', requireAppAccess, async (req, res) => {
         result.hooks = { ok: false, error: e.message };
     }
 
+    // ── Episodic memory ───────────────────────────────────────────────────────
+    try {
+        const episodic = require('../agent-system/episodic-memory');
+        result.episodic = {
+            ok:           true,
+            episodeCount: episodic.episodeCount(),
+            successRate:  episodic.getSuccessRate(50),
+        };
+    } catch (e) {
+        result.episodic = { ok: false, error: e.message };
+    }
+
     const allOk = Object.values(result).every(v => v && v.ok !== false);
     res.json({
         ok:        allOk,
@@ -527,6 +539,7 @@ router.get('/system-status', requireAppAccess, async (req, res) => {
         retrieval:     result.retrieval,
         orchestration: result.orchestration,
         hooks:         result.hooks,
+        episodic:      result.episodic,
     });
 });
 
