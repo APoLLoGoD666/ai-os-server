@@ -79,6 +79,15 @@ router.get('/info', requireAppAccess, (req, res) => {
     }
 });
 
+// GET /api/uptime — process uptime in seconds as plain JSON number
+router.get('/uptime', (req, res) => {
+    try {
+        res.json(process.uptime());
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // GET /api/operations/clients
 router.get('/operations/clients', _auth, async (req, res) => {
     try {
