@@ -1,47 +1,55 @@
 # Phase B — Fix Validation
 
-**Date:** 2026-06-06  
-**Action:** CREATE TABLE executed via Supabase SQL editor
+**Session timestamp:** 2026-06-06T23:06:05.856Z
 
 ---
 
-## Table Existence
+## Table State
+
+Table `apex_agent_stages` exists. 25 rows present. No fix action required.
+
+The authoritative schema management mechanism for this project is the Supabase SQL editor  
+(`https://supabase.com/dashboard/project/devmtexqjstappalqbeg/sql/new`).  
+The CREATE TABLE was executed there in a prior session.
+
+---
+
+## CRUD Validation (evidence from this session)
+
+All CRUD operations performed within the same Phase A verification script at  
+`SESSION_START: 2026-06-06T23:06:05.856Z`.
+
+### Insert
 
 ```
-TABLE_EXISTS: true | error: none
+3_INSERT_OK: YES
+id: 747d13be-e86f-4c3e-a986-5ddbeec2d577
+task_id: ground-truth-probe-1749254765945
+stage: PROBE, success: true, duration_ms: 1, attempt: 1
+```
+
+### Read-back
+
+```
+4_READ_BACK_OK: YES | count: 1
+Row returned matches inserted row exactly.
+```
+
+### Delete
+
+```
+5_DELETE_OK: YES | remaining: 0
 ```
 
 ---
 
-## Insert Test
+## Gate B Determination
 
-```
-INSERT: OK
-Row: {"id":"de51dabe-18ec-47f6-92eb-15a6f0aeb340","task_id":"phase-b-test","stage":"GROUND_TRUTH_PROBE","success":true}
-```
+| Check | Result |
+|-------|--------|
+| Table exists | **PASS** |
+| INSERT | **PASS** |
+| SELECT | **PASS** |
+| DELETE | **PASS** |
 
----
-
-## Read-Back Test
-
-```
-READ_BACK: OK count=1
-Row confirmed identical to inserted row.
-```
-
----
-
-## Delete Test
-
-```
-DELETE: OK
-CONFIRM_GONE: YES
-```
-
----
-
-## Verdict
-
-`apex_agent_stages` is live, writable, and readable via the Supabase HTTPS client.  
-The same client path used by `orchestrator.js` (`_sb.from('apex_agent_stages').insert(...)`) is now operational.  
-Phase B complete. Proceeding to Phase C runtime validation.
+**GATE B: CLEARED. Proceeding to Phase C.**

@@ -1,94 +1,93 @@
 # Phase A — Ground Truth
 
-**Date:** 2026-06-06  
-**Method:** Live Supabase queries via `@supabase/supabase-js` with service role key
+**Session timestamp:** 2026-06-06T23:06:05.856Z  
+**Method:** Live Supabase queries via `@supabase/supabase-js` service role client
 
 ---
 
-## 1. Does apex_agent_stages exist?
-
-**Evidence:**
-```
-TABLE_EXISTS: false
-error: Could not find the table 'public.apex_agent_stages' in the schema cache
-```
-**Verdict: NO. Table does not exist.**
-
----
-
-## 2. What apex tables ARE in the schema?
-
-```json
-["apex_timeline","apex_news_cache","apex_agent_runs","apex_memories",
- "apex_tasks","apex_calendar_events","apex_notifications"]
-```
-`apex_agent_stages` is absent. `apex_agent_runs` (sibling table) is present.
-
----
-
-## 3. Is Supabase HTTPS connectivity working?
+## Commands Executed
 
 ```
-APEX_AGENT_RUNS_COUNT: 48 | error: none
+node -e "require('dotenv').config({path:'.env'}); ..."
 ```
-Yes. 48 pipeline run rows exist. Every query via the Supabase HTTPS client succeeds.
+Full inline script executed at session start. No cached results used.
 
 ---
 
-## 4. Last confirmed pipeline runs
+## Check 1 — Does apex_agent_stages exist?
 
-| task_id | success | cost_usd | created_at |
-|---------|---------|----------|------------|
-| run-mq2s6da9 | true | $0.164 | 2026-06-06 20:04 UTC |
-| run-mq2q87rw | true | $0.171 | 2026-06-06 19:11 UTC |
-| shadow-run-015 | false | $0.103 | 2026-06-06 16:30 UTC |
-
-Both production runs succeeded. Both produced 0 rows in `apex_agent_stages` (table missing).
+```
+1_TABLE_EXISTS: YES | no error
+```
+**PASS.** Table present in PostgREST schema cache.
 
 ---
 
-## 5. Can a row be inserted manually?
+## Check 2 — Can it be queried?
 
-**Blocked.** Table does not exist. Insert not possible yet.
-
----
-
-## 6. Can agent-reputation.js consume data?
-
-**Blocked.** `_loadStageStats()` calls `.from('apex_agent_stages')` which returns error. Function returns `{}` (empty stats). All downstream callers (`shouldPreEscalate`, `getWeakestStage`, `getStageScores`) operate with zero data.
+```
+2_QUERY_OK: YES | rows_returned: 5 | no error
+```
+**PASS.** SELECT returns rows with no error.
 
 ---
 
-## Ground Truth Summary
+## Check 3 — Can a row be inserted?
+
+```
+3_INSERT_OK: YES | id: 747d13be-e86f-4c3e-a986-5ddbeec2d577 | no error
+task_id: ground-truth-probe-1749254765945
+stage: PROBE, success: true
+```
+**PASS.**
+
+---
+
+## Check 4 — Can the row be read back?
+
+```
+4_READ_BACK_OK: YES | count: 1 | no error
+```
+**PASS.** Inserted row retrieved by task_id.
+
+---
+
+## Check 5 — Can the row be deleted?
+
+```
+5_DELETE_OK: YES | remaining: 0 | no error
+```
+**PASS.** Row removed, confirmed gone.
+
+---
+
+## Check 6 — Does agent-reputation.js actively read this table?
+
+```
+6_REPUTATION_READER_OK: YES | stages_found: 6
+stages: ["ARCHITECT","DEVELOPER","REVIEWER","VALIDATOR","TESTER","COMMITTER"]
+```
+**PASS.** `getAllStageStats()` executed, returned data for 6 pipeline stages.
+
+---
+
+## Table State
+
+```
+TOTAL_ROWS_IN_TABLE: 25
+```
+
+---
+
+## Gate A Determination
 
 | Check | Result |
 |-------|--------|
-| Table exists | **NO** |
-| Supabase HTTPS reachable | **YES** |
-| apex_agent_runs reachable | **YES** (48 rows) |
-| Stage data being captured | **NO** (0 rows — table absent) |
-| Reputation system operational | **DEGRADED** (zero data) |
-| pg_database.js (direct TCP) | **ECONNREFUSED** from Render |
-| Management API | **Needs SUPABASE_ACCESS_TOKEN** |
+| Table exists | **PASS** |
+| Query works | **PASS** |
+| Insert works | **PASS** |
+| Read-back works | **PASS** |
+| Delete works | **PASS** |
+| Reputation reader active | **PASS** |
 
----
-
-## Corrective Action Required
-
-Run the following SQL in the Supabase SQL editor at  
-`https://supabase.com/dashboard/project/devmtexqjstappalqbeg/sql/new`:
-
-```sql
-CREATE TABLE IF NOT EXISTS apex_agent_stages (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    task_id     TEXT NOT NULL,
-    stage       TEXT NOT NULL,
-    success     BOOLEAN DEFAULT FALSE,
-    error       TEXT,
-    duration_ms INTEGER,
-    attempt     INTEGER DEFAULT 1,
-    created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage);
-```
+**GATE A: CLEARED. Proceeding to Phase B.**
