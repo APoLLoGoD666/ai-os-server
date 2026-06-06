@@ -1,7 +1,8 @@
-﻿'use strict';
+'use strict';
 const router = require('express').Router();
 const { getSupabaseClient } = require('../lib/clients');
 const _auth = require('../lib/app-auth');
+const { requireAppAccess } = require('../lib/app-auth');
 
 const sb = getSupabaseClient;
 router.get('/health/workouts', _auth, async (req, res) => {
@@ -142,6 +143,23 @@ router.post('/health/supplements', _auth, async (req, res) => {
         const { data, error } = await sb().from('apex_supplements').upsert({ id: supplement_id, log_date: today, taken: !!taken }, { onConflict: 'id,log_date' }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, supplement: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/health/detailed', requireAppAccess, (req, res) => {
+    try {
+        const mem = process.memoryUsage();
+        res.json({
+            ok: true,
+            uptime: process.uptime(),
+            memory: {
+                heapUsed: mem.heapUsed,
+                heapTotal: mem.heapTotal,
+                external: mem.external
+            },
+            environment: process.env.NODE_ENV || 'development',
+            timestamp: new Date().toISOString()
+        });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
