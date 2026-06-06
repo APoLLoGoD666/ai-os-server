@@ -2,6 +2,7 @@
 const router = require('express').Router();
 const { createClient } = require('@supabase/supabase-js');
 const _auth = require('../lib/app-auth');
+const { requireAppAccess } = require('../lib/app-auth');
 const counter = require('../lib/counter');
 
 const _sbClient = (() => { let c; return () => { if (!c) c = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY); return c; }; })();
@@ -58,6 +59,19 @@ router.get('/metrics', (req, res) => {
     try {
         res.json({
             totalRequests: counter.get(),
+            timestamp: new Date().toISOString()
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// GET /api/info — authenticated system diagnostics endpoint
+router.get('/info', requireAppAccess, (req, res) => {
+    try {
+        res.json({
+            node_version: process.version,
+            platform: process.platform,
             timestamp: new Date().toISOString()
         });
     } catch (e) {
