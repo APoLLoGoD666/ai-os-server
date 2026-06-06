@@ -11593,6 +11593,30 @@ server.listen(PORT, () => {
         } catch (e) { console.warn('[Services] init failed (non-fatal):', e.message); }
     });
 
+    // Ensure apex_agent_stages exists — migration omission fix (idempotent)
+    setImmediate(async () => {
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query(`
+                CREATE TABLE IF NOT EXISTS apex_agent_stages (
+                    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    task_id     TEXT NOT NULL,
+                    stage       TEXT NOT NULL,
+                    success     BOOLEAN DEFAULT FALSE,
+                    error       TEXT,
+                    duration_ms INTEGER,
+                    attempt     INTEGER DEFAULT 1,
+                    created_at  TIMESTAMPTZ DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage);
+            `);
+            console.log('[Migration] apex_agent_stages ready');
+        } catch (e) {
+            console.warn('[Migration] apex_agent_stages setup (non-fatal):', e.message);
+        }
+    });
+
     // Ensure pgvector match function exists (idempotent — safe to re-run)
     setImmediate(async () => {
         try {

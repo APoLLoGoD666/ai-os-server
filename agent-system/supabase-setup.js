@@ -204,6 +204,19 @@ async function createAllTables() {
             agent_summary JSONB DEFAULT '[]',
             created_at TIMESTAMPTZ DEFAULT NOW()
         )`,
+        // Per-stage audit log — feeds agent-reputation.js (adaptation engine, pre-escalation)
+        `CREATE TABLE IF NOT EXISTS apex_agent_stages (
+            id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            task_id     TEXT NOT NULL,
+            stage       TEXT NOT NULL,
+            success     BOOLEAN DEFAULT FALSE,
+            error       TEXT,
+            duration_ms INTEGER,
+            attempt     INTEGER DEFAULT 1,
+            created_at  TIMESTAMPTZ DEFAULT NOW()
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC)`,
+        `CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage)`,
         // Daily Briefing
         `CREATE TABLE IF NOT EXISTS briefing_history (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
