@@ -3,7 +3,9 @@
 // result aggregation. Wraps orchestrator.runAgentTeam externally — no internals modified.
 
 const { decomposeGoal, planToSpecs, scoreRisk } = require('./task-planner');
-const { summarizeExecution } = require('./execution-verifier');
+const { summarizeExecution, verifyOutput }        = require('./execution-verifier');
+const _dynSelector                                 = require('./dynamic-agent-selector');
+const _pqr                                         = require('./planning-quality-registry');
 const { createClient } = require('@supabase/supabase-js');
 
 const DEFAULT_CONCURRENCY = 2; // Render 512MB: 2 concurrent pipelines is the safe ceiling
@@ -25,7 +27,7 @@ async function getReputationStats(limit = 50) {
     try {
         const { data, error } = await sb
             .from('apex_agent_runs')
-            .select('complexity, success, cost_usd, duration_ms')
+            .select('complexity, success, cost_usd')
             .order('created_at', { ascending: false })
             .limit(limit);
         if (error || !data?.length) return null;
@@ -81,8 +83,7 @@ async function runParallel(specs, options = {}) {
 
     if (!specs?.length) return [];
 
-    const runAgentTeam    = require('./orchestrator');
-    const reputationStats = await getReputationStats().catch(() => null);
+    const runAgentTeam = require('./orchestrator');
 
     const results = new Array(specs.length).fill(null);
     let nextIdx   = 0;
@@ -92,17 +93,29 @@ async function runParallel(specs, options = {}) {
             const i      = nextIdx++;
             const spec   = specs[i];
             const taskId = `${taskIdPrefix}-${i}`;
-            const tier   = await selectTier(spec, reputationStats).catch(() => spec._planComplexity || 'moderate');
+
+            // Dynamic agent selection: category + stage health + risk (replaces static selectTier)
+            const agentConfig = await _dynSelector.selectAgentConfig(spec, {
+                baseComplexity: spec._planComplexity || 'moderate',
+                riskScore:      spec._planRisk,
+            }).catch(() => ({ tier: spec._planComplexity || 'moderate', escalated: false }));
 
             let result = null;
             let error  = null;
             try {
-                result = await runAgentTeam({ ...spec, _selectedTier: tier }, taskId);
+                result = await runAgentTeam({
+                    ...spec,
+                    _selectedTier: agentConfig.tier,
+                    _agentCategory: agentConfig.category,
+                }, taskId);
             } catch (e) {
                 error = e.message;
             }
 
-            results[i] = { taskId, spec, result, error };
+            // Structured execution summary — wires summarizeExecution + verifyOutput into coordinator results
+            const execSummary = summarizeExecution(spec, result?.agentLogs || [], result);
+
+            results[i] = { taskId, spec, result, error, agentConfig, execSummary };
 
             if (typeof onProgress === 'function') {
                 const done = results.filter(Boolean).length;
@@ -119,13 +132,17 @@ async function runParallel(specs, options = {}) {
 // ── Result aggregation ────────────────────────────────────────────────────────
 function aggregate(results) {
     const items = (results || []).map(r => ({
-        taskId:     r?.taskId,
-        objective:  r?.spec?.objective,
-        success:    !!r?.result?.success,
-        complexity: r?.result?.complexity || null,
-        cost:       r?.result?.cost       || null,
-        commitHash: r?.result?.commitHash || null,
-        error:      r?.error || r?.result?.error || null,
+        taskId:      r?.taskId,
+        objective:   r?.spec?.objective,
+        success:     !!r?.result?.success,
+        complexity:  r?.result?.complexity  || null,
+        cost:        r?.result?.cost        || null,
+        commitHash:  r?.result?.commitHash  || null,
+        error:       r?.error || r?.result?.error || null,
+        category:    r?.agentConfig?.category   || null,
+        tier:        r?.agentConfig?.tier        || null,
+        retryStrategy: r?.execSummary?.retryStrategy || null,
+        outputVerified: r?.execSummary?.outputVerified?.passed ?? null,
     }));
 
     const total   = items.length;
@@ -164,11 +181,32 @@ async function assignWork(goal, options = {}) {
         };
     }
 
+    // Create plan record before execution so we have a planId for outcome tracking
+    let _planRecord = null;
+    try { _planRecord = _pqr.createPlanRecord(plan); } catch {}
+
     const results = await runParallel(specs, {
         concurrency,
         taskIdPrefix: `goal-${Date.now().toString(36)}`,
     });
     const summary = aggregate(results);
+
+    // Record plan outcome with real execution values (non-blocking, non-fatal)
+    setImmediate(() => {
+        try {
+            if (!_planRecord) return;
+            const failurePatterns = summary.items
+                .filter(i => !i.success && i.error)
+                .map(i => String(i.error).slice(0, 100));
+            _pqr.recordPlanOutcome({
+                ..._planRecord,
+                outcome:         summary.successRate === 1 ? 'success' : summary.successRate > 0 ? 'partial' : 'failed',
+                successRate:     summary.successRate,
+                executionCost:   summary.totalCostUsd,
+                failurePatterns,
+            });
+        } catch {}
+    });
 
     return { plan, summary, results };
 }
