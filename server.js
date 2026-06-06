@@ -11175,6 +11175,21 @@ app.post('/api/wiki/ingest-cs249r', requireAppAccess, async (req, res) => {
 // ── Setup Agent Routes ────────────────────────────────────────────
 const supabaseSetup = require('./agent-system/supabase-setup');
 
+// Targeted migration: create apex_agent_stages (idempotent, uses pg pool directly)
+app.post('/api/setup/migrate-stages', requireAppAccess, async (req, res) => {
+    try {
+        const pgPool = require('./pg_database');
+        await pgPool.query(`CREATE TABLE IF NOT EXISTS apex_agent_stages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), task_id TEXT NOT NULL, stage TEXT NOT NULL, success BOOLEAN DEFAULT FALSE, error TEXT, duration_ms INTEGER, attempt INTEGER DEFAULT 1, created_at TIMESTAMPTZ DEFAULT NOW())`);
+        await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC)`);
+        await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage)`);
+        console.log('[Migration] apex_agent_stages created via route');
+        res.json({ ok: true, message: 'apex_agent_stages ready' });
+    } catch (e) {
+        console.error('[Migration] apex_agent_stages route error:', e.message);
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 app.post('/api/setup/database', requireAppAccess, async (req, res) => {
     res.json({ ok: true, status: 'running',
         message: 'Creating all database tables — this takes 30-60 seconds' });
@@ -11593,24 +11608,13 @@ server.listen(PORT, () => {
         } catch (e) { console.warn('[Services] init failed (non-fatal):', e.message); }
     });
 
-    // Ensure apex_agent_stages exists — migration omission fix (idempotent)
+    // Ensure apex_agent_stages exists — migration omission fix (idempotent, split for pgBouncer compat)
     setImmediate(async () => {
         try {
             const pgPool = require('./pg_database');
-            await pgPool.query(`
-                CREATE TABLE IF NOT EXISTS apex_agent_stages (
-                    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    task_id     TEXT NOT NULL,
-                    stage       TEXT NOT NULL,
-                    success     BOOLEAN DEFAULT FALSE,
-                    error       TEXT,
-                    duration_ms INTEGER,
-                    attempt     INTEGER DEFAULT 1,
-                    created_at  TIMESTAMPTZ DEFAULT NOW()
-                );
-                CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC);
-                CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage);
-            `);
+            await pgPool.query(`CREATE TABLE IF NOT EXISTS apex_agent_stages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), task_id TEXT NOT NULL, stage TEXT NOT NULL, success BOOLEAN DEFAULT FALSE, error TEXT, duration_ms INTEGER, attempt INTEGER DEFAULT 1, created_at TIMESTAMPTZ DEFAULT NOW())`);
+            await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC)`);
+            await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage)`);
             console.log('[Migration] apex_agent_stages ready');
         } catch (e) {
             console.warn('[Migration] apex_agent_stages setup (non-fatal):', e.message);
