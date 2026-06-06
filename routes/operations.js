@@ -6,6 +6,21 @@ const _auth = require('../lib/app-auth');
 const _sbClient = (() => { let c; return () => { if (!c) c = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY); return c; }; })();
 function sb() { return _sbClient(); }
 
+const _pkg = require('../package.json');
+
+// GET /api/version
+router.get('/version', (req, res) => {
+    try {
+        res.json({
+            appName: _pkg.name,
+            nodeVersion: process.version,
+            uptimeSeconds: process.uptime()
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // GET /api/operations/clients
 router.get('/operations/clients', _auth, async (req, res) => {
     try {
