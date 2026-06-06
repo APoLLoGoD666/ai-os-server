@@ -8,6 +8,7 @@ const memory = require('./obsidian-memory');
 const { z } = require('zod');
 const _hooks      = require('./agent-pipeline-hooks');
 const _reputation = require('./agent-reputation');
+const _episodic   = require('./episodic-memory');
 
 const ROOT = path.join(__dirname, '..');
 const MAX_FILE_BYTES = 20 * 1024;
@@ -862,6 +863,15 @@ async function runAgentTeam(spec, taskId) {
         obsidianContext = '';
     }
 
+    // Episodic context — inject similar past experiences into ARCHITECT context (non-fatal)
+    try {
+        const similar = _episodic.getSimilarExperiences(spec.objective, { limit: 3 });
+        if (similar.length) {
+            const expCtx = _episodic.formatExperiencesAsContext(similar);
+            obsidianContext = (obsidianContext ? obsidianContext + '\n\n' : '') + expCtx.slice(0, 400);
+        }
+    } catch {}
+
     // ── Git worktree isolation (Superpowers pattern) ──────────────────────────
     const ts          = Date.now().toString(36); // base-36 timestamp suffix prevents branch collision on re-run
     const worktreeDir = path.join(os.tmpdir(), `apex-wt-${taskId}`);
@@ -910,6 +920,7 @@ async function runAgentTeam(spec, taskId) {
         const cost = _costUsd.toFixed(5);
         setImmediate(() => _reflector(spec, agentLogs, false).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
+        setImmediate(() => { try { _episodic.storeEpisode({ id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs, models: _agentModels, failureReason: error }); } catch {} });
         // North Star proposal — if failures cluster around a pattern, propose a constraint
         setImmediate(async () => {
             try {
@@ -1057,6 +1068,7 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _reflector(spec, agentLogs, true).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         setImmediate(() => _reputation.invalidateCache());
+        setImmediate(() => { try { _episodic.storeEpisode({ id: taskId, objective: spec.objective, complexity, success: true, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs, models: _agentModels }); } catch {} });
 
         return {
             success:    true,
@@ -1078,6 +1090,7 @@ async function runAgentTeam(spec, taskId) {
         memory.logLesson(`Task ${taskId} failed: ${err.message}`);
         setImmediate(() => _reflector(spec, agentLogs, false).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
+        setImmediate(() => { try { _episodic.storeEpisode({ id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: _startTime ? Date.now() - _startTime : null, failureReason: err.message }); } catch {} });
         return { success: false, commitHash: null, agentLogs, error: err.message, complexity, models: _agentModels };
     }
 }
