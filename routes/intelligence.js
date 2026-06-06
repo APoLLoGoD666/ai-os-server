@@ -437,6 +437,99 @@ router.get('/performance', requireAppAccess, async (req, res) => {
     }
 });
 
+// GET /api/intelligence/system-status — unified diagnostics across all subsystems
+router.get('/system-status', requireAppAccess, async (req, res) => {
+    const t0 = Date.now();
+    const result = {};
+
+    // ── Knowledge / RAG ───────────────────────────────────────────────────────
+    try {
+        const rag = require('../agent-system/langchain-rag');
+        result.retrieval = rag.getStats();
+        result.knowledge = {
+            ok:            result.retrieval.chunksInMemory > 0,
+            chunksInMemory: result.retrieval.chunksInMemory,
+            lastIndexedAt:  result.retrieval.lastIndexedAt,
+            vectorEnabled:  result.retrieval.vectorEnabled,
+            embedErrors:    result.retrieval.embedErrors,
+        };
+    } catch (e) {
+        result.knowledge = { ok: false, error: e.message };
+        result.retrieval = { error: e.message };
+    }
+
+    // ── Agent registry ────────────────────────────────────────────────────────
+    try {
+        const registry = require('../agent-system/agent-registry');
+        result.agents = registry.getRegistrySummary();
+        result.agents.ok = true;
+    } catch (e) {
+        result.agents = { ok: false, error: e.message };
+    }
+
+    // ── Reputation / performance ──────────────────────────────────────────────
+    try {
+        const reputation = require('../agent-system/agent-reputation');
+        const perf = await reputation.getPerformanceSummary();
+        result.reputation = {
+            ok:         true,
+            sampleCount: perf.sampleCount,
+            pipeline:   Object.keys(perf.pipeline).length > 0 ? perf.pipeline : null,
+            scores:     perf.scores,
+        };
+    } catch (e) {
+        result.reputation = { ok: false, error: e.message };
+    }
+
+    // ── Memory / Obsidian ─────────────────────────────────────────────────────
+    try {
+        const vaultPath = process.env.OBSIDIAN_VAULT_PATH;
+        const fs = require('fs');
+        result.memory = {
+            ok:         !!vaultPath && fs.existsSync(vaultPath),
+            vaultPath:  vaultPath ? '[set]' : null,
+            vaultFound: !!vaultPath && fs.existsSync(vaultPath),
+        };
+    } catch (e) {
+        result.memory = { ok: false, error: e.message };
+    }
+
+    // ── Orchestration (circuit breaker) ──────────────────────────────────────
+    try {
+        const orch = require('../agent-system/orchestrator');
+        result.orchestration = { ok: true, ...orch.getOrchestratorStatus() };
+    } catch (e) {
+        result.orchestration = { ok: false, error: e.message };
+    }
+
+    // ── Pipeline hooks ────────────────────────────────────────────────────────
+    try {
+        const hooks = require('../agent-system/agent-pipeline-hooks');
+        result.hooks = {
+            ok:        typeof hooks.onPipelineStart === 'function',
+            methods:   ['onPipelineStart', 'onPipelineComplete', 'onPipelineFailed']
+                       .filter(m => typeof hooks[m] === 'function'),
+        };
+    } catch (e) {
+        result.hooks = { ok: false, error: e.message };
+    }
+
+    const allOk = Object.values(result).every(v => v && v.ok !== false);
+    res.json({
+        ok:        allOk,
+        status:    allOk ? 'integrated' : 'degraded',
+        latency_ms: Date.now() - t0,
+        ts:        new Date().toISOString(),
+        knowledge:     result.knowledge,
+        agents:        result.agents,
+        memory:        result.memory,
+        reputation:    result.reputation,
+        retrieval:     result.retrieval,
+        orchestration: result.orchestration,
+        hooks:         result.hooks,
+    });
+});
+
 module.exports = router;
 module.exports.voiceState = voiceState;
 module.exports.broadcastVoiceState = broadcastVoiceState;

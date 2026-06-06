@@ -11323,6 +11323,57 @@ server.listen(PORT, () => {
 
     console.log('[Email] Backfill skipped — using Supabase client');
 
+    // ── Startup integration verification — non-fatal, logs only ─────────────
+    setTimeout(async () => {
+        const _checkResult = [];
+        // 1. Pipeline hooks shape
+        try {
+            const hooks = require('./agent-system/agent-pipeline-hooks');
+            const ok = ['onPipelineStart', 'onPipelineComplete', 'onPipelineFailed'].every(m => typeof hooks[m] === 'function');
+            console.log(ok ? '[Boot] ✓ pipeline-hooks wired' : '[Boot] ✗ pipeline-hooks MISSING methods');
+            _checkResult.push({ name: 'pipeline-hooks', ok });
+        } catch (e) { console.warn('[Boot] ✗ pipeline-hooks LOAD FAILED:', e.message); _checkResult.push({ name: 'pipeline-hooks', ok: false }); }
+
+        // 2. Agent registry accessible
+        try {
+            const reg = require('./agent-system/agent-registry');
+            const s = reg.getRegistrySummary();
+            console.log(`[Boot] ✓ agent-registry: ${s.pipelineAgents} pipeline, ${s.domainAgents} domain agents`);
+            _checkResult.push({ name: 'agent-registry', ok: true });
+        } catch (e) { console.warn('[Boot] ✗ agent-registry FAILED:', e.message); _checkResult.push({ name: 'agent-registry', ok: false }); }
+
+        // 3. Vault / memory path
+        try {
+            const fs = require('fs');
+            const vPath = process.env.OBSIDIAN_VAULT_PATH;
+            const ok = !!vPath && fs.existsSync(vPath);
+            console.log(ok ? `[Boot] ✓ vault found at ${vPath}` : `[Boot] ✗ vault NOT found (OBSIDIAN_VAULT_PATH=${vPath || 'unset'})`);
+            _checkResult.push({ name: 'vault', ok });
+        } catch (e) { console.warn('[Boot] ✗ vault check FAILED:', e.message); _checkResult.push({ name: 'vault', ok: false }); }
+
+        // 4. Embedding probe (Voyage or Gemini) — warm up embed module
+        try {
+            const { embedText } = require('./lib/embed');
+            const vec = await embedText('startup probe');
+            const ok = Array.isArray(vec) && vec.length > 0;
+            console.log(ok ? `[Boot] ✓ embed OK (${vec.length} dims)` : '[Boot] ✗ embed returned null — check VOYAGE_API_KEY or GOOGLE_API_KEY');
+            _checkResult.push({ name: 'embed', ok });
+        } catch (e) { console.warn('[Boot] ✗ embed probe FAILED:', e.message); _checkResult.push({ name: 'embed', ok: false }); }
+
+        // 5. Orchestrator status (circuit breaker open?)
+        try {
+            const orch = require('./agent-system/orchestrator');
+            const s = orch.getOrchestratorStatus();
+            const ok = !s.circuitBreaker.open;
+            console.log(ok ? '[Boot] ✓ orchestrator circuit-breaker closed' : `[Boot] ✗ circuit-breaker OPEN (${s.circuitBreaker.failures} failures)`);
+            _checkResult.push({ name: 'orchestrator', ok });
+        } catch (e) { console.warn('[Boot] ✗ orchestrator status FAILED:', e.message); _checkResult.push({ name: 'orchestrator', ok: false }); }
+
+        const passed = _checkResult.filter(r => r.ok).length;
+        console.log(`[Boot] Integration verification: ${passed}/${_checkResult.length} checks passed`);
+    }, 8000); // 8s after listen — after immediate startup tasks settle
+    // ── End startup integration verification ─────────────────────────────────
+
     // Initialize Notion + Slack integration layer
     setImmediate(() => {
         try {

@@ -1082,7 +1082,21 @@ async function runAgentTeam(spec, taskId) {
     }
 }
 
+function getOrchestratorStatus() {
+    return {
+        circuitBreaker: {
+            open:         _cb.isOpen(),
+            failures:     _cb.failures,
+            threshold:    _cb.threshold,
+            cooldownMs:   _cb.isOpen() ? _cb.cooldown() : 0,
+        },
+        lastRunModels:  { ..._agentModels },
+        supabaseReady:  !!_sb,
+    };
+}
+
 module.exports = runAgentTeam;
+module.exports.getOrchestratorStatus = getOrchestratorStatus;
 
 // Purge old backups every 24 hours (fire-and-forget, non-fatal)
 setInterval(() => {
