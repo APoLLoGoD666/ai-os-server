@@ -34,6 +34,15 @@ router.get('/status', (req, res) => {
     }
 });
 
+// GET /api/ping — lightweight health-check endpoint for monitoring
+router.get('/ping', (req, res) => {
+    try {
+        res.json({ ok: true, timestamp: new Date().toISOString() });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // GET /api/operations/clients
 router.get('/operations/clients', _auth, async (req, res) => {
     try {
