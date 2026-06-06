@@ -5,6 +5,11 @@ const _auth = require('../lib/app-auth');
 const { requireAppAccess } = require('../lib/app-auth');
 
 const sb = getSupabaseClient;
+
+router.get('/health/ping', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 router.get('/health/workouts', _auth, async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 91;
