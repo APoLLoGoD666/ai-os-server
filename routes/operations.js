@@ -10,6 +10,11 @@ function sb() { return _sbClient(); }
 
 const _pkg = require('../package.json');
 
+// GET /api/healthz — Kubernetes/Render liveness probe, no auth, synchronous, minimal payload
+router.get('/healthz', (req, res) => {
+    res.status(200).json({ ok: true });
+});
+
 // GET /api/version
 router.get('/version', (req, res) => {
     try {
