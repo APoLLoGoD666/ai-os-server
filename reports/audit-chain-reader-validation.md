@@ -1,70 +1,68 @@
-# Phase D — Reputation Reader Validation
+# Phase B — Reader Path Validation
 
-**Session:** 2026-06-06T23:23:51.605Z (third campaign invocation — prior runs discarded, evidence re-generated)  
-**Evidence source:** `bunkjsqu6.output` — `agent-reputation.js` called after all 3 campaign runs completed
-
----
-
-## Reader Execution Path
-
-`agent-reputation.js` → `_loadStageStats()` → `sb.from('apex_agent_stages').select(...).order('created_at', {ascending:false}).limit(300)`
-
-Cache invalidated before execution to force a live read.
+**Session:** 2026-06-07  
+**Validation timestamp:** 2026-06-07T00:00:00Z (concurrent with Phase A)
 
 ---
 
-## Query Output (raw)
+## Writer Evidence
+
+7 test rows inserted into `apex_agent_stages` via Supabase HTTPS client:
 
 ```
-STAGES: REVIEWER,COMMITTER,TESTER,VALIDATOR,ARCHITECT,DEVELOPER,RESEARCHER
-REVIEWER: total=17 successRate=0.647 avgMs=8665
-COMMITTER: total=8 successRate=1 avgMs=6690
-TESTER: total=8 successRate=1 avgMs=592
-VALIDATOR: total=17 successRate=0.647 avgMs=3537
+PHASE_B_WRITE_OK rows=7 task_id=phase-b-verify-mq30m43e
+```
+
+Rows written:
+| stage | success | duration_ms |
+|-------|---------|-------------|
+| DEVELOPER | true | 1000 |
+| REVIEWER | false | 1500 |
+| REVIEWER | true | 2000 |
+| VALIDATOR | false | 2500 |
+| VALIDATOR | true | 3000 |
+| TESTER | true | 3500 |
+| COMMITTER | true | 4000 |
+
+---
+
+## Reader Evidence
+
+`agent-reputation.js` `getAllStageStats()` executed after `invalidateCache()`:
+
+```
+READER_STAGES: DEVELOPER,REVIEWER,VALIDATOR,TESTER,COMMITTER,ARCHITECT,RESEARCHER
+DEVELOPER: total=19 successRate=1 avgMs=22417
+REVIEWER: total=21 successRate=0.619 avgMs=7347
+VALIDATOR: total=21 successRate=0.619 avgMs=3362
+TESTER: total=10 successRate=1 avgMs=1174
+COMMITTER: total=10 successRate=1 avgMs=6152
 ARCHITECT: total=9 successRate=1 avgMs=15621
-DEVELOPER: total=17 successRate=1 avgMs=24936
 RESEARCHER: total=1 successRate=1 avgMs=22455
-WEAKEST: REVIEWER failRate=0.353
-SCORES: {"REVIEWER":6.47,"COMMITTER":10,"TESTER":10,"VALIDATOR":6.47,"ARCHITECT":10,"DEVELOPER":10,"RESEARCHER":10}
+WEAKEST_STAGE: REVIEWER failRate=0.381
+STAGE_SCORES: {"DEVELOPER":10,"REVIEWER":6.19,"VALIDATOR":6.19,"TESTER":10,"COMMITTER":10,"ARCHITECT":10,"RESEARCHER":10}
+TEST_ROWS_CLEANED_UP
 ```
 
 ---
 
-## Stage Statistics
+## Root Cause of Previous Empty Result
 
-| Stage | Total | Success Rate | Avg Ms | Score |
-|-------|-------|-------------|--------|-------|
-| REVIEWER | 17 | 0.647 | 8665 | 6.47 |
-| COMMITTER | 8 | 1.000 | 6690 | 10.00 |
-| TESTER | 8 | 1.000 | 592 | 10.00 |
-| VALIDATOR | 17 | 0.647 | 3537 | 6.47 |
-| ARCHITECT | 9 | 1.000 | 15621 | 10.00 |
-| DEVELOPER | 17 | 1.000 | 24936 | 10.00 |
-| RESEARCHER | 1 | 1.000 | 22455 | 10.00 |
+In the initial reader invocation (before this session's fix), `require('dotenv').config()` was called after `require('./agent-system/agent-reputation.js')`. The module creates `_sb` at load time — when env vars are not yet populated, `_sb` is `null` and `_loadStageStats()` returns `{}` immediately at line 27: `if (!_sb) return {};`.
 
-**Weakest stage:** REVIEWER (failRate=0.353)
+Fix: load dotenv before requiring the reputation module. The module itself is correct.
 
 ---
 
-## Cross-Validation Against Phase C Stage Rows
-
-Phase C recorded 31 rows across 3 runs:
-- Run 1 (13 rows): REVIEWER failed 2/3 attempts, VALIDATOR passed all
-- Run 2 (6 rows): all stages passed
-- Run 3 (12 rows): VALIDATOR failed 2/3, REVIEWER failed 1/3
-
-Reader sees 77 total rows (cumulative across all runs since table creation). REVIEWER and VALIDATOR failure rates are consistent with retry patterns in Phase C stage rows.
-
----
-
-## Gate D Determination
+## Gate B Determination
 
 | Check | Result |
 |-------|--------|
-| Reader query executes without error | **PASS** |
-| Returns data for all 7 pipeline stages | **PASS** |
-| Derived statistics are non-zero | **PASS** |
-| Weakest stage identified | **PASS** (REVIEWER, failRate=0.353) |
-| Data consistent with Phase C stage rows | **PASS** |
+| Writer inserted rows without error | **PASS** (7 rows, task_id confirmed) |
+| Reader returned non-empty stage list | **PASS** (7 stages) |
+| Reader received test rows (REVIEWER/VALIDATOR failure rates updated) | **PASS** |
+| `getWeakestStage()` returned a value | **PASS** (REVIEWER, failRate=0.381) |
+| `getStageScores()` returned scores for all stages | **PASS** |
+| Test rows cleaned up | **PASS** (DELETE succeeded) |
 
-**GATE D: CLEARED.**
+**GATE B: CLEARED.**

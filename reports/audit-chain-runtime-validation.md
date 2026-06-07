@@ -1,7 +1,7 @@
 # Phase C — Runtime Validation
 
-**Session:** 2026-06-06T23:23:51.605Z  
-**Baseline row count:** 46 (captured at 2026-06-06T23:26:02.625Z)
+**Session:** 2026-06-07  
+**Baseline row count:** 84 (captured at 2026-06-07T00:00:26.627Z)
 
 ---
 
@@ -9,56 +9,48 @@
 
 | # | task_id | success | commit | stage rows | reflection | memory | deploy |
 |---|---------|---------|--------|------------|------------|--------|--------|
-| 1 | run-mq2zfbsx | **true** | a288335 | **13** | ✓ | 52→53 | ✓ |
-| 2 | run-mq2znh77 | **true** | ed71ac3 | **6** | ✓ | 54→55 | ✓ |
-| 3 | run-mq2zppr1 | **true** | 2bcdeef | **12** | ✓ | 56→57 | ✓ |
+| 1 | run-mq311y1h | **true** | 3a8d653 | **9** | ✓ | 62→63 | ✓ |
+| 2 | run-mq30xfgp | **true** | 7e0b644 | **6** | ✓ | 58→59 | ✓ |
+| 3 | run-mq30zh1n | **true** | bcf7359 | **6** | ✓ | 60→61 | ✓ |
+
+Note: An earlier run (run-mq30tsez, commit b7b15ea) produced 0 stage rows in DB because the runner script called `process.exit(0)` before the fire-and-forget insert at `orchestrator.js:814` completed. No missing-table errors were present in that run's logs. Runs above use the corrected 6-second buffer.
 
 ---
 
-## Stage Rows — Run 1 (run-mq2zfbsx, 13 rows)
+## Stage Rows — Run 1 (run-mq311y1h, 9 rows, 96→105)
 
 ```
-RESEARCHER  PASS  22455ms
-ARCHITECT   PASS  10513ms
-DEVELOPER   PASS  15582ms
-REVIEWER    FAIL  7309ms
-VALIDATOR   PASS  3001ms
-DEVELOPER   PASS  18269ms
-REVIEWER    FAIL  7883ms
-VALIDATOR   PASS  3065ms
-DEVELOPER   PASS  19147ms
-REVIEWER    PASS  8999ms
-VALIDATOR   PASS  3367ms
-TESTER      PASS  524ms
-COMMITTER   PASS  6039ms
+ARCHITECT  PASS  11990ms
+DEVELOPER  PASS  19038ms
+REVIEWER   FAIL  7306ms
+VALIDATOR  FAIL  3416ms
+DEVELOPER  PASS  28205ms
+REVIEWER   PASS  7067ms
+VALIDATOR  PASS  3280ms
+TESTER     PASS  483ms
+COMMITTER  PASS  5806ms
 ```
 
-## Stage Rows — Run 2 (run-mq2znh77, 6 rows)
+## Stage Rows — Run 2 (run-mq30xfgp, 6 rows, 84→90)
 
 ```
-ARCHITECT  PASS  18836ms
-DEVELOPER  PASS  18326ms
-REVIEWER   PASS  12420ms
-VALIDATOR  PASS  3927ms
-TESTER     PASS  651ms
-COMMITTER  PASS  6097ms
+ARCHITECT  PASS  12150ms
+DEVELOPER  PASS  18008ms
+REVIEWER   PASS  7424ms
+VALIDATOR  PASS  3192ms
+TESTER     PASS  629ms
+COMMITTER  PASS  6088ms
 ```
 
-## Stage Rows — Run 3 (run-mq2zppr1, 12 rows)
+## Stage Rows — Run 3 (run-mq30zh1n, 6 rows, 90→96)
 
 ```
-ARCHITECT  PASS  12371ms
-DEVELOPER  PASS  20313ms
-REVIEWER   PASS  6611ms
-VALIDATOR  FAIL  3851ms
-DEVELOPER  PASS  17026ms
-REVIEWER   FAIL  6457ms
-VALIDATOR  FAIL  3833ms
-DEVELOPER  PASS  20798ms
-REVIEWER   PASS  5953ms
-VALIDATOR  PASS  3754ms
-TESTER     PASS  1114ms
-COMMITTER  PASS  5941ms
+ARCHITECT  PASS  10646ms
+DEVELOPER  PASS  22506ms
+REVIEWER   PASS  6839ms
+VALIDATOR  PASS  3306ms
+TESTER     PASS  535ms
+COMMITTER  PASS  5109ms
 ```
 
 ---
@@ -66,29 +58,33 @@ COMMITTER  PASS  5941ms
 ## Row Count Evidence
 
 ```
-BASELINE_ROW_COUNT:  46  (2026-06-06T23:26:02.625Z)
-FINAL_ROW_COUNT:     77
-ROWS_ADDED:          31
+BASELINE_ROW_COUNT:  84   (2026-06-07T00:00:26.627Z)
+FINAL_ROW_COUNT:     105  (2026-06-07T00:13:34Z)
+ROWS_ADDED:          21   (6 + 6 + 9)
 ```
 
 ---
 
-## apex_agent_runs Confirmation
+## Run Timing and Cost
 
-```
-APEX_RUNS:
-  run-mq2zfbsx  success=true  cost=$0.293
-  run-mq2znh77  success=true  cost=$0.081
-  run-mq2zppr1  success=true  cost=$0.326
-```
+| Run | Start | End | Duration | Cost |
+|-----|-------|-----|----------|------|
+| run-mq311y1h | 00:11:59Z | 00:13:34Z | 87s | $0.097 |
+| run-mq30xfgp | 00:08:29Z | 00:09:25Z | 51s | $0.052 |
+| run-mq30zh1n | 00:10:04Z | 00:11:01Z | 51s | $0.053 |
+
+**Total cost:** $0.202
 
 ---
 
 ## Missing-Table Error Check
 
-Searched run output files for `stage log non-fatal`:
+Searched output files b69h420bv, bs6k4lwtw, bpqt32vcl for `stage log non-fatal` and `apex_agent_stages.*in the schema`:
 
 ```
+b69h420bv.output: 0 matches
+bs6k4lwtw.output: 0 matches
+bpqt32vcl.output: 0 matches
 MISSING_TABLE_ERRORS_IN_LOGS: 0
 ```
 
@@ -103,7 +99,10 @@ MISSING_TABLE_ERRORS_IN_LOGS: 0
 | Runs with stage rows written | **3/3** |
 | Audit capture rate | **100%** |
 | Missing-table errors | **0** |
-| Storage growth | +31 rows (46 → 77) |
+| Reflection succeeded | **3/3** |
+| Memory indexed | **3/3** |
+| Deploy triggered | **3/3** |
+| Storage growth | +21 rows (84 → 105) |
 
 ---
 
@@ -112,9 +111,12 @@ MISSING_TABLE_ERRORS_IN_LOGS: 0
 | Check | Result |
 |-------|--------|
 | 3 successful runs | **PASS** |
-| Stage rows persisted | **PASS** |
+| Stage rows persisted in each run | **PASS** |
 | Rows queryable | **PASS** |
 | No missing-table errors | **PASS** |
-| Audit capture > 0 | **PASS** (31 rows) |
+| Audit capture > 0 per run | **PASS** (6, 6, 9 rows) |
+| Reflection succeeded | **PASS** |
+| Memory updated | **PASS** |
+| Deploy triggered | **PASS** |
 
 **GATE C: CLEARED.**

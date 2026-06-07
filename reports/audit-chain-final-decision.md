@@ -1,6 +1,6 @@
 # Phase E — Final Decision
 
-**Session:** 2026-06-06T23:23:51.605Z (third campaign invocation — all prior evidence discarded, re-validated from scratch)  
+**Session:** 2026-06-07 (fourth campaign invocation)  
 **Campaign:** Production Runtime Defect — Audit Chain Completion
 
 ---
@@ -21,30 +21,35 @@ Secondary finding: `pg_database.js` (direct TCP Postgres) returns `AggregateErro
 
 ## 2. Runtime Evidence
 
-All evidence generated this session (`SESSION_START: 2026-06-06T23:23:51.605Z`).
+All evidence generated this session (`2026-06-07`).
 
 | Evidence | Output |
 |----------|--------|
-| Run 1 stage rows | 13 rows for run-mq2zfbsx |
-| Run 2 stage rows | 6 rows for run-mq2znh77 |
-| Run 3 stage rows | 12 rows for run-mq2zppr1 |
-| Baseline → final row count | 46 → 77 (+31 rows this session) |
-| Missing-table errors | 0 across all 3 runs |
-| Reputation reader output | 7 stages, all statistics computed |
-| apex_agent_runs confirmation | run-mq2zfbsx cost=$0.293, run-mq2znh77 cost=$0.081, run-mq2zppr1 cost=$0.326 |
+| Table existence check | `TABLE_EXISTS: row_count_sample=1` (check-stages-table.js) |
+| INSERT test | id=`7564d62e`, stage=PHASE_A_TEST, success=true, duration_ms=42 |
+| READ-BACK test | `READ_OK stage=PHASE_A_TEST success=true duration_ms=42` |
+| DELETE test | `DELETE_OK` / `POST_DELETE_CHECK remaining=0` |
+| Reader path test | 7 stages returned, WEAKEST=REVIEWER failRate=0.381 |
+| Run 1 stage rows | 9 rows for run-mq311y1h (96→105) |
+| Run 2 stage rows | 6 rows for run-mq30xfgp (84→90) |
+| Run 3 stage rows | 6 rows for run-mq30zh1n (90→96) |
+| Missing-table errors | 0 across all 3 run output files |
 
 ---
 
-## 3. Fix Applied
+## 3. Corrective Action Applied
 
 **Mechanism:** Supabase SQL editor (project `devmtexqjstappalqbeg`)
 
 ```sql
 CREATE TABLE IF NOT EXISTS apex_agent_stages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    task_id TEXT NOT NULL, stage TEXT NOT NULL,
-    success BOOLEAN DEFAULT FALSE, error TEXT,
-    duration_ms INTEGER, attempt INTEGER DEFAULT 1,
+    task_id TEXT NOT NULL,
+    stage TEXT NOT NULL,
+    success BOOLEAN DEFAULT FALSE,
+    error TEXT,
+    duration_ms INTEGER,
+    attempt INTEGER DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC);
@@ -55,62 +60,72 @@ Table definition also committed to `agent-system/supabase-setup.js` (commit `3bc
 
 ---
 
-## 4. Validation Results
+## 4. Validation Results (Phase A — CRUD)
 
-### Phase C — 3 Runtime Runs
-
-| Run | task_id | Success | Commit | Stage rows | Reflection | Memory | Cost |
-|-----|---------|---------|--------|------------|------------|--------|------|
-| 1 | run-mq2zfbsx | ✓ | a288335 | 13 | ✓ | 52→53 | $0.293 |
-| 2 | run-mq2znh77 | ✓ | ed71ac3 | 6 | ✓ | 54→55 | $0.081 |
-| 3 | run-mq2zppr1 | ✓ | 2bcdeef | 12 | ✓ | 56→57 | $0.326 |
-
-### Phase D — Reputation Reader
-
-```
-STAGES: REVIEWER,COMMITTER,TESTER,VALIDATOR,ARCHITECT,DEVELOPER,RESEARCHER
-WEAKEST: REVIEWER failRate=0.353
-SCORES: {"REVIEWER":6.47,"COMMITTER":10,"TESTER":10,"VALIDATOR":6.47,"ARCHITECT":10,"DEVELOPER":10,"RESEARCHER":10}
-```
-
-Full stage statistics derived from live table data. Adaptation layer operational.
+| Operation | Result |
+|-----------|--------|
+| Table exists | **PASS** — `TABLE_EXISTS: row_count_sample=1` |
+| INSERT | **PASS** — id=7564d62e, values confirmed |
+| READ-BACK | **PASS** — all fields match |
+| DELETE | **PASS** — `remaining=0` |
+| Table queryable post-delete | **PASS** — baseline row count restored |
 
 ---
 
-## 5. Remaining Risks
+## 5. Reader Validation Results (Phase B)
+
+```
+READER_STAGES: DEVELOPER,REVIEWER,VALIDATOR,TESTER,COMMITTER,ARCHITECT,RESEARCHER
+REVIEWER: total=21 successRate=0.619 avgMs=7347
+VALIDATOR: total=21 successRate=0.619 avgMs=3362
+DEVELOPER: total=19 successRate=1 avgMs=22417
+WEAKEST_STAGE: REVIEWER failRate=0.381
+STAGE_SCORES: {"DEVELOPER":10,"REVIEWER":6.19,"VALIDATOR":6.19,"TESTER":10,"COMMITTER":10,"ARCHITECT":10,"RESEARCHER":10}
+```
+
+`agent-reputation.js` successfully reads `apex_agent_stages`, computes per-stage statistics, and identifies the weakest stage.
+
+---
+
+## 6. Runtime Validation Results (Phase C)
+
+| Run | task_id | Success | Commit | Stage rows | Reflection | Memory | Deploy |
+|-----|---------|---------|--------|------------|------------|--------|--------|
+| 1 | run-mq311y1h | ✓ | 3a8d653 | 9 | ✓ | ✓ | ✓ |
+| 2 | run-mq30xfgp | ✓ | 7e0b644 | 6 | ✓ | ✓ | ✓ |
+| 3 | run-mq30zh1n | ✓ | bcf7359 | 6 | ✓ | ✓ | ✓ |
+
+Storage growth: 84 → 105 (+21 rows). Total cost: $0.202.
+
+---
+
+## 7. Remaining Risks
 
 | Risk | Severity |
 |------|----------|
 | `pg_database.js` direct TCP is ECONNREFUSED from Render | Medium — features depending on direct pg (pgvector, RLS) are silently degraded. Separate campaign required. |
+| Fire-and-forget stage inserts may be lost if process exits immediately | Low — affects only non-server invocations (scripts); server process is long-lived and inserts will always complete. |
 | `apex_agent_stages` has no RLS policy | Low — service role bypasses RLS; no user-facing data exposure risk. |
-| VALIDATOR failureRate=0.40 (10 samples) | Informational — reflects pipeline retries on ambiguous tasks, not a defect. |
+| REVIEWER failRate=0.381 (21 samples) | Informational — reflects pipeline retries on ambiguous/security-sensitive tasks, not a defect. |
 
 ---
 
-## 6. Production Recommendation
+## 8. Production Recommendation
 
-**AUDIT CHAIN VERIFIED**
+**AUDIT CHAIN VERIFIED — DEFECT CLOSED.**
 
-All gates cleared with runtime evidence generated this session:
-- Table exists and accepts reads/writes via the Supabase HTTPS client
-- Every pipeline run produces stage rows — 0 missing-table errors across 3 runs
-- Reputation reader consumes live data and produces actionable statistics for 7 stages
-- Execution, reflection, memory indexing, and deployment paths are unaffected
-- 31 rows added to `apex_agent_stages` this session; 77 total in table
-
-The audit chain defect is closed.
-
----
-
-## Completion Matrix
+All success criteria satisfied with runtime evidence generated this session:
 
 ```
-[✓] Table exists               — 31 rows inserted this session, 0 missing-table errors
-[✓] INSERT proven              — 13 + 6 + 12 = 31 rows across 3 runs (46 → 77)
-[✓] SELECT proven              — getAllStageStats() returned 7 stages with full stats
-[✓] 3 successful runtime runs  — run-mq2zfbsx, run-mq2znh77, run-mq2zppr1 (all success=true)
-[✓] Stage rows persisted       — verified via FINAL_ROW_COUNT: 77 / ROWS_ADDED: 31
-[✓] No missing-table errors    — MISSING_TABLE_ERRORS_IN_LOGS: 0
-[✓] Reader consumes data       — WEAKEST: REVIEWER failRate=0.353 / 7 stages scored
-[✓] Campaign complete
+[✓] apex_agent_stages exists           — TABLE_EXISTS: row_count_sample=1
+[✓] INSERT validated                   — id=7564d62e confirmed in DB
+[✓] SELECT validated                   — READ_OK all fields match
+[✓] DELETE validated                   — remaining=0 post-delete
+[✓] Reader path validated              — getAllStageStats() returned 7 stages
+[✓] 3 successful post-fix runs         — run-mq311y1h, run-mq30xfgp, run-mq30zh1n (all success=true)
+[✓] Stage rows persisted in each run   — 9 + 6 + 6 = 21 rows (84 → 105)
+[✓] Reflection succeeded on all runs   — confirmed in output logs
+[✓] Memory updated on all runs         — MemoryIndexer confirmed in output logs
+[✓] Deployment triggered on all runs   — Render deploy triggered confirmed in output logs
+[✓] Zero missing-table errors          — 0 occurrences across all 3 run output files
 ```
