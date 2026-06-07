@@ -17,15 +17,10 @@ router.get('/healthz', (req, res) => {
 
 // GET /api/version
 router.get('/version', (req, res) => {
-    try {
-        res.json({
-            appName: _pkg.name,
-            nodeVersion: process.version,
-            uptimeSeconds: process.uptime()
-        });
-    } catch (e) {
-        res.status(500).json({ ok: false, error: e.message });
-    }
+    res.status(200).json({
+        version: process.env.npm_package_version || '1.0.0',
+        node: process.version
+    });
 });
 
 // GET /api/status — public system diagnostics endpoint
