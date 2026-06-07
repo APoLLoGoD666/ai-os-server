@@ -88,6 +88,15 @@ router.get('/uptime', (req, res) => {
     }
 });
 
+// GET /api/build-info — public operational diagnostics: Node.js version, platform, architecture
+router.get('/build-info', (req, res) => {
+    res.json({
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch
+    });
+});
+
 // GET /api/operations/clients
 router.get('/operations/clients', _auth, async (req, res) => {
     try {
