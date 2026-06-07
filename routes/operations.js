@@ -66,6 +66,20 @@ router.get('/metrics', (req, res) => {
     }
 });
 
+// GET /api/memory-stats — authenticated heap usage diagnostics
+router.get('/memory-stats', requireAppAccess, (req, res) => {
+    try {
+        const mem = process.memoryUsage();
+        res.status(200).json({
+            heapUsed: mem.heapUsed,
+            heapTotal: mem.heapTotal,
+            external: mem.external
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // GET /api/info — authenticated system diagnostics endpoint
 router.get('/info', requireAppAccess, (req, res) => {
     try {
