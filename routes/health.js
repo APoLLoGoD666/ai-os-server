@@ -2,7 +2,6 @@
 const router = require('express').Router();
 const { getSupabaseClient } = require('../lib/clients');
 const _auth = require('../lib/app-auth');
-const { requireAppAccess } = require('../lib/app-auth');
 
 const sb = getSupabaseClient;
 
@@ -151,7 +150,7 @@ router.post('/health/supplements', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/health/detailed', requireAppAccess, (req, res) => {
+router.get('/health/detailed', _auth, (req, res) => {
     try {
         const mem = process.memoryUsage();
         res.json({
