@@ -667,6 +667,14 @@ async function _committer(spec, branchName) {
         return out.replace(/https?:\/\/[^:@\s]+:[^@\s]+@github\.com/g, 'https://[REDACTED]@github.com');
     };
 
+    // Render deploys in detached HEAD — commits and 'git push main' are silent no-ops when HEAD
+    // is not attached to a branch. Force-attach to main before pull/merge/push.
+    const _headRef = spawnSync('git', ['symbolic-ref', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
+    if (_headRef.status !== 0 || _headRef.stdout.trim() !== 'main') {
+        spawnSync('git', ['checkout', '-B', 'main'], { cwd: ROOT, encoding: 'utf8' });
+        console.log('[COMMITTER] HEAD was not on main — attached to main');
+    }
+
     // Pull first — sync ROOT with remote before merging so the merge commit lands on top of
     // the latest remote HEAD. Doing this after merge caused git to rebase away the merge commit
     // when the remote had diverged, producing "Everything up-to-date" on push.
