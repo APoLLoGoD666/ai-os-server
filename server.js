@@ -1,6 +1,8 @@
 require("./instrument.js");
 require("dotenv").config();
 
+const GIT_SHA = (() => { try { return require('child_process').execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'unknown'; } })();
+
 const Sentry = require("@sentry/node");
 
 // Fail fast if critical env vars are missing — prevents silent runtime failures
@@ -379,13 +381,13 @@ app.get('/health', async (req, res) => {
     // DB failures are visible in body but don't block new deploys.
     res.status(200).json({
         status,
-        version:        '383cc62',
+        version:        GIT_SHA,
         uptime:         process.uptime(),
         timestamp:      Date.now(),
         db:             dbOk,
         tts:            ttsOk,
         ai:             aiOk,
-        memory:         { heapMb, rssMb: rssM, warning: heapMb > 400 },
+        memory:         { heapMb, rssMb: rssM, warning: heapMb > 150, heapLimit: 220 },
         mastra:         getMastraStatus(),
         ws:             global._apexWsCount || 0,
         sentry:         !!process.env.SENTRY_DSN,
@@ -415,7 +417,8 @@ app.get('/api/system/health/detailed', requireAppAccess, async (req, res) => {
     result.memory = {
         heapMb:  Math.round(mem.heapUsed  / 1024 / 1024),
         rssMb:   Math.round(mem.rss       / 1024 / 1024),
-        warning: Math.round(mem.heapUsed  / 1024 / 1024) > 400,
+        warning: Math.round(mem.heapUsed  / 1024 / 1024) > 150,
+        heapLimit: 220,
     };
 
     // DB (pg pool)
@@ -829,15 +832,16 @@ function ensureSetup() {
 }
 
 function hasAppAccess(req) {
-    if (!APP_ACCESS_KEY) {
-        // LOCAL_MODE without a key: allow for dev convenience; production: fail closed
-        return process.env.LOCAL_MODE === 'true';
-    }
+    if (!APP_ACCESS_KEY) return false;
 
     const headerKey = req.get("x-app-key");
     const queryKey = req.query?.app_key;
+    const key = headerKey || queryKey || '';
 
-    return headerKey === APP_ACCESS_KEY || queryKey === APP_ACCESS_KEY;
+    try {
+        return key.length === APP_ACCESS_KEY.length &&
+            require('crypto').timingSafeEqual(Buffer.from(key), Buffer.from(APP_ACCESS_KEY));
+    } catch { return false; }
 }
 
 function requireAppAccess(req, res, next) {
@@ -7236,8 +7240,17 @@ app.get("/cron/health", requireAppAccess, (req, res) => {
 });
 
 app.post("/cron/run-schedules", requireCronAccess, async (req, res) => {
+    const cronStart = Date.now();
+    const triggeredBy = req.headers['x-triggered-by'] || req.headers['user-agent']?.slice(0, 50) || 'unknown';
     try {
         const scheduleRun = await runDueSchedules();
+        const durationMs = Date.now() - cronStart;
+        sbAdmin.from('cron_logs').insert({
+            triggered_by: triggeredBy,
+            schedules_checked: scheduleRun.results?.length ?? 0,
+            schedules_run: scheduleRun.results?.filter(r => r.ran).length ?? 0,
+            duration_ms: durationMs,
+        }).then(({ error }) => { if (error) console.warn('[Cron] log insert failed:', error.message); });
         return res.status(200).json({
             ok: true,
             summary: scheduleRun.results.map(formatScheduleRunSummary).join("\n") || "No enabled schedules are due right now.",
@@ -7245,6 +7258,11 @@ app.post("/cron/run-schedules", requireCronAccess, async (req, res) => {
         });
     } catch (error) {
         console.error("CRON RUN SCHEDULES ERROR:", error);
+        sbAdmin.from('cron_logs').insert({
+            triggered_by: triggeredBy,
+            errors: error.message,
+            duration_ms: Date.now() - cronStart,
+        }).then(({ error: le }) => { if (le) console.warn('[Cron] log insert failed:', le.message); });
         return res.status(500).json({
             ok: false,
             error: error.message
@@ -8876,8 +8894,7 @@ app.get("/api/ping", (req, res) => {
 app.get("/api/config", requireAppAccess, (req, res) => {
     res.json({
         ok: true,
-        supabaseUrl: process.env.SUPABASE_URL || "",
-        supabaseAnonKey: process.env.SUPABASE_ANON_KEY || ""
+        supabaseUrl: process.env.SUPABASE_URL || ""
     });
 });
 
@@ -11528,6 +11545,20 @@ require('./routes/gemini-live').attach(server, {
 
 server.listen(PORT, () => {
     ensureSetup();
+    // Validate required tables exist — surfaces missing tables immediately instead of at first write
+    setImmediate(async () => {
+        const required = ['memory', 'documents', 'agent_tasks', 'apex_agent_runs', 'apex_agent_stages', 'notifications', 'apex_lessons', 'cron_logs'];
+        const missing = [];
+        for (const table of required) {
+            const { error } = await sbAdmin.from(table).select('*').limit(0);
+            if (error?.code === 'PGRST205' || (error?.message || '').includes('does not exist')) missing.push(table);
+        }
+        if (missing.length > 0) {
+            console.error('[Startup] MISSING TABLES:', missing.join(', '), '— run migrations/001_missing_tables.sql in Supabase SQL Editor');
+        } else {
+            console.log('[Startup] Schema OK — all required tables present');
+        }
+    });
 
     // Mastra agents — deferred 5 minutes after startup to avoid OOM (loads @mastra/core)
     // All mastra routes null-check mastraAgents so they degrade gracefully until ready.

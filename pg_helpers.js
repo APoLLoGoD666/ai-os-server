@@ -345,15 +345,15 @@ async function pgGetDueAgentSchedules() {
    NOTIFICATIONS
 ========================= */
 
-async function pgCreateNotification(type, title, message, relatedType = null, relatedId = null) {
+async function pgCreateNotification(type, title, message, relatedType = null, relatedId = null, dedupWindowMs = 60000) {
     const eventKey = `${type}:${relatedType || 'none'}:${relatedId || 'none'}:${title || 'untitled'}`;
-    const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
+    const windowStart = new Date(Date.now() - dedupWindowMs).toISOString();
 
     const byKey = check(
         await supabase.from('notifications')
             .select()
             .eq('event_key', eventKey)
-            .gte('created_at', sixtySecondsAgo)
+            .gte('created_at', windowStart)
             .order('id', { ascending: false })
             .limit(1),
         'pgCreateNotification dedup'

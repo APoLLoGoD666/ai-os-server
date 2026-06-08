@@ -293,6 +293,22 @@ async function createAllTables() {
             user_id TEXT, suggestion TEXT, category TEXT,
             based_on TEXT, accepted BOOLEAN, created_at TIMESTAMPTZ DEFAULT NOW(),
             updated_at TIMESTAMPTZ DEFAULT NOW()
+        )`,
+        // Agent reflection lessons — persisted across Render restarts
+        `CREATE TABLE IF NOT EXISTS apex_lessons (
+            id BIGSERIAL PRIMARY KEY,
+            lesson TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )`,
+        // Cron execution audit trail
+        `CREATE TABLE IF NOT EXISTS cron_logs (
+            id BIGSERIAL PRIMARY KEY,
+            triggered_at TIMESTAMPTZ DEFAULT NOW(),
+            triggered_by TEXT,
+            schedules_checked INTEGER DEFAULT 0,
+            schedules_run INTEGER DEFAULT 0,
+            errors TEXT,
+            duration_ms INTEGER
         )`
     ];
 

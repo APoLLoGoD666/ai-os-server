@@ -709,7 +709,7 @@ async function _committer(spec, branchName) {
         try {
             const https = require('https');
             const body = JSON.stringify({ clearCache: 'do_not_clear' });
-            await new Promise(resolve => {
+            const deployStatus = await new Promise(resolve => {
                 const req = https.request({
                     hostname: 'api.render.com',
                     path: `/v1/services/${process.env.RENDER_SERVICE_ID}/deploys`,
@@ -720,13 +720,17 @@ async function _committer(spec, branchName) {
                         'Content-Type': 'application/json',
                         'Content-Length': Buffer.byteLength(body)
                     }
-                }, resolve);
-                req.on('error', () => resolve());
-                req.on('timeout', () => { req.destroy(); resolve(); });
+                }, (res) => resolve(res.statusCode));
+                req.on('error', () => resolve(null));
+                req.on('timeout', () => { req.destroy(); resolve(null); });
                 req.write(body);
                 req.end();
             });
-            console.log('[COMMITTER] Render deploy triggered');
+            if (deployStatus && deployStatus >= 200 && deployStatus < 300) {
+                console.log(`[COMMITTER] Render deploy queued (HTTP ${deployStatus})`);
+            } else {
+                console.error(`[COMMITTER] Render deploy REJECTED: HTTP ${deployStatus ?? 'timeout/error'}`);
+            }
         } catch (e) { console.warn('[COMMITTER] Render deploy failed:', e.message); }
     }
 
@@ -757,9 +761,9 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
         );
         const lesson = res.content[0]?.text?.trim();
         if (lesson && lesson.length > 10) {
-            memory.logLesson(`[Auto-Reflexion] ${lesson}`);
+            const { diskOk, supabaseOk } = await memory.logLesson(`[Auto-Reflexion] ${lesson}`);
             try { _indexer.indexLesson(`[Auto-Reflexion] ${lesson}`); } catch {}
-            console.log('[Reflector] lesson:', lesson.slice(0, 80));
+            console.log(`[Reflector] lesson stored: disk=${diskOk} supabase=${supabaseOk} — ${lesson.slice(0, 80)}`);
         }
     } catch (e) {
         console.warn('[Reflector] skipped (non-fatal):', e.message);
@@ -811,9 +815,9 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity) {
                 created_at:  new Date().toISOString(),
             };
         });
-        _sb.from('apex_agent_stages').insert(stageRows).then(({ error: se }) => {
-            if (se) console.warn('[Audit] stage log non-fatal:', se.message);
-        }).catch(() => {});
+        const { error: se } = await _sb.from('apex_agent_stages').insert(stageRows);
+        if (se) console.error('[Audit] stage INSERT FAILED:', se.message);
+        else console.log('[Audit] stage rows committed:', stageRows.length);
     }
 }
 

@@ -60,32 +60,41 @@ module.exports = {
                 ? fs.readFileSync(full, 'utf8') : '';
             fs.writeFileSync(full,
                 existing + '\n\n---\n\n' + content, 'utf8');
+            return true;
         } catch (e) {
-            console.warn('[ObsidianMemory] append failed (non-fatal):', e.message);
+            console.error('[ObsidianMemory] append FAILED:', e.message);
+            return false;
         }
     },
 
-    logLesson(lesson) {
+    async logLesson(lesson) {
         const now  = new Date();
         const date = now.toISOString().split('T')[0];
         const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        this.append('01 Executive/Lessons.md', `## ${date} ${time}\n${lesson}`);
+        const diskOk = this.append('01 Executive/Lessons.md', `## ${date} ${time}\n${lesson}`);
         _lessonBuffer.push(`${date} ${time}: ${lesson}`);
         if (_lessonBuffer.length > 50) _lessonBuffer.shift();
 
-        // Fire-and-forget Supabase persistence — survives Render restarts
+        let supabaseOk = null; // null = skipped (table missing or no client)
         if (!_sbLessonsMissing) {
             const sb = _getSb();
             if (sb) {
-                sb.from('apex_lessons').insert({ lesson, created_at: now.toISOString() })
-                    .then(({ error }) => {
-                        if (error && error.message.includes('does not exist')) {
-                            _sbLessonsMissing = true;
-                        }
-                    })
-                    .catch(() => {});
+                try {
+                    const { error } = await sb.from('apex_lessons').insert({ lesson, created_at: now.toISOString() });
+                    if (error) {
+                        if (error.message.includes('does not exist')) _sbLessonsMissing = true;
+                        console.error('[ObsidianMemory] apex_lessons INSERT FAILED:', error.message);
+                        supabaseOk = false;
+                    } else {
+                        supabaseOk = true;
+                    }
+                } catch (e) {
+                    console.error('[ObsidianMemory] apex_lessons INSERT error:', e.message);
+                    supabaseOk = false;
+                }
             }
         }
+        return { diskOk, supabaseOk };
     },
 
     logDecision(decision, reason) {

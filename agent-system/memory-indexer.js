@@ -72,7 +72,7 @@ function _scheduleSave() {
 }
 
 function _flush() {
-    if (!_dirty) return;
+    if (!_dirty) return { ok: true, skipped: true };
     try {
         fs.mkdirSync(path.dirname(INDEX_PATH), { recursive: true });
         fs.writeFileSync(INDEX_PATH, JSON.stringify({
@@ -82,8 +82,10 @@ function _flush() {
             lessons:   [..._lessons.values()],
         }, null, 2), 'utf8');
         _dirty = false;
+        return { ok: true, entries: _episodes.size + _lessons.size };
     } catch (e) {
-        console.warn('[MemoryIndexer] flush failed (non-fatal):', e.message);
+        console.error('[MemoryIndexer] flush FAILED:', e.message);
+        return { ok: false, error: e.message };
     }
 }
 
@@ -128,8 +130,12 @@ async function _embedPending() {
             if (i > 0 && i % 10 === 9) await new Promise(r => setTimeout(r, 150));
         }
         if (count > 0) {
-            _flush();
-            console.log(`[MemoryIndexer] Embedded ${count} memory entries (${_episodes.size + _lessons.size} total indexed)`);
+            const flushResult = _flush();
+            if (flushResult.ok && !flushResult.skipped) {
+                console.log(`[MemoryIndexer] Embedded ${count} memory entries (${flushResult.entries} total indexed, flushed to disk)`);
+            } else if (!flushResult.ok) {
+                console.error(`[MemoryIndexer] Embedded ${count} entries but disk write FAILED: ${flushResult.error}`);
+            }
         }
     } catch (e) {
         console.warn('[MemoryIndexer] _embedPending error (non-fatal):', e.message);

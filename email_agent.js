@@ -168,7 +168,7 @@ async function checkEmails(anthropicClient) {
                 "email",
                 "Gmail auth expired",
                 "Gmail OAuth refresh token is invalid. Visit /auth/gmail/reauthorise to re-connect.",
-                null, null
+                null, null, 86400000 // 24h dedup — one notification per day max
             ).catch(() => {});
         }
         return 0;
