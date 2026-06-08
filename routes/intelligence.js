@@ -223,7 +223,9 @@ router.get('/self-check', requireAppAccess, async (req, res) => {
     }
 
     // DB pool (pg) — uses DATABASE_URL; degrades gracefully if not configured
-    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('[YOUR-PASSWORD]')) {
+    const _dbUrl = process.env.DATABASE_URL || '';
+    const _dbPlaceholder = !_dbUrl || _dbUrl.includes('YOUR-PASSWORD') || _dbUrl.includes('%5BYOUR-PASSWORD%5D');
+    if (_dbPlaceholder) {
         checks.postgres = { ok: false, error: 'DATABASE_URL not configured', hint: 'Add real DATABASE_URL to Render env vars (get from Supabase dashboard > Settings > Database)' };
     } else {
         try {
@@ -232,7 +234,7 @@ router.get('/self-check', requireAppAccess, async (req, res) => {
             await pgPool.query('SELECT 1');
             checks.postgres = { ok: true, latency_ms: Date.now() - t };
         } catch (e) {
-            checks.postgres = { ok: false, error: e.message };
+            checks.postgres = { ok: false, error: e.message || 'connection failed', hint: 'Add real DATABASE_URL to Render env vars (Supabase dashboard > Settings > Database)' };
         }
     }
 
