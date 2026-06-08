@@ -222,14 +222,18 @@ router.get('/self-check', requireAppAccess, async (req, res) => {
         checks.obsidian = { ok: false, error: 'OBSIDIAN_URL not set', hint: 'Add OBSIDIAN_URL to Render env vars' };
     }
 
-    // DB pool (pg)
-    try {
-        const pgPool = require('../pg_database');
-        const t = Date.now();
-        await pgPool.query('SELECT 1');
-        checks.postgres = { ok: true, latency_ms: Date.now() - t };
-    } catch (e) {
-        checks.postgres = { ok: false, error: e.message };
+    // DB pool (pg) — uses DATABASE_URL; degrades gracefully if not configured
+    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('[YOUR-PASSWORD]')) {
+        checks.postgres = { ok: false, error: 'DATABASE_URL not configured', hint: 'Add real DATABASE_URL to Render env vars (get from Supabase dashboard > Settings > Database)' };
+    } else {
+        try {
+            const pgPool = require('../pg_database');
+            const t = Date.now();
+            await pgPool.query('SELECT 1');
+            checks.postgres = { ok: true, latency_ms: Date.now() - t };
+        } catch (e) {
+            checks.postgres = { ok: false, error: e.message };
+        }
     }
 
     // RAG system — vault chunk count + vector index size

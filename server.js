@@ -11772,18 +11772,18 @@ server.listen(PORT, () => {
         }
     });
 
-    // Schema migration — apex_agent_runs: add duration_ms + token_usage if missing
+    // Schema migration — apex_agent_runs: verify duration_ms + token_usage columns exist
+    // (Added via Migration 002 via Supabase Management API; this just logs the check)
     setImmediate(async () => {
         try {
-            const pgPool = require('./pg_database');
-            await pgPool.query(`
-                ALTER TABLE apex_agent_runs
-                    ADD COLUMN IF NOT EXISTS duration_ms bigint,
-                    ADD COLUMN IF NOT EXISTS token_usage jsonb;
-            `);
-            console.log('[Migration] apex_agent_runs: duration_ms + token_usage ready');
+            const { error } = await sbAdmin.from('apex_agent_runs').select('duration_ms,token_usage').limit(0);
+            if (error) {
+                console.warn('[Migration] apex_agent_runs: duration_ms/token_usage columns missing —', error.message);
+            } else {
+                console.log('[Migration] apex_agent_runs: duration_ms + token_usage columns confirmed');
+            }
         } catch (e) {
-            console.warn('[Migration] apex_agent_runs schema migration skipped:', e.message);
+            console.warn('[Migration] apex_agent_runs schema check skipped:', e.message);
         }
     });
 
@@ -11827,6 +11827,30 @@ server.listen(PORT, () => {
             await sbAdmin.from('email_queue').delete().in('status', ['done', 'error']).lt('updated_at', emailCutoff);
             _log.info('retention', 'email_queue: purged done/error records > 30 days');
         } catch (e) { _log.warn('retention', 'email_queue purge failed', { error: e.message }); }
+        try {
+            const stagesCutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('apex_agent_stages').delete().lt('created_at', stagesCutoff);
+            _log.info('retention', 'apex_agent_stages: purged records > 90 days');
+        } catch (e) { _log.warn('retention', 'apex_agent_stages purge failed', { error: e.message }); }
+        try {
+            const lessonsCutoff = new Date(Date.now() - 180 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('apex_lessons').delete().lt('created_at', lessonsCutoff);
+            _log.info('retention', 'apex_lessons: purged records > 180 days');
+        } catch (e) { _log.warn('retention', 'apex_lessons purge failed', { error: e.message }); }
+        try {
+            const cronCutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('cron_logs').delete().lt('triggered_at', cronCutoff);
+            _log.info('retention', 'cron_logs: purged records > 90 days');
+        } catch (e) { _log.warn('retention', 'cron_logs purge failed', { error: e.message }); }
+        try {
+            // Reject waiting_approval tasks stuck > 7 days (automated cleanup)
+            const staleCutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+            const { count } = await sbAdmin.from('agent_tasks')
+                .update({ status: 'rejected', updated_at: new Date().toISOString() })
+                .eq('status', 'waiting_approval').lt('created_at', staleCutoff)
+                .select('*', { count: 'exact', head: true });
+            if (count > 0) _log.info('retention', `agent_tasks: auto-rejected ${count} stale waiting_approval tasks`);
+        } catch (e) { _log.warn('retention', 'agent_tasks stale rejection failed', { error: e.message }); }
     }, 6 * 60 * 60 * 1000); // every 6 hours
 
     // Pick up any master tasks that were queued before a cold-start restart
