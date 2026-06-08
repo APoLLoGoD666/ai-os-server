@@ -14,7 +14,16 @@ router.get('/healthz', (req, res) => {
     res.status(200).json({ ok: true });
 });
 
-// GET /api/version
+/**
+ * GET /api/version
+ * Returns the running application version and Node.js runtime version.
+ * No authentication required. Useful for deployment verification and
+ * confirming which build is active in a given environment.
+ *
+ * Response: { version: string, node: string }
+ *   - version: npm package version (falls back to "1.0.0" if env var unavailable)
+ *   - node: Node.js runtime version string (e.g. "v20.11.0")
+ */
 router.get('/version', (req, res) => {
     res.status(200).json({
         version: process.env.npm_package_version || '1.0.0',
