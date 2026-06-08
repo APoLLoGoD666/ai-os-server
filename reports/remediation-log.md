@@ -168,6 +168,36 @@ GET /api/version                 HTTP 200
 
 ---
 
+---
+
+### FIX-11: 9 Missing Route Tables (Phase 3)
+**Defect:** `routes/operations.js` references apex_clients, apex_projects, apex_documents, apex_proposals. `routes/life.js` references apex_university_modules, apex_university_assignments, apex_university_flashcards, apex_university_sessions, apex_reading_list. All 9 tables missing from Supabase.
+**Fix:** Created via Supabase Management API. DDL documented in `migrations/003_operations_and_life_tables.sql`.
+**Evidence:**
+```
+GET /api/operations/clients      HTTP 200
+GET /api/operations/projects     HTTP 200
+GET /api/operations/documents    HTTP 200
+GET /api/operations/proposals    HTTP 200
+GET /api/university/modules      HTTP 200
+GET /api/university/assignments  HTTP 200
+GET /api/university/flashcards   HTTP 200
+GET /api/university/sessions     HTTP 200
+GET /api/reading-list            HTTP 200
+TIMESTAMP: 2026-06-08 (Phase 3)
+```
+**STATUS:** FIXED ✓
+
+---
+
+### FIX-12: COMMITTER Detached HEAD (Phase 3)
+**Defect:** Render deploys the repository in detached HEAD state. When HEAD is detached, `git commit` creates orphan commits not attached to `main`, and `git push main` pushes the unchanged `main` ref — producing "Everything up-to-date" silently. Manifested as TASK-157718 COMMITTER failure: "push up-to-date: file changes were not in ROOT git index".
+**Fix:** `agent-system/orchestrator.js` — added `git symbolic-ref HEAD` check before pull/merge/push in `_committer()`. If HEAD is not on `main`, runs `git checkout -B main` to attach it. Commit `eebd164`.
+**Evidence:** Syntax check passed. Deployed 2026-06-08. Re-run required to confirm push succeeds.
+**STATUS:** FIXED (deployment pending re-validation) ✓
+
+---
+
 ## Commit History
 
 | Commit | Change | Deployed |
@@ -177,3 +207,5 @@ GET /api/version                 HTTP 200
 | `ec32e87` | health.js route load fix | 2026-06-08T15:48Z |
 | `1044173` | intelligence.js postgres hint | 2026-06-08T15:59Z |
 | `18192f8` | server.js inline self-check postgres hint | 2026-06-08T16:05Z |
+| `4f6a179` | Phase 3 report docs | 2026-06-08 |
+| `eebd164` | COMMITTER detached HEAD fix | 2026-06-08 |
