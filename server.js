@@ -10431,10 +10431,15 @@ app.get('/api/intelligence/self-check', requireAppAccess, async (req, res) => {
             checks.obsidian = { ok: true, latency_ms: Date.now() - s };
         } catch (e) { checks.obsidian = { ok: false, error: e.message, hint: 'Check OBSIDIAN_URL tunnel' }; }
     } else { checks.obsidian = { ok: false, error: 'OBSIDIAN_URL not set', hint: 'Add OBSIDIAN_URL to Render env vars' }; }
-    try {
-        const pgPool = require('./pg_database'); const pt = Date.now();
-        await pgPool.query('SELECT 1'); checks.postgres = { ok: true, latency_ms: Date.now() - pt };
-    } catch (e) { checks.postgres = { ok: false, error: e.message }; }
+    const _scDbUrl = process.env.DATABASE_URL || '';
+    if (!_scDbUrl || _scDbUrl.includes('YOUR-PASSWORD')) {
+        checks.postgres = { ok: false, error: 'DATABASE_URL not configured', hint: 'Add real DATABASE_URL to Render env vars (Supabase dashboard > Settings > Database)' };
+    } else {
+        try {
+            const pgPool = require('./pg_database'); const pt = Date.now();
+            await pgPool.query('SELECT 1'); checks.postgres = { ok: true, latency_ms: Date.now() - pt };
+        } catch (e) { checks.postgres = { ok: false, error: e.message || 'connection failed', hint: 'Verify DATABASE_URL in Render env vars' }; }
+    }
     try {
         const { retrieveContext } = require('./agent-system/langchain-rag');
         const [rp, vc] = await Promise.allSettled([
