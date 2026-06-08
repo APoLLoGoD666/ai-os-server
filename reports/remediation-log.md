@@ -193,8 +193,16 @@ TIMESTAMP: 2026-06-08 (Phase 3)
 ### FIX-12: COMMITTER Detached HEAD (Phase 3)
 **Defect:** Render deploys the repository in detached HEAD state. When HEAD is detached, `git commit` creates orphan commits not attached to `main`, and `git push main` pushes the unchanged `main` ref — producing "Everything up-to-date" silently. Manifested as TASK-157718 COMMITTER failure: "push up-to-date: file changes were not in ROOT git index".
 **Fix:** `agent-system/orchestrator.js` — added `git symbolic-ref HEAD` check before pull/merge/push in `_committer()`. If HEAD is not on `main`, runs `git checkout -B main` to attach it. Commit `eebd164`.
-**Evidence:** Syntax check passed. Deployed 2026-06-08. Re-run required to confirm push succeeds.
-**STATUS:** FIXED (deployment pending re-validation) ✓
+**Evidence:**
+```
+TASK-935926 executed 2026-06-08T18:53:24Z–18:54:14Z on build 16ed85f (includes eebd164)
+COMMITTER: success=true, duration_ms=2929, error=none
+Commit: e0bda99429260dd07283dcb6210e5a10e52b852e
+github.com/APoLLoGoD666/ai-os-server/commit/e0bda99 (Author: Apex AutoPilot, 2026-06-08T18:54:12Z)
+main HEAD = e0bda99 (exact match — push confirmed)
+apex_tasks status=completed at 2026-06-08T18:54:14.952Z
+```
+**STATUS:** FIXED AND RUNTIME-VALIDATED ✓
 
 ---
 
@@ -209,3 +217,5 @@ TIMESTAMP: 2026-06-08 (Phase 3)
 | `18192f8` | server.js inline self-check postgres hint | 2026-06-08T16:05Z |
 | `4f6a179` | Phase 3 report docs | 2026-06-08 |
 | `eebd164` | COMMITTER detached HEAD fix | 2026-06-08 |
+| `16ed85f` | Phase 3 certification reports | 2026-06-08 |
+| `e0bda99` | [Apex AutoPilot] TASK-935926 — pipeline commit (runtime proof) | 2026-06-08T18:54:12Z |

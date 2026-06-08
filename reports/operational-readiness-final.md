@@ -1,5 +1,5 @@
 # Operational Readiness — Final Report
-_Generated: 2026-06-08 | Updated: 2026-06-08 (Phase 3 Operational Closure) | Build: eebd164_
+_Generated: 2026-06-08 | Updated: 2026-06-08 (Phase 3.1 COMMITTER Runtime Validated) | Build: e0bda99_
 
 ---
 
@@ -146,7 +146,7 @@ Evidence basis:
 3. `waiting_approval` task backlog was the main long-term risk — now auto-rejected after 7 days.
 4. RAM drift: 370MB baseline, 512MB limit, 150MB heap alert in place. Monitor Render logs monthly.
 
-**Confidence: 65%** (up from 60% — COMMITTER fix closes the last known pipeline failure; all route tables exist)
+**Confidence: 70%** (up from 65% — COMMITTER fix runtime-validated on Render; full pipeline end-to-end PASS confirmed)
 
 ---
 
@@ -158,7 +158,7 @@ Evidence basis:
 | THIS WEEK | Add DATABASE_URL (real password) to Render | 10 min | Raw postgres queries work |
 | THIS WEEK | Add NOTION_API_KEY to Render | 5 min | Notion integration |
 | THIS WEEK | Add SLACK_BOT_TOKEN to Render | 5 min | Slack notifications |
-| THIS WEEK | Re-run pipeline task (post eebd164 deploy) | 20 min | Confirm COMMITTER push now succeeds |
+| DONE | Pipeline re-run (TASK-935926) | completed | COMMITTER push confirmed (e0bda99 on main) |
 | ONGOING | Monthly Render log review | 5 min | Catch RAM drift / OOM |
 | CALENDAR | Quarterly Gmail OAuth refresh | 5 min | Prevent repeat outage |
 
@@ -172,4 +172,34 @@ All known defects that could be fixed without user credentials have been fixed a
 
 **Phase 3 GO/NO-GO: GO** — All critical APIs pass, all critical database paths pass, lesson lifecycle confirmed, schedules confirmed, dashboards confirmed, COMMITTER defect fixed. Remaining blockers genuinely require user credentials.
 
-_Phase 3 certification: 2026-06-08. Expires 2026-09-08 or on major architectural change._
+---
+
+## Phase 3.1 — COMMITTER Runtime Validation
+
+_All conclusions from runtime evidence only. No static analysis._
+
+**DEPLOYED BUILD:** 16ed85f (includes eebd164 COMMITTER fix)  
+**TIMESTAMP:** 2026-06-08T19:38:23Z  
+**SERVER VERSION:** 16ed85f  
+**UPTIME AT CHECK:** 96s  
+**STATUS:** UP, db=true, ai=true  
+
+**TASK EXECUTED:** TASK-935926  
+**TITLE:** Add server timestamp comment to GET /api/ping response  
+**PIPELINE START:** 2026-06-08T18:53:24Z  
+**PIPELINE END:** 2026-06-08T18:54:14Z  
+**TOTAL DURATION:** 44,820ms  
+
+**COMMITTER RESULT:** success=true, duration_ms=2929, error=none  
+**GITHUB PUSH RESULT:** Commit e0bda99429260dd07283dcb6210e5a10e52b852e pushed to remote  
+**GITHUB BRANCH:** main HEAD = e0bda99 (confirmed via GitHub API)  
+**LESSON LIFECYCLE:** Lesson id=5 created at 2026-06-08T18:54:16Z (INSERT confirmed)  
+
+**FINAL GO/NO-GO: GO**
+
+The provisional GO decision from Phase 3 is now confirmed by runtime evidence. The COMMITTER
+detached-HEAD fix (eebd164) works on the deployed Render environment. The full pipeline
+executes end-to-end: task creation → 6 stages → commit → GitHub push → lesson persistence.
+All conditional qualifications are removed.
+
+_Phase 3.1 runtime certification: 2026-06-08T18:54:14Z. Certification expires 2026-09-08._
