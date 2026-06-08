@@ -321,7 +321,20 @@ app.use((req, res, next) => {
         const t0 = Date.now();
         _log.info('request', `${req.method} ${req.path}`, { request_id: id, ip, conversation_id: req.conversationId });
         res.on('finish', () => {
-            _log.info('response', `${req.method} ${req.path} ${res.statusCode}`, { request_id: id, status: res.statusCode, latency_ms: Date.now() - t0 });
+            const latency_ms = Date.now() - t0;
+            _log.info('response', `${req.method} ${req.path} ${res.statusCode}`, { request_id: id, status: res.statusCode, latency_ms });
+            // Persist to request_logs — fire-and-forget, never blocks response
+            const _taskId = req.body?.taskId || req.params?.taskId || null;
+            sbAdmin.from('request_logs').insert({
+                request_id: id,
+                method: req.method,
+                path: req.path,
+                status_code: res.statusCode,
+                latency_ms,
+                ip,
+                task_id: _taskId,
+                conversation_id: req.conversationId || null,
+            }).then(() => {}).catch(() => {});
         });
     }
     next();
@@ -11550,6 +11563,19 @@ require('./routes/gemini-live').attach(server, {
 
 server.listen(PORT, () => {
     ensureSetup();
+    // Record deployment event — one row per server start, links build SHA to timestamp
+    setImmediate(async () => {
+        try {
+            const _deployId = process.env.RENDER_DEPLOY_ID || null;
+            await sbAdmin.from('deployment_events').insert({
+                deploy_id:     _deployId,
+                commit_sha:    process.env.RENDER_GIT_COMMIT || null,
+                build_version: process.env.npm_package_version || null,
+                status:        'started',
+                metadata:      { node: process.version, port: PORT, pid: process.pid },
+            });
+        } catch { /* non-fatal */ }
+    });
     // Validate required tables exist — surfaces missing tables immediately instead of at first write
     setImmediate(async () => {
         const required = ['memory', 'documents', 'agent_tasks', 'apex_agent_runs', 'apex_agent_stages', 'notifications', 'apex_lessons', 'cron_logs'];
