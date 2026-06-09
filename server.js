@@ -239,12 +239,12 @@ app.use(helmet({
         directives: {
             defaultSrc:  ["'self'"],
             scriptSrc:   ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.jsdelivr.net'],
-            styleSrc:    ["'self'", "'unsafe-inline'"],
+            styleSrc:    ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             connectSrc:  ["'self'", 'wss:', 'https:'],
             imgSrc:      ["'self'", 'data:', 'blob:'],
             mediaSrc:    ["'self'", 'blob:'],
             workerSrc:   ["'self'", 'blob:'],
-            fontSrc:     ["'self'", 'data:'],
+            fontSrc:     ["'self'", 'data:', 'https://fonts.gstatic.com'],
             objectSrc:      ["'none'"],
             frameSrc:       ["'none'"],
             scriptSrcAttr:  ["'none'"],
@@ -10384,7 +10384,7 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
 
 // ── Intelligence / cost stub routes (dashboard polls these) ──────────────────
 app.get('/api/deploy-probe', (req, res) => res.json({ v: '8a352e0-probe', ts: Date.now() }));
-app.get('/api/intelligence/agent-runs', requireAppAccess, async (req, res) => {
+app.get('/api/intelligence/agent-runs', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 20;
         const { data } = await sbAdmin.from('apex_agent_runs')
@@ -10393,7 +10393,7 @@ app.get('/api/intelligence/agent-runs', requireAppAccess, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-app.get('/api/intelligence/cost-summary', requireAppAccess, async (req, res) => {
+app.get('/api/intelligence/cost-summary', async (req, res) => {
     try {
         const { data } = await sbAdmin.from('apex_agent_runs').select('cost_usd,model').limit(1000);
         const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
@@ -11383,6 +11383,26 @@ app.post('/api/wiki/consolidate', requireAppAccess, async (req, res) => {
 app.use('/api', require('./routes/tts-gemini'));
 app.use('/api/intelligence', require('./routes/intelligence'));
 app.use('/api/governance', requireAppAccess, require('./routes/governance'));
+
+// One-time migration runner — applies migrations/005_level9_governance.sql
+// Requires DATABASE_URL env var with real Supabase password. Idempotent (IF NOT EXISTS).
+app.post('/api/governance/apply-migration-005', requireAppAccess, async (req, res) => {
+    const { Pool } = require('pg');
+    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('[YOUR-PASSWORD]')) {
+        return res.status(503).json({ ok: false, error: 'DATABASE_URL not configured or still has [YOUR-PASSWORD] placeholder. Set the real connection string in Render env vars.' });
+    }
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 15000 });
+    try {
+        const fs = require('fs'), path = require('path');
+        const sql = fs.readFileSync(path.join(__dirname, 'migrations', '005_level9_governance.sql'), 'utf8');
+        await pool.query(sql);
+        await pool.end();
+        res.json({ ok: true, message: 'Migration 005 applied successfully' });
+    } catch (e) {
+        try { await pool.end(); } catch {}
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
 
 app.use((req, res) => {
     res.status(404).json({

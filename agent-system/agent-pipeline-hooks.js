@@ -12,8 +12,10 @@ const _gov = (() => {
 })();
 
 const { createClient } = require('@supabase/supabase-js');
+let _sbClient = null;
 function _sb() {
-    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    if (!_sbClient) _sbClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    return _sbClient;
 }
 
 // Per-run governance context — keyed by taskId
@@ -38,7 +40,7 @@ module.exports = {
             trace_id:    pipeline.traceId   || null,
         });
 
-        // Level 9 governance (Domains 1,2,16,37)
+        // Level 9 governance (Domains 1,2,3,16,37)
         if (_gov && pipeline.traceId) {
             try {
                 const ctx = await _gov.onPipelineStart(
@@ -46,7 +48,7 @@ module.exports = {
                     pipeline.description, pipeline.model,
                 );
                 _govCtx.set(pipeline.taskId, { ...ctx, traceId: pipeline.traceId });
-            } catch {}
+            } catch (e) { console.error('[gov] onPipelineStart:', e.message); }
         }
 
         if (!_slack) return;
@@ -77,9 +79,10 @@ module.exports = {
                     agentLogs:  pipeline.agentLogs || [],
                     spec:       pipeline.spec || null,
                     attempts:   pipeline.attempts || 1,
+                    agentTokens: pipeline.agentTokens || {},
                 });
                 _govCtx.delete(pipeline.taskId);
-            } catch {}
+            } catch (e) { console.error('[gov] onPipelineComplete:', e.message); }
         }
 
         if (!_slack) return;
@@ -100,7 +103,7 @@ module.exports = {
             trace_id:    ctx.traceId  || null,
         });
 
-        // Level 9 governance (Domains 2, 7, 16, 21, 22, 23, 33, 40)
+        // Level 9 governance (Domains 2, 3, 7, 11, 16, 17, 20, 21, 22, 23, 26, 33, 36, 40)
         if (_gov && ctx.traceId) {
             try {
                 const govCtx = _govCtx.get(ctx.taskId) || {};
@@ -113,9 +116,10 @@ module.exports = {
                     agentLogs:    ctx.agentLogs || [],
                     costUsd:      ctx.cost      || '0',
                     durationMs:   ctx.duration  || 0,
+                    agentTokens:  ctx.agentTokens || {},
                 });
                 _govCtx.delete(ctx.taskId);
-            } catch {}
+            } catch (e) { console.error('[gov] onPipelineFailed:', e.message); }
         }
 
         if (!_slack) return;

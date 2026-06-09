@@ -973,7 +973,7 @@ async function runAgentTeam(spec, taskId) {
                 }
             } catch {}
         });
-        setImmediate(() => _hooks.onPipelineFailed(new Error(error), { taskId, description: spec.objective, traceId: _traceId, agentLogs, spec, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart }).catch(() => {}));
+        setImmediate(() => _hooks.onPipelineFailed(new Error(error), { taskId, description: spec.objective, traceId: _traceId, agentLogs, spec, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart, agentTokens: { ..._agentTokens } }).catch(() => {}));
         setImmediate(() => { try { _goalTracker.blockGoal(taskId, error); } catch {} });
         return { success: false, commitHash: null, agentLogs, error, complexity, models: _agentModels };
     };
@@ -1120,7 +1120,7 @@ async function runAgentTeam(spec, taskId) {
         }
         console.log(`[Orchestrator] ── ${taskId} COMPLETE — ${committerLog.result.commitHash} ──`);
 
-        setImmediate(() => _hooks.onPipelineComplete({ success: true, commitHash: committerLog.result.commitHash, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart, taskId, traceId: _traceId, agentLogs, spec, complexity, attempts: _successAttempt }).catch(() => {}));
+        setImmediate(() => _hooks.onPipelineComplete({ success: true, commitHash: committerLog.result.commitHash, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart, taskId, traceId: _traceId, agentLogs, spec, complexity, attempts: _successAttempt, agentTokens: { ..._agentTokens } }).catch(() => {}));
         setImmediate(() => _reflector(spec, agentLogs, true).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         setImmediate(() => _reputation.invalidateCache());
@@ -1142,7 +1142,7 @@ async function runAgentTeam(spec, taskId) {
 
     } catch (err) {
         console.error('[Orchestrator] pipeline error:', err.message);
-        setImmediate(() => _hooks.onPipelineFailed(err, { taskId, description: spec.objective, traceId: _traceId, agentLogs, spec, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart }).catch(() => {}));
+        setImmediate(() => _hooks.onPipelineFailed(err, { taskId, description: spec.objective, traceId: _traceId, agentLogs, spec, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart, agentTokens: { ..._agentTokens } }).catch(() => {}));
         _cleanup();
         const cost = _costUsd.toFixed(5);
         memory.logLesson(`Task ${taskId} failed: ${err.message}`);
