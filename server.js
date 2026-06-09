@@ -11612,6 +11612,15 @@ server.listen(PORT, () => {
         }
     });
 
+    // Post-deployment governance probe — runs 60s after startup
+    // Proves all governance capabilities are operational after every deploy.
+    // If score < 80, raises a high-severity incident automatically.
+    setTimeout(() => {
+        require('./lib/governance-probe').runProbe()
+            .then(r => console.log(`[GovProbe] startup probe complete: ${r.score}/100 — ${r.probe_passed ? 'PASSED' : 'FAILED'}`))
+            .catch(e => console.error('[GovProbe] startup probe error:', e.message));
+    }, 60000);
+
     // Mastra agents — deferred 5 minutes after startup to avoid OOM (loads @mastra/core)
     // All mastra routes null-check mastraAgents so they degrade gracefully until ready.
     function _loadMastra() {

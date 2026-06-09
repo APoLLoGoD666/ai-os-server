@@ -515,4 +515,65 @@ router.get('/dashboard', async (req, res) => {
     }
 });
 
+// POST /api/governance/probe — run a full governance certification probe
+// Exercises every DB write path and reads back to verify. Takes ~5-10s.
+router.post('/probe', async (req, res) => {
+    try {
+        const probe  = require('../lib/governance-probe');
+        const result = await probe.runProbe();
+        const status = result.probe_passed ? 200 : 422;
+        res.status(status).json({ ok: result.probe_passed, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// GET /api/governance/probe/latest — most recent probe result
+router.get('/probe/latest', async (req, res) => {
+    try {
+        const probe  = require('../lib/governance-probe');
+        const result = await probe.getLatestResult();
+        const history = await probe.getProbeHistory(10);
+        res.json({ ok: true, latest: result, history });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// GET /api/governance/readiness — runtime readiness scorecard (DB evidence only)
+router.get('/readiness', async (req, res) => {
+    try {
+        const { calculateReadiness } = require('../lib/runtime-readiness');
+        const scorecard = await calculateReadiness();
+        res.json({ ok: true, ...scorecard });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// GET /api/governance/completeness/:taskId — evidence completeness for one execution
+router.get('/completeness/:taskId', async (req, res) => {
+    try {
+        const { scoreExecution } = require('../lib/evidence-completeness');
+        const traceId = req.query.traceId || null;
+        const result  = await scoreExecution(req.params.taskId, traceId);
+        res.json({ ok: true, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// GET /api/governance/completeness — evidence completeness for recent executions
+router.get('/completeness', async (req, res) => {
+    try {
+        const { scoreRecentExecutions } = require('../lib/evidence-completeness');
+        const limit   = Math.min(parseInt(req.query.limit || '10', 10), 50);
+        const results = await scoreRecentExecutions(limit);
+        const degraded = results.filter(r => r.classification !== 'COMPLETE').length;
+        res.json({ ok: true, total: results.length, degraded, results });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 module.exports = router;
