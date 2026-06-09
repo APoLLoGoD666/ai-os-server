@@ -750,7 +750,7 @@ async function _committer(spec, branchName) {
 // ── Agent: REFLECTOR (Reflexion pattern — verbal self-reflection after each run) ──
 // Generates a one-sentence lesson, stored in Obsidian/Lessons.md.
 // Future tasks read this via obsidianContext, making agents smarter over time.
-async function _reflector(spec, agentLogs, success) {
+async function _reflector(spec, agentLogs, success, taskId = null, traceId = null) {
     const SYSTEM = `You are the REFLECTOR for Apex AI OS. After each pipeline run, extract ONE concrete actionable lesson.
 Rules: Be specific — name the pattern, file type, or error. One sentence only. No filler words.
 Examples: "Agents must check for existing routes before adding new ones to avoid 404 on duplicate paths."
@@ -770,7 +770,7 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
         );
         const lesson = res.content[0]?.text?.trim();
         if (lesson && lesson.length > 10) {
-            const { diskOk, supabaseOk } = await memory.logLesson(`[Auto-Reflexion] ${lesson}`);
+            const { diskOk, supabaseOk } = await memory.logLesson(`[Auto-Reflexion] ${lesson}`, { taskId, traceId });
             try { _indexer.indexLesson(`[Auto-Reflexion] ${lesson}`); } catch {}
             console.log(`[Reflector] lesson stored: disk=${diskOk} supabase=${supabaseOk} — ${lesson.slice(0, 80)}`);
         }
@@ -955,7 +955,7 @@ async function runAgentTeam(spec, taskId) {
     const _fail = (error) => {
         _cleanup();
         const cost = _costUsd.toFixed(5);
-        setImmediate(() => _reflector(spec, agentLogs, false).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
+        setImmediate(() => _reflector(spec, agentLogs, false, taskId, _traceId).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs, models: _agentModels, failureReason: error }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: false, complexity, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs }); } catch {} });
@@ -1103,9 +1103,9 @@ async function runAgentTeam(spec, taskId) {
                     const ok = await new Promise(resolve => {
                         https.get(url, r => resolve(r.statusCode < 400)).on('error', () => resolve(false));
                     });
-                    if (!ok) memory.logLesson(`[SmokeTester] health check FAILED for ${taskId}`);
+                    if (!ok) memory.logLesson(`[SmokeTester] health check FAILED for ${taskId}`, { taskId, traceId: _traceId });
                     else console.log(`[SmokeTester] ${taskId} — health OK`);
-                } catch (e) { memory.logLesson(`[SmokeTester] error for ${taskId}: ${e.message}`); }
+                } catch (e) { memory.logLesson(`[SmokeTester] error for ${taskId}: ${e.message}`, { taskId, traceId: _traceId }); }
             });
         }
 
@@ -1121,7 +1121,7 @@ async function runAgentTeam(spec, taskId) {
         console.log(`[Orchestrator] ── ${taskId} COMPLETE — ${committerLog.result.commitHash} ──`);
 
         setImmediate(() => _hooks.onPipelineComplete({ success: true, commitHash: committerLog.result.commitHash, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart, taskId, traceId: _traceId, agentLogs, spec, complexity, attempts: _successAttempt, agentTokens: { ..._agentTokens } }).catch(() => {}));
-        setImmediate(() => _reflector(spec, agentLogs, true).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
+        setImmediate(() => _reflector(spec, agentLogs, true, taskId, _traceId).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         setImmediate(() => _reputation.invalidateCache());
         setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: true, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs, models: _agentModels }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
@@ -1145,8 +1145,8 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _hooks.onPipelineFailed(err, { taskId, description: spec.objective, traceId: _traceId, agentLogs, spec, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart, agentTokens: { ..._agentTokens } }).catch(() => {}));
         _cleanup();
         const cost = _costUsd.toFixed(5);
-        memory.logLesson(`Task ${taskId} failed: ${err.message}`);
-        setImmediate(() => _reflector(spec, agentLogs, false).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
+        memory.logLesson(`Task ${taskId} failed: ${err.message}`, { taskId, traceId: _traceId });
+        setImmediate(() => _reflector(spec, agentLogs, false, taskId, _traceId).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: _startTime ? Date.now() - _startTime : null, failureReason: err.message }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: false, complexity, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs }); } catch {} });

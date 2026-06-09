@@ -67,7 +67,7 @@ module.exports = {
         }
     },
 
-    async logLesson(lesson) {
+    async logLesson(lesson, { taskId, traceId } = {}) {
         const now  = new Date();
         const date = now.toISOString().split('T')[0];
         const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -80,7 +80,10 @@ module.exports = {
             const sb = _getSb();
             if (sb) {
                 try {
-                    const { error } = await sb.from('apex_lessons').insert({ lesson, created_at: now.toISOString() });
+                    const row = { lesson, created_at: now.toISOString() };
+                    if (taskId)  row.task_id  = taskId;
+                    if (traceId) row.trace_id = traceId;
+                    const { error } = await sb.from('apex_lessons').insert(row);
                     if (error) {
                         if (error.message.includes('does not exist')) _sbLessonsMissing = true;
                         console.error('[ObsidianMemory] apex_lessons INSERT FAILED:', error.message);
