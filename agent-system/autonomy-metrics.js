@@ -3,7 +3,8 @@
 // Composite autonomy score (0–10) across 6 weighted dimensions.
 // Read-only: no writes to DB, no file mutations.
 
-const { getSuccessRate, getFailureEpisodes, episodeCount } = require('./episodic-memory');
+const { getFailureEpisodes, episodeCount } = require('./episodic-memory');
+const _epMem = require('../lib/memory/episodic-memory-pg');
 const { analyzeFailures, buildPerformanceSummary }         = require('./reflection-engine');
 const { getStats: goalStats }                              = require('./goal-tracker');
 const { createClient }                                     = require('@supabase/supabase-js');
@@ -43,8 +44,8 @@ async function retryRate(sampleSize = 100) {
             }
         } catch {}
     }
-    // Fallback: episodic memory
-    const sr = getSuccessRate(sampleSize);
+    // Fallback: Postgres episodic memory (orchestrator runs only)
+    const sr = await _epMem.getSuccessRate(sampleSize).catch(() => null);
     return sr !== null ? +(1 - sr).toFixed(3) : null;
 }
 
@@ -77,8 +78,8 @@ async function recoveryRate(sampleSize = 40) {
 }
 
 // Composite confidence: recent success rate (50%) + episode volume (20%) + goal completion (30%)
-function executionConfidence() {
-    const sr         = getSuccessRate(20) ?? 0.5;
+async function executionConfidence() {
+    const sr         = (await _epMem.getSuccessRate(20).catch(() => null)) ?? 0.5;
     const epVol      = Math.min(1.0, episodeCount() / 50);
     const gStats     = (() => { try { return goalStats(); } catch { return null; } })();
     const goalScore  = gStats?.completionRate ?? 0.5;
@@ -94,10 +95,10 @@ async function computeAutonomyScore() {
         recoveryRate(30).catch(() => null),
     ]);
 
-    const sr        = getSuccessRate(50);
+    const sr        = await _epMem.getSuccessRate(50).catch(() => null);
     const gStats    = (() => { try { return goalStats(); } catch { return null; } })();
     const compRate  = gStats?.completionRate ?? null;
-    const conf      = executionConfidence();
+    const conf      = await executionConfidence();
     const epRich    = Math.min(1.0, episodeCount() / 100);
 
     const dims = {
@@ -152,7 +153,7 @@ async function getFullMetrics() {
         completionRate:      completionRate(),
         retryRate:           retryR,
         recoveryRate:        recoveryR,
-        executionConfidence: executionConfidence(),
+        executionConfidence: await executionConfidence(),
         goalStats:           gStats,
         failureAnalysis:     failAnalysis,
         episodeCount:        episodeCount(),

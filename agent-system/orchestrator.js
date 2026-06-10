@@ -16,6 +16,12 @@ const _execVerifier = require('./execution-verifier');
 const _goalTracker  = require('./goal-tracker');
 const _adaptEngine  = require('./adaptation-engine');
 
+// ── Runtime layer — Memory Gateway + Task Router ──────────────────────────────
+// NOTE: ModelInterface (selector/output-capture/feedback) is used by executive entities
+// (lib/executive/entity.js), not by the pipeline stages which use _claude() directly.
+const _gateway    = require('../lib/memory/gateway');
+const _taskRouter = require('../runtime/task-router');
+
 const ROOT = path.join(__dirname, '..');
 const MAX_FILE_BYTES = 20 * 1024;
 
@@ -92,6 +98,16 @@ let _startTime    = 0;     // pipeline wall-clock start (for total duration in a
 let _agentTokens  = {};
 let _costUsd      = 0;     // running dollar cost (model-aware)
 let obsidianContext = '';
+let _intelContextPack   = null; // intelligence contextPack for per-agent context injection
+let _gatewayPkg         = null; // Context Package from Memory Gateway (model-agnostic)
+let _behaviorProfile    = null; // behavior-modification-engine output per task
+let _cognitivePolicy    = null; // cognitive-policy-engine output per task
+let _executionStrategy  = null; // execution-strategy-engine output per task
+let _planningStrategy   = null; // planning-strategy-engine output per task (module-level so runtime ctrl can read it)
+let _autonomyResult     = null; // confidence-aware-autonomy-engine output per task
+let _influencePack      = null; // execution-influence-engine output per task
+let _runtimeControls    = null; // all runtime controllers output — built after cognitive assembly
+let _runtimeCtrlError   = null; // Phase 6: stores error if buildControls throws, checked for fail-closed tiers
 
 // ── Complexity classifier — rule-based, no API call needed ───────────────────
 function _classifyComplexity(spec) {
@@ -468,10 +484,28 @@ Rules:
     const allowed = new Set(spec.filesToModify || []);
     const filesToWrite = (parsed.filesModified || []).filter(f => allowed.has(f));
 
+    // Prepend developer-role intelligence context to architect summary
+    let _devArchSummary = architectLog.result.summary;
+    if (_intelContextPack) {
+        try {
+            const _cc = require('../lib/intelligence/context-composer');
+            const _devCtx = _cc.compose(_intelContextPack, 'DEVELOPER');
+            if (_devCtx?.context) _devArchSummary = _devCtx.context + '\n\n---\nARCHITECT ANALYSIS:\n' + _devArchSummary;
+        } catch {}
+    }
+
+    // Planning directive — injects depth, contingencies, rollback requirements into DEVELOPER
+    if (_runtimeControls?.planning) {
+        const _planBlock    = _runtimeControls.planning.toPromptBlock?.() || '';
+        const _provenBlock  = _runtimeControls.planning.toProvenProceduresBlock?.(_influencePack) || '';
+        const _planContext  = [_planBlock, _provenBlock].filter(Boolean).join('\n\n');
+        if (_planContext) _devArchSummary = _planContext + '\n\n---\nARCHITECT ANALYSIS:\n' + _devArchSummary;
+    }
+
     const applied = [];
     for (const filename of filesToWrite) {
         try {
-            const r = await _developerWriteFile(spec, filename, architectLog.result.summary, failureContext);
+            const r = await _developerWriteFile(spec, filename, _devArchSummary, failureContext);
             applied.push(r);
             console.log(`[DEVELOPER] wrote ${filename} (${r.status})`);
         } catch (e) {
@@ -504,12 +538,17 @@ Anti-patterns (flag as issues): emoji as navigation icons, hover-only interactio
         if (dec) priorDecisions = `\n\nPRIOR DECISIONS (flag if this change contradicts these):\n${dec.slice(-1200)}`;
     } catch {}
 
+    // Cognitive reviewer injections: behavior profile requirements + reasoning verification depth
+    const _reviewerBehavior  = _runtimeControls?.behavior?.toReviewerInjection?.() || '';
+    const _reviewerReasoning = _runtimeControls?.reasoning?.toReviewerBlock?.()    || '';
+    const _cogReviewerCtx    = [_reviewerBehavior, _reviewerReasoning].filter(Boolean).join('\n');
+
     const SYSTEM = `You are the REVIEWER and SECURITY AUDITOR for Apex AI OS.
 Review for: spec correctness, missing error handling, proper HTTP status codes.
 Security (OWASP Top 10): injection vectors, broken auth, sensitive data exposure, XSS, missing input validation, secrets hardcoded in code, unvalidated external input.
 STRIDE threat model: Spoofing (auth bypass/impersonation), Tampering (unauthorised data mutation), Repudiation (missing audit trail), Information Disclosure (data leaks, verbose errors), Denial of Service (unbounded loops, missing rate limits), Elevation of Privilege (missing authz checks).
 Also check: no duplicate route paths, try/catch on async DB calls, no raw secrets in code.
-Protected (report as CRITICAL if touched): iOS HTT pipeline, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.${uiAudit}${priorDecisions}
+Protected (report as CRITICAL if touched): iOS HTT pipeline, /api/transcribe, /api/tts, requireAppAccess, database schema, .env.${uiAudit}${priorDecisions}${_cogReviewerCtx ? '\n' + _cogReviewerCtx : ''}
 Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}`;
 
     const fileResults = await Promise.all(filesModified.map(async (entry) => {
@@ -661,7 +700,14 @@ async function _committer(spec, branchName) {
     let finalHash = afterHash;
 
     const _ghToken = process.env.GITHUB_TOKEN || '';
-    const repoUrl = `https://oauth2:${_ghToken}@github.com/APoLLoGoD666/ai-os-server.git`;
+    const _repoBase = 'https://github.com/APoLLoGoD666/ai-os-server.git';
+    const _gitEnv = {
+        ...process.env,
+        GIT_CONFIG_COUNT: '1',
+        GIT_CONFIG_KEY_0: 'http.https://github.com/.extraheader',
+        GIT_CONFIG_VALUE_0: `Authorization: Basic ${Buffer.from(`oauth2:${_ghToken}`).toString('base64')}`,
+        GIT_TERMINAL_PROMPT: '0',
+    };
     const _mask = (s) => {
         let out = String(s || '');
         if (_ghToken) out = out.replace(new RegExp(_ghToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[REDACTED]');
@@ -679,7 +725,7 @@ async function _committer(spec, branchName) {
     // Pull first — sync ROOT with remote before merging so the merge commit lands on top of
     // the latest remote HEAD. Doing this after merge caused git to rebase away the merge commit
     // when the remote had diverged, producing "Everything up-to-date" on push.
-    const pull = spawnSync('git', ['pull', '--rebase', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+    const pull = spawnSync('git', ['pull', '--rebase', _repoBase, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000, env: _gitEnv });
     if (pull.status !== 0) {
         console.warn('[COMMITTER] pre-merge rebase failed — aborting:', _mask(pull.stderr?.slice(0, 200)));
         spawnSync('git', ['rebase', '--abort'], { cwd: ROOT, encoding: 'utf8' });
@@ -700,7 +746,7 @@ async function _committer(spec, branchName) {
         console.log(`[COMMITTER] merged ${branchName} → main (${finalHash})`);
     }
 
-    const push = spawnSync('git', ['push', repoUrl, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+    const push = spawnSync('git', ['push', _repoBase, 'main'], { cwd: ROOT, encoding: 'utf8', timeout: 30000, env: _gitEnv });
     console.log(`[COMMITTER] push status:${push.status} stdout:${_mask(push.stdout?.trim().slice(0,100))} stderr:${_mask(push.stderr?.trim().slice(0,100))}`);
 
     if (push.status !== 0) {
@@ -770,9 +816,24 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
         );
         const lesson = res.content[0]?.text?.trim();
         if (lesson && lesson.length > 10) {
-            const { diskOk, supabaseOk } = await memory.logLesson(`[Auto-Reflexion] ${lesson}`, { taskId, traceId });
+            // Single authoritative write path: gateway → apex_lessons
+            _gateway.storeMemory({ layer: 10, source: 'reflector', taskId, content: `[Auto-Reflexion] ${lesson}`, tags: ['auto_reflexion', success ? 'success' : 'failure'], importance: 6, requestingEntity: 'orchestrator' }).catch(() => {});
             try { _indexer.indexLesson(`[Auto-Reflexion] ${lesson}`); } catch {}
-            console.log(`[Reflector] lesson stored: disk=${diskOk} supabase=${supabaseOk} — ${lesson.slice(0, 80)}`);
+            console.log(`[Reflector] lesson stored via gateway — ${lesson.slice(0, 80)}`);
+            // Register lesson in reflexion tracker for closed-loop behavior verification
+            setImmediate(async () => {
+                try {
+                    const rfx = require('../lib/memory/reflexion-tracker');
+                    await rfx.createReflexion(lesson, traceId, taskId);
+                } catch (_) {}
+            });
+            // Submit lesson to knowledge validation pipeline — becomes semantic_memory when confirmed
+            setImmediate(async () => {
+                try {
+                    const kv = require('../lib/intelligence/knowledge-validator');
+                    await kv.submitLesson(lesson, { traceId, taskId, sourceType: 'auto_reflexion' });
+                } catch (_) {}
+            });
         }
     } catch (e) {
         console.warn('[Reflector] skipped (non-fatal):', e.message);
@@ -827,6 +888,57 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity) {
         const { error: se } = await _sb.from('apex_agent_stages').insert(stageRows);
         if (se) console.error('[Audit] stage INSERT FAILED:', se.message);
         else console.log('[Audit] stage rows committed:', stageRows.length);
+    }
+
+    // Store durable episodic memory record (non-blocking, never throws)
+    setImmediate(async () => {
+        try {
+            const epMem = require('../lib/memory/episodic-memory-pg');
+            await epMem.storeEpisode({
+                objective:      (spec.objective || '').slice(0, 500),
+                complexity:     complexity || 'moderate',
+                success,
+                costUsd:        parseFloat(cost) || 0,
+                durationMs,
+                failedStage:    success ? null : (agentLogs.slice().reverse().find(l => l.result?.error)?.role || null),
+                failureReason:  success ? null : agentLogs.slice().reverse().find(l => l.result?.error)?.result?.error?.toString().slice(0, 300),
+                modelsUsed:     { haiku: _agentTokens?.haiku || 0, sonnet: _agentTokens?.sonnet || 0 },
+                traceId, taskId,
+            }, { source: 'orchestrator', evidence: { taskId, traceId } });
+        } catch (_) {}
+    });
+
+    // Record decision outcomes for all decisions made during this task
+    setImmediate(async () => {
+        try {
+            const di = require('../lib/intelligence/decision-intelligence');
+            await di.recordTaskOutcomes(taskId, success, parseFloat(cost) || 0);
+        } catch (_) {}
+    });
+
+    // Record meta-reasoning observation (cognitive quality tracking)
+    setImmediate(async () => {
+        try {
+            const mr = require('../lib/cognitive/meta-reasoning-engine');
+            await mr.record(taskId, traceId, {
+                success,
+                cost_usd:     parseFloat(cost) || 0,
+                duration_ms:  durationMs,
+                failed_stage: success ? null : (agentLogs.slice().reverse().find(l => l.result?.error)?.role || null),
+                agent_logs:   agentLogs,
+                retries:      agentLogs.filter(l => l.attempt > 1).length,
+            }, _cognitivePolicy, _executionStrategy);
+        } catch (_) {}
+    });
+
+    // Evaluate retrieval quality for this task
+    if (_intelContextPack) {
+        setImmediate(async () => {
+            try {
+                const re = require('../lib/cognitive/retrieval-evaluation-engine');
+                await re.evaluate(taskId, traceId, _intelContextPack, success);
+            } catch (_) {}
+        });
     }
 }
 
@@ -898,16 +1010,192 @@ async function runAgentTeam(spec, taskId) {
         obsidianContext = '';
     }
 
-    // Semantic memory context — similar experiences + relevant lessons via embedding search
-    // Falls back to keyword scoring when embeddings not yet available (e.g. fresh deploy)
+    // Phase 5: Pre-retrieval policy determines limits before memory assembly
+    let _preRetrievalLimits = null;
     try {
-        const _retriever = require('./memory-retriever');
-        const memCtx = await _retriever.retrieve(spec.objective, {
-            episodes: true, lessons: true, episodeLimit: 3, lessonLimit: 5,
+        const _retPol = require('../lib/cognitive/retrieval-policy-engine');
+        const _retPolicy = await _retPol.determine(spec, { taskId, traceId: _traceId, riskLevel: spec._planRisk || 0.3 });
+        _preRetrievalLimits = _retPolicy?.limits || null;
+    } catch (e) { console.warn('[RetrievalPolicy] pre-determination failed:', e.message); }
+
+    // Intelligence layer — full contextPack from all 8 memory sources (replaces 500-char legacy retriever)
+    _intelContextPack = null;
+    try {
+        const _planEngine = require('../lib/intelligence/planning-influence-engine');
+        const _assembly   = await _planEngine.assembleForTask(spec, { traceId: _traceId, taskId, retrievalLimits: _preRetrievalLimits });
+        _intelContextPack = _assembly?.contextPack || null;
+        const _memFormatted = _planEngine.formatForPrompt(_assembly, 'ARCHITECT');
+        if (_memFormatted) obsidianContext = (obsidianContext ? obsidianContext + '\n\n' : '') + _memFormatted;
+    } catch (e) {
+        console.warn('[Orchestrator] intelligence assembly failed (non-fatal):', e.message);
+        // Fallback to legacy retriever
+        try {
+            const _retriever = require('./memory-retriever');
+            const memCtx = await _retriever.retrieve(spec.objective, {
+                episodes: true, lessons: true, episodeLimit: 3, lessonLimit: 5,
+            });
+            const formatted = _retriever.formatForContext(memCtx, 500);
+            if (formatted) obsidianContext = (obsidianContext ? obsidianContext + '\n\n' : '') + formatted;
+        } catch {}
+    }
+
+    // Memory Gateway context assembly — model-agnostic Context Package
+    _gatewayPkg = null;
+    try {
+        const routeDecision = _taskRouter.routeAndLog({ objective: spec.objective, filesToModify: spec.filesToModify, taskId });
+
+        // ── Task Router authority — execution branching by route type ────────────
+        if (routeDecision.route === 'founder_escalation') {
+            console.warn(`[TaskRouter] FOUNDER_ESCALATION — "${(spec.objective || '').slice(0, 80)}" blocked`);
+            _cleanup();
+            return { success: false, commitHash: null, held: true,
+                     holdReason: `founder_escalation: ${routeDecision.reasoning || 'matched escalation pattern'}`,
+                     agentLogs: [], cost: '0.00000', complexity: routeDecision.complexity, models: _agentModels };
+        }
+        if (routeDecision.route === 'executive_runtime' && routeDecision.entity) {
+            try {
+                const { consultExecutive } = require('../lib/cognitive/runtime');
+                const _execResult = await consultExecutive(routeDecision.entity, spec.objective,
+                    { taskId, complexity: routeDecision.complexity });
+                const _reply = [_execResult?.decision, _execResult?.rationale].filter(Boolean).join('\n\n');
+                setImmediate(() => _auditLog(taskId, spec, true, [], '0.00000', routeDecision.complexity).catch(() => {}));
+                _cleanup();
+                return { success: true, commitHash: null, executiveResponse: true, entity: routeDecision.entity,
+                         reply: _reply, agentLogs: [], cost: '0.00000', complexity: routeDecision.complexity, models: _agentModels };
+            } catch (_execErr) {
+                console.warn(`[TaskRouter] executive_runtime failed, falling through to pipeline: ${_execErr.message}`);
+            }
+        }
+        if (routeDecision.route === 'research_system') {
+            spec._researchOnly = true;
+        }
+        // agent_pipeline is the standard execution path — falls through to pipeline stages
+        // ── End route authority ──────────────────────────────────────────────────
+
+        _gatewayPkg = await _gateway.getContext({
+            taskId,
+            description:     spec.objective,
+            category:        spec.category || routeDecision.complexity,
+            complexity:      routeDecision.complexity,
+            modelFormat:     'claude',
+            tokenBudget:     8000,
+            requestingEntity: 'orchestrator',
         });
-        const formatted = _retriever.formatForContext(memCtx, 500);
-        if (formatted) obsidianContext = (obsidianContext ? obsidianContext + '\n\n' : '') + formatted;
-    } catch {}
+        // Append gateway lessons + founder constraints to obsidianContext (non-destructive)
+        const _gwLessons = (_gatewayPkg.lessons || []).slice(0, 5)
+            .map(l => `- ${l.content}`).join('\n');
+        if (_gwLessons) {
+            obsidianContext = (obsidianContext ? obsidianContext + '\n\n' : '')
+                + `## Gateway Lessons\n${_gwLessons}`;
+        }
+        const _gwConstraints = _gatewayPkg.constraints;
+        if (_gwConstraints?.cost_cap_usd) {
+            console.log(`[Gateway] context assembled — ${(_gatewayPkg.lessons || []).length} lessons, cap $${_gwConstraints.cost_cap_usd}`);
+        }
+    } catch (e) {
+        console.warn('[Gateway] context assembly failed (non-fatal):', e.message);
+    }
+
+    // Cognitive layer — behavior modification, cognitive policy, execution strategy, autonomy, influence
+    _behaviorProfile   = null;
+    _cognitivePolicy   = null;
+    _executionStrategy = null;
+    _planningStrategy  = null;
+    _autonomyResult    = null;
+    _influencePack     = null;
+    _runtimeControls   = null;
+    if (_intelContextPack) {
+        try {
+            const _cog = require('../lib/cognitive');
+
+            // Phase 3: behavior modification from context
+            _behaviorProfile = await _cog.behaviorMod.buildProfile(
+                _intelContextPack, spec, { taskId, traceId: _traceId, riskScore: spec._planRisk || 0.3 }
+            );
+
+            // Phase 8: confidence-aware autonomy
+            _autonomyResult = await _cog.autonomy.evaluate(
+                _intelContextPack, spec, { taskId, traceId: _traceId }
+            );
+
+            // Phase 4: cognitive policy
+            _cognitivePolicy = await _cog.cognitivePolicy.determine(
+                spec, _behaviorProfile, _intelContextPack,
+                { taskId, traceId: _traceId, riskScore: spec._planRisk || 0.3, complexity }
+            );
+
+            // Phase 6: planning strategy (stored at module level so runtime controllers can consume it)
+            _planningStrategy = _cog.planningStrategy.generate(
+                _cognitivePolicy, _behaviorProfile, _intelContextPack, spec
+            );
+
+            // Phase 7: execution strategy
+            _executionStrategy = _cog.executionStrategy.generate(
+                _cognitivePolicy, _behaviorProfile, _planningStrategy, _intelContextPack,
+                { taskId, traceId: _traceId }
+            );
+
+            // Phase 9: build influence pack
+            _influencePack = _cog.influence.buildInfluencePack(
+                _behaviorProfile, _cognitivePolicy, _executionStrategy, _autonomyResult, _intelContextPack
+            );
+
+            // Inject cognitive directives into ARCHITECT context
+            const _cogDirective = [
+                _cog.cognitivePolicy.formatAsPromptDirective(_cognitivePolicy),
+                _cog.behaviorMod.formatAsContext(_behaviorProfile),
+                _cog.executionStrategy.formatAsPromptDirective(_executionStrategy),
+                _influencePack?.summary,
+            ].filter(Boolean).join('\n\n');
+
+            if (_cogDirective) {
+                obsidianContext = (obsidianContext ? obsidianContext + '\n\n' : '') + _cogDirective;
+            }
+
+            // Model override from influence pack
+            if (_influencePack?.model_override?.escalate) {
+                _agentModels.architect = M.SONNET;
+                console.log(`[Cognitive] Model escalated to SONNET — reason: ${_influencePack.model_override.reason}`);
+            }
+
+            console.log(`[Cognitive] policy=${_cognitivePolicy.reasoning_mode}/${_cognitivePolicy.planning_mode} autonomy=${_autonomyResult.autonomy_label} (${_autonomyResult.autonomy_level})`);
+        } catch (e) {
+            console.warn('[Cognitive] layer failed (non-fatal):', e.message);
+        }
+    }
+
+    // Runtime enforcement layer — builds all runtime controls from cognitive outputs
+    _runtimeControls = null;
+    _runtimeCtrlError = null;
+    try {
+        const RC = require('../lib/cognitive/runtime');
+        _runtimeControls = await RC.buildControls({
+            cognitivePolicy:  _cognitivePolicy,
+            behaviorProfile:  _behaviorProfile,
+            executionStrategy: _executionStrategy,
+            planningStrategy: _planningStrategy,
+            autonomyResult:   _autonomyResult,
+            spec,
+            complexity,
+            defaultModels: _agentModels,
+        });
+
+        // Apply adaptive model routing
+        if (_runtimeControls.models) {
+            _agentModels = { ..._agentModels, ..._runtimeControls.models };
+        }
+
+        // Inject reasoning and execution constraint blocks into ARCHITECT context
+        const _reasoningBlock   = _runtimeControls.reasoning?.toArchitectBlock?.() || '';
+        const _execConstraints  = _runtimeControls.execution?.toConstraintBlock?.() || '';
+        if (_reasoningBlock || _execConstraints) {
+            const _enfBlocks = [_reasoningBlock, _execConstraints].filter(Boolean).join('\n\n');
+            obsidianContext = (obsidianContext ? obsidianContext + '\n\n' : '') + _enfBlocks;
+        }
+    } catch (e) {
+        _runtimeCtrlError = e.message;
+        console.warn('[RuntimeCtrl] build failed (non-fatal):', e.message);
+    }
 
     // ── Git worktree isolation (Superpowers pattern) ──────────────────────────
     const ts          = Date.now().toString(36); // base-36 timestamp suffix prevents branch collision on re-run
@@ -985,9 +1273,54 @@ async function runAgentTeam(spec, taskId) {
         console.log(`[Orchestrator] ── Starting ${taskId} ──`);
         console.log(`[Orchestrator] Budget cap: $${PIPELINE_BUDGET_USD}`);
 
+        // ── Cognitive enforcement pre-flight ──────────────────────────────────────
+        // Phase 6: Fail-closed for critical/complex tasks when runtime controls unavailable
+        if (_runtimeCtrlError && (complexity === 'critical' || complexity === 'complex')) {
+            return _fail(`[FAIL_CLOSED] Runtime controls unavailable for ${complexity} task: ${_runtimeCtrlError}`);
+        }
+
+        // Autonomy gate: LEVEL_0 blocks execution entirely
+        if (_runtimeControls?.blockExecution) {
+            return _fail(`[AUTONOMY_GATE] ${_runtimeControls.blockReason || 'execution blocked by runtime controls'}`);
+        }
+
+        // Digital twin gate: do_not_deploy blocks execution
+        if (_runtimeControls?.twin && !_runtimeControls.twin.proceed) {
+            return _fail(`[TWIN_GATE] ${_runtimeControls.twin.blockReason || 'digital twin simulation recommends do_not_deploy'}`);
+        }
+
+        // Early hold gate — blocks model execution before any tokens are spent
+        if (_runtimeControls?.deploymentPolicy === 'hold') {
+            _cleanup();
+            console.warn('[DeployGate] HELD (pre-model) — deployment_policy=hold, blocking before model calls');
+            setImmediate(() => _reflector(spec, agentLogs, true, taskId, _traceId).catch(() => {}));
+            setImmediate(() => _auditLog(taskId, spec, true, agentLogs, '0.00000', complexity).catch(() => {}));
+            return { success: true, commitHash: null, held: true, holdReason: 'deployment_policy=hold — blocked before model calls', agentLogs, cost: '0.00000', complexity, models: _agentModels };
+        }
+
+        // Behavior profile gate: blocking constraints prevent execution
+        const _behaviorGate = _runtimeControls?.behaviorGate;
+        if (_behaviorGate?.blocked) {
+            const topConstraint = _behaviorGate.constraints[0];
+            return _fail(`[BEHAVIOR_GATE] ${topConstraint?.reason || 'behavior profile blocking constraint'} (source: ${topConstraint?.source || 'behavior_profile'})`);
+        }
+
+        if (_influencePack?.router?.active) {
+            console.log(`[Cognitive] Router influence active: ${_influencePack.router.directives?.map(d => d.type).join(', ') || 'routing adjusted'}`);
+        }
+
         // Step 0 — RESEARCHER (optional, pre-ARCHITECT web context fetch)
         const researcherLog = await _researcher(spec);
         if (researcherLog) agentLogs.push(researcherLog);
+
+        // research_system route: return after RESEARCHER, skip full pipeline
+        if (spec._researchOnly) {
+            const _researchReply = researcherLog?.result?.summary || researcherLog?.result?.content || 'Research complete.';
+            setImmediate(() => _auditLog(taskId, spec, true, agentLogs, '0.00000', routeDecision.complexity).catch(() => {}));
+            _cleanup();
+            return { success: true, commitHash: null, researchResponse: true,
+                     reply: _researchReply, agentLogs, cost: '0.00000', complexity: routeDecision.complexity, models: _agentModels };
+        }
 
         // Step 1 — ARCHITECT
         const architectLog = await _architect(spec);
@@ -995,25 +1328,29 @@ async function runAgentTeam(spec, taskId) {
         _checkBudget();
         console.log(`[Orchestrator] ARCHITECT (${architectLog.duration}ms) — ${architectLog.result.testCases?.length || 0} test cases`);
 
-        const MAX_ATTEMPTS = 3;
+        // Runtime-controlled retry budget (replaces hardcoded 3)
+        const MAX_ATTEMPTS = _runtimeControls?.maxAttempts || 3;
         let lastFailure = null;
         let developerLog, reviewerLog, validatorLog, testerLog;
         const _escalations   = []; // tracks model escalation events for visibility
         let   _successAttempt = 1;
 
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            console.log(`[Orchestrator] ── Attempt ${attempt}/${MAX_ATTEMPTS} ──`);
+            console.log(`[Orchestrator] ── Attempt ${attempt}/${MAX_ATTEMPTS} (policy=${_runtimeControls?.execution?.escalationPolicy || 'standard'}) ──`);
 
-            // Escalate developer model on retry: Haiku → Sonnet → Opus
-            // This avoids burning expensive tokens on the first attempt while ensuring retries have more power
-            if (attempt === 2 && _agentModels.developer === M.HAIKU) {
-                _escalations.push({ attempt, from: M.HAIKU, to: M.SONNET, reason: 'retry' });
-                _agentModels.developer = M.SONNET;
-                console.log(`[Orchestrator] retry escalation: DEVELOPER → ${M.SONNET}`);
-            } else if (attempt === 3 && _agentModels.developer !== M.OPUS) {
-                _escalations.push({ attempt, from: _agentModels.developer, to: M.OPUS, reason: 'retry' });
-                _agentModels.developer = M.OPUS;
-                console.log(`[Orchestrator] retry escalation: DEVELOPER → ${M.OPUS}`);
+            // Runtime-controlled escalation: uses execution controller's modelForAttempt()
+            if (attempt > 1) {
+                const baseModel   = attempt === 2 ? (Object.keys(M).find(k => M[k] === _agentModels.developer) ? _agentModels.developer : M.HAIKU) : _agentModels.developer;
+                const targetModel = _runtimeControls?.execution?.modelForAttempt
+                    ? _runtimeControls.execution.modelForAttempt(attempt, baseModel, M)
+                    : (attempt === 2 ? (_agentModels.developer === M.HAIKU ? M.SONNET : _agentModels.developer)
+                                     : (_agentModels.developer !== M.OPUS ? M.OPUS : M.OPUS));
+
+                if (targetModel !== _agentModels.developer) {
+                    _escalations.push({ attempt, from: _agentModels.developer, to: targetModel, reason: 'runtime_retry' });
+                    _agentModels.developer = targetModel;
+                    console.log(`[Orchestrator] retry escalation: DEVELOPER → ${targetModel.split('-')[1]} (${_runtimeControls?.execution?.escalationPolicy || 'standard'} policy)`);
+                }
             }
 
             _checkBudget(); // abort before expensive developer call if budget already blown
@@ -1082,6 +1419,55 @@ async function runAgentTeam(spec, taskId) {
             break;
         }
 
+        // Deployment policy gate — enforced from execution/autonomy/twin runtime controls
+        const _deployPolicy = _runtimeControls?.deploymentPolicy || (complexity === 'critical' ? 'staged' : 'auto');
+        if (_deployPolicy === 'hold') {
+            _cleanup();
+            console.warn(`[DeployGate] HELD — runtime controls require manual approval before deployment`);
+            const cost = _costUsd.toFixed(5);
+            setImmediate(() => _reflector(spec, agentLogs, true, taskId, _traceId).catch(() => {}));
+            setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity).catch(() => {}));
+            return { success: true, commitHash: null, held: true, holdReason: `deployment_policy=hold (${_runtimeControls?.autonomy?.label || 'runtime gate'})`, agentLogs, cost, complexity, models: _agentModels };
+        }
+        if (_deployPolicy === 'staged') {
+            console.log(`[DeployGate] STAGED — committing locally but flagging for review (autonomy=${_runtimeControls?.autonomy?.level})`);
+            spec._stagedDeployment = true; // flag so hooks can handle downstream
+        }
+
+        // Executive CTO gate — staged/critical deployments consult CTO before commit
+        if (_deployPolicy === 'staged' || complexity === 'critical') {
+            try {
+                const { consultExecutive } = require('../lib/cognitive/runtime');
+                const changedFiles = (developerLog?.result?.applied || []).map(e => e.file || e);
+                const _ctoDecision = await consultExecutive('cto',
+                    `Approve deployment of "${spec.objective.slice(0, 120)}" (${complexity})?`,
+                    { changedFiles, complexity, testsPassed: testerLog?.result?.passed, reviewPassed: reviewerLog?.result?.passed }
+                );
+                if (_ctoDecision.escalate) {
+                    console.warn('[CTO_GATE] escalated to Founder:', _ctoDecision.rationale);
+                    return _fail(`[CTO_GATE] escalated to Founder: ${_ctoDecision.rationale || 'requires Founder approval'}`);
+                }
+                const _ctoChoice = (_ctoDecision.decision || _ctoDecision.choice || '').toLowerCase();
+                if (_ctoChoice.includes('reject') || _ctoChoice.includes('hold') || _ctoChoice.includes('deny')) {
+                    return _fail(`[CTO_GATE] CTO held deployment: ${_ctoDecision.rationale || _ctoChoice}`);
+                }
+                console.log(`[CTO_GATE] approved (confidence=${_ctoDecision.confidence})`);
+            } catch (e) {
+                console.warn('[CTO_GATE] consultation failed (non-blocking):', e.message);
+            }
+        }
+
+        // Executive COO alert — repeated failures escalate to COO
+        if (_successAttempt > 2) {
+            try {
+                const { consultExecutive } = require('../lib/cognitive/runtime');
+                await consultExecutive('coo',
+                    `Task "${spec.objective.slice(0, 100)}" succeeded on attempt ${_successAttempt}/${MAX_ATTEMPTS} — review retry pattern`,
+                    { attempts: _successAttempt, maxAttempts: MAX_ATTEMPTS, complexity, taskId }
+                );
+            } catch {}
+        }
+
         // Step 5 — COMMITTER (commit in worktree → merge to main → push)
         const committerLog = await _committer(spec, usingWorktree ? branchName : null);
         agentLogs.push(committerLog);
@@ -1123,10 +1509,38 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _hooks.onPipelineComplete({ success: true, commitHash: committerLog.result.commitHash, cost: _costUsd.toFixed(5), duration: Date.now() - _pipelineStart, taskId, traceId: _traceId, agentLogs, spec, complexity, attempts: _successAttempt, agentTokens: { ..._agentTokens } }).catch(() => {}));
         setImmediate(() => _reflector(spec, agentLogs, true, taskId, _traceId).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
+        // Cognitive feedback loop — closes the loop: outcomes → evolution → future behavior
+        if (_runtimeControls?.feedbackLoop) {
+            setImmediate(() => _runtimeControls.feedbackLoop.process(taskId, _traceId, { success: true, agentLogs, complexity, cost, attempts: _successAttempt, objective: spec.objective }).catch(() => {}));
+        }
+        // Mission 5: outcome attribution + twin accuracy recording
+        setImmediate(async () => {
+            try {
+                const _attrEng = require('../lib/cognitive/effectiveness/outcome-attribution-engine');
+                const _twinAcc = require('../lib/cognitive/effectiveness/digital-twin-accuracy-engine');
+                const _res = { success: true, cost_usd: parseFloat(cost), duration_ms: _startTime ? Date.now() - _startTime : 0, attempts: _successAttempt, complexity };
+                const _snap = { cognitivePolicy: _cognitivePolicy, autonomyResult: _autonomyResult, executionStrategy: _executionStrategy, behaviorProfile: _behaviorProfile, runtimeControls: _runtimeControls };
+                await _attrEng.attributeTask(taskId, _traceId, _res, _snap).catch(() => {});
+                if (_runtimeControls?.twin?.simId) await _twinAcc.recordActual(_runtimeControls.twin.simId, taskId, _res).catch(() => {});
+            } catch (_) {}
+        });
         setImmediate(() => _reputation.invalidateCache());
-        setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: true, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs, models: _agentModels }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
+        setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: true, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs, models: _agentModels }; _indexer.indexEpisode(_ep); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: true, complexity, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs }); } catch {} });
         setImmediate(() => { try { _goalTracker.completeGoal(taskId, { commitHash: committerLog.result.commitHash, cost }); } catch {} });
+
+        // CFO alert if cost is high
+        if (parseFloat(cost) > 1.50) {
+            setImmediate(async () => {
+                try {
+                    const { consultExecutive } = require('../lib/cognitive/runtime');
+                    await consultExecutive('cfo',
+                        `Task "${spec.objective.slice(0, 80)}" cost $${cost} (cap $2.00) — within limits but high`,
+                        { taskId, cost_usd: parseFloat(cost), complexity }
+                    ).catch(() => {});
+                } catch (_) {}
+            });
+        }
 
         return {
             success:    true,
@@ -1148,7 +1562,21 @@ async function runAgentTeam(spec, taskId) {
         memory.logLesson(`Task ${taskId} failed: ${err.message}`, { taskId, traceId: _traceId });
         setImmediate(() => _reflector(spec, agentLogs, false, taskId, _traceId).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
-        setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: _startTime ? Date.now() - _startTime : null, failureReason: err.message }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
+        if (_runtimeControls?.feedbackLoop) {
+            setImmediate(() => _runtimeControls.feedbackLoop.process(taskId, _traceId, { success: false, agentLogs, complexity, cost, attempts: MAX_ATTEMPTS, objective: spec.objective }).catch(() => {}));
+        }
+        // Mission 5: outcome attribution + twin accuracy recording (failure path)
+        setImmediate(async () => {
+            try {
+                const _attrEng = require('../lib/cognitive/effectiveness/outcome-attribution-engine');
+                const _twinAcc = require('../lib/cognitive/effectiveness/digital-twin-accuracy-engine');
+                const _res = { success: false, cost_usd: parseFloat(cost), duration_ms: _startTime ? Date.now() - _startTime : 0, attempts: MAX_ATTEMPTS, complexity, failed_stage: err?.message?.slice(0, 100) };
+                const _snap = { cognitivePolicy: _cognitivePolicy, autonomyResult: _autonomyResult, executionStrategy: _executionStrategy, behaviorProfile: _behaviorProfile, runtimeControls: _runtimeControls };
+                await _attrEng.attributeTask(taskId, _traceId, _res, _snap).catch(() => {});
+                if (_runtimeControls?.twin?.simId) await _twinAcc.recordActual(_runtimeControls.twin.simId, taskId, _res).catch(() => {});
+            } catch (_) {}
+        });
+        setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: _startTime ? Date.now() - _startTime : null, failureReason: err.message }; _indexer.indexEpisode(_ep); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: false, complexity, cost, durationMs: _startTime ? Date.now() - _startTime : null, agentLogs }); } catch {} });
         setImmediate(() => { try { _goalTracker.blockGoal(taskId, err.message); } catch {} });
         return { success: false, commitHash: null, agentLogs, error: err.message, complexity, models: _agentModels };
