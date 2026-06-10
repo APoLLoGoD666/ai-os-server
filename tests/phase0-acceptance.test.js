@@ -22,8 +22,9 @@ require('dotenv').config();
 const assert  = require('assert');
 const crypto  = require('crypto');
 const pool    = require('../pg_database');
-const { writeWithOutbox } = require('../lib/write-with-outbox');
-const { relay }           = require('../lib/outbox-relay');
+const { writeWithOutbox }  = require('../lib/write-with-outbox');
+const { relay }            = require('../lib/outbox-relay');
+const { canonicalJson }    = require('../lib/canonical-json');
 
 let passed = 0;
 let failed = 0;
@@ -93,9 +94,9 @@ async function main() {
             `SELECT payload, content_hash FROM events WHERE idempotency_key = $1`, [iKey1]);
         assert.strictEqual(rows.length, 1);
         const computed = crypto.createHash('sha256')
-            .update(JSON.stringify(rows[0].payload))
+            .update(canonicalJson(rows[0].payload))
             .digest('hex');
-        assert.strictEqual(computed, rows[0].content_hash, 'content_hash = sha256(payload)');
+        assert.strictEqual(computed, rows[0].content_hash, 'content_hash = sha256(canonicalJson(payload))');
     });
 
     await cleanUp(iKey1);
@@ -183,7 +184,8 @@ async function main() {
         }
         assert.ok(threw, 'writeWithOutbox must throw when stateQuery fails');
         // Verify transaction rolled back — no orphan outbox row
-        const naturalKey = `test|test.pg_error|${JSON.stringify(testPayload)}`;
+        // Must use canonicalJson to match write-with-outbox idempotency_key computation
+        const naturalKey = `test|test.pg_error|${canonicalJson(testPayload)}`;
         const iKey = crypto.createHash('sha256').update(naturalKey).digest('hex');
         const { rows } = await pool.query(
             `SELECT * FROM outbox WHERE idempotency_key = $1`, [iKey]);

@@ -30,17 +30,27 @@ node tests/phase0-acceptance.test.js
 
 ---
 
-## 3. Supabase write assertion sweep — 137 unpatched calls
+## 3. Supabase write assertion sweep — 130 unpatched calls
 
 **Total write calls audited:** 236  
-**Asserted (error checked):** 99  
-**Unasserted:** 137
+**Asserted (error checked):** 106  
+**Unasserted:** 130
 
-Constitution Article 4 requires every write path to assert on the returned error object. The 137 calls below are tracked TODOs. Patching priority: governance chain writes first (evidence integrity), then memory layer, then server.js notifications (low severity — UI-only).
+**Patched in Phase 0 close-out (56 calls):**
+- `lib/governance.js` — all 43 bare writes wrapped with `_w()` or inline `{data, error}` assert
+- `lib/governance-probe.js` — 1 probe insert (line 166)
+- `lib/memory/episodic-memory-pg.js` — 1 embedding update
+- `lib/memory/semantic-memory.js` — 3 (embedding update + 2 supersede updates)
+- `lib/memory/procedural-memory.js` — 2 (embedding update + recordExecution update)
+- `lib/memory/decision-memory.js` — 1 embedding update
+- `lib/memory/strategic-memory.js` — 1 embedding update
+- `lib/memory/consolidation-engine.js` — 4 queue-state updates
 
-**Resolution:** Patch in Phase 3 (executive engine extraction) when governance.js is refactored, and as a standing rule: every new write added after Phase 0 must assert.
+Constitution Article 4 requires every write path to assert on the returned error object. The 81 remaining calls below are tracked TODOs. Deferred to Phase 3.
 
-### Unasserted write calls (137)
+**Resolution:** Patch remaining calls in Phase 3 (executive engine extraction). Standing rule: every new write added after Phase 0 must assert.
+
+### Remaining unasserted write calls (81) — deferred to Phase 3
 
 ```
 agent-system/agent-pipeline-hooks.js:26
@@ -50,50 +60,7 @@ lib/cron-logger.js:22
 lib/cron-logger.js:37
 lib/cron-logger.js:47
 lib/founder/alignment-engine.js:125
-lib/governance.js:70
-lib/governance.js:79
-lib/governance.js:98
-lib/governance.js:106
-lib/governance.js:117
-lib/governance.js:126
-lib/governance.js:139
-lib/governance.js:153
-lib/governance.js:165
-lib/governance.js:177
-lib/governance.js:200
-lib/governance.js:212
-lib/governance.js:235
-lib/governance.js:247
-lib/governance.js:275
-lib/governance.js:293
-lib/governance.js:306
-lib/governance.js:319
-lib/governance.js:332
-lib/governance.js:344
-lib/governance.js:355
-lib/governance.js:376
-lib/governance.js:384
-lib/governance.js:392
-lib/governance.js:395
-lib/governance.js:410
-lib/governance.js:428
-lib/governance.js:432
-lib/governance.js:444
-lib/governance.js:455
-lib/governance.js:489
-lib/governance.js:495
-lib/governance.js:510
-lib/governance.js:522
-lib/governance.js:536
-lib/governance.js:553
-lib/governance.js:565
-lib/governance.js:577
-lib/governance.js:588
-lib/governance.js:598
-lib/governance.js:611
-lib/governance.js:623
-lib/governance.js:654
-lib/governance-probe.js:166
+lib/intelligence/executive-performance-engine.js:70
 lib/intelligence/executive-performance-engine.js:271
 lib/intelligence/executive-performance-engine.js:408
 lib/intelligence/memory-lifecycle-engine.js:141
@@ -124,20 +91,8 @@ lib/cognitive/effectiveness/digital-twin-accuracy-engine.js:81
 lib/cognitive/effectiveness/outcome-attribution-engine.js:95
 lib/cognitive/runtime/cognitive-feedback-loop.js:105
 lib/cognitive/runtime/self-optimization-engine.js:69
-lib/memory/consolidation-engine.js:63
-lib/memory/consolidation-engine.js:81
-lib/memory/consolidation-engine.js:106
-lib/memory/consolidation-engine.js:217
-lib/memory/decision-memory.js:51
-lib/memory/episodic-memory-pg.js:67
 lib/memory/adaptation-cycle.js:118
 lib/memory/adaptation-cycle.js:136
-lib/memory/semantic-memory.js:46
-lib/memory/semantic-memory.js:126
-lib/memory/semantic-memory.js:133
-lib/memory/procedural-memory.js:51
-lib/memory/procedural-memory.js:125
-lib/memory/strategic-memory.js:49
 lib/intelligence/knowledge-validator.js:113
 lib/intelligence/knowledge-validator.js:121
 lib/intelligence/knowledge-validator.js:183
@@ -151,7 +106,6 @@ lib/memory/skill-memory.js:48
 lib/memory/skill-memory.js:55
 lib/intelligence/opportunity-engine.js:206
 lib/intelligence/decision-outcome-engine.js:45
-lib/intelligence/executive-performance-engine.js:70
 lib/intelligence/value-creation-engine.js:23
 lib/founder/graph.js:140
 lib/empire/graph.js:140
@@ -161,7 +115,6 @@ lib/memory/working-memory.js:36
 lib/memory/working-memory.js:86
 lib/memory/working-memory.js:99
 lib/memory/working-memory.js:111
-lib/memory/consolidation-engine.js:259
 server.js:1411
 server.js:8707
 server.js:9034
