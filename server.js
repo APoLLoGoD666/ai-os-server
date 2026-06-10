@@ -332,6 +332,19 @@ app.use((req, res, next) => {
     next();
 });
 
+// Temporary Phase 0 test runner — remove after certification
+app.get('/phase0-test', async (req, res) => {
+    const secret = process.env.PHASE0_TEST_SECRET;
+    if (!secret || req.headers['x-test-secret'] !== secret) {
+        return res.status(403).json({ error: 'forbidden' });
+    }
+    const { execFile } = require('child_process');
+    const node = process.execPath;
+    execFile(node, ['tests/phase0-acceptance.test.js'], { timeout: 45000, cwd: __dirname }, (err, stdout, stderr) => {
+        res.json({ exitCode: err ? (err.code || 1) : 0, stdout, stderr });
+    });
+});
+
 app.get('/health', async (req, res) => {
     let dbOk = false;
     try {
@@ -10869,9 +10882,10 @@ app.get('/api/system/cognition', requireAppAccess, (req, res) => {
 });
 
 // Cognition layer — episodic performance summary + failure patterns
-app.get('/api/cognition/performance', requireAppAccess, (req, res) => {
+app.get('/api/cognition/performance', requireAppAccess, async (req, res) => {
     try {
         const episodic = require('./agent-system/episodic-memory');
+        const epMem    = require('./lib/memory/episodic-memory-pg');
         const engine   = require('./agent-system/reflection-engine');
         const limit    = Math.min(parseInt(req.query.limit) || 50, 200);
         const episodes = episodic.getSimilarExperiences('', { limit }) // empty query → all recent
@@ -10882,7 +10896,7 @@ app.get('/api/cognition/performance', requireAppAccess, (req, res) => {
         res.json({
             ok:          true,
             episodeCount: episodic.episodeCount(),
-            successRate: episodic.getSuccessRate(limit),
+            successRate: await epMem.getSuccessRate(limit).catch(() => null),
             summary:     engine.buildPerformanceSummary(allEpisodes),
             failures:    engine.analyzeFailures(failures),
             successes:   engine.analyzeSuccesses(allEpisodes.filter(ep => ep.success)),
