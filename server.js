@@ -88,6 +88,7 @@ const _timingEng   = require('./lib/response-timing-engine');
 const _pcm         = require('./lib/persistent-cognition-manager');
 const _eae         = require('./lib/executive-arbitration-engine');
 const _spe         = require('./lib/strategic-planning-engine');
+const _gateway     = require('./lib/memory/gateway');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
@@ -196,39 +197,7 @@ if (!process.env.OBSIDIAN_URL || !process.env.OBSIDIAN_API_KEY) {
     console.warn('[Obsidian] WARNING — OBSIDIAN_URL or OBSIDIAN_API_KEY not set. Obsidian integration disabled.');
 }
 
-async function obsidianRead(notePath) {
-  const res = await fetch(`${process.env.OBSIDIAN_URL}/vault/${encodeURIComponent(notePath)}`, {
-    headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` }
-  });
-  if (!res.ok) return null;
-  return await res.text();
-}
-
-async function obsidianWrite(notePath, markdownContent) {
-  await fetch(`${process.env.OBSIDIAN_URL}/vault/${encodeURIComponent(notePath)}`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}`,
-      'Content-Type': 'text/markdown'
-    },
-    body: markdownContent
-  });
-}
-
-async function obsidianAppend(notePath, markdownContent) {
-    const existing = await obsidianRead(notePath).catch(() => null);
-    const updated = existing ? existing + '\n\n---\n\n' + markdownContent : markdownContent;
-    await obsidianWrite(notePath, updated);
-}
-
-async function obsidianSearch(query) {
-  const res = await fetch(
-    `${process.env.OBSIDIAN_URL}/search/simple/?query=${encodeURIComponent(query)}&contextLength=200`,
-    { headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` } }
-  );
-  if (!res.ok) return [];
-  return await res.json();
-}
+const { obsidianRead, obsidianWrite, obsidianAppend, obsidianSearch } = require('./agent-system/obsidian-client');
 
 const app = express();
 app.set("trust proxy", 1);
@@ -943,6 +912,11 @@ const LOGIN_HTML = `<!DOCTYPE html>
 </html>`;
 
 function requireAuth(req, res, next) {
+    if (process.env.BYPASS_DASHBOARD_AUTH === 'true') {
+        const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+        res.cookie('apex_session', '1', { httpOnly: false, secure: isSecure, sameSite: 'Lax', maxAge: 3600000 });
+        return next();
+    }
     const secret = process.env.JWT_SECRET;
     if (!secret) return res.status(503).json({ ok: false, reply: 'Auth not configured.' });
 
@@ -7388,7 +7362,7 @@ app.post("/chat", requireAppAccess, async (req, res) => {
                 _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _agentIntent2, userMessage, reply: _agentReply, mode: _agentMode, executionClass: req.executionClass });
                 _eae.recordTransition({ sessionId: req.conversationId });
                 _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply: _agentReply, intent: _agentIntent2, mode: _agentMode });
-                setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
+                setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: _agentReply }), tags: ['conversation', 'chat', 'agent'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
                 return res.status(200).json({ ok: true, reply: _agentReply, response_mode: _agentMode, stream_plan: _agentPlan });
             } catch (e) {
                 if (res.headersSent) return;
@@ -7440,7 +7414,7 @@ ${preview}
             _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _mastraIntent, userMessage, reply, mode: _mastraMode, executionClass: req.executionClass });
             _eae.recordTransition({ sessionId: req.conversationId });
             _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode });
-            setImmediate(() => { addToMemory("ai", reply); });
+            setImmediate(() => { addToMemory("ai", reply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'mastra'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
             return res.status(200).json({
                 ok: true,
                 reply,
@@ -7468,7 +7442,7 @@ ${preview}
 
             if (command) {
                 const result = await handleCommand(command);
-                setImmediate(() => addToMemory("ai", result.reply));
+                setImmediate(() => { addToMemory("ai", result.reply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: result.reply }), tags: ['conversation', 'chat', 'tool'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
                 return res.status(result.ok ? 200 : 404).json(result);
             }
         }
@@ -7485,7 +7459,7 @@ ${preview}
         _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _sdkIntent, userMessage, reply, mode: _sdkMode, executionClass: req.executionClass });
         _eae.recordTransition({ sessionId: req.conversationId });
         _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _sdkIntent, mode: _sdkMode });
-        setImmediate(() => { addToMemory("ai", reply); });
+        setImmediate(() => { addToMemory("ai", reply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'sdk'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
 
         return res.status(200).json({
             ok: true,
@@ -8615,6 +8589,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         // Fire-and-forget legacy memory write (kept for compatibility)
         addToMemory("user", userMessage);
+        setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ role: 'user', message: userMessage }), tags: ['conversation', 'voice'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
 
         // ── Context fetch — parallel, all non-blocking ───────────────────────
         const _wikiReader = (() => { try { return require('./agent-system/wiki-reader'); } catch { return null; } })();
@@ -8715,9 +8690,8 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         const reply = finalReply;
 
         // Save this exchange to memory asynchronously — never block the response
-        saveMemory('user', userMessage).catch(() => {});
-        saveMemory('assistant', reply).catch(() => {});
         addToMemory("ai", reply);
+        setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'voice', 'exchange'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
 
         // LangChain memory — persist conversation with summary compression
         setImmediate(() => lcMemory.addExchange(userMessage, reply).catch(() => {}));
@@ -11381,8 +11355,6 @@ app.post('/api/wiki/consolidate', requireAppAccess, async (req, res) => {
 })();
 
 app.use('/api', require('./routes/tts-gemini'));
-app.use('/api/intelligence', require('./routes/intelligence'));
-app.use('/api/governance', requireAppAccess, require('./routes/governance'));
 
 // One-time migration runner — applies migrations/005_level9_governance.sql
 // Requires DATABASE_URL env var with real Supabase password. Idempotent (IF NOT EXISTS).
@@ -11560,6 +11532,8 @@ global._wsChunkedSend = wsChunkedSend;
 server.on('upgrade', (req, socket, head) => {
     const urlPath = (req.url || '').split('?')[0];
     if (urlPath === '/ws') {
+        const token = new URL(req.url, 'http://x').searchParams.get('token');
+        if (APP_ACCESS_KEY && token !== APP_ACCESS_KEY) { socket.destroy(); return; }
         _wss.handleUpgrade(req, socket, head, ws => _wss.emit('connection', ws, req));
     } else if (!urlPath.startsWith('/ws/')) {
         // Only destroy paths that no registered handler owns
@@ -12292,6 +12266,213 @@ checkPendingMasterTasks();
     initRoutineAgent(client).catch(err => console.error("ROUTINE AGENT INIT ERROR:", err.message));
     // Upgrade 3: Proactive reflection agent — runs every 30 minutes
     setInterval(() => require('./lib/cron-logger').wrapCron('reflection_check', () => runReflectionCheck(client)).catch(err => console.error("REFLECTION ERROR:", err.message)), 30 * 60 * 1000);
+
+    // Memory Architecture crons
+    // Working memory TTL cleanup — every 15 minutes
+    setInterval(() => require('./lib/cron-logger').wrapCron('wm_cleanup', () =>
+        require('./lib/memory/working-memory').clearExpired()
+    ), 15 * 60 * 1000);
+
+    // Memory consolidation engine — every hour
+    setInterval(() => require('./lib/cron-logger').wrapCron('mem_consolidation', async () => {
+        const engine = require('./lib/memory/consolidation-engine');
+        const results = await engine.process(10);
+        await engine.purgeOld(7);
+        console.log(`[mem_consolidation] processed ${results.length} items`);
+    }), 60 * 60 * 1000);
+
+    // Weekly adaptation cycle — every Sunday at ~05:00 UTC (fired via setInterval nearest hour)
+    // Runs on first Sunday after deploy, then weekly.
+    (() => {
+        const MS_WEEK = 7 * 24 * 60 * 60 * 1000;
+        const now     = new Date();
+        const daysUntilSunday = (7 - now.getUTCDay()) % 7 || 7;
+        const nextSundayMs    = new Date(Date.UTC(
+            now.getUTCFullYear(), now.getUTCMonth(),
+            now.getUTCDate() + daysUntilSunday, 5, 0, 0
+        )) - now;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('adaptation_cycle', () =>
+                require('./lib/memory/adaptation-cycle').runWeeklyCycle()
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('adaptation_cycle', () =>
+                require('./lib/memory/adaptation-cycle').runWeeklyCycle()
+            ), MS_WEEK);
+        }, Math.max(nextSundayMs, 60000));
+    })();
+
+    // Intelligence layer crons
+    // Knowledge validation — every hour (processes pending lesson submissions)
+    setInterval(() => require('./lib/cron-logger').wrapCron('knowledge_validation', async () => {
+        const kv = require('./lib/intelligence/knowledge-validator');
+        const s  = await kv.processPending(20);
+        console.log(`[knowledge_validation] processed=${s.processed} validated=${s.validated} rejected=${s.rejected}`);
+    }), 60 * 60 * 1000);
+
+    // Contradiction full scan — every Sunday at ~06:00 UTC
+    (() => {
+        const MS_WEEK = 7 * 24 * 60 * 60 * 1000;
+        const now     = new Date();
+        const daysUntilSunday = (7 - now.getUTCDay()) % 7 || 7;
+        const nextSundayMs    = new Date(Date.UTC(
+            now.getUTCFullYear(), now.getUTCMonth(),
+            now.getUTCDate() + daysUntilSunday, 6, 0, 0
+        )) - now;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('contradiction_scan', () =>
+                require('./lib/intelligence/contradiction-engine').fullScan()
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('contradiction_scan', () =>
+                require('./lib/intelligence/contradiction-engine').fullScan()
+            ), MS_WEEK);
+        }, Math.max(nextSundayMs, 60000));
+    })();
+
+    // Memory lifecycle cycle — every Sunday at ~07:00 UTC
+    (() => {
+        const MS_WEEK = 7 * 24 * 60 * 60 * 1000;
+        const now     = new Date();
+        const daysUntilSunday = (7 - now.getUTCDay()) % 7 || 7;
+        const nextSundayMs    = new Date(Date.UTC(
+            now.getUTCFullYear(), now.getUTCMonth(),
+            now.getUTCDate() + daysUntilSunday, 7, 0, 0
+        )) - now;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('lifecycle_cycle', () =>
+                require('./lib/intelligence/memory-lifecycle-engine').runLifecycleCycle()
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('lifecycle_cycle', () =>
+                require('./lib/intelligence/memory-lifecycle-engine').runLifecycleCycle()
+            ), MS_WEEK);
+        }, Math.max(nextSundayMs, 60000));
+    })();
+
+    // Weekly learning report + skill snapshot — every Sunday at ~08:00 UTC
+    (() => {
+        const MS_WEEK = 7 * 24 * 60 * 60 * 1000;
+        const now     = new Date();
+        const daysUntilSunday = (7 - now.getUTCDay()) % 7 || 7;
+        const nextSundayMs    = new Date(Date.UTC(
+            now.getUTCFullYear(), now.getUTCMonth(),
+            now.getUTCDate() + daysUntilSunday, 8, 0, 0
+        )) - now;
+        setTimeout(async () => {
+            require('./lib/cron-logger').wrapCron('weekly_learning', async () => {
+                const orgL  = require('./lib/intelligence/organizational-learning-engine');
+                const skillE = require('./lib/intelligence/skill-evolution-engine');
+                const [report, snapshot] = await Promise.allSettled([
+                    orgL.generateWeeklyReport(),
+                    skillE.takeWeeklySnapshot(),
+                ]);
+                console.log(`[weekly_learning] report=${report.status} snapshot=${snapshot.status}`);
+            });
+            setInterval(() => require('./lib/cron-logger').wrapCron('weekly_learning', async () => {
+                const orgL  = require('./lib/intelligence/organizational-learning-engine');
+                const skillE = require('./lib/intelligence/skill-evolution-engine');
+                await Promise.allSettled([orgL.generateWeeklyReport(), skillE.takeWeeklySnapshot()]);
+            }), MS_WEEK);
+        }, Math.max(nextSundayMs, 60000));
+    })();
+
+    // Improvement auto-queue processor — every 30 minutes (catch-up for auto-deploy items)
+    setInterval(() => require('./lib/cron-logger').wrapCron('improvement_autoqueue', () =>
+        require('./lib/intelligence/improvement-governor').processAutoQueue()
+    ), 30 * 60 * 1000);
+
+    // ── Cognitive Layer Crons ───────────────────────────────────────────────
+    const MS_WEEK_COG = 7 * 24 * 60 * 60 * 1000;
+
+    // Knowledge decay cycle — every Sunday at ~09:00 UTC
+    (function _scheduleCognKnowledgeDecay() {
+        const now2 = new Date();
+        const daysToSun2 = (7 - now2.getUTCDay()) % 7;
+        const nextSunMs2 = new Date(Date.UTC(
+            now2.getUTCFullYear(), now2.getUTCMonth(),
+            now2.getUTCDate() + daysToSun2, 9, 0, 0
+        )) - now2;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('knowledge_decay', () =>
+                require('./lib/cognitive/knowledge-decay-engine').runDecayCycle()
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('knowledge_decay', () =>
+                require('./lib/cognitive/knowledge-decay-engine').runDecayCycle()
+            ), MS_WEEK_COG);
+        }, Math.max(nextSunMs2, 60000));
+    })();
+
+    // Cognitive evolution cycle — every Sunday at ~10:00 UTC
+    (function _scheduleCognEvolution() {
+        const now2 = new Date();
+        const daysToSun2 = (7 - now2.getUTCDay()) % 7;
+        const nextSunMs2 = new Date(Date.UTC(
+            now2.getUTCFullYear(), now2.getUTCMonth(),
+            now2.getUTCDate() + daysToSun2, 10, 0, 0
+        )) - now2;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('cognitive_evolution', () =>
+                require('./lib/cognitive/cognitive-evolution-engine').runEvolutionCycle()
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('cognitive_evolution', () =>
+                require('./lib/cognitive/cognitive-evolution-engine').runEvolutionCycle()
+            ), MS_WEEK_COG);
+        }, Math.max(nextSunMs2, 60000));
+    })();
+
+    // Cognitive performance metrics — every Sunday at ~11:00 UTC
+    (function _scheduleCognPerformance() {
+        const now2 = new Date();
+        const daysToSun2 = (7 - now2.getUTCDay()) % 7;
+        const nextSunMs2 = new Date(Date.UTC(
+            now2.getUTCFullYear(), now2.getUTCMonth(),
+            now2.getUTCDate() + daysToSun2, 11, 0, 0
+        )) - now2;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('cognitive_performance', () =>
+                require('./lib/cognitive/cognitive-performance-engine').computeMetrics('weekly')
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('cognitive_performance', () =>
+                require('./lib/cognitive/cognitive-performance-engine').computeMetrics('weekly')
+            ), MS_WEEK_COG);
+        }, Math.max(nextSunMs2, 60000));
+    })();
+
+    // Organizational intelligence report — every Sunday at ~12:00 UTC
+    (function _scheduleCognOrgIntel() {
+        const now2 = new Date();
+        const daysToSun2 = (7 - now2.getUTCDay()) % 7;
+        const nextSunMs2 = new Date(Date.UTC(
+            now2.getUTCFullYear(), now2.getUTCMonth(),
+            now2.getUTCDate() + daysToSun2, 12, 0, 0
+        )) - now2;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('org_intelligence', () =>
+                require('./lib/cognitive/organizational-intelligence-engine').generate('weekly')
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('org_intelligence', () =>
+                require('./lib/cognitive/organizational-intelligence-engine').generate('weekly')
+            ), MS_WEEK_COG);
+        }, Math.max(nextSunMs2, 60000));
+    })();
+
+    // Civilization Health — daily at 08:00 UTC
+    (function _scheduleCivHealth() {
+        const MS_DAY = 24 * 60 * 60 * 1000;
+        const now3   = new Date();
+        const nextUtc8 = new Date(Date.UTC(now3.getUTCFullYear(), now3.getUTCMonth(),
+            now3.getUTCDate() + (now3.getUTCHours() >= 8 ? 1 : 0), 8, 0, 0));
+        const delay3 = Math.max(nextUtc8 - now3, 60_000);
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('civilization_health', async () => {
+                const { computeCivilizationHealth } = require('./lib/telemetry/aggregator');
+                const snap = await computeCivilizationHealth();
+                console.log(`[civilization_health] score=${snap.overall_score} (${snap.classification})`);
+            });
+            setInterval(() => require('./lib/cron-logger').wrapCron('civilization_health', async () => {
+                const { computeCivilizationHealth } = require('./lib/telemetry/aggregator');
+                await computeCivilizationHealth();
+            }), MS_DAY);
+        }, delay3);
+    })();
 
     // Mastra agent framework
     try {
