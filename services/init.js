@@ -76,8 +76,16 @@ function init(app, sbAdmin) {
                 agent_summary: JSON.stringify({ queue_task: true, elapsed_ms: p.elapsed_ms, error: p.error || null }),
                 created_at:    new Date().toISOString(),
             });
-            if (error && !error.message.includes('duplicate') && !error.message.includes('unique')) {
-                console.warn('[Services/bus] agent run persist failed:', error.message);
+            // Article 4: assert on every write — silent failure is corruption
+            if (error) {
+                const isDup = error.message.includes('duplicate') || error.message.includes('unique');
+                if (!isDup) {
+                    console.warn('[Services/bus] agent run persist failed:', error.message);
+                    try {
+                        const { alertError } = require('./slack/slack-alerts');
+                        alertError('Event write failure', `apex_agent_runs insert: ${error.message}`, 'EventBus').catch(() => {});
+                    } catch (_) {}
+                }
             }
         });
     } catch (e) {
@@ -127,6 +135,22 @@ function init(app, sbAdmin) {
         } catch (e) {
             console.warn('[Services] health check setup failed:', e.message);
         }
+    }
+
+    // Phase 0b: start outbox relay (5-second tick, outbox → events)
+    try {
+        require('../lib/outbox-relay').start();
+        console.log('[Services] Outbox relay started');
+    } catch (e) {
+        console.warn('[Services] outbox relay start failed (non-fatal):', e.message);
+    }
+
+    // Phase 0b: start integrity crons (backup 24h, reconciliation 7d)
+    try {
+        require('../lib/integrity-crons').start();
+        console.log('[Services] Integrity crons registered');
+    } catch (e) {
+        console.warn('[Services] integrity crons failed (non-fatal):', e.message);
     }
 
     console.log('[Services] Integration layer initialized');
