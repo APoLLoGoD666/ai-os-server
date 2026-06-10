@@ -464,18 +464,19 @@ app.get('/api/system/health/detailed', requireAppAccess, async (req, res) => {
     res.status(allOk ? 200 : 503).json({ ok: allOk, probe_ms: Date.now() - t0, ...result });
 });
 
-app.get('/', requireAuth, (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.sendFile(path.join(__dirname, 'dashboard.html'));
-});
-app.get('/dashboard.html', requireAuth, (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.sendFile(path.join(__dirname, 'dashboard.html'));
-});
+function _serveDashboard(req, res) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    if (process.env.BYPASS_DASHBOARD_AUTH === 'true') {
+        const html = fs.readFileSync(path.join(__dirname, 'dashboard.html'), 'utf8');
+        const k = JSON.stringify(process.env.APP_ACCESS_KEY || '');
+        return res.send(html.replace('</head>', `<script>try{localStorage.setItem('apex_app_key',${k});}catch(e){}</script></head>`));
+    }
+    res.sendFile(path.join(__dirname, 'dashboard.html'));
+}
+app.get('/', requireAuth, _serveDashboard);
+app.get('/dashboard.html', requireAuth, _serveDashboard);
 app.get('/sw.js', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.sendFile(path.join(__dirname, 'sw.js'));
