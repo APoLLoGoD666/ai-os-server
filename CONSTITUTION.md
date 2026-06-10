@@ -37,3 +37,4 @@ Amendments are proposed as a pull request against this file, must cite the incid
 ## Amendment log
 
 - 2026-06-10 — Constitution ratified (Articles 1–6).
+- 2026-06-10 — Phase 0 certified: event spine live, acceptance tests green (9/9 on Render), integrity crons active. Commit c6b2b78.

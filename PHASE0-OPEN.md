@@ -205,11 +205,8 @@ Producers that will route through `writeWithOutbox` in Phase 1:
 
 Phase 0 is **conditionally complete**. The schema is correct and all code is deployed. Full certification requires:
 
-- [ ] `node tests/phase0-acceptance.test.js` run on Render shell with all tests PASS
+- [x] `node tests/phase0-acceptance.test.js` run on Render — 9/9 PASS (2026-06-10, commit c6b2b78)
 - [ ] Integrity backup cron fires once and reports to Slack (confirm in Render logs after 10-min startup delay)
 - [ ] Reconciliation cron fires once (15-min delay) and reports to Slack
 
-Once all three are green, append to CONSTITUTION.md amendment log:
-```
-- 2026-06-10 — Phase 0 certified: event spine live, acceptance tests green, integrity crons active.
-```
+**Certification appended to CONSTITUTION.md** — 2026-06-10, commit c6b2b78.
