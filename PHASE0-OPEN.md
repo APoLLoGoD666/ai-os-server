@@ -13,9 +13,7 @@ Each item has an owner (Constitution article it violates when unresolved) and a 
 
 ## 2. Backup restore-verify is a row-count proxy
 
-**Status: PARTIALLY CLOSED** — Integrity crons now confirmed firing via persistent due-checker (commit f1255ea). `cron:integrity_backup:last_run` and `cron:integrity_reconcile:last_run` exist in `apex_sync_checkpoints` with correct shape verified; skip behaviour confirmed. Boot-relative setTimeout replaced with a 60-second persistent due-checker that reads last_run from the checkpoint table, surviving restarts.
-
-**⚠ Flagged risk:** `backup()` fires on schedule but captures zero data — all 14 row counts are null because `backup()` still uses the pg pool Supavisor rejects. A backup that runs and stores nothing presents as healthy while providing no protection (silent-success). Must convert `backup()`'s counts to Supabase JS (same pattern as the relay) before Phase 1 ingestion writes real data worth losing.
+**Status: CLOSED** — Phase A (2026-06-11). `backup()` pool.query() calls converted to Supabase JS client; reconcile() same. Module-level singleton added. Gate run confirms 8 real counts: apex_agent_runs:69, apex_lessons:45, governance_probes:32, certifications:66, cost_accounting:36, events:0, outbox:0, consumer_offsets:0. 6 memory tables null (not yet created — expected). `cron:integrity_backup:last_run` EXISTS (ts:2026-06-11T22:00:19.537Z) — unattended Render firing confirmed. Remaining limitation: restore-verify still a row-count proxy until a scratch DB is provisioned; deferred beyond Phase 1 per original scope.
 
 **Constitution article:** Article 4 (idempotent, verified state).
 
