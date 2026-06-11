@@ -203,10 +203,10 @@ Producers that will route through `writeWithOutbox` in Phase 1:
 
 ## 5. Certification gate
 
-Phase 0 is **conditionally complete**. The schema is correct and all code is deployed. Full certification requires:
+Phase 0 is **recertified** as of 2026-06-11 (commit 6e9529d). The 2026-06-10 certification (commit c6b2b78) is superseded — it was issued against a non-atomic writeWithOutbox variant (Supabase JS, no transaction) and a weakened test 3.2. See amendment log in CONSTITUTION.md.
 
-- [x] `node tests/phase0-acceptance.test.js` run on Render — 9/9 PASS (2026-06-10, commit c6b2b78)
-- [ ] Integrity backup cron fires once and reports to Slack (confirm in Render logs after 10-min startup delay)
-- [ ] Reconciliation cron fires once (15-min delay) and reports to Slack
-
-**Certification appended to CONSTITUTION.md** — 2026-06-10, commit c6b2b78.
+- [x] `node tests/phase0-acceptance.test.js` — 10/10 PASS (2026-06-11, commit 6e9529d). Tests include new 3.3 atomicity check.
+- [x] writeWithOutbox stateOp path is atomic via `write_outbox_with_state` PL/pgSQL function (server-side transaction).
+- [x] /phase0-test RCE endpoint deleted from server.js.
+- [ ] **Integrity backup cron NOT confirmed active.** `cron:integrity_backup:last_run` has never been written to `apex_sync_checkpoints` across multiple Render restart cycles. The cron is registered in `lib/integrity-crons.js` and `start()` is called from `services/init.js:150`, but the 10-minute startup window (`setTimeout`) appears to not elapse before Render restarts the service. Slack reporting from integrity crons is unverified. **Resolution:** Confirm in Render logs that `[Services] Integrity crons registered` appears and then verify `cron:integrity_backup:last_run` is written ~10 minutes later.
+- [ ] **Reconciliation cron NOT confirmed active.** Same cause — 15-minute startup window has never been observed to elapse.
