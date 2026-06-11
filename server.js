@@ -332,18 +332,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Temporary Phase 0 test runner — remove after certification
-app.get('/phase0-test', async (req, res) => {
-    const secret = process.env.PHASE0_TEST_SECRET;
-    if (!secret || req.headers['x-test-secret'] !== secret) {
-        return res.status(403).json({ error: 'forbidden' });
-    }
-    const { execFile } = require('child_process');
-    const node = process.execPath;
-    execFile(node, ['tests/phase0-acceptance.test.js'], { timeout: 45000, cwd: __dirname }, (err, stdout, stderr) => {
-        res.json({ exitCode: err ? (err.code || 1) : 0, stdout, stderr });
-    });
-});
 
 app.get('/health', async (req, res) => {
     let dbOk = false;
