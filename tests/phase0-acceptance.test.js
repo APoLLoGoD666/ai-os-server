@@ -188,37 +188,34 @@ async function main() {
         );
     });
 
-    await test('3.2 — stateOp SQL fails → writeWithOutbox throws, zero outbox rows (rollback)', async () => {
+    await test('3.2 — unknown op name throws, zero outbox rows (whitelist enforced)', async () => {
         let threw = false;
         const testPayload = { n: 3, ts: Date.now() };
         try {
             await writeWithOutbox(
-                // Real pg query against a nonexistent table — must fail inside the transaction
-                { sql: 'SELECT 1 FROM nonexistent_table_phase0_test_xyz' },
+                // Op name not in whitelist — Postgres RAISE rolls back the transaction
+                { op: 'nonexistent_op_phase0_test_xyz', args: {} },
                 { source: 'test', type: 'test.pg_error', payload: testPayload }
             );
         } catch { threw = true; }
-        assert.ok(threw, 'writeWithOutbox must throw when stateOp SQL fails');
+        assert.ok(threw, 'writeWithOutbox must throw when op is unknown');
         // Verify transaction rolled back — no orphan outbox row
         const naturalKey = `test|test.pg_error|${canonicalJson(testPayload)}`;
         const iKey = crypto.createHash('sha256').update(naturalKey).digest('hex');
         const rows = await sbRows('outbox', { idempotency_key: iKey });
         assert.strictEqual(rows.length, 0,
-            'rollback: no orphan outbox row after failed stateOp SQL');
+            'rollback: no orphan outbox row after unknown op');
     });
 
     await test('3.3 — outbox INSERT failure rolls back preceding state change (atomicity)', async () => {
-        // State change: insert a sentinel row into phase0_atomicity_test
+        // State change: insert_atomicity_sentinel op inserts a row in phase0_atomicity_test.
         // Outbox INSERT: fails because entity_refs contains a non-UUID string,
-        //   which triggers an invalid cast AFTER the state change ran — forcing rollback
+        //   which triggers an invalid cast AFTER the state change ran — forcing rollback.
         const marker = 'txn-sentinel-' + Date.now();
-        // Use PL/pgSQL dollar quoting to safely embed the marker value
-        const stateSql =
-            `INSERT INTO phase0_atomicity_test (marker) VALUES ('${marker.replace(/'/g, "''")}')`;
         let threw = false;
         try {
             await writeWithOutbox(
-                { sql: stateSql },
+                { op: 'insert_atomicity_sentinel', args: { marker } },
                 {
                     source: 'test', type: 'test.atomicity',
                     payload: { marker },
