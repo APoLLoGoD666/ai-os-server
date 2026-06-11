@@ -15,7 +15,7 @@ Each item has an owner (Constitution article it violates when unresolved) and a 
 
 **Status: PARTIALLY CLOSED** — Integrity crons now confirmed firing via persistent due-checker (commit f1255ea). `cron:integrity_backup:last_run` and `cron:integrity_reconcile:last_run` exist in `apex_sync_checkpoints` with correct shape verified; skip behaviour confirmed. Boot-relative setTimeout replaced with a 60-second persistent due-checker that reads last_run from the checkpoint table, surviving restarts.
 
-**Still open (deferred):** The `backup()` row-count proxy issue — pool.query fails for all 14 tables (DATABASE_URL connects but the pg pool user is invalid on Render's Supavisor), so counts are all null. The cron fires and writes the checkpoint, but the audit data is worthless until the pool credential is fixed or the row-count queries are rewritten to use Supabase JS. This does not block Phase 1.
+**⚠ Flagged risk:** `backup()` fires on schedule but captures zero data — all 14 row counts are null because `backup()` still uses the pg pool Supavisor rejects. A backup that runs and stores nothing presents as healthy while providing no protection (silent-success). Must convert `backup()`'s counts to Supabase JS (same pattern as the relay) before Phase 1 ingestion writes real data worth losing.
 
 **Constitution article:** Article 4 (idempotent, verified state).
 
