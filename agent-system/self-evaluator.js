@@ -7,12 +7,13 @@
 const fs   = require('fs');
 const path = require('path');
 
-const _ep = require('./episodic-memory');
-const _rf = require('./reflection-engine');
-const _ae = require('./adaptation-engine');
-const _am = require('./autonomy-metrics');
-const _gt = require('./goal-tracker');
-const _ev = require('./execution-verifier');
+const _ep    = require('./episodic-memory');
+const _epMem = require('../lib/memory/episodic-memory-pg');
+const _rf    = require('./reflection-engine');
+const _ae    = require('./adaptation-engine');
+const _am    = require('./autonomy-metrics');
+const _gt    = require('./goal-tracker');
+const _ev    = require('./execution-verifier');
 
 const VAULT    = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
 const EVAL_DIR = path.join(VAULT, 'System', 'Cognition', 'Evaluations');
@@ -329,7 +330,7 @@ async function generateSystemEvaluation() {
     const goalStats     = (() => { try { return _gt.getStats(); }    catch { return null; } })();
     const adaptSnapshot = (() => { try { return _ae.getSnapshot(); } catch { return null; } })();
     const epCount       = _ep.episodeCount();
-    const successRate   = _ep.getSuccessRate(50);
+    const successRate   = await _epMem.getSuccessRate(50).catch(() => null);
 
     // Load episodes for reflection-engine analysis (empty string = recency-ranked)
     const recentEps = _ep.getSimilarExperiences('', { limit: 60 });

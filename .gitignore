@@ -26,3 +26,6 @@ ruvector.db
 .claude-flow/learning/
 .claude-flow/daemon-state.json
 .claude-flow/daemon.pid
+
+.env.vault
+.env.backup

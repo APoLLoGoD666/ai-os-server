@@ -1,12 +1,11 @@
 "use strict";
 const { chromium } = require('playwright');
-const Anthropic = require('@anthropic-ai/sdk');
+const runtime = require('../lib/models/runtime');
 const memory = require('./obsidian-memory');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const MODEL = 'claude-sonnet-4-6';
 const DEFAULT_TIMEOUT = 30000;
 const SESSION_DIR = '/tmp/browser-sessions';
 
@@ -35,8 +34,6 @@ function _checkDomain(url) {
 // SOCKS5/HTTP proxy configuration — set PLAYWRIGHT_PROXY env var as "socks5://host:port"
 const _proxyConfig = process.env.PLAYWRIGHT_PROXY ? { server: process.env.PLAYWRIGHT_PROXY } : undefined;
 
-// Module-level Anthropic client — NOT new per call
-const _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ── Session helpers ───────────────────────────────────────────────
 function _ensureSessionDir() {
@@ -241,9 +238,10 @@ async function checkResearchCache(objective) {
 
 // ── Analyse content with Claude ───────────────────────────────────
 async function analyseContent(content, objective) {
-    const res = await _client.messages.create({
-        model: MODEL,
-        max_tokens: 2000,
+    const { result: res } = await runtime.execute({
+        tier:      'balanced',
+        caller:    'browser-agent',
+        maxTokens: 2000,
         system: `You are a data extraction agent. Given webpage content and an objective,
 extract exactly the information requested. Be precise and concise.
 Output JSON only: { "found": boolean, "data": any, "summary": string, "nextAction": string|null }

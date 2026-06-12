@@ -5,6 +5,7 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 const { decomposeGoal, planToSpecs, estimateComplexity, scoreRisk } = require('./task-planner');
+const runtime   = require('../lib/models/runtime');
 
 const HAIKU  = 'claude-haiku-4-5-20251001';
 const STAGES = Object.freeze(['PLANNING', 'EXECUTION', 'VALIDATION', 'REFLECTION', 'COMPLETION']);
@@ -150,8 +151,9 @@ Return ONLY valid JSON — no markdown fences.`;
 
     let parsed = null;
     try {
-        const res = await client.messages.create({
-            model: HAIKU, max_tokens: 1024,
+        const { result: res } = await runtime.execute({
+            client, caller: 'adaptive-planner',
+            model: HAIKU, maxTokens: 1024,
             system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
             messages: [{ role: 'user', content: prompt }],
         });

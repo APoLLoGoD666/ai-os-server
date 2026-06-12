@@ -523,10 +523,11 @@ router.get('/system-status', requireAppAccess, async (req, res) => {
     // ── Episodic memory ───────────────────────────────────────────────────────
     try {
         const episodic = require('../agent-system/episodic-memory');
+        const epMem    = require('../lib/memory/episodic-memory-pg');
         result.episodic = {
             ok:           true,
             episodeCount: episodic.episodeCount(),
-            successRate:  episodic.getSuccessRate(50),
+            successRate:  await epMem.getSuccessRate(50).catch(() => null),
         };
     } catch (e) {
         result.episodic = { ok: false, error: e.message };

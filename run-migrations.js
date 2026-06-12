@@ -49,7 +49,8 @@ function runSQL(sql) {
 }
 
 async function main() {
-    const sqlFile = path.join(__dirname, 'migrations', '001_missing_tables.sql');
+    const migArg   = process.argv[2];  // optional: node run-migrations.js 015_civilization_infrastructure.sql
+    const sqlFile  = path.join(__dirname, 'migrations', migArg || '001_missing_tables.sql');
     const sql = fs.readFileSync(sqlFile, 'utf8')
         .split('\n')
         .filter(l => !l.trim().startsWith('--') && l.trim())

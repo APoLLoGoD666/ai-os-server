@@ -12,7 +12,8 @@
 const fs   = require('fs');
 const path = require('path');
 
-const _ep  = require('./episodic-memory');
+const _ep    = require('./episodic-memory');
+const _epMem = require('../lib/memory/episodic-memory-pg');
 const _rf  = require('./reflection-engine');
 const _rep = require('./agent-reputation');
 const _sel = require('./dynamic-agent-selector');
@@ -170,14 +171,14 @@ async function _analyzeStageFailures() {
 
 // ── Pass 2: Episodic memory patterns (source: episodic-memory + reflection-engine) ──
 
-function _analyzeEpisodicPatterns() {
+async function _analyzeEpisodicPatterns() {
     const recs     = [];
     const totalEps = _ep.episodeCount();
     if (totalEps < MIN_SAMPLES) return recs;
 
     try {
         const failures = _ep.getFailureEpisodes(60);
-        const sr       = _ep.getSuccessRate(40) ?? 0.5;
+        const sr       = (await _epMem.getSuccessRate(40).catch(() => null)) ?? 0.5;
         const failRate = +(1 - sr).toFixed(3);
 
         // A — DEVELOPER failures → split oversized tasks before routing
@@ -351,7 +352,7 @@ async function runCycle() {
         _analyzeStageFailures(),
         _analyzeCategoryRouting(),
     ]);
-    const episodic = _analyzeEpisodicPatterns();
+    const episodic = await _analyzeEpisodicPatterns();
     const fresh    = [...stageFails, ...episodic, ...catRouting];
     const existing = _loadRegistry().adaptations || [];
     const merged   = _merge(existing, fresh);

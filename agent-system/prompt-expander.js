@@ -1,10 +1,6 @@
 "use strict";
-const Anthropic = require('@anthropic-ai/sdk');
+const runtime = require('../lib/models/runtime');
 const memory = require('./obsidian-memory');
-
-let _anthropicClient;
-
-const MODEL = 'claude-haiku-4-5-20251001';
 
 const SYSTEM_PROMPT = `You are a senior developer working on Apex AI OS — a Node.js/Express voice-first AI operating system on Render. The stack is: Node.js, Express, Supabase JS client, Anthropic Claude API, Deepgram STT/TTS, Gmail OAuth2, Ruflo agent orchestration.
 
@@ -44,19 +40,16 @@ Output format (strict JSON, no other text):
 }`;
 
 async function expandPrompt(simplePrompt) {
-    if (!_anthropicClient) _anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const client = _anthropicClient;
-    const model = MODEL;
-
     const northStar = memory.getNorthStar();
     const lessons = memory.getLessons();
     const memoryContext = northStar || lessons
         ? `\n\nSYSTEM MEMORY:\n${northStar}\n\nLESSONS LEARNED:\n${lessons}`
         : '';
 
-    const res = await client.messages.create({
-        model,
-        max_tokens: 800,
+    const { result: res } = await runtime.execute({
+        tier: 'fast',
+        caller: 'prompt-expander',
+        maxTokens: 800,
         system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: `Task: ${simplePrompt}${memoryContext}` }]
     });

@@ -33,6 +33,7 @@ const path = require('path');
 
 const _adapt   = require('./adaptation-engine');
 const _ep      = require('./episodic-memory');
+const _epMem   = require('../lib/memory/episodic-memory-pg');
 const _rf      = require('./reflection-engine');
 const _goals   = require('./goal-tracker');
 const _metrics = require('./autonomy-metrics');
@@ -411,7 +412,7 @@ async function _snapshot() {
     };
     await Promise.allSettled([
         Promise.resolve().then(() => { s.episodeCount = _ep.episodeCount(); }),
-        Promise.resolve().then(() => { s.successRate  = _ep.getSuccessRate(50); }),
+        _epMem.getSuccessRate(50).then(sr => { s.successRate = sr; }).catch(() => {}),
         Promise.resolve().then(() => { s.memoryStats  = _midx.getStats(); }),
         // getActiveAdaptations reads from registry file — does NOT re-run analysis cycle
         Promise.resolve().then(() => {

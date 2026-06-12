@@ -2,9 +2,7 @@
 // task-planner.js — Goal decomposition, complexity estimation, risk scoring, simulation mode.
 // Standalone module: no orchestrator internals modified, no DB writes.
 
-const Anthropic = require('@anthropic-ai/sdk');
-
-const HAIKU = 'claude-haiku-4-5-20251001';
+const runtime = require('../lib/models/runtime');
 
 // Risk keyword patterns — static scoring, zero API cost
 const _HIGH_RISK = /\b(auth(?:entication|oriz)?|password|secret|api.?key|jwt|oauth|stripe|payment|billing|sql|xss|csrf|rls|encrypt|hash|salt|session.?token|database.?schema|migration)\b/i;
@@ -53,18 +51,6 @@ async function decomposeGoal(goal, options = {}) {
         };
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-        return {
-            goal, complexity, risk, simulated: false,
-            subtasks: [{
-                objective: goal, filesToModify: [], steps: [], complexity, risk,
-                rationale: 'fallback — ANTHROPIC_API_KEY not set'
-            }]
-        };
-    }
-
-    const client = new Anthropic({ apiKey });
     const SYSTEM = `You are a software task planner for APEX AI OS (Node.js/Express on Render).
 Break goals into concrete, independently-executable subtasks.
 Each subtask must be completable in a single agent pipeline run.
@@ -87,9 +73,10 @@ Goal: ${goal}`;
 
     let parsed;
     try {
-        const res = await client.messages.create({
-            model: HAIKU,
-            max_tokens: 1024,
+        const { result: res } = await runtime.execute({
+            tier: 'fast',
+            caller: 'task-planner',
+            maxTokens: 1024,
             system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
             messages: [{ role: 'user', content: prompt }]
         });

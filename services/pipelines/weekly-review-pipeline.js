@@ -5,6 +5,7 @@
 
 const { briefings: slackBriefings } = require('../slack');
 const { sync: notionSync } = require('../notion');
+const runtime = require('../../lib/models/runtime');
 
 async function runWeeklyReview(pgPool, obsidianUrl, anthropicClient) {
   const weekOf = _weekLabel();
@@ -88,11 +89,11 @@ async function _aggregateWeeklyData(pgPool) {
 }
 
 async function _synthesize(client, data) {
-  if (!client) return { summary: 'No synthesis available', wins: [], priorities: [] };
   try {
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
+    const { result: response } = await runtime.execute({
+      tier:      'fast',
+      caller:    'weekly-review-pipeline',
+      maxTokens: 500,
       messages: [{
         role: 'user',
         content: `Weekly data: ${JSON.stringify(data, null, 2)}\n\nSynthesize: 3 wins, 3 next priorities, 1-line summary. JSON: {wins:[], priorities:[], summary:'', topPriority:''}`,

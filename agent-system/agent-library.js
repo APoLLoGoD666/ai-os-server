@@ -2,7 +2,7 @@
 
 const https     = require('https');
 const path      = require('path');
-const Anthropic = require('@anthropic-ai/sdk');
+const runtime = require('../lib/models/runtime');
 
 const GITHUB_TREE = 'https://api.github.com/repos/msitarzewski/agency-agents/git/trees/main?recursive=1';
 const RAW_BASE    = 'https://raw.githubusercontent.com/msitarzewski/agency-agents/main/';
@@ -259,13 +259,12 @@ async function invokeAgent(slugOrKeyword, userMessage, { anthropicClient } = {})
     const agent = getAgent(slugOrKeyword);
     if (!agent) throw new Error(`Agent "${slugOrKeyword}" not found. Call /api/agents/sync first.`);
 
-    const client = anthropicClient || new Anthropic();
-
-    const response = await client.messages.create({
-        model:      'claude-haiku-4-5-20251001',
-        max_tokens: 1500,
-        system:     agent.system_prompt,
-        messages:   [{ role: 'user', content: userMessage }]
+    const { result: response } = await runtime.execute({
+        tier:      'fast',
+        caller:    'agent-library',
+        maxTokens: 1500,
+        system:    agent.system_prompt,
+        messages:  [{ role: 'user', content: userMessage }],
     });
 
     return {

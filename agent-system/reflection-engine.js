@@ -7,6 +7,7 @@
 
 const Anthropic  = require('@anthropic-ai/sdk');
 const localMemory = require('./obsidian-memory');
+const runtime     = require('../lib/models/runtime');
 
 const _MODEL = 'claude-haiku-4-5-20251001';
 let _client  = null;
@@ -210,9 +211,9 @@ async function generateReflectionLesson(spec, agentLogs, success, existingLesson
     ).join('\n');
 
     try {
-        const res = await client.messages.create({
-            model:      _MODEL,
-            max_tokens: 120,
+        const { result: res } = await runtime.execute({
+            client, caller: 'reflection-engine',
+            model: _MODEL, maxTokens: 120,
             system: [{ type: 'text', cache_control: { type: 'ephemeral' }, text:
                 `You generate ONE concrete actionable engineering lesson for an AI agent system.
 Rules: one sentence, name the specific file type / stage / pattern. No filler. No repetition of existing lessons.

@@ -1,6 +1,7 @@
 "use strict";
 const { obsidianRead, obsidianWrite } = require('./obsidian-client');
 const localMemory = require('./obsidian-memory');
+const runtime     = require('../lib/models/runtime');
 
 let _anthropic;
 
@@ -95,8 +96,9 @@ async function consolidateWiki() {
     // Consolidate Decisions.md — summarize old entries, keep recent verbatim
     const decisions = await obsidianRead('System/Decisions.md').catch(() => null);
     if (decisions && decisions.length > 500) {
-        const res = await client.messages.create({
-            model, max_tokens: 2000,
+        const { result: res } = await runtime.execute({
+            client, caller: 'wiki-reader',
+            model, maxTokens: 2000,
             system: `You consolidate a living decisions log.
 Rules:
 - Keep entries from the last 7 days verbatim

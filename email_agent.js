@@ -11,8 +11,7 @@ const {
     pgSaveGmailToken,
     pgClearGmailToken
 } = require("./pg_helpers");
-
-const HAIKU = "claude-haiku-4-5-20251001";
+const runtime = require("./lib/models/runtime");
 
 async function getGmailClient() {
     const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET } = process.env;
@@ -67,10 +66,11 @@ Subject: ${email.subject}
 Body: ${email.body}`;
 
     try {
-        const response = await anthropicClient.messages.create({
-            model: HAIKU,
-            max_tokens: 200,
-            messages: [{ role: "user", content: prompt }]
+        const { result: response } = await runtime.execute({
+            tier:      'fast',
+            caller:    'email-agent',
+            maxTokens: 200,
+            messages:  [{ role: "user", content: prompt }],
         });
 
         const text = response.content[0]?.text || "{}";

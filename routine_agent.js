@@ -12,7 +12,7 @@ const {
 
 const { createClient: _sbRoutine } = require('@supabase/supabase-js');
 const _sbr = _sbRoutine(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const HAIKU = "claude-haiku-4-5-20251001";
+const runtime = require("./lib/models/runtime");
 
 const DEFAULT_ROUTINES = [
     {
@@ -83,10 +83,11 @@ async function generateRoutineMessage(routine, anthropicClient) {
         || `You are Apex. Deliver a 2-sentence ${routine.description}. Be natural and direct. No markdown.\n\nRecent context:\n${memContext}`;
 
     try {
-        const res = await anthropicClient.messages.create({
-            model: HAIKU,
-            max_tokens: 100,
-            messages: [{ role: "user", content: prompt }]
+        const { result: res } = await runtime.execute({
+            tier:      'fast',
+            caller:    'routine-agent',
+            maxTokens: 100,
+            messages:  [{ role: "user", content: prompt }],
         });
         return res.content[0]?.text?.trim() || `Time for your ${routine.name}.`;
     } catch {
@@ -150,10 +151,11 @@ async function analyseUsagePatterns(anthropicClient) {
         const topHours = sorted.map(([h, cnt]) => `${h}:00 (${cnt} msgs)`).join(", ");
         const prompt = `Based on this user activity pattern: ${topHours}, suggest one short personalised daily routine schedule in 1 sentence. Be specific about timing.`;
 
-        const res = await anthropicClient.messages.create({
-            model: HAIKU,
-            max_tokens: 80,
-            messages: [{ role: "user", content: prompt }]
+        const { result: res } = await runtime.execute({
+            tier:      'fast',
+            caller:    'routine-agent',
+            maxTokens: 80,
+            messages:  [{ role: "user", content: prompt }],
         });
 
         const suggestion = res.content[0]?.text?.trim();

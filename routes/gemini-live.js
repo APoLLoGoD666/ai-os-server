@@ -362,10 +362,9 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
         const url = new URL(req.url, 'http://localhost');
         if (url.pathname !== '/ws/gemini-live') return;
         if (appKey) {
-            const qKey = url.searchParams.get('app_key') || '';
             const hKey = req.headers['x-app-key'] || '';
-            const _safe = (k) => { try { return crypto.timingSafeEqual(Buffer.from(k), Buffer.from(appKey)); } catch { return false; } };
-            if (!_safe(qKey) && !_safe(hKey)) {
+            const _safe = (k) => { try { return k.length === appKey.length && crypto.timingSafeEqual(Buffer.from(k), Buffer.from(appKey)); } catch { return false; } };
+            if (!_safe(hKey)) {
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
                 socket.destroy();
                 return;
@@ -401,7 +400,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
         // Without this guard, geminiWs would be created and never cleaned up.
         if (browserWs.readyState !== WebSocket.OPEN) return;
 
-        const geminiWs = new WebSocket(`${GEMINI_WS_BASE}?key=${resolvedKey}`);
+        const geminiWs = new WebSocket(GEMINI_WS_BASE, { headers: { 'x-goog-api-key': resolvedKey } });
         let _setupTimer = null;
 
         geminiWs.once('open', () => {

@@ -469,11 +469,6 @@ function _serveDashboard(req, res) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    if (process.env.BYPASS_DASHBOARD_AUTH === 'true') {
-        const html = fs.readFileSync(path.join(__dirname, 'dashboard.html'), 'utf8');
-        const k = JSON.stringify(process.env.APP_ACCESS_KEY || '');
-        return res.send(html.replace('</head>', `<script>try{localStorage.setItem('apex_app_key',${k});}catch(e){}</script></head>`));
-    }
     res.sendFile(path.join(__dirname, 'dashboard.html'));
 }
 app.get('/', requireAuth, _serveDashboard);
@@ -543,6 +538,7 @@ const client = new Anthropic({
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 const SONNET_MODEL = "claude-sonnet-4-6";
+const runtime = require('./lib/models/runtime');
 const AUTONOMY_LEVEL = String(process.env.AUTONOMY_LEVEL || "1");
 
 let mastraAgents = null;
@@ -818,9 +814,7 @@ function ensureSetup() {
 function hasAppAccess(req) {
     if (!APP_ACCESS_KEY) return false;
 
-    const headerKey = req.get("x-app-key");
-    const queryKey = req.query?.app_key;
-    const key = headerKey || queryKey || '';
+    const key = req.get("x-app-key") || '';
 
     try {
         return key.length === APP_ACCESS_KEY.length &&
@@ -998,9 +992,9 @@ async function _compressMemory() {
         const toCompress = memory.slice(0, memory.length - 6)
             .map(m => `[${m.role}] ${m.message}`)
             .join("\n");
-        const res = await client.messages.create({
-            model: HAIKU_MODEL,
-            max_tokens: 100,
+        const { result: res } = await runtime.execute({
+            tier: 'fast', caller: '_compressMemory',
+            maxTokens: 100,
             messages: [{ role: "user", content: `Summarise this conversation history in one sentence:\n\n${toCompress}` }]
         });
         const summary = (res.content[0]?.text || "").trim();
@@ -1041,9 +1035,9 @@ async function getMemorySummary() {
             return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${item.message}`;
         }).join("\n");
         try {
-            const res = await client.messages.create({
-                model: "claude-haiku-4-5-20251001",
-                max_tokens: 60,
+            const { result: res } = await runtime.execute({
+                tier: 'fast', caller: 'getMemorySummary',
+                maxTokens: 60,
                 temperature: 0,
                 messages: [{ role: "user", content: `Summarise this conversation history into one compact paragraph (max 60 words). Focus on facts, preferences, and recent context only.\n\n${raw}` }]
             });
@@ -1554,9 +1548,9 @@ async function moveFileToCategory(filename, category) {
 
 async function summariseText(text) {
     try {
-        const response = await client.messages.create({
-            model: HAIKU_MODEL,
-            max_tokens: 200,
+        const { result: response } = await runtime.execute({
+            tier: 'fast', caller: 'summariseText',
+            maxTokens: 200,
             messages: [{ role: "user", content: `Summarise this file clearly in 3-5 bullet points:\n\n${text}` }]
         });
         return (response.content || []).filter(p => p.type === "text").map(p => p.text || "").join("\n").trim();
@@ -1621,9 +1615,9 @@ function getLatestCompletedAgentTask(tasks = []) {
 }
 
 async function generateReflectionForTask(task) {
-    const response = await client.messages.create({
-        model: HAIKU_MODEL,
-        max_tokens: 400,
+    const { result: response } = await runtime.execute({
+        tier: 'fast', caller: 'generateReflectionForTask',
+        maxTokens: 400,
         messages: [
             {
                 role: "user",
@@ -4555,9 +4549,9 @@ function buildDirectSafeAgentStepsFromRequest(request = "") {
 }
 
 async function getApprovedAgentActions(latestPlan) {
-    const response = await client.messages.create({
-        model: SONNET_MODEL,
-        max_tokens: 700,
+    const { result: response } = await runtime.execute({
+        tier: 'balanced', caller: 'getApprovedAgentActions',
+        maxTokens: 700,
         messages: [
             {
                 role: "user",
@@ -6980,18 +6974,18 @@ Answer helpfully.
 
 async function backgroundClassifyAndSummarise(filename, content) {
     try {
-        const [classRes, sumRes] = await Promise.all([
-            client.messages.create({
-                model: HAIKU_MODEL,
-                max_tokens: 20,
+        const [{ result: classRes }, { result: sumRes }] = await Promise.all([
+            runtime.execute({
+                tier: 'fast', caller: 'backgroundClassifyAndSummarise',
+                maxTokens: 20,
                 messages: [{
                     role: "user",
                     content: `Classify into ONE word: uni, business, personal, summary\n\nTEXT:\n${content}`
                 }]
             }),
-            client.messages.create({
-                model: HAIKU_MODEL,
-                max_tokens: 150,
+            runtime.execute({
+                tier: 'fast', caller: 'backgroundClassifyAndSummarise',
+                maxTokens: 150,
                 messages: [{
                     role: "user",
                     content: `Summarise this in 2-3 sentences:\n\n${content}`
@@ -7704,9 +7698,9 @@ app.post("/api/ai-draft-reply", requireAppAccess, async (req, res) => {
         const { emailSubject, emailBody, senderName, userPrompt } = req.body || {};
         const cleanEmailSubject = (emailSubject || "").replace(/[^\x00-\x7F]/g, " ").trim();
         const prompt = `You are drafting a short email reply on behalf of the user.\nOriginal email from: ${senderName || "Unknown"}\nSubject: ${cleanEmailSubject}\nBody: ${emailBody || ""}\n${userPrompt ? `\nUser instruction: ${userPrompt}` : ""}\n\nWrite a concise, natural 2-3 sentence reply. Output only the reply body text, no subject line, no greeting prefix beyond a natural opening.`;
-        const response = await client.messages.create({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 150,
+        const { result: response } = await runtime.execute({
+            tier: 'fast', caller: 'ai-draft-reply',
+            maxTokens: 150,
             messages: [{ role: "user", content: prompt }]
         });
         const draft = response.content[0]?.text?.trim() || "";
@@ -7919,78 +7913,6 @@ app.post("/api/speak", requireAppAccess, async (req, res) => {
     }
 });
 
-// ── APEX MEMORY (pgvector + Voyage AI) ────────────────────────────────────
-
-// Supabase client — used by saveMemory / recallMemories for vector storage
-const { createClient: _createSupabaseClient } = require('@supabase/supabase-js');
-const supabase = _createSupabaseClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
-
-async function getVoyageEmbedding(text) {
-    try {
-        const res = await fetch('https://api.voyageai.com/v1/embeddings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`
-            },
-            body: JSON.stringify({
-                input: [text],
-                model: 'voyage-3-lite',
-                input_type: 'document'
-            })
-        });
-        const data = await res.json();
-        return data?.data?.[0]?.embedding || null;
-    } catch (err) {
-        console.error('[MEMORY] Voyage embedding error:', err.message);
-        return null;
-    }
-}
-
-async function saveMemory(role, content) {
-    try {
-        const embedding = await getVoyageEmbedding(content);
-        const row = { role, content };
-        if (embedding) row.embedding = JSON.stringify(embedding);
-        const { error } = await supabase.from('apex_memories').insert(row);
-        if (error) console.error('[MEMORY] Save error:', error.message);
-    } catch (err) {
-        console.error('[MEMORY] saveMemory error:', err.message);
-    }
-}
-
-async function recallMemories(query, count = 5) {
-    try {
-        const embedding = await getVoyageEmbedding(query);
-        if (!embedding) {
-            const { data, error } = await supabase
-                .from('apex_memories')
-                .select('role, content, created_at')
-                .ilike('content', `%${query.slice(0, 50)}%`)
-                .order('created_at', { ascending: false })
-                .limit(count);
-            if (error) return [];
-            return data || [];
-        }
-        const { data, error } = await supabase.rpc('match_apex_memories', {
-            query_embedding: JSON.stringify(embedding),
-            match_count: count
-        });
-        if (error) {
-            console.error('[MEMORY] Recall error:', error.message);
-            return [];
-        }
-        return data || [];
-    } catch (err) {
-        console.error('[MEMORY] recallMemories error:', err.message);
-        return [];
-    }
-}
-
-// ── END APEX MEMORY ────────────────────────────────────────────────────────
 
 // ── UPGRADE 1: Structured Memory Extraction ─────────────────────────────────
 async function extractAndSaveFacts(userMessage, apexReply) {
@@ -8002,9 +7924,9 @@ Apex replied: ${apexReply}
 
 Respond with one fact per line, each starting with "Alex".`;
 
-        const res = await client.messages.create({
-            model: HAIKU_MODEL,
-            max_tokens: 200,
+        const { result: res } = await runtime.execute({
+            tier: 'fast', caller: 'extractAndSaveFacts',
+            maxTokens: 200,
             messages: [{ role: 'user', content: prompt }]
         });
 
@@ -8899,9 +8821,9 @@ app.post("/api/upload-file", requireAppAccess, async (req, res) => {
 
         await createWorkspaceFile(cleanName, textContent);
 
-        const summaryResp = await client.messages.create({
-            model: HAIKU_MODEL,
-            max_tokens: 150,
+        const { result: summaryResp } = await runtime.execute({
+            tier: 'fast', caller: 'upload-file',
+            maxTokens: 150,
             messages: [{ role: "user", content: `Summarise this file in 2-3 sentences:\n\nFilename: ${cleanName}\n\n${textContent.slice(0, 3000)}` }]
         });
         const summary = (summaryResp.content[0]?.text || "").trim();
@@ -9342,9 +9264,9 @@ Rules:
 - Multiple style actions allowed
 - Return empty actions array if request is unclear`;
 
-        const msg = await client.messages.create({
-            model: HAIKU_MODEL,
-            max_tokens: 512,
+        const { result: msg } = await runtime.execute({
+            tier: 'fast', caller: 'editor-ai-action',
+            maxTokens: 512,
             system: systemPrompt,
             messages: [{ role: 'user', content: prompt }],
         });
@@ -10120,9 +10042,9 @@ app.post('/api/editor/lens', requireAppAccess, async (req, res) => {
             brutalist: 'Brutalist style: raw contrast, visible borders, intentional asymmetry, bold typography, no rounded corners.'
         };
 
-        const { getAnthropicClient } = require('./lib/clients');
-        const res_ = await getAnthropicClient().messages.create({
-            model: HAIKU_MODEL, max_tokens: 1500,
+        const { result: res_ } = await runtime.execute({
+            tier: 'fast', caller: 'editor-lens',
+            maxTokens: 1500,
             system: `You are a UI design critic applying a specific design lens to HTML.
 ${LENS_DESCRIPTIONS[lens] || LENS_DESCRIPTIONS.kowalski}
 ${STYLE_DESCRIPTIONS[styleVariant] || STYLE_DESCRIPTIONS.soft}
@@ -10250,9 +10172,9 @@ app.post('/api/voice/pipeline', requireAppAccess, async (req, res) => {
         const _rag = require('./agent-system/rag-bridge');
 
         // 1. Intent classification
-        const { getAnthropicClient: _gac } = require('./lib/clients');
-        const intentRes = await _gac().messages.create({
-            model: HAIKU_MODEL, max_tokens: 200,
+        const { result: intentRes } = await runtime.execute({
+            tier: 'fast', caller: 'voice-intent',
+            maxTokens: 200,
             system: 'Classify the user intent. Reply with JSON only: {"intent":"research|browser|rag|direct","query":"refined query or null"}',
             messages: [{ role: 'user', content: transcript }]
         });
@@ -10282,9 +10204,9 @@ app.post('/api/voice/pipeline', requireAppAccess, async (req, res) => {
         }
 
         // 3. Generate response via Claude
-        const { getAnthropicClient: _voiceAc } = require('./lib/clients');
-        const finalRes = await _voiceAc().messages.create({
-            model: 'claude-haiku-4-5-20251001', max_tokens: 500,
+        const { result: finalRes } = await runtime.execute({
+            tier: 'fast', caller: 'voice-response',
+            maxTokens: 500,
             system: 'You are Apex, a concise voice assistant. Respond in 1-3 sentences suitable for speech synthesis. No markdown, no bullet points.',
             messages: [{ role: 'user', content: `${context ? `Context:\n${context}\n\n` : ''}User: ${transcript}` }]
         });
@@ -10360,7 +10282,7 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
 
 // ── Intelligence / cost stub routes (dashboard polls these) ──────────────────
 app.get('/api/deploy-probe', (req, res) => res.json({ v: '8a352e0-probe', ts: Date.now() }));
-app.get('/api/intelligence/agent-runs', async (req, res) => {
+app.get('/api/intelligence/agent-runs', requireAppAccess, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 20;
         const { data } = await sbAdmin.from('apex_agent_runs')
@@ -10369,7 +10291,7 @@ app.get('/api/intelligence/agent-runs', async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-app.get('/api/intelligence/cost-summary', async (req, res) => {
+app.get('/api/intelligence/cost-summary', requireAppAccess, async (req, res) => {
     try {
         const { data } = await sbAdmin.from('apex_agent_runs').select('cost_usd,model').limit(1000);
         const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
@@ -10474,7 +10396,10 @@ app.get('/api/agent/status', requireAppAccess, async (req, res) => {
 });
 // ── End stub routes ───────────────────────────────────────────────────────────
 
+let _checkPendingLocked = false; // prevents concurrent dispatch from multiple triggers
 async function checkPendingMasterTasks() {
+    if (_checkPendingLocked) return;
+    _checkPendingLocked = true;
     try {
         const { data, error } = await sbAdmin
             .from('apex_notifications')
@@ -10524,6 +10449,8 @@ async function checkPendingMasterTasks() {
         }
     } catch (e) {
         console.error('[Master] checkPendingMasterTasks error:', e.message);
+    } finally {
+        _checkPendingLocked = false;
     }
 }
 
@@ -11108,9 +11035,9 @@ app.post('/api/wiki/voice-note', requireAppAccess, async (req, res) => {
         if (!content) return res.json({ ok: true, saved: false, reason: 'Empty content after stripping trigger' });
 
         // Classify via the wiki ingest route logic (inline)
-        const { getAnthropicClient: _wikiAc } = require('./lib/clients');
-        const classifyRes = await _wikiAc().messages.create({
-            model: HAIKU_MODEL, max_tokens: 80,
+        const { result: classifyRes } = await runtime.execute({
+            tier: 'fast', caller: 'voice-note-classify',
+            maxTokens: 80,
             messages: [{ role: 'user', content:
                 `Classify this spoken note into a wiki page path.\nOptions: People/User.md, System/Decisions.md, System/WIKI.md, Entities/<Name>.md, Concepts/<Name>.md\nNote: "${content.slice(0, 300)}"\nReply ONLY with the path.`
             }]
@@ -11536,7 +11463,11 @@ server.on('upgrade', (req, socket, head) => {
     const urlPath = (req.url || '').split('?')[0];
     if (urlPath === '/ws') {
         const token = new URL(req.url, 'http://x').searchParams.get('token');
-        if (APP_ACCESS_KEY && token !== APP_ACCESS_KEY) { socket.destroy(); return; }
+        if (APP_ACCESS_KEY) {
+            const _t = Buffer.from(token || '', 'utf8');
+            const _k = Buffer.from(APP_ACCESS_KEY, 'utf8');
+            if (_t.length !== _k.length || !require('crypto').timingSafeEqual(_t, _k)) { socket.destroy(); return; }
+        }
         _wss.handleUpgrade(req, socket, head, ws => _wss.emit('connection', ws, req));
     } else if (!urlPath.startsWith('/ws/')) {
         // Only destroy paths that no registered handler owns
@@ -11588,6 +11519,9 @@ server.listen(PORT, () => {
             console.log('[Startup] Schema OK — all required tables present');
         }
     });
+
+    // Model telemetry subscriber — logs all MODEL_INVOKED events via logger
+    require('./lib/models/runtime/subscriber').activate();
 
     // Post-deployment governance probe — runs 60s after startup
     // Proves all governance capabilities are operational after every deploy.
@@ -12017,10 +11951,9 @@ checkPendingMasterTasks();
                     '',
                     'Write the review with: Executive Summary (3 bullets), Wins, Concerns, Next Week Focus.',
                 ].join('\n');
-                const Anthropic = require('@anthropic-ai/sdk');
-                const _anth = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-                const msg = await _anth.messages.create({
-                    model: 'claude-haiku-4-5-20251001', max_tokens: 1200,
+                const { result: msg } = await runtime.execute({
+                    tier: 'fast', caller: 'weekly-review',
+                    maxTokens: 1200,
                     messages: [{ role: 'user', content: prompt }]
                 });
                 const review = msg.content[0]?.text?.trim();
@@ -12477,13 +12410,19 @@ checkPendingMasterTasks();
         }, delay3);
     })();
 
-    // Mastra agent framework
-    try {
-        mastraAgents = initMastra(handleCommand);
-        console.log("🤖 Mastra agents initialised.");
-    } catch (err) {
-        console.error("MASTRA INIT ERROR:", err.message);
-    }
+    // Intelligence reality loop — OODA cycle at Haiku tier (grounded, no synthetic metrics)
+    setTimeout(() => {
+        try {
+            require('./lib/intelligence/reality-loop').start(15 * 60 * 1000); // 15-minute interval
+            console.log('[Intelligence] Reality loop started (15min OODA cycle)');
+        } catch (err) {
+            console.warn('[Intelligence] Reality loop start failed (non-fatal):', err.message);
+        }
+    }, 60000); // 1-minute warm-up delay after server is stable
+
+    // Mastra agent framework — real load deferred 5 min via _loadMastra() above.
+    // initMastra is the stub (() => null) here; this call is intentionally harmless.
+    mastraAgents = initMastra(handleCommand);
 
     // Ruflo daemon — auto-starts 10 min after server stabilises
     // Detached so it runs independently and doesn't hold the event loop.

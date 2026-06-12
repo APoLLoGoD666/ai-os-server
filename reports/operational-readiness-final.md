@@ -1,5 +1,5 @@
 # Operational Readiness — Final Report
-_Generated: 2026-06-08 | Updated: 2026-06-08 (Phase 3.1 COMMITTER Runtime Validated) | Build: e0bda99_
+_Generated: 2026-06-08 | Updated: 2026-06-08 (Phase 4 Stress Validation Complete) | Build: f2c3b17_
 
 ---
 
@@ -203,3 +203,28 @@ executes end-to-end: task creation → 6 stages → commit → GitHub push → l
 All conditional qualifications are removed.
 
 _Phase 3.1 runtime certification: 2026-06-08T18:54:14Z. Certification expires 2026-09-08._
+
+---
+
+## Phase 4 — Operational Stress Validation
+
+_All evidence from live pipeline execution. No static analysis._
+
+**EXECUTED:** 2026-06-08T20:11:13Z — 20:36:39Z  
+**TASKS:** 3 sequential independent tasks (TASK-A, TASK-B, TASK-C)  
+**BUILD AT START:** a3c1901 → **FINAL BUILD:** f2c3b17 (advanced 3x by Apex AutoPilot)
+
+| Task | ID | Duration | Stages | Commit | Lesson | Result |
+|------|----|----------|--------|--------|--------|--------|
+| TASK-A | TASK-421408 | 75,948ms | 6/6 PASS (1 VALIDATOR retry) | 7858d48 | id=6 | PASS |
+| TASK-B | TASK-023923 | 27,105ms | 6/6 PASS | 495bce1 | id=7 | PASS |
+| TASK-C | TASK-768539 | 130,873ms | 6/6 PASS | f2c3b17 | id=8 | PASS |
+
+- TASK-B had one pre-pipeline failure (ARCHITECT spec truncation on overly broad description). Retry with constrained description succeeded.
+- GitHub main advanced: a3c1901 → 7858d48 → 495bce1 → f2c3b17. No duplicate commits.
+- All 3 lessons persisted to apex_lessons (id=6,7,8) within 2 seconds of pipeline completion.
+- No stuck tasks, no deadlocks. Server survived 3 sequential pipeline runs without OOM.
+
+**PHASE 4 DETERMINATION: OPERATIONALLY READY**
+
+_Phase 4 certification: 2026-06-08T20:36:39Z._
