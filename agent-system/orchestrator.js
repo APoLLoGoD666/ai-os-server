@@ -352,12 +352,23 @@ Frontend testCases MUST include:
         _adaptCtx = _adaptEngine.formatRecsAsContext(_recs);
     } catch {}
 
+    let _similarCtx = '';
+    try {
+        const _similar = await _indexer.searchSimilar(spec.objective, 3);
+        if (_similar.length) {
+            _similarCtx = 'SIMILAR PAST TASKS (semantic recall):\n' + _similar.map(e =>
+                `[${e.meta?.success !== false ? 'SUCCESS' : 'FAILURE'} | ${e.meta?.complexity || e.type}] ${e.text.slice(0, 180)}`
+            ).join('\n');
+        }
+    } catch {}
+
     const res = await _callClaude(ctx.agentModels.architect, SYSTEM + uiMandate,
         `SPEC:\n${JSON.stringify(spec, null, 2)}\n\n` +
         (routesMap ? routesMap + '\n\n' : '') +
         `FILE CONTENTS:\n${archFileContents}` +
         (graphContext ? '\n\nKNOWLEDGE GRAPH:\n' + graphContext : '') +
         (ctx.obsidianContext ? '\n\nSYSTEM MEMORY:\n' + ctx.obsidianContext : '') +
+        (_similarCtx ? '\n\nSIMILAR PAST TASKS:\n' + _similarCtx : '') +
         (_adaptCtx ? '\n\n' + _adaptCtx : ''),
         800, 'ARCHITECT', ctx
     );
@@ -1027,6 +1038,8 @@ async function runAgentTeam(spec, taskId) {
             if (_rec) {
                 const prev = ctx.agentModels[key];
                 ctx.agentModels[key] = _rec.params.recommendedModel;
+                ctx._appliedAdaptIds = ctx._appliedAdaptIds || [];
+                ctx._appliedAdaptIds.push(_rec.id);
                 console.log(`[AdaptEngine] ${stage}: ${prev.split('-').pop()} → ${_rec.params.recommendedModel.split('-').pop()} (conf:${_rec.confidence})`);
             }
         }
@@ -1054,6 +1067,8 @@ async function runAgentTeam(spec, taskId) {
                 if (_bm.developer) ctx.agentModels.developer = _bm.developer;
                 if (_bm.reviewer)  ctx.agentModels.reviewer  = _bm.reviewer;
                 console.log(`[AdaptEngine] routing: ${complexity} → ${_bumped} (cat:${_cat}, conf:${_routingRec.confidence})`);
+                ctx._appliedAdaptIds = ctx._appliedAdaptIds || [];
+                ctx._appliedAdaptIds.push(_routingRec.id);
             }
         }
     } catch {}
@@ -1335,6 +1350,7 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity, ctx).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs, models: ctx.agentModels, failureReason: error }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: false, complexity, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs }); } catch {} });
+        setImmediate(() => { try { (ctx._appliedAdaptIds || []).forEach(id => _adaptEngine.recordApplication(id, false)); } catch {} });
         // North Star proposal — if failures cluster around a pattern, propose a constraint
         setImmediate(async () => {
             try {
@@ -1632,6 +1648,7 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _reputation.invalidateCache());
         setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: true, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs, models: ctx.agentModels }; _indexer.indexEpisode(_ep); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: true, complexity, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs }); } catch {} });
+        setImmediate(() => { try { (ctx._appliedAdaptIds || []).forEach(id => _adaptEngine.recordApplication(id, true)); } catch {} });
         setImmediate(() => { try { _goalTracker.completeGoal(taskId, { commitHash: committerLog.result.commitHash, cost }); } catch {} });
 
         // CFO alert if cost is high
@@ -1684,6 +1701,7 @@ async function runAgentTeam(spec, taskId) {
         });
         setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, failureReason: err.message }; _indexer.indexEpisode(_ep); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: false, complexity, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs }); } catch {} });
+        setImmediate(() => { try { (ctx._appliedAdaptIds || []).forEach(id => _adaptEngine.recordApplication(id, false)); } catch {} });
         setImmediate(() => { try { _goalTracker.blockGoal(taskId, err.message); } catch {} });
         return { success: false, commitHash: null, agentLogs, error: err.message, complexity, models: ctx.agentModels };
     }

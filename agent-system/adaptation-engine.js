@@ -404,8 +404,17 @@ function recordApplication(id, succeeded = null) {
     const reg = _loadRegistry();
     const a   = (reg.adaptations || []).find(x => x.id === id);
     if (!a) return false;
-    a.appliedCount++;
-    if (succeeded === true) a.successCount = (a.successCount || 0) + 1;
+    a.appliedCount = (a.appliedCount || 0) + 1;
+    if (succeeded === true)  a.successCount = (a.successCount || 0) + 1;
+    if (succeeded === false) a.failureCount = (a.failureCount || 0) + 1;
+    // Bayesian update: Beta posterior mean with Laplace smoothing (alpha=1, beta=1 prior)
+    // Only update after >=2 observations to avoid over-reacting to a single sample
+    if (a.appliedCount >= 2) {
+        const successes = a.successCount || 0;
+        const observed  = (successes + 1) / (a.appliedCount + 2); // Laplace-smoothed
+        // Blend observed rate (70%) with original signal-based confidence (30%)
+        a.confidence = +((observed * 0.7) + (a.confidence * 0.3)).toFixed(3);
+    }
     _saveRegistry(reg.adaptations);
     return true;
 }

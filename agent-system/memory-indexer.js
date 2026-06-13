@@ -336,6 +336,56 @@ function getStats() {
     };
 }
 
+// ── Public: Semantic similarity search ───────────────────────────────────────
+/**
+ * Returns the top-K most semantically similar indexed entries to queryText.
+ * Uses cosine similarity over stored embeddings. Falls back to keyword scoring
+ * if no embeddings are available yet (e.g. first-run before embed queue drains).
+ * Never throws — returns [] on any error.
+ * @param {string} queryText
+ * @param {number} topK
+ * @returns {Promise<Array<{id,type,text,hash,score,meta}>>}
+ */
+async function searchSimilar(queryText, topK = 5) {
+    _load();
+    try {
+        const { embedText } = require('../lib/embed');
+        const queryVec = await embedText(queryText);
+        if (queryVec && queryVec.length > 0) {
+            const all = [..._episodes.values(), ..._lessons.values()].filter(e => e.embedding?.length > 0);
+            if (all.length > 0) {
+                const scored = all.map(e => {
+                    let dot = 0, na = 0, nb = 0;
+                    const a = queryVec, b = e.embedding;
+                    const len = Math.min(a.length, b.length);
+                    for (let i = 0; i < len; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+                    const sim = (na && nb) ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
+                    const { embedding: _omit, ...rest } = e;
+                    return { ...rest, score: +sim.toFixed(4) };
+                });
+                scored.sort((a, b) => b.score - a.score);
+                return scored.slice(0, topK).filter(e => e.score > 0.1);
+            }
+        }
+    } catch {}
+    // Keyword fallback — used when embeddings not yet computed
+    return _keywordSearch(queryText, topK);
+}
+
+function _keywordSearch(queryText, topK) {
+    const words = (queryText || '').toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    if (!words.length) return [];
+    const all = [..._episodes.values(), ..._lessons.values()];
+    const scored = all.map(e => {
+        const text = (e.text || '').toLowerCase();
+        const hits = words.filter(w => text.includes(w)).length;
+        const { embedding: _omit, ...rest } = e;
+        return { ...rest, score: +(hits / words.length).toFixed(4) };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, topK).filter(e => e.score > 0);
+}
+
 // ── Startup ───────────────────────────────────────────────────────────────────
 _load();
 
@@ -354,6 +404,7 @@ module.exports = {
     indexEpisode,
     indexLesson,
     indexExecutionPattern,
+    searchSimilar,
     rebuildIndex,
     getEpisodes,
     getLessons,
