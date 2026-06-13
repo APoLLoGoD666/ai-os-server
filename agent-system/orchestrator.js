@@ -1202,7 +1202,7 @@ async function runAgentTeam(spec, taskId) {
         const similar = _episodic.getSimilarExperiences(spec.objective, { limit: 3 });
         if (similar.length) {
             const expCtx = _episodic.formatExperiencesAsContext(similar);
-            obsidianContext = (obsidianContext ? obsidianContext + '\n\n' : '') + expCtx.slice(0, 400);
+            ctx.obsidianContext = (ctx.obsidianContext ? ctx.obsidianContext + '\n\n' : '') + expCtx.slice(0, 400);
         }
     } catch {}
 

@@ -2970,7 +2970,12 @@ async function runDueSchedules() {
     const results = [];
 
     for (const schedule of dueSchedules) {
-        results.push(await runSingleScheduleOnce(schedule));
+        try {
+            results.push(await runSingleScheduleOnce(schedule));
+        } catch (e) {
+            console.error(`[runDueSchedules] schedule #${schedule.id} failed:`, e.message);
+            results.push({ ok: false, schedule, message: e.message });
+        }
     }
 
     return {
@@ -3009,7 +3014,14 @@ async function runAgentPlanningCycle(taskId) {
     const files = await listWorkspaceFiles();
     const today = new Date().toISOString().slice(0, 10);
     const agentProfile = getAgentProfile(task.context_json?.agentProfile?.name || "system_agent");
-    const plan = await buildAgentPlan(task.goal, memory, documents, files, today, agentProfile);
+    let plan;
+    try {
+        plan = await buildAgentPlan(task.goal, memory, documents, files, today, agentProfile);
+    } catch (e) {
+        console.error('[runAgentPlanningCycle] buildAgentPlan failed:', e.message);
+        await pgUpdateAgentTask(taskId, { status: 'failed', error: `Plan generation failed: ${e.message}` });
+        return { ok: false, message: `Plan generation failed: ${e.message}` };
+    }
     const parsed = await getApprovedAgentActions({
         request: task.goal,
         plan,
@@ -4546,10 +4558,12 @@ function buildDirectSafeAgentStepsFromRequest(request = "") {
 }
 
 async function getApprovedAgentActions(latestPlan) {
-    const { result: response } = await runtime.execute({
-        tier: 'balanced', caller: 'getApprovedAgentActions',
-        maxTokens: 700,
-        messages: [
+    let response;
+    try {
+        ({ result: response } = await runtime.execute({
+            tier: 'balanced', caller: 'getApprovedAgentActions',
+            maxTokens: 700,
+            messages: [
             {
                 role: "user",
                 content: `You are converting an approved agent plan into a strict JSON workflow.
@@ -4625,7 +4639,11 @@ ${JSON.stringify({
 }, null, 2)}`
             }
         ]
-    });
+        }));
+    } catch (e) {
+        console.error('[getApprovedAgentActions] runtime.execute failed:', e.message);
+        return null;
+    }
 
     const text = (response.content || [])
         .filter(part => part.type === "text")
