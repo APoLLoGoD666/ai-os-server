@@ -1,6 +1,7 @@
 "use strict";
 const fs = require('fs');
 const path = require('path');
+const { obsidianRead: _apiRead, obsidianWrite: _apiWrite, obsidianAppend: _apiAppend } = require('./obsidian-client');
 
 const VAULT = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
 
@@ -71,6 +72,8 @@ module.exports = {
         const now  = new Date();
         const date = now.toISOString().split('T')[0];
         const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        // Write via REST API (works on Render) then sync to filesystem as well
+        await _apiAppend('01 Executive/Lessons.md', `## ${date} ${time}\n${lesson}`).catch(() => {});
         const diskOk = this.append('01 Executive/Lessons.md', `## ${date} ${time}\n${lesson}`);
         _lessonBuffer.push(`${date} ${time}: ${lesson}`);
         if (_lessonBuffer.length > 50) _lessonBuffer.shift();
@@ -102,34 +105,27 @@ module.exports = {
 
     logDecision(decision, reason) {
         const date = new Date().toISOString().split('T')[0];
-        this.append('01 Executive/Decisions.md',
-            `## ${date} — ${decision}\n**Reason:** ${reason}`);
+        const entry = `## ${date} — ${decision}\n**Reason:** ${reason}`;
+        _apiAppend('01 Executive/Decisions.md', entry).catch(() => {});
+        this.append('01 Executive/Decisions.md', entry);
     },
 
     logFeature(featureId, title, commitHash, details) {
         const date = new Date().toISOString().split('T')[0];
-        this.append('01 Executive/Features.md',
-            `## ${featureId}: ${title}\n` +
-            `**Completed:** ${date}\n` +
-            `**Commit:** ${commitHash}\n` +
-            `**Details:** ${details}`);
-        this.write(`02 Projects/Completed/${featureId}.md`,
-            `---\n` +
-            `id: ${featureId}\n` +
-            `title: ${title}\n` +
-            `status: completed\n` +
-            `date: ${date}\n` +
-            `commit: ${commitHash}\n` +
-            `---\n\n` +
-            `# ${featureId}: ${title}\n\n` +
-            `**Status:** Completed\n` +
-            `**Date:** ${date}\n` +
-            `**Commit:** ${commitHash}\n\n` +
-            `## Details\n${details}`);
+        const featureEntry = `## ${featureId}: ${title}\n**Completed:** ${date}\n**Commit:** ${commitHash}\n**Details:** ${details}`;
+        const projectNote  = `---\nid: ${featureId}\ntitle: ${title}\nstatus: completed\ndate: ${date}\ncommit: ${commitHash}\n---\n\n# ${featureId}: ${title}\n\n**Status:** Completed\n**Date:** ${date}\n**Commit:** ${commitHash}\n\n## Details\n${details}`;
+        _apiAppend('01 Executive/Features.md', featureEntry).catch(() => {});
+        _apiWrite(`02 Projects/Completed/${featureId}.md`, projectNote).catch(() => {});
+        this.append('01 Executive/Features.md', featureEntry);
+        this.write(`02 Projects/Completed/${featureId}.md`, projectNote);
     },
 
     getNorthStar() {
         return this.read('01 Executive/North-Star.md') || '';
+    },
+
+    async getNorthStarAsync() {
+        return (await _apiRead('01 Executive/North-Star.md')) || '';
     },
 
     getLessons() {
@@ -184,6 +180,19 @@ module.exports = {
         if (northStar) parts.push('# NORTH STAR\n' + northStar);
         if (lessons) parts.push('# LESSONS LEARNED\n' + lessons);
         if (features) parts.push('# COMPLETED FEATURES\n' + features);
+        return parts.length ? parts.join('\n\n---\n\n') : '';
+    },
+
+    async getFullContextAsync() {
+        const [northStar, lessons, features] = await Promise.all([
+            _apiRead('01 Executive/North-Star.md'),
+            _apiRead('01 Executive/Lessons.md'),
+            _apiRead('01 Executive/Features.md'),
+        ]);
+        const parts = [];
+        if (northStar) parts.push('# NORTH STAR\n' + northStar);
+        if (lessons)   parts.push('# LESSONS LEARNED\n' + lessons);
+        if (features)  parts.push('# COMPLETED FEATURES\n' + features);
         return parts.length ? parts.join('\n\n---\n\n') : '';
     },
 

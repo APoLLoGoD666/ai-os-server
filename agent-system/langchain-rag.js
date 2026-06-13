@@ -123,7 +123,11 @@ async function _buildIndex() {
     try {
         const mdFiles = _walkMd(VAULT_PATH);
         if (!mdFiles.length) {
-            console.log("[LCRAG] No .md files found in vault, skipping BM25 index");
+            if (process.env.OBSIDIAN_URL && process.env.OBSIDIAN_API_KEY) {
+                console.log('[LCRAG] Vault filesystem not available — BM25 skipped. Supabase vector search active.');
+            } else {
+                console.log('[LCRAG] No .md files found in vault — BM25 and vector index empty. Set OBSIDIAN_URL + OBSIDIAN_API_KEY for remote vault access.');
+            }
             return;
         }
 

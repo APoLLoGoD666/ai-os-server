@@ -193,11 +193,15 @@ const {
     pgClearGmailToken
 } = require("./pg_helpers");
 
-if (!process.env.OBSIDIAN_URL || !process.env.OBSIDIAN_API_KEY) {
-    console.warn('[Obsidian] WARNING — OBSIDIAN_URL or OBSIDIAN_API_KEY not set. Obsidian integration disabled.');
+if (!process.env.OBSIDIAN_URL) {
+    console.warn('[Obsidian] OBSIDIAN_URL not set — vault reads/writes will use local filesystem only. Run obsidian-tunnel.ps1 to enable remote access.');
+} else if (!process.env.OBSIDIAN_API_KEY) {
+    console.warn('[Obsidian] OBSIDIAN_URL set but OBSIDIAN_API_KEY missing — REST API calls will fail with 401. Add OBSIDIAN_API_KEY to Render env vars.');
+} else {
+    console.log('[Obsidian] REST API configured — vault access via tunnel enabled.');
 }
 
-const { obsidianRead, obsidianWrite, obsidianAppend, obsidianSearch } = require('./agent-system/obsidian-client');
+const { obsidianRead, obsidianWrite, obsidianAppend, obsidianSearch, obsidianListVault, obsidianListDir } = require('./agent-system/obsidian-client');
 
 const app = express();
 app.set("trust proxy", 1);

@@ -256,33 +256,52 @@ async function rebuildIndex() {
     _load();
     let epCount = 0;
     let lessonCount = 0;
+    const { obsidianRead, obsidianListDir } = require('./obsidian-client');
+    const useApi = !!(process.env.OBSIDIAN_URL && process.env.OBSIDIAN_API_KEY);
 
-    // Episodes
+    // Episodes — try filesystem first, fall back to Obsidian REST API
     try {
-        const files = fs.readdirSync(EPISODES_DIR)
-            .filter(f => f.startsWith('ep-') && f.endsWith('.json'));
-        for (const f of files) {
+        let episodeFiles = [];
+        let readEpisode;
+
+        if (fs.existsSync(EPISODES_DIR)) {
+            episodeFiles = fs.readdirSync(EPISODES_DIR).filter(f => f.startsWith('ep-') && f.endsWith('.json'));
+            readEpisode  = (f) => fs.readFileSync(path.join(EPISODES_DIR, f), 'utf8');
+        } else if (useApi) {
+            const listed = await obsidianListDir('12 Memory/Episodes');
+            episodeFiles = listed.filter(f => f.startsWith('ep-') && f.endsWith('.json'));
+            readEpisode  = async (f) => await obsidianRead(`12 Memory/Episodes/${f}`);
+        }
+
+        for (const f of episodeFiles) {
             try {
-                const ep   = JSON.parse(fs.readFileSync(path.join(EPISODES_DIR, f), 'utf8'));
+                const raw  = await Promise.resolve(readEpisode(f));
+                if (!raw) continue;
+                const ep   = JSON.parse(raw);
                 const hash = _hash(`ep:${ep.id || ep.objective}`);
                 if (!_episodes.has(hash)) { indexEpisode(ep); epCount++; }
             } catch {}
         }
     } catch {}
 
-    // Lessons
+    // Lessons — try filesystem first, fall back to Obsidian REST API
     try {
-        const raw      = fs.readFileSync(LESSONS_PATH, 'utf8');
-        const sections = raw.split(/\n---\n/).filter(s => s.trim().length > 10);
-        sections.forEach((section, i) => {
-            const clean = section.trim();
-            const hash  = _hash(`lesson:${clean.slice(0, 100)}`);
-            if (!_lessons.has(hash)) { indexLesson(clean, { position: i }); lessonCount++; }
-        });
+        let raw = null;
+        try { raw = fs.readFileSync(LESSONS_PATH, 'utf8'); } catch {}
+        if (!raw && useApi) raw = await obsidianRead('01 Executive/Lessons.md');
+        if (raw) {
+            const sections = raw.split(/\n---\n/).filter(s => s.trim().length > 10);
+            sections.forEach((section, i) => {
+                const clean = section.trim();
+                const hash  = _hash(`lesson:${clean.slice(0, 100)}`);
+                if (!_lessons.has(hash)) { indexLesson(clean, { position: i }); lessonCount++; }
+            });
+        }
     } catch {}
 
     _flush();
-    console.log(`[MemoryIndexer] Rebuild complete: +${epCount} episodes, +${lessonCount} lessons`);
+    const via = useApi && !fs.existsSync(EPISODES_DIR) ? ' (via API)' : '';
+    console.log(`[MemoryIndexer] Rebuild complete: +${epCount} episodes, +${lessonCount} lessons${via}`);
 
     // Embed all pending in one batch
     await _embedPending();

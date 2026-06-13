@@ -127,4 +127,48 @@ function obsidianSearch(query) {
     }
 }
 
-module.exports = { obsidianRead, obsidianWrite, obsidianAppend, obsidianSearch };
+// Returns a flat array of all vault file paths (relative to vault root), or null if API unavailable.
+// Uses the Obsidian Local REST API GET /vault/ endpoint which returns all files recursively.
+async function obsidianListVault() {
+    if (process.env.OBSIDIAN_URL && process.env.OBSIDIAN_API_KEY) {
+        const ctrl = new AbortController();
+        const _t = setTimeout(() => ctrl.abort(), 10000);
+        try {
+            const res = await fetch(
+                `${process.env.OBSIDIAN_URL}/vault/`,
+                { headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` }, signal: ctrl.signal }
+            );
+            clearTimeout(_t);
+            if (res.ok) {
+                const data = await res.json();
+                return (data.files || []).filter(f => !f.startsWith('.'));
+            }
+            if (res.status === 401) console.warn('[ObsidianClient] 401 Unauthorized — check OBSIDIAN_API_KEY');
+        } catch (e) { clearTimeout(_t); if (e.name !== 'AbortError') console.warn('[ObsidianClient] listVault failed:', e.message); }
+    }
+    return null; // API unavailable — caller should use filesystem
+}
+
+// Lists immediate children of a vault directory. Returns array of filenames, or [] on failure.
+async function obsidianListDir(dirPath) {
+    if (process.env.OBSIDIAN_URL && process.env.OBSIDIAN_API_KEY) {
+        const ctrl = new AbortController();
+        const _t = setTimeout(() => ctrl.abort(), 5000);
+        try {
+            const encoded = dirPath.split('/').map(encodeURIComponent).join('/');
+            const res = await fetch(
+                `${process.env.OBSIDIAN_URL}/vault/${encoded}/`,
+                { headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` }, signal: ctrl.signal }
+            );
+            clearTimeout(_t);
+            if (res.ok) {
+                const data = await res.json();
+                return data.files || [];
+            }
+        } catch (e) { clearTimeout(_t); }
+    }
+    // Filesystem fallback
+    try { return fs.readdirSync(path.join(VAULT, dirPath)); } catch { return []; }
+}
+
+module.exports = { obsidianRead, obsidianWrite, obsidianAppend, obsidianSearch, obsidianListVault, obsidianListDir };
