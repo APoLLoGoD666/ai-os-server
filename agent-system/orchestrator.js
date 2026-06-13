@@ -1346,6 +1346,15 @@ async function runAgentTeam(spec, taskId) {
     try {
         setImmediate(() => _hooks.onPipelineStart({ taskId, description: spec.objective, agentCount: 8, model: ctx.agentModels.developer, traceId: ctx.traceId }).catch(() => {}));
         setImmediate(() => { try { _goalTracker.startGoal(taskId, spec.objective); } catch {} });
+        setImmediate(async () => {
+            try {
+                const _wm = require('../lib/memory/working-memory');
+                await _wm.set(taskId, 'active_task',
+                    { objective: spec.objective, complexity, startedAt: new Date().toISOString() },
+                    { taskId, ttlSeconds: 7200 }
+                );
+            } catch {}
+        });
         console.log(`[Orchestrator] ── Starting ${taskId} ──`);
         console.log(`[Orchestrator] Budget cap: $${PIPELINE_BUDGET_USD}`);
 

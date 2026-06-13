@@ -142,8 +142,18 @@ async function planFeature(feature, workstream) {
     }
 
     const _featureClass = _preClassifyFeature(feature);
-    const planModel = (_featureClass === 'critical' || _featureClass === 'complex') ? _SONNET : MODEL;
+    let planModel = (_featureClass === 'critical' || _featureClass === 'complex') ? _SONNET : MODEL;
     console.log(`[Master] planFeature ${feature.id} — class: ${_featureClass}, model: ${planModel}`);
+    // Upgrade plan model if adaptation engine has a high-confidence ARCHITECT recommendation
+    try {
+        const _ae = require('./adaptation-engine');
+        const _archRec = _ae.getRecommendationsFor({ stage: 'ARCHITECT' })
+            .find(a => a.type === 'model_tier' && a.params?.recommendedModel && a.confidence >= 0.5);
+        if (_archRec && planModel !== _SONNET) {
+            planModel = _archRec.params.recommendedModel;
+            console.log(`[Master] planFeature model upgraded by adaptation: ${planModel} (conf:${_archRec.confidence})`);
+        }
+    } catch {}
     const context = await memory.getFullContextAsync();
 
     const res = await Promise.race([

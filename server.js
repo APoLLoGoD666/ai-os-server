@@ -8595,11 +8595,14 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
             let loopCount = 0;
             const maxLoops = 8;
 
+            const _vcRuntime = require('./lib/models/runtime');
             while (loopCount < maxLoops) {
                 loopCount++;
-                const response = await client.messages.create({
+                const { result: response } = await _vcRuntime.execute({
+                    client,
                     model: _voiceModel,
-                    max_tokens: 2048,
+                    caller: 'voice_chat',
+                    maxTokens: 2048,
                     system: [
                         enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
                         alexContext,
@@ -11546,6 +11549,20 @@ server.listen(PORT, () => {
             console.error('[Startup] MISSING TABLES:', missing.join(', '), '— run migrations/001_missing_tables.sql in Supabase SQL Editor');
         } else {
             console.log('[Startup] Schema OK — all required tables present');
+        }
+    });
+
+    // Reset adaptation_cycles stuck in 'running' from a previous crashed deploy
+    setImmediate(async () => {
+        try {
+            const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+            await sbAdmin.from('adaptation_cycles')
+                .update({ status: 'failed', completed_at: new Date().toISOString() })
+                .eq('status', 'running')
+                .lt('started_at', cutoff);
+            console.log('[Startup] Adaptation cycle cleanup complete');
+        } catch (e) {
+            console.warn('[Startup] Adaptation cycle cleanup failed (non-fatal):', e.message);
         }
     });
 

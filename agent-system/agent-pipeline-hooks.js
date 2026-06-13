@@ -85,14 +85,26 @@ module.exports = {
             } catch (e) { console.error('[gov] onPipelineComplete:', e.message); }
         }
 
-        if (!_slack) return;
-        await _slack.notifyPipelineComplete({
-            taskId:      pipeline.taskId,
-            description: pipeline.description,
-            totalCost:   pipeline.cost,
-            duration:    pipeline.duration,
-            commitHash:  pipeline.commitHash,
-        }).catch(() => {});
+        if (_slack) {
+            await _slack.notifyPipelineComplete({
+                taskId:      pipeline.taskId,
+                description: pipeline.description,
+                totalCost:   pipeline.cost,
+                duration:    pipeline.duration,
+                commitHash:  pipeline.commitHash,
+            }).catch(() => {});
+        }
+        // Mirror completed run to Notion agentRuns database
+        if (process.env.NOTION_API_KEY) {
+            setImmediate(async () => {
+                try {
+                    const { createPage, DB } = require('../services/notion/notion-client');
+                    await createPage(DB.agentRuns, {},
+                        `Task: ${(pipeline.description || '').slice(0, 200)}\nStatus: complete\nCost: $${pipeline.cost || 0}\nCommit: ${pipeline.commitHash || 'none'}\nDuration: ${pipeline.duration || 0}ms\nTask ID: ${pipeline.taskId}`
+                    );
+                } catch {}
+            });
+        }
     },
 
     async onPipelineFailed(err, ctx) {
