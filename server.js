@@ -922,6 +922,20 @@ function requireAuth(req, res, next) {
 
     if (hasAppAccess(req)) return next();
 
+    // Scoped API key — grants access to /api/* without exposing APP_ACCESS_KEY.
+    // Set API_KEY env var to issue a lower-privilege key to agents / integrations.
+    // requireAppAccess routes still require x-app-key (APP_ACCESS_KEY); this key only passes this gate.
+    const _apiKey = process.env.API_KEY || '';
+    if (_apiKey) {
+        const _provided = req.get('x-api-key') || '';
+        try {
+            if (_provided.length === _apiKey.length &&
+                require('crypto').timingSafeEqual(Buffer.from(_provided), Buffer.from(_apiKey))) {
+                return next();
+            }
+        } catch {}
+    }
+
     const cookies = parseCookies(req);
     // Do not log token presence to avoid leaking auth state to logs
     const token = cookies.apex_token;
