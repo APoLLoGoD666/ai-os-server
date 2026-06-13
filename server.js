@@ -11585,13 +11585,18 @@ server.listen(PORT, () => {
             _checkResult.push({ name: 'agent-registry', ok: true });
         } catch (e) { console.warn('[Boot] ✗ agent-registry FAILED:', e.message); _checkResult.push({ name: 'agent-registry', ok: false }); }
 
-        // 3. Vault / memory path
+        // 3. Vault / memory path (optional — vault is local-only, not required on Render)
         try {
             const fs = require('fs');
             const vPath = process.env.OBSIDIAN_VAULT_PATH;
-            const ok = !!vPath && fs.existsSync(vPath);
-            console.log(ok ? `[Boot] ✓ vault found at ${vPath}` : `[Boot] ✗ vault NOT found (OBSIDIAN_VAULT_PATH=${vPath || 'unset'})`);
-            _checkResult.push({ name: 'vault', ok });
+            if (!vPath) {
+                console.log('[Boot] ○ vault skipped (OBSIDIAN_VAULT_PATH not set — vault features disabled)');
+                _checkResult.push({ name: 'vault', ok: true }); // optional, not a failure
+            } else {
+                const ok = fs.existsSync(vPath);
+                console.log(ok ? `[Boot] ✓ vault found at ${vPath}` : `[Boot] ✗ vault NOT found at ${vPath}`);
+                _checkResult.push({ name: 'vault', ok });
+            }
         } catch (e) { console.warn('[Boot] ✗ vault check FAILED:', e.message); _checkResult.push({ name: 'vault', ok: false }); }
 
         // 4. Embedding probe (Voyage or Gemini) — warm up embed module
@@ -11701,6 +11706,7 @@ server.listen(PORT, () => {
                 );
                 CREATE INDEX IF NOT EXISTS vault_emb_vec_idx
                     ON vault_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
+                DROP FUNCTION IF EXISTS match_vault_embeddings(vector, int);
                 CREATE OR REPLACE FUNCTION match_vault_embeddings(
                     query_embedding vector(768), match_count int DEFAULT 5
                 ) RETURNS TABLE(source text, chunk_text text, mtime bigint, similarity float)
