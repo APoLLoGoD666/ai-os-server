@@ -1,4 +1,4 @@
-# obsidian-tunnel-setup.ps1 — ONE-TIME setup for permanent named Cloudflare tunnel
+# obsidian-tunnel-setup.ps1 - ONE-TIME setup for permanent named Cloudflare tunnel
 # Run this once. After it completes, use obsidian-tunnel-permanent.ps1 to start the tunnel.
 
 $CLOUDFLARED  = "C:\Program Files (x86)\cloudflared\cloudflared.exe"
@@ -15,10 +15,10 @@ function Write-Log($msg) {
     Write-Host "$ts  $msg"
 }
 
-Write-Log "=== Apex Obsidian — Permanent Tunnel Setup ==="
+Write-Log "=== Apex Obsidian - Permanent Tunnel Setup ==="
 
-# Step 1: Login (opens browser — select apex-ai-os-cos.uk)
-Write-Log "STEP 1: Logging into Cloudflare. A browser window will open — log in and select apex-ai-os-cos.uk"
+# Step 1: Login (opens browser - select apex-ai-os-cos.uk)
+Write-Log "STEP 1: Logging into Cloudflare. A browser window will open - log in and select apex-ai-os-cos.uk"
 & $CLOUDFLARED tunnel login
 if ($LASTEXITCODE -ne 0) { Write-Log "ERROR: Login failed. Exiting."; exit 1 }
 Write-Log "Login OK"
@@ -37,7 +37,7 @@ if ($createOutput -match 'Created tunnel .+ with id ([a-f0-9\-]{36})') {
 }
 
 if (-not $tunnelId) {
-    # Tunnel may already exist — list to find ID
+    # Tunnel may already exist - list to find ID
     $listOutput = & $CLOUDFLARED tunnel list 2>&1 | Select-String $TUNNEL_NAME
     if ($listOutput -match '([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})') {
         $tunnelId = $Matches[1]

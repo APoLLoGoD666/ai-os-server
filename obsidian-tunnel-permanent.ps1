@@ -1,4 +1,4 @@
-# obsidian-tunnel-permanent.ps1 — Start the permanent named Cloudflare tunnel
+# obsidian-tunnel-permanent.ps1 - Start the permanent named Cloudflare tunnel
 # Run after obsidian-tunnel-setup.ps1 has been completed once.
 # Add to Task Scheduler to auto-start at login (with Obsidian already running).
 
@@ -43,11 +43,11 @@ Write-Log "Starting named tunnel '$TUNNEL_NAME' → https://$HOSTNAME"
 # Kill any lingering cloudflared processes
 Get-Process -Name "cloudflared" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
-# Run named tunnel (permanent — URL never changes)
+# Run named tunnel (permanent - URL never changes)
 & $CLOUDFLARED tunnel --config $CONFIG_FILE run $TUNNEL_NAME
 
 # If cloudflared exits, restart after 10s
-Write-Log "cloudflared exited — restarting in 10s..."
+Write-Log "cloudflared exited - restarting in 10s..."
 Start-Sleep -Seconds 10
 Start-Process -FilePath "powershell.exe" `
     -ArgumentList "-NonInteractive -File `"$PSScriptRoot\obsidian-tunnel-permanent.ps1`"" `
