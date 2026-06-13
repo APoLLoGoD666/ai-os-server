@@ -144,7 +144,7 @@ async function planFeature(feature, workstream) {
     const _featureClass = _preClassifyFeature(feature);
     const planModel = (_featureClass === 'critical' || _featureClass === 'complex') ? _SONNET : MODEL;
     console.log(`[Master] planFeature ${feature.id} — class: ${_featureClass}, model: ${planModel}`);
-    const context = memory.getFullContext();
+    const context = await memory.getFullContextAsync();
 
     const res = await Promise.race([
         _anthro.messages.create({

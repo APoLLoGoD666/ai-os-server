@@ -40,8 +40,8 @@ Output format (strict JSON, no other text):
 }`;
 
 async function expandPrompt(simplePrompt) {
-    const northStar = memory.getNorthStar();
-    const lessons = memory.getLessons();
+    const northStar = await memory.getNorthStarAsync();
+    const lessons = await memory.getRecentLessonsAsync(12);
     const memoryContext = northStar || lessons
         ? `\n\nSYSTEM MEMORY:\n${northStar}\n\nLESSONS LEARNED:\n${lessons}`
         : '';
