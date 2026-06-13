@@ -806,6 +806,18 @@ Examples: "Agents must check for existing routes before adding new ones to avoid
                     await kv.submitLesson(lesson, { traceId, taskId, sourceType: 'auto_reflexion' });
                 } catch (_) {}
             });
+            // Emit canonical spine event — makes lesson visible to all Article 3 consumers
+            setImmediate(async () => {
+                try {
+                    const { writeWithOutbox } = require('../lib/write-with-outbox');
+                    await writeWithOutbox(null, {
+                        source:      'reflector',
+                        type:        'lesson.stored',
+                        payload:     { lesson: lesson.slice(0, 500), taskId, traceId, success },
+                        occurred_at: new Date().toISOString(),
+                    });
+                } catch {}
+            });
         }
     } catch (e) {
         console.warn('[Reflector] skipped (non-fatal):', e.message);

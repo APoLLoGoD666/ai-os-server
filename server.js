@@ -11569,6 +11569,10 @@ server.listen(PORT, () => {
     // Model telemetry subscriber — logs all MODEL_INVOKED events via logger
     require('./lib/models/runtime/subscriber').activate();
 
+    // Event spine relay — moves outbox rows → events table every 5s (Constitution Article 3 & 4)
+    require('./lib/outbox-relay').start();
+    console.log('[Startup] Outbox relay started');
+
     // Post-deployment governance probe — runs 60s after startup
     // Proves all governance capabilities are operational after every deploy.
     // If score < 80, raises a high-severity incident automatically.

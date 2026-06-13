@@ -11,6 +11,25 @@ const _gov = (() => {
     try { return require('../lib/governance'); } catch { return null; }
 })();
 
+const _outbox = (() => {
+    try { return require('../lib/write-with-outbox'); } catch { return null; }
+})();
+
+// Emit a canonical event to the event spine. Fire-and-forget — never throws.
+function _spine(type, source, payload) {
+    if (!_outbox) return;
+    setImmediate(async () => {
+        try {
+            await _outbox.writeWithOutbox(null, {
+                source,
+                type,
+                payload,
+                occurred_at: new Date().toISOString(),
+            });
+        } catch {}
+    });
+}
+
 const { createClient } = require('@supabase/supabase-js');
 let _sbClient = null;
 function _sb() {
@@ -51,6 +70,13 @@ module.exports = {
             } catch (e) { console.error('[gov] onPipelineStart:', e.message); }
         }
 
+        _spine('pipeline.started', 'orchestrator', {
+            task_id:     pipeline.taskId,
+            description: (pipeline.description || '').slice(0, 255),
+            trace_id:    pipeline.traceId || null,
+            model:       pipeline.model   || null,
+        });
+
         if (!_slack) return;
         await _slack.notifyPipelineStart(pipeline).catch(() => {});
     },
@@ -84,6 +110,15 @@ module.exports = {
                 _govCtx.delete(pipeline.taskId);
             } catch (e) { console.error('[gov] onPipelineComplete:', e.message); }
         }
+
+        _spine('pipeline.completed', 'orchestrator', {
+            task_id:     pipeline.taskId,
+            trace_id:    pipeline.traceId  || null,
+            commit_sha:  pipeline.commitHash || null,
+            cost_usd:    pipeline.cost      || 0,
+            duration_ms: pipeline.duration  || 0,
+            complexity:  pipeline.complexity || null,
+        });
 
         if (_slack) {
             await _slack.notifyPipelineComplete({
@@ -133,6 +168,13 @@ module.exports = {
                 _govCtx.delete(ctx.taskId);
             } catch (e) { console.error('[gov] onPipelineFailed:', e.message); }
         }
+
+        _spine('pipeline.failed', 'orchestrator', {
+            task_id:     ctx.taskId,
+            trace_id:    ctx.traceId || null,
+            error:       (err?.message || String(err)).slice(0, 500),
+            description: (ctx.description || '').slice(0, 255),
+        });
 
         if (!_slack) return;
         await _slack.notifyRunFailed({
