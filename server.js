@@ -11706,7 +11706,11 @@ server.listen(PORT, () => {
                 );
                 CREATE INDEX IF NOT EXISTS vault_emb_vec_idx
                     ON vault_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
-                DROP FUNCTION IF EXISTS match_vault_embeddings(vector, int);
+            `);
+            // DROP and CREATE must be separate queries — CREATE OR REPLACE cannot change
+            // a function's return type in the same multi-statement parse round.
+            await pgPool.query(`DROP FUNCTION IF EXISTS match_vault_embeddings(vector, int);`);
+            await pgPool.query(`
                 CREATE OR REPLACE FUNCTION match_vault_embeddings(
                     query_embedding vector(768), match_count int DEFAULT 5
                 ) RETURNS TABLE(source text, chunk_text text, mtime bigint, similarity float)
@@ -11750,16 +11754,16 @@ server.listen(PORT, () => {
         }
     });
 
-    // Schema migration — apex_agent_runs: verify duration_ms + token_usage columns exist
-    // (Added via Migration 002 via Supabase Management API; this just logs the check)
+    // Schema migration — apex_agent_runs: verify + add missing columns
     setImmediate(async () => {
         try {
-            const { error } = await sbAdmin.from('apex_agent_runs').select('duration_ms,token_usage').limit(0);
-            if (error) {
-                console.warn('[Migration] apex_agent_runs: duration_ms/token_usage columns missing —', error.message);
-            } else {
-                console.log('[Migration] apex_agent_runs: duration_ms + token_usage columns confirmed');
-            }
+            const pgPool = require('./pg_database');
+            await pgPool.query(`
+                ALTER TABLE apex_agent_runs ADD COLUMN IF NOT EXISTS model TEXT;
+                ALTER TABLE apex_agent_runs ADD COLUMN IF NOT EXISTS duration_ms INTEGER;
+                ALTER TABLE apex_agent_runs ADD COLUMN IF NOT EXISTS token_usage JSONB;
+            `);
+            console.log('[Migration] apex_agent_runs: duration_ms + token_usage + model columns confirmed');
         } catch (e) {
             console.warn('[Migration] apex_agent_runs schema check skipped:', e.message);
         }
