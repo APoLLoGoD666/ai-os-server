@@ -12449,6 +12449,20 @@ checkPendingMasterTasks();
         }, delay3);
     })();
 
+    // Civilization Runtime — full autonomous cycle every 6 hours (health → council → adapt → act)
+    (function _scheduleCivRuntime() {
+        const MS_6H = 6 * 60 * 60 * 1000;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('civilization_runtime', async () => {
+                const civRuntime = require('./lib/intelligence/civilization-runtime');
+                if (!civRuntime.isRunning()) {
+                    civRuntime.start(MS_6H);
+                    console.log('[civilization_runtime] autonomous cycle started (6h interval)');
+                }
+            });
+        }, Math.max(60_000, 5 * 60 * 1000)); // 5min after boot — let health checks settle first
+    })();
+
     // Intelligence reality loop — OODA cycle at Haiku tier (grounded, no synthetic metrics)
     setTimeout(() => {
         try {

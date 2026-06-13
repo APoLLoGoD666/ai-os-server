@@ -1020,6 +1020,32 @@ async function runAgentTeam(spec, taskId) {
         }
     } catch {}
 
+    // Apply routing adaptations from learning — escalate tier for high-failure categories
+    try {
+        const _cat = _dynSelector.detectCategory(spec.objective);
+        const _routingRec = _adaptEngine.getRecommendationsFor({ category: _cat })
+            .find(a => a.type === 'routing' && a.action?.startsWith('escalate_') && (a.params?.tierBump >= 1) && a.confidence >= 0.5);
+        if (_routingRec) {
+            const _tiers = ['simple', 'moderate', 'complex', 'critical'];
+            const _tierModels = {
+                simple:   { architect: 'claude-haiku-4-5-20251001', developer: 'claude-haiku-4-5-20251001', reviewer: 'claude-haiku-4-5-20251001' },
+                moderate: { architect: 'claude-haiku-4-5-20251001', developer: 'claude-sonnet-4-6',          reviewer: 'claude-haiku-4-5-20251001' },
+                complex:  { architect: 'claude-sonnet-4-6',          developer: 'claude-sonnet-4-6',          reviewer: 'claude-sonnet-4-6' },
+                critical: { architect: 'claude-sonnet-4-6',          developer: 'claude-sonnet-4-6',          reviewer: 'claude-opus-4-7' },
+            };
+            const _curIdx = _tiers.indexOf(complexity);
+            const _newIdx = Math.min(_tiers.length - 1, _curIdx + (_routingRec.params.tierBump || 1));
+            if (_newIdx > _curIdx) {
+                const _bumped = _tiers[_newIdx];
+                const _bm = _tierModels[_bumped];
+                if (_bm.architect) ctx.agentModels.architect = _bm.architect;
+                if (_bm.developer) ctx.agentModels.developer = _bm.developer;
+                if (_bm.reviewer)  ctx.agentModels.reviewer  = _bm.reviewer;
+                console.log(`[AdaptEngine] routing: ${complexity} → ${_bumped} (cat:${_cat}, conf:${_routingRec.confidence})`);
+            }
+        }
+    } catch {}
+
     // Wiki context — capped at 1500 chars
     try {
         const { getWikiContext } = require('./wiki-reader');
@@ -1039,6 +1065,20 @@ async function runAgentTeam(spec, taskId) {
                 'FOUNDER ALIGNMENT:\n' + _founderGuidance;
         }
     } catch (e) { console.warn('[Orchestrator] founder alignment failed (non-fatal):', e.message); }
+
+    // Constitution — inject Article summaries so agents know the governing constraints
+    try {
+        const _path = require('path');
+        const _fs   = require('fs');
+        const _constitutionPath = _path.join(__dirname, '../CONSTITUTION.md');
+        const _raw  = _fs.readFileSync(_constitutionPath, 'utf8');
+        // Extract Articles 1-6 only (strip amendment log)
+        const _articles = _raw.split('---')[0].replace(/^#.*\n/, '').trim().slice(0, 800);
+        if (_articles) {
+            ctx.obsidianContext = (ctx.obsidianContext ? ctx.obsidianContext + '\n\n' : '') +
+                'GOVERNING CONSTITUTION (abide by all articles):\n' + _articles;
+        }
+    } catch {}
 
     // Phase 5: Pre-retrieval policy determines limits before memory assembly
     let _preRetrievalLimits = null;
@@ -1305,7 +1345,7 @@ async function runAgentTeam(spec, taskId) {
     const _pipelineStart = Date.now();
     try {
         setImmediate(() => _hooks.onPipelineStart({ taskId, description: spec.objective, agentCount: 8, model: ctx.agentModels.developer, traceId: ctx.traceId }).catch(() => {}));
-        setImmediate(() => { try { _goalTracker.startGoal(taskId); } catch {} });
+        setImmediate(() => { try { _goalTracker.startGoal(taskId, spec.objective); } catch {} });
         console.log(`[Orchestrator] ── Starting ${taskId} ──`);
         console.log(`[Orchestrator] Budget cap: $${PIPELINE_BUDGET_USD}`);
 

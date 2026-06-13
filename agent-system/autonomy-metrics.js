@@ -77,13 +77,30 @@ async function recoveryRate(sampleSize = 40) {
     } catch { return null; }
 }
 
-// Composite confidence: recent success rate (50%) + episode volume (20%) + goal completion (30%)
+// Avg consensus_level from recent council deliberations — high consensus = high executive quality
+async function executiveCouncilScore() {
+    const sb = _getSb();
+    if (!sb) return null;
+    try {
+        const { data, error } = await sb
+            .from('executive_deliberations')
+            .select('consensus_level')
+            .in('status', ['resolved', 'escalated'])
+            .order('created_at', { ascending: false })
+            .limit(20);
+        if (error || !data?.length) return null;
+        return +(data.reduce((s, r) => s + (r.consensus_level ?? 0.5), 0) / data.length).toFixed(3);
+    } catch { return null; }
+}
+
+// Composite confidence: success rate (40%) + episode volume (15%) + goal completion (25%) + council quality (20%)
 async function executionConfidence() {
-    const sr         = (await _epMem.getSuccessRate(20).catch(() => null)) ?? 0.5;
-    const epVol      = Math.min(1.0, episodeCount() / 50);
-    const gStats     = (() => { try { return goalStats(); } catch { return null; } })();
-    const goalScore  = gStats?.completionRate ?? 0.5;
-    return +(sr * 0.5 + epVol * 0.2 + goalScore * 0.3).toFixed(3);
+    const sr          = (await _epMem.getSuccessRate(20).catch(() => null)) ?? 0.5;
+    const epVol       = Math.min(1.0, episodeCount() / 50);
+    const gStats      = (() => { try { return goalStats(); } catch { return null; } })();
+    const goalScore   = gStats?.completionRate ?? 0.5;
+    const councilScr  = (await executiveCouncilScore()) ?? 0.5;
+    return +(sr * 0.40 + epVol * 0.15 + goalScore * 0.25 + councilScr * 0.20).toFixed(3);
 }
 
 // ── Composite autonomy score ──────────────────────────────────────────────────

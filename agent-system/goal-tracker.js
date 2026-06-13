@@ -6,7 +6,7 @@
 const fs   = require('fs');
 const path = require('path');
 
-const VAULT     = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
+const VAULT     = process.env.OBSIDIAN_VAULT_PATH || path.join(process.cwd(), 'vault');
 const GOALS_DIR = path.join(VAULT, 'System', 'Goals');
 
 const STATUS = Object.freeze({
@@ -72,9 +72,19 @@ function addGoal(objective, options = {}) {
     });
 }
 
-function startGoal(id) {
-    const g = _load(id);
-    if (!g) return null;
+function startGoal(id, objective = '') {
+    let g = _load(id);
+    if (!g) {
+        // Auto-create when orchestrator calls startGoal before addGoal
+        _ensureDir();
+        g = {
+            id, objective: objective || id, priority: 'medium', source: 'agent_pipeline',
+            parentId: null, planId: null, status: STATUS.PENDING,
+            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+            startedAt: null, completedAt: null, blockedAt: null,
+            blockedReason: null, result: null, subtaskIds: [], retryCount: 0,
+        };
+    }
     g.status    = STATUS.RUNNING;
     g.startedAt = new Date().toISOString();
     return _save(g);
@@ -137,7 +147,7 @@ function getStats() {
     return {
         total,
         ...counts,
-        completionRate:  total ? +(completed / total).toFixed(3) : 0,
+        completionRate:  total ? +(completed / total).toFixed(3) : null,
         oldestPending:   all.find(g => g.status === STATUS.PENDING)?.createdAt || null,
     };
 }
