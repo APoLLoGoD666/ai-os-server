@@ -1004,6 +1004,22 @@ async function runAgentTeam(spec, taskId) {
         console.log(_dynSelector.formatSelection(agentConfig));
     } catch {}
 
+    // Apply model_tier adaptations from learning — override stage models when confidence ≥ 0.5
+    // The adaptation engine learns from real failures; this closes the loop from observation to routing.
+    try {
+        const _stageMap = { ARCHITECT: 'architect', DEVELOPER: 'developer', REVIEWER: 'reviewer' };
+        for (const [stage, key] of Object.entries(_stageMap)) {
+            if (!ctx.agentModels[key]) continue;
+            const _rec = _adaptEngine.getRecommendationsFor({ stage })
+                .find(a => a.type === 'model_tier' && a.params?.recommendedModel && a.confidence >= 0.5);
+            if (_rec) {
+                const prev = ctx.agentModels[key];
+                ctx.agentModels[key] = _rec.params.recommendedModel;
+                console.log(`[AdaptEngine] ${stage}: ${prev.split('-').pop()} → ${_rec.params.recommendedModel.split('-').pop()} (conf:${_rec.confidence})`);
+            }
+        }
+    } catch {}
+
     // Wiki context — capped at 1500 chars
     try {
         const { getWikiContext } = require('./wiki-reader');
@@ -1012,6 +1028,17 @@ async function runAgentTeam(spec, taskId) {
         console.warn('[Orchestrator] wiki read failed:', e.message);
         ctx.obsidianContext = '';
     }
+
+    // Founder alignment — mission, values, active principles, failure warnings for this task
+    // getAlignmentGuidanceForPrompt is cached 5min; never throws; zero API cost
+    try {
+        const _f = require('../lib/founder');
+        const _founderGuidance = await _f.getAlignmentGuidanceForPrompt(spec.objective);
+        if (_founderGuidance) {
+            ctx.obsidianContext = (ctx.obsidianContext ? ctx.obsidianContext + '\n\n' : '') +
+                'FOUNDER ALIGNMENT:\n' + _founderGuidance;
+        }
+    } catch (e) { console.warn('[Orchestrator] founder alignment failed (non-fatal):', e.message); }
 
     // Phase 5: Pre-retrieval policy determines limits before memory assembly
     let _preRetrievalLimits = null;
