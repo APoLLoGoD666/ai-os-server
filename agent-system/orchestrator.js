@@ -1197,6 +1197,15 @@ async function runAgentTeam(spec, taskId) {
         console.warn('[RuntimeCtrl] build failed (non-fatal):', e.message);
     }
 
+    // Episodic context — inject similar past experiences into ARCHITECT context (non-fatal)
+    try {
+        const similar = _episodic.getSimilarExperiences(spec.objective, { limit: 3 });
+        if (similar.length) {
+            const expCtx = _episodic.formatExperiencesAsContext(similar);
+            obsidianContext = (obsidianContext ? obsidianContext + '\n\n' : '') + expCtx.slice(0, 400);
+        }
+    } catch {}
+
     // ── Git worktree isolation (Superpowers pattern) ──────────────────────────
     const ts          = Date.now().toString(36); // base-36 timestamp suffix prevents branch collision on re-run
     const worktreeDir = path.join(os.tmpdir(), `apex-wt-${taskId}`);
