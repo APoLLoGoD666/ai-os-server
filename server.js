@@ -1592,14 +1592,10 @@ async function analyseDocumentsWithAI(documents) {
     }
 
     try {
-        const response = await client.messages.create({
-            model: MODEL,
-            max_tokens: 700,
-            messages: [{
-                role: "user",
-                content: `Analyse these documents. Return key themes, important points, duplicates, cleanup suggestions, and next actions.\n\nReturn a structured response with these exact sections:\n1. Key Insights\n2. Main Themes\n3. Important Points\n4. Duplicate Or Cleanup Signals\n5. Suggested Next Actions\n\nDOCUMENTS:\n${limitedDocs.join("\n\n----------------------\n\n")}`
-            }]
-        });
+        const { result: response } = await runtime.execute({ tier: 'balanced', caller: 'analyseDocumentsWithAI', maxTokens: 700, messages: [{
+            role: "user",
+            content: `Analyse these documents. Return key themes, important points, duplicates, cleanup suggestions, and next actions.\n\nReturn a structured response with these exact sections:\n1. Key Insights\n2. Main Themes\n3. Important Points\n4. Duplicate Or Cleanup Signals\n5. Suggested Next Actions\n\nDOCUMENTS:\n${limitedDocs.join("\n\n----------------------\n\n")}`
+        }]});
         return (response.content || []).filter(p => p.type === "text").map(p => p.text || "").join("\n").trim();
     } catch (e) {
         console.warn('[analyseDocumentsWithAI] AI call failed:', e.message);
@@ -1965,10 +1961,7 @@ async function buildAgentPlan(request, memory, documents, files, today, agentPro
         "Use this role context to shape planning style and scope, but do not bypass any existing safety, approval, autonomy, or allowlist rules."
     ].join("\n");
 
-    const response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 700,
-        messages: [
+    const { result: response } = await runtime.execute({ tier: 'balanced', caller: 'buildAgentPlan', maxTokens: 700, messages: [
             {
                 role: "user",
                 content: `You are in safe proposal mode. Do not execute any changes.
