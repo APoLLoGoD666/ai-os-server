@@ -11573,6 +11573,12 @@ server.listen(PORT, () => {
     require('./lib/outbox-relay').start();
     console.log('[Startup] Outbox relay started');
 
+    // Integrity crons — nightly backup manifest + weekly source reconciliation
+    require('./lib/integrity-crons').start();
+
+    // Event consumer — alerts on pipeline.failed events from the events table
+    require('./lib/event-consumer').start();
+
     // Post-deployment governance probe — runs 60s after startup
     // Proves all governance capabilities are operational after every deploy.
     // If score < 80, raises a high-severity incident automatically.
