@@ -8699,24 +8699,7 @@ window.startVoice = function() {
         _glStop(true);
         try { localStorage.setItem('apex_gemini_live', '0'); } catch(_){}
     } else {
-        var glTimeout = setTimeout(function() {
-            if (!GL.ws || GL.ws.readyState !== WebSocket.OPEN) {
-                console.warn('[GeminiLive] connection timeout — falling back to legacy pipeline');
-                _glStop(false);
-                toggleListening();
-            }
-        }, 5000);
-        var _origOnMessage = function(ev) {
-            var msg; try { msg = JSON.parse(ev.data); } catch { return; }
-            if (msg.type === 'ready') clearTimeout(glTimeout);
-        };
-        _glStart().then(function() {
-            if (GL.ws) GL.ws.addEventListener('message', _origOnMessage, { once: true });
-        }).catch(function() {
-            clearTimeout(glTimeout);
-            toggleListening();
-        });
-        try { localStorage.setItem('apex_gemini_live', '1'); } catch(_){}
+        toggleListening();
     }
 };
 
@@ -9473,7 +9456,7 @@ function _startInterruptListener() {
         const wordCount  = transcript.split(/\s+/).filter(w => w.length >= 2).length;
         const msSinceVoice = Date.now() - _lastHighDbMs;
         // Echo guard: discard if >55% of words match what Apex is currently saying
-        const _phraseWords = (_currentSpeakPhrase || '').toLowerCase().split(/\s+/);
+        const _phraseWords = (_currentSpeakPhrase || '').toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/);
         const _txWords = transcript.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
         const _echoHits = _txWords.filter(w => _phraseWords.includes(w)).length;
         const _isEcho = _txWords.length > 0 && (_echoHits / _txWords.length) >= 0.55;
