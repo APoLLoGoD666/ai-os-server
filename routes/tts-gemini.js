@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const _auth  = require('../lib/app-auth');
 
 const MODEL         = 'gemini-2.5-flash-preview-tts';
-const DEFAULT_VOICE = 'Charon';
+const DEFAULT_VOICE = 'Fenrir';
 const SAMPLE_RATE   = 24000;
 const CACHE_TTL_MS  = 5 * 60 * 1000;
 const CACHE_MAX     = 30;

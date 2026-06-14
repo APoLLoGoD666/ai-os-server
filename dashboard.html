@@ -8749,7 +8749,7 @@ let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 let _emailCache         = {};
 let _currentDraftEmailId = null;
-const voiceSpeed        = 1.3;
+const voiceSpeed        = 1.5;
 let _t0Voice            = 0;
 const inFlightRefreshes = {};
 const renderSigs        = {};
@@ -9373,7 +9373,7 @@ async function _processSpeak() {
         console.log('[Speak] safety timer → unmuteDeepgram, 3s silence countdown begins');
         unmuteDeepgram();
         setOrbState(autoListen && isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
-    }, isIOSPWA ? Math.min(8000, Math.max(2500, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(' ').length : 3) * 500) + 2000)) : Math.max(45000, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(/\s+/).length : 100) * 400) + 10000));
+    }, isIOSPWA ? Math.min(8000, Math.max(2500, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(' ').length : 3) * 500) + 2000)) : Math.max(15000, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(/\s+/).length : 30) * 350) + 5000));
 
     while (speakQueue.length) {
         const { text, useFiller } = speakQueue.shift();
@@ -9472,9 +9472,14 @@ function _startInterruptListener() {
         const transcript = res.transcript.trim();
         const wordCount  = transcript.split(/\s+/).filter(w => w.length >= 2).length;
         const msSinceVoice = Date.now() - _lastHighDbMs;
-        console.log(`[Interrupt] "${transcript}" — words:${wordCount} lastHighDb:${msSinceVoice}ms ago`);
+        // Echo guard: discard if >55% of words match what Apex is currently saying
+        const _phraseWords = (_currentSpeakPhrase || '').toLowerCase().split(/\s+/);
+        const _txWords = transcript.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+        const _echoHits = _txWords.filter(w => _phraseWords.includes(w)).length;
+        const _isEcho = _txWords.length > 0 && (_echoHits / _txWords.length) >= 0.55;
+        console.log(`[Interrupt] "${transcript}" — words:${wordCount} conf:${res.confidence.toFixed(2)} echo:${_isEcho} lastHighDb:${msSinceVoice}ms ago`);
         if (!isSpeakingNow) { _stopInterruptListener(); return; }
-        if (wordCount >= 3 && res.confidence >= 0.65 && (Date.now() - (window._ttsPlayStartMs || 0)) > 2000) {
+        if (wordCount >= 3 && res.confidence >= 0.65 && !_isEcho && (Date.now() - (window._ttsPlayStartMs || 0)) > 2000) {
             _vadInterruptSR = null;
             interruptSpeech();
             document.getElementById("chatInput").value = transcript;
