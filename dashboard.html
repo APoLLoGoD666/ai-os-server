@@ -8938,7 +8938,7 @@ function _httSpeak(text) {
     if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
     if (_httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
     const wordCount = text.trim().split(/\s+/).length;
-    const safetyMs  = Math.min(60000, Math.max(8000, wordCount * 1000 + 6000));
+    const safetyMs  = Math.min(40000, Math.max(5000, wordCount * 480 + 2000));
     fetch(buildApiUrl(getTtsUrl()), {
         method: 'POST',
         headers: buildApiHeaders({ 'Content-Type': 'application/json' }),
@@ -9474,7 +9474,7 @@ function _startInterruptListener() {
         const msSinceVoice = Date.now() - _lastHighDbMs;
         console.log(`[Interrupt] "${transcript}" — words:${wordCount} lastHighDb:${msSinceVoice}ms ago`);
         if (!isSpeakingNow) { _stopInterruptListener(); return; }
-        if (wordCount > 2 && (Date.now() - (window._ttsPlayStartMs || 0)) > 3000) {
+        if (wordCount >= 3 && res.confidence >= 0.65 && (Date.now() - (window._ttsPlayStartMs || 0)) > 2000) {
             _vadInterruptSR = null;
             interruptSpeech();
             document.getElementById("chatInput").value = transcript;
