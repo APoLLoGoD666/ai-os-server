@@ -9239,34 +9239,41 @@ async function speakWithElevenLabs(text) {
 
     try {
         console.log(`[LATENCY] +${Date.now() - _t0Voice}ms TTS request sent | provider:${_ttsProvider}`);
-        const ac = new AbortController();
-        currentAbort = ac;
-        let fetchRes;
-        const _retryDelays = [2000, 8000];
-        for (let _attempt = 0; _attempt <= _retryDelays.length; _attempt++) {
-            fetchRes = await fetch(buildApiUrl(getTtsUrl()), {
-                method: "POST",
-                headers: buildApiHeaders({ "Content-Type": "application/json" }),
-                body: JSON.stringify({ text: phrase }),
-                signal: ac.signal,
-                credentials: "same-origin"
-            });
-            if (fetchRes.ok || fetchRes.status !== 429) break;
-            if (_attempt < _retryDelays.length) {
-                console.warn(`[TTS] 429 — retry ${_attempt + 1} in ${_retryDelays[_attempt]}ms`);
-                await new Promise(r => setTimeout(r, _retryDelays[_attempt]));
-            }
+        // Consume pre-fetched audio blob if speak() started it in parallel
+        let _resolvedBlobUrl = null;
+        if (_ttsPrefetch.has(phrase)) {
+            const _p = _ttsPrefetch.get(phrase);
+            _ttsPrefetch.delete(phrase);
+            _resolvedBlobUrl = await _p;
         }
-        if (!fetchRes.ok) return false;
+        if (!_resolvedBlobUrl) {
+            const ac = new AbortController();
+            currentAbort = ac;
+            let fetchRes;
+            const _retryDelays = [2000, 8000];
+            for (let _attempt = 0; _attempt <= _retryDelays.length; _attempt++) {
+                fetchRes = await fetch(buildApiUrl(getTtsUrl()), {
+                    method: "POST",
+                    headers: buildApiHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ text: phrase }),
+                    signal: ac.signal,
+                    credentials: "same-origin"
+                });
+                if (fetchRes.ok || fetchRes.status !== 429) break;
+                if (_attempt < _retryDelays.length) {
+                    console.warn(`[TTS] 429 — retry ${_attempt + 1} in ${_retryDelays[_attempt]}ms`);
+                    await new Promise(r => setTimeout(r, _retryDelays[_attempt]));
+                }
+            }
+            if (!fetchRes.ok) return false;
+            const buf = await fetchRes.arrayBuffer();
+            const mimeType = fetchRes.headers.get('content-type') || getTtsMimeType();
+            _resolvedBlobUrl = URL.createObjectURL(new Blob([buf], { type: mimeType.split(';')[0].trim() }));
+        }
 
-        // arrayBuffer → Blob approach is the only path that reliably works on iOS Safari
-        const buf  = await fetchRes.arrayBuffer();
-        const mimeType = fetchRes.headers.get('content-type') || getTtsMimeType();
-        const blob = new Blob([buf], { type: mimeType.split(';')[0].trim() });
-
-        // Revoke the previous blob URL before creating the new one
+        // Revoke the previous blob URL before assigning the new one
         if (_apexBlobUrl) { try { URL.revokeObjectURL(_apexBlobUrl); } catch (_) {} }
-        _apexBlobUrl = URL.createObjectURL(blob);
+        _apexBlobUrl = _resolvedBlobUrl;
 
         _apexAudio.src          = _apexBlobUrl;
         _apexAudio.playbackRate = _isTouchDevice ? 1.3 : voiceSpeed;
@@ -9391,8 +9398,36 @@ async function _processSpeak() {
     }
 }
 
+const _ttsPrefetch = new Map();
+
+function _splitSentences(text) {
+    const parts = text.match(/[^.!?]+[.!?]*/g);
+    return parts ? parts.map(s => s.trim()).filter(s => s.length > 3) : [text];
+}
+
+async function _doTtsFetch(phrase) {
+    try {
+        const r = await fetch(buildApiUrl(getTtsUrl()), {
+            method: 'POST',
+            headers: buildApiHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ text: phrase }),
+            credentials: 'same-origin'
+        });
+        if (!r.ok) return null;
+        const buf = await r.arrayBuffer();
+        const mime = r.headers.get('content-type') || getTtsMimeType();
+        return URL.createObjectURL(new Blob([buf], { type: mime.split(';')[0].trim() }));
+    } catch (_) { return null; }
+}
+
 function speak(text, { useFiller = false } = {}) {
-    speakQueue.push({ text, useFiller });
+    const cleaned = cleanForSpeech(text);
+    if (!cleaned) return;
+    const sentences = _splitSentences(cleaned);
+    sentences.forEach((s, i) => {
+        _ttsPrefetch.set(s, _doTtsFetch(s));
+        speakQueue.push({ text: s, useFiller: i === 0 && useFiller });
+    });
     _processSpeak();
 }
 
