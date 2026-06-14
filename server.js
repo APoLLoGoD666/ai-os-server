@@ -2968,6 +2968,19 @@ async function runSingleScheduleOnce(schedule) {
         if (autoRun.status === "completed") {
             await notifyTaskStatus({ ...task, goal: schedule.goal, id: task.id }, "completed", `Scheduled task #${task.id} completed without approval.`);
         }
+
+        // Governance pipeline — fire-and-forget, never blocks execution
+        setImmediate(() => {
+            try {
+                const orchestrator = require('./lib/orchestration/execution_orchestrator');
+                orchestrator.process({
+                    execution_id: String(task.id),
+                    output:       autoRun,
+                    metadata:     { task_id: task.id, success: autoRun.status === 'completed' },
+                    timestamp:    new Date().toISOString(),
+                }).catch(() => {});
+            } catch (_) {}
+        });
     }
 
     return {
