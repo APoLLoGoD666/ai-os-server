@@ -8623,7 +8623,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                         `Speak in natural, flowing English only. No markdown, no bullet points, no asterisks, no numbered lists. All responses are read aloud by a voice engine.`,
                         _domainAgent ? `SPECIALIST CONTEXT — ${_domainAgent.name.toUpperCase()}:\n${_domainAgent.system_prompt}` : '',
                     ].filter(Boolean).join('\n\n'),
-                    tools: _isFastPath ? [] : APEX_TOOLS,
+                    tools: _isFastPath ? undefined : APEX_TOOLS,
                     messages
                 });
 
