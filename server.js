@@ -2949,7 +2949,9 @@ async function runSingleScheduleOnce(schedule) {
     let autoRun = null;
 
     if (AUTONOMY_LEVEL === "2" || AUTONOMY_LEVEL === "3") {
+        try { require('./lib/orchestration/governance_instrumentation').emitStart(String(task.id), 'scheduled_auto_run'); } catch (_) {}
         autoRun = await autoRunReadOnlyTaskSteps(task.id);
+        setImmediate(() => { try { require('./lib/orchestration/governance_instrumentation').emitEnd(String(task.id), autoRun?.status); } catch (_) {} });
 
         if (!autoRun.ok) {
             await notifyTaskStatus({ ...task, goal: schedule.goal, id: task.id }, "failed", autoRun.message);
@@ -6212,7 +6214,10 @@ ${task.plan || "No plan saved."}`
             }
 
             if (AUTONOMY_LEVEL === "2" || AUTONOMY_LEVEL === "3") {
+                try { require('./lib/orchestration/governance_instrumentation').emitStart(String(task.id), 'chat_auto_run'); } catch (_) {}
                 const autoRun = await autoRunReadOnlyTaskSteps(task.id);
+                setImmediate(() => { try { require('./lib/orchestration/governance_instrumentation').emitEnd(String(task.id), autoRun?.status); } catch (_) {} });
+                setImmediate(() => { try { const o = require('./lib/orchestration/execution_orchestrator'); o.process({ execution_id: String(task.id), output: autoRun, metadata: { task_id: task.id, success: autoRun?.status === 'completed' }, timestamp: new Date().toISOString() }).catch(() => {}); } catch (_) {} });
 
                 if (!autoRun.ok) {
                     return {
@@ -6280,7 +6285,10 @@ ${task.plan || "No plan saved."}`
             }
 
             if (AUTONOMY_LEVEL === "2" || AUTONOMY_LEVEL === "3") {
+                try { require('./lib/orchestration/governance_instrumentation').emitStart(String(task.id), 'continue_auto_run'); } catch (_) {}
                 const autoRun = await autoRunReadOnlyTaskSteps(task.id);
+                setImmediate(() => { try { require('./lib/orchestration/governance_instrumentation').emitEnd(String(task.id), autoRun?.status); } catch (_) {} });
+                setImmediate(() => { try { const o = require('./lib/orchestration/execution_orchestrator'); o.process({ execution_id: String(task.id), output: autoRun, metadata: { task_id: task.id, success: autoRun?.status === 'completed' }, timestamp: new Date().toISOString() }).catch(() => {}); } catch (_) {} });
 
                 if (!autoRun.ok) {
                     return {
@@ -6498,7 +6506,10 @@ Choose one:
             const execution = await executeApprovedAgentTask(task.id);
 
             if (execution.ok && (AUTONOMY_LEVEL === "2" || AUTONOMY_LEVEL === "3") && execution.status === "running") {
+                try { require('./lib/orchestration/governance_instrumentation').emitStart(String(task.id), 'approve_auto_run'); } catch (_) {}
                 const autoRun = await autoRunReadOnlyTaskSteps(task.id);
+                setImmediate(() => { try { require('./lib/orchestration/governance_instrumentation').emitEnd(String(task.id), autoRun?.status); } catch (_) {} });
+                setImmediate(() => { try { const o = require('./lib/orchestration/execution_orchestrator'); o.process({ execution_id: String(task.id), output: autoRun, metadata: { task_id: task.id, success: autoRun?.status === 'completed' }, timestamp: new Date().toISOString() }).catch(() => {}); } catch (_) {} });
 
                 if (!autoRun.ok) {
                     return {
