@@ -8552,11 +8552,19 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
             /\b(your (purpose|goal|name|role|job|mission|function|design)|who (are|is) you|what (are|is) (you|apex|this)|what can you (do|help)|tell me about (yourself|apex)|introduce yourself|explain (yourself|apex|what you do)|how (do|does|did) you (work|learn|think|grow)|your (capabilities|abilities|skills))\b/i.test(userMessage.trim());
         const _isFastPath = _isGreeting || _isConversational;
 
-        // ── Context fetch — skip heavy sources for fast-path queries ─────────
+        // ── Context fetch ─────────────────────────────────────────────────────
+        // _isConversational: zero context — system prompt covers identity/capability
+        // _isGreeting: Alex context only, 3s timeout cap (pgLoadFacts can hang)
+        // full path: all 7 sources in parallel
         const _wikiReader = (() => { try { return require('./agent-system/wiki-reader'); } catch { return null; } })();
         let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', lcMemCtx = '', lcRagCtx = '';
-        if (_isFastPath) {
-            alexContext = await buildAlexContext().catch(() => '');
+        if (_isConversational) {
+            // zero context — fastest possible path
+        } else if (_isGreeting) {
+            alexContext = await Promise.race([
+                buildAlexContext(),
+                new Promise(r => setTimeout(() => r(''), 3000))
+            ]).catch(() => '');
         } else {
             [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx] = await Promise.all([
                 getMemorySummary().catch(() => ''),
@@ -8568,7 +8576,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                 lcRag.retrieveContext(userMessage).catch(() => ''),
             ]);
         }
-        console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done${_isFastPath ? ' (fast-path)' : ''}`);
+        console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done (${_isConversational ? 'zero-ctx' : _isGreeting ? 'greeting' : 'full'})`);
 
         // Keyword-only domain routing — zero latency, no extra API call
         const _kwDomain = detectDomain(userMessage);
@@ -8622,7 +8630,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                         `You are direct, confident, and loyal. You remember everything. You grow sharper with every conversation.`,
                         _domainAgent ? `SPECIALIST CONTEXT — ${_domainAgent.name.toUpperCase()}:\n${_domainAgent.system_prompt}` : '',
                     ].filter(Boolean).join('\n\n'),
-                    tools: _isFastPath ? undefined : APEX_TOOLS,
+                    tools: _isConversational ? undefined : APEX_TOOLS,
                     messages
                 });
 
