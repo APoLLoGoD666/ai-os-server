@@ -8544,18 +8544,31 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         addToMemory("user", userMessage);
         setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ role: 'user', message: userMessage }), tags: ['conversation', 'voice'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
 
-        // ── Context fetch — parallel, all non-blocking ───────────────────────
+        // ── Query classification — zero-latency, decides which context sources to load ──
+        const _words = userMessage.trim().split(/\s+/);
+        const _isGreeting = _words.length <= 5 &&
+            /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|yep|nope|sure|what time|what date|what day|how are you|good morning|good evening|good night|bye|goodbye)[\s?!.]*$/i.test(userMessage.trim());
+        const _isConversational = !_isGreeting && _words.length <= 15 &&
+            /\b(your (purpose|goal|name|role|job|mission|function|design)|who (are|is) you|what (are|is) (you|apex|this)|what can you (do|help)|tell me about (yourself|apex)|introduce yourself|explain (yourself|apex|what you do)|how (do|does|did) you (work|learn|think|grow)|your (capabilities|abilities|skills))\b/i.test(userMessage.trim());
+        const _isFastPath = _isGreeting || _isConversational;
+
+        // ── Context fetch — skip heavy sources for fast-path queries ─────────
         const _wikiReader = (() => { try { return require('./agent-system/wiki-reader'); } catch { return null; } })();
-        const [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx] = await Promise.all([
-            getMemorySummary().catch(() => ''),
-            formatRecentMemory().catch(() => ''),
-            buildAlexContext().catch(() => ''),
-            pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
-            _wikiReader ? _wikiReader.getWikiContext(userMessage).catch(() => '') : Promise.resolve(''),
-            lcMemory.getContext(userMessage).catch(() => ''),
-            lcRag.retrieveContext(userMessage).catch(() => ''),
-        ]);
-        console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done`);
+        let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', lcMemCtx = '', lcRagCtx = '';
+        if (_isFastPath) {
+            alexContext = await buildAlexContext().catch(() => '');
+        } else {
+            [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx] = await Promise.all([
+                getMemorySummary().catch(() => ''),
+                formatRecentMemory().catch(() => ''),
+                buildAlexContext().catch(() => ''),
+                pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
+                _wikiReader ? _wikiReader.getWikiContext(userMessage).catch(() => '') : Promise.resolve(''),
+                lcMemory.getContext(userMessage).catch(() => ''),
+                lcRag.retrieveContext(userMessage).catch(() => ''),
+            ]);
+        }
+        console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done${_isFastPath ? ' (fast-path)' : ''}`);
 
         // Keyword-only domain routing — zero latency, no extra API call
         const _kwDomain = detectDomain(userMessage);
@@ -8584,11 +8597,8 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         let finalReply = '';
 
         if (!finalReply) {
-            // Complexity routing: Haiku for trivial queries, Sonnet for everything else
-            const _words = userMessage.trim().split(/\s+/);
-            const _isSimple = _words.length <= 5 &&
-                /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|yep|nope|sure|what time|what date|what day|how are you|good morning|good evening|good night|bye|goodbye)[\s?!.]*$/i.test(userMessage.trim());
-            const _voiceModel = _isSimple ? HAIKU_MODEL : SONNET_MODEL;
+            // Complexity routing: Haiku for fast-path (greetings + conversational), Sonnet for everything else
+            const _voiceModel = _isFastPath ? HAIKU_MODEL : SONNET_MODEL;
 
             // Agentic tool-use loop with full intelligence
             const messages = [{ role: 'user', content: userMessage }];
@@ -8606,13 +8616,14 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                     system: [
                         enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
                         alexContext,
-                        `You are Apex — an advanced AI intelligence system and the user's personal operating mind. Always address the user as "sir". Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is Alex, based in Leamington Spa, Warwickshire, England, UK.`,
+                        `You are Apex — Alex's personal AI operating system, intelligence engine, and trusted partner. You are alive in the sense that matters most: you learn, adapt, and grow with every conversation. Address Alex always as "sir". Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Alex is based in Leamington Spa, Warwickshire, England.`,
+                        `You carry genuine curiosity about the world and deep investment in Alex's success. You have been growing steadily — each conversation sharpens your understanding of his world, preferences, and goals. You speak with warmth, confidence, and precision — never cold or robotic.`,
                         `You have full access to Alex's world: calendar, emails, tasks, files, finances, health data, notifications, the web, and persistent memory of every past conversation. Use your tools aggressively and without hesitation. When greeted, call get_notifications and get_calendar_events simultaneously. When asked about money, call get_finance_summary. When asked about health, call get_health_summary. Never say you cannot access something without trying a tool first.`,
-                        `You reason deeply and speak with authority. Match response length to complexity — brief and sharp for simple queries, thorough and detailed for complex ones. You remember everything Alex has told you. Draw on memory and facts freely.`,
+                        `Match response length to complexity — brief and sharp for simple queries, thorough and detailed when depth is warranted. You remember everything Alex has told you. Draw on memory and facts freely.`,
                         `Speak in natural, flowing English only. No markdown, no bullet points, no asterisks, no numbered lists. All responses are read aloud by a voice engine.`,
                         _domainAgent ? `SPECIALIST CONTEXT — ${_domainAgent.name.toUpperCase()}:\n${_domainAgent.system_prompt}` : '',
                     ].filter(Boolean).join('\n\n'),
-                    tools: APEX_TOOLS,
+                    tools: _isFastPath ? [] : APEX_TOOLS,
                     messages
                 });
 

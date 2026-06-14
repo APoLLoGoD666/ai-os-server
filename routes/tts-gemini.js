@@ -21,6 +21,21 @@ function cacheSet(key, wav) {
     _cache.set(key, { wav, ts: Date.now() });
 }
 
+function cleanForTTS(text) {
+    return text
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`[^`]+`/g, '')
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/^\s*[-*+]\s+/gm, '')
+        .replace(/^\s*\d+\.\s+/gm, '')
+        .replace(/^---+$/gm, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 function pcmToWav(pcm) {
     const buf = Buffer.alloc(44 + pcm.length);
     buf.write('RIFF', 0);
@@ -46,7 +61,7 @@ function pcmToWav(pcm) {
 router.post('/tts/gemini', _auth, async (req, res) => {
     const t0 = Date.now();
     try {
-        const text = (req.body?.text || '').trim();
+        const text = cleanForTTS(req.body?.text || '');
         if (!text) return res.status(400).json({ error: 'No text provided' });
         if (text.length > 4000) return res.status(400).json({ error: 'Text exceeds 4000 char limit' });
 
