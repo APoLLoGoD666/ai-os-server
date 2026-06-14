@@ -3,6 +3,7 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const Anthropic = require("@anthropic-ai/sdk");
+const runtime = require('./lib/models/runtime');
 
 const client = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY
@@ -115,15 +116,9 @@ Rules:
 - content must be the full file, not a diff.
 `.trim();
 
-    const response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 12000,
-        messages: [
-            {
-                role: "user",
-                content: prompt
-            }
-        ]
+    const { result: response } = await runtime.execute({
+        client, model: MODEL, caller: 'cloud_autopilot', maxTokens: 12000,
+        messages: [{ role: 'user', content: prompt }],
     });
 
     const text = (response.content || [])

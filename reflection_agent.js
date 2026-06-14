@@ -1,8 +1,7 @@
 "use strict";
 
 const { pgLoadMemory, pgListNotifications, pgCreateNotification } = require("./pg_helpers");
-
-const HAIKU = "claude-haiku-4-5-20251001";
+const runtime = require("./lib/models/runtime");
 
 async function runReflectionCheck(anthropicClient) {
     try {
@@ -35,10 +34,11 @@ If there IS something worth surfacing, respond with exactly two lines:
 TITLE: <short title under 60 chars>
 MESSAGE: <one concise sentence>`;
 
-        const res = await anthropicClient.messages.create({
-            model: HAIKU,
-            max_tokens: 120,
-            messages: [{ role: "user", content: prompt }]
+        const { result: res } = await runtime.execute({
+            tier:      'fast',
+            caller:    'reflection-agent',
+            maxTokens: 120,
+            messages:  [{ role: "user", content: prompt }],
         });
 
         const text = (res.content[0]?.text || "").trim();

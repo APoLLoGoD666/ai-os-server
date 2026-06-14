@@ -1,5 +1,14 @@
 "use strict";
 
+if (process.env.GMAIL_ENABLED !== 'true') {
+    module.exports = {
+        checkEmails:    async () => ({ count: 0, disabled: true, message: 'Gmail disabled — refresh OAuth tokens then set GMAIL_ENABLED=true' }),
+        sendEmailReply: async () => { throw new Error('Gmail disabled — set GMAIL_ENABLED=true after running node get_gmail_token.js'); },
+        initEmailAgent: async () => {},
+        isDisabled:     true,
+    };
+} else {
+
 const { google } = require("googleapis");
 const {
     pgSaveEmailQueueItem,
@@ -11,8 +20,7 @@ const {
     pgSaveGmailToken,
     pgClearGmailToken
 } = require("./pg_helpers");
-
-const HAIKU = "claude-haiku-4-5-20251001";
+const runtime = require("./lib/models/runtime");
 
 async function getGmailClient() {
     const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET } = process.env;
@@ -67,10 +75,11 @@ Subject: ${email.subject}
 Body: ${email.body}`;
 
     try {
-        const response = await anthropicClient.messages.create({
-            model: HAIKU,
-            max_tokens: 200,
-            messages: [{ role: "user", content: prompt }]
+        const { result: response } = await runtime.execute({
+            tier:      'fast',
+            caller:    'email-agent',
+            maxTokens: 200,
+            messages:  [{ role: "user", content: prompt }],
         });
 
         const text = response.content[0]?.text || "{}";
@@ -168,7 +177,7 @@ async function checkEmails(anthropicClient) {
                 "email",
                 "Gmail auth expired",
                 "Gmail OAuth refresh token is invalid. Visit /auth/gmail/reauthorise to re-connect.",
-                null, null
+                null, null, 86400000 // 24h dedup — one notification per day max
             ).catch(() => {});
         }
         return 0;
@@ -221,3 +230,4 @@ async function initEmailAgent(anthropicClient) {
 }
 
 module.exports = { checkEmails, sendEmailReply, initEmailAgent };
+}

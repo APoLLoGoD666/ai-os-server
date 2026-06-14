@@ -7,8 +7,7 @@ const {
     pgCreateAgentTask,
     pgCreateNotification
 } = require("./pg_helpers");
-
-const HAIKU = "claude-haiku-4-5-20251001";
+const runtime = require("./lib/models/runtime");
 
 const FINANCE_CATEGORIES = [
     "housing", "food", "transport", "entertainment",
@@ -21,10 +20,11 @@ Description: "${description}", Amount: ${amount}
 Reply with only the category word, nothing else.`;
 
     try {
-        const res = await anthropicClient.messages.create({
-            model: HAIKU,
-            max_tokens: 10,
-            messages: [{ role: "user", content: prompt }]
+        const { result: res } = await runtime.execute({
+            tier:      'fast',
+            caller:    'finance-agent',
+            maxTokens: 10,
+            messages:  [{ role: "user", content: prompt }],
         });
         const cat = (res.content[0]?.text || "other").trim().toLowerCase().replace(/[^a-z]/g, "");
         return FINANCE_CATEGORIES.includes(cat) ? cat : "other";

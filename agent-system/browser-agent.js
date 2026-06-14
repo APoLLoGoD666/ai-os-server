@@ -1,11 +1,11 @@
 "use strict";
 const { chromium } = require('playwright');
-const Anthropic = require('@anthropic-ai/sdk');
+const runtime = require('../lib/models/runtime');
 const memory = require('./obsidian-memory');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
-const MODEL = 'claude-sonnet-4-6';
 const DEFAULT_TIMEOUT = 30000;
 const SESSION_DIR = '/tmp/browser-sessions';
 
@@ -15,23 +15,25 @@ const _allowedDomains = process.env.BROWSER_ALLOWED_DOMAINS
     ? new Set(process.env.BROWSER_ALLOWED_DOMAINS.split(',').map(d => d.trim().toLowerCase()))
     : null;
 
+// RFC-1918 / loopback / link-local pattern — always blocked regardless of allowlist
+const _PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.0\.0\.0|::1$|fd[0-9a-f]{2}:)/i;
+
 function _checkDomain(url) {
-    if (!_allowedDomains || _allowedDomains.size === 0) return;
-    try {
-        const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
-        if (!_allowedDomains.has(host)) {
-            throw new Error(`Domain not in allowlist: ${host}`);
-        }
-    } catch (e) {
-        if (e.message.startsWith('Domain not in allowlist')) throw e;
+    let parsed;
+    try { parsed = new URL(url); } catch { throw new Error(`Invalid URL: ${url}`); }
+    if (parsed.protocol === 'file:') throw new Error('file:// URLs are blocked');
+    if (!parsed.protocol.startsWith('http')) throw new Error(`Protocol blocked: ${parsed.protocol}`);
+    const host = parsed.hostname.toLowerCase();
+    if (_PRIVATE_HOST.test(host)) throw new Error(`SSRF blocked — private/loopback host: ${host}`);
+    if (_allowedDomains && _allowedDomains.size > 0) {
+        const bare = host.replace(/^www\./, '');
+        if (!_allowedDomains.has(bare)) throw new Error(`Domain not in allowlist: ${host}`);
     }
 }
 
 // SOCKS5/HTTP proxy configuration — set PLAYWRIGHT_PROXY env var as "socks5://host:port"
 const _proxyConfig = process.env.PLAYWRIGHT_PROXY ? { server: process.env.PLAYWRIGHT_PROXY } : undefined;
 
-// Module-level Anthropic client — NOT new per call
-const _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ── Session helpers ───────────────────────────────────────────────
 function _ensureSessionDir() {
@@ -198,7 +200,7 @@ function interceptNetwork(page) {
             const raw = request.postData();
             if (raw) postData = raw.slice(0, 500);
         } catch (_) {}
-        captured.push({
+        if (captured.length < 100) captured.push({
             method: request.method(),
             url: reqUrl,
             headers: filteredHeaders,
@@ -236,9 +238,10 @@ async function checkResearchCache(objective) {
 
 // ── Analyse content with Claude ───────────────────────────────────
 async function analyseContent(content, objective) {
-    const res = await _client.messages.create({
-        model: MODEL,
-        max_tokens: 2000,
+    const { result: res } = await runtime.execute({
+        tier:      'balanced',
+        caller:    'browser-agent',
+        maxTokens: 2000,
         system: `You are a data extraction agent. Given webpage content and an objective,
 extract exactly the information requested. Be precise and concise.
 Output JSON only: { "found": boolean, "data": any, "summary": string, "nextAction": string|null }

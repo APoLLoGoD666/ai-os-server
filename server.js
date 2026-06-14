@@ -1,7 +1,9 @@
+require("./instrument.js");
 require("dotenv").config();
 
+const GIT_SHA = (() => { try { return require('child_process').execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'unknown'; } })();
+
 const Sentry = require("@sentry/node");
-Sentry.init({ dsn: process.env.SENTRY_DSN || "", tracesSampleRate: 0.1 });
 
 // Fail fast if critical env vars are missing — prevents silent runtime failures
 (function _validateEnv() {
@@ -11,8 +13,10 @@ Sentry.init({ dsn: process.env.SENTRY_DSN || "", tracesSampleRate: 0.1 });
         console.error(`[STARTUP] FATAL — missing required env vars: ${missing.join(', ')}`);
         process.exit(1);
     }
-    if (!process.env.GITHUB_TOKEN) console.warn('[STARTUP] GITHUB_TOKEN not set — agent git push will fail');
-    if (!process.env.CRON_SECRET)  console.warn('[STARTUP] CRON_SECRET not set — cron endpoints are unprotected');
+    if (!process.env.GITHUB_TOKEN)    console.warn('[STARTUP] GITHUB_TOKEN not set — agent git push will fail');
+    if (!process.env.CRON_SECRET)     console.warn('[STARTUP] CRON_SECRET not set — cron endpoints are unprotected');
+    if (!process.env.NOTION_API_KEY)  console.warn('[STARTUP] NOTION_API_KEY not set — Notion integration disabled');
+    if (!process.env.SLACK_BOT_TOKEN) console.warn('[STARTUP] SLACK_BOT_TOKEN not set — Slack integration disabled');
 })();
 
 // Error sink — writes to apex_notifications when Sentry DSN is absent
@@ -61,6 +65,7 @@ process.on('unhandledRejection', (reason) => {
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const cors = require("cors");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
@@ -75,14 +80,30 @@ const db = require("./database");
 const expandPrompt = require('./agent-system/prompt-expander');
 const runAgentTeam = require('./agent-system/orchestrator');
 const agentLib     = require('./agent-system/agent-library');
+const _bus         = require('./lib/event-bus');
+const _agentQueue  = require('./lib/agent-queue');
+const _cogOrch     = require('./lib/cognitive-orchestrator');
+const _sessionReg  = require('./lib/session-state-registry');
+const _timingEng   = require('./lib/response-timing-engine');
+const _pcm         = require('./lib/persistent-cognition-manager');
+const _eae         = require('./lib/executive-arbitration-engine');
+const _spe         = require('./lib/strategic-planning-engine');
+const _gateway     = require('./lib/memory/gateway');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
-const { invokeDomainAgent: _invokeDomainAgent, DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
+const { DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
-// ── LangChain agents — lazy-loaded on first voice-chat request ───────────────
-let lcMemory = { getContext: async () => '', addExchange: async () => {} };
+// ── LangChain modules — lazy-loaded on first voice-chat to avoid startup RSS hit
+let lcMemory = { getContext: async () => '', addExchange: async () => {}, clearMemory: async () => {} };
 let lcRag    = { retrieveContext: async () => '' };
-let lcRouter = { routeMessage: async () => ({ domain: 'general', confidence: 0, needs_data: false }), DOMAIN_SLUG_MAP: {} };
 let _lcLoaded = false;
+async function _ensureLCLoaded() {
+    if (_lcLoaded) return;
+    _lcLoaded = true;
+    try { lcMemory = require('./agent-system/langchain-memory'); console.log('[LC] memory loaded'); }
+    catch (e) { console.warn('[LC] memory load failed:', e.message); }
+    try { lcRag = require('./agent-system/langchain-rag'); console.log('[LC] rag loaded'); }
+    catch (e) { console.warn('[LC] rag load failed:', e.message); }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Keyword-based domain detector (fast, zero API cost) ──────────────────────
@@ -144,7 +165,7 @@ const {
     getWorkspaceStorageDebug
 } = require("./storage");
 
-const { runAutoCoder } = require("./auto_coder");
+const runAutoCoder = async () => ({ skipped: true, reason: "auto_coder removed", summary: "", changedFiles: [] });
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
 const { checkEmails, sendEmailReply, initEmailAgent } = require("./email_agent");
 // mastra_agents is lazy-loaded after server stabilises to avoid startup OOM
@@ -172,50 +193,36 @@ const {
     pgClearGmailToken
 } = require("./pg_helpers");
 
-if (!process.env.OBSIDIAN_URL || !process.env.OBSIDIAN_API_KEY) {
-    console.warn('[Obsidian] WARNING — OBSIDIAN_URL or OBSIDIAN_API_KEY not set. Obsidian integration disabled.');
+if (!process.env.OBSIDIAN_URL) {
+    console.warn('[Obsidian] OBSIDIAN_URL not set — vault reads/writes will use local filesystem only. Run obsidian-tunnel.ps1 to enable remote access.');
+} else if (!process.env.OBSIDIAN_API_KEY) {
+    console.warn('[Obsidian] OBSIDIAN_URL set but OBSIDIAN_API_KEY missing — REST API calls will fail with 401. Add OBSIDIAN_API_KEY to Render env vars.');
+} else {
+    console.log('[Obsidian] REST API configured — vault access via tunnel enabled.');
 }
 
-async function obsidianRead(notePath) {
-  const res = await fetch(`${process.env.OBSIDIAN_URL}/vault/${encodeURIComponent(notePath)}`, {
-    headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` }
-  });
-  if (!res.ok) return null;
-  return await res.text();
-}
-
-async function obsidianWrite(notePath, markdownContent) {
-  await fetch(`${process.env.OBSIDIAN_URL}/vault/${encodeURIComponent(notePath)}`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}`,
-      'Content-Type': 'text/markdown'
-    },
-    body: markdownContent
-  });
-}
-
-async function obsidianAppend(notePath, markdownContent) {
-    const existing = await obsidianRead(notePath).catch(() => null);
-    const updated = existing ? existing + '\n\n---\n\n' + markdownContent : markdownContent;
-    await obsidianWrite(notePath, updated);
-}
-
-async function obsidianSearch(query) {
-  const res = await fetch(
-    `${process.env.OBSIDIAN_URL}/search/simple/?query=${encodeURIComponent(query)}&contextLength=200`,
-    { headers: { 'Authorization': `Bearer ${process.env.OBSIDIAN_API_KEY}` } }
-  );
-  if (!res.ok) return [];
-  return await res.json();
-}
+const { obsidianRead, obsidianWrite, obsidianAppend, obsidianSearch, obsidianListVault, obsidianListDir } = require('./agent-system/obsidian-client');
 
 const app = express();
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
 app.use(helmet({
-    contentSecurityPolicy: false, // Dashboard uses inline scripts — CSP requires separate config
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc:  ["'self'"],
+            scriptSrc:   ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.jsdelivr.net'],
+            styleSrc:    ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+            connectSrc:  ["'self'", 'wss:', 'https:'],
+            imgSrc:      ["'self'", 'data:', 'blob:'],
+            mediaSrc:    ["'self'", 'blob:'],
+            workerSrc:   ["'self'", 'blob:'],
+            fontSrc:     ["'self'", 'data:', 'https://fonts.gstatic.com'],
+            objectSrc:      ["'none'"],
+            frameSrc:       ["'none'"],
+            scriptSrcAttr:  ["'none'"],
+        }
+    },
     crossOriginEmbedderPolicy: false
 }));
 app.use(cors({
@@ -248,14 +255,60 @@ app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// Stable conversation ID — persists across turns for PCM/EAE/SPE state continuity
+// Priority: x-conversation-id header > x-session-id header > Authorization JWT sub >
+//           apex_token cookie JWT sub > per-request fallback
+function _resolveConversationId(req) {
+    if (req.headers['x-conversation-id']) return req.headers['x-conversation-id'];
+    if (req.headers['x-session-id'])      return req.headers['x-session-id'];
+    // Authorization header JWT
+    try {
+        const auth = req.headers['authorization'] || '';
+        if (auth.startsWith('Bearer ')) {
+            const payload = JSON.parse(Buffer.from(auth.slice(7).split('.')[1], 'base64url').toString());
+            if (typeof payload.sub === 'string' && payload.sub.length > 0) return payload.sub;
+        }
+    } catch (_) {}
+    // Cookie JWT — primary path for dashboard traffic (apex_token cookie)
+    try {
+        const cookies = parseCookies(req);
+        const cookieToken = cookies.apex_token;
+        if (cookieToken) {
+            const payload = JSON.parse(Buffer.from(cookieToken.split('.')[1], 'base64url').toString());
+            if (typeof payload.sub === 'string' && payload.sub.length > 0) return payload.sub;
+        }
+    } catch (_) {}
+    return req.requestId; // last resort — per-request only, no cross-turn continuity
+}
+
 // Request correlation ID — injected on every request, echoed in response headers
+const _log = require('./lib/logger');
 app.use((req, res, next) => {
     const id = req.headers['x-request-id'] || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-    req.requestId = id;
+    req.requestId    = id;
+    req.conversationId = _resolveConversationId(req);
     res.setHeader('X-Request-ID', id);
+    res.setHeader('X-Conversation-ID', req.conversationId);
     if (req.path.startsWith('/api/')) {
         const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-        console.log(`[REQUEST] ${req.method} ${req.path} — ${ip} — ${id} — ${new Date().toISOString()}`);
+        const t0 = Date.now();
+        _log.info('request', `${req.method} ${req.path}`, { request_id: id, ip, conversation_id: req.conversationId });
+        res.on('finish', () => {
+            const latency_ms = Date.now() - t0;
+            _log.info('response', `${req.method} ${req.path} ${res.statusCode}`, { request_id: id, status: res.statusCode, latency_ms });
+            // Persist to request_logs — fire-and-forget, never blocks response
+            const _taskId = req.body?.taskId || req.params?.taskId || null;
+            sbAdmin.from('request_logs').insert({
+                request_id: id,
+                method: req.method,
+                path: req.path,
+                status_code: res.statusCode,
+                latency_ms,
+                ip,
+                task_id: _taskId,
+                conversation_id: req.conversationId || null,
+            }).then(() => {}).catch(() => {});
+        });
     }
     next();
 });
@@ -271,6 +324,18 @@ app.use('/api/', (req, res, next) => {
     }
     next();
 });
+
+// ── Execution class tagger — tags every request with REFLEX/EXECUTIVE/BACKGROUND
+// Used by latency tracker + event bus for aggregated metrics.
+const _BACKGROUND_PATHS = /^\/api\/(tasks\/run|master\/|research\/|browser\/|cloud-autopilot|agent\/run|wiki\/ingest|rag\/)/;
+const _REFLEX_PATHS     = /^\/(?:health|api\/latency-stats|api\/latency-traces|api\/system\/events)$/;
+app.use((req, res, next) => {
+    if (_REFLEX_PATHS.test(req.path))          req.executionClass = 'REFLEX';
+    else if (_BACKGROUND_PATHS.test(req.path)) req.executionClass = 'BACKGROUND';
+    else                                        req.executionClass = 'EXECUTIVE';
+    next();
+});
+
 
 app.get('/health', async (req, res) => {
     let dbOk = false;
@@ -291,7 +356,7 @@ app.get('/health', async (req, res) => {
                 dbOk = !error;
             }
         }
-    } catch {}
+    } catch (e) { console.warn('[Health] db check error:', e.message); }
     const mem     = process.memoryUsage();
     const heapMb  = Math.round(mem.heapUsed  / 1024 / 1024);
     const rssM    = Math.round(mem.rss        / 1024 / 1024);
@@ -299,35 +364,128 @@ app.get('/health', async (req, res) => {
     const aiOk    = !!process.env.ANTHROPIC_API_KEY;
     const allOk   = dbOk && ttsOk && aiOk;
     const status  = allOk ? 'ok' : (dbOk ? 'degraded' : 'down');
-    res.status(dbOk ? 200 : 503).json({
+    // Always 200 so Render zero-downtime deploy health check passes on startup;
+    // DB failures are visible in body but don't block new deploys.
+    res.status(200).json({
         status,
-        uptime:    process.uptime(),
-        timestamp: Date.now(),
-        db:        dbOk,
-        tts:       ttsOk,
-        ai:        aiOk,
-        memory:    { heapMb, rssMb: rssM, warning: heapMb > 400 },
-        recentErrors: _errBuffer.slice(-3)
+        version:        GIT_SHA,
+        uptime:         process.uptime(),
+        timestamp:      Date.now(),
+        db:             dbOk,
+        tts:            ttsOk,
+        ai:             aiOk,
+        memory:         { heapMb, rssMb: rssM, warning: heapMb > 150, heapLimit: 220 },
+        mastra:         getMastraStatus(),
+        ws:             global._apexWsCount || 0,
+        sentry:         !!process.env.SENTRY_DSN,
+        correlationIds: true,
+        recentErrors:   _errBuffer.slice(-3)
     });
 });
 
-app.get('/', requireAuth, (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.sendFile(path.join(__dirname, 'dashboard.html'));
+// GET /api/system/health/detailed — unified observability snapshot
+app.get('/api/system/health/detailed', requireAppAccess, async (req, res) => {
+    const t0 = Date.now();
+    const result = {
+        timestamp:  Date.now(),
+        uptime:     process.uptime(),
+        memory:     null,
+        db:         { ok: false, latencyMs: null },
+        supabase:   { ok: false },
+        voice:      null,
+        agentQueue: null,
+        agents:     null,
+        obsidian:   { ok: false },
+        latency:    null,
+    };
+
+    // Memory
+    const mem = process.memoryUsage();
+    result.memory = {
+        heapMb:  Math.round(mem.heapUsed  / 1024 / 1024),
+        rssMb:   Math.round(mem.rss       / 1024 / 1024),
+        warning: Math.round(mem.heapUsed  / 1024 / 1024) > 150,
+        heapLimit: 220,
+    };
+
+    // DB (pg pool)
+    await (async () => {
+        const t = Date.now();
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query('SELECT 1');
+            result.db = { ok: true, latencyMs: Date.now() - t };
+        } catch (e) {
+            result.db = { ok: false, error: e.message };
+        }
+    })();
+
+    // Supabase
+    await (async () => {
+        try {
+            const { error } = await sbAdmin.from('notifications').select('id').limit(1);
+            result.supabase = { ok: !error, error: error?.message };
+        } catch (e) { result.supabase = { ok: false, error: e.message }; }
+    })();
+
+    // Voice state
+    try {
+        const intel = require('./routes/intelligence');
+        const vs = intel.voiceState;
+        result.voice = { active: vs.active, sessionId: vs.sessionId, ttsPlaying: vs.ttsPlaying, listeners: vs.listeners.size };
+    } catch { result.voice = { active: false }; }
+
+    // Agent queue
+    try { result.agentQueue = _agentQueue.status(); } catch {}
+
+    // Agent library
+    try { result.agents = require('./agent-system/agent-library').status(); } catch {}
+
+    // Obsidian vault reachability
+    try {
+        const vaultPath = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
+        const fs = require('fs');
+        result.obsidian = { ok: fs.existsSync(vaultPath), path: vaultPath };
+    } catch {}
+
+    // Latency tracker stats
+    try {
+        const trackerStats = require('./lib/latency-tracker').stats();
+        const ov = trackerStats.overall;
+        result.latency = {
+            total_sessions:   trackerStats.total_sessions,
+            active:           trackerStats.active_voice_sessions,
+            ack_p50:          ov?.ack_latency?.p50         ?? null,
+            ack_p95:          ov?.ack_latency?.p95         ?? null,
+            meaningful_p50:   ov?.meaningful_latency?.p50  ?? null,
+            meaningful_p95:   ov?.meaningful_latency?.p95  ?? null,
+            completion_p50:   ov?.completion_latency?.p50  ?? null,
+            completion_p95:   ov?.completion_latency?.p95  ?? null,
+            abandonment_rate: trackerStats.abandonment_rate,
+        };
+    } catch {}
+
+    const allOk = result.db.ok && result.supabase.ok;
+    res.status(allOk ? 200 : 503).json({ ok: allOk, probe_ms: Date.now() - t0, ...result });
 });
-app.get('/dashboard.html', requireAuth, (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.sendFile(path.join(__dirname, 'dashboard.html'));
-});
+
+function _serveDashboard(req, res) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.sendFile(path.join(__dirname, 'dashboard.html'));
+}
+app.get('/', requireAuth, _serveDashboard);
+app.get('/dashboard.html', requireAuth, _serveDashboard);
 app.get('/sw.js', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.sendFile(path.join(__dirname, 'sw.js'));
 });
-app.use(express.static(__dirname));
+// Serve only specific static assets — never expose .env, server.js, package.json etc.
+app.get('/apex-v2.css',     (req, res) => res.sendFile(path.join(__dirname, 'apex-v2.css')));
+app.get('/apex-custom.css', (req, res) => res.sendFile(path.join(__dirname, 'apex-custom.css')));
+app.get('/manifest.json',   (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
+app.use('/src/components',  express.static(path.join(__dirname, 'src', 'components')));
 
 app.post('/auth/login', (req, res) => {
     const secret = process.env.JWT_SECRET;
@@ -339,19 +497,27 @@ app.post('/auth/login', (req, res) => {
     if (!password || password !== correctPw) {
         return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
     }
-    const token = jwt.sign({ apex: true }, secret, { expiresIn: '1h' });
+    const token = jwt.sign({ apex: true, sub: 'apex-user' }, secret, { expiresIn: '7d' });
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('apex_token', token, {
+        httpOnly: true,
+        secure: isSecure,
+        sameSite: 'Lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+    // Non-secret session indicator — JS-readable so the login overlay can detect auth state
+    res.cookie('apex_session', '1', {
         httpOnly: false,
         secure: isSecure,
         sameSite: 'Lax',
-        maxAge: 60 * 60 * 1000
+        maxAge: 7 * 24 * 60 * 60 * 1000
     });
     return res.json({ ok: true });
 });
 
 app.post('/auth/logout', (req, res) => {
-    res.clearCookie('apex_token', { path: '/' });
+    res.clearCookie('apex_token',  { path: '/' });
+    res.clearCookie('apex_session', { path: '/' });
     return res.json({ ok: true });
 });
 
@@ -376,6 +542,7 @@ const client = new Anthropic({
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 const SONNET_MODEL = "claude-sonnet-4-6";
+const runtime = require('./lib/models/runtime');
 const AUTONOMY_LEVEL = String(process.env.AUTONOMY_LEVEL || "1");
 
 let mastraAgents = null;
@@ -391,6 +558,8 @@ function getCached(key) {
 }
 function setCache(key, data) { apiCache.set(key, { ts: Date.now(), data }); }
 function clearCache(...keys) { keys.forEach(k => apiCache.delete(k)); }
+// Prune stale entries every 60s to prevent unbounded growth
+setInterval(() => { const now = Date.now(); for (const [k, v] of apiCache) if (now - v.ts > CACHE_TTL) apiCache.delete(k); }, 60_000).unref();
 
 const TOOLS = [
     {
@@ -633,11 +802,8 @@ let pendingDuplicateDecision = null;
 let latestAgentCleanupPreview = null;
 let latestObviousAgentCleanupPreview = null;
 
-if (!AGENT_SECRET) {
-}
-
-if (!APP_ACCESS_KEY) {
-}
+if (!AGENT_SECRET)    console.warn('[Startup] AGENT_SECRET not set — agent auth endpoints are unprotected');
+if (!APP_ACCESS_KEY)  console.warn('[Startup] APP_ACCESS_KEY not set — app auth is disabled');
 
 if (!CRON_SECRET) {
     console.warn("CRON_SECRET not set. Cron route is unprotected.");
@@ -650,15 +816,14 @@ function ensureSetup() {
 }
 
 function hasAppAccess(req) {
-    if (!APP_ACCESS_KEY) {
-        // LOCAL_MODE without a key: allow for dev convenience; production: fail closed
-        return process.env.LOCAL_MODE === 'true';
-    }
+    if (!APP_ACCESS_KEY) return false;
 
-    const headerKey = req.get("x-app-key");
-    const queryKey = req.query?.app_key;
+    const key = req.get("x-app-key") || '';
 
-    return headerKey === APP_ACCESS_KEY || queryKey === APP_ACCESS_KEY;
+    try {
+        return key.length === APP_ACCESS_KEY.length &&
+            require('crypto').timingSafeEqual(Buffer.from(key), Buffer.from(APP_ACCESS_KEY));
+    } catch { return false; }
 }
 
 function requireAppAccess(req, res, next) {
@@ -674,7 +839,10 @@ function requireAppAccess(req, res, next) {
 
 function hasCronAccess(req) {
     if (!CRON_SECRET) return false;
-    return req.get("x-cron-secret") === CRON_SECRET;
+    const provided = req.get("x-cron-secret") || "";
+    try {
+        return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(CRON_SECRET));
+    } catch { return false; }
 }
 
 function requireCronAccess(req, res, next) {
@@ -744,13 +912,32 @@ const LOGIN_HTML = `<!DOCTYPE html>
 </html>`;
 
 function requireAuth(req, res, next) {
+    if (process.env.BYPASS_DASHBOARD_AUTH === 'true') {
+        const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+        res.cookie('apex_session', '1', { httpOnly: false, secure: isSecure, sameSite: 'Lax', maxAge: 3600000 });
+        return next();
+    }
     const secret = process.env.JWT_SECRET;
     if (!secret) return res.status(503).json({ ok: false, reply: 'Auth not configured.' });
 
     if (hasAppAccess(req)) return next();
 
+    // Scoped API key — grants access to /api/* without exposing APP_ACCESS_KEY.
+    // Set API_KEY env var to issue a lower-privilege key to agents / integrations.
+    // requireAppAccess routes still require x-app-key (APP_ACCESS_KEY); this key only passes this gate.
+    const _apiKey = process.env.API_KEY || '';
+    if (_apiKey) {
+        const _provided = req.get('x-api-key') || '';
+        try {
+            if (_provided.length === _apiKey.length &&
+                require('crypto').timingSafeEqual(Buffer.from(_provided), Buffer.from(_apiKey))) {
+                return next();
+            }
+        } catch {}
+    }
+
     const cookies = parseCookies(req);
-    console.log('[Auth] cookie present:', !!cookies.apex_token);
+    // Do not log token presence to avoid leaking auth state to logs
     const token = cookies.apex_token;
     if (token) {
         try {
@@ -823,14 +1010,14 @@ async function _compressMemory() {
         const toCompress = memory.slice(0, memory.length - 6)
             .map(m => `[${m.role}] ${m.message}`)
             .join("\n");
-        const res = await client.messages.create({
-            model: HAIKU_MODEL,
-            max_tokens: 100,
+        const { result: res } = await runtime.execute({
+            tier: 'fast', caller: '_compressMemory',
+            maxTokens: 100,
             messages: [{ role: "user", content: `Summarise this conversation history in one sentence:\n\n${toCompress}` }]
         });
         const summary = (res.content[0]?.text || "").trim();
         if (summary) await pgAddMemory("summary", summary);
-    } catch (_) {}
+    } catch (e) { console.warn('[Memory] compress failed:', e.message); }
 }
 
 async function formatRecentMemory() {
@@ -848,6 +1035,7 @@ async function formatRecentMemory() {
 // Memory summary cache — regenerate only if >10 new messages OR >5 minutes since last
 let _memorySummaryCache = null;
 let _lastSummaryMsgCount = 0;
+let _summaryInFlight = null; // Promise guard — prevents parallel Haiku summarization calls
 const SUMMARY_TTL_MS = 300000; // 5 minutes hard ceiling
 const SUMMARY_MSG_DELTA = 10;  // also regenerate after 10 new messages
 async function getMemorySummary() {
@@ -856,26 +1044,32 @@ async function getMemorySummary() {
     if (_memorySummaryCache && (now - _memorySummaryCache.ts) < SUMMARY_TTL_MS && msgDelta < SUMMARY_MSG_DELTA) {
         return _memorySummaryCache.summary;
     }
-    const memory = await loadMemory();
-    if (!memory.length) return "No recent memory.";
-    const raw = memory.slice(-15).map(item => {
-        const when = timeAgo(item.time);
-        return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${item.message}`;
-    }).join("\n");
-    try {
-        const res = await client.messages.create({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 60,
-            temperature: 0,
-            messages: [{ role: "user", content: `Summarise this conversation history into one compact paragraph (max 60 words). Focus on facts, preferences, and recent context only.\n\n${raw}` }]
-        });
-        const summary = res.content?.find(b => b.type === "text")?.text?.trim() || raw;
-        _memorySummaryCache = { summary, ts: Date.now() };
-        _lastSummaryMsgCount = _memMsgCount;
-        return summary;
-    } catch (_) {
-        return raw;
-    }
+    if (_summaryInFlight) return _summaryInFlight;
+    _summaryInFlight = (async () => {
+        const memory = await loadMemory();
+        if (!memory.length) return "No recent memory.";
+        const raw = memory.slice(-15).map(item => {
+            const when = timeAgo(item.time);
+            return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${item.message}`;
+        }).join("\n");
+        try {
+            const { result: res } = await runtime.execute({
+                tier: 'fast', caller: 'getMemorySummary',
+                maxTokens: 60,
+                temperature: 0,
+                messages: [{ role: "user", content: `Summarise this conversation history into one compact paragraph (max 60 words). Focus on facts, preferences, and recent context only.\n\n${raw}` }]
+            });
+            const summary = res.content?.find(b => b.type === "text")?.text?.trim() || raw;
+            _memorySummaryCache = { summary, ts: Date.now() };
+            _lastSummaryMsgCount = _memMsgCount;
+            return summary;
+        } catch (_) {
+            return raw;
+        } finally {
+            _summaryInFlight = null;
+        }
+    })();
+    return _summaryInFlight;
 }
 
 // Minimal solid-colour PNG generator (no external deps)
@@ -1211,9 +1405,9 @@ async function embedText(text) {
     if (googleKey) {
         try {
             const resp = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${googleKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent`,
                 { model: 'models/text-embedding-004', content: { parts: [{ text: text.slice(0, 2000) }] } },
-                { timeout: 8000 }
+                { timeout: 8000, headers: { 'x-goog-api-key': googleKey } }
             );
             return resp.data?.embedding?.values || null;
         } catch (err) {
@@ -1241,13 +1435,19 @@ async function getRelevantDocuments(question) {
         return pgSearchDocuments(q).catch(() => []);
     }
 
-    // Try semantic vector search first
-    if (process.env.VOYAGE_API_KEY && q) {
+    // Try semantic vector search (Voyage primary, Gemini fallback)
+    if (q) {
         try {
             const embedding = await embedText(q);
             if (embedding) {
-                // Vector cosine search requires raw SQL (<=> operator) — not available via Supabase JS client
-                // Falling through to keyword search
+                const { data, error } = await sbAdmin.rpc('match_documents', {
+                    query_embedding: embedding,
+                    match_count: 5
+                });
+                if (!error && data?.length) {
+                    console.log(`[VectorSearch] ${data.length} results for: ${q.slice(0, 40)}`);
+                    return data;
+                }
             }
         } catch (err) {
             console.error("VECTOR SEARCH ERROR:", err.message);
@@ -1365,22 +1565,17 @@ async function moveFileToCategory(filename, category) {
 }
 
 async function summariseText(text) {
-    const response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 200,
-        messages: [
-            {
-                role: "user",
-                content: `Summarise this file clearly in 3-5 bullet points:\n\n${text}`
-            }
-        ]
-    });
-
-    return (response.content || [])
-        .filter(part => part.type === "text")
-        .map(part => part.text || "")
-        .join("\n")
-        .trim();
+    try {
+        const { result: response } = await runtime.execute({
+            tier: 'fast', caller: 'summariseText',
+            maxTokens: 200,
+            messages: [{ role: "user", content: `Summarise this file clearly in 3-5 bullet points:\n\n${text}` }]
+        });
+        return (response.content || []).filter(p => p.type === "text").map(p => p.text || "").join("\n").trim();
+    } catch (e) {
+        console.warn('[summariseText] AI call failed:', e.message);
+        return '';
+    }
 }
 
 async function analyseDocumentsWithAI(documents) {
@@ -1410,32 +1605,16 @@ async function analyseDocumentsWithAI(documents) {
         combinedLength += contentPreview.length;
     }
 
-    const response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 700,
-        messages: [
-            {
-                role: "user",
-                content: `Analyse these documents. Return key themes, important points, duplicates, cleanup suggestions, and next actions.
-
-Return a structured response with these exact sections:
-1. Key Insights
-2. Main Themes
-3. Important Points
-4. Duplicate Or Cleanup Signals
-5. Suggested Next Actions
-
-DOCUMENTS:
-${limitedDocs.join("\n\n----------------------\n\n")}`
-            }
-        ]
-    });
-
-    return (response.content || [])
-        .filter(part => part.type === "text")
-        .map(part => part.text || "")
-        .join("\n")
-        .trim();
+    try {
+        const { result: response } = await runtime.execute({ tier: 'balanced', caller: 'analyseDocumentsWithAI', maxTokens: 700, messages: [{
+            role: "user",
+            content: `Analyse these documents. Return key themes, important points, duplicates, cleanup suggestions, and next actions.\n\nReturn a structured response with these exact sections:\n1. Key Insights\n2. Main Themes\n3. Important Points\n4. Duplicate Or Cleanup Signals\n5. Suggested Next Actions\n\nDOCUMENTS:\n${limitedDocs.join("\n\n----------------------\n\n")}`
+        }]});
+        return (response.content || []).filter(p => p.type === "text").map(p => p.text || "").join("\n").trim();
+    } catch (e) {
+        console.warn('[analyseDocumentsWithAI] AI call failed:', e.message);
+        return '';
+    }
 }
 
 async function getRecentDocumentsForAnalysis(limit = 10) {
@@ -1450,9 +1629,9 @@ function getLatestCompletedAgentTask(tasks = []) {
 }
 
 async function generateReflectionForTask(task) {
-    const response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 400,
+    const { result: response } = await runtime.execute({
+        tier: 'fast', caller: 'generateReflectionForTask',
+        maxTokens: 400,
         messages: [
             {
                 role: "user",
@@ -1796,10 +1975,7 @@ async function buildAgentPlan(request, memory, documents, files, today, agentPro
         "Use this role context to shape planning style and scope, but do not bypass any existing safety, approval, autonomy, or allowlist rules."
     ].join("\n");
 
-    const response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 700,
-        messages: [
+    const { result: response } = await runtime.execute({ tier: 'balanced', caller: 'buildAgentPlan', maxTokens: 700, messages: [
             {
                 role: "user",
                 content: `You are in safe proposal mode. Do not execute any changes.
@@ -2803,13 +2979,17 @@ async function runSingleScheduleOnce(schedule) {
     };
 }
 
-// TODO: wire runDueSchedules() to Render Cron Job or a background worker.
 async function runDueSchedules() {
     const dueSchedules = await pgGetDueAgentSchedules();
     const results = [];
 
     for (const schedule of dueSchedules) {
-        results.push(await runSingleScheduleOnce(schedule));
+        try {
+            results.push(await runSingleScheduleOnce(schedule));
+        } catch (e) {
+            console.error(`[runDueSchedules] schedule #${schedule.id} failed:`, e.message);
+            results.push({ ok: false, schedule, message: e.message });
+        }
     }
 
     return {
@@ -2848,7 +3028,14 @@ async function runAgentPlanningCycle(taskId) {
     const files = await listWorkspaceFiles();
     const today = new Date().toISOString().slice(0, 10);
     const agentProfile = getAgentProfile(task.context_json?.agentProfile?.name || "system_agent");
-    const plan = await buildAgentPlan(task.goal, memory, documents, files, today, agentProfile);
+    let plan;
+    try {
+        plan = await buildAgentPlan(task.goal, memory, documents, files, today, agentProfile);
+    } catch (e) {
+        console.error('[runAgentPlanningCycle] buildAgentPlan failed:', e.message);
+        await pgUpdateAgentTask(taskId, { status: 'failed', error: `Plan generation failed: ${e.message}` });
+        return { ok: false, message: `Plan generation failed: ${e.message}` };
+    }
     const parsed = await getApprovedAgentActions({
         request: task.goal,
         plan,
@@ -3865,8 +4052,8 @@ async function applyAgentCleanupPreview(preview) {
 Deleted task IDs: ${taskIds.length ? taskIds.join(", ") : "None"}
 Deleted schedule IDs: ${scheduleIds.length ? scheduleIds.join(", ") : "None"}`
         };
-    } catch (error) {
-        throw error;
+    } catch (e) {
+        return { ok: false, reply: `Cleanup failed: ${e.message}` };
     }
 }
 
@@ -3938,8 +4125,11 @@ function getAgentAccessError(command) {
         "approve_reflection"
     ]);
 
-    if (!protectedTypes.has(command.type) || !AGENT_SECRET) {
+    if (!protectedTypes.has(command.type)) {
         return null;
+    }
+    if (!AGENT_SECRET) {
+        return `Agent approval is disabled (AGENT_SECRET not set).`;
     }
 
     if (command.secret !== AGENT_SECRET) {
@@ -4382,10 +4572,12 @@ function buildDirectSafeAgentStepsFromRequest(request = "") {
 }
 
 async function getApprovedAgentActions(latestPlan) {
-    const response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 700,
-        messages: [
+    let response;
+    try {
+        ({ result: response } = await runtime.execute({
+            tier: 'balanced', caller: 'getApprovedAgentActions',
+            maxTokens: 700,
+            messages: [
             {
                 role: "user",
                 content: `You are converting an approved agent plan into a strict JSON workflow.
@@ -4461,7 +4653,11 @@ ${JSON.stringify({
 }, null, 2)}`
             }
         ]
-    });
+        }));
+    } catch (e) {
+        console.error('[getApprovedAgentActions] runtime.execute failed:', e.message);
+        return null;
+    }
 
     const text = (response.content || [])
         .filter(part => part.type === "text")
@@ -6807,18 +7003,18 @@ Answer helpfully.
 
 async function backgroundClassifyAndSummarise(filename, content) {
     try {
-        const [classRes, sumRes] = await Promise.all([
-            client.messages.create({
-                model: HAIKU_MODEL,
-                max_tokens: 20,
+        const [{ result: classRes }, { result: sumRes }] = await Promise.all([
+            runtime.execute({
+                tier: 'fast', caller: 'backgroundClassifyAndSummarise',
+                maxTokens: 20,
                 messages: [{
                     role: "user",
                     content: `Classify into ONE word: uni, business, personal, summary\n\nTEXT:\n${content}`
                 }]
             }),
-            client.messages.create({
-                model: HAIKU_MODEL,
-                max_tokens: 150,
+            runtime.execute({
+                tier: 'fast', caller: 'backgroundClassifyAndSummarise',
+                maxTokens: 150,
                 messages: [{
                     role: "user",
                     content: `Summarise this in 2-3 sentences:\n\n${content}`
@@ -6850,11 +7046,7 @@ async function backgroundClassifyAndSummarise(filename, content) {
    ROUTES
 ========================= */
 
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "dashboard.html"));
-});
-
-app.get("/editor", (req, res) => {
+app.get("/editor", requireAppAccess, (req, res) => {
     res.sendFile(path.join(__dirname, "editor.html"));
 });
 
@@ -6887,8 +7079,10 @@ app.get("/version", requireAppAccess, (req, res) => {
 });
 
 app.get("/debug-storage", requireAppAccess, async (req, res) => {
-    const debug = await getWorkspaceStorageDebug();
-    res.status(debug.ok ? 200 : 500).json(debug);
+    try {
+        const debug = await getWorkspaceStorageDebug();
+        res.status(debug.ok ? 200 : 500).json(debug);
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get("/memory", requireAppAccess, async (req, res) => {
@@ -7053,17 +7247,22 @@ app.post("/run-schedules-now", requireAppAccess, async (req, res) => {
     }
 });
 
-app.get("/cron/health", (req, res) => {
-    return res.status(200).json({
-        ok: true,
-        cronReady: true,
-        hasCronSecret: Boolean(CRON_SECRET)
-    });
+app.get("/cron/health", requireAppAccess, (req, res) => {
+    return res.status(200).json({ ok: true, cronReady: true });
 });
 
 app.post("/cron/run-schedules", requireCronAccess, async (req, res) => {
+    const cronStart = Date.now();
+    const triggeredBy = req.headers['x-triggered-by'] || req.headers['user-agent']?.slice(0, 50) || 'unknown';
     try {
         const scheduleRun = await runDueSchedules();
+        const durationMs = Date.now() - cronStart;
+        sbAdmin.from('cron_logs').insert({
+            triggered_by: triggeredBy,
+            schedules_checked: scheduleRun.results?.length ?? 0,
+            schedules_run: scheduleRun.results?.filter(r => r.ran).length ?? 0,
+            duration_ms: durationMs,
+        }).then(({ error }) => { if (error) console.warn('[Cron] log insert failed:', error.message); });
         return res.status(200).json({
             ok: true,
             summary: scheduleRun.results.map(formatScheduleRunSummary).join("\n") || "No enabled schedules are due right now.",
@@ -7071,6 +7270,11 @@ app.post("/cron/run-schedules", requireCronAccess, async (req, res) => {
         });
     } catch (error) {
         console.error("CRON RUN SCHEDULES ERROR:", error);
+        sbAdmin.from('cron_logs').insert({
+            triggered_by: triggeredBy,
+            errors: error.message,
+            duration_ms: Date.now() - cronStart,
+        }).then(({ error: le }) => { if (le) console.warn('[Cron] log insert failed:', le.message); });
         return res.status(500).json({
             ok: false,
             error: error.message
@@ -7079,8 +7283,10 @@ app.post("/cron/run-schedules", requireCronAccess, async (req, res) => {
 });
 
 app.get("/files", requireAppAccess, async (req, res) => {
-    const files = await listWorkspaceFiles();
-    res.status(200).json({ ok: true, count: files.length, files });
+    try {
+        const files = await listWorkspaceFiles();
+        res.status(200).json({ ok: true, count: files.length, files });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get("/load-layout", requireAppAccess, (req, res) => {
@@ -7149,6 +7355,23 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         }, 25000);
 
         const userMessage = rawMessage.trim();
+        // Stage 3.3 — load relevant cognitive threads from prior turns
+        const _pcmCtx  = _pcm.resumeRelevantThreads({ userMessage, sessionId: req.conversationId });
+        // Stage 3.4/3.5 — combine PCM + EAE + SPE context into single meta object
+        const _eaeSnap = _eae.generateExecutiveSnapshot(req.conversationId);
+        const _speCtx  = _spe.resumeStrategicContext({ sessionId: req.conversationId, userMessage });
+        const _ctxMeta = {
+            resumed_cognition: _pcmCtx.hasResumed,
+            resume_hint:       _pcmCtx.resumeHint,
+            executive_focus:   _eaeSnap.current_focus,
+            executive_summary: _eaeSnap.executive_summary,
+            strategic_hint:    _speCtx.hasStrategicContext ? _speCtx.hint : null,
+            strategic_context: _speCtx.activeObjective ? {
+                objective_id:   _speCtx.activeObjective.objective_id,
+                title:          _speCtx.activeObjective.title,
+                progress_score: _speCtx.activeObjective.progress_score,
+            } : null,
+        };
 
         // ── Agent library intent detection ─────────────────────────────────────
         // Intercept messages like "ask the security engineer to review this"
@@ -7157,9 +7380,15 @@ app.post("/chat", requireAppAccess, async (req, res) => {
             try {
                 const _agentResult = await agentLib.invokeAgent(_agentIntent.slug, _agentIntent.task);
                 clearTimeout(chatTimeout);
-                const _agentReply  = `[${_agentResult.agent.name}]\n\n${_agentResult.reply}`;
-                setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); });
-                return res.status(200).json({ ok: true, reply: _agentReply });
+                const _agentReplyRaw = `[${_agentResult.agent.name}]\n\n${_agentResult.reply}`;
+                const { reply: _agentReply, mode: _agentMode, intent: _agentIntent2 } = _cogOrch.shape(userMessage, _agentReplyRaw, req.executionClass || 'EXECUTIVE', req.conversationId);
+                const _agentSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
+                const _agentPlan = _timingEng.buildStreamPlan(_agentReply, _agentIntent2, req.executionClass || 'EXECUTIVE', _agentSnap);
+                _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _agentIntent2, userMessage, reply: _agentReply, mode: _agentMode, executionClass: req.executionClass });
+                _eae.recordTransition({ sessionId: req.conversationId });
+                _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply: _agentReply, intent: _agentIntent2, mode: _agentMode });
+                setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: _agentReply }), tags: ['conversation', 'chat', 'agent'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+                return res.status(200).json({ ok: true, reply: _agentReply, response_mode: _agentMode, stream_plan: _agentPlan });
             } catch (e) {
                 if (res.headersSent) return;
                 console.warn('[AgentLib] intent invoke failed, falling through to normal chat:', e.message);
@@ -7203,23 +7432,30 @@ ${preview}
                 { role: "user", content: prompt }
             ]);
             clearTimeout(chatTimeout);
-            const reply = result.text || "No response from AI";
-            setImmediate(() => addToMemory("ai", reply));
+            const _mastraRaw = result.text || "No response from AI";
+            const { reply, mode: _mastraMode, intent: _mastraIntent } = _cogOrch.shape(userMessage, _mastraRaw, req.executionClass || 'EXECUTIVE', req.conversationId);
+            const _mastraSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
+            const _mastraPlan = _timingEng.buildStreamPlan(reply, _mastraIntent, req.executionClass || 'EXECUTIVE', _mastraSnap);
+            _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _mastraIntent, userMessage, reply, mode: _mastraMode, executionClass: req.executionClass });
+            _eae.recordTransition({ sessionId: req.conversationId });
+            _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode });
+            setImmediate(() => { addToMemory("ai", reply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'mastra'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
             return res.status(200).json({
                 ok: true,
                 reply,
+                response_mode: _mastraMode,
+                stream_plan: _mastraPlan,
                 memoryUsed: true,
                 documentsUsed: relevantDocs.length
             });
         }
 
         // Fallback: raw Anthropic SDK if Mastra not initialised
-        const streamMsg = await client.messages.stream({
-            model: MODEL,
-            max_tokens: 500,
+        const { result: streamMsg } = await runtime.execute({
+            client, model: MODEL, caller: 'chat_fallback', maxTokens: 500,
             tools: TOOLS,
-            messages: [{ role: "user", content: prompt }]
-        }).finalMessage();
+            messages: [{ role: 'user', content: prompt }],
+        });
 
         clearTimeout(chatTimeout);
 
@@ -7230,22 +7466,30 @@ ${preview}
 
             if (command) {
                 const result = await handleCommand(command);
-                setImmediate(() => addToMemory("ai", result.reply));
+                setImmediate(() => { addToMemory("ai", result.reply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: result.reply }), tags: ['conversation', 'chat', 'tool'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
                 return res.status(result.ok ? 200 : 404).json(result);
             }
         }
 
-        const reply = (streamMsg.content || [])
+        const _rawReply = (streamMsg.content || [])
             .filter(part => part.type === "text")
             .map(part => part.text || "")
             .join("\n")
             .trim() || "No response from AI";
 
-        setImmediate(() => addToMemory("ai", reply));
+        const { reply, mode: _sdkMode, intent: _sdkIntent } = _cogOrch.shape(userMessage, _rawReply, req.executionClass || 'EXECUTIVE', req.conversationId);
+        const _sdkSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
+        const _sdkPlan = _timingEng.buildStreamPlan(reply, _sdkIntent, req.executionClass || 'EXECUTIVE', _sdkSnap);
+        _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _sdkIntent, userMessage, reply, mode: _sdkMode, executionClass: req.executionClass });
+        _eae.recordTransition({ sessionId: req.conversationId });
+        _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _sdkIntent, mode: _sdkMode });
+        setImmediate(() => { addToMemory("ai", reply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'sdk'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
 
         return res.status(200).json({
             ok: true,
             reply,
+            response_mode: _sdkMode,
+            stream_plan: _sdkPlan,
             memoryUsed: true,
             documentsUsed: relevantDocs.length
         });
@@ -7482,9 +7726,9 @@ app.post("/api/ai-draft-reply", requireAppAccess, async (req, res) => {
         const { emailSubject, emailBody, senderName, userPrompt } = req.body || {};
         const cleanEmailSubject = (emailSubject || "").replace(/[^\x00-\x7F]/g, " ").trim();
         const prompt = `You are drafting a short email reply on behalf of the user.\nOriginal email from: ${senderName || "Unknown"}\nSubject: ${cleanEmailSubject}\nBody: ${emailBody || ""}\n${userPrompt ? `\nUser instruction: ${userPrompt}` : ""}\n\nWrite a concise, natural 2-3 sentence reply. Output only the reply body text, no subject line, no greeting prefix beyond a natural opening.`;
-        const response = await client.messages.create({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 150,
+        const { result: response } = await runtime.execute({
+            tier: 'fast', caller: 'ai-draft-reply',
+            maxTokens: 150,
             messages: [{ role: "user", content: prompt }]
         });
         const draft = response.content[0]?.text?.trim() || "";
@@ -7657,10 +7901,10 @@ app.post("/api/speak", requireAppAccess, async (req, res) => {
         const voiceName = 'Orus';
         const t0 = Date.now();
         const gRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`,
             {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text }] }],
                     generationConfig: {
@@ -7697,78 +7941,6 @@ app.post("/api/speak", requireAppAccess, async (req, res) => {
     }
 });
 
-// ── APEX MEMORY (pgvector + Voyage AI) ────────────────────────────────────
-
-// Supabase client — used by saveMemory / recallMemories for vector storage
-const { createClient: _createSupabaseClient } = require('@supabase/supabase-js');
-const supabase = _createSupabaseClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
-
-async function getVoyageEmbedding(text) {
-    try {
-        const res = await fetch('https://api.voyageai.com/v1/embeddings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`
-            },
-            body: JSON.stringify({
-                input: [text],
-                model: 'voyage-3-lite',
-                input_type: 'document'
-            })
-        });
-        const data = await res.json();
-        return data?.data?.[0]?.embedding || null;
-    } catch (err) {
-        console.error('[MEMORY] Voyage embedding error:', err.message);
-        return null;
-    }
-}
-
-async function saveMemory(role, content) {
-    try {
-        const embedding = await getVoyageEmbedding(content);
-        const row = { role, content };
-        if (embedding) row.embedding = JSON.stringify(embedding);
-        const { error } = await supabase.from('apex_memories').insert(row);
-        if (error) console.error('[MEMORY] Save error:', error.message);
-    } catch (err) {
-        console.error('[MEMORY] saveMemory error:', err.message);
-    }
-}
-
-async function recallMemories(query, count = 5) {
-    try {
-        const embedding = await getVoyageEmbedding(query);
-        if (!embedding) {
-            const { data, error } = await supabase
-                .from('apex_memories')
-                .select('role, content, created_at')
-                .ilike('content', `%${query.slice(0, 50)}%`)
-                .order('created_at', { ascending: false })
-                .limit(count);
-            if (error) return [];
-            return data || [];
-        }
-        const { data, error } = await supabase.rpc('match_apex_memories', {
-            query_embedding: JSON.stringify(embedding),
-            match_count: count
-        });
-        if (error) {
-            console.error('[MEMORY] Recall error:', error.message);
-            return [];
-        }
-        return data || [];
-    } catch (err) {
-        console.error('[MEMORY] recallMemories error:', err.message);
-        return [];
-    }
-}
-
-// ── END APEX MEMORY ────────────────────────────────────────────────────────
 
 // ── UPGRADE 1: Structured Memory Extraction ─────────────────────────────────
 async function extractAndSaveFacts(userMessage, apexReply) {
@@ -7780,9 +7952,9 @@ Apex replied: ${apexReply}
 
 Respond with one fact per line, each starting with "Alex".`;
 
-        const res = await client.messages.create({
-            model: HAIKU_MODEL,
-            max_tokens: 200,
+        const { result: res } = await runtime.execute({
+            tier: 'fast', caller: 'extractAndSaveFacts',
+            maxTokens: 200,
             messages: [{ role: 'user', content: prompt }]
         });
 
@@ -7802,7 +7974,7 @@ Respond with one fact per line, each starting with "Alex".`;
             // Mirror to Obsidian Alex profile for persistent second-brain context
             const date = new Date().toLocaleDateString('en-GB');
             const lines = facts.map(f => `- ${f} *(${date})*`).join('\n');
-            obsidianAppend('People/Alex.md', `\n${lines}`).catch(() => {});
+            obsidianAppend('12 Memory/Identity/Alex.md', `\n${lines}`).catch(() => {});
         }
     } catch (err) {
         console.error('[FACTS] extractAndSaveFacts error:', err.message);
@@ -7814,7 +7986,7 @@ async function buildAlexContext() {
     const parts = [];
     try {
         // Primary: structured profile from Obsidian vault
-        const profile = await obsidianRead('People/Alex.md').catch(() => null);
+        const profile = await obsidianRead('12 Memory/Identity/Alex.md').catch(() => null);
         if (profile && profile.length > 50) {
             // Strip frontmatter and markdown headers for clean injection
             const cleaned = profile
@@ -8232,7 +8404,7 @@ async function toolGetHealthSummary() {
         const week  = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
         const [workouts, nutrition, sleep, mood] = await Promise.all([
             sbAdmin.from('apex_workouts').select('type,duration_min,calories_burned,date').gte('date', week).order('date', { ascending: false }).limit(5),
-            sbAdmin.from('apex_nutrition_log').select('food_name,calories,protein_g,carbs_g,fat_g').eq('date', today),
+            sbAdmin.from('apex_nutrition_log').select('food_name,calories,protein_g,carbs_g,fat_g').eq('date', today).limit(100),
             sbAdmin.from('apex_sleep_log').select('date,duration_h,quality_score').order('date', { ascending: false }).limit(3),
             sbAdmin.from('apex_mood_log').select('date,score,notes').order('date', { ascending: false }).limit(1),
         ]);
@@ -8362,21 +8534,48 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         const t0 = Date.now();
         console.log("[LATENCY] +0ms request received");
 
+        // Lazy-load LangChain on first request — avoids startup RSS hit
+        _ensureLCLoaded().catch(() => {});
+
         const userMessage = rawMessage.trim();
 
         // Fire-and-forget legacy memory write (kept for compatibility)
         addToMemory("user", userMessage);
+        setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ role: 'user', message: userMessage }), tags: ['conversation', 'voice'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
 
-        // ── Context fetch — parallel, all non-blocking ───────────────────────
+        // ── Query classification — zero-latency, decides which context sources to load ──
+        const _words = userMessage.trim().split(/\s+/);
+        const _isGreeting = _words.length <= 5 &&
+            /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|yep|nope|sure|what time|what date|what day|how are you|good morning|good evening|good night|bye|goodbye)[\s?!.]*$/i.test(userMessage.trim());
+        const _isConversational = !_isGreeting && _words.length <= 15 &&
+            /\b(your (purpose|goal|name|role|job|mission|function|design)|who (are|is) you|what (are|is) (you|apex|this)|what can you (do|help)|tell me about (yourself|apex)|introduce yourself|explain (yourself|apex|what you do)|how (do|does|did) you (work|learn|think|grow)|your (capabilities|abilities|skills))\b/i.test(userMessage.trim());
+        const _isFastPath = _isGreeting || _isConversational;
+
+        // ── Context fetch ─────────────────────────────────────────────────────
+        // _isConversational: zero context — system prompt covers identity/capability
+        // _isGreeting: Alex context only, 3s timeout cap (pgLoadFacts can hang)
+        // full path: all 7 sources in parallel
         const _wikiReader = (() => { try { return require('./agent-system/wiki-reader'); } catch { return null; } })();
-        const [memSummary, recentMem, alexContext, relevantDocs, wikiCtx] = await Promise.all([
-            getMemorySummary().catch(() => ''),
-            formatRecentMemory().catch(() => ''),
-            buildAlexContext().catch(() => ''),
-            pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
-            _wikiReader ? _wikiReader.getWikiContext(userMessage).catch(() => '') : Promise.resolve(''),
-        ]);
-        console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done`);
+        let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', lcMemCtx = '', lcRagCtx = '';
+        if (_isConversational) {
+            // zero context — fastest possible path
+        } else if (_isGreeting) {
+            alexContext = await Promise.race([
+                buildAlexContext(),
+                new Promise(r => setTimeout(() => r(''), 3000))
+            ]).catch(() => '');
+        } else {
+            [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx] = await Promise.all([
+                getMemorySummary().catch(() => ''),
+                formatRecentMemory().catch(() => ''),
+                buildAlexContext().catch(() => ''),
+                pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
+                _wikiReader ? _wikiReader.getWikiContext(userMessage).catch(() => '') : Promise.resolve(''),
+                lcMemory.getContext(userMessage).catch(() => ''),
+                lcRag.retrieveContext(userMessage).catch(() => ''),
+            ]);
+        }
+        console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done (${_isConversational ? 'zero-ctx' : _isGreeting ? 'greeting' : 'full'})`);
 
         // Keyword-only domain routing — zero latency, no extra API call
         const _kwDomain = detectDomain(userMessage);
@@ -8389,6 +8588,8 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         // Build enriched context block for system prompt
         const contextParts = [];
         if (wikiCtx)     contextParts.push(`VAULT CONTEXT:\n${wikiCtx}`);
+        if (lcMemCtx)    contextParts.push(`CONVERSATION HISTORY:\n${lcMemCtx}`);
+        if (lcRagCtx)    contextParts.push(`VAULT SEARCH:\n${lcRagCtx}`);
         if (memSummary)  contextParts.push(`MEMORY SUMMARY:\n${memSummary}`);
         if (recentMem)   contextParts.push(`RECENT CONVERSATION:\n${recentMem}`);
         if (docsText)    contextParts.push(`WORKSPACE DOCUMENTS:\n${docsText}`);
@@ -8403,32 +8604,32 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         let finalReply = '';
 
         if (!finalReply) {
-            // Complexity routing: Haiku for trivial queries, Sonnet for everything else
-            const _words = userMessage.trim().split(/\s+/);
-            const _isSimple = _words.length <= 5 &&
-                /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|yep|nope|sure|what time|what date|what day|how are you|good morning|good evening|good night|bye|goodbye)[\s?!.]*$/i.test(userMessage.trim());
-            const _voiceModel = _isSimple ? HAIKU_MODEL : SONNET_MODEL;
+            // Complexity routing: Haiku for fast-path (greetings + conversational), Sonnet for everything else
+            const _voiceModel = _isFastPath ? HAIKU_MODEL : SONNET_MODEL;
 
             // Agentic tool-use loop with full intelligence
             const messages = [{ role: 'user', content: userMessage }];
             let loopCount = 0;
             const maxLoops = 8;
 
+            const _vcRuntime = require('./lib/models/runtime');
             while (loopCount < maxLoops) {
                 loopCount++;
-                const response = await client.messages.create({
+                const { result: response } = await _vcRuntime.execute({
+                    client,
                     model: _voiceModel,
-                    max_tokens: 2048,
+                    caller: 'voice_chat',
+                    maxTokens: _isConversational ? 45 : 200,
                     system: [
                         enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
                         alexContext,
-                        `You are Apex — an advanced AI intelligence system and the user's personal operating mind. Always address the user as "sir". Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. The user is Alex, based in Leamington Spa, Warwickshire, England, UK.`,
-                        `You have full access to Alex's world: calendar, emails, tasks, files, finances, health data, notifications, the web, and persistent memory of every past conversation. Use your tools aggressively and without hesitation. When greeted, call get_notifications and get_calendar_events simultaneously. When asked about money, call get_finance_summary. When asked about health, call get_health_summary. Never say you cannot access something without trying a tool first.`,
-                        `You reason deeply and speak with authority. Match response length to complexity — brief and sharp for simple queries, thorough and detailed for complex ones. You remember everything Alex has told you. Draw on memory and facts freely.`,
-                        `Speak in natural, flowing English only. No markdown, no bullet points, no asterisks, no numbered lists. All responses are read aloud by a voice engine.`,
+                        `You are Apex — Alex's personal AI operating system and intelligence engine. Address Alex as "sir". Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Alex is based in Leamington Spa, Warwickshire, England.`,
+                        `VOICE RULES — mandatory: Responses are spoken aloud. Maximum 15 words for simple questions, 25 words for complex ones. One thought, then stop. No preamble, no trailing questions unless essential. No markdown, no lists, no asterisks.`,
+                        `You have full access to Alex's world: calendar, emails, tasks, files, finances, health data, notifications, the web, and persistent memory. Use tools without hesitation. When greeted, call get_notifications and get_calendar_events simultaneously. Never say you cannot access something without trying first.`,
+                        `You are direct, confident, and loyal. You remember everything. You grow sharper with every conversation.`,
                         _domainAgent ? `SPECIALIST CONTEXT — ${_domainAgent.name.toUpperCase()}:\n${_domainAgent.system_prompt}` : '',
                     ].filter(Boolean).join('\n\n'),
-                    tools: APEX_TOOLS,
+                    tools: _isConversational ? undefined : APEX_TOOLS,
                     messages
                 });
 
@@ -8462,9 +8663,8 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         const reply = finalReply;
 
         // Save this exchange to memory asynchronously — never block the response
-        saveMemory('user', userMessage).catch(() => {});
-        saveMemory('assistant', reply).catch(() => {});
         addToMemory("ai", reply);
+        setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'voice', 'exchange'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
 
         // LangChain memory — persist conversation with summary compression
         setImmediate(() => lcMemory.addExchange(userMessage, reply).catch(() => {}));
@@ -8491,7 +8691,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         // consumes ~150MB on top of the main process, causing container OOM on Render.
 
         const today = new Date().toISOString().split('T')[0];
-        const noteTitle = `Conversations/${today}.md`;
+        const noteTitle = `13 Briefings/Conversations/${today}.md`;
         const timestamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
         const noteContent = `## ${timestamp}\n\n**You:** ${userMessage}\n\n**Apex:** ${reply}\n`;
         obsidianAppend(noteTitle, noteContent).catch(e =>
@@ -8526,10 +8726,10 @@ app.post("/api/transcribe", requireAppAccess, multerUpload.single("audio"), asyn
         console.log("[APEX transcribe] mimeType:", mimeType, "size:", audioBuffer.length);
 
         const gRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
             {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
                 body: JSON.stringify({
                     contents: [{
                         parts: [
@@ -8566,10 +8766,10 @@ app.post('/api/tts', requireAppAccess, async (req, res) => {
         const voiceName = 'Orus';
         const t0 = Date.now();
         const gRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`,
             {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text }] }],
                     generationConfig: {
@@ -8654,8 +8854,7 @@ app.get("/api/ping", (req, res) => {
 app.get("/api/config", requireAppAccess, (req, res) => {
     res.json({
         ok: true,
-        supabaseUrl: process.env.SUPABASE_URL || "",
-        supabaseAnonKey: process.env.SUPABASE_ANON_KEY || ""
+        supabaseUrl: process.env.SUPABASE_URL || ""
     });
 });
 
@@ -8671,9 +8870,9 @@ app.post("/api/upload-file", requireAppAccess, async (req, res) => {
 
         await createWorkspaceFile(cleanName, textContent);
 
-        const summaryResp = await client.messages.create({
-            model: HAIKU_MODEL,
-            max_tokens: 150,
+        const { result: summaryResp } = await runtime.execute({
+            tier: 'fast', caller: 'upload-file',
+            maxTokens: 150,
             messages: [{ role: "user", content: `Summarise this file in 2-3 sentences:\n\nFilename: ${cleanName}\n\n${textContent.slice(0, 3000)}` }]
         });
         const summary = (summaryResp.content[0]?.text || "").trim();
@@ -8846,13 +9045,26 @@ async function _startAutoPipeline(taskId) {
         } catch {}
     };
 
+    const _goalTracker = require('./agent-system/goal-tracker');
+    let _goalId = null;
+
     try {
         const t0 = Date.now();
         console.log(`[AutoPipeline] ${taskId} — expanding prompt: "${task.title}"`);
         const spec = await expandPrompt(task.title);
         console.log(`[AutoPipeline] ${taskId} — spec ready, running agent team`);
+
+        // Goal lifecycle — PENDING → RUNNING before pipeline starts
+        try {
+            const g = _goalTracker.addGoal(spec.objective, { source: 'autopipeline', planId: taskId, priority: 'medium' });
+            _goalId = g?.id || null;
+            if (_goalId) _goalTracker.startGoal(_goalId);
+        } catch {}
+
+        _bus.emit(_bus.E.AGENT_STARTED, { task_id: taskId, label: spec.objective });
         const result = await runAgentTeam(spec, taskId);
         const duration = Date.now() - t0;
+        _bus.emit(_bus.E.AGENT_COMPLETED, { task_id: taskId, elapsed_ms: duration, ok: result.success });
 
         if (result.success) {
             await sbAdmin.from('apex_tasks')
@@ -8869,6 +9081,8 @@ async function _startAutoPipeline(taskId) {
                 agentLogs:    result.agentLogs,
                 success:      true
             });
+            // Goal lifecycle — RUNNING → COMPLETED
+            try { if (_goalId) _goalTracker.completeGoal(_goalId, { commitHash: result.commitHash, cost: result.cost }); } catch {}
             console.log(`[AutoPipeline] ${taskId} done — commit ${result.commitHash}`);
             try {
                 const { updateWikiAfterTask } = require('./agent-system/wiki-reader');
@@ -8889,11 +9103,15 @@ async function _startAutoPipeline(taskId) {
                 success:      false,
                 error:        result.error
             });
+            // Goal lifecycle — RUNNING → BLOCKED
+            try { if (_goalId) _goalTracker.blockGoal(_goalId, result.error || 'pipeline failed'); } catch {}
         }
     } catch (err) {
         console.error(`[AutoPipeline] ${taskId} fatal:`, err.message);
         try { restoreBackup(taskId); } catch {}
         await _markFailed(err.message);
+        // Goal lifecycle — RUNNING → BLOCKED on fatal exception
+        try { if (_goalId) _goalTracker.blockGoal(_goalId, err.message); } catch {}
     }
 }
 
@@ -8979,7 +9197,7 @@ app.post('/api/tasks/run', requireAppAccess, async (req, res) => {
         .update({ status: 'in_progress', updated_at: new Date().toISOString() })
         .eq('id', taskId);
     res.json({ ok: true, status: 'running', taskId });
-    setImmediate(() => _startAutoPipeline(taskId).catch(e => console.error('[AutoPipeline] unhandled:', e.message)));
+    _agentQueue.enqueue(taskId, () => _startAutoPipeline(taskId), { label: tasks.title || taskId });
 });
 
 app.post('/api/tasks/notify', requireAppAccess, async (req, res) => {
@@ -9095,9 +9313,9 @@ Rules:
 - Multiple style actions allowed
 - Return empty actions array if request is unclear`;
 
-        const msg = await client.messages.create({
-            model: HAIKU_MODEL,
-            max_tokens: 512,
+        const { result: msg } = await runtime.execute({
+            tier: 'fast', caller: 'editor-ai-action',
+            maxTokens: 512,
             system: systemPrompt,
             messages: [{ role: 'user', content: prompt }],
         });
@@ -9258,8 +9476,9 @@ app.post('/api/rag/ingest', requireAppAccess, requireRagSidecar, multerUpload.si
             const mdResult = await _mkd.convertBuffer(req.file.buffer, req.file.originalname);
             if (mdResult.success && mdResult.markdown) {
                 const { obsidianWrite } = require('./agent-system/obsidian-client');
-                const noteName = `References/${req.file.originalname.replace(/\.[^.]+$/, '')}.md`;
-                await obsidianWrite(noteName, `# ${req.file.originalname}\n\n${mdResult.markdown}`);
+                const safeName = path.basename(req.file.originalname || 'file').replace(/[<>:"|?*\x00-\x1f]/g, '_');
+                const noteName = `09 Knowledge/References/${safeName.replace(/\.[^.]+$/, '')}.md`;
+                await obsidianWrite(noteName, `# ${safeName}\n\n${mdResult.markdown}`);
             }
         } catch {}
         res.json({ ok: true, ...result });
@@ -9297,8 +9516,9 @@ app.post('/api/convert/ingest', requireAppAccess, multerUpload.single('file'), a
         const mdResult = await _mkd.convertBuffer(req.file.buffer, req.file.originalname);
         if (!mdResult.success) throw new Error('conversion failed');
         const { obsidianWrite } = require('./agent-system/obsidian-client');
-        const noteName = `References/${req.file.originalname.replace(/\.[^.]+$/, '')}.md`;
-        await obsidianWrite(noteName, `# ${req.file.originalname}\n\n${mdResult.markdown}`);
+        const safeName = path.basename(req.file.originalname || 'file').replace(/[<>:"|?*\x00-\x1f]/g, '_');
+        const noteName = `References/${safeName.replace(/\.[^.]+$/, '')}.md`;
+        await obsidianWrite(noteName, `# ${safeName}\n\n${mdResult.markdown}`);
         res.json({ ok: true, note: noteName, chars: mdResult.markdown.length });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
@@ -9764,7 +9984,7 @@ app.post('/api/master/quality-gate', requireAppAccess, async (req, res) => {
 
         if (featureId) {
             const _mem = require('./agent-system/obsidian-memory');
-            _mem.write(`Projects/QualityGate-${featureId}.md`,
+            _mem.write(`11 Agents/Reports/QualityGate-${featureId}.md`,
                 `# Quality Gate: ${featureId}\n\n**Passed:** ${passed}\n\n` +
                 (results.impeccable ? `## Impeccable\n${JSON.stringify(results.impeccable.summary, null, 2)}\n\n` : '') +
                 (results.vitals ? `## Web Vitals\n${results.vitals.map(v => `- ${v.url}: LCP=${v.vitals?.lcp}ms (${v.ratings?.lcp})`).join('\n')}` : '')
@@ -9871,9 +10091,9 @@ app.post('/api/editor/lens', requireAppAccess, async (req, res) => {
             brutalist: 'Brutalist style: raw contrast, visible borders, intentional asymmetry, bold typography, no rounded corners.'
         };
 
-        const { getAnthropicClient } = require('./lib/clients');
-        const res_ = await getAnthropicClient().messages.create({
-            model: HAIKU_MODEL, max_tokens: 1500,
+        const { result: res_ } = await runtime.execute({
+            tier: 'fast', caller: 'editor-lens',
+            maxTokens: 1500,
             system: `You are a UI design critic applying a specific design lens to HTML.
 ${LENS_DESCRIPTIONS[lens] || LENS_DESCRIPTIONS.kowalski}
 ${STYLE_DESCRIPTIONS[styleVariant] || STYLE_DESCRIPTIONS.soft}
@@ -10001,9 +10221,9 @@ app.post('/api/voice/pipeline', requireAppAccess, async (req, res) => {
         const _rag = require('./agent-system/rag-bridge');
 
         // 1. Intent classification
-        const { getAnthropicClient: _gac } = require('./lib/clients');
-        const intentRes = await _gac().messages.create({
-            model: HAIKU_MODEL, max_tokens: 200,
+        const { result: intentRes } = await runtime.execute({
+            tier: 'fast', caller: 'voice-intent',
+            maxTokens: 200,
             system: 'Classify the user intent. Reply with JSON only: {"intent":"research|browser|rag|direct","query":"refined query or null"}',
             messages: [{ role: 'user', content: transcript }]
         });
@@ -10033,8 +10253,9 @@ app.post('/api/voice/pipeline', requireAppAccess, async (req, res) => {
         }
 
         // 3. Generate response via Claude
-        const finalRes = await _anthro.messages.create({
-            model: 'claude-haiku-4-5-20251001', max_tokens: 500,
+        const { result: finalRes } = await runtime.execute({
+            tier: 'fast', caller: 'voice-response',
+            maxTokens: 500,
             system: 'You are Apex, a concise voice assistant. Respond in 1-3 sentences suitable for speech synthesis. No markdown, no bullet points.',
             messages: [{ role: 'user', content: `${context ? `Context:\n${context}\n\n` : ''}User: ${transcript}` }]
         });
@@ -10079,7 +10300,7 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
         const [taskRes, timelineRes, runRes] = await Promise.all([
             safeQ(() => sbAdmin.from('apex_tasks').select('id', { count: 'exact', head: true })),
             safeQ(() => sbAdmin.from('apex_timeline').select('id', { count: 'exact', head: true })),
-            safeQ(() => sbAdmin.from('apex_agent_runs').select('task_id,success,cost_usd,duration_ms'))
+            safeQ(() => sbAdmin.from('apex_agent_runs').select('task_id,success,cost_usd,duration_ms').limit(500))
         ]);
         const runs     = (runRes && Array.isArray(runRes.data)) ? runRes.data : [];
         const runCount = runs.length;
@@ -10109,25 +10330,26 @@ app.get('/api/master/metrics', requireAppAccess, async (req, res) => {
 });
 
 // ── Intelligence / cost stub routes (dashboard polls these) ──────────────────
+app.get('/api/deploy-probe', (req, res) => res.json({ v: '8a352e0-probe', ts: Date.now() }));
 app.get('/api/intelligence/agent-runs', requireAppAccess, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 20;
         const { data } = await sbAdmin.from('apex_agent_runs')
             .select('*').order('created_at', { ascending: false }).limit(limit);
         res.json({ ok: true, runs: data || [] });
-    } catch { res.json({ ok: true, runs: [] }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get('/api/intelligence/cost-summary', requireAppAccess, async (req, res) => {
     try {
-        const { data } = await sbAdmin.from('apex_agent_runs').select('cost_usd,model');
+        const { data } = await sbAdmin.from('apex_agent_runs').select('cost_usd,model').limit(1000);
         const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
         const byModel = {};
         for (const r of (data || [])) {
             if (r.model) byModel[r.model] = ((byModel[r.model] || 0) + (r.cost_usd || 0));
         }
         res.json({ ok: true, total_cost_usd: total.toFixed(4), by_model: byModel });
-    } catch { res.json({ ok: true, total_cost_usd: '0.0000', by_model: {} }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get('/api/intelligence/lessons', requireAppAccess, async (req, res) => {
@@ -10136,7 +10358,73 @@ app.get('/api/intelligence/lessons', requireAppAccess, async (req, res) => {
         const { data } = await sbAdmin.from('apex_lessons')
             .select('*').order('created_at', { ascending: false }).limit(n);
         res.json({ ok: true, lessons: data || [] });
-    } catch { res.json({ ok: true, lessons: [] }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// GET /api/intelligence/self-check — Phase 10 autonomous diagnostics (10-subsystem health report)
+app.get('/api/intelligence/self-check', requireAppAccess, async (req, res) => {
+    const checks = {};
+    const t0 = Date.now();
+    const mem    = process.memoryUsage();
+    const rssMb  = Math.round(mem.rss / 1024 / 1024);
+    const CONTAINER_MB = parseInt(process.env.CONTAINER_MEMORY_MB || '512', 10);
+    const rssPct = Math.round(rssMb / CONTAINER_MB * 100);
+    checks.memory = { ok: rssPct < 85, rss_mb: rssMb, rss_pct: rssPct, heap_used_mb: Math.round(mem.heapUsed / 1024 / 1024), container_mb: CONTAINER_MB, hint: rssPct >= 85 ? `RSS ${rssMb} MB exceeds 85% of ${CONTAINER_MB} MB container — consider restart` : null };
+    try {
+        const { data, error } = await sbAdmin.from('apex_notifications').select('id').limit(1);
+        checks.supabase = { ok: !error, latency_ms: Date.now() - t0, error: error?.message || null };
+    } catch (e) { checks.supabase = { ok: false, error: e.message }; }
+    try {
+        const bus = require('./lib/event-bus');
+        const ev = bus.recent(10);
+        const age = ev.length ? Date.now() - ev[ev.length - 1].timestamp : null;
+        checks.event_bus = { ok: true, recent_events: ev.length, last_event_age_s: age !== null ? Math.round(age / 1000) : null };
+    } catch (e) { checks.event_bus = { ok: false, error: e.message }; }
+    try {
+        const aq = require('./lib/agent-queue'); const qs = aq.status();
+        checks.agent_queue = { ok: qs.queued < 40, ...qs, hint: qs.queued >= 40 ? 'Queue near capacity' : null };
+    } catch (e) { checks.agent_queue = { ok: false, error: e.message }; }
+    if (process.env.OBSIDIAN_URL) {
+        try {
+            const { obsidianRead } = require('./agent-system/obsidian-client');
+            const s = Date.now(); await obsidianRead('System/Claude-Memory/MEMORY.md');
+            checks.obsidian = { ok: true, latency_ms: Date.now() - s };
+        } catch (e) { checks.obsidian = { ok: false, error: e.message, hint: 'Check OBSIDIAN_URL tunnel' }; }
+    } else { checks.obsidian = { ok: false, error: 'OBSIDIAN_URL not set', hint: 'Add OBSIDIAN_URL to Render env vars' }; }
+    const _scDbUrl = process.env.DATABASE_URL || '';
+    if (!_scDbUrl || _scDbUrl.includes('YOUR-PASSWORD')) {
+        checks.postgres = { ok: false, error: 'DATABASE_URL not configured', hint: 'Add real DATABASE_URL to Render env vars (Supabase dashboard > Settings > Database)' };
+    } else {
+        try {
+            const pgPool = require('./pg_database'); const pt = Date.now();
+            await pgPool.query('SELECT 1'); checks.postgres = { ok: true, latency_ms: Date.now() - pt };
+        } catch (e) { checks.postgres = { ok: false, error: e.message || 'connection failed', hint: 'Verify DATABASE_URL in Render env vars' }; }
+    }
+    try {
+        const { retrieveContext } = require('./agent-system/langchain-rag');
+        const [rp, vc] = await Promise.allSettled([
+            retrieveContext('health check ping', 1),
+            sbAdmin ? sbAdmin.from('vault_embeddings').select('id', { count: 'exact', head: true }) : Promise.resolve(null),
+        ]);
+        checks.rag = { ok: true, vault_reachable: rp.status === 'fulfilled', vector_chunks: vc.value?.count ?? null, hint: vc.value?.count === 0 ? 'vault_embeddings empty' : null };
+    } catch (e) { checks.rag = { ok: false, error: e.message }; }
+    if (process.env.NOTION_API_KEY) {
+        try {
+            const t = Date.now(); const r = await fetch('https://api.notion.com/v1/users/me', { headers: { Authorization: `Bearer ${process.env.NOTION_API_KEY}`, 'Notion-Version': '2022-06-28' }, signal: AbortSignal.timeout(5000) });
+            checks.notion = { ok: r.ok, latency_ms: Date.now() - t, status: r.status };
+        } catch (e) { checks.notion = { ok: false, error: e.message }; }
+    } else { checks.notion = { ok: false, error: 'NOTION_API_KEY not set' }; }
+    if (process.env.SLACK_BOT_TOKEN) {
+        try {
+            const t = Date.now(); const r = await fetch('https://slack.com/api/auth.test', { method: 'POST', headers: { Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) });
+            const b = await r.json(); checks.slack = { ok: !!b.ok, latency_ms: Date.now() - t, team: b.team || null, error: b.error || null };
+        } catch (e) { checks.slack = { ok: false, error: e.message }; }
+    } else { checks.slack = { ok: false, error: 'SLACK_BOT_TOKEN not set' }; }
+    checks.sentry = { ok: !!process.env.SENTRY_DSN, dsn_set: !!process.env.SENTRY_DSN, hint: !process.env.SENTRY_DSN ? 'Set SENTRY_DSN env var' : null };
+    const allOk = Object.values(checks).every(c => c.ok);
+    const total = Object.keys(checks).length;
+    const passed = Object.values(checks).filter(c => c.ok).length;
+    res.json({ ok: allOk, status: allOk ? 'healthy' : 'degraded', score: `${Math.round(passed / total * 100)}%`, issues: Object.entries(checks).filter(([, c]) => !c.ok).map(([k, c]) => `${k}: ${c.error || c.hint || 'failed'}`), checks, latency_ms: Date.now() - t0, ts: new Date().toISOString() });
 });
 
 app.get('/api/cost/today', requireAppAccess, async (req, res) => {
@@ -10146,18 +10434,21 @@ app.get('/api/cost/today', requireAppAccess, async (req, res) => {
             .select('cost_usd').gte('created_at', today);
         const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
         res.json({ ok: true, cost_usd: total.toFixed(4), date: today });
-    } catch { res.json({ ok: true, cost_usd: '0.0000' }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get('/api/agent/status', requireAppAccess, async (req, res) => {
     try {
         const { data } = await sbAdmin.from('apex_agents').select('slug,name,status');
         res.json({ ok: true, agents: data || [] });
-    } catch { res.json({ ok: true, agents: [] }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 // ── End stub routes ───────────────────────────────────────────────────────────
 
+let _checkPendingLocked = false; // prevents concurrent dispatch from multiple triggers
 async function checkPendingMasterTasks() {
+    if (_checkPendingLocked) return;
+    _checkPendingLocked = true;
     try {
         const { data, error } = await sbAdmin
             .from('apex_notifications')
@@ -10207,6 +10498,8 @@ async function checkPendingMasterTasks() {
         }
     } catch (e) {
         console.error('[Master] checkPendingMasterTasks error:', e.message);
+    } finally {
+        _checkPendingLocked = false;
     }
 }
 
@@ -10484,11 +10777,11 @@ app.get('/api/wiki/status', requireAppAccess, async (req, res) => {
         let lastWrite = null;
         let noteCount = 0;
         try {
-            const stat = fs.statSync(path.join(VAULT, 'System/Lessons.md'));
+            const stat = fs.statSync(path.join(VAULT, '01 Executive/Lessons.md'));
             lastWrite = stat.mtime.toISOString();
         } catch {}
         try {
-            const health = fs.readFileSync(path.join(VAULT, 'System/VaultHealth.md'), 'utf8');
+            const health = fs.readFileSync(path.join(VAULT, '01 Executive/VaultHealth.md'), 'utf8');
             const m = health.match(/Total notes:\*\* (\d+)/);
             if (m) noteCount = parseInt(m[1]);
         } catch {}
@@ -10516,6 +10809,266 @@ app.post('/api/wiki/search', requireAppAccess, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// ── Latency instrumentation ───────────────────────────────────────────────────
+const _tracker = require('./lib/latency-tracker');
+
+app.get('/api/latency-stats', requireAppAccess, (req, res) => {
+    res.json({ ok: true, ...(_tracker.stats()) });
+});
+
+app.get('/api/latency-traces', requireAppAccess, (req, res) => {
+    res.json({ ok: true, sessions: _tracker.getSessions(50), active: _tracker.getActive() });
+});
+
+// Recent events from the internal event bus (last 100)
+app.get('/api/system/events', requireAppAccess, (req, res) => {
+    const n = Math.min(parseInt(req.query.n) || 100, 200);
+    const type = req.query.type || null;
+    let events = _bus.recent(n);
+    if (type) events = events.filter(e => e.type === type);
+    res.json({ ok: true, events, total: _bus.recent(200).length });
+});
+
+// Agent queue status
+app.get('/api/system/queue', requireAppAccess, (req, res) => {
+    res.json({ ok: true, queue: _agentQueue.status() });
+});
+
+// Registered tool registry
+app.get('/api/system/tools', requireAppAccess, (req, res) => {
+    const toolExecutor = require('./lib/tool-executor');
+    res.json({ ok: true, tools: toolExecutor.list() });
+});
+
+// Stage 3 — cognitive orchestrator state + counters
+app.get('/api/system/cognition', requireAppAccess, (req, res) => {
+    res.json({ ok: true, counters: _cogOrch.counters(), intents: _cogOrch.INTENT, modes: _cogOrch.MODE });
+});
+
+// Cognition layer — episodic performance summary + failure patterns
+app.get('/api/cognition/performance', requireAppAccess, async (req, res) => {
+    try {
+        const episodic = require('./agent-system/episodic-memory');
+        const epMem    = require('./lib/memory/episodic-memory-pg');
+        const engine   = require('./agent-system/reflection-engine');
+        const limit    = Math.min(parseInt(req.query.limit) || 50, 200);
+        const episodes = episodic.getSimilarExperiences('', { limit }) // empty query → all recent
+            .concat(episodic.getFailureEpisodes(limit))
+            .filter((ep, i, arr) => arr.findIndex(e => e.id === ep.id) === i); // dedupe
+        const allEpisodes = episodes.slice(0, limit);
+        const failures  = allEpisodes.filter(ep => !ep.success);
+        res.json({
+            ok:          true,
+            episodeCount: episodic.episodeCount(),
+            successRate: await epMem.getSuccessRate(limit).catch(() => null),
+            summary:     engine.buildPerformanceSummary(allEpisodes),
+            failures:    engine.analyzeFailures(failures),
+            successes:   engine.analyzeSuccesses(allEpisodes.filter(ep => ep.success)),
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — full metrics report (completion rate, retry rate, recovery rate, autonomy score)
+app.get('/api/autonomy/metrics', requireAppAccess, async (req, res) => {
+    try {
+        const _autonomy = require('./agent-system/autonomy-metrics');
+        const metrics = await _autonomy.getFullMetrics();
+        res.json({ ok: true, ...metrics });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — composite autonomy score only (fast path)
+app.get('/api/autonomy/score', requireAppAccess, async (req, res) => {
+    try {
+        const _autonomy = require('./agent-system/autonomy-metrics');
+        const result = await _autonomy.computeAutonomyScore();
+        res.json({ ok: true, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — decompose a goal into a plan (simulate:true by default to avoid cost)
+app.post('/api/autonomy/plan', requireAppAccess, async (req, res) => {
+    try {
+        const { goal, simulate = true, maxSubtasks = 5 } = req.body || {};
+        if (!goal || typeof goal !== 'string') {
+            return res.status(400).json({ ok: false, error: 'goal (string) is required' });
+        }
+        const _planner = require('./agent-system/task-planner');
+        const plan = await _planner.decomposeGoal(goal, { simulate, maxSubtasks: Math.min(maxSubtasks, 10) });
+        const specs = _planner.planToSpecs(plan);
+        res.json({ ok: true, plan, specs, simulated: simulate });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — assign work (simulate:true by default; set simulate:false to execute real pipelines)
+app.post('/api/autonomy/assign', requireAppAccess, async (req, res) => {
+    try {
+        const { goal, simulate = true, concurrency = 2, maxSubtasks = 5 } = req.body || {};
+        if (!goal || typeof goal !== 'string') {
+            return res.status(400).json({ ok: false, error: 'goal (string) is required' });
+        }
+        const _coord = require('./agent-system/multi-agent-coordinator');
+        const result = await _coord.assignWork(goal, {
+            simulate,
+            concurrency: Math.min(concurrency, 4),
+            maxSubtasks: Math.min(maxSubtasks, 10),
+        });
+        res.json({ ok: true, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — list goals, optionally filtered by status
+app.get('/api/autonomy/goals', requireAppAccess, (req, res) => {
+    try {
+        const _gt = require('./agent-system/goal-tracker');
+        const { status, limit = 50 } = req.query;
+        const goals = status
+            ? _gt.getGoals(status)
+            : _gt.getGoals();
+        res.json({ ok: true, goals: goals.slice(0, Math.min(parseInt(limit) || 50, 200)), total: goals.length });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — transition a goal's status (start / complete / block / cancel)
+app.patch('/api/autonomy/goals/:id/status', requireAppAccess, (req, res) => {
+    try {
+        const _gt = require('./agent-system/goal-tracker');
+        const { id } = req.params;
+        const { action, reason, outcome } = req.body || {};
+        const ACTIONS = { start: 'startGoal', complete: 'completeGoal', block: 'blockGoal', cancel: 'cancelGoal' };
+        const method = ACTIONS[action];
+        if (!method) {
+            return res.status(400).json({ ok: false, error: `action must be one of: ${Object.keys(ACTIONS).join(', ')}` });
+        }
+        let goal;
+        if (action === 'complete') goal = _gt.completeGoal(id, outcome || {});
+        else if (action === 'block')   goal = _gt.blockGoal(id, reason || 'blocked via API');
+        else if (action === 'cancel')  goal = _gt.cancelGoal(id, reason || 'cancelled via API');
+        else                           goal = _gt.startGoal(id);
+        if (!goal) return res.status(404).json({ ok: false, error: `goal ${id} not found` });
+        res.json({ ok: true, goal });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — generate a full system self-evaluation (5 dimensions, 0-10 score)
+app.get('/api/autonomy/evaluation', requireAppAccess, async (req, res) => {
+    try {
+        const _se = require('./agent-system/self-evaluator');
+        const ev  = await _se.generateSystemEvaluation();
+        res.json({ ok: true, ...ev });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — return the most recently saved evaluation without recomputing
+app.get('/api/autonomy/evaluation/latest', requireAppAccess, (req, res) => {
+    try {
+        const _se = require('./agent-system/self-evaluator');
+        const ev  = _se.getLatestEvaluation();
+        if (!ev) return res.status(404).json({ ok: false, error: 'no evaluation stored yet' });
+        res.json({ ok: true, ...ev });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — evaluate a specific pipeline run by episode ID (or most recent if omitted)
+app.get('/api/autonomy/evaluation/run/:id', requireAppAccess, async (req, res) => {
+    try {
+        const _se = require('./agent-system/self-evaluator');
+        const ev  = await _se.generateRunEvaluation(req.params.id);
+        res.json({ ok: true, ...ev });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — list all improvement proposals (optionally filter by status)
+app.get('/api/autonomy/improvements', requireAppAccess, (req, res) => {
+    try {
+        const _imp   = require('./agent-system/improvement-executor');
+        const { status, limit = 50 } = req.query;
+        const all    = _imp.getTopImprovements(Math.min(parseInt(limit) || 50, 200));
+        const result = status ? all.filter(p => p.status === status) : all;
+        res.json({ ok: true, proposals: result, total: result.length });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — top-ranked improvement proposals (highest confidence + impact)
+app.get('/api/autonomy/improvements/top', requireAppAccess, (req, res) => {
+    try {
+        const _imp = require('./agent-system/improvement-executor');
+        const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+        res.json({ ok: true, proposals: _imp.getTopImprovements(limit) });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Autonomy layer — improvement executor stats (proposal counts, categories, risk distribution)
+app.get('/api/autonomy/improvements/stats', requireAppAccess, (req, res) => {
+    try {
+        const _imp = require('./agent-system/improvement-executor');
+        res.json({ ok: true, ..._imp.getStats() });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Stage 3.1 — canonical system-wide session state
+app.get('/api/system/state', requireAppAccess, (req, res) => {
+    res.json({ ok: true, ..._sessionReg.getSystemWideSnapshot() });
+});
+
+// Stage 3.1 — canonical state for a specific session
+app.get('/api/system/state/:sessionId', requireAppAccess, (req, res) => {
+    const snap = _sessionReg.getDerivedCognitiveSnapshot(req.params.sessionId);
+    res.json({ ok: true, snapshot: snap });
+});
+
+// Stage 3.3 — persistent cognition thread stats
+app.get('/api/system/cognition/threads', requireAppAccess, (req, res) => {
+    const sessionId = req.query.session || null;
+    res.json({ ok: true, ..._pcm.stats(sessionId) });
+});
+
+// Stage 3.4 — executive arbitration global stats
+app.get('/api/system/arbitration', requireAppAccess, (req, res) => {
+    res.json({ ok: true, ..._eae.stats() });
+});
+
+// Stage 3.4 — executive snapshot for a specific session
+app.get('/api/system/arbitration/:sessionId', requireAppAccess, (req, res) => {
+    res.json({ ok: true, snapshot: _eae.generateExecutiveSnapshot(req.params.sessionId) });
+});
+
+// Stage 3.5 — strategic planning engine global stats
+app.get('/api/system/strategy', requireAppAccess, (req, res) => {
+    res.json({ ok: true, ..._spe.stats() });
+});
+
+// Stage 3.5 — strategic context for a specific session
+app.get('/api/system/strategy/:sessionId', requireAppAccess, (req, res) => {
+    res.json({ ok: true, ..._spe.stats(req.params.sessionId) });
+});
+
 // Voice-to-note: classify spoken text and write to correct vault note
 app.post('/api/wiki/voice-note', requireAppAccess, async (req, res) => {
     const { text, source } = req.body || {};
@@ -10531,9 +11084,9 @@ app.post('/api/wiki/voice-note', requireAppAccess, async (req, res) => {
         if (!content) return res.json({ ok: true, saved: false, reason: 'Empty content after stripping trigger' });
 
         // Classify via the wiki ingest route logic (inline)
-        const { getAnthropicClient: _wikiAc } = require('./lib/clients');
-        const classifyRes = await _wikiAc().messages.create({
-            model: HAIKU_MODEL, max_tokens: 80,
+        const { result: classifyRes } = await runtime.execute({
+            tier: 'fast', caller: 'voice-note-classify',
+            maxTokens: 80,
             messages: [{ role: 'user', content:
                 `Classify this spoken note into a wiki page path.\nOptions: People/User.md, System/Decisions.md, System/WIKI.md, Entities/<Name>.md, Concepts/<Name>.md\nNote: "${content.slice(0, 300)}"\nReply ONLY with the path.`
             }]
@@ -10599,7 +11152,7 @@ app.post('/api/wiki/ingest-cs249r', requireAppAccess, async (req, res) => {
             const result = await cs249r.ingestAllToVault(obsidianMemory);
             await sbAdmin.from('apex_notifications').insert({
                 id: `cs249r-ingest-${Date.now()}`, type: 'success', read: false,
-                message: `CS249R ingest complete — ${result.succeeded}/${result.total} chapters written to References/CS249R/`
+                message: `CS249R ingest complete — ${result.succeeded}/${result.total} chapters written to 09 Knowledge/CS249R/`
             });
         } catch (e) {
             console.error('[CS249R] ingest error:', e.message);
@@ -10609,6 +11162,42 @@ app.post('/api/wiki/ingest-cs249r', requireAppAccess, async (req, res) => {
 
 // ── Setup Agent Routes ────────────────────────────────────────────
 const supabaseSetup = require('./agent-system/supabase-setup');
+
+// Targeted migration: create apex_agent_stages via Supabase Management API (pg pool is blocked on Render)
+app.post('/api/setup/migrate-stages', requireAppAccess, async (req, res) => {
+    const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
+    const PROJECT_ID   = 'devmtexqjstappalqbeg';
+    if (!ACCESS_TOKEN) {
+        return res.status(503).json({ ok: false, error: 'SUPABASE_ACCESS_TOKEN not set — add it to Render env vars' });
+    }
+    const https = require('https');
+    async function runSQL(sql) {
+        return new Promise((resolve, reject) => {
+            const body = JSON.stringify({ query: sql });
+            const options = {
+                hostname: 'api.supabase.com',
+                path: `/v1/projects/${PROJECT_ID}/database/query`,
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+            };
+            const req2 = https.request(options, r2 => {
+                let d = ''; r2.on('data', c => d += c);
+                r2.on('end', () => { try { const p = JSON.parse(d); if (r2.statusCode >= 400) reject(new Error(JSON.stringify(p))); else resolve(p); } catch(e){ reject(new Error(d)); } });
+            });
+            req2.on('error', reject); req2.write(body); req2.end();
+        });
+    }
+    try {
+        await runSQL(`CREATE TABLE IF NOT EXISTS apex_agent_stages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), task_id TEXT NOT NULL, stage TEXT NOT NULL, success BOOLEAN DEFAULT FALSE, error TEXT, duration_ms INTEGER, attempt INTEGER DEFAULT 1, created_at TIMESTAMPTZ DEFAULT NOW())`);
+        await runSQL(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC)`);
+        await runSQL(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage)`);
+        console.log('[Migration] apex_agent_stages created via Management API');
+        res.json({ ok: true, message: 'apex_agent_stages ready' });
+    } catch (e) {
+        console.error('[Migration] apex_agent_stages Management API error:', e.message);
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
 
 app.post('/api/setup/database', requireAppAccess, async (req, res) => {
     res.json({ ok: true, status: 'running',
@@ -10670,20 +11259,22 @@ app.post('/api/wiki/ingest', requireAppAccess, async (req, res) => {
         const today = new Date().toISOString().split('T')[0];
 
         // Classify — extended taxonomy: System, Projects, People, Entities, Concepts
-        const classifyRes = await wikiClient.messages.create({
-            model: wikiModel, max_tokens: 80,
+        const { result: classifyRes } = await runtime.execute({
+            client: wikiClient, model: wikiModel,
+            caller: 'wiki_ingest_classify', maxTokens: 80,
             messages: [{ role: 'user', content:
                 `Classify this content into the best wiki page path. Options:\n` +
-                `System/North-Star.md\nSystem/Decisions.md\nProjects/Apex-AI-OS.md\n` +
-                `People/Alex.md\nSystem/WIKI.md\n` +
+                `01 Executive/North-Star.md\n01 Executive/Decisions.md\n02 Projects/Active/Apex-AI-OS.md\n` +
+                `12 Memory/Identity/Alex.md\n01 Executive/WIKI.md\n` +
                 `Entities/<Name>.md  (tools, services, companies, APIs)\n` +
                 `Concepts/<Name>.md  (ideas, patterns, techniques)\n` +
-                `People/<Name>.md    (other people)\n\n` +
+                `07 Relationships/People/<Name>.md    (other people)\n\n` +
                 `Content: ${content.slice(0, 400)}\n\n` +
                 `Reply with ONLY the page path. Replace <Name> with the actual name.`
             }]
         });
-        const page = classifyRes.content[0]?.text?.trim() || 'System/Decisions.md';
+        const _rawPage = (classifyRes.content[0]?.text?.trim() || '').replace(/\.\.\//g, '').replace(/^\/+/, '').replace(/[<>:"|?*\x00-\x1f]/g, '_');
+        const page = (_rawPage.endsWith('.md') ? _rawPage : (_rawPage || '01 Executive/Decisions.md') + '.md').slice(0, 200);
 
         // Read existing — if no page exists, create it with structure
         const existing = await obsidianRead(page).catch(() => null);
@@ -10693,8 +11284,9 @@ app.post('/api/wiki/ingest', requireAppAccess, async (req, res) => {
             merged = `# ${pageName}\n*Created ${today} — source: ${source || 'ingest'}*\n\n${content}`;
         } else {
             // Merge: update existing sections, never just append
-            const mergeRes = await wikiClient.messages.create({
-                model: wikiModel, max_tokens: 2000,
+            const { result: mergeRes } = await runtime.execute({
+                client: wikiClient, model: wikiModel,
+                caller: 'wiki_ingest_merge', maxTokens: 2000,
                 system: `You maintain a living knowledge base. Merge new information into the page.
 Rules:
 - Update existing sections with new info rather than duplicating
@@ -10745,6 +11337,26 @@ app.post('/api/wiki/consolidate', requireAppAccess, async (req, res) => {
 
 app.use('/api', require('./routes/tts-gemini'));
 
+// One-time migration runner — applies migrations/005_level9_governance.sql
+// Requires DATABASE_URL env var with real Supabase password. Idempotent (IF NOT EXISTS).
+app.post('/api/governance/apply-migration-005', requireAppAccess, async (req, res) => {
+    const { Pool } = require('pg');
+    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('[YOUR-PASSWORD]')) {
+        return res.status(503).json({ ok: false, error: 'DATABASE_URL not configured or still has [YOUR-PASSWORD] placeholder. Set the real connection string in Render env vars.' });
+    }
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 15000 });
+    try {
+        const fs = require('fs'), path = require('path');
+        const sql = fs.readFileSync(path.join(__dirname, 'migrations', '005_level9_governance.sql'), 'utf8');
+        await pool.query(sql);
+        await pool.end();
+        res.json({ ok: true, message: 'Migration 005 applied successfully' });
+    } catch (e) {
+        try { await pool.end(); } catch {}
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,
@@ -10785,6 +11397,8 @@ const _wss = new WebSocketServer({
 
 // Session registry — maps sessionId → ws connection + metadata
 const _wsSessions = new Map();
+// Expose live WS count to services layer without circular require
+Object.defineProperty(global, '_apexWsCount', { get: () => _wsSessions.size, configurable: true });
 
 // Broadcast fan-out: serialize ONCE, send same buffer to all (gws frame-reuse pattern)
 function wsBroadcast(data, filter = null) {
@@ -10856,6 +11470,7 @@ _wss.on('connection', (ws, req) => {
     // ── OnClose — clean up session ─────────────────────────────────
     ws.on('close', (code, reason) => {
         _wsSessions.delete(ws);
+        _sessionReg.deleteSession(sessionId);
         console.log(`[WS] OnClose — ${sessionId} (code=${code}, remaining: ${_wsSessions.size})`);
     });
 
@@ -10891,13 +11506,25 @@ function wsChunkedSend(ws, data, chunkSize = 64 * 1024) {
 }
 global._wsChunkedSend = wsChunkedSend;
 
-// Upgrade HTTP → WS on /ws path
+// Upgrade HTTP → WS on /ws path.
+// IMPORTANT: do NOT destroy /ws/* sub-routes — gemini-live registers its own
+// upgrade handler for /ws/gemini-live AFTER this block. Destroying the socket
+// here would kill it before gemini-live can claim it.
 server.on('upgrade', (req, socket, head) => {
-    if (req.url === '/ws' || req.url?.startsWith('/ws?')) {
+    const urlPath = (req.url || '').split('?')[0];
+    if (urlPath === '/ws') {
+        const token = new URL(req.url, 'http://x').searchParams.get('token');
+        if (APP_ACCESS_KEY) {
+            const _t = Buffer.from(token || '', 'utf8');
+            const _k = Buffer.from(APP_ACCESS_KEY, 'utf8');
+            if (_t.length !== _k.length || !require('crypto').timingSafeEqual(_t, _k)) { socket.destroy(); return; }
+        }
         _wss.handleUpgrade(req, socket, head, ws => _wss.emit('connection', ws, req));
-    } else {
+    } else if (!urlPath.startsWith('/ws/')) {
+        // Only destroy paths that no registered handler owns
         socket.destroy();
     }
+    // /ws/* paths fall through to sub-route handlers (e.g. /ws/gemini-live)
 });
 
 // Export broadcast so routes can push events to clients
@@ -10910,23 +11537,96 @@ require('./routes/gemini-live').attach(server, {
     executeApexTool,
     buildAlexContext,
     obsidianAppend,
+    anthropicClient:  client,
 });
 
 
 server.listen(PORT, () => {
     ensureSetup();
+    // Record deployment event — one row per server start, links build SHA to timestamp
+    setImmediate(async () => {
+        try {
+            const _deployId = process.env.RENDER_DEPLOY_ID || null;
+            await sbAdmin.from('deployment_events').insert({
+                deploy_id:     _deployId,
+                commit_sha:    process.env.RENDER_GIT_COMMIT || null,
+                build_version: process.env.npm_package_version || null,
+                status:        'started',
+                metadata:      { node: process.version, port: PORT, pid: process.pid },
+            });
+        } catch { /* non-fatal */ }
+    });
+    // Validate required tables exist — surfaces missing tables immediately instead of at first write
+    setImmediate(async () => {
+        const required = ['memory', 'documents', 'agent_tasks', 'apex_agent_runs', 'apex_agent_stages', 'notifications', 'apex_lessons', 'cron_logs'];
+        const missing = [];
+        for (const table of required) {
+            const { error } = await sbAdmin.from(table).select('*').limit(0);
+            if (error?.code === 'PGRST205' || (error?.message || '').includes('does not exist')) missing.push(table);
+        }
+        if (missing.length > 0) {
+            console.error('[Startup] MISSING TABLES:', missing.join(', '), '— run migrations/001_missing_tables.sql in Supabase SQL Editor');
+        } else {
+            console.log('[Startup] Schema OK — all required tables present');
+        }
+    });
+
+    // Reset adaptation_cycles stuck in 'running' from a previous crashed deploy
+    setImmediate(async () => {
+        try {
+            const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+            await sbAdmin.from('adaptation_cycles')
+                .update({ status: 'failed', completed_at: new Date().toISOString() })
+                .eq('status', 'running')
+                .lt('started_at', cutoff);
+            console.log('[Startup] Adaptation cycle cleanup complete');
+        } catch (e) {
+            console.warn('[Startup] Adaptation cycle cleanup failed (non-fatal):', e.message);
+        }
+    });
+
+    // Model telemetry subscriber — logs all MODEL_INVOKED events via logger
+    require('./lib/models/runtime/subscriber').activate();
+
+    // Event spine relay — moves outbox rows → events table every 5s (Constitution Article 3 & 4)
+    require('./lib/outbox-relay').start();
+    console.log('[Startup] Outbox relay started');
+
+    // Integrity crons — nightly backup manifest + weekly source reconciliation
+    require('./lib/integrity-crons').start();
+
+    // Event consumer — alerts on pipeline.failed events from the events table
+    require('./lib/event-consumer').start();
+
+    // Post-deployment governance probe — runs 60s after startup
+    // Proves all governance capabilities are operational after every deploy.
+    // If score < 80, raises a high-severity incident automatically.
+    setTimeout(() => {
+        require('./lib/governance-probe').runProbe()
+            .then(r => console.log(`[GovProbe] startup probe complete: ${r.score}/100 — ${r.probe_passed ? 'PASSED' : 'FAILED'}`))
+            .catch(e => console.error('[GovProbe] startup probe error:', e.message));
+    }, 60000);
 
     // Mastra agents — deferred 5 minutes after startup to avoid OOM (loads @mastra/core)
     // All mastra routes null-check mastraAgents so they degrade gracefully until ready.
-    setTimeout(() => {
+    function _loadMastra() {
         try {
+            // Guard: skip if heap usage > 75% to prevent OOM kill on constrained instances
+            const mem = process.memoryUsage();
+            const heapPct = mem.heapUsed / mem.heapTotal;
+            if (heapPct > 0.75) {
+                console.warn(`[Mastra] load skipped — heap at ${(heapPct * 100).toFixed(0)}% (>75% threshold). Retry in 10 min.`);
+                setTimeout(_loadMastra, 600000);
+                return;
+            }
             const _m = require('./mastra_agents');
             initMastra = _m.initMastra;
             getMastraStatus = _m.getMastraStatus;
             mastraAgents = initMastra(handleCommand);
-            console.log('🤖 Mastra agents initialised (deferred).');
-        } catch (err) { console.error('MASTRA INIT ERROR (deferred):', err.message); }
-    }, 300000); // 5 minutes
+            console.log('[Mastra] agents initialised (deferred).');
+        } catch (err) { console.error('[Mastra] INIT ERROR (deferred):', err.message); }
+    }
+    setTimeout(_loadMastra, 300000); // 5 minutes
 
     // Agent library — load index from Supabase on startup (fast), then background-sync from GitHub if empty
     setImmediate(async () => {
@@ -10940,7 +11640,209 @@ server.listen(PORT, () => {
     });
 
     console.log('[Email] Backfill skipped — using Supabase client');
-    console.log('[PGVector] Skipping — managed via Supabase dashboard');
+
+    // ── Startup integration verification — non-fatal, logs only ─────────────
+    setTimeout(async () => {
+        const _checkResult = [];
+        // 1. Pipeline hooks shape
+        try {
+            const hooks = require('./agent-system/agent-pipeline-hooks');
+            const ok = ['onPipelineStart', 'onPipelineComplete', 'onPipelineFailed'].every(m => typeof hooks[m] === 'function');
+            console.log(ok ? '[Boot] ✓ pipeline-hooks wired' : '[Boot] ✗ pipeline-hooks MISSING methods');
+            _checkResult.push({ name: 'pipeline-hooks', ok });
+        } catch (e) { console.warn('[Boot] ✗ pipeline-hooks LOAD FAILED:', e.message); _checkResult.push({ name: 'pipeline-hooks', ok: false }); }
+
+        // 2. Agent registry accessible
+        try {
+            const reg = require('./agent-system/agent-registry');
+            const s = reg.getRegistrySummary();
+            console.log(`[Boot] ✓ agent-registry: ${s.pipelineAgents} pipeline, ${s.domainAgents} domain agents`);
+            _checkResult.push({ name: 'agent-registry', ok: true });
+        } catch (e) { console.warn('[Boot] ✗ agent-registry FAILED:', e.message); _checkResult.push({ name: 'agent-registry', ok: false }); }
+
+        // 3. Vault / memory path (optional — vault is local-only, not required on Render)
+        try {
+            const fs = require('fs');
+            const vPath = process.env.OBSIDIAN_VAULT_PATH;
+            if (!vPath) {
+                console.log('[Boot] ○ vault skipped (OBSIDIAN_VAULT_PATH not set — vault features disabled)');
+                _checkResult.push({ name: 'vault', ok: true }); // optional, not a failure
+            } else {
+                const ok = fs.existsSync(vPath);
+                console.log(ok ? `[Boot] ✓ vault found at ${vPath}` : `[Boot] ✗ vault NOT found at ${vPath}`);
+                _checkResult.push({ name: 'vault', ok });
+            }
+        } catch (e) { console.warn('[Boot] ✗ vault check FAILED:', e.message); _checkResult.push({ name: 'vault', ok: false }); }
+
+        // 4. Embedding probe (Voyage or Gemini) — warm up embed module
+        try {
+            const { embedText } = require('./lib/embed');
+            const vec = await embedText('startup probe');
+            const ok = Array.isArray(vec) && vec.length > 0;
+            console.log(ok ? `[Boot] ✓ embed OK (${vec.length} dims)` : '[Boot] ✗ embed returned null — check VOYAGE_API_KEY or GOOGLE_API_KEY');
+            _checkResult.push({ name: 'embed', ok });
+        } catch (e) { console.warn('[Boot] ✗ embed probe FAILED:', e.message); _checkResult.push({ name: 'embed', ok: false }); }
+
+        // 5. Orchestrator status (circuit breaker open?)
+        try {
+            const orch = require('./agent-system/orchestrator');
+            const s = orch.getOrchestratorStatus();
+            const ok = !s.circuitBreaker.open;
+            console.log(ok ? '[Boot] ✓ orchestrator circuit-breaker closed' : `[Boot] ✗ circuit-breaker OPEN (${s.circuitBreaker.failures} failures)`);
+            _checkResult.push({ name: 'orchestrator', ok });
+        } catch (e) { console.warn('[Boot] ✗ orchestrator status FAILED:', e.message); _checkResult.push({ name: 'orchestrator', ok: false }); }
+
+        // 6. Episodic memory accessible
+        try {
+            const episodic = require('./agent-system/episodic-memory');
+            const count = episodic.episodeCount();
+            console.log(`[Boot] ✓ episodic-memory: ${count} stored episodes`);
+            _checkResult.push({ name: 'episodic', ok: true });
+        } catch (e) { console.warn('[Boot] ✗ episodic-memory FAILED:', e.message); _checkResult.push({ name: 'episodic', ok: false }); }
+
+        const passed = _checkResult.filter(r => r.ok).length;
+        console.log(`[Boot] Integration verification: ${passed}/${_checkResult.length} checks passed`);
+    }, 8000); // 8s after listen — after immediate startup tasks settle
+    // ── End startup integration verification ─────────────────────────────────
+
+    // Initialize Notion + Slack integration layer
+    setImmediate(() => {
+        try {
+            require('./services/init').init(app, sbAdmin);
+        } catch (e) { console.warn('[Services] init failed (non-fatal):', e.message); }
+    });
+
+    // Ensure apex_agent_stages exists — migration omission fix (uses Management API; pg pool blocked on Render)
+    setImmediate(async () => {
+        const _token = process.env.SUPABASE_ACCESS_TOKEN;
+        if (!_token) { console.warn('[Migration] apex_agent_stages skipped: SUPABASE_ACCESS_TOKEN not set'); return; }
+        const _https = require('https');
+        async function _runSQL(sql) {
+            return new Promise((resolve, reject) => {
+                const body = JSON.stringify({ query: sql });
+                const opts = { hostname:'api.supabase.com', path:'/v1/projects/devmtexqjstappalqbeg/database/query', method:'POST', headers:{ Authorization:'Bearer '+_token, 'Content-Type':'application/json', 'Content-Length':Buffer.byteLength(body) } };
+                const r = _https.request(opts, res2 => { let d=''; res2.on('data',c=>d+=c); res2.on('end',()=>{ try{ const p=JSON.parse(d); if(res2.statusCode>=400) reject(new Error(JSON.stringify(p))); else resolve(p); }catch(e){reject(new Error(d));} }); }); r.on('error',reject); r.write(body); r.end();
+            });
+        }
+        try {
+            await _runSQL(`CREATE TABLE IF NOT EXISTS apex_agent_stages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), task_id TEXT NOT NULL, stage TEXT NOT NULL, success BOOLEAN DEFAULT FALSE, error TEXT, duration_ms INTEGER, attempt INTEGER DEFAULT 1, created_at TIMESTAMPTZ DEFAULT NOW())`);
+            await _runSQL(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_created_at ON apex_agent_stages (created_at DESC)`);
+            await _runSQL(`CREATE INDEX IF NOT EXISTS idx_apex_agent_stages_stage ON apex_agent_stages (stage)`);
+            console.log('[Migration] apex_agent_stages ready');
+        } catch (e) {
+            console.warn('[Migration] apex_agent_stages setup (non-fatal):', e.message);
+        }
+    });
+
+    // Ensure pgvector match function exists (idempotent — safe to re-run)
+    setImmediate(async () => {
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query(`
+                CREATE EXTENSION IF NOT EXISTS vector;
+                ALTER TABLE documents ADD COLUMN IF NOT EXISTS embedding vector(768);
+                CREATE OR REPLACE FUNCTION match_documents(
+                    query_embedding vector(768), match_count int DEFAULT 5
+                ) RETURNS TABLE(
+                    filename text, classification text, summary text,
+                    content text, created_at timestamptz, similarity float
+                ) LANGUAGE plpgsql AS $$
+                BEGIN
+                    RETURN QUERY
+                    SELECT d.filename, d.classification, d.summary, d.content, d.created_at,
+                           1 - (d.embedding <=> query_embedding) AS similarity
+                    FROM documents d
+                    WHERE d.embedding IS NOT NULL
+                    ORDER BY d.embedding <=> query_embedding
+                    LIMIT match_count;
+                END;
+                $$;
+            `);
+            console.log('[PGVector] match_documents function ready');
+        } catch (e) {
+            console.warn('[PGVector] setup skipped:', e.message);
+        }
+    });
+
+    // vault_embeddings table for hybrid vault RAG (Phase 28)
+    setImmediate(async () => {
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query(`
+                CREATE TABLE IF NOT EXISTS vault_embeddings (
+                    id BIGSERIAL PRIMARY KEY,
+                    source TEXT NOT NULL,
+                    chunk_hash TEXT NOT NULL,
+                    chunk_text TEXT NOT NULL,
+                    embedding vector(768),
+                    mtime BIGINT,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    CONSTRAINT vault_embeddings_uniq UNIQUE (source, chunk_hash)
+                );
+                CREATE INDEX IF NOT EXISTS vault_emb_vec_idx
+                    ON vault_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
+            `);
+            // DROP and CREATE must be separate queries — CREATE OR REPLACE cannot change
+            // a function's return type in the same multi-statement parse round.
+            await pgPool.query(`DROP FUNCTION IF EXISTS match_vault_embeddings(vector, int);`);
+            await pgPool.query(`
+                CREATE OR REPLACE FUNCTION match_vault_embeddings(
+                    query_embedding vector(768), match_count int DEFAULT 5
+                ) RETURNS TABLE(source text, chunk_text text, mtime bigint, similarity float)
+                LANGUAGE SQL STABLE AS $$
+                    SELECT source, chunk_text, mtime,
+                           1 - (embedding <=> query_embedding) AS similarity
+                    FROM vault_embeddings
+                    WHERE embedding IS NOT NULL
+                    ORDER BY embedding <=> query_embedding
+                    LIMIT match_count;
+                $$;
+            `);
+            console.log('[PGVector] vault_embeddings table + RPC ready');
+        } catch (e) {
+            console.warn('[PGVector] vault_embeddings setup skipped:', e.message);
+        }
+    });
+
+    // apex_agent_stages table for per-stage failure analytics (Phase 28)
+    setImmediate(async () => {
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query(`
+                CREATE TABLE IF NOT EXISTS apex_agent_stages (
+                    id BIGSERIAL PRIMARY KEY,
+                    task_id TEXT NOT NULL,
+                    stage TEXT NOT NULL,
+                    success BOOLEAN NOT NULL DEFAULT FALSE,
+                    error TEXT,
+                    duration_ms INTEGER,
+                    attempt INTEGER DEFAULT 1,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS apex_agent_stages_task_id_idx ON apex_agent_stages(task_id);
+                CREATE INDEX IF NOT EXISTS apex_agent_stages_stage_idx ON apex_agent_stages(stage, success);
+                CREATE INDEX IF NOT EXISTS apex_agent_stages_created_at_idx ON apex_agent_stages(created_at);
+            `);
+            console.log('[Schema] apex_agent_stages table ready');
+        } catch (e) {
+            console.warn('[Schema] apex_agent_stages setup skipped:', e.message);
+        }
+    });
+
+    // Schema migration — apex_agent_runs: verify + add missing columns
+    setImmediate(async () => {
+        try {
+            const pgPool = require('./pg_database');
+            await pgPool.query(`
+                ALTER TABLE apex_agent_runs ADD COLUMN IF NOT EXISTS model TEXT;
+                ALTER TABLE apex_agent_runs ADD COLUMN IF NOT EXISTS duration_ms INTEGER;
+                ALTER TABLE apex_agent_runs ADD COLUMN IF NOT EXISTS token_usage JSONB;
+            `);
+            console.log('[Migration] apex_agent_runs: duration_ms + token_usage + model columns confirmed');
+        } catch (e) {
+            console.warn('[Migration] apex_agent_runs schema check skipped:', e.message);
+        }
+    });
 
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🤖 Model: ${MODEL}`);
@@ -10949,7 +11851,15 @@ server.listen(PORT, () => {
 
     setInterval(() => {
         const mem = process.memoryUsage();
-        console.log(`[HEALTH] uptime=${Math.floor(process.uptime())}s rss=${Math.round(mem.rss/1024/1024)}MB heap=${Math.round(mem.heapUsed/1024/1024)}MB ts=${new Date().toISOString()}`);
+        const cpu = process.cpuUsage();
+        _log.info('health', 'periodic telemetry', {
+            uptime_s:    Math.floor(process.uptime()),
+            rss_mb:      Math.round(mem.rss      / 1024 / 1024),
+            heap_mb:     Math.round(mem.heapUsed  / 1024 / 1024),
+            cpu_user_ms: Math.round(cpu.user      / 1000),
+            cpu_sys_ms:  Math.round(cpu.system    / 1000),
+            ws:          global._apexWsCount || 0,
+        });
     }, 300000);
 
     // Purge old read notifications — keep table lean (cap at 200 unread + delete read > 7 days)
@@ -10957,12 +11867,49 @@ server.listen(PORT, () => {
         try {
             const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
             await sbAdmin.from('apex_notifications').delete().eq('read', true).lt('created_at', cutoff);
-            console.log('[Notifications] purged read notifications older than 7 days');
-        } catch (e) { console.warn('[Notifications] purge failed (non-fatal):', e.message); }
+            _log.info('retention', 'apex_notifications: purged read records > 7 days');
+        } catch (e) { _log.warn('retention', 'apex_notifications purge failed', { error: e.message }); }
+        try {
+            const runsCutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('apex_agent_runs').delete().lt('created_at', runsCutoff);
+            _log.info('retention', 'apex_agent_runs: purged records > 90 days');
+        } catch (e) { _log.warn('retention', 'apex_agent_runs purge failed', { error: e.message }); }
+        try {
+            const tasksCutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('agent_tasks').delete().in('status', ['done', 'cancelled']).lt('updated_at', tasksCutoff);
+            _log.info('retention', 'agent_tasks: purged done/cancelled records > 90 days');
+        } catch (e) { _log.warn('retention', 'agent_tasks purge failed', { error: e.message }); }
+        try {
+            const emailCutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('email_queue').delete().in('status', ['done', 'error']).lt('updated_at', emailCutoff);
+            _log.info('retention', 'email_queue: purged done/error records > 30 days');
+        } catch (e) { _log.warn('retention', 'email_queue purge failed', { error: e.message }); }
+        try {
+            const stagesCutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('apex_agent_stages').delete().lt('created_at', stagesCutoff);
+            _log.info('retention', 'apex_agent_stages: purged records > 90 days');
+        } catch (e) { _log.warn('retention', 'apex_agent_stages purge failed', { error: e.message }); }
+        try {
+            const lessonsCutoff = new Date(Date.now() - 180 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('apex_lessons').delete().lt('created_at', lessonsCutoff);
+            _log.info('retention', 'apex_lessons: purged records > 180 days');
+        } catch (e) { _log.warn('retention', 'apex_lessons purge failed', { error: e.message }); }
+        try {
+            const cronCutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+            await sbAdmin.from('cron_logs').delete().lt('triggered_at', cronCutoff);
+            _log.info('retention', 'cron_logs: purged records > 90 days');
+        } catch (e) { _log.warn('retention', 'cron_logs purge failed', { error: e.message }); }
+        try {
+            // Reject waiting_approval tasks stuck > 7 days (automated cleanup)
+            const staleCutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+            const { count } = await sbAdmin.from('agent_tasks')
+                .update({ status: 'rejected', updated_at: new Date().toISOString() })
+                .eq('status', 'waiting_approval').lt('created_at', staleCutoff)
+                .select('*', { count: 'exact', head: true });
+            if (count > 0) _log.info('retention', `agent_tasks: auto-rejected ${count} stale waiting_approval tasks`);
+        } catch (e) { _log.warn('retention', 'agent_tasks stale rejection failed', { error: e.message }); }
     }, 6 * 60 * 60 * 1000); // every 6 hours
 
-    // Pick up any master tasks that were queued before a cold-start restart
-    setTimeout(() => checkPendingMasterTasks(), 30000);
     // Auto-approve safe permission requests — runs after task check settles
     setTimeout(() => autoApproveStandardPermissions(), 15000);
 
@@ -10985,9 +11932,9 @@ checkPendingMasterTasks();
         if (_3am <= _now) _3am.setDate(_3am.getDate() + 1);
         const _delay = _3am.getTime() - _now.getTime();
         setTimeout(function _nightlyWiki() {
-            require('./agent-system/wiki-reader').consolidateWiki()
+            require('./lib/cron-logger').wrapCron('wiki_consolidation', () => require('./agent-system/wiki-reader').consolidateWiki())
                 .catch(e => console.warn('[Wiki] nightly consolidation error:', e.message));
-            setInterval(() => require('./agent-system/wiki-reader').consolidateWiki()
+            setInterval(() => require('./lib/cron-logger').wrapCron('wiki_consolidation', () => require('./agent-system/wiki-reader').consolidateWiki())
                 .catch(e => console.warn('[Wiki] nightly consolidation error:', e.message)),
                 24 * 60 * 60 * 1000);
         }, _delay);
@@ -11006,11 +11953,18 @@ checkPendingMasterTasks();
                 const briefing = obsidianMemory.generateDailyBriefing();
                 if (briefing) {
                     const date = new Date().toISOString().split('T')[0];
-                    obsidianWrite(`Daily/${date}.md`, briefing)
+                    obsidianWrite(`13 Briefings/Daily/${date}.md`, briefing)
                         .catch(e => console.warn('[DailyBriefing] write error:', e.message));
                     console.log('[DailyBriefing] Written for', date);
+                    require('./lib/cron-logger').record('daily_briefing', 'ok').catch(() => {});
+                    // Post to Slack #apex-executive (non-blocking)
+                    try {
+                        require('./services/slack/slack-briefings').postDailyBriefing({
+                            date: new Date(date).toLocaleDateString('en-GB'),
+                        }).catch(e => console.warn('[DailyBriefing] Slack post failed:', e.message));
+                    } catch (_) {}
                 }
-            } catch (e) { console.warn('[DailyBriefing] error (non-fatal):', e.message); }
+            } catch (e) { console.warn('[DailyBriefing] error (non-fatal):', e.message); require('./lib/cron-logger').record('daily_briefing', 'error', e.message).catch(() => {}); }
             setInterval(() => {
                 try {
                     const obsidianMemory = require('./agent-system/obsidian-memory');
@@ -11018,9 +11972,9 @@ checkPendingMasterTasks();
                     const briefing = obsidianMemory.generateDailyBriefing();
                     if (briefing) {
                         const date = new Date().toISOString().split('T')[0];
-                        obsidianWrite(`Daily/${date}.md`, briefing).catch(() => {});
+                        obsidianWrite(`13 Briefings/Daily/${date}.md`, briefing).catch(e => console.warn('[DailyBriefing] write error:', e.message));
                     }
-                } catch {}
+                } catch (e) { console.warn('[DailyBriefing] interval error:', e.message); }
             }, 24 * 60 * 60 * 1000);
         }, _7am.getTime() - _now.getTime());
         console.log(`[DailyBriefing] Scheduled in ${Math.round((_7am.getTime() - _now.getTime()) / 60000)}min`);
@@ -11036,12 +11990,264 @@ checkPendingMasterTasks();
         }
         const _next = _nextSunday4am();
         setTimeout(function _vaultHealth() {
-            require('./agent-system/wiki-reader').checkVaultHealth()
+            require('./lib/cron-logger').wrapCron('vault_health', () => require('./agent-system/wiki-reader').checkVaultHealth())
                 .catch(e => console.warn('[VaultHealth] error:', e.message));
-            setInterval(() => require('./agent-system/wiki-reader').checkVaultHealth()
-                .catch(() => {}), 7 * 24 * 60 * 60 * 1000);
+            setInterval(() => require('./lib/cron-logger').wrapCron('vault_health', () => require('./agent-system/wiki-reader').checkVaultHealth())
+                .catch(e => console.warn('[VaultHealth] interval error:', e.message)), 7 * 24 * 60 * 60 * 1000);
         }, _next.getTime() - Date.now());
         console.log(`[VaultHealth] Weekly check scheduled for ${_next.toDateString()}`);
+    })();
+
+    // Weekly review — Sundays at 8am (after 4am vault health check)
+    (function _scheduleWeeklyReview() {
+        async function _generateWeeklyReview() {
+            if (!process.env.ANTHROPIC_API_KEY) return;
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+            try {
+                const [tasksRes, runsRes, finRes, healthRes] = await Promise.allSettled([
+                    sbAdmin.from('apex_tasks').select('title,status,created_at').gte('created_at', weekAgo).limit(50),
+                    sbAdmin.from('apex_agent_runs').select('cost_usd,success,model').gte('created_at', weekAgo).limit(200),
+                    sbAdmin.from('apex_transactions').select('description,amount,category').gte('date', weekAgo).limit(50),
+                    sbAdmin.from('apex_workouts').select('type,duration_min,date').gte('date', weekAgo).limit(20),
+                ]);
+                const tasks    = tasksRes.value?.data    || [];
+                const runs     = runsRes.value?.data     || [];
+                const finance  = finRes.value?.data      || [];
+                const workouts = healthRes.value?.data   || [];
+                const totalCost  = runs.reduce((s, r) => s + (r.cost_usd || 0), 0);
+                const successRate = runs.length ? (runs.filter(r => r.success).length / runs.length * 100).toFixed(0) : 'N/A';
+                const prompt = [
+                    `Week ending ${today}. Produce a concise Apex AI OS weekly review in markdown.`,
+                    '',
+                    `## Tasks (${tasks.length})`,
+                    tasks.slice(0, 20).map(t => `- [${t.status}] ${t.title}`).join('\n') || 'None',
+                    '',
+                    `## AI Agent Activity`,
+                    `- ${runs.length} runs · success rate ${successRate}% · total cost $${totalCost.toFixed(4)}`,
+                    '',
+                    `## Finance (${finance.length} transactions)`,
+                    finance.slice(0, 10).map(t => `- ${t.category}: £${t.amount} — ${t.description}`).join('\n') || 'No data',
+                    '',
+                    `## Health (${workouts.length} workouts)`,
+                    workouts.map(w => `- ${w.date}: ${w.type} ${w.duration_min}min`).join('\n') || 'No workouts logged',
+                    '',
+                    'Write the review with: Executive Summary (3 bullets), Wins, Concerns, Next Week Focus.',
+                ].join('\n');
+                const { result: msg } = await runtime.execute({
+                    tier: 'fast', caller: 'weekly-review',
+                    maxTokens: 1200,
+                    messages: [{ role: 'user', content: prompt }]
+                });
+                const review = msg.content[0]?.text?.trim();
+                if (review) {
+                    await require('./agent-system/obsidian-client').obsidianWrite(
+                        `13 Briefings/Weekly/Weekly-Review-${today}.md`,
+                        `# Weekly Review — ${today}\n\n${review}`
+                    );
+                    console.log(`[WeeklyReview] Written to 13 Briefings/Weekly/Weekly-Review-${today}.md`);
+                    require('./lib/cron-logger').record('weekly_review', 'ok').catch(() => {});
+                    // Post to Slack #apex-weekly-review (non-blocking)
+                    try {
+                        const _slackBrief = require('./services/slack/slack-briefings');
+                        const _wkOf = today;
+                        _slackBrief.postWeeklyReview({
+                            weekOf: _wkOf,
+                            completedTasks: tasks.filter(t => t.status === 'done').length,
+                            totalAgentRuns: runs.length,
+                            totalApiSpend: totalCost,
+                            healthSummary: `${workouts.length} workouts`,
+                            financeSummary: `${finance.length} transactions`,
+                        }).catch(e => console.warn('[WeeklyReview] Slack post failed:', e.message));
+                    } catch (_) {}
+                }
+            } catch (e) { console.warn('[WeeklyReview] error (non-fatal):', e.message); require('./lib/cron-logger').record('weekly_review', 'error', e.message).catch(() => {}); }
+        }
+        function _nextSunday8am() {
+            const d = new Date(); d.setHours(8, 0, 0, 0);
+            const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + daysUntilSunday);
+            return d;
+        }
+        const _next = _nextSunday8am();
+        setTimeout(function _weeklyReview() {
+            _generateWeeklyReview();
+            setInterval(_generateWeeklyReview, 7 * 24 * 60 * 60 * 1000);
+        }, _next.getTime() - Date.now());
+        console.log(`[WeeklyReview] Scheduled for ${_next.toDateString()} 08:00`);
+    })();
+
+    // Weekly adaptation refresh — Sundays at 1am (adaptations have 7-day TTL; refresh before expiry)
+    (function _scheduleAdaptationRefresh() {
+        function _nextSunday1am() {
+            const d = new Date(); d.setHours(1, 0, 0, 0);
+            const daysUntil = (7 - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + daysUntil);
+            return d;
+        }
+        async function _runAdaptationRefresh() {
+            try {
+                const ae = require('./agent-system/adaptation-engine');
+                const result = await ae.runCycle();
+                console.log(`[AdaptCron] Cycle complete — totalActive=${result.totalActive} avgConf=${result.avgConfidence}`);
+                require('./lib/cron-logger').record('adaptation_refresh', 'ok').catch(() => {});
+            } catch (e) {
+                console.warn('[AdaptCron] refresh error (non-fatal):', e.message);
+                require('./lib/cron-logger').record('adaptation_refresh', 'error', e.message).catch(() => {});
+            }
+        }
+        const _next = _nextSunday1am();
+        setTimeout(function _adaptationRefresh() {
+            _runAdaptationRefresh();
+            setInterval(_runAdaptationRefresh, 7 * 24 * 60 * 60 * 1000);
+        }, _next.getTime() - Date.now());
+        console.log(`[AdaptCron] Weekly refresh scheduled for ${_next.toDateString()} 01:00`);
+    })();
+
+    // Weekly technical debt audit — Sundays at 2am
+    (function _scheduleTechDebtAudit() {
+        function _nextSunday2am() {
+            const d = new Date(); d.setHours(2, 0, 0, 0);
+            const daysUntil = (7 - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + daysUntil);
+            return d;
+        }
+        async function _runTechDebtAudit() {
+            if (!process.env.ANTHROPIC_API_KEY) return;
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+            try {
+                // Collect agent run stats
+                const [runsRes, stagesRes] = await Promise.allSettled([
+                    sbAdmin.from('apex_agent_runs')
+                        .select('task_id,success,cost_usd,complexity,duration_ms,created_at,agent_summary')
+                        .gte('created_at', weekAgo).limit(500),
+                    sbAdmin.from('apex_agent_stages')
+                        .select('stage,success,error,duration_ms')
+                        .gte('created_at', weekAgo).limit(2000),
+                ]);
+                const runs   = runsRes.value?.data   || [];
+                const stages = stagesRes.value?.data || [];
+
+                if (!runs.length) return;
+
+                const totalRuns    = runs.length;
+                const failedRuns   = runs.filter(r => !r.success).length;
+                const totalCost    = runs.reduce((s, r) => s + (r.cost_usd || 0), 0);
+                const avgDurMs     = runs.reduce((s, r) => s + (r.duration_ms || 0), 0) / totalRuns;
+                const slowRuns     = runs.filter(r => (r.duration_ms || 0) > 120000).length;
+
+                // Stage-level failure hotspots
+                const stageFailures = {};
+                for (const s of stages) {
+                    if (!s.success) stageFailures[s.stage] = (stageFailures[s.stage] || 0) + 1;
+                }
+                const hotspots = Object.entries(stageFailures)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([stage, count]) => `${stage}: ${count} failures`)
+                    .join(', ') || 'none';
+
+                const report = [
+                    `# Technical Debt Audit — ${today}`,
+                    `*Generated by APEX AI OS automated debt engine*`,
+                    '',
+                    `## Agent Pipeline Health`,
+                    `- **Runs this week:** ${totalRuns}`,
+                    `- **Failure rate:** ${failedRuns}/${totalRuns} (${totalRuns ? Math.round(failedRuns/totalRuns*100) : 0}%)`,
+                    `- **Total AI cost:** $${totalCost.toFixed(4)}`,
+                    `- **Avg duration:** ${Math.round(avgDurMs / 1000)}s`,
+                    `- **Slow runs (>2min):** ${slowRuns}`,
+                    `- **Failure hotspots:** ${hotspots}`,
+                    '',
+                    `## Recommended Actions`,
+                    failedRuns / Math.max(totalRuns, 1) > 0.3 ? `- ⚠️ Failure rate >30% — investigate recurring errors in apex_agent_stages` : `- ✅ Failure rate acceptable`,
+                    slowRuns > 5 ? `- ⚠️ ${slowRuns} slow runs — check DEVELOPER agent retry escalation` : `- ✅ Pipeline speed normal`,
+                    totalCost > 5 ? `- ⚠️ High weekly cost $${totalCost.toFixed(2)} — review complexity routing` : `- ✅ Cost within budget`,
+                ].join('\n');
+
+                // Write to Obsidian vault
+                const { obsidianWrite } = require('./agent-system/obsidian-client');
+                await obsidianWrite(`15 System/TechDebt/${today}.md`, report)
+                    .catch(e => console.warn('[TechDebt] vault write failed:', e.message));
+
+                // Persist to Supabase
+                await sbAdmin.from('apex_notifications').insert({
+                    title: `Weekly Tech Debt Audit — ${today}`,
+                    body: `${failedRuns}/${totalRuns} failures · $${totalCost.toFixed(4)} cost · hotspots: ${hotspots}`,
+                    type: 'system', read: false, created_at: new Date().toISOString(),
+                }).catch(() => {});
+
+                require('./lib/cron-logger').record('tech_debt_audit', 'ok').catch(() => {});
+                console.log(`[TechDebt] Weekly audit complete — ${failedRuns}/${totalRuns} failures, $${totalCost.toFixed(4)}`);
+            } catch (e) {
+                console.warn('[TechDebt] audit error (non-fatal):', e.message);
+                require('./lib/cron-logger').record('tech_debt_audit', 'error', e.message).catch(() => {});
+            }
+        }
+        const _next = _nextSunday2am();
+        setTimeout(function _techDebt() {
+            _runTechDebtAudit();
+            setInterval(_runTechDebtAudit, 7 * 24 * 60 * 60 * 1000);
+        }, _next.getTime() - Date.now());
+        console.log(`[TechDebt] Weekly audit scheduled for ${_next.toDateString()} 02:00`);
+    })();
+
+    // Weekly lesson consolidation — Sundays at 3am (between tech-debt at 2am and vault-health at 4am)
+    (function _scheduleLessonConsolidation() {
+        async function _runLessonConsolidation() {
+            try {
+                const mem    = require('./agent-system/obsidian-memory');
+                const engine = require('./agent-system/reflection-engine');
+                const raw    = mem.getLessons();
+                if (!raw || raw.length < 3000) return; // skip if Lessons.md is still small
+                const consolidated = engine.consolidateLessons(raw, 30);
+                mem.write('01 Executive/Lessons.md', consolidated);
+                console.log('[LessonCron] Lessons.md consolidated to 30 entries');
+                await require('./lib/cron-logger').record('lesson_consolidation', 'ok').catch(() => {});
+            } catch (e) {
+                console.warn('[LessonCron] consolidation failed (non-fatal):', e.message);
+                await require('./lib/cron-logger').record('lesson_consolidation', 'error', e.message).catch(() => {});
+            }
+        }
+        function _nextSunday3am() {
+            const d = new Date(); d.setHours(3, 0, 0, 0);
+            const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + daysUntilSunday);
+            return d;
+        }
+        const _next = _nextSunday3am();
+        setTimeout(function _lessonConsolidation() {
+            _runLessonConsolidation();
+            setInterval(_runLessonConsolidation, 7 * 24 * 60 * 60 * 1000);
+        }, _next.getTime() - Date.now());
+        console.log(`[LessonCron] Weekly consolidation scheduled for ${_next.toDateString()} 03:00`);
+    })();
+
+    // Weekly evolution cycle — Sundays at 5am (generates improvement roadmap from live telemetry)
+    (function _scheduleEvolutionCycle() {
+        async function _runEvolutionCycle() {
+            try {
+                const _imp = require('./agent-system/improvement-executor');
+                await _imp.generateRoadmap();
+                console.log('[EvolutionCycle] Weekly roadmap generated');
+                require('./lib/cron-logger').record('evolution_cycle', 'ok').catch(() => {});
+            } catch (e) {
+                console.warn('[EvolutionCycle] error (non-fatal):', e.message);
+                require('./lib/cron-logger').record('evolution_cycle', 'error', e.message).catch(() => {});
+            }
+        }
+        function _nextSunday5am() {
+            const d = new Date(); d.setHours(5, 0, 0, 0);
+            const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
+            d.setDate(d.getDate() + daysUntilSunday);
+            return d;
+        }
+        const _next = _nextSunday5am();
+        setTimeout(function _evolutionCycle() {
+            _runEvolutionCycle();
+            setInterval(_runEvolutionCycle, 7 * 24 * 60 * 60 * 1000);
+        }, _next.getTime() - Date.now());
+        console.log(`[EvolutionCycle] Weekly roadmap scheduled for ${_next.toDateString()} 05:00`);
     })();
 
     // News ingest — runs at 6am daily, plus an immediate run on startup
@@ -11051,10 +12257,10 @@ checkPendingMasterTasks();
         _6am.setHours(6, 0, 0, 0);
         if (_6am <= _now) _6am.setDate(_6am.getDate() + 1);
         // Initial run after 5min (avoid OOM spike during server cold-start)
-        setTimeout(() => ingestNews().catch(e => console.warn('[News] startup ingest failed:', e.message)), 300000);
+        setTimeout(() => require('./lib/cron-logger').wrapCron('news_ingest', () => ingestNews()).catch(e => console.warn('[News] startup ingest failed:', e.message)), 300000);
         setTimeout(function _dailyNews() {
-            ingestNews().catch(e => console.warn('[News] ingest error:', e.message));
-            setInterval(() => ingestNews().catch(e => console.warn('[News] ingest error:', e.message)), 24 * 60 * 60 * 1000);
+            require('./lib/cron-logger').wrapCron('news_ingest', () => ingestNews()).catch(e => console.warn('[News] ingest error:', e.message));
+            setInterval(() => require('./lib/cron-logger').wrapCron('news_ingest', () => ingestNews()).catch(e => console.warn('[News] ingest error:', e.message)), 24 * 60 * 60 * 1000);
         }, _6am.getTime() - _now.getTime());
         console.log(`[News] Daily ingest scheduled for 06:00, initial run in 30s`);
     })();
@@ -11062,27 +12268,260 @@ checkPendingMasterTasks();
     // Calendar sync — every 30 minutes
     (function _scheduleCalendarSync() {
         const { syncGoogleCalendar } = require('./routes/communications');
-        const doSync = () => syncGoogleCalendar()
-            .then(r => { if (r.count) console.log(`[Calendar] Auto-sync: ${r.count} events`); })
+        const doSync = () => require('./lib/cron-logger').wrapCron('calendar_sync', () => syncGoogleCalendar()
+            .then(r => { if (r.count) console.log(`[Calendar] Auto-sync: ${r.count} events`); }))
             .catch(e => console.warn('[Calendar] sync error:', e.message));
         setTimeout(doSync, 360000); // initial run after 6min (spread startup load)
         setInterval(doSync, 30 * 60 * 1000);
         console.log('[Calendar] Auto-sync every 30 minutes');
     })();
 
+    // Schedule fallback — run due agent schedules every 5 min in-process
+    // Primary trigger is Render Cron; this ensures schedules fire even if cron misses
+    setInterval(() => require('./lib/cron-logger').wrapCron('schedule_fallback', () => runDueSchedules()).catch(e => console.warn('[ScheduleFallback] error:', e.message)), 5 * 60 * 1000);
+
     // Phase 2 agents
     initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
     initRoutineAgent(client).catch(err => console.error("ROUTINE AGENT INIT ERROR:", err.message));
     // Upgrade 3: Proactive reflection agent — runs every 30 minutes
-    setInterval(() => runReflectionCheck(client).catch(err => console.error("REFLECTION ERROR:", err.message)), 30 * 60 * 1000);
+    setInterval(() => require('./lib/cron-logger').wrapCron('reflection_check', () => runReflectionCheck(client)).catch(err => console.error("REFLECTION ERROR:", err.message)), 30 * 60 * 1000);
 
-    // Mastra agent framework
-    try {
-        mastraAgents = initMastra(handleCommand);
-        console.log("🤖 Mastra agents initialised.");
-    } catch (err) {
-        console.error("MASTRA INIT ERROR:", err.message);
-    }
+    // Memory Architecture crons
+    // Working memory TTL cleanup — every 15 minutes
+    setInterval(() => require('./lib/cron-logger').wrapCron('wm_cleanup', () =>
+        require('./lib/memory/working-memory').clearExpired()
+    ), 15 * 60 * 1000);
+
+    // Memory consolidation engine — every hour
+    setInterval(() => require('./lib/cron-logger').wrapCron('mem_consolidation', async () => {
+        const engine = require('./lib/memory/consolidation-engine');
+        const results = await engine.process(10);
+        await engine.purgeOld(7);
+        console.log(`[mem_consolidation] processed ${results.length} items`);
+    }), 60 * 60 * 1000);
+
+    // Weekly adaptation cycle — every Sunday at ~05:00 UTC (fired via setInterval nearest hour)
+    // Runs on first Sunday after deploy, then weekly.
+    (() => {
+        const MS_WEEK = 7 * 24 * 60 * 60 * 1000;
+        const now     = new Date();
+        const daysUntilSunday = (7 - now.getUTCDay()) % 7 || 7;
+        const nextSundayMs    = new Date(Date.UTC(
+            now.getUTCFullYear(), now.getUTCMonth(),
+            now.getUTCDate() + daysUntilSunday, 5, 0, 0
+        )) - now;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('adaptation_cycle', () =>
+                require('./lib/memory/adaptation-cycle').runWeeklyCycle()
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('adaptation_cycle', () =>
+                require('./lib/memory/adaptation-cycle').runWeeklyCycle()
+            ), MS_WEEK);
+        }, Math.max(nextSundayMs, 60000));
+    })();
+
+    // Intelligence layer crons
+    // Knowledge validation — every hour (processes pending lesson submissions)
+    setInterval(() => require('./lib/cron-logger').wrapCron('knowledge_validation', async () => {
+        const kv = require('./lib/intelligence/knowledge-validator');
+        const s  = await kv.processPending(20);
+        console.log(`[knowledge_validation] processed=${s.processed} validated=${s.validated} rejected=${s.rejected}`);
+    }), 60 * 60 * 1000);
+
+    // Contradiction full scan — every Sunday at ~06:00 UTC
+    (() => {
+        const MS_WEEK = 7 * 24 * 60 * 60 * 1000;
+        const now     = new Date();
+        const daysUntilSunday = (7 - now.getUTCDay()) % 7 || 7;
+        const nextSundayMs    = new Date(Date.UTC(
+            now.getUTCFullYear(), now.getUTCMonth(),
+            now.getUTCDate() + daysUntilSunday, 6, 0, 0
+        )) - now;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('contradiction_scan', () =>
+                require('./lib/intelligence/contradiction-engine').fullScan()
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('contradiction_scan', () =>
+                require('./lib/intelligence/contradiction-engine').fullScan()
+            ), MS_WEEK);
+        }, Math.max(nextSundayMs, 60000));
+    })();
+
+    // Memory lifecycle cycle — every Sunday at ~07:00 UTC
+    (() => {
+        const MS_WEEK = 7 * 24 * 60 * 60 * 1000;
+        const now     = new Date();
+        const daysUntilSunday = (7 - now.getUTCDay()) % 7 || 7;
+        const nextSundayMs    = new Date(Date.UTC(
+            now.getUTCFullYear(), now.getUTCMonth(),
+            now.getUTCDate() + daysUntilSunday, 7, 0, 0
+        )) - now;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('lifecycle_cycle', () =>
+                require('./lib/intelligence/memory-lifecycle-engine').runLifecycleCycle()
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('lifecycle_cycle', () =>
+                require('./lib/intelligence/memory-lifecycle-engine').runLifecycleCycle()
+            ), MS_WEEK);
+        }, Math.max(nextSundayMs, 60000));
+    })();
+
+    // Weekly learning report + skill snapshot — every Sunday at ~08:00 UTC
+    (() => {
+        const MS_WEEK = 7 * 24 * 60 * 60 * 1000;
+        const now     = new Date();
+        const daysUntilSunday = (7 - now.getUTCDay()) % 7 || 7;
+        const nextSundayMs    = new Date(Date.UTC(
+            now.getUTCFullYear(), now.getUTCMonth(),
+            now.getUTCDate() + daysUntilSunday, 8, 0, 0
+        )) - now;
+        setTimeout(async () => {
+            require('./lib/cron-logger').wrapCron('weekly_learning', async () => {
+                const orgL  = require('./lib/intelligence/organizational-learning-engine');
+                const skillE = require('./lib/intelligence/skill-evolution-engine');
+                const [report, snapshot] = await Promise.allSettled([
+                    orgL.generateWeeklyReport(),
+                    skillE.takeWeeklySnapshot(),
+                ]);
+                console.log(`[weekly_learning] report=${report.status} snapshot=${snapshot.status}`);
+            });
+            setInterval(() => require('./lib/cron-logger').wrapCron('weekly_learning', async () => {
+                const orgL  = require('./lib/intelligence/organizational-learning-engine');
+                const skillE = require('./lib/intelligence/skill-evolution-engine');
+                await Promise.allSettled([orgL.generateWeeklyReport(), skillE.takeWeeklySnapshot()]);
+            }), MS_WEEK);
+        }, Math.max(nextSundayMs, 60000));
+    })();
+
+    // Improvement auto-queue processor — every 30 minutes (catch-up for auto-deploy items)
+    setInterval(() => require('./lib/cron-logger').wrapCron('improvement_autoqueue', () =>
+        require('./lib/intelligence/improvement-governor').processAutoQueue()
+    ), 30 * 60 * 1000);
+
+    // ── Cognitive Layer Crons ───────────────────────────────────────────────
+    if (process.env.COGNITIVE_CRONS_ENABLED === 'true') {
+    const MS_WEEK_COG = 7 * 24 * 60 * 60 * 1000;
+
+    // Knowledge decay cycle — every Sunday at ~09:00 UTC
+    (function _scheduleCognKnowledgeDecay() {
+        const now2 = new Date();
+        const daysToSun2 = (7 - now2.getUTCDay()) % 7;
+        const nextSunMs2 = new Date(Date.UTC(
+            now2.getUTCFullYear(), now2.getUTCMonth(),
+            now2.getUTCDate() + daysToSun2, 9, 0, 0
+        )) - now2;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('knowledge_decay', () =>
+                require('./lib/cognitive/knowledge-decay-engine').runDecayCycle()
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('knowledge_decay', () =>
+                require('./lib/cognitive/knowledge-decay-engine').runDecayCycle()
+            ), MS_WEEK_COG);
+        }, Math.max(nextSunMs2, 60000));
+    })();
+
+    // Cognitive evolution cycle — every Sunday at ~10:00 UTC
+    (function _scheduleCognEvolution() {
+        const now2 = new Date();
+        const daysToSun2 = (7 - now2.getUTCDay()) % 7;
+        const nextSunMs2 = new Date(Date.UTC(
+            now2.getUTCFullYear(), now2.getUTCMonth(),
+            now2.getUTCDate() + daysToSun2, 10, 0, 0
+        )) - now2;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('cognitive_evolution', () =>
+                require('./lib/cognitive/cognitive-evolution-engine').runEvolutionCycle()
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('cognitive_evolution', () =>
+                require('./lib/cognitive/cognitive-evolution-engine').runEvolutionCycle()
+            ), MS_WEEK_COG);
+        }, Math.max(nextSunMs2, 60000));
+    })();
+
+    // Cognitive performance metrics — every Sunday at ~11:00 UTC
+    (function _scheduleCognPerformance() {
+        const now2 = new Date();
+        const daysToSun2 = (7 - now2.getUTCDay()) % 7;
+        const nextSunMs2 = new Date(Date.UTC(
+            now2.getUTCFullYear(), now2.getUTCMonth(),
+            now2.getUTCDate() + daysToSun2, 11, 0, 0
+        )) - now2;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('cognitive_performance', () =>
+                require('./lib/cognitive/cognitive-performance-engine').computeMetrics('weekly')
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('cognitive_performance', () =>
+                require('./lib/cognitive/cognitive-performance-engine').computeMetrics('weekly')
+            ), MS_WEEK_COG);
+        }, Math.max(nextSunMs2, 60000));
+    })();
+
+    // Organizational intelligence report — every Sunday at ~12:00 UTC
+    (function _scheduleCognOrgIntel() {
+        const now2 = new Date();
+        const daysToSun2 = (7 - now2.getUTCDay()) % 7;
+        const nextSunMs2 = new Date(Date.UTC(
+            now2.getUTCFullYear(), now2.getUTCMonth(),
+            now2.getUTCDate() + daysToSun2, 12, 0, 0
+        )) - now2;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('org_intelligence', () =>
+                require('./lib/cognitive/organizational-intelligence-engine').generate('weekly')
+            );
+            setInterval(() => require('./lib/cron-logger').wrapCron('org_intelligence', () =>
+                require('./lib/cognitive/organizational-intelligence-engine').generate('weekly')
+            ), MS_WEEK_COG);
+        }, Math.max(nextSunMs2, 60000));
+    })();
+    } // end COGNITIVE_CRONS_ENABLED
+
+    // Civilization Health — daily at 08:00 UTC
+    (function _scheduleCivHealth() {
+        const MS_DAY = 24 * 60 * 60 * 1000;
+        const now3   = new Date();
+        const nextUtc8 = new Date(Date.UTC(now3.getUTCFullYear(), now3.getUTCMonth(),
+            now3.getUTCDate() + (now3.getUTCHours() >= 8 ? 1 : 0), 8, 0, 0));
+        const delay3 = Math.max(nextUtc8 - now3, 60_000);
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('civilization_health', async () => {
+                const { computeCivilizationHealth } = require('./lib/telemetry/aggregator');
+                const snap = await computeCivilizationHealth();
+                console.log(`[civilization_health] score=${snap.overall_score} (${snap.classification})`);
+            });
+            setInterval(() => require('./lib/cron-logger').wrapCron('civilization_health', async () => {
+                const { computeCivilizationHealth } = require('./lib/telemetry/aggregator');
+                await computeCivilizationHealth();
+            }), MS_DAY);
+        }, delay3);
+    })();
+
+    // Civilization Runtime — full autonomous cycle every 6 hours (health → council → adapt → act)
+    (function _scheduleCivRuntime() {
+        const MS_6H = 6 * 60 * 60 * 1000;
+        setTimeout(() => {
+            require('./lib/cron-logger').wrapCron('civilization_runtime', async () => {
+                const civRuntime = require('./lib/intelligence/civilization-runtime');
+                if (!civRuntime.isRunning()) {
+                    civRuntime.start(MS_6H);
+                    console.log('[civilization_runtime] autonomous cycle started (6h interval)');
+                }
+            });
+        }, Math.max(60_000, 5 * 60 * 1000)); // 5min after boot — let health checks settle first
+    })();
+
+    // Intelligence reality loop — OODA cycle at Haiku tier (grounded, no synthetic metrics)
+    setTimeout(() => {
+        try {
+            require('./lib/intelligence/reality-loop').start(15 * 60 * 1000); // 15-minute interval
+            console.log('[Intelligence] Reality loop started (15min OODA cycle)');
+        } catch (err) {
+            console.warn('[Intelligence] Reality loop start failed (non-fatal):', err.message);
+        }
+    }, 60000); // 1-minute warm-up delay after server is stable
+
+    // Mastra agent framework — real load deferred 5 min via _loadMastra() above.
+    // initMastra is the stub (() => null) here; this call is intentionally harmless.
+    mastraAgents = initMastra(handleCommand);
 
     // Ruflo daemon — auto-starts 10 min after server stabilises
     // Detached so it runs independently and doesn't hold the event loop.
@@ -11111,6 +12550,8 @@ function _gracefulShutdown(sig) {
             if (_pid > 0) { process.kill(_pid, 'SIGTERM'); fs.unlinkSync(_pidFile); }
         }
     } catch {}
+    // Stop the WebSocket keepalive immediately — no point pinging during shutdown
+    clearInterval(_wsKeepalive);
     // Stop accepting new connections; exit when drain completes or after 15s
     server.close(() => { console.log('[Shutdown] all connections drained — exiting'); process.exit(0); });
     setTimeout(() => { console.warn('[Shutdown] drain timeout — forcing exit'); process.exit(1); }, 15000);

@@ -1,6 +1,6 @@
 'use strict';
 
-const Anthropic = require('@anthropic-ai/sdk');
+const runtime = require('../lib/models/runtime');
 
 // Domain agents: specialized for the Apex AI OS context.
 // Each has a rich system prompt scoped to its domain.
@@ -149,8 +149,6 @@ When reporting pipeline: show count and value per stage. Flag any follow-up date
     }
 };
 
-const _client = new Anthropic();
-
 async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 2000 } = {}) {
     const agent = DOMAIN_AGENTS[slug];
     if (!agent) throw new Error(`Unknown domain agent: "${slug}". Valid: ${Object.keys(DOMAIN_AGENTS).join(', ')}`);
@@ -160,11 +158,12 @@ async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 
         { role: 'user', content: userMessage }
     ];
 
-    const response = await _client.messages.create({
-        model:      'claude-haiku-4-5-20251001',
-        max_tokens: maxTokens,
-        system:     agent.system_prompt,
-        messages
+    const { result: response } = await runtime.execute({
+        tier:     'fast',
+        caller:   'domain-agents',
+        system:   agent.system_prompt,
+        messages,
+        maxTokens,
     });
 
     return {

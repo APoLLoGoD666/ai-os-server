@@ -1,7 +1,8 @@
 'use strict';
 
-const https = require('https');
-const path  = require('path');
+const https     = require('https');
+const path      = require('path');
+const runtime = require('../lib/models/runtime');
 
 const GITHUB_TREE = 'https://api.github.com/repos/msitarzewski/agency-agents/git/trees/main?recursive=1';
 const RAW_BASE    = 'https://raw.githubusercontent.com/msitarzewski/agency-agents/main/';
@@ -78,7 +79,7 @@ function _parse(content, githubPath) {
 function _writeToObsidian(agent) {
     try {
         const mem      = require('./obsidian-memory');
-        const vaultPath = `Agents/${agent.category}/${agent.slug}.md`;
+        const vaultPath = `11 Agents/Specifications/${agent.category}/${agent.slug}.md`;
         const frontmatter = [
             '---',
             `slug: "${agent.slug}"`,
@@ -183,7 +184,7 @@ async function syncFromGitHub(sbAdmin, { obsidian = true } = {}) {
                     if (vp) agents[i + j].vault_path = vp;
                 });
             }
-            console.log('[AgentLib] Agents written to Obsidian vault under Agents/');
+            console.log('[AgentLib] Agents written to Obsidian vault under 11 Agents/Specifications/');
         }
 
         // Populate memory cache
@@ -258,14 +259,12 @@ async function invokeAgent(slugOrKeyword, userMessage, { anthropicClient } = {})
     const agent = getAgent(slugOrKeyword);
     if (!agent) throw new Error(`Agent "${slugOrKeyword}" not found. Call /api/agents/sync first.`);
 
-    const Anthropic = require('@anthropic-ai/sdk');
-    const client    = anthropicClient || new Anthropic();
-
-    const response = await client.messages.create({
-        model:      'claude-haiku-4-5-20251001',
-        max_tokens: 1500,
-        system:     agent.system_prompt,
-        messages:   [{ role: 'user', content: userMessage }]
+    const { result: response } = await runtime.execute({
+        tier:      'fast',
+        caller:    'agent-library',
+        maxTokens: 1500,
+        system:    agent.system_prompt,
+        messages:  [{ role: 'user', content: userMessage }],
     });
 
     return {

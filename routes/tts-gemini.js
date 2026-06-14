@@ -1,22 +1,14 @@
 'use strict';
 const router = require('express').Router();
 const crypto = require('crypto');
+const _auth  = require('../lib/app-auth');
 
 const MODEL         = 'gemini-2.5-flash-preview-tts';
-const DEFAULT_VOICE = 'Orus';
+const DEFAULT_VOICE = 'Fenrir';
 const SAMPLE_RATE   = 24000;
-const CACHE_TTL_MS  = 5 * 60 * 1000;  // 5 min
+const CACHE_TTL_MS  = 5 * 60 * 1000;
 const CACHE_MAX     = 30;
 
-const VOICES = new Set([
-    'Achernar','Achird','Algenib','Algieba','Alnilam','Aoede','Autonoe',
-    'Callirrhoe','Charon','Despina','Enceladus','Erinome','Fenrir','Gacrux',
-    'Iapetus','Kore','Laomedeia','Leda','Orus','Pulcherrima','Puck',
-    'Rasalgethi','Sadachbia','Sadaltager','Schedar','Sulafat','Umbriel',
-    'Vindemiatrix','Zephyr','Zubenelgenubi',
-]);
-
-// In-memory WAV cache keyed by SHA-1 of text — avoids re-calling Gemini for repeated phrases
 const _cache = new Map();
 function cacheGet(key) {
     const entry = _cache.get(key);
@@ -25,14 +17,25 @@ function cacheGet(key) {
     return entry.wav;
 }
 function cacheSet(key, wav) {
-    if (_cache.size >= CACHE_MAX) {
-        // evict oldest
-        _cache.delete(_cache.keys().next().value);
-    }
+    if (_cache.size >= CACHE_MAX) _cache.delete(_cache.keys().next().value);
     _cache.set(key, { wav, ts: Date.now() });
 }
 
-// Prepend a 44-byte WAV/RIFF header to raw PCM data (24kHz, 16-bit, mono)
+function cleanForTTS(text) {
+    return text
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`[^`]+`/g, '')
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/^\s*[-*+]\s+/gm, '')
+        .replace(/^\s*\d+\.\s+/gm, '')
+        .replace(/^---+$/gm, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 function pcmToWav(pcm) {
     const buf = Buffer.alloc(44 + pcm.length);
     buf.write('RIFF', 0);
@@ -52,32 +55,22 @@ function pcmToWav(pcm) {
     return buf;
 }
 
-async function callGeminiTTS(url, payload) {
-    const gRes = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-    return gRes;
-}
-
 // POST /api/tts/gemini
 // Body: { text: string }
-// Returns: audio/wav buffer (PCM 24kHz 16-bit mono with WAV header)
-router.post('/tts/gemini', async (req, res) => {
+// Returns: audio/wav (Gemini 2.5 Flash TTS, 24kHz PCM)
+router.post('/tts/gemini', _auth, async (req, res) => {
     const t0 = Date.now();
     try {
-        const text = (req.body?.text || '').trim();
+        const text = cleanForTTS(req.body?.text || '');
         if (!text) return res.status(400).json({ error: 'No text provided' });
         if (text.length > 4000) return res.status(400).json({ error: 'Text exceeds 4000 char limit' });
 
         const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            console.error('[APEX-UI] Gemini TTS: GOOGLE_API_KEY / GEMINI_API_KEY not set');
-            return res.status(503).json({ error: 'Gemini API key not configured — set GOOGLE_API_KEY or GEMINI_API_KEY' });
+            console.error('[TTS/Gemini] GOOGLE_API_KEY not set');
+            return res.status(503).json({ error: 'GOOGLE_API_KEY not configured' });
         }
 
-        // Return cached WAV if available
         const cacheKey = crypto.createHash('sha1').update(text).digest('hex');
         const cached = cacheGet(cacheKey);
         if (cached) {
@@ -89,7 +82,7 @@ router.post('/tts/gemini', async (req, res) => {
             return res.send(cached);
         }
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
         const payload = {
             contents: [{ parts: [{ text }] }],
             generationConfig: {
@@ -100,37 +93,26 @@ router.post('/tts/gemini', async (req, res) => {
 
         let gRes;
         try {
-            gRes = await callGeminiTTS(url, payload);
-            // Single retry after 1.5s on 429 (rate limit) or 503 (transient)
-            if ((gRes.status === 429 || gRes.status === 503) && !res.headersSent) {
-                console.warn(`[TTS/Gemini] ${gRes.status} — retrying in 1.5s`);
-                await new Promise(r => setTimeout(r, 1500));
-                gRes = await callGeminiTTS(url, payload);
-            }
+            gRes = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(payload) });
         } catch (netErr) {
-            console.error('[APEX-UI] Gemini TTS network error:', netErr.message);
-            return res.status(502).json({ error: 'Network error reaching Gemini API', detail: netErr.message });
+            console.error('[TTS/Gemini] network error:', netErr.message);
+            return res.status(502).json({ error: 'Network error reaching Gemini API' });
         }
 
         if (!gRes.ok) {
             const errText = await gRes.text().catch(() => '');
-            console.error('[APEX-UI] Gemini TTS API error:', gRes.status, errText.slice(0, 300));
-            // Pass 429 through so the client knows to back off
-            const status = gRes.status === 429 ? 429 : 502;
-            return res.status(status).json({ error: 'Gemini API returned ' + gRes.status, detail: errText.slice(0, 300) });
+            console.error('[TTS/Gemini] error:', gRes.status, errText.slice(0, 300));
+            return res.status(gRes.status === 429 ? 429 : 502).json({ error: 'Gemini API returned ' + gRes.status });
         }
 
         let json;
-        try {
-            json = await gRes.json();
-        } catch (parseErr) {
-            console.error('[APEX-UI] Gemini TTS JSON parse error:', parseErr.message);
+        try { json = await gRes.json(); } catch (e) {
             return res.status(502).json({ error: 'Invalid JSON from Gemini API' });
         }
 
         const inlineData = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
         if (!inlineData?.data) {
-            console.error('[APEX-UI] Gemini TTS: no audio in response —', JSON.stringify(json).slice(0, 300));
+            console.error('[TTS/Gemini] no audio in response:', JSON.stringify(json).slice(0, 300));
             return res.status(502).json({ error: 'No audio data in Gemini response' });
         }
 
@@ -148,14 +130,13 @@ router.post('/tts/gemini', async (req, res) => {
 
         console.log(`[TTS/Gemini] ${latency}ms · ${wav.length}B · "${text.slice(0, 50)}"`);
     } catch (err) {
-        console.error('[APEX-UI] Gemini TTS unhandled exception:', err.message);
-        res.status(500).json({ error: err.message });
+        console.error('[TTS/Gemini] unhandled:', err.message);
+        res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-// GET /api/tts/gemini/voices — list available voices
-router.get('/tts/gemini/voices', (_req, res) => {
-    res.json({ voices: [...VOICES].sort(), default: DEFAULT_VOICE, model: MODEL });
+router.get('/tts/gemini/voices', _auth, (_req, res) => {
+    res.json({ voices: ['Orus'], default: DEFAULT_VOICE, model: MODEL });
 });
 
 module.exports = router;
