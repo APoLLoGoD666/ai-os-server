@@ -1140,6 +1140,7 @@ async function runAgentTeam(spec, taskId) {
     ctx.gatewayPkg = null;
     try {
         const routeDecision = _taskRouter.routeAndLog({ objective: spec.objective, filesToModify: spec.filesToModify, taskId });
+        require('../lib/consumption-log').record({ subsystem: 'task-router', output_key: routeDecision.route, consumer: 'orchestrator', task_id: taskId, meta: { complexity: routeDecision.complexity } });
 
         // ── Task Router authority — execution branching by route type ────────────
         if (routeDecision.route === 'founder_escalation') {

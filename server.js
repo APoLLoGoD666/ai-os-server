@@ -7451,12 +7451,11 @@ ${preview}
         }
 
         // Fallback: raw Anthropic SDK if Mastra not initialised
-        const streamMsg = await client.messages.stream({
-            model: MODEL,
-            max_tokens: 500,
+        const { result: streamMsg } = await runtime.execute({
+            client, model: MODEL, caller: 'chat_fallback', maxTokens: 500,
             tools: TOOLS,
-            messages: [{ role: "user", content: prompt }]
-        }).finalMessage();
+            messages: [{ role: 'user', content: prompt }],
+        });
 
         clearTimeout(chatTimeout);
 
@@ -11260,8 +11259,9 @@ app.post('/api/wiki/ingest', requireAppAccess, async (req, res) => {
         const today = new Date().toISOString().split('T')[0];
 
         // Classify — extended taxonomy: System, Projects, People, Entities, Concepts
-        const classifyRes = await wikiClient.messages.create({
-            model: wikiModel, max_tokens: 80,
+        const { result: classifyRes } = await runtime.execute({
+            client: wikiClient, model: wikiModel,
+            caller: 'wiki_ingest_classify', maxTokens: 80,
             messages: [{ role: 'user', content:
                 `Classify this content into the best wiki page path. Options:\n` +
                 `01 Executive/North-Star.md\n01 Executive/Decisions.md\n02 Projects/Active/Apex-AI-OS.md\n` +
@@ -11284,8 +11284,9 @@ app.post('/api/wiki/ingest', requireAppAccess, async (req, res) => {
             merged = `# ${pageName}\n*Created ${today} — source: ${source || 'ingest'}*\n\n${content}`;
         } else {
             // Merge: update existing sections, never just append
-            const mergeRes = await wikiClient.messages.create({
-                model: wikiModel, max_tokens: 2000,
+            const { result: mergeRes } = await runtime.execute({
+                client: wikiClient, model: wikiModel,
+                caller: 'wiki_ingest_merge', maxTokens: 2000,
                 system: `You maintain a living knowledge base. Merge new information into the page.
 Rules:
 - Update existing sections with new info rather than duplicating
@@ -11909,8 +11910,6 @@ server.listen(PORT, () => {
         } catch (e) { _log.warn('retention', 'agent_tasks stale rejection failed', { error: e.message }); }
     }, 6 * 60 * 60 * 1000); // every 6 hours
 
-    // Pick up any master tasks that were queued before a cold-start restart
-    setTimeout(() => checkPendingMasterTasks(), 30000);
     // Auto-approve safe permission requests — runs after task check settles
     setTimeout(() => autoApproveStandardPermissions(), 15000);
 
@@ -12400,6 +12399,7 @@ checkPendingMasterTasks();
     ), 30 * 60 * 1000);
 
     // ── Cognitive Layer Crons ───────────────────────────────────────────────
+    if (process.env.COGNITIVE_CRONS_ENABLED === 'true') {
     const MS_WEEK_COG = 7 * 24 * 60 * 60 * 1000;
 
     // Knowledge decay cycle — every Sunday at ~09:00 UTC
@@ -12473,6 +12473,7 @@ checkPendingMasterTasks();
             ), MS_WEEK_COG);
         }, Math.max(nextSunMs2, 60000));
     })();
+    } // end COGNITIVE_CRONS_ENABLED
 
     // Civilization Health — daily at 08:00 UTC
     (function _scheduleCivHealth() {

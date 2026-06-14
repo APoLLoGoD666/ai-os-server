@@ -1,5 +1,14 @@
 "use strict";
 
+if (process.env.GMAIL_ENABLED !== 'true') {
+    module.exports = {
+        checkEmails:    async () => ({ count: 0, disabled: true, message: 'Gmail disabled — refresh OAuth tokens then set GMAIL_ENABLED=true' }),
+        sendEmailReply: async () => { throw new Error('Gmail disabled — set GMAIL_ENABLED=true after running node get_gmail_token.js'); },
+        initEmailAgent: async () => {},
+        isDisabled:     true,
+    };
+} else {
+
 const { google } = require("googleapis");
 const {
     pgSaveEmailQueueItem,
@@ -221,3 +230,4 @@ async function initEmailAgent(anthropicClient) {
 }
 
 module.exports = { checkEmails, sendEmailReply, initEmailAgent };
+}

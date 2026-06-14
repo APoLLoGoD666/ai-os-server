@@ -3,6 +3,7 @@ const https     = require('https');
 const crypto    = require('crypto');
 const WebSocket = require('ws');
 const tracker   = require('../lib/latency-tracker');
+const runtime   = require('../lib/models/runtime');
 
 // Persistent HTTPS agent — reuses TLS connections across TTS calls.
 // Eliminates ~100-200ms TLS handshake overhead on 2nd+ chunks per session
@@ -279,11 +280,12 @@ async function _claudeVoiceStream({ text, model, anthropicClient, systemPrompt, 
 
     tracker.mark(turnId, 'claude_start', { model });
 
-    const stream = anthropicClient.messages.stream({
-        model,
-        max_tokens: model.includes('sonnet') ? 1200 : 600,
-        system:     systemPrompt,
-        messages:   _buildMessages(sessionTranscript, text),
+    const { stream } = runtime.stream({
+        client: anthropicClient, model,
+        caller: 'gemini_live_claude',
+        maxTokens: model.includes('sonnet') ? 1200 : 600,
+        system:    systemPrompt,
+        messages:  _buildMessages(sessionTranscript, text),
     });
 
     let _streamError = null;
