@@ -8620,7 +8620,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                     client,
                     model: _voiceModel,
                     caller: 'voice_chat',
-                    maxTokens: _isFastPath ? 60 : 200,
+                    maxTokens: _isConversational ? 45 : 200,
                     system: [
                         enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
                         alexContext,
