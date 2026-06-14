@@ -12660,7 +12660,7 @@ if (!isIOSPWA) { setTimeout(function() { var ci = document.getElementById('chatI
 // ── Command page data functions ───────────────────────────────────────────────
 async function fetchCommandProgress() {
     try {
-        const r = await fetch('/api/intelligence/cost-summary');
+        const r = await fetch('/api/intelligence/cost-summary', {headers: buildApiHeaders()});
         const d = await r.json();
         if (d.ok) {
             const el = document.getElementById('cmdStatRuns');
@@ -12675,7 +12675,7 @@ async function fetchCommandProgress() {
         }
     } catch(e) {}
     try {
-        const r = await fetch('/api/intelligence/agent-runs?limit=100');
+        const r = await fetch('/api/intelligence/agent-runs?limit=100', {headers: buildApiHeaders()});
         const d = await r.json();
         const runs = d.runs || [];
         const done = runs.filter(function(r){return r.success;}).length;
@@ -12707,7 +12707,7 @@ async function fetchCommandProgress() {
 
 async function fetchCommandUpdates() {
     try {
-        const r = await fetch('/api/intelligence/agent-runs?limit=8');
+        const r = await fetch('/api/intelligence/agent-runs?limit=8', {headers: buildApiHeaders()});
         const d = await r.json();
         const tbody = document.getElementById('recentRunsPanel');
         if (d.ok && tbody) {
@@ -12725,7 +12725,7 @@ async function fetchCommandUpdates() {
         }
         const metrics = document.getElementById('metricsPanel');
         if (metrics) {
-            const r2 = await fetch('/api/intelligence/cost-summary');
+            const r2 = await fetch('/api/intelligence/cost-summary', {headers: buildApiHeaders()});
             const d2 = await r2.json();
             if (d2.ok) {
                 metrics.innerHTML = '<div style="display:flex;gap:16px;flex-wrap:wrap">'
@@ -12764,7 +12764,7 @@ async function fetchCommandNews() {
     try {
         const el = document.getElementById('cmdNewsFeed');
         if (!el) return;
-        const r = await fetch('/api/intelligence/news');
+        const r = await fetch('/api/intelligence/news', {headers: buildApiHeaders()});
         const d = await r.json();
         if (!d.ok || !d.articles || !d.articles.length) {
             el.innerHTML = '<div class="t-small" style="color:var(--text-mute)">No intel feed configured</div>';
@@ -14057,7 +14057,7 @@ function fetchFinanceData() {
         var ytdEl = document.getElementById('fin-expenses-ytd');
         if (ytdEl) ytdEl.textContent = '£'+total.toFixed(2);
     }).catch(function(){});
-    fetch('/api/intelligence/cost-summary').then(function(r){return r.json();}).then(function(d){
+    fetch('/api/intelligence/cost-summary', {headers: buildApiHeaders()}).then(function(r){return r.json();}).then(function(d){
         if (!d.ok) return;
         var el = document.getElementById('finStatCredit');
         var sub = document.getElementById('finStatCreditSub');
