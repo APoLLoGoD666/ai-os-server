@@ -3,7 +3,7 @@
 const { pgLoadMemory, pgListNotifications, pgCreateNotification } = require("./pg_helpers");
 const runtime = require("./lib/models/runtime");
 
-async function runReflectionCheck(anthropicClient) {
+async function runReflectionCheck() {
     try {
         const [memories, notifications] = await Promise.all([
             pgLoadMemory().catch(() => []),

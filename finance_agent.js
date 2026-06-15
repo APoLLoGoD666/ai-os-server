@@ -14,7 +14,7 @@ const FINANCE_CATEGORIES = [
     "business", "health", "savings", "income", "other"
 ];
 
-async function categoriseTransaction(description, amount, type, anthropicClient) {
+async function categoriseTransaction(description, amount, type) {
     const prompt = `Categorise this ${type} transaction into ONE word from: ${FINANCE_CATEGORIES.join(", ")}.
 Description: "${description}", Amount: ${amount}
 Reply with only the category word, nothing else.`;
@@ -33,7 +33,7 @@ Reply with only the category word, nothing else.`;
     }
 }
 
-async function checkBudgetAlerts(anthropicClient) {
+async function checkBudgetAlerts() {
     try {
         const now    = new Date();
         const month  = now.getMonth() + 1;
@@ -80,7 +80,7 @@ async function checkBudgetAlerts(anthropicClient) {
     }
 }
 
-async function parseCsvTransactions(csvText, anthropicClient) {
+async function parseCsvTransactions(csvText) {
     const lines = csvText.split("\n").map(l => l.trim()).filter(Boolean);
     if (!lines.length) return [];
 
@@ -112,7 +112,7 @@ async function parseCsvTransactions(csvText, anthropicClient) {
 
         if (amount === 0) continue;
 
-        const category = await categoriseTransaction(description, amount, type, anthropicClient);
+        const category = await categoriseTransaction(description, amount, type);
         results.push({ date, description, amount, type, category, source: "csv" });
     }
 

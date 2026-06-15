@@ -6849,7 +6849,7 @@ Final obvious clean state summary:
         case "log_expense": {
             const now = new Date();
             const category = await categoriseTransaction(
-                command.description, command.amount, command.transactionType || "expense", client
+                command.description, command.amount, command.transactionType || "expense"
             );
             const tx = await pgSaveTransaction(
                 now.toISOString().split("T")[0],
@@ -6858,7 +6858,7 @@ Final obvious clean state summary:
                 command.transactionType || "expense",
                 category
             );
-            await checkBudgetAlerts(client);
+            await checkBudgetAlerts();
             return { ok: true, reply: `Logged ${command.transactionType || "expense"}: £${command.amount} for "${command.description}" (${category}).` };
         }
 
@@ -6895,7 +6895,7 @@ Final obvious clean state summary:
 
         case "check_emails": {
             try {
-                const count = await checkEmails(client);
+                const count = await checkEmails();
                 return { ok: true, reply: `Checked email. Found ${count} new message${count !== 1 ? "s" : ""}.` };
             } catch (err) {
                 return { ok: false, reply: `Email check failed: ${err.message}` };
@@ -7598,7 +7598,7 @@ app.get("/api/emails", requireAppAccess, async (req, res) => {
 
 app.post("/api/emails/check", requireAppAccess, async (req, res) => {
     try {
-        const count = await checkEmails(client);
+        const count = await checkEmails();
         clearCache("emails");
         return res.json({ ok: true, reply: `Checked email. Found ${count} new messages.` });
     } catch (error) {
@@ -7728,10 +7728,10 @@ app.post("/api/finance/transaction", requireAppAccess, async (req, res) => {
         if (!description || !amount) return res.status(400).json({ ok: false, reply: "description and amount required." });
 
         const txType   = type === "income" ? "income" : "expense";
-        const category = await categoriseTransaction(description, parseFloat(amount), txType, client);
+        const category = await categoriseTransaction(description, parseFloat(amount), txType);
         const tx = await pgSaveTransaction(date || null, description, parseFloat(amount), txType, category);
 
-        await checkBudgetAlerts(client);
+        await checkBudgetAlerts();
         clearCache("finance_summary");
         return res.json({ ok: true, reply: `Saved: ${txType} £${amount} — ${description} (${category})`, transaction: tx });
     } catch (error) {
@@ -7788,13 +7788,13 @@ app.post("/api/finance/upload-csv", requireAppAccess, async (req, res) => {
         const { csv } = req.body || {};
         if (!csv) return res.status(400).json({ ok: false, reply: "csv field required." });
 
-        const parsed = await parseCsvTransactions(csv, client);
+        const parsed = await parseCsvTransactions(csv);
         const saved  = [];
         for (const tx of parsed) {
             const row = await pgSaveTransaction(tx.date, tx.description, tx.amount, tx.type, tx.category, "csv");
             saved.push(row);
         }
-        await checkBudgetAlerts(client);
+        await checkBudgetAlerts();
         return res.json({ ok: true, reply: `Imported ${saved.length} transactions from CSV.`, count: saved.length });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
@@ -8228,7 +8228,7 @@ async function toolListEmails() {
 
 async function toolCheckEmails() {
     try {
-        const count = await checkEmails(client);
+        const count = await checkEmails();
         return { checked: true, new_emails: count, message: `Checked inbox. Found ${count} new message${count !== 1 ? 's' : ''}.` };
     } catch (err) {
         return { error: err.message };
@@ -12260,10 +12260,9 @@ checkPendingMasterTasks();
     setInterval(() => require('./lib/cron-logger').wrapCron('schedule_fallback', () => runDueSchedules()).catch(e => console.warn('[ScheduleFallback] error:', e.message)), 5 * 60 * 1000);
 
     // Phase 2 agents
-    initEmailAgent(client).catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
-    initRoutineAgent(client).catch(err => console.error("ROUTINE AGENT INIT ERROR:", err.message));
-    // Upgrade 3: Proactive reflection agent — runs every 30 minutes
-    setInterval(() => require('./lib/cron-logger').wrapCron('reflection_check', () => runReflectionCheck(client)).catch(err => console.error("REFLECTION ERROR:", err.message)), 30 * 60 * 1000);
+    initEmailAgent().catch(err => console.error("EMAIL AGENT INIT ERROR:", err.message));
+    initRoutineAgent().catch(err => console.error("ROUTINE AGENT INIT ERROR:", err.message));
+    setInterval(() => require('./lib/cron-logger').wrapCron('reflection_check', () => runReflectionCheck()).catch(err => console.error("REFLECTION ERROR:", err.message)), 30 * 60 * 1000);
 
     // Memory Architecture crons
     // Working memory TTL cleanup — every 15 minutes

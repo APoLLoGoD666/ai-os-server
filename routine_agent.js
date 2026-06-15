@@ -10,8 +10,7 @@ const {
     pgAddMemory
 } = require("./pg_helpers");
 
-const { createClient: _sbRoutine } = require('@supabase/supabase-js');
-const _sbr = _sbRoutine(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const _sbr = require('./lib/clients').getSupabaseClient();
 const runtime = require("./lib/models/runtime");
 
 const DEFAULT_ROUTINES = [
@@ -66,7 +65,7 @@ function wasAlreadyRunThisPeriod(lastRun, cronExpr) {
     return last.toDateString() === now.toDateString();
 }
 
-async function generateRoutineMessage(routine, anthropicClient) {
+async function generateRoutineMessage(routine) {
     let memContext = "";
     try {
         const mem = await pgLoadMemory();
@@ -108,7 +107,7 @@ async function ensureDefaultRoutines() {
     }
 }
 
-async function runDueRoutines(anthropicClient) {
+async function runDueRoutines() {
     try {
         const routines = await pgListRoutines();
         const now = new Date();
@@ -118,7 +117,7 @@ async function runDueRoutines(anthropicClient) {
             if (!cronMatches(routine.schedule_cron, now)) continue;
             if (wasAlreadyRunThisPeriod(routine.last_run, routine.schedule_cron)) continue;
 
-            const message = await generateRoutineMessage(routine, anthropicClient);
+            const message = await generateRoutineMessage(routine);
             await pgMarkRoutineRun(routine.id);
             await pgCreateNotification("routine", routine.name, message, "routine", routine.id);
             console.log(`ROUTINE: "${routine.name}" — ${message}`);
@@ -129,7 +128,7 @@ async function runDueRoutines(anthropicClient) {
 }
 
 // Pattern learning: after 7 days of usage, suggest personalised routine
-async function analyseUsagePatterns(anthropicClient) {
+async function analyseUsagePatterns() {
     try {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const { data: rows } = await _sbr.from('memory')
@@ -172,13 +171,13 @@ async function analyseUsagePatterns(anthropicClient) {
     }
 }
 
-async function initRoutineAgent(anthropicClient) {
+async function initRoutineAgent() {
     await ensureDefaultRoutines();
     console.log("ROUTINE AGENT: Started, checking every minute.");
-    setInterval(() => runDueRoutines(anthropicClient), 60 * 1000);
+    setInterval(() => runDueRoutines(), 60 * 1000);
 
     // Pattern analysis: run once a day
-    setInterval(() => analyseUsagePatterns(anthropicClient), 24 * 60 * 60 * 1000);
+    setInterval(() => analyseUsagePatterns(), 24 * 60 * 60 * 1000);
 }
 
 module.exports = { initRoutineAgent, runDueRoutines };

@@ -61,7 +61,7 @@ async function parseEmailMessage(gmail, messageId) {
     return { sender, subject, body: body.slice(0, 500), gmailId: messageId };
 }
 
-async function triageEmail(email, anthropicClient) {
+async function triageEmail(email) {
     const prompt = `You are an email triage agent. Analyse this email and respond in JSON only:
 {
   "priority": "urgent" or "normal" or "low",
@@ -96,7 +96,7 @@ Body: ${email.body}`;
     }
 }
 
-async function checkEmails(anthropicClient) {
+async function checkEmails() {
     const gmail = await getGmailClient();
     if (!gmail) {
         console.log("EMAIL AGENT: Gmail not configured, skipping.");
@@ -118,7 +118,7 @@ async function checkEmails(anthropicClient) {
             if (existing) continue;
 
             const email  = await parseEmailMessage(gmail, msg.id);
-            const triage = await triageEmail(email, anthropicClient);
+            const triage = await triageEmail(email);
 
             // Force urgent for failed payment emails regardless of Claude triage
             const subjectLc = (email.subject || "").toLowerCase();
@@ -218,15 +218,14 @@ async function sendEmailReply(gmailId, to, subject, replyText) {
     }
 }
 
-async function initEmailAgent(anthropicClient) {
+async function initEmailAgent() {
     if (!process.env.GMAIL_CLIENT_ID) {
         console.log("EMAIL AGENT: Skipped — no GMAIL_CLIENT_ID in env.");
         return;
     }
     console.log("EMAIL AGENT: Starting, polling every 5 minutes.");
-    // Initial check after 10s to let server finish starting
-    setTimeout(() => checkEmails(anthropicClient), 10000);
-    setInterval(() => checkEmails(anthropicClient), 5 * 60 * 1000);
+    setTimeout(() => checkEmails(), 10000);
+    setInterval(() => checkEmails(), 5 * 60 * 1000);
 }
 
 module.exports = { checkEmails, sendEmailReply, initEmailAgent };
