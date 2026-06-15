@@ -1,10 +1,6 @@
 "use strict";
 
-const { createClient } = require('@supabase/supabase-js');
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = require('./lib/clients').getSupabaseClient();
 
 function check({ data, error }, label) {
     if (error) throw new Error(`[DB] ${label}: ${error.message}`);

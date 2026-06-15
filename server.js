@@ -89,6 +89,7 @@ const _pcm         = require('./lib/persistent-cognition-manager');
 const _eae         = require('./lib/executive-arbitration-engine');
 const _spe         = require('./lib/strategic-planning-engine');
 const _gateway     = require('./lib/memory/gateway');
+const { embedText } = require('./lib/embed');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 
@@ -117,8 +118,7 @@ function detectDomain(text) {
     return null;
 }
 // ── End detectDomain ──────────────────────────────────────────────────────────
-const { createClient: _sbAdmin } = require('@supabase/supabase-js');
-const sbAdmin = _sbAdmin(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const sbAdmin = require('./lib/clients').getSupabaseClient();
 const {
     pgListDocuments,
     pgSaveDocument,
@@ -535,9 +535,7 @@ app.use("/api/voice-chat", voiceLimiter);
 const authLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Too many login attempts, try again later." } });
 app.use("/auth/login", authLimiter);
 
-const client = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY
-});
+const client = require('./lib/clients').getAnthropicClient();
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const HAIKU_MODEL = "claude-haiku-4-5-20251001";
@@ -1379,43 +1377,6 @@ function searchDocuments(keyword) {
     }
 }
 
-let _voyage429Until = 0;
-
-async function embedText(text) {
-    // Voyage (primary — higher quality)
-    if (process.env.VOYAGE_API_KEY && Date.now() >= _voyage429Until) {
-        try {
-            const resp = await axios.post(
-                "https://api.voyageai.com/v1/embeddings",
-                { model: "voyage-3-lite", input: [text.slice(0, 2000)] },
-                { headers: { Authorization: `Bearer ${process.env.VOYAGE_API_KEY}` }, timeout: 5000 }
-            );
-            return resp.data?.data?.[0]?.embedding || null;
-        } catch (err) {
-            if (err.response?.status === 429) {
-                _voyage429Until = Date.now() + 60000;
-                console.warn("VOYAGE: 429 rate limit — circuit breaker active for 60s");
-            } else {
-                console.error("VOYAGE EMBED ERROR:", err.message);
-            }
-        }
-    }
-    // Gemini fallback (text-embedding-004, 768-dim)
-    const googleKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
-    if (googleKey) {
-        try {
-            const resp = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent`,
-                { model: 'models/text-embedding-004', content: { parts: [{ text: text.slice(0, 2000) }] } },
-                { timeout: 8000, headers: { 'x-goog-api-key': googleKey } }
-            );
-            return resp.data?.embedding?.values || null;
-        } catch (err) {
-            console.error("GEMINI EMBED ERROR:", err.message);
-        }
-    }
-    return null;
-}
 
 async function embedAndStoreDocument(filename, content) {
     try {
@@ -1430,12 +1391,7 @@ async function embedAndStoreDocument(filename, content) {
 async function getRelevantDocuments(question) {
     const q = (question || "").trim().toLowerCase();
 
-    if (Date.now() < _voyage429Until) {
-        console.log("Voyage 429 - falling back to keyword search");
-        return pgSearchDocuments(q).catch(() => []);
-    }
-
-    // Try semantic vector search (Voyage primary, Gemini fallback)
+    // Try semantic vector search (Voyage primary, Gemini fallback — circuit breakers in lib/embed)
     if (q) {
         try {
             const embedding = await embedText(q);
@@ -11700,7 +11656,6 @@ server.listen(PORT, () => {
 
         // 4. Embedding probe (Voyage or Gemini) — warm up embed module
         try {
-            const { embedText } = require('./lib/embed');
             const vec = await embedText('startup probe');
             const ok = Array.isArray(vec) && vec.length > 0;
             console.log(ok ? `[Boot] ✓ embed OK (${vec.length} dims)` : '[Boot] ✗ embed returned null — check VOYAGE_API_KEY or GOOGLE_API_KEY');
