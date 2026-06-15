@@ -5,18 +5,13 @@
 // All analysis functions are synchronous and zero-cost (no API).
 // generateReflectionLesson() uses Haiku when deeper synthesis is needed.
 
-const Anthropic  = require('@anthropic-ai/sdk');
 const localMemory = require('./obsidian-memory');
 const runtime     = require('../lib/models/runtime');
 
 const _MODEL = 'claude-haiku-4-5-20251001';
-let _client  = null;
 
 function _getClient() {
-    if (!_client && process.env.ANTHROPIC_API_KEY) {
-        _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    }
-    return _client;
+    return process.env.ANTHROPIC_API_KEY ? require('../lib/clients').getAnthropicClient() : null;
 }
 
 // ── Knowledge Scoring ──────────────────────────────────────────────────────────

@@ -2,15 +2,13 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync, spawnSync } = require('child_process');
-const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const memory = require('./obsidian-memory');
 
-// Module-level clients — created once, reused across all calls
 const _sb = process.env.SUPABASE_URL
     ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
     : null;
-const _anthro = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const _anthro = require('../lib/clients').getAnthropicClient();
 const runtime = require('../lib/models/runtime');
 
 // In-memory plan cache — avoids re-planning the same feature on retries

@@ -3,7 +3,6 @@ const { obsidianRead, obsidianWrite } = require('./obsidian-client');
 const localMemory = require('./obsidian-memory');
 const runtime     = require('../lib/models/runtime');
 
-let _anthropic;
 
 // Lazy-load markitdown bridge — optional dependency
 const _mkd = (() => { try { return require('./markitdown-bridge'); } catch { return null; } })();
@@ -86,9 +85,7 @@ async function consolidateWiki() {
         console.warn('[Wiki] ANTHROPIC_API_KEY not set — skipping consolidation');
         return;
     }
-    const Anthropic = require('@anthropic-ai/sdk');
-    if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const client = _anthropic;
+    const client = require('../lib/clients').getAnthropicClient();
     const model = 'claude-haiku-4-5-20251001';
 
     const today = new Date().toISOString().split('T')[0];
