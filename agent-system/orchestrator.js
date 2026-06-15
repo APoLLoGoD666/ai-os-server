@@ -1,5 +1,4 @@
 "use strict";
-const Anthropic = require('@anthropic-ai/sdk');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -979,7 +978,7 @@ async function runAgentTeam(spec, taskId) {
         agentTokens:      {},
         traceId:          randomUUID(),
         paidClient:       process.env.ANTHROPIC_API_KEY
-            ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+            ? require('../lib/clients').getAnthropicClient()
             : null,
         agentModels:      null,
         obsidianContext:  '',
