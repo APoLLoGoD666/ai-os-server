@@ -2,12 +2,9 @@ require("dotenv").config();
 
 const fs = require("fs");
 const path = require("path");
-const Anthropic = require("@anthropic-ai/sdk");
 const runtime = require('./lib/models/runtime');
 
-const client = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY
-});
+const client = require('./lib/clients').getAnthropicClient();
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const ROOT = __dirname;

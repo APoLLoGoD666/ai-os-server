@@ -3,7 +3,6 @@
 // Supports multi-stage execution plans: PLANNING → EXECUTION → VALIDATION → REFLECTION → COMPLETION.
 // Extends task-planner.js. No orchestrator internals modified.
 
-const Anthropic = require('@anthropic-ai/sdk');
 const { decomposeGoal, planToSpecs, estimateComplexity, scoreRisk } = require('./task-planner');
 const runtime   = require('../lib/models/runtime');
 
@@ -14,8 +13,7 @@ const STAGE_STATUS = Object.freeze({
 });
 
 function _getClient() {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    return apiKey ? new Anthropic({ apiKey }) : null;
+    return process.env.ANTHROPIC_API_KEY ? require('../lib/clients').getAnthropicClient() : null;
 }
 
 // ── Task size heuristics ───────────────────────────────────────────────────────
