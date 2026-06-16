@@ -619,9 +619,16 @@ Reply JSON: {"passed":bool,"failedCases":["what failed and why"]}`;
             300, 'VALIDATOR', ctx
         );
         try { result = _parseJSON(res.content[0]?.text?.trim()); }
-        catch { result = { passed: true, failedCases: [] }; }
+        catch { result = { passed: false, failedCases: ['VALIDATOR parse error: invalid JSON response'] }; }
     } catch (e) {
-        result = { passed: true, failedCases: [], note: e.message };
+        result = { passed: false, failedCases: [`VALIDATOR exception: ${e.message}`], note: e.message };
+    }
+
+    // Schema normalization: coerce schema-invalid but JSON-valid responses to canonical failure
+    if (typeof result.passed !== 'boolean') {
+        result = { passed: false, failedCases: ['VALIDATOR schema error: passed field missing or non-boolean'], note: null };
+    } else if (!Array.isArray(result.failedCases)) {
+        result.failedCases = result.passed ? [] : ['VALIDATOR schema error: failedCases field missing or non-array'];
     }
 
     console.log(`[Validator] passed=${result.passed}${(result.failedCases || []).length ? ' — ' + result.failedCases[0] : ''}`);
@@ -839,7 +846,8 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity, ctx
     if (!_sb) return; // Supabase not configured — skip silently
     const agentSummary = agentLogs.map(l => ({
         role: l.role, duration: l.duration,
-        passed: l.result?.passed, error: l.result?.error || l.result?.commitHash
+        passed: l.result?.passed, error: l.result?.error || l.result?.commitHash,
+        note: l.result?.note ?? null
     }));
     const durationMs = ctx?.startTime ? Date.now() - ctx.startTime : null;
     const baseRow = {
@@ -877,6 +885,7 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity, ctx
                 duration_ms: l.duration || null,
                 attempt:     1,
                 created_at:  new Date().toISOString(),
+                note:        l.result?.note ?? null,
             };
         });
         const { error: se } = await _sb.from('apex_agent_stages').insert(stageRows);
