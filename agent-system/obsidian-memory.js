@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { obsidianRead: _apiRead, obsidianWrite: _apiWrite, obsidianAppend: _apiAppend } = require('./obsidian-client');
+const _gateway = require('../lib/memory/gateway');
 
 const VAULT = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
 
@@ -80,24 +81,13 @@ module.exports = {
 
         let supabaseOk = null; // null = skipped (table missing or no client)
         if (!_sbLessonsMissing) {
-            const sb = _getSb();
-            if (sb) {
-                try {
-                    const row = { lesson, created_at: now.toISOString() };
-                    if (taskId)  row.task_id  = taskId;
-                    if (traceId) row.trace_id = traceId;
-                    const { error } = await sb.from('apex_lessons').insert(row);
-                    if (error) {
-                        if (error.message.includes('does not exist')) _sbLessonsMissing = true;
-                        console.error('[ObsidianMemory] apex_lessons INSERT FAILED:', error.message);
-                        supabaseOk = false;
-                    } else {
-                        supabaseOk = true;
-                    }
-                } catch (e) {
-                    console.error('[ObsidianMemory] apex_lessons INSERT error:', e.message);
-                    supabaseOk = false;
-                }
+            try {
+                await _gateway.storeMemory({ layer: 10, content: lesson, taskId, source: 'obsidian-memory' });
+                supabaseOk = true;
+            } catch (e) {
+                if (e.message && e.message.includes('does not exist')) _sbLessonsMissing = true;
+                console.error('[ObsidianMemory] apex_lessons INSERT FAILED:', e.message);
+                supabaseOk = false;
             }
         }
         return { diskOk, supabaseOk };

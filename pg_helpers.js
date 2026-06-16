@@ -1,6 +1,7 @@
 "use strict";
 
 const supabase = require('./lib/clients').getSupabaseClient();
+const { sanitize } = require('./lib/memory/sanitizer');
 
 function check({ data, error }, label) {
     if (error) throw new Error(`[DB] ${label}: ${error.message}`);
@@ -83,8 +84,9 @@ async function pgUpdateDocumentSummary(filename, summary) {
 ========================= */
 
 async function pgAddMemory(role, message) {
+    const safeMessage = sanitize(message);
     check(
-        await supabase.from('memory').insert({ role, message }),
+        await supabase.from('memory').insert({ role, message: safeMessage }),
         'pgAddMemory insert'
     );
     const all = check(
