@@ -82,7 +82,7 @@ module.exports = {
         let supabaseOk = null; // null = skipped (table missing or no client)
         if (!_sbLessonsMissing) {
             try {
-                await _gateway.storeMemory({ layer: 10, content: lesson, taskId, source: 'obsidian-memory' });
+                await _gateway.storeMemory({ layer: 10, content: lesson, taskId, traceId, source: 'obsidian-memory' });
                 supabaseOk = true;
             } catch (e) {
                 if (e.message && e.message.includes('does not exist')) _sbLessonsMissing = true;
