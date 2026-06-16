@@ -556,7 +556,7 @@ Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}
             const text = response.content[0]?.text?.trim();
             let fileResult;
             try { fileResult = _parseJSON(text); }
-            catch { fileResult = { file: filename, passed: true, issues: [] }; }
+            catch { fileResult = { file: filename, passed: false, issues: [] }; }
             if (!fileResult.passed) {
                 passed = false;
                 (fileResult.issues || []).forEach(i => issues.push(`${filename}: ${i}`));
@@ -1525,7 +1525,7 @@ async function runAgentTeam(spec, taskId) {
                 if (attempt < MAX_ATTEMPTS) { console.log('[Orchestrator] retrying after review failure...'); continue; }
                 return _fail(lastFailure);
             }
-            if (!validatorLog.result.passed && (validatorLog.result.failedCases || []).length > 0) {
+            if (!validatorLog.result.passed) {
                 _rollback();
                 lastFailure = `VALIDATOR: ${(validatorLog.result.failedCases || []).join('; ')}`;
                 if (attempt < MAX_ATTEMPTS) { console.log('[Orchestrator] retrying after validator failure...'); continue; }
