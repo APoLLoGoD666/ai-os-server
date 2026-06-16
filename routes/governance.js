@@ -10,8 +10,10 @@ const { createClient } = require('@supabase/supabase-js');
 const router  = express.Router();
 router.use(require('../lib/app-auth'));
 
+let _client = null;
 function _sb() {
-    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    if (!_client) _client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    return _client;
 }
 
 // GET /api/governance/forensics/:taskId
