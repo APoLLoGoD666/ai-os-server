@@ -24,7 +24,7 @@ function _reality()   { return require('../lib/intelligence/reality-loop'); }
 // ─── Health (existing + new engine) ───────────────────────────────────────────
 
 // Compute fresh snapshot via legacy aggregator (backward compat)
-router.get('/health', _auth, async (req, res) => {
+router.get('/civilization/health', _auth, async (req, res) => {
   try {
     const snapshot = await computeCivilizationHealth();
     res.json({ ok: true, ...snapshot });
@@ -34,7 +34,7 @@ router.get('/health', _auth, async (req, res) => {
 });
 
 // Return the most recent persisted snapshot (fast path)
-router.get('/health/latest', _auth, async (req, res) => {
+router.get('/civilization/health/latest', _auth, async (req, res) => {
   try {
     const { data, error } = await _sb()
       .from('civilization_health_snapshots')
@@ -49,7 +49,7 @@ router.get('/health/latest', _auth, async (req, res) => {
 });
 
 // Historical snapshots for trend view
-router.get('/health/history', _auth, async (req, res) => {
+router.get('/civilization/health/history', _auth, async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days || '30'), 90);
     const since = new Date(Date.now() - days * 86_400_000).toISOString();
@@ -66,14 +66,14 @@ router.get('/health/history', _auth, async (req, res) => {
 });
 
 // Full 7-dimension score + snapshot via new engine
-router.post('/health/snapshot', _auth, async (req, res) => {
+router.post('/civilization/health/snapshot', _auth, async (req, res) => {
   try {
     const snapshot = await _health().snapshot();
     res.json({ ok: true, snapshot });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/health/trend', _auth, async (req, res) => {
+router.get('/civilization/health/trend', _auth, async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days || '30'), 90);
     const trend = await _health().getTrend(days);
@@ -83,7 +83,7 @@ router.get('/health/trend', _auth, async (req, res) => {
 
 // ─── Global Intelligence ───────────────────────────────────────────────────────
 
-router.post('/intelligence/ingest', _auth, async (req, res) => {
+router.post('/civilization/intelligence/ingest', _auth, async (req, res) => {
   try {
     const { domain, signals = [] } = req.body;
     const events = await _gig().ingest(domain, signals);
@@ -91,7 +91,7 @@ router.post('/intelligence/ingest', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/intelligence/scan', _auth, async (req, res) => {
+router.post('/civilization/intelligence/scan', _auth, async (req, res) => {
   try {
     const { domain } = req.body;
     const events = domain ? await _gig().scan(domain) : await _gig().scanAll();
@@ -99,7 +99,7 @@ router.post('/intelligence/scan', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/intelligence/events', _auth, async (req, res) => {
+router.get('/civilization/intelligence/events', _auth, async (req, res) => {
   try {
     const { domain, minSignificance, limit = 20 } = req.query;
     const events = await _gig().getRecentEvents({
@@ -111,7 +111,7 @@ router.get('/intelligence/events', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/intelligence/alerts', _auth, async (req, res) => {
+router.get('/civilization/intelligence/alerts', _auth, async (req, res) => {
   try {
     const alerts = await _gig().getAlerts();
     res.json({ ok: true, alerts });
@@ -120,7 +120,7 @@ router.get('/intelligence/alerts', _auth, async (req, res) => {
 
 // ─── Opportunities ─────────────────────────────────────────────────────────────
 
-router.post('/opportunities/detect', _auth, async (req, res) => {
+router.post('/civilization/opportunities/detect', _auth, async (req, res) => {
   try {
     const { founderInterests, companyObjectives, marketSignals } = req.body || {};
     const opportunities = await _opp().detect({ founderInterests, companyObjectives, marketSignals });
@@ -128,7 +128,7 @@ router.post('/opportunities/detect', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/opportunities', _auth, async (req, res) => {
+router.get('/civilization/opportunities', _auth, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || '20'), 50);
     const opportunities = await _opp().getTopOpportunities(limit);
@@ -136,7 +136,7 @@ router.get('/opportunities', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/opportunities/:id/action', _auth, async (req, res) => {
+router.post('/civilization/opportunities/:id/action', _auth, async (req, res) => {
   try {
     await _opp().action(req.params.id, req.body?.notes || '');
     res.json({ ok: true });
@@ -145,7 +145,7 @@ router.post('/opportunities/:id/action', _auth, async (req, res) => {
 
 // ─── Executive Council ─────────────────────────────────────────────────────────
 
-router.post('/council/deliberate', _auth, async (req, res) => {
+router.post('/civilization/council/deliberate', _auth, async (req, res) => {
   try {
     const { question, context = {} } = req.body;
     if (!question) return res.status(400).json({ ok: false, error: 'question required' });
@@ -154,7 +154,7 @@ router.post('/council/deliberate', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/council/history', _auth, async (req, res) => {
+router.get('/civilization/council/history', _auth, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || '10'), 50);
     const deliberations = await _council().getRecentDeliberations(limit);
@@ -164,7 +164,7 @@ router.get('/council/history', _auth, async (req, res) => {
 
 // ─── Digital Twin ──────────────────────────────────────────────────────────────
 
-router.post('/twin/simulate', _auth, async (req, res) => {
+router.post('/civilization/twin/simulate', _auth, async (req, res) => {
   try {
     const { type, subject, params = {} } = req.body;
     if (!type || !subject) return res.status(400).json({ ok: false, error: 'type and subject required' });
@@ -183,7 +183,7 @@ router.post('/twin/simulate', _auth, async (req, res) => {
 
 // ─── Strategy ─────────────────────────────────────────────────────────────────
 
-router.post('/strategy/generate', _auth, async (req, res) => {
+router.post('/civilization/strategy/generate', _auth, async (req, res) => {
   try {
     const { horizon } = req.body || {};
     let result;
@@ -199,7 +199,7 @@ router.post('/strategy/generate', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/strategy/plans', _auth, async (req, res) => {
+router.get('/civilization/strategy/plans', _auth, async (req, res) => {
   try {
     const plans = await _strat().getLatestPlans();
     res.json({ ok: true, plans });
@@ -208,7 +208,7 @@ router.get('/strategy/plans', _auth, async (req, res) => {
 
 // ─── Civilization Runtime ──────────────────────────────────────────────────────
 
-router.post('/runtime/start', _auth, async (req, res) => {
+router.post('/civilization/runtime/start', _auth, async (req, res) => {
   try {
     const intervalMs = parseInt(req.body?.intervalMs || String(6 * 60 * 60 * 1000));
     await _civrt().start(intervalMs);
@@ -216,20 +216,20 @@ router.post('/runtime/start', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/runtime/stop', _auth, async (req, res) => {
+router.post('/civilization/runtime/stop', _auth, async (req, res) => {
   try {
     _civrt().stop();
     res.json({ ok: true, running: false, cyclesCompleted: _civrt().getCycleCount() });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/runtime/status', _auth, async (req, res) => {
+router.get('/civilization/runtime/status', _auth, async (req, res) => {
   try {
     res.json({ ok: true, running: _civrt().isRunning(), cyclesCompleted: _civrt().getCycleCount() });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/runtime/tick', _auth, async (req, res) => {
+router.post('/civilization/runtime/tick', _auth, async (req, res) => {
   try {
     const result = await _civrt().runOnce();
     res.json({ ok: true, cycle: result });
@@ -238,7 +238,7 @@ router.post('/runtime/tick', _auth, async (req, res) => {
 
 // ─── Executive Performance ─────────────────────────────────────────────────────
 
-router.get('/executive/performance', _auth, async (req, res) => {
+router.get('/civilization/executive/performance', _auth, async (req, res) => {
   try {
     const { entityId } = req.query;
     const stats = await _execPerf().computeStats(entityId || null);
@@ -246,7 +246,7 @@ router.get('/executive/performance', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/executive/performance/record', _auth, async (req, res) => {
+router.post('/civilization/executive/performance/record', _auth, async (req, res) => {
   try {
     const { entityId, recommendation, decisionId, confidenceAtTime } = req.body;
     if (!entityId || !recommendation) return res.status(400).json({ ok: false, error: 'entityId and recommendation required' });
@@ -255,7 +255,7 @@ router.post('/executive/performance/record', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/executive/performance/:id/outcome', _auth, async (req, res) => {
+router.post('/civilization/executive/performance/:id/outcome', _auth, async (req, res) => {
   try {
     const { outcome, outcomeMatched, impactScore, notes } = req.body;
     if (outcome === undefined || outcomeMatched === undefined) return res.status(400).json({ ok: false, error: 'outcome and outcomeMatched required' });
@@ -264,7 +264,7 @@ router.post('/executive/performance/:id/outcome', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/executive/coverage', _auth, async (req, res) => {
+router.get('/civilization/executive/coverage', _auth, async (req, res) => {
   try {
     const coverage = await _execPerf().getDecisionCoverage();
     res.json({ ok: true, coverage });
@@ -273,7 +273,7 @@ router.get('/executive/coverage', _auth, async (req, res) => {
 
 // ─── Decision Outcomes ─────────────────────────────────────────────────────────
 
-router.post('/decisions/track', _auth, async (req, res) => {
+router.post('/civilization/decisions/track', _auth, async (req, res) => {
   try {
     const { decisionSource, decisionId, question, expectedOutcome } = req.body;
     if (!question || !expectedOutcome) return res.status(400).json({ ok: false, error: 'question and expectedOutcome required' });
@@ -282,7 +282,7 @@ router.post('/decisions/track', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/decisions/:id/measure', _auth, async (req, res) => {
+router.post('/civilization/decisions/:id/measure', _auth, async (req, res) => {
   try {
     const { actualOutcome, variance, lessonsLearned } = req.body;
     if (!actualOutcome) return res.status(400).json({ ok: false, error: 'actualOutcome required' });
@@ -291,21 +291,21 @@ router.post('/decisions/:id/measure', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/decisions/pending', _auth, async (req, res) => {
+router.get('/civilization/decisions/pending', _auth, async (req, res) => {
   try {
     const pending = await _outcomes().getPending();
     res.json({ ok: true, pending });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/decisions/measured', _auth, async (req, res) => {
+router.get('/civilization/decisions/measured', _auth, async (req, res) => {
   try {
     const measured = await _outcomes().getMeasured();
     res.json({ ok: true, measured });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/decisions/summary', _auth, async (req, res) => {
+router.get('/civilization/decisions/summary', _auth, async (req, res) => {
   try {
     const summary = await _outcomes().getSummary();
     res.json({ ok: true, summary });
@@ -314,14 +314,14 @@ router.get('/decisions/summary', _auth, async (req, res) => {
 
 // ─── Resource Authority ────────────────────────────────────────────────────────
 
-router.get('/resources', _auth, async (req, res) => {
+router.get('/civilization/resources', _auth, async (req, res) => {
   try {
     const summary = await _resources().getResourceSummary();
     res.json({ ok: true, resources: summary });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/resources/validate', _auth, async (req, res) => {
+router.post('/civilization/resources/validate', _auth, async (req, res) => {
   try {
     const { estimatedCostUsd = 0, estimatedTokens = 0, taskId } = req.body;
     const result = await _resources().validate({ estimatedCostUsd, estimatedTokens, taskId });
@@ -329,7 +329,7 @@ router.post('/resources/validate', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/resources/sync', _auth, async (req, res) => {
+router.post('/civilization/resources/sync', _auth, async (req, res) => {
   try {
     const result = await _resources().syncFromAgentRuns();
     res.json({ ok: true, ...result });
@@ -338,7 +338,7 @@ router.post('/resources/sync', _auth, async (req, res) => {
 
 // ─── Value Creation ────────────────────────────────────────────────────────────
 
-router.get('/value', _auth, async (req, res) => {
+router.get('/civilization/value', _auth, async (req, res) => {
   try {
     const since = req.query.since || null;
     const netValue = await _value().computeNetValue({ since });
@@ -346,7 +346,7 @@ router.get('/value', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/value/record', _auth, async (req, res) => {
+router.post('/civilization/value/record', _auth, async (req, res) => {
   try {
     const { eventType, opportunityId, description, valueUsd, costUsd, evidence } = req.body;
     if (!eventType || !description) return res.status(400).json({ ok: false, error: 'eventType and description required' });
@@ -355,7 +355,7 @@ router.post('/value/record', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/value/events', _auth, async (req, res) => {
+router.get('/civilization/value/events', _auth, async (req, res) => {
   try {
     const events = await _value().getValueEvents({ eventType: req.query.eventType, limit: parseInt(req.query.limit || '20') });
     res.json({ ok: true, events });
@@ -364,7 +364,7 @@ router.get('/value/events', _auth, async (req, res) => {
 
 // ─── Reality Loop ──────────────────────────────────────────────────────────────
 
-router.post('/reality/start', _auth, async (req, res) => {
+router.post('/civilization/reality/start', _auth, async (req, res) => {
   try {
     const intervalMs = parseInt(req.body?.intervalMs || String(4 * 60 * 60 * 1000));
     await _reality().start(intervalMs);
@@ -372,20 +372,20 @@ router.post('/reality/start', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/reality/stop', _auth, async (req, res) => {
+router.post('/civilization/reality/stop', _auth, async (req, res) => {
   try {
     _reality().stop();
     res.json({ ok: true, running: false });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/reality/status', _auth, async (req, res) => {
+router.get('/civilization/reality/status', _auth, async (req, res) => {
   try {
     res.json({ ok: true, ..._reality().status() });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/reality/tick', _auth, async (req, res) => {
+router.post('/civilization/reality/tick', _auth, async (req, res) => {
   try {
     const result = await _reality().runOnce();
     res.json({ ok: true, cycle: result });

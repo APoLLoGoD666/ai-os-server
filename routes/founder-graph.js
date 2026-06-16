@@ -10,7 +10,7 @@ function _fkg() { return require('../lib/founder/graph'); }
 // ─── Build / Stats ────────────────────────────────────────────────────────────
 
 // Build or rebuild the graph from static definition (idempotent)
-router.post('/build', _auth, async (req, res) => {
+router.post('/founder-graph/build', _auth, async (req, res) => {
   try {
     const result = await _fkg().buildFounderGraph();
     res.json({ ok: true, ...result });
@@ -18,7 +18,7 @@ router.post('/build', _auth, async (req, res) => {
 });
 
 // Graph statistics
-router.get('/stats', _auth, async (req, res) => {
+router.get('/founder-graph/stats', _auth, async (req, res) => {
   try {
     const stats = await _fkg().getGraphStats();
     res.json({ ok: true, stats });
@@ -28,7 +28,7 @@ router.get('/stats', _auth, async (req, res) => {
 // ─── Node Operations ──────────────────────────────────────────────────────────
 
 // List all nodes (optionally filtered by type or layer)
-router.get('/nodes', _auth, async (req, res) => {
+router.get('/founder-graph/nodes', _auth, async (req, res) => {
   try {
     const { getSupabaseClient } = require('../lib/clients');
     const { type, layer, limit = 200 } = req.query;
@@ -42,7 +42,7 @@ router.get('/nodes', _auth, async (req, res) => {
 });
 
 // Get a single node by ID
-router.get('/nodes/:id', _auth, async (req, res) => {
+router.get('/founder-graph/nodes/:id', _auth, async (req, res) => {
   try {
     const node = await _fkg().getNode(req.params.id);
     res.json({ ok: true, node });
@@ -50,7 +50,7 @@ router.get('/nodes/:id', _auth, async (req, res) => {
 });
 
 // Get node neighbors
-router.get('/nodes/:id/neighbors', _auth, async (req, res) => {
+router.get('/founder-graph/nodes/:id/neighbors', _auth, async (req, res) => {
   try {
     const { relationship } = req.query;
     const neighbors = await _fkg().getNeighbors(req.params.id, relationship || null);
@@ -59,7 +59,7 @@ router.get('/nodes/:id/neighbors', _auth, async (req, res) => {
 });
 
 // Update a node's properties
-router.patch('/nodes/:id', _auth, async (req, res) => {
+router.patch('/founder-graph/nodes/:id', _auth, async (req, res) => {
   try {
     const { properties } = req.body;
     if (!properties || typeof properties !== 'object') return res.status(400).json({ ok: false, error: 'properties object required' });
@@ -71,7 +71,7 @@ router.patch('/nodes/:id', _auth, async (req, res) => {
 // ─── Edge Operations ──────────────────────────────────────────────────────────
 
 // List all edges (optionally filtered by relationship)
-router.get('/edges', _auth, async (req, res) => {
+router.get('/founder-graph/edges', _auth, async (req, res) => {
   try {
     const { getSupabaseClient } = require('../lib/clients');
     const { relationship, from_id, to_id, limit = 500 } = req.query;
@@ -88,7 +88,7 @@ router.get('/edges', _auth, async (req, res) => {
 // ─── Goal Intelligence ────────────────────────────────────────────────────────
 
 // Get full dependency tree for a goal
-router.get('/goals/:id/dependencies', _auth, async (req, res) => {
+router.get('/founder-graph/goals/:id/dependencies', _auth, async (req, res) => {
   try {
     const tree = await _fkg().getGoalDependencies(req.params.id);
     res.json({ ok: true, ...tree });
@@ -96,7 +96,7 @@ router.get('/goals/:id/dependencies', _auth, async (req, res) => {
 });
 
 // Get all goal nodes with their dependency counts
-router.get('/goals', _auth, async (req, res) => {
+router.get('/founder-graph/goals', _auth, async (req, res) => {
   try {
     const { getSupabaseClient } = require('../lib/clients');
     const { data, error } = await getSupabaseClient()
@@ -109,7 +109,7 @@ router.get('/goals', _auth, async (req, res) => {
 // ─── Alignment & Conflict Detection ──────────────────────────────────────────
 
 // Calculate founder graph alignment score for any text
-router.post('/align', _auth, async (req, res) => {
+router.post('/founder-graph/align', _auth, async (req, res) => {
   try {
     const { text } = req.body;
     if (!text) return res.status(400).json({ ok: false, error: 'text required' });
@@ -119,7 +119,7 @@ router.post('/align', _auth, async (req, res) => {
 });
 
 // Detect anti-goal conflicts in any text
-router.post('/anti-goals/detect', _auth, async (req, res) => {
+router.post('/founder-graph/anti-goals/detect', _auth, async (req, res) => {
   try {
     const { text } = req.body;
     if (!text) return res.status(400).json({ ok: false, error: 'text required' });
@@ -131,7 +131,7 @@ router.post('/anti-goals/detect', _auth, async (req, res) => {
 // ─── Search ───────────────────────────────────────────────────────────────────
 
 // Search the founder graph by keyword
-router.get('/search', _auth, async (req, res) => {
+router.get('/founder-graph/search', _auth, async (req, res) => {
   try {
     const { q } = req.query;
     if (!q) return res.status(400).json({ ok: false, error: 'q query param required' });
@@ -143,7 +143,7 @@ router.get('/search', _auth, async (req, res) => {
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 // Get graph context summary (used by all subsystems)
-router.get('/context', _auth, async (req, res) => {
+router.get('/founder-graph/context', _auth, async (req, res) => {
   try {
     const { description = '' } = req.query;
     const ctx = await _fkg().getFounderGraphContext(description);
@@ -154,7 +154,7 @@ router.get('/context', _auth, async (req, res) => {
 // ─── Shortest Path ────────────────────────────────────────────────────────────
 
 // BFS shortest path between two nodes
-router.get('/path', _auth, async (req, res) => {
+router.get('/founder-graph/path', _auth, async (req, res) => {
   try {
     const { from, to } = req.query;
     if (!from || !to) return res.status(400).json({ ok: false, error: 'from and to query params required' });

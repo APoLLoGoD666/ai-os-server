@@ -10,7 +10,7 @@ function _sie() { return require('../lib/intelligence/sie'); }
 // ─── Full Analysis ────────────────────────────────────────────────────────────
 
 // Run full strategic analysis (goals + opps + threats + bottlenecks + brief)
-router.post('/run', _auth, async (req, res) => {
+router.post('/strategic/run', _auth, async (req, res) => {
   try {
     const result = await _sie().runFullAnalysis();
     res.json({ ok: true, ...result });
@@ -20,7 +20,7 @@ router.post('/run', _auth, async (req, res) => {
 // ─── Executive Briefing ────────────────────────────────────────────────────────
 
 // Generate executive strategic briefing (6 points)
-router.get('/brief', _auth, async (req, res) => {
+router.get('/strategic/brief', _auth, async (req, res) => {
   try {
     const brief = await _sie().generateExecutiveBriefing();
     res.json({ ok: true, briefing: brief });
@@ -30,7 +30,7 @@ router.get('/brief', _auth, async (req, res) => {
 // ─── Component Analysis ───────────────────────────────────────────────────────
 
 // Goal analysis: progress, dependencies, probability, time estimates
-router.get('/goals', _auth, async (req, res) => {
+router.get('/strategic/goals', _auth, async (req, res) => {
   try {
     const goals = await _sie().analyzeGoals();
     res.json({ ok: true, goals, count: goals.length });
@@ -38,7 +38,7 @@ router.get('/goals', _auth, async (req, res) => {
 });
 
 // Opportunity scoring: full strategic score for all detected opportunities
-router.get('/opportunities', _auth, async (req, res) => {
+router.get('/strategic/opportunities', _auth, async (req, res) => {
   try {
     const opps = await _sie().analyzeOpportunities();
     res.json({ ok: true, opportunities: opps, count: opps.length });
@@ -46,7 +46,7 @@ router.get('/opportunities', _auth, async (req, res) => {
 });
 
 // Threat analysis: all active threats sorted by severity
-router.get('/threats', _auth, async (req, res) => {
+router.get('/strategic/threats', _auth, async (req, res) => {
   try {
     const threats = await _sie().analyzeThreats();
     const critical = threats.filter(t => t.severity === 'critical' || t.severity === 'existential');
@@ -55,7 +55,7 @@ router.get('/threats', _auth, async (req, res) => {
 });
 
 // Bottleneck detection: ranked by impact on empire growth
-router.get('/bottlenecks', _auth, async (req, res) => {
+router.get('/strategic/bottlenecks', _auth, async (req, res) => {
   try {
     const bottlenecks = await _sie().detectBottlenecks();
     res.json({ ok: true, bottlenecks, count: bottlenecks.length });
@@ -63,7 +63,7 @@ router.get('/bottlenecks', _auth, async (req, res) => {
 });
 
 // Strategic priority ranking of all actionable items
-router.get('/priority', _auth, async (req, res) => {
+router.get('/strategic/priority', _auth, async (req, res) => {
   try {
     const ranked = await _sie().getStrategicPriority();
     res.json({ ok: true, ranked, count: ranked.length });
@@ -73,7 +73,7 @@ router.get('/priority', _auth, async (req, res) => {
 // ─── Recommendations ──────────────────────────────────────────────────────────
 
 // Get recommendations for a horizon: daily | weekly | monthly | long_term
-router.get('/recommendations/:horizon', _auth, async (req, res) => {
+router.get('/strategic/recommendations/:horizon', _auth, async (req, res) => {
   try {
     const { horizon } = req.params;
     const valid = ['daily', 'weekly', 'monthly', 'long_term'];
@@ -86,7 +86,7 @@ router.get('/recommendations/:horizon', _auth, async (req, res) => {
 // ─── Pathfinding ──────────────────────────────────────────────────────────────
 
 // Strategic path to a goal: current state → target state → fastest/safest/highest-EV path
-router.get('/path/:goalId', _auth, async (req, res) => {
+router.get('/strategic/path/:goalId', _auth, async (req, res) => {
   try {
     const path = await _sie().findStrategicPath(req.params.goalId);
     res.json({ ok: true, ...path });
@@ -96,7 +96,7 @@ router.get('/path/:goalId', _auth, async (req, res) => {
 // ─── Decision Support ─────────────────────────────────────────────────────────
 
 // Analyze a decision: score options, detect conflicts, synthesize recommendation
-router.post('/decision', _auth, async (req, res) => {
+router.post('/strategic/decision', _auth, async (req, res) => {
   try {
     const { decision, options, constraints = {} } = req.body;
     if (!decision) return res.status(400).json({ ok: false, error: 'decision required' });
@@ -109,7 +109,7 @@ router.post('/decision', _auth, async (req, res) => {
 // ─── Future Simulation ────────────────────────────────────────────────────────
 
 // Simulate outcomes across time horizons with best/expected/worst cases
-router.post('/simulate', _auth, async (req, res) => {
+router.post('/strategic/simulate', _auth, async (req, res) => {
   try {
     const { scenario = {}, horizons = ['30d', '90d', '1y', '5y', '10y'] } = req.body;
     if (!Array.isArray(horizons) || !horizons.length) return res.status(400).json({ ok: false, error: 'horizons array required' });
@@ -121,7 +121,7 @@ router.post('/simulate', _auth, async (req, res) => {
 // ─── History ──────────────────────────────────────────────────────────────────
 
 // Recent analyses log
-router.get('/history', _auth, async (req, res) => {
+router.get('/strategic/history', _auth, async (req, res) => {
   try {
     const { type, limit = 20 } = req.query;
     const { getSupabaseClient } = require('../lib/clients');
@@ -136,7 +136,7 @@ router.get('/history', _auth, async (req, res) => {
 });
 
 // Recent decisions
-router.get('/decisions', _auth, async (req, res) => {
+router.get('/strategic/decisions', _auth, async (req, res) => {
   try {
     const { limit = 10 } = req.query;
     const { getSupabaseClient } = require('../lib/clients');

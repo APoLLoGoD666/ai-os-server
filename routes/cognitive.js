@@ -10,7 +10,7 @@ const cog    = require('../lib/cognitive');
 // ── Retrieval Policy ──────────────────────────────────────────────────────────
 
 // POST /api/cognitive/retrieval-policy/determine
-router.post('/retrieval-policy/determine', async (req, res) => {
+router.post('/cognitive/retrieval-policy/determine', async (req, res) => {
     try {
         const { spec, taskId, traceId, riskLevel } = req.body || {};
         if (!spec) return res.status(400).json({ ok: false, error: 'spec required' });
@@ -19,7 +19,7 @@ router.post('/retrieval-policy/determine', async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/retrieval-policy/stats', async (req, res) => {
+router.get('/cognitive/retrieval-policy/stats', async (req, res) => {
     try {
         const stats = await cog.retrievalPolicy.getStats(parseInt(req.query.days) || 30);
         res.json({ ok: true, stats });
@@ -29,7 +29,7 @@ router.get('/retrieval-policy/stats', async (req, res) => {
 // ── Behavior Modification ─────────────────────────────────────────────────────
 
 // POST /api/cognitive/behavior/profile
-router.post('/behavior/profile', async (req, res) => {
+router.post('/cognitive/behavior/profile', async (req, res) => {
     try {
         const { contextPack, spec, taskId, traceId, riskScore } = req.body || {};
         if (!contextPack) return res.status(400).json({ ok: false, error: 'contextPack required' });
@@ -41,7 +41,7 @@ router.post('/behavior/profile', async (req, res) => {
 // ── Cognitive Policy ──────────────────────────────────────────────────────────
 
 // GET  /api/cognitive/policy/stats
-router.get('/policy/stats', async (req, res) => {
+router.get('/cognitive/policy/stats', async (req, res) => {
     try {
         const stats = await cog.cognitivePolicy.getStats(parseInt(req.query.days) || 30);
         res.json({ ok: true, stats });
@@ -51,7 +51,7 @@ router.get('/policy/stats', async (req, res) => {
 // ── Autonomy Engine ───────────────────────────────────────────────────────────
 
 // POST /api/cognitive/autonomy/evaluate
-router.post('/autonomy/evaluate', async (req, res) => {
+router.post('/cognitive/autonomy/evaluate', async (req, res) => {
     try {
         const { contextPack, spec, taskId, traceId } = req.body || {};
         if (!contextPack) return res.status(400).json({ ok: false, error: 'contextPack required' });
@@ -61,7 +61,7 @@ router.post('/autonomy/evaluate', async (req, res) => {
 });
 
 // GET  /api/cognitive/autonomy/stats
-router.get('/autonomy/stats', async (req, res) => {
+router.get('/cognitive/autonomy/stats', async (req, res) => {
     try {
         const stats = await cog.autonomy.getStats(parseInt(req.query.days) || 30);
         res.json({ ok: true, stats });
@@ -71,7 +71,7 @@ router.get('/autonomy/stats', async (req, res) => {
 // ── Retrieval Evaluation ──────────────────────────────────────────────────────
 
 // GET  /api/cognitive/retrieval-eval/quality
-router.get('/retrieval-eval/quality', async (req, res) => {
+router.get('/cognitive/retrieval-eval/quality', async (req, res) => {
     try {
         const stats = await cog.retrievalEval.getQualityStats(parseInt(req.query.days) || 30);
         res.json({ ok: true, stats });
@@ -79,7 +79,7 @@ router.get('/retrieval-eval/quality', async (req, res) => {
 });
 
 // GET  /api/cognitive/retrieval-eval/source-effectiveness
-router.get('/retrieval-eval/source-effectiveness', async (req, res) => {
+router.get('/cognitive/retrieval-eval/source-effectiveness', async (req, res) => {
     try {
         const data = await cog.retrievalEval.getSourceEffectiveness(parseInt(req.query.days) || 30);
         res.json({ ok: true, data });
@@ -89,7 +89,7 @@ router.get('/retrieval-eval/source-effectiveness', async (req, res) => {
 // ── Knowledge Decay ───────────────────────────────────────────────────────────
 
 // POST /api/cognitive/knowledge-decay/run
-router.post('/knowledge-decay/run', async (req, res) => {
+router.post('/cognitive/knowledge-decay/run', async (req, res) => {
     try {
         const result = await cog.knowledgeDecay.runDecayCycle();
         res.json({ ok: true, result });
@@ -97,7 +97,7 @@ router.post('/knowledge-decay/run', async (req, res) => {
 });
 
 // GET  /api/cognitive/knowledge-decay/queue
-router.get('/knowledge-decay/queue', async (req, res) => {
+router.get('/cognitive/knowledge-decay/queue', async (req, res) => {
     try {
         const queue = await cog.knowledgeDecay.getRevalidationQueue(parseInt(req.query.limit) || 50);
         res.json({ ok: true, queue });
@@ -105,7 +105,7 @@ router.get('/knowledge-decay/queue', async (req, res) => {
 });
 
 // GET  /api/cognitive/knowledge-decay/stats
-router.get('/knowledge-decay/stats', async (req, res) => {
+router.get('/cognitive/knowledge-decay/stats', async (req, res) => {
     try {
         const stats = await cog.knowledgeDecay.getStats();
         res.json({ ok: true, stats });
@@ -113,7 +113,7 @@ router.get('/knowledge-decay/stats', async (req, res) => {
 });
 
 // POST /api/cognitive/knowledge-decay/revalidate/:memoryId
-router.post('/knowledge-decay/revalidate/:memoryId', async (req, res) => {
+router.post('/cognitive/knowledge-decay/revalidate/:memoryId', async (req, res) => {
     try {
         const newConf = parseFloat(req.body?.newConfidence) || 0.75;
         const result  = await cog.knowledgeDecay.markRevalidated(req.params.memoryId, newConf);
@@ -124,7 +124,7 @@ router.post('/knowledge-decay/revalidate/:memoryId', async (req, res) => {
 // ── Meta-Reasoning ────────────────────────────────────────────────────────────
 
 // GET  /api/cognitive/meta-reasoning/stats
-router.get('/meta-reasoning/stats', async (req, res) => {
+router.get('/cognitive/meta-reasoning/stats', async (req, res) => {
     try {
         const stats = await cog.metaReasoning.getStats(parseInt(req.query.days) || 30);
         res.json({ ok: true, stats });
@@ -135,7 +135,7 @@ router.get('/meta-reasoning/stats', async (req, res) => {
 
 // POST /api/cognitive/performance/compute
 // Body: { type: 'weekly'|'monthly'|'quarterly' }
-router.post('/performance/compute', async (req, res) => {
+router.post('/cognitive/performance/compute', async (req, res) => {
     try {
         const type    = req.body?.type || 'weekly';
         const metrics = await cog.cognitivePerf.computeMetrics(type);
@@ -144,7 +144,7 @@ router.post('/performance/compute', async (req, res) => {
 });
 
 // GET  /api/cognitive/performance/trend
-router.get('/performance/trend', async (req, res) => {
+router.get('/cognitive/performance/trend', async (req, res) => {
     try {
         const type    = req.query.type || 'weekly';
         const periods = parseInt(req.query.periods) || 8;
@@ -156,7 +156,7 @@ router.get('/performance/trend', async (req, res) => {
 // ── Cognitive Evolution ───────────────────────────────────────────────────────
 
 // POST /api/cognitive/evolution/run
-router.post('/evolution/run', async (req, res) => {
+router.post('/cognitive/evolution/run', async (req, res) => {
     try {
         const result = await cog.evolution.runEvolutionCycle();
         res.json({ ok: true, result });
@@ -164,7 +164,7 @@ router.post('/evolution/run', async (req, res) => {
 });
 
 // GET  /api/cognitive/evolution/proposals
-router.get('/evolution/proposals', async (req, res) => {
+router.get('/cognitive/evolution/proposals', async (req, res) => {
     try {
         const limit     = parseInt(req.query.limit) || 20;
         const proposals = await cog.evolution.getPendingProposals(limit);
@@ -173,7 +173,7 @@ router.get('/evolution/proposals', async (req, res) => {
 });
 
 // POST /api/cognitive/evolution/proposals/:proposalId/approve
-router.post('/evolution/proposals/:proposalId/approve', async (req, res) => {
+router.post('/cognitive/evolution/proposals/:proposalId/approve', async (req, res) => {
     try {
         const { approvedBy } = req.body || {};
         if (!approvedBy) return res.status(400).json({ ok: false, error: 'approvedBy required' });
@@ -185,7 +185,7 @@ router.post('/evolution/proposals/:proposalId/approve', async (req, res) => {
 // ── Organizational Intelligence ───────────────────────────────────────────────
 
 // POST /api/cognitive/org-intelligence/generate
-router.post('/org-intelligence/generate', async (req, res) => {
+router.post('/cognitive/org-intelligence/generate', async (req, res) => {
     try {
         const type   = req.body?.type || 'weekly';
         const report = await cog.orgIntelligence.generate(type);
@@ -194,7 +194,7 @@ router.post('/org-intelligence/generate', async (req, res) => {
 });
 
 // GET  /api/cognitive/org-intelligence/reports
-router.get('/org-intelligence/reports', async (req, res) => {
+router.get('/cognitive/org-intelligence/reports', async (req, res) => {
     try {
         const { type, limit } = req.query;
         const reports = await cog.orgIntelligence.getRecentReports(type || null, parseInt(limit) || 5);
@@ -205,7 +205,7 @@ router.get('/org-intelligence/reports', async (req, res) => {
 // ── Digital Twin ──────────────────────────────────────────────────────────────
 
 // POST /api/cognitive/digital-twin/simulate-policy
-router.post('/digital-twin/simulate-policy', async (req, res) => {
+router.post('/cognitive/digital-twin/simulate-policy', async (req, res) => {
     try {
         const { policyType, proposedChange, currentState } = req.body || {};
         if (!policyType || !proposedChange) return res.status(400).json({ ok: false, error: 'policyType and proposedChange required' });
@@ -215,7 +215,7 @@ router.post('/digital-twin/simulate-policy', async (req, res) => {
 });
 
 // POST /api/cognitive/digital-twin/simulate-autonomy
-router.post('/digital-twin/simulate-autonomy', async (req, res) => {
+router.post('/cognitive/digital-twin/simulate-autonomy', async (req, res) => {
     try {
         const { proposedLevel, context } = req.body || {};
         if (proposedLevel === undefined) return res.status(400).json({ ok: false, error: 'proposedLevel required' });
@@ -225,7 +225,7 @@ router.post('/digital-twin/simulate-autonomy', async (req, res) => {
 });
 
 // POST /api/cognitive/digital-twin/simulate-improvement
-router.post('/digital-twin/simulate-improvement', async (req, res) => {
+router.post('/cognitive/digital-twin/simulate-improvement', async (req, res) => {
     try {
         const { improvementId } = req.body || {};
         if (!improvementId) return res.status(400).json({ ok: false, error: 'improvementId required' });
@@ -235,7 +235,7 @@ router.post('/digital-twin/simulate-improvement', async (req, res) => {
 });
 
 // POST /api/cognitive/digital-twin/what-if
-router.post('/digital-twin/what-if', async (req, res) => {
+router.post('/cognitive/digital-twin/what-if', async (req, res) => {
     try {
         const { scenario, question, options } = req.body || {};
         if (!scenario || !question) return res.status(400).json({ ok: false, error: 'scenario and question required' });
@@ -245,7 +245,7 @@ router.post('/digital-twin/what-if', async (req, res) => {
 });
 
 // GET  /api/cognitive/digital-twin/simulations
-router.get('/digital-twin/simulations', async (req, res) => {
+router.get('/cognitive/digital-twin/simulations', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 20;
         const data  = await cog.digitalTwin.getRecentSimulations(limit);
@@ -256,7 +256,7 @@ router.get('/digital-twin/simulations', async (req, res) => {
 // ── Validation Framework ──────────────────────────────────────────────────────
 
 // POST /api/cognitive/validate
-router.post('/validate', async (req, res) => {
+router.post('/cognitive/validate', async (req, res) => {
     try {
         const days   = parseInt(req.body?.days) || 30;
         const result = await cog.validation.runFullValidation({ days });
@@ -267,7 +267,7 @@ router.post('/validate', async (req, res) => {
 // ── Health ────────────────────────────────────────────────────────────────────
 
 // GET  /api/cognitive/health
-router.get('/health', async (req, res) => {
+router.get('/cognitive/health', async (req, res) => {
     try {
         const [autonomyStats, metaStats, retrievalStats, decayStats, perfTrend] = await Promise.allSettled([
             cog.autonomy.getStats(7),

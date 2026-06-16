@@ -6,7 +6,7 @@ router.use(require('../lib/app-auth'));
 const kg      = require('../lib/memory/knowledge-graph');
 
 // Create a node
-router.post('/nodes', async (req, res) => {
+router.post('/knowledge-graph/nodes', async (req, res) => {
     const { nodeType, label, properties, sourceMemoryId, sourceTable } = req.body;
     if (!nodeType || !label) return res.status(400).json({ ok: false, error: 'nodeType, label required' });
     const nodeId = await kg.createNode(nodeType, label, properties || {}, sourceMemoryId, sourceTable);
@@ -14,13 +14,13 @@ router.post('/nodes', async (req, res) => {
 });
 
 // Get a specific node
-router.get('/nodes/:nodeId', async (req, res) => {
+router.get('/knowledge-graph/nodes/:nodeId', async (req, res) => {
     const data = await kg.getNode(req.params.nodeId);
     res.json({ ok: !!data, data });
 });
 
 // Get all nodes of a type
-router.get('/nodes/type/:nodeType', async (req, res) => {
+router.get('/knowledge-graph/nodes/type/:nodeType', async (req, res) => {
     if (!kg.VALID_NODE_TYPES.includes(req.params.nodeType)) {
         return res.status(400).json({ ok: false, error: `invalid nodeType. valid: ${kg.VALID_NODE_TYPES.join(', ')}` });
     }
@@ -29,7 +29,7 @@ router.get('/nodes/type/:nodeType', async (req, res) => {
 });
 
 // Create an edge
-router.post('/edges', async (req, res) => {
+router.post('/knowledge-graph/edges', async (req, res) => {
     const { fromNodeId, toNodeId, relationship, evidence, confidence } = req.body;
     if (!fromNodeId || !toNodeId || !relationship) {
         return res.status(400).json({ ok: false, error: 'fromNodeId, toNodeId, relationship required' });
@@ -39,14 +39,14 @@ router.post('/edges', async (req, res) => {
 });
 
 // Get neighbors of a node
-router.get('/nodes/:nodeId/neighbors', async (req, res) => {
+router.get('/knowledge-graph/nodes/:nodeId/neighbors', async (req, res) => {
     const { relationship, direction } = req.query;
     const data = await kg.getNeighbors(req.params.nodeId, relationship || null, direction || 'out');
     res.json({ ok: true, data });
 });
 
 // Find path between two nodes (BFS)
-router.get('/path', async (req, res) => {
+router.get('/knowledge-graph/path', async (req, res) => {
     const { from, to, maxDepth } = req.query;
     if (!from || !to) return res.status(400).json({ ok: false, error: 'from and to required' });
     const path = await kg.findPath(from, to, parseInt(maxDepth) || 5);
@@ -54,7 +54,7 @@ router.get('/path', async (req, res) => {
 });
 
 // High-confidence subgraph
-router.get('/subgraph', async (req, res) => {
+router.get('/knowledge-graph/subgraph', async (req, res) => {
     const { minConfidence, nodeLimit } = req.query;
     const data = await kg.getHighConfidenceSubgraph(
         parseFloat(minConfidence) || 0.7,
@@ -64,7 +64,7 @@ router.get('/subgraph', async (req, res) => {
 });
 
 // Sync a memory object to the graph
-router.post('/sync', async (req, res) => {
+router.post('/knowledge-graph/sync', async (req, res) => {
     const { nodeType, sourceMemoryId, sourceTable, label, properties } = req.body;
     if (!nodeType || !sourceMemoryId || !sourceTable || !label) {
         return res.status(400).json({ ok: false, error: 'nodeType, sourceMemoryId, sourceTable, label required' });
@@ -74,13 +74,13 @@ router.post('/sync', async (req, res) => {
 });
 
 // Graph statistics
-router.get('/stats', async (req, res) => {
+router.get('/knowledge-graph/stats', async (req, res) => {
     const data = await kg.getStats();
     res.json({ ok: true, data });
 });
 
 // Valid node types and relationships reference
-router.get('/schema', async (req, res) => {
+router.get('/knowledge-graph/schema', async (req, res) => {
     res.json({
         ok:            true,
         nodeTypes:     kg.VALID_NODE_TYPES,

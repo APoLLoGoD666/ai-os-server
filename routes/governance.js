@@ -16,7 +16,7 @@ function _sb() {
 
 // GET /api/governance/forensics/:taskId
 // Returns answers to all 16 forensic questions for a task.
-router.get('/forensics/:taskId', async (req, res) => {
+router.get('/governance/forensics/:taskId', async (req, res) => {
     const { taskId } = req.params;
     const sb = _sb();
     const t0 = Date.now();
@@ -321,7 +321,7 @@ router.get('/forensics/:taskId', async (req, res) => {
 });
 
 // GET /api/governance/certifications — list recent certifications
-router.get('/certifications', async (req, res) => {
+router.get('/governance/certifications', async (req, res) => {
     try {
         const { data, error } = await _sb().from('certifications')
             .select('*').order('issued_at', { ascending: false }).limit(20);
@@ -333,7 +333,7 @@ router.get('/certifications', async (req, res) => {
 });
 
 // GET /api/governance/anomalies — recent anomalies
-router.get('/anomalies', async (req, res) => {
+router.get('/governance/anomalies', async (req, res) => {
     try {
         const { data, error } = await _sb().from('anomalies')
             .select('*').order('detected_at', { ascending: false }).limit(50);
@@ -345,7 +345,7 @@ router.get('/anomalies', async (req, res) => {
 });
 
 // GET /api/governance/slo-status — current SLO pass/fail rates
-router.get('/slo-status', async (req, res) => {
+router.get('/governance/slo-status', async (req, res) => {
     try {
         const sb = _sb();
         const { data: defs } = await sb.from('slo_definitions').select('*');
@@ -372,7 +372,7 @@ router.get('/slo-status', async (req, res) => {
 });
 
 // GET /api/governance/agent-reputation — per-agent success rates
-router.get('/agent-reputation', async (req, res) => {
+router.get('/governance/agent-reputation', async (req, res) => {
     try {
         const { data } = await _sb().from('agent_reputation_events')
             .select('agent_role, outcome, cost_usd, accuracy_score')
@@ -400,7 +400,7 @@ router.get('/agent-reputation', async (req, res) => {
 });
 
 // GET /api/governance/system-certification — Domain 40 OS certification status
-router.get('/system-certification', async (req, res) => {
+router.get('/governance/system-certification', async (req, res) => {
     try {
         const { data } = await _sb().from('system_certifications')
             .select('*').order('created_at', { ascending: false }).limit(1);
@@ -412,7 +412,7 @@ router.get('/system-certification', async (req, res) => {
 });
 
 // GET /api/governance/incidents — open incidents
-router.get('/incidents', async (req, res) => {
+router.get('/governance/incidents', async (req, res) => {
     try {
         const { data } = await _sb().from('incidents')
             .select('*').eq('status', 'open')
@@ -424,7 +424,7 @@ router.get('/incidents', async (req, res) => {
 });
 
 // GET /api/governance/change-intelligence — recent change classifications
-router.get('/change-intelligence', async (req, res) => {
+router.get('/governance/change-intelligence', async (req, res) => {
     try {
         const { data } = await _sb().from('change_classifications')
             .select('*').order('classified_at', { ascending: false }).limit(50);
@@ -439,7 +439,7 @@ router.get('/change-intelligence', async (req, res) => {
 });
 
 // GET /api/governance/evidence-chain — last N blocks
-router.get('/evidence-chain', async (req, res) => {
+router.get('/governance/evidence-chain', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     try {
         const { data } = await _sb().from('evidence_blocks')
@@ -454,7 +454,7 @@ router.get('/evidence-chain', async (req, res) => {
 });
 
 // GET /api/governance/policy-violations — recent violations
-router.get('/policy-violations', async (req, res) => {
+router.get('/governance/policy-violations', async (req, res) => {
     try {
         const { data } = await _sb().from('policy_violations')
             .select('*, policies(name)')
@@ -466,7 +466,7 @@ router.get('/policy-violations', async (req, res) => {
 });
 
 // GET /api/governance/dashboard — Domain 35 unified governance snapshot
-router.get('/dashboard', async (req, res) => {
+router.get('/governance/dashboard', async (req, res) => {
     const sb = _sb();
     const t0 = Date.now();
     try {
@@ -518,7 +518,7 @@ router.get('/dashboard', async (req, res) => {
 
 // POST /api/governance/probe — run a full governance certification probe
 // Exercises every DB write path and reads back to verify. Takes ~5-10s.
-router.post('/probe', async (req, res) => {
+router.post('/governance/probe', async (req, res) => {
     try {
         const probe  = require('../lib/governance-probe');
         const result = await probe.runProbe();
@@ -530,7 +530,7 @@ router.post('/probe', async (req, res) => {
 });
 
 // GET /api/governance/probe/latest — most recent probe result
-router.get('/probe/latest', async (req, res) => {
+router.get('/governance/probe/latest', async (req, res) => {
     try {
         const probe  = require('../lib/governance-probe');
         const result = await probe.getLatestResult();
@@ -542,7 +542,7 @@ router.get('/probe/latest', async (req, res) => {
 });
 
 // GET /api/governance/readiness — runtime readiness scorecard (DB evidence only)
-router.get('/readiness', async (req, res) => {
+router.get('/governance/readiness', async (req, res) => {
     try {
         const { calculateReadiness } = require('../lib/runtime-readiness');
         const scorecard = await calculateReadiness();
@@ -553,7 +553,7 @@ router.get('/readiness', async (req, res) => {
 });
 
 // GET /api/governance/completeness/:taskId — evidence completeness for one execution
-router.get('/completeness/:taskId', async (req, res) => {
+router.get('/governance/completeness/:taskId', async (req, res) => {
     try {
         const { scoreExecution } = require('../lib/evidence-completeness');
         const traceId = req.query.traceId || null;
@@ -565,7 +565,7 @@ router.get('/completeness/:taskId', async (req, res) => {
 });
 
 // GET /api/governance/completeness — evidence completeness for recent executions
-router.get('/completeness', async (req, res) => {
+router.get('/governance/completeness', async (req, res) => {
     try {
         const { scoreRecentExecutions } = require('../lib/evidence-completeness');
         const limit   = Math.min(parseInt(req.query.limit || '10', 10), 50);

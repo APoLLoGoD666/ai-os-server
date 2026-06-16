@@ -11,7 +11,7 @@ function _os() { return require('../lib/founder'); }
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
 // Full profile (sanitized — no protected people raw data)
-router.get('/profile', _auth, async (req, res) => {
+router.get('/founder/profile', _auth, async (req, res) => {
   try {
     const p = await _os().loadProfile();
     const safe = _os().sanitizeForModel(p);
@@ -20,7 +20,7 @@ router.get('/profile', _auth, async (req, res) => {
 });
 
 // Single profile section
-router.get('/profile/:section', _auth, async (req, res) => {
+router.get('/founder/profile/:section', _auth, async (req, res) => {
   try {
     const section = req.params.section.replace(/-/g, '.');
     if (!_os().checkAccess(req.entity || 'api', section)) {
@@ -32,7 +32,7 @@ router.get('/profile/:section', _auth, async (req, res) => {
 });
 
 // Force reload profile from DB (invalidates cache)
-router.post('/profile/reload', _auth, async (req, res) => {
+router.post('/founder/profile/reload', _auth, async (req, res) => {
   try {
     _os().invalidateProfile();
     const p = await _os().loadProfile(true);
@@ -43,7 +43,7 @@ router.post('/profile/reload', _auth, async (req, res) => {
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 // Assembled FounderContextPackage for a task
-router.post('/context', _auth, async (req, res) => {
+router.post('/founder/context', _auth, async (req, res) => {
   try {
     const { taskDescription = '', entityId = 'api' } = req.body;
     const ctx = await _os().getContext(taskDescription, { entityId });
@@ -52,7 +52,7 @@ router.post('/context', _auth, async (req, res) => {
 });
 
 // Alignment guidance as a prompt string
-router.post('/context/prompt', _auth, async (req, res) => {
+router.post('/founder/context/prompt', _auth, async (req, res) => {
   try {
     const { taskDescription = '' } = req.body;
     const guidance = await _os().getAlignmentGuidance(taskDescription);
@@ -60,14 +60,14 @@ router.post('/context/prompt', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/decision-weights', _auth, async (req, res) => {
+router.get('/founder/decision-weights', _auth, async (req, res) => {
   try {
     const weights = await _os().getDecisionWeights();
     res.json({ ok: true, weights });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/risk-profile', _auth, async (req, res) => {
+router.get('/founder/risk-profile', _auth, async (req, res) => {
   try {
     const riskProfile = await _os().getRiskProfile();
     res.json({ ok: true, risk_profile: riskProfile });
@@ -77,7 +77,7 @@ router.get('/risk-profile', _auth, async (req, res) => {
 // ─── Alignment Scoring ────────────────────────────────────────────────────────
 
 // Score a single text
-router.post('/align', _auth, async (req, res) => {
+router.post('/founder/align', _auth, async (req, res) => {
   try {
     const { text, subjectType = 'generic', subjectId = null } = req.body;
     if (!text) return res.status(400).json({ ok: false, error: 'text required' });
@@ -87,7 +87,7 @@ router.post('/align', _auth, async (req, res) => {
 });
 
 // Score multiple items in one call
-router.post('/align/batch', _auth, async (req, res) => {
+router.post('/founder/align/batch', _auth, async (req, res) => {
   try {
     const { items, subjectType = 'batch' } = req.body;
     if (!Array.isArray(items) || !items.length) return res.status(400).json({ ok: false, error: 'items array required' });
@@ -97,7 +97,7 @@ router.post('/align/batch', _auth, async (req, res) => {
 });
 
 // Alignment history
-router.get('/align/history', _auth, async (req, res) => {
+router.get('/founder/align/history', _auth, async (req, res) => {
   try {
     const { subjectType, limit = 20, minScore } = req.query;
     const history = await _os().getAlignmentHistory({
@@ -111,7 +111,7 @@ router.get('/align/history', _auth, async (req, res) => {
 
 // ─── Anti-Goal Monitoring ─────────────────────────────────────────────────────
 
-router.post('/anti-goals/check', _auth, async (req, res) => {
+router.post('/founder/anti-goals/check', _auth, async (req, res) => {
   try {
     const { text, triggerSource = 'manual', triggerId = null } = req.body;
     if (!text) return res.status(400).json({ ok: false, error: 'text required' });
@@ -120,7 +120,7 @@ router.post('/anti-goals/check', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/anti-goals/failure-pattern', _auth, async (req, res) => {
+router.post('/founder/anti-goals/failure-pattern', _auth, async (req, res) => {
   try {
     const { text } = req.body;
     if (!text) return res.status(400).json({ ok: false, error: 'text required' });
@@ -129,21 +129,21 @@ router.post('/anti-goals/failure-pattern', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/anti-goals/alerts', _auth, async (req, res) => {
+router.get('/founder/anti-goals/alerts', _auth, async (req, res) => {
   try {
     const alerts = await _os().getActiveAlerts();
     res.json({ ok: true, alerts });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/anti-goals/alerts/:id/acknowledge', _auth, async (req, res) => {
+router.post('/founder/anti-goals/alerts/:id/acknowledge', _auth, async (req, res) => {
   try {
     await _os().acknowledgeAlert(req.params.id);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/anti-goals/alerts/acknowledge-all', _auth, async (req, res) => {
+router.post('/founder/anti-goals/alerts/acknowledge-all', _auth, async (req, res) => {
   try {
     await _os().acknowledgeAllAlerts();
     res.json({ ok: true });
@@ -152,7 +152,7 @@ router.post('/anti-goals/alerts/acknowledge-all', _auth, async (req, res) => {
 
 // ─── Opportunity Scoring ──────────────────────────────────────────────────────
 
-router.post('/opportunities/score', _auth, async (req, res) => {
+router.post('/founder/opportunities/score', _auth, async (req, res) => {
   try {
     const { opportunity } = req.body;
     if (!opportunity) return res.status(400).json({ ok: false, error: 'opportunity object required' });
@@ -161,7 +161,7 @@ router.post('/opportunities/score', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.post('/opportunities/score-all', _auth, async (req, res) => {
+router.post('/founder/opportunities/score-all', _auth, async (req, res) => {
   try {
     const { opportunities } = req.body;
     if (!Array.isArray(opportunities)) return res.status(400).json({ ok: false, error: 'opportunities array required' });
@@ -172,14 +172,14 @@ router.post('/opportunities/score-all', _auth, async (req, res) => {
 
 // ─── Domains & Goals ──────────────────────────────────────────────────────────
 
-router.get('/domains', _auth, async (req, res) => {
+router.get('/founder/domains', _auth, async (req, res) => {
   try {
     const domains = await _os().getDomains();
     res.json({ ok: true, domains });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.patch('/domains/:id', _auth, async (req, res) => {
+router.patch('/founder/domains/:id', _auth, async (req, res) => {
   try {
     const { currentState, healthScore } = req.body;
     if (!currentState) return res.status(400).json({ ok: false, error: 'currentState required' });
@@ -188,7 +188,7 @@ router.patch('/domains/:id', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/goals', _auth, async (req, res) => {
+router.get('/founder/goals', _auth, async (req, res) => {
   try {
     const { domainId, status = 'active' } = req.query;
     const goals = await _os().getGoals({ domainId, status: status || null });
@@ -196,7 +196,7 @@ router.get('/goals', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.patch('/goals/:id/progress', _auth, async (req, res) => {
+router.patch('/founder/goals/:id/progress', _auth, async (req, res) => {
   try {
     const { currentValue, progressPct, notes } = req.body;
     if (progressPct === undefined) return res.status(400).json({ ok: false, error: 'progressPct required' });
@@ -207,14 +207,14 @@ router.patch('/goals/:id/progress', _auth, async (req, res) => {
 
 // ─── State Snapshots ──────────────────────────────────────────────────────────
 
-router.post('/state/snapshot', _auth, async (req, res) => {
+router.post('/founder/state/snapshot', _auth, async (req, res) => {
   try {
     const snap = await _os().snapshotState();
     res.json({ ok: true, snapshot: snap });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-router.get('/state/latest', _auth, async (req, res) => {
+router.get('/founder/state/latest', _auth, async (req, res) => {
   try {
     const snap = await _os().getLatestState();
     res.json({ ok: true, snapshot: snap });

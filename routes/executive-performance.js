@@ -11,7 +11,7 @@ function _epe() { return require('../lib/intelligence/executive-performance-engi
 
 // Record a new recommendation for an executive.
 // Body: { entityId, recommendation, decisionId?, confidence, decisionType?, category?, contextSummary? }
-router.post('/recommendations', _auth, async (req, res) => {
+router.post('/executive-performance/recommendations', _auth, async (req, res) => {
   try {
     const { entityId, recommendation, decisionId, confidence, decisionType, category, contextSummary } = req.body;
     if (!entityId)       return res.status(400).json({ ok: false, error: 'entityId required' });
@@ -34,7 +34,7 @@ router.post('/recommendations', _auth, async (req, res) => {
 
 // Measure the outcome of a tracked recommendation.
 // Body: { outcome, outcomeMatched, impactScore?, valueCreated?, notes? }
-router.post('/recommendations/:id/outcome', _auth, async (req, res) => {
+router.post('/executive-performance/recommendations/:id/outcome', _auth, async (req, res) => {
   try {
     const { outcome, outcomeMatched, impactScore, valueCreated, notes } = req.body;
     if (!outcome)                        return res.status(400).json({ ok: false, error: 'outcome required' });
@@ -55,7 +55,7 @@ router.post('/recommendations/:id/outcome', _auth, async (req, res) => {
 // ─── Stats ─────────────────────────────────────────────────────────────────────
 
 // Stats for all executives — computed from real recorded outcomes only.
-router.get('/stats', _auth, async (req, res) => {
+router.get('/executive-performance/stats', _auth, async (req, res) => {
   try {
     const stats = await _epe().computeStats(null);
     res.json({ ok: true, stats });
@@ -63,7 +63,7 @@ router.get('/stats', _auth, async (req, res) => {
 });
 
 // Stats for a specific executive.
-router.get('/stats/:entityId', _auth, async (req, res) => {
+router.get('/executive-performance/stats/:entityId', _auth, async (req, res) => {
   try {
     const { entityId } = req.params;
     if (!_epe().ENTITY_IDS.includes(entityId))
@@ -74,7 +74,7 @@ router.get('/stats/:entityId', _auth, async (req, res) => {
 });
 
 // Recompute and persist all stats to exec_performance_stats cache.
-router.post('/stats/refresh', _auth, async (req, res) => {
+router.post('/executive-performance/stats/refresh', _auth, async (req, res) => {
   try {
     const all = await _epe().computeAllStats();
     res.json({ ok: true, stats: all, refreshed_at: new Date().toISOString() });
@@ -84,7 +84,7 @@ router.post('/stats/refresh', _auth, async (req, res) => {
 // ─── Status Report ─────────────────────────────────────────────────────────────
 
 // Generate the full status report: overconfident / underconfident / highest-impact.
-router.post('/report', _auth, async (req, res) => {
+router.post('/executive-performance/report', _auth, async (req, res) => {
   try {
     const report = await _epe().generateStatusReport();
     res.json({ ok: true, ...report });
@@ -92,7 +92,7 @@ router.post('/report', _auth, async (req, res) => {
 });
 
 // Recent status reports.
-router.get('/reports', _auth, async (req, res) => {
+router.get('/executive-performance/reports', _auth, async (req, res) => {
   try {
     const { limit = 5 } = req.query;
     const reports = await _epe().getRecentReports(parseInt(limit));
@@ -103,7 +103,7 @@ router.get('/reports', _auth, async (req, res) => {
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
 
 // Ranked leaderboard by accuracy (desc). Only executives with real outcome data.
-router.get('/leaderboard', _auth, async (req, res) => {
+router.get('/executive-performance/leaderboard', _auth, async (req, res) => {
   try {
     const leaderboard = await _epe().getLeaderboard();
     res.json({ ok: true, leaderboard, count: leaderboard.length });
@@ -113,7 +113,7 @@ router.get('/leaderboard', _auth, async (req, res) => {
 // ─── History ──────────────────────────────────────────────────────────────────
 
 // Recommendation history for one executive.
-router.get('/history/:entityId', _auth, async (req, res) => {
+router.get('/executive-performance/history/:entityId', _auth, async (req, res) => {
   try {
     const { entityId } = req.params;
     const { limit = 20 } = req.query;
@@ -125,7 +125,7 @@ router.get('/history/:entityId', _auth, async (req, res) => {
 // ─── Pending Outcomes ─────────────────────────────────────────────────────────
 
 // All recommendations awaiting an outcome to be recorded.
-router.get('/pending', _auth, async (req, res) => {
+router.get('/executive-performance/pending', _auth, async (req, res) => {
   try {
     const { entityId } = req.query;
     const pending = await _epe().getPendingOutcomes(entityId || null);
@@ -136,7 +136,7 @@ router.get('/pending', _auth, async (req, res) => {
 // ─── Coverage ─────────────────────────────────────────────────────────────────
 
 // Decision coverage: how many decisions have tracked outcomes vs total logged.
-router.get('/coverage', _auth, async (req, res) => {
+router.get('/executive-performance/coverage', _auth, async (req, res) => {
   try {
     const coverage = await _epe().getDecisionCoverage();
     res.json({ ok: true, ...coverage });
