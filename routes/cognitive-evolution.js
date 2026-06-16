@@ -10,7 +10,7 @@ router.use(require('../lib/app-auth'));
 
 // ── Outcome attribution ───────────────────────────────────────────────────────
 // GET /api/cognitive-evolution/attribution/impact?days=30
-router.get('/attribution/impact', async (req, res) => {
+router.get('/cognitive-evolution/attribution/impact', async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 30;
         const engine = require('../lib/cognitive/effectiveness/outcome-attribution-engine');
@@ -22,7 +22,7 @@ router.get('/attribution/impact', async (req, res) => {
 });
 
 // GET /api/cognitive-evolution/attribution/task/:taskId
-router.get('/attribution/task/:taskId', async (req, res) => {
+router.get('/cognitive-evolution/attribution/task/:taskId', async (req, res) => {
     try {
         const engine = require('../lib/cognitive/effectiveness/outcome-attribution-engine');
         const data   = await engine.getTaskAttribution(req.params.taskId);
@@ -35,7 +35,7 @@ router.get('/attribution/task/:taskId', async (req, res) => {
 
 // ── Digital twin accuracy ─────────────────────────────────────────────────────
 // GET /api/cognitive-evolution/twin/accuracy?days=30
-router.get('/twin/accuracy', async (req, res) => {
+router.get('/cognitive-evolution/twin/accuracy', async (req, res) => {
     try {
         const days   = parseInt(req.query.days) || 30;
         const engine = require('../lib/cognitive/effectiveness/digital-twin-accuracy-engine');
@@ -47,7 +47,7 @@ router.get('/twin/accuracy', async (req, res) => {
 });
 
 // GET /api/cognitive-evolution/twin/trend?periods=8
-router.get('/twin/trend', async (req, res) => {
+router.get('/cognitive-evolution/twin/trend', async (req, res) => {
     try {
         const periods = parseInt(req.query.periods) || 8;
         const engine  = require('../lib/cognitive/effectiveness/digital-twin-accuracy-engine');
@@ -60,7 +60,7 @@ router.get('/twin/trend', async (req, res) => {
 
 // ── Policy evolution ──────────────────────────────────────────────────────────
 // GET /api/cognitive-evolution/policies
-router.get('/policies', async (req, res) => {
+router.get('/cognitive-evolution/policies', async (req, res) => {
     try {
         const engine = require('../lib/cognitive/evolution/policy-evolution-engine');
         const data   = await engine.getCurrentSettings();
@@ -71,7 +71,7 @@ router.get('/policies', async (req, res) => {
 });
 
 // GET /api/cognitive-evolution/policies/history?limit=20
-router.get('/policies/history', async (req, res) => {
+router.get('/cognitive-evolution/policies/history', async (req, res) => {
     try {
         const limit  = parseInt(req.query.limit) || 20;
         const engine = require('../lib/cognitive/evolution/policy-evolution-engine');
@@ -83,7 +83,7 @@ router.get('/policies/history', async (req, res) => {
 });
 
 // POST /api/cognitive-evolution/policies/analyze?days=30
-router.post('/policies/analyze', async (req, res) => {
+router.post('/cognitive-evolution/policies/analyze', async (req, res) => {
     try {
         const days   = parseInt(req.query.days) || 30;
         const engine = require('../lib/cognitive/evolution/policy-evolution-engine');
@@ -95,7 +95,7 @@ router.post('/policies/analyze', async (req, res) => {
 });
 
 // POST /api/cognitive-evolution/policies/propose?days=30
-router.post('/policies/propose', async (req, res) => {
+router.post('/cognitive-evolution/policies/propose', async (req, res) => {
     try {
         const days   = parseInt(req.query.days) || 30;
         const engine = require('../lib/cognitive/evolution/policy-evolution-engine');
@@ -108,7 +108,7 @@ router.post('/policies/propose', async (req, res) => {
 
 // POST /api/cognitive-evolution/policies/apply
 // Body: { proposalId, approvedBy }
-router.post('/policies/apply', async (req, res) => {
+router.post('/cognitive-evolution/policies/apply', async (req, res) => {
     try {
         const { proposalId, approvedBy } = req.body || {};
         if (!proposalId || !approvedBy) {
@@ -125,7 +125,7 @@ router.post('/policies/apply', async (req, res) => {
 // ── Benchmark ─────────────────────────────────────────────────────────────────
 // POST /api/cognitive-evolution/benchmark/run
 // Body: { name }
-router.post('/benchmark/run', async (req, res) => {
+router.post('/cognitive-evolution/benchmark/run', async (req, res) => {
     try {
         const name   = req.body?.name || 'cognitive_baseline';
         const runner = require('../lib/cognitive/benchmarks/benchmark-runner');
@@ -137,7 +137,7 @@ router.post('/benchmark/run', async (req, res) => {
 });
 
 // GET /api/cognitive-evolution/benchmark/history?name=cognitive_baseline&limit=10
-router.get('/benchmark/history', async (req, res) => {
+router.get('/cognitive-evolution/benchmark/history', async (req, res) => {
     try {
         const name   = req.query.name   || 'cognitive_baseline';
         const limit  = parseInt(req.query.limit) || 10;
@@ -151,7 +151,7 @@ router.get('/benchmark/history', async (req, res) => {
 
 // ── Longitudinal reporting ────────────────────────────────────────────────────
 // POST /api/cognitive-evolution/reports/weekly
-router.post('/reports/weekly', async (req, res) => {
+router.post('/cognitive-evolution/reports/weekly', async (req, res) => {
     try {
         const reporter = require('../lib/cognitive/reporting/intelligence-evolution-reporter');
         const data     = await reporter.generateWeeklyReport();
@@ -162,7 +162,7 @@ router.post('/reports/weekly', async (req, res) => {
 });
 
 // POST /api/cognitive-evolution/reports/monthly
-router.post('/reports/monthly', async (req, res) => {
+router.post('/cognitive-evolution/reports/monthly', async (req, res) => {
     try {
         const reporter = require('../lib/cognitive/reporting/intelligence-evolution-reporter');
         const data     = await reporter.generateMonthlyReport();
@@ -173,7 +173,7 @@ router.post('/reports/monthly', async (req, res) => {
 });
 
 // POST /api/cognitive-evolution/reports/quarterly
-router.post('/reports/quarterly', async (req, res) => {
+router.post('/cognitive-evolution/reports/quarterly', async (req, res) => {
     try {
         const reporter = require('../lib/cognitive/reporting/intelligence-evolution-reporter');
         const data     = await reporter.generateQuarterlyReport();
@@ -184,7 +184,7 @@ router.post('/reports/quarterly', async (req, res) => {
 });
 
 // GET /api/cognitive-evolution/reports/latest?period=weekly
-router.get('/reports/latest', async (req, res) => {
+router.get('/cognitive-evolution/reports/latest', async (req, res) => {
     try {
         const period   = req.query.period || 'weekly';
         const reporter = require('../lib/cognitive/reporting/intelligence-evolution-reporter');
