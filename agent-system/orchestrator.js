@@ -977,7 +977,10 @@ async function runAgentTeam(spec, taskId) {
             console.warn(`[Constitutional] Anti-goal warning (${_antiGoal.highest_severity}): ${(_antiGoal.triggered || []).length} match(es) — proceeding`);
         }
     } catch (e) {
-        console.warn('[Constitutional] anti-goal check failed (non-fatal):', e.message);
+        console.error('[Constitutional] anti-goal check unavailable — blocking for safety:', e.message);
+        return { success: false, commitHash: null, agentLogs: [],
+                 error: `[CONSTITUTIONAL_GATE] Anti-goal check unavailable — blocked for safety: ${e.message}`,
+                 complexity: 'unknown', models: {} };
     }
 
     const ctx = {
@@ -1397,7 +1400,7 @@ async function runAgentTeam(spec, taskId) {
 
         // ── Cognitive enforcement pre-flight ──────────────────────────────────────
         // Phase 6: Fail-closed for critical/complex tasks when runtime controls unavailable
-        if (ctx.runtimeCtrlError && (complexity === 'critical' || complexity === 'complex')) {
+        if (ctx.runtimeCtrlError) {
             return _fail(`[FAIL_CLOSED] Runtime controls unavailable for ${complexity} task: ${ctx.runtimeCtrlError}`);
         }
 
@@ -1583,7 +1586,8 @@ async function runAgentTeam(spec, taskId) {
                 }
                 console.log(`[CTO_GATE] approved (confidence=${_ctoDecision.confidence})`);
             } catch (e) {
-                console.warn('[CTO_GATE] consultation failed (non-blocking):', e.message);
+                console.error('[CTO_GATE] consultation unavailable — blocking for safety:', e.message);
+                return _fail(`[CTO_GATE] consultation unavailable — blocked for safety: ${e.message}`);
             }
         }
 
