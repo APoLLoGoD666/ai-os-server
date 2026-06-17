@@ -321,6 +321,19 @@ function getLatestEvaluation() {
  * Saves result to vault and returns the evaluation object.
  */
 async function generateSystemEvaluation() {
+    // Return cached result if written within the last 5 minutes — avoids redundant
+    // recomputation when the route is called repeatedly in a short window.
+    try {
+        _ensureDir();
+        const files = fs.readdirSync(EVAL_DIR)
+            .filter(f => f.startsWith('eval-') && f.endsWith('.json'))
+            .map(f => ({ f, mtime: fs.statSync(path.join(EVAL_DIR, f)).mtimeMs }))
+            .sort((a, b) => b.mtime - a.mtime);
+        if (files.length && (Date.now() - files[0].mtime) < 5 * 60 * 1000) {
+            return JSON.parse(fs.readFileSync(path.join(EVAL_DIR, files[0].f), 'utf8'));
+        }
+    } catch {}
+
     // Async calls in parallel — both may return null if Supabase is unavailable
     const [retryR, recoveryR] = await Promise.all([
         _am.retryRate(50).catch(() => null),

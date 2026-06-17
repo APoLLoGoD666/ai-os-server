@@ -346,6 +346,29 @@ function _saveRegistry(proposals) {
     _ensureDir();
     const reg = { version: '1.0', generatedAt: new Date().toISOString(), proposals };
     fs.writeFileSync(PROPOSALS_FILE, JSON.stringify(reg, null, 2), 'utf8');
+    // Fire-and-forget DB mirror for observability (L-12). Vault remains authoritative.
+    setImmediate(async () => {
+        try {
+            const { getSupabaseClient } = require('../lib/clients');
+            const rows = proposals.map(p => ({
+                proposal_id:    p.id,
+                template_id:    p.templateId   || null,
+                category:       p.category     || null,
+                status:         p.status       || 'pending',
+                priority_score: p.priorityScore ?? null,
+                title:          (p.title || p.description || p.id).slice(0, 120),
+                description:    p.description  ? p.description.slice(0, 500) : null,
+                risk:           p.risk         || null,
+                target_module:  p.targetModule || null,
+                synced_at:      new Date().toISOString(),
+            }));
+            if (rows.length) {
+                await getSupabaseClient()
+                    .from('improvement_proposals_registry')
+                    .upsert(rows, { onConflict: 'proposal_id' });
+            }
+        } catch {}
+    });
     return reg;
 }
 

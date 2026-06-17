@@ -338,25 +338,27 @@ app.use((req, res, next) => {
 
 
 app.get('/health', async (req, res) => {
+    // Retry DB check once (500 ms gap) before declaring down — guards transient glitches
+    // at deploy time so a brief Supabase hiccup doesn't block a valid Render deploy.
     let dbOk = false;
-    try {
-        // In LOCAL_MODE the raw pg pool has no valid connection string — use Supabase JS client instead.
-        // On Render the pg pool (DATABASE_URL) is expected to be configured.
-        if (process.env.LOCAL_MODE === 'true') {
-            const { error } = await sbAdmin.from('notifications').select('id').limit(1);
-            dbOk = !error;
-        } else {
-            try {
-                const pgPool = require('./pg_database');
-                await pgPool.query('SELECT 1');
-                dbOk = true;
-            } catch {
-                // pg pool unavailable (e.g. DATABASE_URL not yet set) — fall back to Supabase JS client
+    for (let attempt = 0; attempt < 2 && !dbOk; attempt++) {
+        try {
+            if (process.env.LOCAL_MODE === 'true') {
                 const { error } = await sbAdmin.from('notifications').select('id').limit(1);
                 dbOk = !error;
+            } else {
+                try {
+                    const pgPool = require('./pg_database');
+                    await pgPool.query('SELECT 1');
+                    dbOk = true;
+                } catch {
+                    const { error } = await sbAdmin.from('notifications').select('id').limit(1);
+                    dbOk = !error;
+                }
             }
-        }
-    } catch (e) { console.warn('[Health] db check error:', e.message); }
+        } catch (e) { console.warn('[Health] db check error:', e.message); }
+        if (!dbOk && attempt === 0) await new Promise(r => setTimeout(r, 500));
+    }
     const mem     = process.memoryUsage();
     const heapMb  = Math.round(mem.heapUsed  / 1024 / 1024);
     const rssM    = Math.round(mem.rss        / 1024 / 1024);
@@ -364,9 +366,17 @@ app.get('/health', async (req, res) => {
     const aiOk    = !!process.env.ANTHROPIC_API_KEY;
     const allOk   = dbOk && ttsOk && aiOk;
     const status  = allOk ? 'ok' : (dbOk ? 'degraded' : 'down');
-    // Always 200 so Render zero-downtime deploy health check passes on startup;
-    // DB failures are visible in body but don't block new deploys.
-    res.status(200).json({
+    // 503 when DB is persistently down: Render stops routing traffic and monitoring fires.
+    // Degraded (DB up, TTS/AI env vars missing) stays 200 — core pipeline still works.
+    if (!dbOk) {
+        setImmediate(async () => {
+            try {
+                const { alertCritical } = require('./services/slack/slack-alerts');
+                await alertCritical('Database Unavailable', 'Health check: DB unreachable after retry', 'HealthCheck');
+            } catch {}
+        });
+    }
+    res.status(dbOk ? 200 : 503).json({
         status,
         version:        GIT_SHA,
         uptime:         process.uptime(),
