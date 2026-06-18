@@ -2,7 +2,7 @@ services:
   - type: web
     name: ai-os-server
     env: node
-    buildCommand: npm install --legacy-peer-deps
+    buildCommand: npm install --legacy-peer-deps && node scripts/certify.js
     startCommand: node --max-old-space-size=220 server.js
     healthCheckPath: /health
     # Disable zero-downtime deploys so the new instance has full 512MB available

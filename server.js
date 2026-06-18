@@ -89,6 +89,7 @@ const _pcm         = require('./lib/persistent-cognition-manager');
 const _eae         = require('./lib/executive-arbitration-engine');
 const _spe         = require('./lib/strategic-planning-engine');
 const _gateway     = require('./lib/memory/gateway');
+const _wm          = require('./lib/memory/working-memory');
 const { embedText } = require('./lib/embed');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
@@ -2966,7 +2967,30 @@ async function runDueSchedules() {
 
     for (const schedule of dueSchedules) {
         try {
-            results.push(await runSingleScheduleOnce(schedule));
+            const _schedResult = await runSingleScheduleOnce(schedule);
+            results.push(_schedResult);
+
+            // Phase 1 — Agent Completion Memory: persist successful task outcomes
+            if (_schedResult?.ok && (_schedResult.autoRun?.status === 'completed' || _schedResult.planning?.status === 'completed')) {
+                const _tid = String(_schedResult.taskId || '');
+                setImmediate(async () => {
+                    try {
+                        const content = `Agent task completed: "${schedule.goal}". Task ID: ${_tid}.`;
+                        await _gateway.storeMemory({ layer: 2, source: 'agent_completion', content, tags: ['agent', 'task', 'completion'], requestingEntity: 'system', taskId: _tid });
+                    } catch {}
+
+                    // Phase 5 — Influence Confirmation: task succeeded → lessons used were influential
+                    try {
+                        const lessonRec = await _wm.get(_tid, 'execution_context');
+                        if (lessonRec?.content?.length) {
+                            const _rfx = require('./lib/memory/reflexion-tracker');
+                            for (const l of lessonRec.content) {
+                                if (l.content) _rfx.recordInfluence(l.content, _tid, 'operational').catch(() => {});
+                            }
+                        }
+                    } catch {}
+                });
+            }
         } catch (e) {
             console.error(`[runDueSchedules] schedule #${schedule.id} failed:`, e.message);
             results.push({ ok: false, schedule, message: e.message });
@@ -8479,10 +8503,39 @@ async function toolBrowserClick(url, selector) {
 }
 
 async function executeApexTool(name, input) {
-    if (name === 'web_search') return await toolWebSearch(input.query);
+    if (name === 'web_search') {
+        const _wsResult = await toolWebSearch(input.query);
+        if (_wsResult?.results?.length) {
+            setImmediate(() => {
+                const _imp = require('./lib/memory/importance-engine');
+                const content = `Web search: ${input.query}. Results: ${_wsResult.results.map(r => r.title + ': ' + r.snippet).join(' | ').slice(0, 500)}`;
+                const { classification } = _imp.score(content, { source: 'browser_research' }); // reuse browser_research base score
+                if (classification !== 'IGNORE' && classification !== 'SHORT_TERM') {
+                    _gateway.storeMemory({ layer: 9, source: 'web_search', content, tags: ['search', 'research'], requestingEntity: 'tool', taskId: null }).catch(() => {});
+                }
+            });
+        }
+        return _wsResult;
+    }
     if (name === 'get_weather') return await toolWeather(input.location);
     if (name === 'get_datetime') return toolDateTime();
-    if (name === 'list_emails') return await toolListEmails();
+    if (name === 'list_emails') {
+        const _leResult = await toolListEmails();
+        if (_leResult?.emails?.length) {
+            setImmediate(() => {
+                const _imp = require('./lib/memory/importance-engine');
+                for (const em of _leResult.emails.slice(0, 5)) {
+                    if (!em.sender && !em.subject) continue;
+                    const content = `Email — From: ${em.sender || 'unknown'} | Subject: ${em.subject || '(no subject)'} | ${(em.summary || '').slice(0, 200)}`;
+                    const { classification } = _imp.score(content, { source: 'email' });
+                    if (classification !== 'IGNORE' && classification !== 'SHORT_TERM') {
+                        _gateway.storeMemory({ layer: 9, source: 'email', content, tags: ['email', 'communication', em.priority?.toLowerCase() || 'normal'], requestingEntity: 'tool', taskId: null }).catch(() => {});
+                    }
+                }
+            });
+        }
+        return _leResult;
+    }
     if (name === 'check_emails') return await toolCheckEmails();
     if (name === 'get_notifications') return await toolGetNotifications(input.unread_only !== false);
     if (name === 'list_files') return await toolListFiles();
@@ -8492,9 +8545,34 @@ async function executeApexTool(name, input) {
     if (name === 'list_tasks') return await toolListTasks();
     if (name === 'get_news') return await toolGetNews(input.category);
     if (name === 'get_calendar_events') return await toolGetCalendarEvents(input.days || 7);
-    if (name === 'get_finance_summary') return await toolGetFinanceSummary();
-    if (name === 'get_health_summary') return await toolGetHealthSummary();
-    if (name === 'browser_research') return await toolBrowserResearch(input.objective, input.url);
+    if (name === 'get_finance_summary') {
+        const _fsResult = await toolGetFinanceSummary();
+        if (_fsResult?.summary && !_fsResult.error) {
+            setImmediate(() => _gateway.storeMemory({ layer: 9, source: 'finance_summary', content: `Finance status: ${_fsResult.summary}`, tags: ['finance'], requestingEntity: 'tool', taskId: null }).catch(() => {}));
+        }
+        return _fsResult;
+    }
+    if (name === 'get_health_summary') {
+        const _hsResult = await toolGetHealthSummary();
+        if (_hsResult?.summary && !_hsResult.error) {
+            setImmediate(() => _gateway.storeMemory({ layer: 9, source: 'health_summary', content: `Health status: ${_hsResult.summary}`, tags: ['health'], requestingEntity: 'tool', taskId: null }).catch(() => {}));
+        }
+        return _hsResult;
+    }
+    if (name === 'browser_research') {
+        const _brResult = await toolBrowserResearch(input.objective, input.url);
+        if (_brResult && !_brResult.error) {
+            setImmediate(() => {
+                const _imp = require('./lib/memory/importance-engine');
+                const content = `Research: ${input.objective || ''}. ${JSON.stringify(_brResult).slice(0, 600)}`;
+                const { classification } = _imp.score(content, { source: 'browser_research' });
+                if (classification === 'IGNORE') return;
+                const layer = _imp.recommendLayer('browser_research', classification);
+                if (layer) _gateway.storeMemory({ layer, source: 'browser_research', content, tags: ['research', 'browser'], requestingEntity: 'tool', taskId: null }).catch(() => {});
+            });
+        }
+        return _brResult;
+    }
     if (name === 'browser_screenshot') return await toolBrowserScreenshot(input.url);
     if (name === 'browser_pdf') return await toolBrowserPdf(input.url);
     if (name === 'browser_scrape') return await toolBrowserScrape(input.url);
@@ -8533,6 +8611,26 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         addToMemory("user", userMessage);
         setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ role: 'user', message: userMessage }), tags: ['conversation', 'voice'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
 
+        // Phase 13 — Conversational influence closure: explicit affirmations confirm lesson influence
+        // Conservative: ≤5 words AND matches a whitelist of unambiguous success markers only.
+        {
+            const _p13words = userMessage.trim().split(/\s+/).length;
+            const _p13affirm = /^(yes|yep|yeah|perfect|exactly|that'?s(?: right)?|confirmed|correct|spot on|absolutely|precisely|indeed)\b[\s!.]*$/i.test(userMessage.trim());
+            if (_p13words <= 5 && _p13affirm && req.conversationId) {
+                setImmediate(async () => {
+                    try {
+                        const priorLessons = await _wm.get(req.conversationId, 'execution_context').catch(() => null);
+                        if (priorLessons?.length) {
+                            const _rfx = require('./lib/memory/reflexion-tracker');
+                            for (const l of priorLessons) {
+                                if (l.content) await _rfx.recordInfluence(l.content, req.conversationId, 'conversational').catch(() => {});
+                            }
+                        }
+                    } catch {}
+                });
+            }
+        }
+
         // ── Query classification — zero-latency, decides which context sources to load ──
         const _words = userMessage.trim().split(/\s+/);
         const _isGreeting = _words.length <= 5 &&
@@ -8546,7 +8644,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         // _isGreeting: Alex context only, 3s timeout cap (pgLoadFacts can hang)
         // full path: all 7 sources in parallel
         const _wikiReader = (() => { try { return require('./agent-system/wiki-reader'); } catch { return null; } })();
-        let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', lcMemCtx = '', lcRagCtx = '';
+        let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', lcMemCtx = '', lcRagCtx = '', gatewayCtx = null;
         if (_isConversational) {
             // zero context — fastest possible path
         } else if (_isGreeting) {
@@ -8555,7 +8653,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                 new Promise(r => setTimeout(() => r(''), 3000))
             ]).catch(() => '');
         } else {
-            [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx] = await Promise.all([
+            [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx, gatewayCtx] = await Promise.all([
                 getMemorySummary().catch(() => ''),
                 formatRecentMemory().catch(() => ''),
                 buildAlexContext().catch(() => ''),
@@ -8563,7 +8661,10 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                 _wikiReader ? _wikiReader.getWikiContext(userMessage).catch(() => '') : Promise.resolve(''),
                 lcMemory.getContext(userMessage).catch(() => ''),
                 lcRag.retrieveContext(userMessage).catch(() => ''),
+                _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 2000, taskId: req.conversationId }).catch(() => null),
             ]);
+            // Phase U2 Phase 5: write current conversation to working memory (TTL 2h)
+            setImmediate(() => _wm.set(req.conversationId || 'voice', 'current_conversation', { message: userMessage, at: new Date().toISOString() }, { source: 'voice_chat', ttlSeconds: 7200 }).catch(() => {}));
         }
         console.log(`[LATENCY] +${Date.now() - t0}ms context fetch done (${_isConversational ? 'zero-ctx' : _isGreeting ? 'greeting' : 'full'})`);
 
@@ -8613,6 +8714,10 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                     system: [
                         enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
                         alexContext,
+                        gatewayCtx?.lessons?.length ? `LESSONS LEARNED:\n${gatewayCtx.lessons.slice(0, 3).map(l => `• ${l.content}`).join('\n')}` : '',
+                        gatewayCtx?.historical_context?.length ? `RELEVANT PAST CONTEXT:\n${gatewayCtx.historical_context.slice(0, 2).map(h => `• ${(typeof h.content === 'string' ? h.content : JSON.stringify(h.content)).slice(0, 120)}`).join('\n')}` : '',
+                        // Phase 16/WS1 — Founder context: abstracted alignment only; raw PII never sent externally
+                        (() => { try { const fc = gatewayCtx?.founder_context; if (!fc) return ''; const { abstractForExternalPrompt } = require('./lib/founder/privacy-guard'); const abs = abstractForExternalPrompt(fc); if (!abs) return ''; const parts = [abs.alignment_guidance, abs.peak_state_prompt, abs.abstracted_behavioral_guidance?.length ? `Behavioral guidance:\n${abs.abstracted_behavioral_guidance.map(g => `• ${g}`).join('\n')}` : null, abs.relevant_values?.length ? `Values: ${abs.relevant_values.slice(0,3).join(', ')}` : null, abs.applicable_principles?.length ? `Principles: ${abs.applicable_principles.slice(0,2).join(' | ')}` : null].filter(Boolean); return parts.length ? `FOUNDER ALIGNMENT:\n${parts.join('\n')}` : ''; } catch { return ''; } })(),
                         `You are Apex — Alex's personal AI operating system and intelligence engine. Address Alex as "sir". Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Alex is based in Leamington Spa, Warwickshire, England.`,
                         `VOICE RULES — mandatory: Responses are spoken aloud. Maximum 15 words for simple questions, 25 words for complex ones. One thought, then stop. No preamble, no trailing questions unless essential. No markdown, no lists, no asterisks.`,
                         `You have full access to Alex's world: calendar, emails, tasks, files, finances, health data, notifications, the web, and persistent memory. Use tools without hesitation. When greeted, call get_notifications and get_calendar_events simultaneously. Never say you cannot access something without trying first.`,
@@ -8660,6 +8765,17 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         setImmediate(() => lcMemory.addExchange(userMessage, reply).catch(() => {}));
         // Upgrade 1: fire-and-forget fact extraction — never blocks response
         setImmediate(() => extractAndSaveFacts(userMessage, reply).catch(() => {}));
+        // Phase 2 — Founder Continuity: observe communication patterns and preferences
+        setImmediate(() => {
+            try {
+                const _te = require('./lib/founder/trait-evolution');
+                const _imp = require('./lib/memory/importance-engine');
+                const { classification } = _imp.score(userMessage, { source: 'voice_chat' });
+                if (classification !== 'IGNORE' && classification !== 'SHORT_TERM') {
+                    _te.recordEvidence({ trait: 'communication_pattern', observation: userMessage.slice(0, 200), confidence: 0.4, evidence: userMessage.slice(0, 300), originatingEvent: 'voice_chat' }).catch(() => {});
+                }
+            } catch {}
+        });
 
         // Voice-to-task: detect action intent and log to apex_tasks
         setImmediate(async () => {

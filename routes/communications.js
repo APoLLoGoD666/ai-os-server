@@ -3,6 +3,7 @@ const router = require('express').Router();
 const { createClient } = require('@supabase/supabase-js');
 const { google } = require('googleapis');
 const _auth = require('../lib/app-auth');
+const _gateway = require('../lib/memory/gateway');
 
 const _sbClient = (() => { let c; return () => { if (!c) c = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY); return c; }; })();
 function sb() { return _sbClient(); }
@@ -126,6 +127,19 @@ async function syncGoogleCalendar() {
     }
 
     console.log(`[Calendar] Synced ${rows.length} events from Google Calendar`);
+
+    // Phase U2: store calendar summary via canonical write pathway (importance gate → gateway)
+    setImmediate(() => {
+        const _imp     = require('../lib/memory/importance-engine');
+        const titles   = rows.slice(0, 5).map(r => r.title).join(', ');
+        const content  = `Calendar synced ${rows.length} upcoming events: ${titles}`;
+        const { classification } = _imp.score(content, { source: 'calendar_sync' });
+        if (classification === 'IGNORE') return;
+        const layer = _imp.recommendLayer('calendar_sync', classification);
+        if (!layer) return;
+        _gateway.storeMemory({ layer, source: 'calendar_sync', content, tags: ['calendar', 'schedule'], requestingEntity: 'system' }).catch(() => {});
+    });
+
     return { count: rows.length };
 }
 
