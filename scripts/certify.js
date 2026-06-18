@@ -49,7 +49,7 @@ async function main() {
         console.log(`  ${pad(clause.clause, 8)} ${pad(v, 8)} ${pad(conf, 16)} ${clause.name}`);
     }
     console.log('  ─────────────────────────────────────────────────────────────');
-    console.log(`  ${report.pass_count}/4 clauses pass   Latency: ${report.latency_ms}ms\n`);
+    console.log(`  ${report.pass_count}/5 clauses pass   Latency: ${report.latency_ms}ms\n`);
 
     if (report.pass) {
         console.log('  ████████████████████████████████████████████████████████████');
@@ -59,7 +59,7 @@ async function main() {
     } else {
         console.log('  ████████████████████████████████████████████████████████████');
         console.log('  ██  CERTIFICATION: FAIL — DEPLOYMENT BLOCKED               ██');
-        console.log(`  ██  ${report.fail_count} clause(s) failed. Fix before deploying.          ██`);
+        console.log(`  ██  ${report.fail_count} clause(s) failed. Fix before deploying.         ██`);
         console.log('  ████████████████████████████████████████████████████████████\n');
         const failing = report.clauses.filter(c => !c.pass).map(c => `    - Clause ${c.clause}: ${c.failures[0] || 'failed'}`);
         console.log('  Failing clauses:');
