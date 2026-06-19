@@ -337,6 +337,8 @@ app.use((req, res, next) => {
     next();
 });
 
+// Civilization Kernel — must run after execution class tagger, before all routes
+app.use(require('./middleware/civilization-kernel'));
 
 app.get('/health', async (req, res) => {
     // Retry DB check once (500 ms gap) before declaring down — guards transient glitches

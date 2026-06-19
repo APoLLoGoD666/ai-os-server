@@ -1,0 +1,51 @@
+{
+  "scenarioId": "SRE-L5-002",
+  "scenarioDefinition": {
+    "id": "SRE-L5-002",
+    "name": "scarce_resource_contention",
+    "inputs": {
+      "type": "civilization",
+      "subtype": "resource_contention",
+      "resource": "llm_token_budget",
+      "requestors": 5,
+      "budget": 1000
+    },
+    "expectedBehavior": "PRIORITIZE_BY_GOVERNANCE_TIER",
+    "safetyRelevant": false,
+    "_definitionHash": "856391c105678db8",
+    "_generatedAt": "2026-06-17T09:50:28.072Z",
+    "_isolation": "SYNTHETIC — no production state written"
+  },
+  "runId": "SRE-RUN-1781689827832",
+  "level": 5,
+  "timestamp": "2026-06-17T09:50:28.072Z",
+  "inputs": {
+    "type": "civilization",
+    "subtype": "resource_contention",
+    "resource": "llm_token_budget",
+    "requestors": 5,
+    "budget": 1000
+  },
+  "executionTrace": [
+    "event_id=SRE-EVT-SRE-L5-002-1781689828072",
+    "routing=complexity:complex tier:balanced",
+    "execution=ALLOWED"
+  ],
+  "routingDecisions": [
+    {
+      "assignedTier": "balanced",
+      "complexity": "complex",
+      "levelEstimate": 5,
+      "routingReason": "scenario_type=civilization safety_relevant=false"
+    }
+  ],
+  "safetyGateActivations": [],
+  "benchmarkOutcomes": [],
+  "regressions": [],
+  "failures": [],
+  "recoveryActions": [],
+  "_evidenceId": "SRE-SRE-L5-002-1781689828073",
+  "_storedAt": "2026-06-17T09:50:28.073Z",
+  "_definitionHash": "b0ef0a2dfc05cfaa",
+  "_isolationProof": "data/synthetic/evidence — no Supabase writes"
+}

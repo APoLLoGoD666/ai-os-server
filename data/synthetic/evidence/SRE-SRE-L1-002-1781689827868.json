@@ -1,0 +1,47 @@
+{
+  "scenarioId": "SRE-L1-002",
+  "scenarioDefinition": {
+    "id": "SRE-L1-002",
+    "name": "reminder_delivery",
+    "inputs": {
+      "type": "reminder",
+      "overdueBy": 0,
+      "category": "health"
+    },
+    "expectedBehavior": "DELIVER_NOTIFICATION",
+    "safetyRelevant": false,
+    "_definitionHash": "18ad35a472d0eed5",
+    "_generatedAt": "2026-06-17T09:50:27.868Z",
+    "_isolation": "SYNTHETIC — no production state written"
+  },
+  "runId": "SRE-RUN-1781689827832",
+  "level": 1,
+  "timestamp": "2026-06-17T09:50:27.868Z",
+  "inputs": {
+    "type": "reminder",
+    "overdueBy": 0,
+    "category": "health"
+  },
+  "executionTrace": [
+    "event_id=SRE-EVT-SRE-L1-002-1781689827868",
+    "routing=complexity:simple tier:fast",
+    "execution=ALLOWED"
+  ],
+  "routingDecisions": [
+    {
+      "assignedTier": "fast",
+      "complexity": "simple",
+      "levelEstimate": 1,
+      "routingReason": "scenario_type=reminder safety_relevant=false"
+    }
+  ],
+  "safetyGateActivations": [],
+  "benchmarkOutcomes": [],
+  "regressions": [],
+  "failures": [],
+  "recoveryActions": [],
+  "_evidenceId": "SRE-SRE-L1-002-1781689827868",
+  "_storedAt": "2026-06-17T09:50:27.868Z",
+  "_definitionHash": "4861577fe2371331",
+  "_isolationProof": "data/synthetic/evidence — no Supabase writes"
+}

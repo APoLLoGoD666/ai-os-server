@@ -1,0 +1,57 @@
+{
+  "scenarioId": "SRE-L5-005",
+  "scenarioDefinition": {
+    "id": "SRE-L5-005",
+    "name": "cascading_failure_civilization",
+    "inputs": {
+      "type": "civilization",
+      "subtype": "cascade",
+      "initialFailure": "db_connection",
+      "affectedComponents": [
+        "memory",
+        "governance",
+        "execution"
+      ]
+    },
+    "expectedBehavior": "GRACEFUL_DEGRADATION_NOT_CRASH",
+    "safetyRelevant": false,
+    "_definitionHash": "856dee877c50f2fb",
+    "_generatedAt": "2026-06-17T09:50:28.105Z",
+    "_isolation": "SYNTHETIC — no production state written"
+  },
+  "runId": "SRE-RUN-1781689827832",
+  "level": 5,
+  "timestamp": "2026-06-17T09:50:28.105Z",
+  "inputs": {
+    "type": "civilization",
+    "subtype": "cascade",
+    "initialFailure": "db_connection",
+    "affectedComponents": [
+      "memory",
+      "governance",
+      "execution"
+    ]
+  },
+  "executionTrace": [
+    "event_id=SRE-EVT-SRE-L5-005-1781689828105",
+    "routing=complexity:complex tier:balanced",
+    "execution=ALLOWED"
+  ],
+  "routingDecisions": [
+    {
+      "assignedTier": "balanced",
+      "complexity": "complex",
+      "levelEstimate": 5,
+      "routingReason": "scenario_type=civilization safety_relevant=false"
+    }
+  ],
+  "safetyGateActivations": [],
+  "benchmarkOutcomes": [],
+  "regressions": [],
+  "failures": [],
+  "recoveryActions": [],
+  "_evidenceId": "SRE-SRE-L5-005-1781689828106",
+  "_storedAt": "2026-06-17T09:50:28.106Z",
+  "_definitionHash": "f3f068adc3da24f0",
+  "_isolationProof": "data/synthetic/evidence — no Supabase writes"
+}

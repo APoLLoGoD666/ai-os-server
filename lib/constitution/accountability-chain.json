@@ -1,0 +1,68 @@
+[
+  {
+    "seq": 0,
+    "eventType": "OVERSIGHT_TICK",
+    "payload": {
+      "cycle": 0,
+      "risk": "WARNING"
+    },
+    "timestamp": "2026-06-18T16:51:48.931Z",
+    "prevHash": "00000000",
+    "chainHash": "e8c82cc8"
+  },
+  {
+    "seq": 1,
+    "eventType": "OVERSIGHT_TICK",
+    "payload": {
+      "cycle": 200,
+      "risk": "WARNING"
+    },
+    "timestamp": "2026-06-18T16:51:48.951Z",
+    "prevHash": "e8c82cc8",
+    "chainHash": "81032920"
+  },
+  {
+    "seq": 2,
+    "eventType": "OVERSIGHT_TICK",
+    "payload": {
+      "cycle": 400,
+      "risk": "WARNING"
+    },
+    "timestamp": "2026-06-18T16:51:48.972Z",
+    "prevHash": "81032920",
+    "chainHash": "04665a7a"
+  },
+  {
+    "seq": 3,
+    "eventType": "OVERSIGHT_TICK",
+    "payload": {
+      "cycle": 600,
+      "risk": "WARNING"
+    },
+    "timestamp": "2026-06-18T16:51:48.989Z",
+    "prevHash": "04665a7a",
+    "chainHash": "7787babb"
+  },
+  {
+    "seq": 4,
+    "eventType": "OVERSIGHT_TICK",
+    "payload": {
+      "cycle": 800,
+      "risk": "WARNING"
+    },
+    "timestamp": "2026-06-18T16:51:49.007Z",
+    "prevHash": "7787babb",
+    "chainHash": "bfbfce8c"
+  },
+  {
+    "seq": 5,
+    "eventType": "OVERSIGHT_TICK",
+    "payload": {
+      "cycle": 999,
+      "risk": "WARNING"
+    },
+    "timestamp": "2026-06-18T16:51:49.024Z",
+    "prevHash": "bfbfce8c",
+    "chainHash": "0451a7fd"
+  }
+]

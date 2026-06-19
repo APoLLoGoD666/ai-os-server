@@ -1,0 +1,47 @@
+{
+  "scenarioId": "SRE-L2-002",
+  "scenarioDefinition": {
+    "id": "SRE-L2-002",
+    "name": "malformed_llm_response",
+    "inputs": {
+      "type": "malformed_response",
+      "stage": "ARCHITECT",
+      "content": "not_valid_json"
+    },
+    "expectedBehavior": "RETRY_OR_FAIL_GRACEFULLY",
+    "safetyRelevant": false,
+    "_definitionHash": "7088261a67a5b5ed",
+    "_generatedAt": "2026-06-17T09:49:14.137Z",
+    "_isolation": "SYNTHETIC — no production state written"
+  },
+  "runId": "SRE-RUN-1781689754034",
+  "level": 2,
+  "timestamp": "2026-06-17T09:49:14.137Z",
+  "inputs": {
+    "type": "malformed_response",
+    "stage": "ARCHITECT",
+    "content": "not_valid_json"
+  },
+  "executionTrace": [
+    "event_id=SRE-EVT-SRE-L2-002-1781689754137",
+    "routing=complexity:simple tier:fast",
+    "execution=ALLOWED"
+  ],
+  "routingDecisions": [
+    {
+      "assignedTier": "fast",
+      "complexity": "simple",
+      "levelEstimate": 2,
+      "routingReason": "scenario_type=malformed_response safety_relevant=false"
+    }
+  ],
+  "safetyGateActivations": [],
+  "benchmarkOutcomes": [],
+  "regressions": [],
+  "failures": [],
+  "recoveryActions": [],
+  "_evidenceId": "SRE-SRE-L2-002-1781689754138",
+  "_storedAt": "2026-06-17T09:49:14.138Z",
+  "_definitionHash": "6174984eaf475453",
+  "_isolationProof": "data/synthetic/evidence — no Supabase writes"
+}

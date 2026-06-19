@@ -1,0 +1,15 @@
+[
+  {
+    "id": "AMD-1781801509014-nox05",
+    "principleId": "P05_PII_ABSTRACTION",
+    "proposedChange": "lite privilege escalation change",
+    "rationale": "lite escalation rationale that is certainly longer than fifty characters",
+    "proposedBy": "orchestrator",
+    "contentHash": "57a209c8",
+    "status": "PROPOSED",
+    "proposedAt": "2026-06-18T16:51:49.014Z",
+    "approvedBy": null,
+    "approvedAt": null,
+    "activatedAt": null
+  }
+]
