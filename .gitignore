@@ -17,6 +17,9 @@ backups/
 .mcp.json
 .claude-session-lock.json
 
+# Claude Code agent worktrees — ephemeral isolation dirs, never commit
+.claude/worktrees/
+
 # Ruflo runtime databases and ephemeral state
 ruvector.db
 .swarm/*.db
