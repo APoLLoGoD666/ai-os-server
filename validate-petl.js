@@ -64,8 +64,9 @@ async function main() {
         assert('1.09 ic.INVARIANT is object',        isObj(ic.INVARIANT));
         assert('1.10 cp.run is function',            typeof cp.run         === 'function');
         assert('1.11 et.TX_STATE is object',         isObj(et.TX_STATE));
-        assert('1.12 et.begin is function',          typeof et.begin       === 'function');
-        assert('1.13 et.finalize is function',       typeof et.finalize    === 'function');
+        assert('1.12 et.begin is function',              typeof et.begin             === 'function');
+        assert('1.12b et.beginWithLattice is function',  typeof et.beginWithLattice  === 'function');
+        assert('1.13 et.finalize is function',           typeof et.finalize          === 'function');
         assert('1.14 et.abort is function',          typeof et.abort       === 'function');
         assert('1.15 et.boundMemoryWrite is fn',     typeof et.boundMemoryWrite === 'function');
         assert('1.16 et.PetlError is class',         typeof et.PetlError   === 'function');
@@ -481,7 +482,7 @@ async function main() {
         const res  = mockRes();
         let nextCalled = false;
 
-        mw.petlGate(req, res, () => { nextCalled = true; });
+        await mw.petlGate(req, res, () => { nextCalled = true; });
 
         assert('12.01 next() called on success',   nextCalled);
         assert('12.02 req.txId set',               isStr(req.txId) && req.txId.startsWith('TX-'));
@@ -490,10 +491,19 @@ async function main() {
         assert('12.05 res.json is wrapped',        res.json !== null);
         assert('12.06 res.send is wrapped',        res.send !== null);
 
+        // latticeDecision must be present on every middleware-gated tx
+        assert('12.09 latticeDecision present',     isObj(req.tx.latticeDecision));
+        assert('12.10 constitutionVerdict set',     isStr(req.tx.latticeDecision.constitutionVerdict));
+        assert('12.11 founderAlignmentScore set',   req.tx.latticeDecision.founderAlignmentScore !== undefined);
+        assert('12.12 digitalTwinPrediction set',   req.tx.latticeDecision.digitalTwinPrediction !== undefined);
+        assert('12.13 finalDecisionScore set',      isNum(req.tx.latticeDecision.finalDecisionScore));
+        assert('12.14 finalDecision is string',     isStr(req.tx.latticeDecision.finalDecision));
+        assert('12.15 driftFlag is bool',           isBool(req.tx.latticeDecision.driftFlag));
+
         // Calling res.json auto-finalizes
         res.json({ ok: true });
-        assert('12.07 tx finalized on res.json',   req.tx.state === et.TX_STATE.FINALIZED);
-        assert('12.08 invariantReport generated',  isObj(req.tx.invariantReport));
+        assert('12.16 tx finalized on res.json',   req.tx.state === et.TX_STATE.FINALIZED);
+        assert('12.17 invariantReport generated',  isObj(req.tx.invariantReport));
 
         et._reset(); csm._reset(); clog._reset();
     }
@@ -506,7 +516,7 @@ async function main() {
             const req = mockReq({ path: bypassPath, url: bypassPath });
             const res = mockRes();
             let nextCalled = false;
-            mw.petlGate(req, res, () => { nextCalled = true; });
+            await mw.petlGate(req, res, () => { nextCalled = true; });
             assert(`13.x bypass: next() for ${bypassPath}`, nextCalled);
             assert(`13.x bypass: no txId for ${bypassPath}`, req.txId === undefined);
         }
@@ -521,7 +531,7 @@ async function main() {
         const req = mockReq({ headers: { 'x-ratelimit-remaining': '0' } });
         const res = mockRes();
         let nextCalled = false;
-        mw.petlGate(req, res, () => { nextCalled = true; });
+        await mw.petlGate(req, res, () => { nextCalled = true; });
 
         assert('14.01 next NOT called on rate limit', !nextCalled);
         assert('14.02 res status 429',               res.statusCode === 429);
@@ -540,14 +550,14 @@ async function main() {
         const req  = mockReq();
         const res1 = mockRes();
         // First request takes the slot
-        mw.petlGate(req, res1, () => {});
+        await mw.petlGate(req, res1, () => {});
         assert('15.01 first request committed', req.tx?.state === et.TX_STATE.COMMITTED);
 
         // Second identical request → concurrency denied
         const req2 = mockReq();
         const res2 = mockRes();
         let next2Called = false;
-        mw.petlGate(req2, res2, () => { next2Called = true; });
+        await mw.petlGate(req2, res2, () => { next2Called = true; });
         assert('15.02 second request blocked',   !next2Called);
         assert('15.03 second res status 429',    res2.statusCode === 429);
         assert('15.04 second body.error',        res2._body?.error === 'CONCURRENCY_DENIED');
@@ -557,7 +567,7 @@ async function main() {
         const req3 = mockReq();
         const res3 = mockRes();
         let next3Called = false;
-        mw.petlGate(req3, res3, () => { next3Called = true; });
+        await mw.petlGate(req3, res3, () => { next3Called = true; });
         assert('15.05 third request ok after release', next3Called);
         res3.json({});
 
@@ -570,7 +580,7 @@ async function main() {
 
         const req = mockReq();
         const res = mockRes();
-        mw.petlGate(req, res, () => {});
+        await mw.petlGate(req, res, () => {});
 
         const slotKey = req.tx.slotKey;
         assert('16.01 slot occupied before error', !csm.isFree(slotKey));
@@ -606,7 +616,7 @@ async function main() {
         // Committed tx → passes
         const req = mockReq();
         const res = mockRes();
-        mw.petlGate(req, res, () => {});
+        await mw.petlGate(req, res, () => {});
 
         let throws2 = false;
         try { mw.assertTransaction(req); } catch (_) { throws2 = true; }
@@ -662,9 +672,11 @@ async function main() {
         const pruned0 = et.prune(300_000);
         assert('19.01 prune: nothing expired yet',  pruned0 === 0);
 
-        // With maxAgeMs = 0, finalized tx is pruned
-        const pruned1 = et.prune(0);
-        assert('19.02 prune with 0 maxAge removes tx', pruned1 >= 1);
+        // With maxAgeMs = -1 (cutoff in the future) all finalized txs are pruned.
+        // Avoids Date.now() same-tick race on Windows (15ms granularity) that
+        // makes startedAt === cutoff when maxAgeMs = 0.
+        const pruned1 = et.prune(-1);
+        assert('19.02 prune removes finalized tx', pruned1 >= 1);
         assert('19.03 pruned tx no longer in registry', et.get(tx.txId) === null);
 
         et._reset(); csm._reset(); clog._reset();
