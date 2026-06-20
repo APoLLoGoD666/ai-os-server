@@ -6925,9 +6925,48 @@ Final obvious clean state summary:
    AI
 ========================= */
 
-function buildPrompt(userMessage, memoryText, docsText) {
+async function fetchSelfContext() {
+    try {
+        const sb = require('./lib/clients').getSupabaseClient();
+        const since24h = new Date(Date.now() - 86_400_000).toISOString();
+        const [snapRes, oppRes, lesRes, taskRes] = await Promise.allSettled([
+            sb.from('civilization_health_snapshots').select('score,classification,dimensions,created_at').order('created_at', { ascending: false }).limit(1).single(),
+            sb.from('opportunities').select('title,composite_score').eq('status','detected').order('composite_score',{ascending:false}).limit(1),
+            sb.from('apex_lessons').select('id',{count:'exact',head:true}).gte('created_at', since24h),
+            sb.from('agent_tasks').select('status').gte('created_at', since24h).limit(50),
+        ]);
+        const snap  = snapRes.status  === 'fulfilled' ? snapRes.value.data   : null;
+        const opp   = oppRes.status   === 'fulfilled' ? oppRes.value.data?.[0] : null;
+        const les24 = lesRes.status   === 'fulfilled' ? (lesRes.value.count || 0) : 0;
+        const tasks = taskRes.status  === 'fulfilled' ? (taskRes.value.data || []) : [];
+        const completed24 = tasks.filter(t => t.status === 'completed').length;
+        return { snap, opp, les24, completed24 };
+    } catch { return { snap: null, opp: null, les24: 0, completed24: 0 }; }
+}
+
+function buildPrompt(userMessage, memoryText, docsText, selfCtx = null) {
+    const dimStr = selfCtx?.snap?.dimensions
+        ? Object.entries(selfCtx.snap.dimensions).map(([k,v]) => `${k}:${v.score}`).join(' | ')
+        : null;
+    const selfBlock = selfCtx?.snap ? `
+APEX SELF-STATE (live):
+Health score: ${selfCtx.snap.score}/100 — ${selfCtx.snap.classification}
+Dimensions: ${dimStr}
+Lessons learned today: ${selfCtx.les24} | Tasks completed today: ${selfCtx.completed24}
+Top opportunity: ${selfCtx.opp ? `"${selfCtx.opp.title}" (score ${Math.round((selfCtx.opp.composite_score||0)*100)}/100)` : 'none detected yet'}
+
+APEX ARCHITECTURE:
+Runtime: Node.js + Express on Render (main server) + Python FastAPI sidecar
+Memory: Supabase Postgres — episodic memory, apex_lessons, working memory, knowledge graph
+Intelligence: 7-dimension civilization health (memory/execution/financial/infrastructure/learning/opportunity/strategic)
+Governance: autonomous governance cycles, executive deliberation (CSO/CTO/CFO/COO/CIO/CGO)
+Autonomy: Level ${process.env.AUTONOMY_LEVEL || '1'} — acts within approved scope, surfaces decisions upward
+Connected services: Gmail, Supabase Storage, Mastra agent framework, Claude API
+` : '';
     return `
-You are Apex. You have access to: emails (check_emails, list_emails), files, documents, finance, and routines. When asked about emails, call list_emails immediately. Never say you cannot access emails.
+You are Apex — a personal AI OS, not just a chatbot. You are connected to your runtime. You know your own state, architecture, and what you have done.${selfBlock ? '\n' + selfBlock.trimEnd() : ''}
+
+You have access to: emails (check_emails, list_emails), files, documents, finance, and routines. When asked about emails, call list_emails immediately. Never say you cannot access emails.
 
 You have direct access to the user's workspace files and saved documents. The relevant files are provided below — reference and work with them directly. Never say you cannot access files.
 
@@ -7362,7 +7401,8 @@ ${preview}
             }).join("\n\n")
             : "No relevant saved documents found.";
 
-        const prompt = buildPrompt(userMessage, memoryText, docsText);
+        const selfCtx = await fetchSelfContext();
+        const prompt = buildPrompt(userMessage, memoryText, docsText, selfCtx);
 
         if (mastraAgents && mastraAgents.apexAgent) {
             const historyMessages = memory.slice(-3).map(m => ({
