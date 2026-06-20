@@ -214,7 +214,7 @@ app.use(helmet({
             defaultSrc:  ["'self'"],
             scriptSrc:   ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.jsdelivr.net'],
             styleSrc:    ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-            connectSrc:  ["'self'", 'wss:', 'https:'],
+            connectSrc:  ["'self'", 'wss:', 'https:', 'http://localhost:5002', 'http://127.0.0.1:5002'],
             imgSrc:      ["'self'", 'data:', 'blob:'],
             mediaSrc:    ["'self'", 'blob:'],
             workerSrc:   ["'self'", 'blob:'],
@@ -11411,6 +11411,7 @@ app.post('/api/wiki/consolidate', requireAppAccess, async (req, res) => {
 })();
 
 app.use('/api', require('./routes/tts-gemini'));
+app.use('/', require('./src/routes/telemetry/index.js')({ requireAppAccess, getStatus: getMastraStatus, errBuffer: _errBuffer, gitSha: GIT_SHA }));
 
 // One-time migration runner — applies migrations/005_level9_governance.sql
 // Requires DATABASE_URL env var with real Supabase password. Idempotent (IF NOT EXISTS).
