@@ -8752,7 +8752,7 @@ let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 let _emailCache         = {};
 let _currentDraftEmailId = null;
-const voiceSpeed        = 1.5;
+const voiceSpeed        = 1.0;
 let _t0Voice            = 0;
 const inFlightRefreshes = {};
 const renderSigs        = {};
@@ -9109,10 +9109,13 @@ function _pickVoice() {
     const vv = window.speechSynthesis.getVoices();
     if (!vv.length) return null;
     _selectedVoice =
+        vv.find(v => /microsoft ryan online.*natural/i.test(v.name))                 ||
+        vv.find(v => /microsoft ryan.*english.*united kingdom/i.test(v.name))        ||
+        vv.find(v => /microsoft ryan/i.test(v.name))                                 ||
+        vv.find(v => /microsoft guy online.*natural/i.test(v.name))                  ||
+        vv.find(v => /microsoft.*online.*natural.*en.*(gb|uk)/i.test(v.name))        ||
         vv.find(v => /google uk english male/i.test(v.name))                         ||
         vv.find(v => /google us english/i.test(v.name))                              ||
-        vv.find(v => /microsoft ryan online.*english.*united kingdom/i.test(v.name)) ||
-        vv.find(v => /microsoft guy online.*natural/i.test(v.name))                  ||
         vv.find(v => v.lang === "en-GB" && /male/i.test(v.name))                     ||
         vv.find(v => v.lang === "en-US" && /male/i.test(v.name))                     ||
         vv.find(v => v.lang.startsWith("en") && /male/i.test(v.name))               ||
@@ -9195,7 +9198,11 @@ function summariseForSpeech(raw) {
 }
 
 const FILLERS = [
-    { text: null, weight: 100 },
+    { text: null,            weight: 45 },
+    { text: "Right.",        weight: 18 },
+    { text: "Got it.",       weight: 15 },
+    { text: "Of course.",    weight: 12 },
+    { text: "Understood.",   weight: 10 },
 ];
 
 function _pickFiller() {
