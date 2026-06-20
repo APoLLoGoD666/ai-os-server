@@ -20,7 +20,7 @@ async function obsidianRead(notePath) {
             if (res.ok) return await res.text();
             if (res.status === 401) console.warn(`[ObsidianClient] 401 Unauthorized — check OBSIDIAN_API_KEY`);
             else if (res.status !== 404) console.warn(`[ObsidianClient] API returned ${res.status} for ${notePath}`);
-        } catch (e) { clearTimeout(_t); if (e.name !== 'AbortError') throw e; console.warn('[ObsidianClient] read timeout — falling back to local'); }
+        } catch (e) { clearTimeout(_t); console.warn(`[ObsidianClient] read failed (${e.message}) — falling back to local`); }
     }
     try {
         return fs.readFileSync(path.join(VAULT, notePath), 'utf8');
@@ -48,7 +48,7 @@ async function obsidianWrite(notePath, content) {
             );
             clearTimeout(_t);
             return;
-        } catch (e) { clearTimeout(_t); if (e.name !== 'AbortError') throw e; console.warn('[ObsidianClient] write timeout — falling back to local'); }
+        } catch (e) { clearTimeout(_t); console.warn(`[ObsidianClient] write failed (${e.message}) — falling back to local`); }
     }
     try {
         const full = path.join(VAULT, notePath);
