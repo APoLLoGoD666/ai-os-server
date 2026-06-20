@@ -8869,18 +8869,20 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
             } catch {}
         });
 
-        // Voice-to-task: detect action intent and log to apex_tasks
+        // Voice-to-task: detect action intent, log to apex_tasks and queue for execution
         setImmediate(async () => {
             const actionWords = /\b(remind|add|schedule|book|create|set|buy|order|call|email|text|send|check|research|find|draft|write|plan|note|do|make)\b/i;
             if (actionWords.test(userMessage)) {
                 try {
+                    const vtId = `voice-task-${Date.now()}`;
                     await sbAdmin.from('apex_tasks').insert({
-                        id: `voice-task-${Date.now()}`,
+                        id: vtId,
                         title: userMessage.slice(0, 200),
-                        status: 'pending',
+                        status: 'in_progress',
                         source: 'voice',
                         created_at: new Date().toISOString()
                     });
+                    _agentQueue.enqueue(vtId, () => _startAutoPipeline(vtId), { label: userMessage.slice(0, 80) });
                 } catch {}
             }
         });
@@ -11625,6 +11627,18 @@ require('./routes/gemini-live').attach(server, {
     buildAlexContext,
     obsidianAppend,
     anthropicClient:  client,
+});
+
+// Wire civilization loop → agent pipeline
+// civilization-runtime PHASE 5 emits this when an opportunity passes the anti-goal gate
+_bus.on('civilization:opportunity:execute', ({ opportunityId, objective, route }) => {
+    if (!objective) return;
+    const taskId = `CIV-OPP-${opportunityId || Date.now()}`;
+    sbAdmin.from('apex_tasks').insert({ id: taskId, title: String(objective).slice(0, 200), status: 'in_progress', source: 'civilization_runtime' })
+        .then(() => {
+            _agentQueue.enqueue(taskId, () => _startAutoPipeline(taskId), { label: objective });
+        })
+        .catch(e => console.warn('[CivLoop] opportunity queue failed:', e.message));
 });
 
 
