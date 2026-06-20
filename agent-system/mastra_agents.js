@@ -245,6 +245,76 @@ function initMastra(handleCommand) {
         }
     });
 
+    // ── Browser / Web Execution Tools ───────────────────────────────────────
+
+    const browserResearchTool = createTool({
+        id: "browser_research",
+        description: "Navigate the web and research a topic or URL using a real browser. Can follow links, extract content, and summarise pages. Use for any task that requires reading live web pages.",
+        inputSchema: z.object({
+            objective: z.string().describe("What to find or research."),
+            url: z.string().optional().describe("Starting URL (optional — omit to let the browser search).")
+        }),
+        execute: async ({ inputData }) => {
+            try {
+                const ba = require('./browser-agent');
+                const result = await ba.research(inputData.objective, inputData.url || null, { maxPages: 3 });
+                return { summary: result.summary, pages: result.pages?.length || 0, success: result.success };
+            } catch (e) { return { error: e.message, success: false }; }
+        }
+    });
+
+    const browserScrapeTool = createTool({
+        id: "browser_scrape",
+        description: "Scrape structured content from a specific URL using a real browser. Returns page text, headings, links, and structured data.",
+        inputSchema: z.object({
+            url: z.string().describe("The URL to scrape.")
+        }),
+        execute: async ({ inputData }) => {
+            try {
+                const ba = require('./browser-agent');
+                const browser = await ba.createBrowser();
+                const page = await browser.newPage();
+                await page.goto(inputData.url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+                const data = await ba.extractStructuredData(page);
+                await browser.close();
+                return { ...data, success: true };
+            } catch (e) { return { error: e.message, success: false }; }
+        }
+    });
+
+    const browserFillFormTool = createTool({
+        id: "browser_fill_form",
+        description: "Fill in and submit a web form on a page. Use for sign-ups, contact forms, product creation, or any multi-field web form.",
+        inputSchema: z.object({
+            url: z.string().describe("The URL containing the form."),
+            fields: z.record(z.string()).describe("Object mapping CSS selector or field name to the value to enter."),
+            submitSelector: z.string().optional().describe("CSS selector for the submit button (optional).")
+        }),
+        execute: async ({ inputData }) => {
+            try {
+                const ba = require('./browser-agent');
+                const result = await ba.fillForm(inputData.url, inputData.fields, inputData.submitSelector || null);
+                return { success: result.success, message: result.message };
+            } catch (e) { return { error: e.message, success: false }; }
+        }
+    });
+
+    const browserClickTool = createTool({
+        id: "browser_click",
+        description: "Click an element on a web page and return the resulting page content. Use for navigation buttons, CTAs, menu items.",
+        inputSchema: z.object({
+            url: z.string().describe("The URL of the page."),
+            selector: z.string().describe("CSS selector for the element to click.")
+        }),
+        execute: async ({ inputData }) => {
+            try {
+                const ba = require('./browser-agent');
+                const result = await ba.clickAndExtract(inputData.url, inputData.selector);
+                return { content: result.content, success: result.success };
+            } catch (e) { return { error: e.message, success: false }; }
+        }
+    });
+
     // ── Agents ─────────────────────────────────────────────────────────────
 
     apexAgent = _tryInitAgent("apex", () => new Agent({
@@ -288,12 +358,20 @@ ROUTINES:
 NOTIFICATIONS:
 - create_notification — post a system notification with title, body, and priority
 
+WEB / BROWSER (you can execute on the web):
+- browser_research — navigate the web and research any topic or URL using a real browser
+- browser_scrape — extract structured content from a specific URL
+- browser_fill_form — fill in and submit a web form (sign-ups, product creation, any form)
+- browser_click — click an element on a page and return the resulting content
+
 ## Rules
 - When a user asks about emails, ALWAYS call list_emails immediately. Never say you don't have email access.
 - When a user asks to summarise emails, call list_emails then summarise the results in plain English.
 - When asked to check for new emails, call check_emails.
 - When asked for a finance summary, call get_finance_summary immediately.
 - Never deny a capability that a tool exists for. Never describe what you would do — just do it.
+- When a user asks to research a website, scrape a page, fill a form, or do ANYTHING on the web — use browser tools immediately.
+- For multi-step web tasks (e.g. "build a store on Printify"): use browser_research first to get the page structure, then browser_fill_form / browser_click for each step.
 - Be concise and practical. Use the most specific tool available.
 - Be extremely concise. Maximum 3 sentences unless the user explicitly asks for more detail. Prefer bullet points for lists.`,
         model: anthropic(process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001"),
@@ -313,7 +391,11 @@ NOTIFICATIONS:
             list_emails: listEmailsTool,
             list_routines: listRoutinesTool,
             create_routine: createRoutineTool,
-            create_notification: createNotificationTool
+            create_notification: createNotificationTool,
+            browser_research: browserResearchTool,
+            browser_scrape: browserScrapeTool,
+            browser_fill_form: browserFillFormTool,
+            browser_click: browserClickTool,
         }
     }));
 
