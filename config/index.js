@@ -20,7 +20,7 @@ const REQUEST_TIMEOUT_MS = 30 * 1000;
 // ── Obsidian ──────────────────────────────────────────────────────────────────
 const OBSIDIAN_VAULT_PATH = process.env.OBSIDIAN_VAULT_PATH
     || (process.platform === 'win32'
-        ? 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS'
+        ? 'C:\\Users\\arwwo\\Desktop\\APEX\\APEX AI OS'
         : '/opt/render/project/src/APEX AI OS');
 
 // ── Document limits ───────────────────────────────────────────────────────────

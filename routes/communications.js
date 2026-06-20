@@ -12,7 +12,7 @@ async function getGCalClient() {
     const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET } = process.env;
     if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET) return null;
     // Prefer DB-stored token (written by re-auth flow), fall back to env var
-    const { pgGetGmailToken } = require('../pg_helpers');
+    const { pgGetGmailToken } = require('../lib/pg_helpers');
     const dbToken = await pgGetGmailToken().catch(() => null);
     const refreshToken = dbToken || process.env.GMAIL_REFRESH_TOKEN;
     if (!refreshToken) return null;

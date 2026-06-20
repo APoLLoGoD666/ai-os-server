@@ -229,7 +229,7 @@ router.get('/self-check', requireAppAccess, async (req, res) => {
         checks.postgres = { ok: false, error: 'DATABASE_URL not configured', hint: 'Add real DATABASE_URL to Render env vars (get from Supabase dashboard > Settings > Database)' };
     } else {
         try {
-            const pgPool = require('../pg_database');
+            const pgPool = require('../lib/pg_database');
             const t = Date.now();
             await pgPool.query('SELECT 1');
             checks.postgres = { ok: true, latency_ms: Date.now() - t };

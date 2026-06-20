@@ -75,7 +75,7 @@ async function syncAgentRuns(opts = {}) {
 // Ensure the checkpoints table exists (idempotent)
 async function ensureCheckpointTable() {
     try {
-        const pgPool = require('../../pg_database');
+        const pgPool = require('../../lib/pg_database');
         await pgPool.query(`
             CREATE TABLE IF NOT EXISTS apex_sync_checkpoints (
                 key TEXT PRIMARY KEY,

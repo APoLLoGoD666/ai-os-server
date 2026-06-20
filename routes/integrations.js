@@ -196,7 +196,7 @@ router.post('/briefing/daily', requireAppAccess, async (req, res) => {
     const pipeline = _pipeline('daily-briefing-pipeline');
     if (!pipeline) return res.status(503).json({ ok: false, error: 'pipeline unavailable' });
     try {
-        const pgPool = (() => { try { return require('../pg_database'); } catch { return null; } })();
+        const pgPool = (() => { try { return require('../lib/pg_database'); } catch { return null; } })();
         const result = await pipeline.runDailyBriefing(pgPool);
         res.json(result);
     } catch (e) {
@@ -210,7 +210,7 @@ router.post('/briefing/weekly', requireAppAccess, async (req, res) => {
     const pipeline = _pipeline('weekly-review-pipeline');
     if (!pipeline) return res.status(503).json({ ok: false, error: 'pipeline unavailable' });
     try {
-        const pgPool = (() => { try { return require('../pg_database'); } catch { return null; } })();
+        const pgPool = (() => { try { return require('../lib/pg_database'); } catch { return null; } })();
         const anthropic = new (require('@anthropic-ai/sdk'))({ apiKey: process.env.ANTHROPIC_API_KEY });
         const result = await pipeline.runWeeklyReview(pgPool, process.env.OBSIDIAN_URL, anthropic);
         res.json(result);
@@ -300,7 +300,7 @@ router.get('/system/status', requireAppAccess, async (req, res) => {
         }
         if (supabase) {
             try {
-                const pg = require('../pg_database');
+                const pg = require('../lib/pg_database');
                 const t = Date.now(); await pg.query('SELECT 1'); ping.supabase = { ok: true, latencyMs: Date.now() - t };
             } catch (e) { ping.supabase = { ok: false, error: e.message }; }
         }

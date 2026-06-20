@@ -14,7 +14,7 @@ module.exports = function makeTelemetryRouter({ requireAppAccess, getStatus, err
                 dbOk = !error;
             } else {
                 try {
-                    const pgPool = require('../../../pg_database');
+                    const pgPool = require('../../../lib/pg_database');
                     await pgPool.query('SELECT 1');
                     dbOk = true;
                 } catch {
@@ -73,7 +73,7 @@ module.exports = function makeTelemetryRouter({ requireAppAccess, getStatus, err
         await (async () => {
             const t = Date.now();
             try {
-                const pgPool = require('../../../pg_database');
+                const pgPool = require('../../../lib/pg_database');
                 await pgPool.query('SELECT 1');
                 result.db = { ok: true, latencyMs: Date.now() - t };
             } catch (e) {
@@ -193,7 +193,7 @@ module.exports = function makeTelemetryRouter({ requireAppAccess, getStatus, err
             checks.postgres = { ok: false, error: 'DATABASE_URL not configured', hint: 'Add real DATABASE_URL to Render env vars (Supabase dashboard > Settings > Database)' };
         } else {
             try {
-                const pgPool = require('../../../pg_database'); const pt = Date.now();
+                const pgPool = require('../../../lib/pg_database'); const pt = Date.now();
                 await pgPool.query('SELECT 1'); checks.postgres = { ok: true, latency_ms: Date.now() - pt };
             } catch (e) { checks.postgres = { ok: false, error: e.message || 'connection failed', hint: 'Verify DATABASE_URL in Render env vars' }; }
         }
