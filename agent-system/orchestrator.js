@@ -1051,6 +1051,9 @@ async function runAgentTeam(spec, taskId) {
         influencePack:     null,
         runtimeControls:   null,
         runtimeCtrlError:  null,
+        graphId:           null,
+        spanId:            null,
+        conditionsMet:     [],
     };
     if (!ctx.paidClient) throw new Error('No API key configured — set ANTHROPIC_API_KEY');
 
@@ -1449,6 +1452,15 @@ async function runAgentTeam(spec, taskId) {
                 );
             } catch {}
         });
+        // Governance start — records system event, starts execution graph, captures environment snapshot
+        try {
+            const _govStart = await _gov.onPipelineStart(taskId, ctx.traceId, spec.objective, ctx.agentModels.developer);
+            ctx.graphId       = _govStart.graphId;
+            ctx.spanId        = _govStart.spanId;
+            ctx.conditionsMet = _govStart.conditionsMet || [];
+        } catch (_govStartErr) {
+            console.warn('[orchestrator] governance start failed (non-fatal):', _govStartErr.message);
+        }
         console.log(`[Orchestrator] ── Starting ${taskId} ──`);
         console.log(`[Orchestrator] Budget cap: $${PIPELINE_BUDGET_USD}`);
 
