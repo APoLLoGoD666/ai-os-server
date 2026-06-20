@@ -9342,7 +9342,12 @@ async function _processSpeak() {
         console.log('[Speak] safety timer → unmuteDeepgram, 3s silence countdown begins');
         unmuteDeepgram();
         setOrbState(autoListen && isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
-    }, isIOSPWA ? Math.min(8000, Math.max(2500, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(' ').length : 3) * 500) + 2000)) : Math.max(15000, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(/\s+/).length : 30) * 350) + 5000));
+    }, (() => {
+        const totalWords = speakQueue.reduce((n, item) => n + (item.text ? item.text.split(/\s+/).length : 0), 0) || 30;
+        return isIOSPWA
+            ? Math.min(30000, Math.max(4000, totalWords * 500 + 3000))
+            : Math.max(20000, totalWords * 400 + 8000);
+    })());
 
     while (speakQueue.length) {
         const { text, useFiller } = speakQueue.shift();
@@ -9399,7 +9404,6 @@ function speak(text, { useFiller = false } = {}) {
     if (!cleaned) return;
     const sentences = _splitSentences(cleaned);
     sentences.forEach((s, i) => {
-        _ttsPrefetch.set(s, _doTtsFetch(s));
         speakQueue.push({ text: s, useFiller: i === 0 && useFiller });
     });
     _processSpeak();

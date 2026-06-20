@@ -18,8 +18,9 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
     const url = new URL(e.request.url);
 
-    // API calls and non-GET — let browser handle directly (no SW intercept)
+    // API calls, non-GET, and cross-origin (localhost health probes etc) — let browser handle directly
     if (e.request.method !== "GET") return;
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return;
     if (url.pathname.startsWith("/api/") || url.pathname === "/chat") return;
 
     // Shell (root + dashboard.html) — network first, cache fallback
