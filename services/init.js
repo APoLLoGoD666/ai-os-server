@@ -23,6 +23,13 @@ function init(app, sbAdmin) {
     const hasNotion = !!process.env.NOTION_API_KEY;
     const hasSlack  = !!process.env.SLACK_BOT_TOKEN;
 
+    // Run life-domain table migration on every startup — idempotent
+    setImmediate(() => {
+        try {
+            require('../lib/db-migrate').runLifeDomainMigration().catch(e => console.warn('[Services] db-migrate error:', e.message));
+        } catch (e) { console.warn('[Services] db-migrate load error:', e.message); }
+    });
+
     console.log(`[Services] Notion: ${hasNotion ? '✅' : '⚠️  NOTION_API_KEY not set'}`);
     console.log(`[Services] Slack:  ${hasSlack  ? '✅' : '⚠️  SLACK_BOT_TOKEN not set'}`);
 
@@ -119,7 +126,7 @@ function init(app, sbAdmin) {
                 try {
                     const mem = process.memoryUsage();
                     let dbLatency = null;
-                    try { const pgPool = require('../pg_database'); const t = Date.now(); await pgPool.query('SELECT 1'); dbLatency = Date.now() - t; } catch {}
+                    try { const pgPool = require('../lib/pg_database'); const t = Date.now(); await pgPool.query('SELECT 1'); dbLatency = Date.now() - t; } catch {}
                     await runHealthCheck({
                         memoryMb: Math.round(mem.rss / 1024 / 1024),
                         supabaseLatencyMs: dbLatency,

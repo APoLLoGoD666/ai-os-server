@@ -157,24 +157,24 @@ const {
     pgListStandingApprovals,
     pgDisableStandingApproval,
     pgGetEnabledStandingApprovals
-} = require("./pg_helpers");
+} = require("./lib/pg_helpers");
 const {
     uploadWorkspaceFile,
     readWorkspaceFileFromStorage,
     deleteWorkspaceFileFromStorage,
     listWorkspaceFilesFromStorage,
     getWorkspaceStorageDebug
-} = require("./storage");
+} = require("./lib/storage");
 
 const runAutoCoder = async () => ({ skipped: true, reason: "auto_coder removed", summary: "", changedFiles: [] });
-const { previewCloudAutopilot, applyLatestCloudProposal } = require("./cloud_autopilot");
-const { checkEmails, sendEmailReply, initEmailAgent } = require("./email_agent");
+const { previewCloudAutopilot, applyLatestCloudProposal } = require("./agent-system/cloud_autopilot");
+const { checkEmails, sendEmailReply, initEmailAgent } = require("./agent-system/email_agent");
 // mastra_agents is lazy-loaded after server stabilises to avoid startup OOM
 let initMastra = () => null;
 let getMastraStatus = () => ({ apex: false, email: false, finance: false, routine: false, research: false, mastra: false, details: { status: 'not yet loaded' } });
-const { categoriseTransaction, checkBudgetAlerts, parseCsvTransactions, FINANCE_CATEGORIES } = require("./finance_agent");
-const { initRoutineAgent } = require("./routine_agent");
-const { runReflectionCheck } = require("./reflection_agent");
+const { categoriseTransaction, checkBudgetAlerts, parseCsvTransactions, FINANCE_CATEGORIES } = require("./agent-system/finance_agent");
+const { initRoutineAgent } = require("./agent-system/routine_agent");
+const { runReflectionCheck } = require("./agent-system/reflection_agent");
 const {
     pgListEmailQueue,
     pgUpdateEmailQueueStatus,
@@ -192,7 +192,7 @@ const {
     pgSaveGmailToken,
     pgGetGmailToken,
     pgClearGmailToken
-} = require("./pg_helpers");
+} = require("./lib/pg_helpers");
 
 if (!process.env.OBSIDIAN_URL) {
     console.warn('[Obsidian] OBSIDIAN_URL not set — vault reads/writes will use local filesystem only. Run obsidian-tunnel.ps1 to enable remote access.');
@@ -351,7 +351,7 @@ app.get('/health', async (req, res) => {
                 dbOk = !error;
             } else {
                 try {
-                    const pgPool = require('./pg_database');
+                    const pgPool = require('./lib/pg_database');
                     await pgPool.query('SELECT 1');
                     dbOk = true;
                 } catch {
@@ -425,7 +425,7 @@ app.get('/api/system/health/detailed', requireAppAccess, async (req, res) => {
     await (async () => {
         const t = Date.now();
         try {
-            const pgPool = require('./pg_database');
+            const pgPool = require('./lib/pg_database');
             await pgPool.query('SELECT 1');
             result.db = { ok: true, latencyMs: Date.now() - t };
         } catch (e) {
@@ -486,18 +486,18 @@ function _serveDashboard(req, res) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.sendFile(path.join(__dirname, 'dashboard.html'));
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 }
 app.get('/', requireAuth, _serveDashboard);
 app.get('/dashboard.html', requireAuth, _serveDashboard);
 app.get('/sw.js', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.sendFile(path.join(__dirname, 'sw.js'));
+    res.sendFile(path.join(__dirname, 'public', 'sw.js'));
 });
 // Serve only specific static assets — never expose .env, server.js, package.json etc.
-app.get('/apex-v2.css',     (req, res) => res.sendFile(path.join(__dirname, 'apex-v2.css')));
-app.get('/apex-custom.css', (req, res) => res.sendFile(path.join(__dirname, 'apex-custom.css')));
-app.get('/manifest.json',   (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
+app.get('/apex-v2.css',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'apex-v2.css')));
+app.get('/apex-custom.css', (req, res) => res.sendFile(path.join(__dirname, 'public', 'apex-custom.css')));
+app.get('/manifest.json',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'manifest.json')));
 app.use('/src/components',  express.static(path.join(__dirname, 'src', 'components')));
 
 app.post('/auth/login', (req, res) => {
@@ -6991,7 +6991,7 @@ async function backgroundClassifyAndSummarise(filename, content) {
 ========================= */
 
 app.get("/editor", requireAppAccess, (req, res) => {
-    res.sendFile(path.join(__dirname, "editor.html"));
+    res.sendFile(path.join(__dirname, 'public', 'editor.html'));
 });
 
 app.get("/test", requireAppAccess, (req, res) => {
@@ -8173,6 +8173,41 @@ const APEX_TOOLS = [
         name: 'get_health_summary',
         description: 'Get a health summary: recent workouts, nutrition today, sleep data, and mood. Use when asked about health, fitness, workouts, calories, sleep, or wellbeing.',
         input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'get_relationship_summary',
+        description: 'Get a relationships summary: people tracked, overdue follow-ups, and recent interactions. Use when asked about relationships, contacts, who to follow up with, or social life.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'get_travel_summary',
+        description: 'Get a travel summary: upcoming and active trips, itinerary, and spend vs budget. Use when asked about travel, trips, holidays, flights, or travel plans.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'get_property_summary',
+        description: 'Get a property summary: properties, monthly housing costs, and pending maintenance items. Use when asked about property, housing, rent, mortgage, maintenance, or home.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'get_legal_summary',
+        description: 'Get a legal summary: active contracts and upcoming legal deadlines. Use when asked about contracts, legal documents, agreements, or legal deadlines.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'get_career_summary',
+        description: 'Get a career summary: job applications by status, upcoming interviews, and skills inventory. Use when asked about career, job search, applications, interviews, or skills.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'get_shopping_summary',
+        description: 'Get a shopping summary: wishlist items and recent purchases. Use when asked about shopping, wishlist, what to buy, spending, or recent purchases.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'get_social_summary',
+        description: 'Get a social media summary: connected accounts and scheduled or recent posts. Use when asked about social media, posts, content, schedule, or social accounts.',
+        input_schema: { type: 'object', properties: {}, required: [] }
     }
 ];
 
@@ -8378,6 +8413,130 @@ async function toolGetHealthSummary() {
     }
 }
 
+async function toolGetRelationshipSummary() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const week  = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+        const [people, overdue, recent] = await Promise.all([
+            sbAdmin.from('apex_people').select('id', { count: 'exact', head: true }),
+            sbAdmin.from('apex_follow_ups').select('note,due_date').eq('completed', false).lt('due_date', today).order('due_date', { ascending: true }).limit(5),
+            sbAdmin.from('apex_interactions').select('id', { count: 'exact', head: true }).gte('interaction_date', week),
+        ]);
+        const parts = [];
+        if (people.count) parts.push(`${people.count} people tracked`);
+        if (overdue.data?.length) parts.push(`${overdue.data.length} overdue follow-up${overdue.data.length !== 1 ? 's' : ''} — next: ${overdue.data[0].note}`);
+        else parts.push('No overdue follow-ups');
+        if (recent.count) parts.push(`${recent.count} interaction${recent.count !== 1 ? 's' : ''} this week`);
+        return { summary: parts.join('. ') || 'No relationship data yet.', overdue: overdue.data || [] };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolGetTravelSummary() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: trips } = await sbAdmin.from('apex_trips').select('name,destination,start_date,end_date,status,budget_gbp')
+            .in('status', ['planned', 'booked', 'active']).gte('end_date', today).order('start_date', { ascending: true }).limit(5);
+        const parts = [];
+        if (trips?.length) {
+            const next = trips[0];
+            parts.push(`Next trip: ${next.name}${next.destination ? ' to ' + next.destination : ''} (${next.start_date})`);
+            if (trips.length > 1) parts.push(`${trips.length} upcoming trips total`);
+        } else {
+            parts.push('No upcoming trips');
+        }
+        return { summary: parts.join('. '), trips: trips || [] };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolGetPropertySummary() {
+    try {
+        const [props, maintenance] = await Promise.all([
+            sbAdmin.from('apex_properties').select('name,type,monthly_cost_gbp,lease_end_date').limit(10),
+            sbAdmin.from('apex_maintenance_items').select('description,status,scheduled_date').in('status', ['pending', 'scheduled']).limit(5),
+        ]);
+        const parts = [];
+        if (props.data?.length) {
+            const monthly = props.data.reduce((s, p) => s + (Number(p.monthly_cost_gbp) || 0), 0);
+            parts.push(`${props.data.length} propert${props.data.length !== 1 ? 'ies' : 'y'}, \xA3${monthly.toFixed(2)}/mo total`);
+        }
+        if (maintenance.data?.length) parts.push(`${maintenance.data.length} pending maintenance item${maintenance.data.length !== 1 ? 's' : ''}`);
+        else parts.push('No pending maintenance');
+        return { summary: parts.join('. ') || 'No property data yet.', properties: props.data || [], maintenance: maintenance.data || [] };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolGetLegalSummary() {
+    try {
+        const soon = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+        const [contracts, deadlines] = await Promise.all([
+            sbAdmin.from('apex_contracts').select('title,counterparty,type,end_date,status').eq('status', 'active').order('end_date', { ascending: true }).limit(10),
+            sbAdmin.from('apex_legal_deadlines').select('description,due_date').eq('completed', false).lte('due_date', soon).order('due_date', { ascending: true }).limit(5),
+        ]);
+        const parts = [];
+        if (contracts.data?.length) parts.push(`${contracts.data.length} active contract${contracts.data.length !== 1 ? 's' : ''}`);
+        if (deadlines.data?.length) parts.push(`${deadlines.data.length} deadline${deadlines.data.length !== 1 ? 's' : ''} in next 30 days — next: ${deadlines.data[0].description} (${deadlines.data[0].due_date})`);
+        else parts.push('No upcoming deadlines');
+        return { summary: parts.join('. ') || 'No legal data yet.', contracts: contracts.data || [], deadlines: deadlines.data || [] };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolGetCareerSummary() {
+    try {
+        const now = new Date().toISOString();
+        const [apps, interviews, skills] = await Promise.all([
+            sbAdmin.from('apex_job_applications').select('company,role,status').not('status', 'in', '("rejected","accepted","withdrawn")').order('applied_date', { ascending: false }).limit(10),
+            sbAdmin.from('apex_interviews').select('type,interview_date').gte('interview_date', now).order('interview_date', { ascending: true }).limit(5),
+            sbAdmin.from('apex_skills').select('id', { count: 'exact', head: true }),
+        ]);
+        const parts = [];
+        if (apps.data?.length) {
+            const statusMap = apps.data.reduce((m, a) => { m[a.status] = (m[a.status] || 0) + 1; return m; }, {});
+            parts.push(`${apps.data.length} active application${apps.data.length !== 1 ? 's' : ''}: ${Object.entries(statusMap).map(([s, n]) => `${n} ${s}`).join(', ')}`);
+        } else {
+            parts.push('No active applications');
+        }
+        if (interviews.data?.length) parts.push(`${interviews.data.length} upcoming interview${interviews.data.length !== 1 ? 's' : ''}`);
+        if (skills.count) parts.push(`${skills.count} skill${skills.count !== 1 ? 's' : ''} in inventory`);
+        return { summary: parts.join('. ') || 'No career data yet.', applications: apps.data || [], interviews: interviews.data || [] };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolGetShoppingSummary() {
+    try {
+        const since = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+        const [wishlist, purchases] = await Promise.all([
+            sbAdmin.from('apex_wishlist').select('name,price_target_gbp,priority').eq('purchased', false).order('priority', { ascending: false }).limit(10),
+            sbAdmin.from('apex_purchases').select('name,amount_gbp').gte('purchase_date', since).limit(20),
+        ]);
+        const parts = [];
+        if (wishlist.data?.length) {
+            const total = wishlist.data.reduce((s, w) => s + (Number(w.price_target_gbp) || 0), 0);
+            parts.push(`${wishlist.data.length} wishlist item${wishlist.data.length !== 1 ? 's' : ''}${total ? ', \xA3' + total.toFixed(2) + ' total target' : ''}`);
+        } else {
+            parts.push('Wishlist empty');
+        }
+        if (purchases.data?.length) {
+            const spent = purchases.data.reduce((s, p) => s + (Number(p.amount_gbp) || 0), 0);
+            parts.push(`\xA3${spent.toFixed(2)} spent in last 30 days`);
+        }
+        return { summary: parts.join('. ') || 'No shopping data yet.', wishlist: wishlist.data || [], purchases: purchases.data || [] };
+    } catch (e) { return { error: e.message }; }
+}
+
+async function toolGetSocialSummary() {
+    try {
+        const [accounts, scheduled] = await Promise.all([
+            sbAdmin.from('apex_social_accounts').select('platform,username,status').eq('status', 'active').limit(20),
+            sbAdmin.from('apex_social_posts').select('platform,content,scheduled_at').eq('status', 'scheduled').order('scheduled_at', { ascending: true }).limit(5),
+        ]);
+        const parts = [];
+        if (accounts.data?.length) parts.push(`${accounts.data.length} active account${accounts.data.length !== 1 ? 's' : ''}: ${accounts.data.map(a => a.platform).join(', ')}`);
+        else parts.push('No social accounts connected');
+        if (scheduled.data?.length) parts.push(`${scheduled.data.length} post${scheduled.data.length !== 1 ? 's' : ''} scheduled`);
+        return { summary: parts.join('. ') || 'No social data yet.', accounts: accounts.data || [], scheduled: scheduled.data || [] };
+    } catch (e) { return { error: e.message }; }
+}
+
 async function toolBrowserResearch(objective, url) {
     try {
         const ba = require('./agent-system/browser-agent');
@@ -8488,6 +8647,13 @@ async function executeApexTool(name, input) {
         }
         return _hsResult;
     }
+    if (name === 'get_relationship_summary') return await toolGetRelationshipSummary();
+    if (name === 'get_travel_summary') return await toolGetTravelSummary();
+    if (name === 'get_property_summary') return await toolGetPropertySummary();
+    if (name === 'get_legal_summary') return await toolGetLegalSummary();
+    if (name === 'get_career_summary') return await toolGetCareerSummary();
+    if (name === 'get_shopping_summary') return await toolGetShoppingSummary();
+    if (name === 'get_social_summary') return await toolGetSocialSummary();
     if (name === 'browser_research') {
         const _brResult = await toolBrowserResearch(input.objective, input.url);
         if (_brResult && !_brResult.error) {
@@ -9174,12 +9340,12 @@ async function _runTask(taskId, res) {
     // Backup before any changes
     const _bkSrv = fs.existsSync(path.join(__dirname, 'server.js'))
         ? fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8') : null;
-    const _bkDash = fs.existsSync(path.join(__dirname, 'dashboard.html'))
-        ? fs.readFileSync(path.join(__dirname, 'dashboard.html'), 'utf8') : null;
+    const _bkDash = fs.existsSync(path.join(__dirname, 'public', 'dashboard.html'))
+        ? fs.readFileSync(path.join(__dirname, 'public', 'dashboard.html'), 'utf8') : null;
 
     const _restore = () => {
         if (_bkSrv)  fs.writeFileSync(path.join(__dirname, 'server.js'),      _bkSrv,  'utf8');
-        if (_bkDash) fs.writeFileSync(path.join(__dirname, 'dashboard.html'), _bkDash, 'utf8');
+        if (_bkDash) fs.writeFileSync(path.join(__dirname, 'public', 'dashboard.html'), _bkDash, 'utf8');
     };
     const _markFailed = async (reason) => {
         await sbAdmin.from('apex_tasks')
@@ -9362,7 +9528,7 @@ app.post('/api/editor/save-styles', requireAppAccess, async (req, res) => {
         const { css } = req.body;
         if (typeof css !== 'string') return res.status(400).json({ error: 'css required' });
         const fs = require('fs').promises;
-        await fs.writeFile(path.join(__dirname, 'apex-custom.css'), css, 'utf8');
+        await fs.writeFile(path.join(__dirname, 'public', 'apex-custom.css'), css, 'utf8');
         res.json({ ok: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -11524,7 +11690,7 @@ server.listen(PORT, () => {
                 setTimeout(_loadMastra, 600000);
                 return;
             }
-            const _m = require('./mastra_agents');
+            const _m = require('./agent-system/mastra_agents');
             initMastra = _m.initMastra;
             getMastraStatus = _m.getMastraStatus;
             mastraAgents = initMastra(handleCommand);
@@ -11641,7 +11807,7 @@ server.listen(PORT, () => {
     // Ensure pgvector match function exists (idempotent — safe to re-run)
     setImmediate(async () => {
         try {
-            const pgPool = require('./pg_database');
+            const pgPool = require('./lib/pg_database');
             await pgPool.query(`
                 CREATE EXTENSION IF NOT EXISTS vector;
                 ALTER TABLE documents ADD COLUMN IF NOT EXISTS embedding vector(768);
@@ -11671,7 +11837,7 @@ server.listen(PORT, () => {
     // vault_embeddings table for hybrid vault RAG (Phase 28)
     setImmediate(async () => {
         try {
-            const pgPool = require('./pg_database');
+            const pgPool = require('./lib/pg_database');
             await pgPool.query(`
                 CREATE TABLE IF NOT EXISTS vault_embeddings (
                     id BIGSERIAL PRIMARY KEY,
@@ -11711,7 +11877,7 @@ server.listen(PORT, () => {
     // apex_agent_stages table for per-stage failure analytics (Phase 28)
     setImmediate(async () => {
         try {
-            const pgPool = require('./pg_database');
+            const pgPool = require('./lib/pg_database');
             await pgPool.query(`
                 CREATE TABLE IF NOT EXISTS apex_agent_stages (
                     id BIGSERIAL PRIMARY KEY,
@@ -11736,7 +11902,7 @@ server.listen(PORT, () => {
     // Schema migration — apex_agent_runs: verify + add missing columns
     setImmediate(async () => {
         try {
-            const pgPool = require('./pg_database');
+            const pgPool = require('./lib/pg_database');
             await pgPool.query(`
                 ALTER TABLE apex_agent_runs ADD COLUMN IF NOT EXISTS model TEXT;
                 ALTER TABLE apex_agent_runs ADD COLUMN IF NOT EXISTS duration_ms INTEGER;
