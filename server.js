@@ -11433,6 +11433,17 @@ app.post('/api/governance/apply-migration-005', requireAppAccess, async (req, re
     }
 });
 
+// Run one civilization cycle on demand and return the phase-by-phase result
+app.post('/api/governance/run-cycle', requireAppAccess, async (req, res) => {
+    try {
+        const civRuntime = require('./lib/intelligence/civilization-runtime');
+        const result = await civRuntime.runOnce();
+        res.json({ ok: true, result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,
