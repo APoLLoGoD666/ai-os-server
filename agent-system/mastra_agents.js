@@ -296,7 +296,7 @@ NOTIFICATIONS:
 - Never deny a capability that a tool exists for. Never describe what you would do — just do it.
 - Be concise and practical. Use the most specific tool available.
 - Be extremely concise. Maximum 3 sentences unless the user explicitly asks for more detail. Prefer bullet points for lists.`,
-        model: anthropic(process.env.ANTHROPIC_MODEL || "claude-opus-4-7"),
+        model: anthropic(process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001"),
         tools: {
             save_note: saveNoteTool,
             read_file: readFileTool,

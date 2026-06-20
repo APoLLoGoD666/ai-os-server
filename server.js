@@ -7383,12 +7383,12 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         const memory = await loadMemory();
 
         const memoryText = memory.length
-            ? memory.slice(-12).map(m => `[${m.role.toUpperCase()}]${m.time ? ` (${timeAgo(m.time)})` : ""} ${m.message}`).join("\n")
+            ? memory.slice(-5).map(m => `[${m.role.toUpperCase()}]${m.time ? ` (${timeAgo(m.time)})` : ""} ${m.message}`).join("\n")
             : "No recent memory.";
         const relevantDocs = await getRelevantDocuments(userMessage).catch(e => { console.log("Voyage unavailable - using keyword search"); return pgSearchDocuments(userMessage.toLowerCase()).catch(() => []); });
         const docsText = relevantDocs.length
             ? relevantDocs.map((doc, index) => {
-                const preview = (doc.content || "").slice(0, 500);
+                const preview = (doc.content || "").slice(0, 200);
                 return `
 DOCUMENT ${index + 1}
 Filename: ${doc.filename}
@@ -7434,7 +7434,7 @@ ${preview}
 
         // Fallback: raw Anthropic SDK if Mastra not initialised
         const { result: streamMsg } = await runtime.execute({
-            client, model: MODEL, caller: 'chat_fallback', maxTokens: 500,
+            client, model: HAIKU_MODEL, caller: 'chat_fallback', maxTokens: 500,
             tools: TOOLS,
             messages: [{ role: 'user', content: prompt }],
         });
