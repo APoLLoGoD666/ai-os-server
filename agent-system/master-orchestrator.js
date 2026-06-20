@@ -4,6 +4,7 @@ const path = require('path');
 const { execSync, spawnSync } = require('child_process');
 const { createClient } = require('@supabase/supabase-js');
 const memory = require('./obsidian-memory');
+const constitutionGate = require('../lib/runtime/constitutional-gate');
 
 const _sb = process.env.SUPABASE_URL
     ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
@@ -139,6 +140,30 @@ async function planFeature(feature, workstream) {
         return _planCache.get(feature.id);
     }
 
+    // GAP-7: Constitution gate — evaluate before any model calls or planning work
+    let gateResult;
+    try {
+        gateResult = await Promise.resolve(constitutionGate.evaluate(
+            { metadata: { path: `plan/${feature.id}` }, identity: { roles: ['HUMAN_OPERATOR'] } },
+            {}
+        ));
+    } catch (gateErr) {
+        throw new Error(`Constitution gate unavailable — planFeature aborted: ${gateErr.message}`);
+    }
+
+    const verdict = gateResult && gateResult.verdict;
+
+    if (verdict === 'DENY') {
+        throw new Error(`Constitutional gate DENY for ${feature.id}: ${(gateResult.risks || []).join(', ') || 'policy violation'}`);
+    }
+
+    // RESTRICT: halve planning token budget and flag as restricted
+    if (verdict === 'RESTRICT') {
+        workstream = workstream; // no-op (workstream is a string, immutable here)
+        feature = { ...feature, _restricted: true, _maxTokens: 1500 };
+        console.log(`[Master] planFeature ${feature.id} — RESTRICTED by constitution gate (risks: ${(gateResult.risks || []).join(', ')})`);
+    }
+
     const _featureClass = _preClassifyFeature(feature);
     let planModel = (_featureClass === 'critical' || _featureClass === 'complex') ? _SONNET : MODEL;
     console.log(`[Master] planFeature ${feature.id} — class: ${_featureClass}, model: ${planModel}`);
@@ -154,8 +179,9 @@ async function planFeature(feature, workstream) {
     } catch {}
     const context = await memory.getFullContextAsync();
 
+    const _planMaxTokens = feature._restricted ? (feature._maxTokens || 1500) : 3000;
     const res = await Promise.race([
-        runtime.execute({ client: _anthro, model: planModel, caller: 'master_planner', maxTokens: 3000,
+        runtime.execute({ client: _anthro, model: planModel, caller: 'master_planner', maxTokens: _planMaxTokens,
             system: [{ type: 'text', cache_control: { type: 'ephemeral' }, text: `You are a senior architect planning features for Apex AI OS.
 Apex is a Node.js/Express voice-first AI OS on Render.
 Stack: Node.js, Express, Supabase, Anthropic Claude API,

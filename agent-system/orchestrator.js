@@ -7,6 +7,7 @@ const { randomUUID } = require('crypto');
 const memory = require('./obsidian-memory');
 const { z } = require('zod');
 const _hooks        = require('./agent-pipeline-hooks');
+const _gov          = require('../lib/governance');
 const _reputation   = require('./agent-reputation');
 const _episodic     = require('./episodic-memory');
 const _indexer      = require('./memory-indexer');
@@ -361,11 +362,24 @@ Frontend testCases MUST include:
         }
     } catch {}
 
+    // GAP-3: Inject knowledge graph neighborhood context if available
+    let _kgCtx = '';
+    if (ctx.knowledgeGraph) {
+        const _kg = ctx.knowledgeGraph;
+        const _kgParts = [];
+        if (_kg.relatedNodes.length)  _kgParts.push('Related nodes: ' + _kg.relatedNodes.map(n => n.label || n.node_id).join(', '));
+        if (_kg.relatedEdges.length)  _kgParts.push('Related edges: ' + _kg.relatedEdges.slice(0, 5).map(e => `${e.from_node_id}→${e.to_node_id}(${e.relationship})`).join(', '));
+        if (_kg.incidentCauses.length) _kgParts.push('Incident causes: ' + _kg.incidentCauses.slice(0, 3).map(c => c.label || c.nodeId).join(', '));
+        if (_kg.relevantLessons.length) _kgParts.push('Relevant lessons: ' + _kg.relevantLessons.slice(0, 3).map(l => l.lessonLabel || l.label || l.lessonId).join('; '));
+        if (_kgParts.length) _kgCtx = 'KNOWLEDGE GRAPH CONTEXT:\n' + _kgParts.join('\n');
+    }
+
     const res = await _callClaude(ctx.agentModels.architect, SYSTEM + uiMandate,
         `SPEC:\n${JSON.stringify(spec, null, 2)}\n\n` +
         (routesMap ? routesMap + '\n\n' : '') +
         `FILE CONTENTS:\n${archFileContents}` +
         (graphContext ? '\n\nKNOWLEDGE GRAPH:\n' + graphContext : '') +
+        (_kgCtx ? '\n\n' + _kgCtx : '') +
         (ctx.obsidianContext ? '\n\nSYSTEM MEMORY:\n' + ctx.obsidianContext : '') +
         (_similarCtx ? '\n\nSIMILAR PAST TASKS:\n' + _similarCtx : '') +
         (_adaptCtx ? '\n\n' + _adaptCtx : ''),
@@ -467,8 +481,22 @@ Rules:
     const allowed = new Set(spec.filesToModify || []);
     const filesToWrite = (parsed.filesModified || []).filter(f => allowed.has(f));
 
-    // Prepend developer-role intelligence context to architect summary
+    // GAP-4: Inject skill-memory profile into DEVELOPER context
     let _devArchSummary = architectLog.result.summary;
+    try {
+        const skillMemory = require('../lib/memory/skill-memory');
+        const keywords = ((spec && spec.objective) || '').split(/\s+/).filter(Boolean).slice(0, 5);
+        const relevantSkills = (await skillMemory.getSkills(null)).filter(s =>
+            keywords.some(k => (s.skill_name || '').toLowerCase().includes(k.toLowerCase()))
+        ).slice(0, 3);
+        if (relevantSkills.length > 0) {
+            _devArchSummary += '\n\nYour current skill profile for this task:\n' +
+                relevantSkills.map(s => `- ${s.skill_name}: ${Math.round((s.success_rate || 0) * 100)}% proficiency (${s.competency_level || 'unknown'} level)`).join('\n');
+        }
+    } catch (e) {
+        // non-fatal — skill memory unavailable
+    }
+
     if (ctx.intelContextPack) {
         try {
             const _cc = require('../lib/intelligence/context-composer');
@@ -943,6 +971,25 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity, ctx
             } catch (_) {}
         });
     }
+
+    // Observability chain — all 10 runtime analysis modules (non-blocking, fire-and-forget)
+    const { runObservabilityChain } = require('../lib/runtime/assembler');
+    setImmediate(() =>
+        runObservabilityChain(taskId, {
+            agentType:       ctx?.agentType,
+            duration:        ctx?.startTime ? Date.now() - ctx.startTime : 0,
+            tokenCount:      (ctx?.agentTokens && Object.values(ctx.agentTokens).reduce((s, t) => s + (t.in || 0) + (t.out || 0), 0)) || 0,
+            outcome:         success ? 'success' : 'failure',
+            retries:         ctx?.agentTokens ? Object.keys(ctx.agentTokens).length - 1 : 0,
+            cost:            parseFloat(cost) || 0,
+            traceId:         ctx?.traceId,
+            decision:        ctx?.decision,
+            inputHash:       ctx?.inputHash,
+            outputHash:      ctx?.outputHash,
+            policyDecisions: ctx?.policyDecisions || [],
+            error:           ctx?.lastError || null,
+        }).catch(e => console.error('[orchestrator] assembler error:', e.message))
+    );
 }
 
 // ── Per-run cost cap — aborts pipeline if budget exceeded ─────────────────────
@@ -1378,6 +1425,13 @@ async function runAgentTeam(spec, taskId) {
             } catch {}
         });
         setImmediate(() => _hooks.onPipelineFailed(new Error(error), { taskId, description: spec.objective, traceId: ctx.traceId, agentLogs, spec, cost: ctx.costUsd.toFixed(5), duration: Date.now() - _pipelineStart, agentTokens: { ...ctx.agentTokens } }).catch(() => {}));
+        setImmediate(async () => {
+            try {
+                await _gov.onPipelineFailed(taskId, ctx.traceId, { graphId: ctx.graphId, spanId: ctx.spanId, conditionsMet: ctx.conditionsMet, error: new Error(error), spec, agentLogs, costUsd: ctx.costUsd, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentTokens: ctx.agentTokens });
+            } catch (govErr) {
+                console.error('[orchestrator] governance failure notification failed (non-fatal):', govErr.message);
+            }
+        });
         setImmediate(() => { try { _goalTracker.blockGoal(taskId, error); } catch {} });
         return { success: false, commitHash: null, agentLogs, error, complexity, models: ctx.agentModels };
     };
@@ -1432,6 +1486,23 @@ async function runAgentTeam(spec, taskId) {
 
         if (ctx.influencePack?.router?.active) {
             console.log(`[Cognitive] Router influence active: ${ctx.influencePack.router.directives?.map(d => d.type).join(', ') || 'routing adjusted'}`);
+        }
+
+        // GAP-3: Knowledge graph context — fetched once, shared by RESEARCHER and ARCHITECT
+        let graphContext = null;
+        try {
+            const graphReasoningEngine = require('../lib/intelligence/graph-reasoning-engine');
+            graphContext = await graphReasoningEngine.getNeighborhoodContext(taskId);
+        } catch (e) {
+            // non-fatal — knowledge graph unavailable
+        }
+        if (graphContext) {
+            ctx.knowledgeGraph = {
+                relatedNodes:   (graphContext.nodes  || []).slice(0, 10),
+                relatedEdges:   (graphContext.edges  || []).slice(0, 20),
+                incidentCauses: graphContext.incidentCauses || [],
+                relevantLessons: graphContext.lessons || [],
+            };
         }
 
         // Step 0 — RESEARCHER (optional, pre-ARCHITECT web context fetch)
@@ -1641,6 +1712,16 @@ async function runAgentTeam(spec, taskId) {
         console.log(`[Orchestrator] ── ${taskId} COMPLETE — ${committerLog.result.commitHash} ──`);
 
         setImmediate(() => _hooks.onPipelineComplete({ success: true, commitHash: committerLog.result.commitHash, cost: ctx.costUsd.toFixed(5), duration: Date.now() - _pipelineStart, taskId, traceId: ctx.traceId, agentLogs, spec, complexity, attempts: _successAttempt, agentTokens: { ...ctx.agentTokens } }).catch(() => {}));
+        setImmediate(async () => {
+            try {
+                const govResult = await _gov.onPipelineComplete(taskId, ctx.traceId, { graphId: ctx.graphId, spanId: ctx.spanId, conditionsMet: ctx.conditionsMet, commitSha: committerLog.result.commitHash, costUsd: ctx.costUsd, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, complexity, agentLogs, spec, attempts: _successAttempt, agentTokens: ctx.agentTokens });
+                if (govResult && govResult.blockedDecisions && govResult.blockedDecisions.length > 0) {
+                    console.warn('[orchestrator] governance blocked decisions:', govResult.blockedDecisions.length, { taskId });
+                }
+            } catch (govErr) {
+                console.error('[orchestrator] governance evaluation failed (non-fatal):', govErr.message);
+            }
+        });
         setImmediate(() => _reflector(spec, agentLogs, true, taskId, ctx.traceId, ctx).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity, ctx).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         // Cognitive feedback loop — closes the loop: outcomes → evolution → future behavior
@@ -1693,6 +1774,13 @@ async function runAgentTeam(spec, taskId) {
     } catch (err) {
         console.error('[Orchestrator] pipeline error:', err.message);
         setImmediate(() => _hooks.onPipelineFailed(err, { taskId, description: spec.objective, traceId: ctx.traceId, agentLogs, spec, cost: ctx.costUsd.toFixed(5), duration: Date.now() - _pipelineStart, agentTokens: { ...ctx.agentTokens } }).catch(() => {}));
+        setImmediate(async () => {
+            try {
+                await _gov.onPipelineFailed(taskId, ctx.traceId, { graphId: ctx.graphId, spanId: ctx.spanId, conditionsMet: ctx.conditionsMet, error: err, spec, agentLogs, costUsd: ctx.costUsd, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentTokens: ctx.agentTokens });
+            } catch (govErr) {
+                console.error('[orchestrator] governance failure notification failed (non-fatal):', govErr.message);
+            }
+        });
         _cleanup();
         const cost = ctx.costUsd.toFixed(5);
         memory.logLesson(`Task ${taskId} failed: ${err.message}`, { taskId, traceId: ctx.traceId });

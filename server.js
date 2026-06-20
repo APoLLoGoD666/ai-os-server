@@ -76,7 +76,7 @@ const axios = require("axios");
 const multer = require("multer");
 const multerUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
-const db = require("./database");
+// SQLite database.js removed — all document writes go through Supabase/Postgres.
 const expandPrompt = require('./agent-system/prompt-expander');
 const runAgentTeam = require('./agent-system/orchestrator');
 const agentLib     = require('./agent-system/agent-library');
@@ -549,10 +549,16 @@ const authLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardHeade
 app.use("/auth/login", authLimiter);
 
 const client = require('./lib/clients').getAnthropicClient();
+const {
+  HAIKU_MODEL,
+  SONNET_MODEL,
+  OPUS_MODEL,
+  REQUEST_TIMEOUT_MS,
+  RATE_LIMIT_WINDOW_MS,
+  RATE_LIMIT_MAX
+} = require('./config');
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
-const HAIKU_MODEL = "claude-haiku-4-5-20251001";
-const SONNET_MODEL = "claude-sonnet-4-6";
+const MODEL = 'claude-opus-4-7'; // Opus tier — ANTHROPIC_MODEL env var handled by config/index.js
 const runtime = require('./lib/models/runtime');
 const AUTONOMY_LEVEL = String(process.env.AUTONOMY_LEVEL || "1");
 
@@ -808,10 +814,19 @@ const DISCOVERY_AGENT_STEP_TYPES = new Set([
     "search_documents"
 ]);
 const { AGENT_PROFILES } = require("./agents");
-let latestAgentPlan = null;
-let pendingDuplicateDecision = null;
-let latestAgentCleanupPreview = null;
-let latestObviousAgentCleanupPreview = null;
+const _agentState = new Map(); // keyed by userId — safe for concurrent sessions
+
+function getAgentState(userId) {
+  if (!_agentState.has(userId)) {
+    _agentState.set(userId, {
+      latestAgentPlan: null,
+      pendingDuplicateDecision: null,
+      latestAgentCleanupPreview: null,
+      latestObviousAgentCleanupPreview: null
+    });
+  }
+  return _agentState.get(userId);
+}
 
 if (!AGENT_SECRET)    console.warn('[Startup] AGENT_SECRET not set — agent auth endpoints are unprotected');
 if (!APP_ACCESS_KEY)  console.warn('[Startup] APP_ACCESS_KEY not set — app auth is disabled');
@@ -1308,86 +1323,33 @@ async function renameDocumentStorageFile(oldName, newName) {
 ========================= */
 
 function saveDocumentToDatabase(filename, content, classification = "personal", summary = "") {
-    try {
-        db.prepare(`
-            INSERT INTO documents (filename, content, classification, summary)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(filename) DO UPDATE SET
-                content = excluded.content,
-                classification = excluded.classification,
-                summary = excluded.summary
-        `).run(filename, content, classification, summary);
-
-        return true;
-    } catch (error) {
-        console.error("DB SAVE ERROR:", error.message);
-        return false;
-    }
+    // SQLite removed — document writes handled by pgSaveDocument / Supabase.
+    return true;
 }
 
 function deleteDocumentFromDatabase(filename) {
-    try {
-        db.prepare("DELETE FROM documents WHERE filename = ?").run(filename);
-        return true;
-    } catch (error) {
-        console.error("DB DELETE ERROR:", error.message);
-        return false;
-    }
+    // SQLite removed — no-op; delete handled by Supabase routes.
+    return true;
 }
 
 function renameDocumentInDatabase(oldName, newName) {
-    try {
-        db.prepare("UPDATE documents SET filename = ? WHERE filename = ?").run(newName, oldName);
-        return true;
-    } catch (error) {
-        console.error("DB RENAME ERROR:", error.message);
-        return false;
-    }
+    // SQLite removed — rename handled by Supabase routes.
+    return true;
 }
 
 function updateDocumentSummary(filename, summary) {
-    try {
-        db.prepare("UPDATE documents SET summary = ? WHERE filename = ?").run(summary, filename);
-        return true;
-    } catch (error) {
-        console.error("DB SUMMARY ERROR:", error.message);
-        return false;
-    }
+    // SQLite removed — summary updates handled by pgSaveDocument.
+    return true;
 }
 
 function listRecentDocuments() {
-    try {
-        return db.prepare(`
-            SELECT id, filename, classification, summary, created_at
-            FROM documents
-            ORDER BY created_at DESC
-            LIMIT 20
-        `).all();
-    } catch (error) {
-        console.error("DOCUMENT LIST ERROR:", error.message);
-        return [];
-    }
+    // SQLite removed — callers should use pgSearchDocuments or Supabase directly.
+    return [];
 }
 
 function searchDocuments(keyword) {
-    const k = keyword.toLowerCase();
-
-    try {
-        return db.prepare(`
-            SELECT id, filename, classification, summary, created_at
-            FROM documents
-            WHERE
-                LOWER(filename) LIKE ?
-                OR LOWER(classification) LIKE ?
-                OR LOWER(summary) LIKE ?
-                OR LOWER(content) LIKE ?
-            ORDER BY created_at DESC
-            LIMIT 20
-        `).all(`%${k}%`, `%${k}%`, `%${k}%`, `%${k}%`);
-    } catch (error) {
-        console.error("DOCUMENT SEARCH ERROR:", error.message);
-        return [];
-    }
+    // SQLite removed — callers should use pgSearchDocuments or Supabase directly.
+    return [];
 }
 
 
@@ -1430,45 +1392,13 @@ async function getRelevantDocuments(question) {
         console.error("POSTGRES DOCUMENT SEARCH ERROR:", error.message);
     }
 
-    try {
-        if (!q) {
-            return db.prepare(`
-                SELECT filename, classification, summary, content, created_at
-                FROM documents
-                ORDER BY created_at DESC
-                LIMIT 5
-            `).all();
-        }
-
-        return db.prepare(`
-            SELECT filename, classification, summary, content, created_at
-            FROM documents
-            WHERE
-                LOWER(filename) LIKE ?
-                OR LOWER(classification) LIKE ?
-                OR LOWER(summary) LIKE ?
-                OR LOWER(content) LIKE ?
-            ORDER BY created_at DESC
-            LIMIT 5
-        `).all(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
-    } catch (error) {
-        console.error("DB SEARCH ERROR:", error.message);
-        return [];
-    }
+    // SQLite fallback removed — Postgres/Supabase are the canonical stores.
+    return [];
 }
 
 function getDocumentByFilename(filename) {
-    try {
-        return db.prepare(`
-            SELECT id, filename, classification, summary, content, created_at
-            FROM documents
-            WHERE filename = ?
-            LIMIT 1
-        `).get(filename);
-    } catch (error) {
-        console.error("DOCUMENT GET ERROR:", error.message);
-        return null;
-    }
+    // SQLite removed — callers should use Supabase directly.
+    return null;
 }
 
 /* =========================
@@ -5444,7 +5374,8 @@ function toolUseInputToCommand(toolName, input) {
    COMMAND HANDLER
 ========================= */
 
-async function handleCommand(command) {
+async function handleCommand(command, userId) {
+    const _s = getAgentState(userId || 'default');
     const accessError = getAgentAccessError(command);
 
     if (accessError) {
@@ -6024,7 +5955,7 @@ ${task.plan || "No plan saved."}`
                                     null
                                 );
 
-                                latestAgentPlan = null;
+                                _s.latestAgentPlan = null;
 
                                 return {
                                     ok: true,
@@ -6044,7 +5975,7 @@ ${task.plan || "No plan saved."}`
             const today = new Date().toISOString().slice(0, 10);
             const plan = await buildAgentPlan(command.request, memory, documents, files, today, agentProfile);
 
-            latestAgentPlan = {
+            _s.latestAgentPlan = {
                 agentProfile,
                 request: command.request,
                 memory,
@@ -6066,7 +5997,7 @@ ${task.plan || "No plan saved."}`
             );
 
             if (autonomyLevel >= 3) {
-                let parsed = await getApprovedAgentActions(latestAgentPlan);
+                let parsed = await getApprovedAgentActions(_s.latestAgentPlan);
                 let usedDirectFallback = false;
 
                 if (!parsed || parsed.needs_clarification || !Array.isArray(parsed.steps) || !parsed.steps.length) {
@@ -6126,7 +6057,7 @@ ${task.plan || "No plan saved."}`
                                 );
 
                                 if (!autoPlan.remaining.length) {
-                                    latestAgentPlan = null;
+                                    _s.latestAgentPlan = null;
 
                                     return {
                                         ok: true,
@@ -6136,9 +6067,9 @@ ${task.plan || "No plan saved."}`
                                     };
                                 }
 
-                                latestAgentPlan.pendingSteps = autoPlan.remaining;
-                                latestAgentPlan.pendingSkipped = validation.skipped;
-                                latestAgentPlan.autoExecutedResults = execution.results;
+                                _s.latestAgentPlan.pendingSteps = autoPlan.remaining;
+                                _s.latestAgentPlan.pendingSkipped = validation.skipped;
+                                _s.latestAgentPlan.autoExecutedResults = execution.results;
 
                                 return {
                                     ok: true,
@@ -6149,8 +6080,8 @@ ${task.plan || "No plan saved."}`
                             }
                         }
 
-                        latestAgentPlan.pendingSteps = validation.validSteps;
-                        latestAgentPlan.pendingSkipped = validation.skipped;
+                        _s.latestAgentPlan.pendingSteps = validation.validSteps;
+                        _s.latestAgentPlan.pendingSkipped = validation.skipped;
 
                         return {
                             ok: true,
@@ -6330,20 +6261,20 @@ ${task.plan || "No plan saved."}`
 
         case "agent_apply": {
             // TODO: Move latestAgentPlan into agent_tasks.context_json before concurrent multi-agent execution.
-            if (!latestAgentPlan) {
+            if (!_s.latestAgentPlan) {
                 return { ok: false, reply: "No agent plan to approve." };
             }
 
-            const planAgeMs = Date.now() - new Date(latestAgentPlan.createdAt || 0).getTime();
+            const planAgeMs = Date.now() - new Date(_s.latestAgentPlan.createdAt || 0).getTime();
             if (planAgeMs > 10 * 60 * 1000) {
-                latestAgentPlan = null;
+                _s.latestAgentPlan = null;
                 return { ok: false, reply: "Agent plan expired. Please create a new plan." };
             }
 
-            const hasPendingSteps = Array.isArray(latestAgentPlan.pendingSteps);
+            const hasPendingSteps = Array.isArray(_s.latestAgentPlan.pendingSteps);
             const parsed = hasPendingSteps
-                ? { steps: latestAgentPlan.pendingSteps }
-                : await getApprovedAgentActions(latestAgentPlan);
+                ? { steps: _s.latestAgentPlan.pendingSteps }
+                : await getApprovedAgentActions(_s.latestAgentPlan);
 
             if (!parsed) {
                 return {
@@ -6364,23 +6295,23 @@ ${task.plan || "No plan saved."}`
             const validation = hasPendingSteps
                 ? {
                     fatalError: null,
-                    validSteps: latestAgentPlan.pendingSteps,
-                    skipped: Array.isArray(latestAgentPlan.pendingSkipped) ? latestAgentPlan.pendingSkipped : []
+                    validSteps: _s.latestAgentPlan.pendingSteps,
+                    skipped: Array.isArray(_s.latestAgentPlan.pendingSkipped) ? _s.latestAgentPlan.pendingSkipped : []
                 }
-                : validateAgentSteps(parsed.steps, latestAgentPlan.request);
+                : validateAgentSteps(parsed.steps, _s.latestAgentPlan.request);
 
             if (validation.fatalError) {
                 await pgLogAgentAction(
                     "agent_apply",
                     "blocked",
-                    latestAgentPlan.request,
-                    latestAgentPlan.plan,
+                    _s.latestAgentPlan.request,
+                    _s.latestAgentPlan.plan,
                     parsed.steps,
                     null,
                     validation.fatalError
                 );
 
-                await notifyUnsafeActionBlocked(latestAgentPlan.request, validation.fatalError);
+                await notifyUnsafeActionBlocked(_s.latestAgentPlan.request, validation.fatalError);
 
                 return {
                     ok: false,
@@ -6392,8 +6323,8 @@ ${task.plan || "No plan saved."}`
                 await pgLogAgentAction(
                     "agent_apply",
                     "skipped",
-                    latestAgentPlan.request,
-                    latestAgentPlan.plan,
+                    _s.latestAgentPlan.request,
+                    _s.latestAgentPlan.plan,
                     parsed.steps,
                     null,
                     validation.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")
@@ -6408,9 +6339,9 @@ ${task.plan || "No plan saved."}`
             const duplicateMatch = await findPendingDuplicateForSteps(validation.validSteps);
 
             if (duplicateMatch) {
-                pendingDuplicateDecision = {
-                    request: latestAgentPlan.request,
-                    plan: latestAgentPlan.plan,
+                _s.pendingDuplicateDecision = {
+                    request: _s.latestAgentPlan.request,
+                    plan: _s.latestAgentPlan.plan,
                     steps: validation.validSteps,
                     skipped: validation.skipped,
                     duplicateIndex: duplicateMatch.index,
@@ -6420,8 +6351,8 @@ ${task.plan || "No plan saved."}`
                 await pgLogAgentAction(
                     "agent_apply",
                     "duplicate_pending",
-                    latestAgentPlan.request,
-                    latestAgentPlan.plan,
+                    _s.latestAgentPlan.request,
+                    _s.latestAgentPlan.plan,
                     validation.validSteps,
                     null,
                     `Duplicate detected for ${duplicateMatch.duplicate.filename}`
@@ -6441,15 +6372,15 @@ Choose one:
 
             const execution = await executeApprovedAgentActions(validation.validSteps, {
                 skipped: validation.skipped,
-                originalRequest: latestAgentPlan.request
+                originalRequest: _s.latestAgentPlan.request
             });
 
             if (!execution.ok) {
                 await pgLogAgentAction(
                     "agent_apply",
                     "failed",
-                    latestAgentPlan.request,
-                    latestAgentPlan.plan,
+                    _s.latestAgentPlan.request,
+                    _s.latestAgentPlan.plan,
                     parsed.steps,
                     execution.undoEntries || null,
                     execution.message
@@ -6464,15 +6395,15 @@ Choose one:
             await pgLogAgentAction(
                 "agent_apply",
                 "applied",
-                latestAgentPlan.request,
-                latestAgentPlan.plan,
+                _s.latestAgentPlan.request,
+                _s.latestAgentPlan.plan,
                 validation.validSteps,
                 execution.undoEntries,
                 `Executed: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`
             );
 
-            latestAgentPlan = null;
-            pendingDuplicateDecision = null;
+            _s.latestAgentPlan = null;
+            _s.pendingDuplicateDecision = null;
 
             return {
                 ok: true,
@@ -6548,18 +6479,18 @@ Choose one:
 
         case "duplicate_create_approval":
         case "duplicate_replace_approval": {
-            if (!pendingDuplicateDecision) {
+            if (!_s.pendingDuplicateDecision) {
                 return { ok: false, reply: "No duplicate decision is waiting for approval." };
             }
 
             const execution = await executeApprovedAgentActions(
-                pendingDuplicateDecision.steps,
+                _s.pendingDuplicateDecision.steps,
                 {
-                    skipped: pendingDuplicateDecision.skipped,
-                    originalRequest: pendingDuplicateDecision.request,
+                    skipped: _s.pendingDuplicateDecision.skipped,
+                    originalRequest: _s.pendingDuplicateDecision.request,
                     duplicateDecision: {
-                        index: pendingDuplicateDecision.duplicateIndex,
-                        duplicate: pendingDuplicateDecision.duplicate,
+                        index: _s.pendingDuplicateDecision.duplicateIndex,
+                        duplicate: _s.pendingDuplicateDecision.duplicate,
                         mode: command.type === "duplicate_replace_approval" ? "replace" : "create"
                     }
                 }
@@ -6569,9 +6500,9 @@ Choose one:
                 await pgLogAgentAction(
                     "agent_apply",
                     "failed",
-                    pendingDuplicateDecision.request,
-                    pendingDuplicateDecision.plan,
-                    pendingDuplicateDecision.steps,
+                    _s.pendingDuplicateDecision.request,
+                    _s.pendingDuplicateDecision.plan,
+                    _s.pendingDuplicateDecision.steps,
                     execution.undoEntries || null,
                     execution.message
                 );
@@ -6585,15 +6516,15 @@ Choose one:
             await pgLogAgentAction(
                 "agent_apply",
                 "applied",
-                pendingDuplicateDecision.request,
-                pendingDuplicateDecision.plan,
-                pendingDuplicateDecision.steps,
+                _s.pendingDuplicateDecision.request,
+                _s.pendingDuplicateDecision.plan,
+                _s.pendingDuplicateDecision.steps,
                 execution.undoEntries,
                 `Executed: ${execution.results.join(" | ")}${execution.skipped.length ? ` | Skipped: ${execution.skipped.map(item => `${item.type}: ${item.reason}`).join(" | ")}` : ""}`
             );
 
-            latestAgentPlan = null;
-            pendingDuplicateDecision = null;
+            _s.latestAgentPlan = null;
+            _s.pendingDuplicateDecision = null;
 
             return {
                 ok: true,
@@ -6604,21 +6535,21 @@ Choose one:
         }
 
         case "duplicate_cancel": {
-            if (!pendingDuplicateDecision) {
+            if (!_s.pendingDuplicateDecision) {
                 return { ok: false, reply: "No duplicate decision is waiting." };
             }
 
             await pgLogAgentAction(
                 "agent_apply",
                 "cancelled",
-                pendingDuplicateDecision.request,
-                pendingDuplicateDecision.plan,
-                pendingDuplicateDecision.steps,
+                _s.pendingDuplicateDecision.request,
+                _s.pendingDuplicateDecision.plan,
+                _s.pendingDuplicateDecision.steps,
                 null,
                 "Duplicate creation cancelled"
             );
 
-            pendingDuplicateDecision = null;
+            _s.pendingDuplicateDecision = null;
 
             return {
                 ok: true,
@@ -6701,7 +6632,7 @@ Choose one:
         case "preview_cleanup_agent_data": {
             const rows = await fetchAgentCleanupRows();
             const preview = buildAgentCleanupPreviewData(rows);
-            latestAgentCleanupPreview = preview;
+            _s.latestAgentCleanupPreview = preview;
 
             return {
                 ok: true,
@@ -6713,7 +6644,7 @@ Choose one:
         case "preview_cleanup_obvious_agent_data": {
             const rows = await fetchAgentCleanupRows();
             const preview = buildObviousAgentCleanupPreviewData(rows);
-            latestObviousAgentCleanupPreview = preview;
+            _s.latestObviousAgentCleanupPreview = preview;
 
             return {
                 ok: true,
@@ -6723,14 +6654,14 @@ Choose one:
         }
 
         case "apply_cleanup_agent_data": {
-            if (!latestAgentCleanupPreview) {
+            if (!_s.latestAgentCleanupPreview) {
                 return {
                     ok: false,
                     reply: "Run preview cleanup agent data first."
                 };
             }
 
-            const applyResult = await applyAgentCleanupPreview(latestAgentCleanupPreview);
+            const applyResult = await applyAgentCleanupPreview(_s.latestAgentCleanupPreview);
 
             if (!applyResult.ok) {
                 return {
@@ -6741,7 +6672,7 @@ Choose one:
 
             const refreshedRows = await fetchAgentCleanupRows();
             const refreshedPreview = buildAgentCleanupPreviewData(refreshedRows);
-            latestAgentCleanupPreview = null;
+            _s.latestAgentCleanupPreview = null;
 
             return {
                 ok: true,
@@ -6757,14 +6688,14 @@ Final clean state summary:
         }
 
         case "apply_cleanup_obvious_agent_data": {
-            if (!latestObviousAgentCleanupPreview) {
+            if (!_s.latestObviousAgentCleanupPreview) {
                 return {
                     ok: false,
                     reply: "Run preview cleanup obvious agent data first."
                 };
             }
 
-            const applyResult = await applyAgentCleanupPreview(latestObviousAgentCleanupPreview);
+            const applyResult = await applyAgentCleanupPreview(_s.latestObviousAgentCleanupPreview);
 
             if (!applyResult.ok) {
                 return {
@@ -6775,7 +6706,7 @@ Final clean state summary:
 
             const refreshedRows = await fetchAgentCleanupRows();
             const refreshedPreview = buildObviousAgentCleanupPreviewData(refreshedRows);
-            latestObviousAgentCleanupPreview = null;
+            _s.latestObviousAgentCleanupPreview = null;
 
             return {
                 ok: true,
@@ -7041,10 +6972,7 @@ async function backgroundClassifyAndSummarise(filename, content) {
         const classification = (classRes.content[0]?.text || "personal").trim().toLowerCase();
         const summary = (sumRes.content[0]?.text || "").trim();
 
-        db.prepare(
-            "UPDATE documents SET classification = ?, summary = ? WHERE filename = ?"
-        ).run(classification, summary, filename);
-
+        // SQLite write removed — Postgres is the canonical store.
         await pgSaveDocument(
             filename,
             content,
@@ -7403,7 +7331,7 @@ app.post("/chat", requireAppAccess, async (req, res) => {
                 _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _agentIntent2, userMessage, reply: _agentReply, mode: _agentMode, executionClass: req.executionClass });
                 _eae.recordTransition({ sessionId: req.conversationId });
                 _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply: _agentReply, intent: _agentIntent2, mode: _agentMode });
-                setImmediate(() => { addToMemory("user", userMessage); addToMemory("ai", _agentReply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: _agentReply }), tags: ['conversation', 'chat', 'agent'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+                setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: _agentReply }), tags: ['conversation', 'chat', 'agent'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
                 return res.status(200).json({ ok: true, reply: _agentReply, response_mode: _agentMode, stream_plan: _agentPlan });
             } catch (e) {
                 if (res.headersSent) return;
@@ -7415,7 +7343,6 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         // ── Domain routing: uses full memory+tools loop below ─────────────────
 
         const memory = await loadMemory();
-        setImmediate(() => addToMemory("user", userMessage));
 
         const memoryText = memory.length
             ? memory.slice(-12).map(m => `[${m.role.toUpperCase()}]${m.time ? ` (${timeAgo(m.time)})` : ""} ${m.message}`).join("\n")
@@ -7455,7 +7382,7 @@ ${preview}
             _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _mastraIntent, userMessage, reply, mode: _mastraMode, executionClass: req.executionClass });
             _eae.recordTransition({ sessionId: req.conversationId });
             _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode });
-            setImmediate(() => { addToMemory("ai", reply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'mastra'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+            setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'mastra'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
             return res.status(200).json({
                 ok: true,
                 reply,
@@ -7481,8 +7408,8 @@ ${preview}
             const command = toolUseInputToCommand(toolUseBlock.name, toolUseBlock.input || {});
 
             if (command) {
-                const result = await handleCommand(command);
-                setImmediate(() => { addToMemory("ai", result.reply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: result.reply }), tags: ['conversation', 'chat', 'tool'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+                const result = await handleCommand(command, req.user?.id || 'default');
+                setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: result.reply }), tags: ['conversation', 'chat', 'tool'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
                 return res.status(result.ok ? 200 : 404).json(result);
             }
         }
@@ -7499,7 +7426,7 @@ ${preview}
         _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _sdkIntent, userMessage, reply, mode: _sdkMode, executionClass: req.executionClass });
         _eae.recordTransition({ sessionId: req.conversationId });
         _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _sdkIntent, mode: _sdkMode });
-        setImmediate(() => { addToMemory("ai", reply); _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'sdk'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+        setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'sdk'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
 
         return res.status(200).json({
             ok: true,
@@ -8609,8 +8536,6 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         const userMessage = rawMessage.trim();
 
-        // Fire-and-forget legacy memory write (kept for compatibility)
-        addToMemory("user", userMessage);
         setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ role: 'user', message: userMessage }), tags: ['conversation', 'voice'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
 
         // Phase 13 — Conversational influence closure: explicit affirmations confirm lesson influence
@@ -8760,7 +8685,6 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         const reply = finalReply;
 
         // Save this exchange to memory asynchronously — never block the response
-        addToMemory("ai", reply);
         setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'voice', 'exchange'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
 
         // LangChain memory — persist conversation with summary compression
@@ -9084,6 +9008,23 @@ app.get('/api/ruflo/memory/search', requireAppAccess, async (req, res) => {
         res.json({ ok: true, output: (r.stdout || r.stderr || '').trim() });
     } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+// ── SRE ADMIN ────────────────────────────────────────────────────────────────
+
+app.post('/api/admin/sre/run', requireAppAccess, async (req, res) => {
+    try {
+        const { scenarioIds, label, setAsBaseline = false } = req.body;
+        const syntheticHarness = require('./lib/synthetic');
+        const result = await syntheticHarness.run(syntheticHarness.EXECUTION_MODE.SYNTHETIC, {
+            scenarioIds: scenarioIds || [],
+            label:       label || 'admin_trigger',
+            setAsBaseline,
+        });
+        res.json({ success: true, result });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -11556,10 +11497,6 @@ server.listen(PORT, () => {
     // Model telemetry subscriber — logs all MODEL_INVOKED events via logger
     require('./lib/models/runtime/subscriber').activate();
 
-    // Event spine relay — moves outbox rows → events table every 5s (Constitution Article 3 & 4)
-    require('./lib/outbox-relay').start();
-    console.log('[Startup] Outbox relay started');
-
     // Integrity crons — nightly backup manifest + weekly source reconciliation
     require('./lib/integrity-crons').start();
 
@@ -12190,8 +12127,9 @@ checkPendingMasterTasks();
         console.log(`[LessonCron] Weekly consolidation scheduled for ${_next.toDateString()} 03:00`);
     })();
 
-    // Weekly evolution cycle — Sundays at 5am (generates improvement roadmap from live telemetry)
-    (function _scheduleEvolutionCycle() {
+    // Weekly evolution cycle — Sundays at 05:30 UTC (staggered from adaptation-cycle at 05:00 UTC)
+    (() => {
+        const MS_WEEK = 7 * 24 * 60 * 60 * 1000;
         async function _runEvolutionCycle() {
             try {
                 const _imp = require('./agent-system/improvement-executor');
@@ -12203,18 +12141,17 @@ checkPendingMasterTasks();
                 require('./lib/cron-logger').record('evolution_cycle', 'error', e.message).catch(() => {});
             }
         }
-        function _nextSunday5am() {
-            const d = new Date(); d.setHours(5, 0, 0, 0);
-            const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
-            d.setDate(d.getDate() + daysUntilSunday);
-            return d;
-        }
-        const _next = _nextSunday5am();
-        setTimeout(function _evolutionCycle() {
+        const now = new Date();
+        const daysUntilSunday = (7 - now.getUTCDay()) % 7 || 7;
+        const nextSundayMs = new Date(Date.UTC(
+            now.getUTCFullYear(), now.getUTCMonth(),
+            now.getUTCDate() + daysUntilSunday, 5, 30, 0
+        )) - now;
+        setTimeout(() => {
             _runEvolutionCycle();
-            setInterval(_runEvolutionCycle, 7 * 24 * 60 * 60 * 1000);
-        }, _next.getTime() - Date.now());
-        console.log(`[EvolutionCycle] Weekly roadmap scheduled for ${_next.toDateString()} 05:00`);
+            setInterval(_runEvolutionCycle, MS_WEEK);
+        }, Math.max(nextSundayMs, 60000));
+        console.log('[EvolutionCycle] Weekly roadmap scheduled for Sun 05:30 UTC');
     })();
 
     // News ingest — runs at 6am daily, plus an immediate run on startup
@@ -12441,25 +12378,10 @@ checkPendingMasterTasks();
     })();
     } // end COGNITIVE_CRONS_ENABLED
 
-    // Civilization Health — daily at 08:00 UTC
-    (function _scheduleCivHealth() {
-        const MS_DAY = 24 * 60 * 60 * 1000;
-        const now3   = new Date();
-        const nextUtc8 = new Date(Date.UTC(now3.getUTCFullYear(), now3.getUTCMonth(),
-            now3.getUTCDate() + (now3.getUTCHours() >= 8 ? 1 : 0), 8, 0, 0));
-        const delay3 = Math.max(nextUtc8 - now3, 60_000);
-        setTimeout(() => {
-            require('./lib/cron-logger').wrapCron('civilization_health', async () => {
-                const { computeCivilizationHealth } = require('./lib/telemetry/aggregator');
-                const snap = await computeCivilizationHealth();
-                console.log(`[civilization_health] score=${snap.overall_score} (${snap.classification})`);
-            });
-            setInterval(() => require('./lib/cron-logger').wrapCron('civilization_health', async () => {
-                const { computeCivilizationHealth } = require('./lib/telemetry/aggregator');
-                await computeCivilizationHealth();
-            }), MS_DAY);
-        }, delay3);
-    })();
+    // DATA-5: Civilization Health cron migrated to civilization-health-engine.js (schema_version:2).
+    // The aggregator's computeCivilizationHealth() no longer writes snapshots; this cron is removed.
+    // Health snapshots are now written by civilization-runtime.js which calls
+    // civilization-health-engine.snapshot() on its 6-hour cycle.
 
     // Civilization Runtime — full autonomous cycle every 6 hours (health → council → adapt → act)
     (function _scheduleCivRuntime() {

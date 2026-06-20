@@ -2,7 +2,7 @@ const chokidar = require("chokidar");
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
-const db = require("./database");
+// SQLite database.js removed — watcher no longer writes to local SQLite.
 
 const API_KEY = process.env.ANTHROPIC_API_KEY;
 const watchFolder = path.join(__dirname, "./workspace");
@@ -91,27 +91,13 @@ async function processFile(filePath) {
             return;
         }
 
-        // skip duplicates
-        const existing = db.prepare(
-            "SELECT * FROM documents WHERE filename = ?"
-        ).get(file);
-
-        if (existing) {
-            console.log("⏭️ Already processed, skipping");
-            return;
-        }
-
         const classification = await classify(data);
         console.log("📂 Type:", classification);
 
         const summary = await summarise(data);
 
-        db.prepare(`
-            INSERT INTO documents (filename, content, classification, summary)
-            VALUES (?, ?, ?, ?)
-        `).run(file, data, classification, summary);
-
-        console.log("✅ Saved to database");
+        // SQLite writes removed — document persistence handled by Supabase/Postgres.
+        console.log("✅ Classified and summarised (no local DB write)");
 
     } catch (err) {
         console.error("❌ Error processing file:", err.message);

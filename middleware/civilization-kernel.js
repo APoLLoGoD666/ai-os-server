@@ -76,6 +76,18 @@ function _resolveGoals() {
     }
 }
 
+// Retrieve live cognitive confidence from autonomy runtime (non-fatal, cached per process tick).
+let _cognitiveConfidenceCache = 0.7;
+(async () => {
+    try {
+        const autonomyCtrl = require('../lib/cognitive/runtime/autonomy-runtime-controller');
+        const result = autonomyCtrl.applyLevel({ autonomy_level: 3, composite_score: null });
+        _cognitiveConfidenceCache = typeof result.compositeScore === 'number'
+            ? result.compositeScore
+            : 0.7;
+    } catch (_) { /* keep default */ }
+})();
+
 function _scoreAttention(ctx) {
     try {
         const topGoal = ctx.goals.scored[0];
@@ -86,7 +98,7 @@ function _scoreAttention(ctx) {
             financialWeight:     0,
             memoryRelevance:     0.3,
             urgency:             ctx.identity.executionClass === 'EXECUTIVE' ? 0.8 : 0.4,
-            cognitiveConfidence: 0.7,
+            cognitiveConfidence: _cognitiveConfidenceCache,
         };
         return attention.score(item);
     } catch (_) {
