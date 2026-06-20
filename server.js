@@ -1,4 +1,4 @@
-require("./scripts/instrument.js");
+require("./instrument.js");
 require("dotenv").config();
 
 const GIT_SHA = (() => { try { return require('child_process').execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'unknown'; } })();
