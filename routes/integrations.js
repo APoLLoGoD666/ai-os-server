@@ -112,23 +112,17 @@ router.get('/clients', requireAppAccess, async (req, res) => {
     }
 });
 
-// ── POST /api/notion/sync — manual sync trigger ─────────────────────────────
+// ── POST /api/notion/sync — manual sync trigger (checkpointed, dry-run safe) ─
 router.post('/notion/sync', requireAppAccess, async (req, res) => {
-    const { type = 'status' } = req.body || {};
-    const syncMod = _notion('notion-sync');
-    if (!syncMod) return res.status(503).json({ ok: false, error: 'notion unavailable' });
-    if (type === 'agent_runs') {
-        try {
-            const { createClient } = require('@supabase/supabase-js');
-            const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-            const { data } = await sb.from('apex_agent_runs').select('*').order('created_at', { ascending: false }).limit(20);
-            const result = await syncMod.syncAgentRunsFromSupabase(data || []);
-            return res.json({ ok: true, ...result });
-        } catch (e) {
-            return res.status(500).json({ ok: false, error: e.message });
-        }
+    const { dryRun = false } = req.body || {};
+    try {
+        const { runFullSync, ensureCheckpointTable } = require('../services/sync/supabase-notion-sync');
+        await ensureCheckpointTable();
+        const result = await runFullSync({ dryRun });
+        res.json({ ok: true, ...result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
     }
-    res.json({ ok: true, message: 'sync type not implemented: ' + type });
 });
 
 // ── POST /api/notion/log-decision — log a decision to Notion ───────────────

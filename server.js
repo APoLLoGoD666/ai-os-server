@@ -1,4 +1,4 @@
-require("./instrument.js");
+require("./scripts/instrument.js");
 require("dotenv").config();
 
 const GIT_SHA = (() => { try { return require('child_process').execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'unknown'; } })();
@@ -166,7 +166,6 @@ const {
     getWorkspaceStorageDebug
 } = require("./lib/storage");
 
-const runAutoCoder = async () => ({ skipped: true, reason: "auto_coder removed", summary: "", changedFiles: [] });
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./agent-system/cloud_autopilot");
 const { checkEmails, sendEmailReply, initEmailAgent } = require("./agent-system/email_agent");
 // mastra_agents is lazy-loaded after server stabilises to avoid startup OOM
@@ -7447,45 +7446,6 @@ ${preview}
     }
 });
 
-app.post("/autocode", requireAppAccess, async (req, res) => {
-    try {
-        const requirements = req.body?.requirements;
-        const autoPush = !!req.body?.autoPush;
-        const commitMessage = req.body?.commitMessage || "AI dev panel update";
-
-        if (!requirements || typeof requirements !== "string" || !requirements.trim()) {
-            return res.status(400).json({
-                ok: false,
-                reply: "Please enter coding requirements."
-            });
-        }
-
-        const result = await runAutoCoder(requirements.trim(), {
-            autoPush,
-            commitMessage
-        });
-
-        return res.status(200).json({
-            ok: true,
-            reply: result.skipped
-                ? "No changes detected, so nothing was pushed."
-                : result.reason || "Auto-code completed.",
-            summary: result.summary,
-            changedFiles: result.changedFiles || result.files || [],
-            backupFolder: result.backupFolder,
-            pushed: result.pushed,
-            skipped: result.skipped,
-            reason: result.reason
-        });
-    } catch (error) {
-        console.error("AUTOCODE ERROR:", error);
-
-        return res.status(500).json({
-            ok: false,
-            reply: error.message || "Auto-code failed."
-        });
-    }
-});
 
 app.post("/cloud-autopilot/preview", requireAppAccess, async (req, res) => {
     try {
