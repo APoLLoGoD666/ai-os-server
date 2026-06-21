@@ -601,8 +601,13 @@ function initMastraWithRetry(handleCommand) {
         console.error("MASTRA INIT FAILED, retrying in 5s:", err.message);
         setTimeout(() => {
             try {
-                const agents = initMastra(handleCommand);
-                Object.assign(apexAgent    && {}, agents);
+                const result = initMastra(handleCommand);
+                apexAgent     = result.apexAgent;
+                emailAgent    = result.emailAgent;
+                financeAgent  = result.financeAgent;
+                routineAgent  = result.routineAgent;
+                researchAgent = result.researchAgent;
+                mastraInstance = result.mastra;
                 console.log("MASTRA RETRY SUCCESS");
             } catch (e2) {
                 console.error("MASTRA RETRY FAILED:", e2.message);

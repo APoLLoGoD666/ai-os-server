@@ -281,6 +281,7 @@ function _updateKanban(feature, status) {
         board = board.replace(new RegExp(`^\\- \\[${feature.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\].*$`, 'gm'), '');
         // Add to correct section
         const section = status === 'complete' ? '## Complete' : status === 'in-progress' ? '## In Progress' : '## Pending';
+        if (!board.includes(section)) board += '\n' + section + '\n';
         board = board.replace(section, section + '\n' + entry);
         // Clean up extra blank lines
         board = board.replace(/\n{3,}/g, '\n\n');

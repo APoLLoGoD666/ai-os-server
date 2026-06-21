@@ -94,7 +94,7 @@ router.post('/civilization/intelligence/ingest', _auth, async (req, res) => {
 router.post('/civilization/intelligence/scan', _auth, async (req, res) => {
   try {
     const { domain } = req.body;
-    const events = domain ? await _gig().scan(domain) : await _gig().scanAll();
+    const events = await _gig().getRecentEvents({ domain: domain || undefined, minSignificance: 0, limit: 50 });
     res.json({ ok: true, events });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });

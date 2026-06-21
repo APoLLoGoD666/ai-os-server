@@ -53,7 +53,7 @@ process.on('uncaughtException', (err) => {
     Sentry.captureException(err);
     _sinkError('uncaughtException', err);
     // Give Sentry time to flush before exiting — Render will restart immediately
-    setTimeout(() => process.exit(1), 1000);
+    setTimeout(() => process.exit(1), parseInt(process.env.CRASH_FLUSH_MS || '1000', 10));
 });
 process.on('unhandledRejection', (reason) => {
     console.error('[FATAL] unhandledRejection:', reason);
@@ -559,7 +559,8 @@ const {
 
 const MODEL = 'claude-opus-4-7'; // Opus tier — ANTHROPIC_MODEL env var handled by config/index.js
 const runtime = require('./lib/models/runtime');
-const AUTONOMY_LEVEL = String(process.env.AUTONOMY_LEVEL || "1");
+const getAutonomyLevel = () => String(process.env.AUTONOMY_LEVEL || "1");
+const AUTONOMY_LEVEL = getAutonomyLevel(); // snapshot for legacy callers — prefer getAutonomyLevel() for hot paths
 
 let mastraAgents = null;
 
@@ -937,7 +938,7 @@ const LOGIN_HTML = `<!DOCTYPE html>
 </html>`;
 
 function requireAuth(req, res, next) {
-    if (process.env.BYPASS_DASHBOARD_AUTH === 'true') {
+    if (process.env.BYPASS_DASHBOARD_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
         const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
         res.cookie('apex_session', '1', { httpOnly: false, secure: isSecure, sameSite: 'Lax', maxAge: 3600000 });
         return next();

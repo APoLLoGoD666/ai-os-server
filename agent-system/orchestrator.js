@@ -128,19 +128,29 @@ function _trackCost(usage, model, role, ctx) {
 }
 
 // ── Clean up orphaned worktrees from crashed previous runs ────────────────────
-(function _cleanOrphanedWorktrees() {
+// Deferred + safe: only removes worktrees whose directories no longer exist on disk.
+// This prevents deleting worktrees that are still active in a concurrent startup.
+setImmediate(() => {
     try {
-        const tmpEntries = fs.readdirSync(os.tmpdir()).filter(e => e.startsWith('apex-wt-'));
-        for (const entry of tmpEntries) {
-            const dir = path.join(os.tmpdir(), entry);
-            spawnSync('git', ['worktree', 'remove', dir, '--force'], { cwd: ROOT, encoding: 'utf8' });
-            const taskId = entry.replace('apex-wt-', '');
-            const branch = `feat/${taskId.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
-            spawnSync('git', ['branch', '-D', branch], { cwd: ROOT, encoding: 'utf8' });
+        const result = spawnSync('git', ['worktree', 'list', '--porcelain'], { cwd: ROOT, encoding: 'utf8' });
+        const lines = (result.stdout || '').split('\n');
+        let cleaned = 0;
+        for (const line of lines) {
+            if (!line.startsWith('worktree ')) continue;
+            const dir = line.slice('worktree '.length).trim();
+            if (!dir.includes('apex-wt-')) continue;
+            if (!fs.existsSync(dir)) {
+                spawnSync('git', ['worktree', 'remove', dir, '--force'], { cwd: ROOT, encoding: 'utf8' });
+                const entry = path.basename(dir);
+                const taskId = entry.replace('apex-wt-', '');
+                const branch = `feat/${taskId.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
+                spawnSync('git', ['branch', '-D', branch], { cwd: ROOT, encoding: 'utf8' });
+                cleaned++;
+            }
         }
-        if (tmpEntries.length) console.log(`[Worktree] cleaned ${tmpEntries.length} orphaned worktree(s) on startup`);
+        if (cleaned > 0) console.log(`[Worktree] cleaned ${cleaned} orphaned worktree(s) on startup`);
     } catch (e) { console.warn('[Worktree] orphan cleanup error (non-fatal):', e.message); }
-})();
+});
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 async function callWithBackoff(fn, retries = 3) {
@@ -670,6 +680,13 @@ async function _tester(filesModified, ctx) {
     const failures = [];
 
     for (const f of allFiles) {
+        if (f.endsWith('.json')) {
+            const fp = path.join(ctx.worktreeRoot, f);
+            if (!fs.existsSync(fp)) continue;
+            try { JSON.parse(fs.readFileSync(fp, 'utf8')); console.log('[Tester] JSON OK:', f); }
+            catch (e) { console.log('[Tester] JSON FAIL:', f); failures.push({ file: f, error: e.message.slice(0, 300) }); }
+            continue;
+        }
         if (!f.endsWith('.js')) continue;
         // server.js always checked from ROOT (never modified by agents)
         const fp = f === 'server.js' ? path.join(ROOT, f) : path.join(ctx.worktreeRoot, f);
@@ -1055,7 +1072,7 @@ async function runAgentTeam(spec, taskId) {
         spanId:            null,
         conditionsMet:     [],
     };
-    if (!ctx.paidClient) throw new Error('No API key configured — set ANTHROPIC_API_KEY');
+    if (!ctx.paidClient) return { success: false, commitHash: null, agentLogs: [], error: 'No API key configured — set ANTHROPIC_API_KEY', complexity: 'unknown', models: {} };
 
     // ── Complexity classification → per-agent model routing ──────────────────
     const complexity  = _classifyComplexity(spec);
@@ -1147,7 +1164,7 @@ async function runAgentTeam(spec, taskId) {
     // getAlignmentGuidanceForPrompt is cached 5min; never throws; zero API cost
     try {
         const _f = require('../lib/founder');
-        const _founderGuidance = await _f.getAlignmentGuidanceForPrompt(spec.objective);
+        const _founderGuidance = await _f.getAlignmentGuidance(spec.objective);
         if (_founderGuidance) {
             ctx.obsidianContext = (ctx.obsidianContext ? ctx.obsidianContext + '\n\n' : '') +
                 'FOUNDER ALIGNMENT:\n' + _founderGuidance;
@@ -1199,8 +1216,10 @@ async function runAgentTeam(spec, taskId) {
 
     // Memory Gateway context assembly — model-agnostic Context Package
     ctx.gatewayPkg = null;
+    let routeDecision = null;
+    let _gwLessonsRaw = [];
     try {
-        const routeDecision = _taskRouter.routeAndLog({ objective: spec.objective, filesToModify: spec.filesToModify, taskId });
+        routeDecision = _taskRouter.routeAndLog({ objective: spec.objective, filesToModify: spec.filesToModify, taskId });
         require('../lib/consumption-log').record({ subsystem: 'task-router', output_key: routeDecision.route, consumer: 'orchestrator', task_id: taskId, meta: { complexity: routeDecision.complexity } });
 
         // ── Task Router authority — execution branching by route type ────────────
@@ -1216,7 +1235,7 @@ async function runAgentTeam(spec, taskId) {
                 const { consultExecutive } = require('../lib/cognitive/runtime');
                 const _execResult = await consultExecutive(routeDecision.entity, spec.objective,
                     { taskId, complexity: routeDecision.complexity });
-                const _reply = [_execResult?.decision, _execResult?.rationale].filter(Boolean).join('\n\n');
+                const _reply = [_execResult?.choice || _execResult?.decision, _execResult?.rationale].filter(Boolean).join('\n\n');
                 setImmediate(() => _auditLog(taskId, spec, true, [], '0.00000', routeDecision.complexity, ctx).catch(() => {}));
                 _cleanup();
                 return { success: true, commitHash: null, executiveResponse: true, entity: routeDecision.entity,
@@ -1241,7 +1260,7 @@ async function runAgentTeam(spec, taskId) {
             requestingEntity: 'orchestrator',
         });
         // Append gateway lessons + founder constraints to obsidianContext (non-destructive)
-        const _gwLessonsRaw = (ctx.gatewayPkg.lessons || []).slice(0, 5);
+        _gwLessonsRaw = (ctx.gatewayPkg.lessons || []).slice(0, 5);
         const _gwLessons = _gwLessonsRaw.map(l => `- ${l.content}`).join('\n');
         if (_gwLessons) {
             ctx.obsidianContext = (ctx.obsidianContext ? ctx.obsidianContext + '\n\n' : '')
@@ -1441,7 +1460,6 @@ async function runAgentTeam(spec, taskId) {
 
     const _pipelineStart = Date.now();
     try {
-        setImmediate(() => _hooks.onPipelineStart({ taskId, description: spec.objective, agentCount: 8, model: ctx.agentModels.developer, traceId: ctx.traceId }).catch(() => {}));
         setImmediate(() => { try { _goalTracker.startGoal(taskId, spec.objective); } catch {} });
         setImmediate(async () => {
             try {
@@ -1518,7 +1536,7 @@ async function runAgentTeam(spec, taskId) {
         }
 
         // Step 0 — RESEARCHER (optional, pre-ARCHITECT web context fetch)
-        const researcherLog = await _researcher(spec);
+        const researcherLog = await _researcher(spec, ctx);
         if (researcherLog) agentLogs.push(researcherLog);
 
         // research_system route: return after RESEARCHER, skip full pipeline
@@ -1556,11 +1574,11 @@ async function runAgentTeam(spec, taskId) {
 
             // Runtime-controlled escalation: uses execution controller's modelForAttempt()
             if (attempt > 1) {
-                const baseModel   = attempt === 2 ? (Object.keys(M).find(k => M[k] === ctx.agentModels.developer) ? ctx.agentModels.developer : M.HAIKU) : ctx.agentModels.developer;
+                const baseModel   = ctx.agentModels.developer;
                 const targetModel = ctx.runtimeControls?.execution?.modelForAttempt
                     ? ctx.runtimeControls.execution.modelForAttempt(attempt, baseModel, M)
                     : (attempt === 2 ? (ctx.agentModels.developer === M.HAIKU ? M.SONNET : ctx.agentModels.developer)
-                                     : (ctx.agentModels.developer !== M.OPUS ? M.OPUS : M.OPUS));
+                                     : M.OPUS);
 
                 if (targetModel !== ctx.agentModels.developer) {
                     _escalations.push({ attempt, from: ctx.agentModels.developer, to: targetModel, reason: 'runtime_retry' });
@@ -1837,7 +1855,8 @@ module.exports = runAgentTeam;
 module.exports.getOrchestratorStatus = getOrchestratorStatus;
 
 // Purge old backups every 24 hours (fire-and-forget, non-fatal)
+const _backupManager = require('./backup-manager');
 setInterval(() => {
-    try { require('./backup-manager').cleanOldBackups(); }
+    try { _backupManager.cleanOldBackups(); }
     catch (e) { console.warn('[Orchestrator] cleanOldBackups error (non-fatal):', e.message); }
-}, 24 * 60 * 60 * 1000);
+}, 24 * 60 * 60 * 1000).unref();

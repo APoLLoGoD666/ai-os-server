@@ -13,31 +13,41 @@ const {
 // ── Layer 1: Working Memory ──────────────────────────────────────────────────
 
 router.post('/memory/working', async (req, res) => {
-    const { sessionId, memoryType, content, ttlSeconds, traceId, taskId } = req.body;
-    if (!sessionId || !memoryType || !content) return res.status(400).json({ ok: false, error: 'sessionId, memoryType, content required' });
-    const id = await workingMemory.set(sessionId, memoryType, content, { ttlSeconds, traceId, taskId });
-    res.json({ ok: !!id, memoryId: id });
+    try {
+        const { sessionId, memoryType, content, ttlSeconds, traceId, taskId } = req.body;
+        if (!sessionId || !memoryType || !content) return res.status(400).json({ ok: false, error: 'sessionId, memoryType, content required' });
+        const id = await workingMemory.set(sessionId, memoryType, content, { ttlSeconds, traceId, taskId });
+        res.json({ ok: !!id, memoryId: id });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 router.get('/memory/working/:sessionId', async (req, res) => {
-    const all = await workingMemory.getAll(req.params.sessionId);
-    res.json({ ok: true, data: all });
+    try {
+        const all = await workingMemory.getAll(req.params.sessionId);
+        res.json({ ok: true, data: all });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 router.get('/memory/working/:sessionId/:memoryType', async (req, res) => {
-    const data = await workingMemory.get(req.params.sessionId, req.params.memoryType);
-    res.json({ ok: true, data });
+    try {
+        const data = await workingMemory.get(req.params.sessionId, req.params.memoryType);
+        res.json({ ok: true, data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 router.delete('/memory/working/:sessionId', async (req, res) => {
-    await workingMemory.clear(req.params.sessionId);
-    res.json({ ok: true });
+    try {
+        await workingMemory.clear(req.params.sessionId);
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 router.post('/memory/working/:sessionId/extend', async (req, res) => {
-    const { extraSeconds } = req.body;
-    await workingMemory.extend(req.params.sessionId, extraSeconds);
-    res.json({ ok: true });
+    try {
+        const { extraSeconds } = req.body;
+        await workingMemory.extend(req.params.sessionId, extraSeconds);
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // ── Layer 2: Episodic Memory ─────────────────────────────────────────────────
@@ -269,9 +279,9 @@ router.post('/memory/reflexion/retrieval', async (req, res) => {
 });
 
 router.post('/memory/reflexion/influence', async (req, res) => {
-    const { lessonText, decisionMemoryId, decisionType } = req.body;
-    if (!lessonText || !decisionMemoryId) return res.status(400).json({ ok: false, error: 'lessonText, decisionMemoryId required' });
-    const ok = await reflexionTracker.recordInfluence(lessonText, decisionMemoryId, decisionType);
+    const { lessonText, taskId, decisionMemoryId, decisionType } = req.body;
+    if (!lessonText || (!taskId && !decisionMemoryId)) return res.status(400).json({ ok: false, error: 'lessonText and taskId (or decisionMemoryId) required' });
+    const ok = await reflexionTracker.recordInfluence(lessonText, taskId || decisionMemoryId, decisionType);
     res.json({ ok });
 });
 
@@ -346,10 +356,10 @@ router.get('/memory/health', async (req, res) => {
     res.json({
         ok: true,
         data: {
-            episodic:      episodicStats.value    || null,
-            consolidation: consolidationStats.value || null,
-            reflexion:     reflexionStats.value   || null,
-            improvement:   improvementSummary.value || null,
+            episodic:      episodicStats.status      === 'fulfilled' ? episodicStats.value      : null,
+            consolidation: consolidationStats.status === 'fulfilled' ? consolidationStats.value : null,
+            reflexion:     reflexionStats.status     === 'fulfilled' ? reflexionStats.value     : null,
+            improvement:   improvementSummary.status === 'fulfilled' ? improvementSummary.value : null,
         },
     });
 });
