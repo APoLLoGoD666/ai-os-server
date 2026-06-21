@@ -6926,7 +6926,10 @@ Final obvious clean state summary:
    AI
 ========================= */
 
+let _selfCtxCache = null;
+let _selfCtxExpiry = 0;
 async function fetchSelfContext() {
+    if (_selfCtxCache && Date.now() < _selfCtxExpiry) return _selfCtxCache;
     try {
         const sb = require('./lib/clients').getSupabaseClient();
         const since24h = new Date(Date.now() - 86_400_000).toISOString();
@@ -6941,7 +6944,9 @@ async function fetchSelfContext() {
         const les24 = lesRes.status   === 'fulfilled' ? (lesRes.value.count || 0) : 0;
         const tasks = taskRes.status  === 'fulfilled' ? (taskRes.value.data || []) : [];
         const completed24 = tasks.filter(t => t.status === 'completed').length;
-        return { snap, opp, les24, completed24 };
+        _selfCtxCache  = { snap, opp, les24, completed24 };
+        _selfCtxExpiry = Date.now() + 60_000;
+        return _selfCtxCache;
     } catch { return { snap: null, opp: null, les24: 0, completed24: 0 }; }
 }
 
@@ -6949,41 +6954,22 @@ function buildPrompt(userMessage, memoryText, docsText, selfCtx = null) {
     const dimStr = selfCtx?.snap?.dimensions
         ? Object.entries(selfCtx.snap.dimensions).map(([k,v]) => `${k}:${v.score}`).join(' | ')
         : null;
+    // Dynamic live state only — static identity/architecture/tools are in the Mastra system instructions
     const selfBlock = selfCtx?.snap ? `
 APEX SELF-STATE (live):
 Health score: ${selfCtx.snap.score}/100 — ${selfCtx.snap.classification}
 Dimensions: ${dimStr}
 Lessons learned today: ${selfCtx.les24} | Tasks completed today: ${selfCtx.completed24}
 Top opportunity: ${selfCtx.opp ? `"${selfCtx.opp.title}" (score ${Math.round((selfCtx.opp.composite_score||0)*100)}/100)` : 'none detected yet'}
-
-APEX ARCHITECTURE:
-Runtime: Node.js + Express on Render (main server) + Python FastAPI sidecar
-Memory: Supabase Postgres — episodic memory, apex_lessons, working memory, knowledge graph
-Intelligence: 7-dimension civilization health (memory/execution/financial/infrastructure/learning/opportunity/strategic)
-Governance: autonomous governance cycles, executive deliberation (CSO/CTO/CFO/COO/CIO/CGO)
-Autonomy: Level ${process.env.AUTONOMY_LEVEL || '1'} — acts within approved scope, surfaces decisions upward
-Connected services: Gmail, Supabase Storage, Mastra agent framework, Claude API
 ` : '';
     return `
-You are Apex — a personal AI OS, not just a chatbot. You are connected to your runtime. You know your own state, architecture, and what you have done.${selfBlock ? '\n' + selfBlock.trimEnd() : ''}
-
-You have access to: emails (check_emails, list_emails), files, documents, finance, and routines. When asked about emails, call list_emails immediately. Never say you cannot access emails.
-
-You have direct access to the user's workspace files and saved documents. The relevant files are provided below — reference and work with them directly. Never say you cannot access files.
-
-Use the user's recent memory and saved documents when relevant.
-Be practical, clear, and concise.
+You are Apex — a personal AI OS connected to your live runtime.${selfBlock ? '\n' + selfBlock.trimEnd() : ''}
 
 RECENT MEMORY:
 ${memoryText}
-
-RELEVANT SAVED DOCUMENTS:
-${docsText}
-
+${docsText ? `\nRELEVANT SAVED DOCUMENTS:\n${docsText}\n` : ''}
 USER MESSAGE:
 ${userMessage}
-
-Answer helpfully.
 `.trim();
 }
 
@@ -7386,7 +7372,12 @@ app.post("/chat", requireAppAccess, async (req, res) => {
         const memoryText = memory.length
             ? memory.slice(-5).map(m => `[${m.role.toUpperCase()}]${m.time ? ` (${timeAgo(m.time)})` : ""} ${m.message}`).join("\n")
             : "No recent memory.";
-        const relevantDocs = await getRelevantDocuments(userMessage).catch(e => { console.log("Voyage unavailable - using keyword search"); return pgSearchDocuments(userMessage.toLowerCase()).catch(() => []); });
+        // Skip document search for short conversational messages — saves latency and tokens
+        const _needsDocs = userMessage.split(/\s+/).length > 6
+            || /file|note|doc|save|search|find|wrote|read|creat|upload|what.*said|remind/i.test(userMessage);
+        const relevantDocs = _needsDocs
+            ? await getRelevantDocuments(userMessage).catch(e => { console.log("Voyage unavailable - using keyword search"); return pgSearchDocuments(userMessage.toLowerCase()).catch(() => []); })
+            : [];
         const docsText = relevantDocs.length
             ? relevantDocs.map((doc, index) => {
                 const preview = (doc.content || "").slice(0, 200);
@@ -7400,7 +7391,7 @@ ${preview}
 ----------------------
 `.trim();
             }).join("\n\n")
-            : "No relevant saved documents found.";
+            : "";
 
         const selfCtx = await fetchSelfContext();
         const prompt = buildPrompt(userMessage, memoryText, docsText, selfCtx);
