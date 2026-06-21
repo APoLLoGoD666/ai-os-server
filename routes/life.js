@@ -252,7 +252,7 @@ router.get('/life/university/flashcards', _auth, async (req, res) => {
 router.post('/life/university/flashcards/:id/review', _auth, async (req, res) => {
     try {
         const { id } = req.params;
-        const ease = parseInt(req.body?.ease) || 2; // 1=again 2=good 3=easy
+        const ease = parseInt(req.body?.ease, 10); // 1=again 2=good 3=easy
         const daysMap = { 1: 1, 2: 3, 3: 7 };
         const days = daysMap[ease] || 3;
         const next = new Date(Date.now() + days * 86400000).toISOString();
