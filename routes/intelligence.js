@@ -490,11 +490,14 @@ router.get('/intelligence/system-status', requireAppAccess, async (req, res) => 
     // ── Memory / Obsidian ─────────────────────────────────────────────────────
     try {
         const vaultPath = process.env.OBSIDIAN_VAULT_PATH;
+        const obsidianUrl = process.env.OBSIDIAN_URL;
         const fs = require('fs');
+        const vaultFound = !!vaultPath && fs.existsSync(vaultPath);
         result.memory = {
-            ok:         !!vaultPath && fs.existsSync(vaultPath),
-            vaultPath:  vaultPath ? '[set]' : null,
-            vaultFound: !!vaultPath && fs.existsSync(vaultPath),
+            ok:          vaultFound || !!obsidianUrl,
+            vaultPath:   vaultPath ? '[set]' : null,
+            vaultFound,
+            tunnelMode:  !!obsidianUrl && !vaultFound,
         };
     } catch (e) {
         result.memory = { ok: false, error: e.message };

@@ -588,7 +588,7 @@ Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}
                 system:   SYSTEM,
                 messages: [{ role: 'user', content:
                     `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE: ${filename}\n\`\`\`\n${fileContent.slice(0, 4000)}\n\`\`\`` }],
-                maxTokens: 500,
+                maxTokens: 800,
             });
             _trackCost(response.usage, ctx.agentModels.reviewer, 'REVIEWER', ctx);
             const text = response.content[0]?.text?.trim();
@@ -642,7 +642,7 @@ async function _validator(spec, architectLog, developerLog, ctx) {
 
     const codeSnapshot = filesApplied.map(e => {
         const fp = path.join(ctx.worktreeRoot, e.file || e);
-        try { return `// ${e.file || e}\n${fs.readFileSync(fp, 'utf8').slice(0, 2000)}`; }
+        try { return `// ${e.file || e}\n${fs.readFileSync(fp, 'utf8').slice(0, 6000)}`; }
         catch { return `// ${e.file || e} (not found)`; }
     }).join('\n\n');
 
@@ -654,7 +654,7 @@ Reply JSON: {"passed":bool,"failedCases":["what failed and why"]}`;
     try {
         const res = await _callClaude(ctx.agentModels.validator, SYSTEM,
             `EXPECTED BEHAVIORS:\n${testCases.map((tc, i) => `${i + 1}. ${tc}`).join('\n')}\n\nIMPLEMENTED CODE:\n${codeSnapshot}`,
-            300, 'VALIDATOR', ctx
+            600, 'VALIDATOR', ctx
         );
         try { result = _parseJSON(res.content[0]?.text?.trim()); }
         catch { result = { passed: false, failedCases: ['VALIDATOR parse error: invalid JSON response'] }; }
@@ -926,7 +926,7 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity, ctx
                 task_id:     taskId,
                 stage:       l.role || 'UNKNOWN',
                 success:     !!stageSuccess,
-                error:       l.result?.error ? String(l.result.error).slice(0, 500) : null,
+                error:       l.result?.error ? String(l.result.error).slice(0, 500) : (l.result?.failedCases?.length ? l.result.failedCases[0].slice(0, 500) : null),
                 duration_ms: l.duration || null,
                 attempt:     1,
                 created_at:  new Date().toISOString(),
