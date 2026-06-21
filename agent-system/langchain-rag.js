@@ -117,19 +117,25 @@ function _applySourceDiversity(items, scoreKey, k) {
     return result;
 }
 
+// Repo-local System/ docs — always available on Render even without the vault
+const SYSTEM_DOCS_PATH = path.join(__dirname, '..', 'System');
+
 async function _buildIndex() {
     if (_indexing) return;
     _indexing = true;
     try {
-        const mdFiles = _walkMd(VAULT_PATH);
+        const vaultFiles  = _walkMd(VAULT_PATH);
+        const systemFiles = _walkMd(SYSTEM_DOCS_PATH);
+        const mdFiles = [...new Set([...vaultFiles, ...systemFiles])];
         if (!mdFiles.length) {
             if (process.env.OBSIDIAN_URL && process.env.OBSIDIAN_API_KEY) {
                 console.log('[LCRAG] Vault filesystem not available — BM25 skipped. Supabase vector search active.');
             } else {
-                console.log('[LCRAG] No .md files found in vault — BM25 and vector index empty. Set OBSIDIAN_URL + OBSIDIAN_API_KEY for remote vault access.');
+                console.log('[LCRAG] No .md files found in vault or System/ — BM25 and vector index empty.');
             }
             return;
         }
+        if (systemFiles.length) console.log(`[LCRAG] Including ${systemFiles.length} System/ doc(s) in index`);
 
         const splitter = new RecursiveCharacterTextSplitter({
             chunkSize:    CHUNK_SIZE,
@@ -142,7 +148,9 @@ async function _buildIndex() {
                 const stat    = fs.statSync(filePath);
                 const content = fs.readFileSync(filePath, "utf-8").trim();
                 if (!content) continue;
-                const relPath  = path.relative(VAULT_PATH, filePath);
+                const relPath  = filePath.startsWith(SYSTEM_DOCS_PATH)
+                    ? 'System/' + path.relative(SYSTEM_DOCS_PATH, filePath)
+                    : path.relative(VAULT_PATH, filePath);
                 const filename = path.basename(filePath, ".md");
                 const docs     = await splitter.createDocuments([content]);
                 for (const doc of docs) {

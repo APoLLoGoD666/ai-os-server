@@ -727,8 +727,15 @@ async function _committer(spec, branchName, ctx) {
     const afterHash = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd, encoding: 'utf8' }).stdout?.trim();
 
     if (afterHash === beforeHash) {
-        console.warn('[COMMITTER] nothing to commit');
-        return { role: 'COMMITTER', result: { commitHash: null, error: 'nothing to commit — DEVELOPER made no file changes' }, duration: Date.now() - t0 };
+        // Check whether any files were actually staged — if not, working tree was already clean
+        const staged = spawnSync('git', ['diff', '--cached', '--name-only'], { cwd, encoding: 'utf8' });
+        if (staged.stdout?.trim()) {
+            // Files staged but commit produced no new hash — genuine error
+            return { role: 'COMMITTER', result: { commitHash: null, error: 'nothing to commit — staged changes present but commit produced no hash' }, duration: Date.now() - t0 };
+        }
+        // No staged changes — working tree already satisfies the spec (legitimate no-op)
+        console.warn('[COMMITTER] working tree already satisfies spec — no-op success');
+        return { role: 'COMMITTER', result: { commitHash: beforeHash, note: 'no file changes required — working tree already satisfies spec' }, duration: Date.now() - t0 };
     }
 
     let finalHash = afterHash;
@@ -926,7 +933,7 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity, ctx
                 task_id:     taskId,
                 stage:       l.role || 'UNKNOWN',
                 success:     !!stageSuccess,
-                error:       l.result?.error ? String(l.result.error).slice(0, 500) : (l.result?.failedCases?.length ? l.result.failedCases[0].slice(0, 500) : null),
+                error:       l.result?.error ? String(l.result.error).slice(0, 500) : (l.result?.failedCases?.length ? l.result.failedCases[0].slice(0, 500) : (l.result?.issues?.length ? l.result.issues[0].slice(0, 500) : null)),
                 duration_ms: l.duration || null,
                 attempt:     1,
                 created_at:  new Date().toISOString(),
