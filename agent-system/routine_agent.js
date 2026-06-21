@@ -8,7 +8,7 @@ const {
     pgLoadMemory,
     pgCreateAgentTask,
     pgAddMemory
-} = require("../pg_helpers");
+} = require("../lib/pg_helpers");
 
 const _sbr = require('../lib/clients').getSupabaseClient();
 const runtime = require("../lib/models/runtime");

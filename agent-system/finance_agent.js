@@ -6,7 +6,7 @@ const {
     pgListBudgets,
     pgCreateAgentTask,
     pgCreateNotification
-} = require("../pg_helpers");
+} = require("../lib/pg_helpers");
 const runtime = require("../lib/models/runtime");
 
 const FINANCE_CATEGORIES = [

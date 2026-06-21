@@ -19,7 +19,7 @@ const {
     pgGetGmailToken,
     pgSaveGmailToken,
     pgClearGmailToken
-} = require("../pg_helpers");
+} = require("../lib/pg_helpers");
 const runtime = require("../lib/models/runtime");
 
 async function getGmailClient() {

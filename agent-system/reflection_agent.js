@@ -1,6 +1,6 @@
 "use strict";
 
-const { pgLoadMemory, pgListNotifications, pgCreateNotification } = require("../pg_helpers");
+const { pgLoadMemory, pgListNotifications, pgCreateNotification } = require("../lib/pg_helpers");
 const runtime = require("../lib/models/runtime");
 
 async function runReflectionCheck() {
