@@ -8879,7 +8879,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                     await sbAdmin.from('apex_tasks').insert({
                         id: vtId,
                         title: userMessage.slice(0, 200),
-                        status: 'in_progress',
+                        status: 'pending',
                         source: 'voice',
                         created_at: new Date().toISOString()
                     });

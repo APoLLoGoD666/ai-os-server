@@ -478,10 +478,9 @@ router.get('/intelligence/system-status', requireAppAccess, async (req, res) => 
         const reputation = require('../agent-system/agent-reputation');
         const perf = await reputation.getPerformanceSummary();
         result.reputation = {
-            ok:         true,
-            sampleCount: perf.sampleCount,
-            pipeline:   Object.keys(perf.pipeline).length > 0 ? perf.pipeline : null,
-            scores:     perf.scores,
+            ok:       true,
+            pipeline: Object.keys(perf.pipeline).length > 0 ? perf.pipeline : null,
+            scores:   perf.scores,
         };
     } catch (e) {
         result.reputation = { ok: false, error: e.message };
@@ -525,12 +524,12 @@ router.get('/intelligence/system-status', requireAppAccess, async (req, res) => 
 
     // ── Episodic memory ───────────────────────────────────────────────────────
     try {
-        const episodic = require('../agent-system/episodic-memory');
         const epMem    = require('../lib/memory/episodic-memory-pg');
+        const epStats  = await epMem.getStats().catch(() => null);
         result.episodic = {
             ok:           true,
-            episodeCount: episodic.episodeCount(),
-            successRate:  await epMem.getSuccessRate(50).catch(() => null),
+            episodeCount: epStats?.total ?? null,
+            successRate:  epStats?.successRate ?? await epMem.getSuccessRate(50).catch(() => null),
         };
     } catch (e) {
         result.episodic = { ok: false, error: e.message };

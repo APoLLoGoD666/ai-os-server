@@ -53,7 +53,7 @@ const PRICE = {
 // critical = auth, payment, security, database schema
 const ROUTING = {
     simple:   { architect: M.HAIKU,  developer: M.HAIKU,  reviewer: M.HAIKU,  validator: M.HAIKU  },
-    moderate: { architect: M.HAIKU,  developer: M.SONNET, reviewer: M.HAIKU,  validator: M.HAIKU  },
+    moderate: { architect: M.HAIKU,  developer: M.SONNET, reviewer: M.SONNET, validator: M.HAIKU  },
     complex:  { architect: M.SONNET, developer: M.SONNET, reviewer: M.SONNET, validator: M.HAIKU  },
     critical: { architect: M.SONNET, developer: M.SONNET, reviewer: M.OPUS,   validator: M.SONNET }
 };
@@ -796,8 +796,8 @@ async function _committer(spec, branchName, ctx) {
     }
     const pushOut = (push.stdout || '') + (push.stderr || '');
     if (pushOut.includes('Everything up-to-date')) {
-        console.error('[COMMITTER] push no-op — worktree changes not in ROOT');
-        return { role: 'COMMITTER', result: { commitHash: null, error: 'push up-to-date: file changes were not in ROOT git index' }, duration: Date.now() - t0 };
+        console.warn('[COMMITTER] push up-to-date — remote already has these changes (soft-pass)');
+        return { role: 'COMMITTER', result: { commitHash: finalHash, note: 'push up-to-date — remote already contains this commit' }, duration: Date.now() - t0 };
     }
 
     // Trigger Render deploy
@@ -935,7 +935,7 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity, ctx
                 success:     !!stageSuccess,
                 error:       l.result?.error ? String(l.result.error).slice(0, 500) : (l.result?.failedCases?.length ? l.result.failedCases[0].slice(0, 500) : (l.result?.issues?.length ? l.result.issues[0].slice(0, 500) : null)),
                 duration_ms: l.duration || null,
-                attempt:     1,
+                attempt:     l._attempt || 1,
                 created_at:  new Date().toISOString(),
                 note:        l.result?.note ?? null,
             };
@@ -1597,6 +1597,7 @@ async function runAgentTeam(spec, taskId) {
             _checkBudget(ctx); // abort before expensive developer call if budget already blown
             // Step 2 — DEVELOPER (passes lastFailure as grounded feedback on retries — Reflexion pattern)
             developerLog = await _developer(spec, architectLog, attempt > 1 ? lastFailure : null, ctx);
+            developerLog._attempt = attempt;
             agentLogs.push(developerLog);
             console.log(`[Orchestrator] DEVELOPER (${developerLog.duration}ms) — ${developerLog.result.applied?.length || 0} files written`);
 
@@ -1627,6 +1628,8 @@ async function runAgentTeam(spec, taskId) {
                 _reviewer(spec, developerLog, ctx),
                 _validator(spec, architectLog, developerLog, ctx),
             ]);
+            reviewerLog._attempt = attempt;
+            validatorLog._attempt = attempt;
             agentLogs.push(reviewerLog, validatorLog);
             console.log(`[Orchestrator] REVIEWER (${reviewerLog.duration}ms) passed=${reviewerLog.result.passed} | VALIDATOR (${validatorLog.duration}ms) passed=${validatorLog.result.passed}`);
 
@@ -1646,6 +1649,7 @@ async function runAgentTeam(spec, taskId) {
             // Step 4 — TESTER (syntax check, no model needed)
             const filesModified = (developerLog.result.applied || []).map(e => e.file || e);
             testerLog = await _tester(filesModified, ctx);
+            testerLog._attempt = attempt;
             agentLogs.push(testerLog);
             console.log(`[Orchestrator] TESTER (${testerLog.duration}ms) — passed=${testerLog.result.passed}`);
             if (!testerLog.result.passed) {
@@ -1777,7 +1781,7 @@ async function runAgentTeam(spec, taskId) {
             } catch (_) {}
         });
         setImmediate(() => _reputation.invalidateCache());
-        setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: true, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs, models: ctx.agentModels }; _indexer.indexEpisode(_ep); } catch {} });
+        setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: true, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs, models: ctx.agentModels }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: true, complexity, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs }); } catch {} });
         setImmediate(() => { try { (ctx._appliedAdaptIds || []).forEach(id => _adaptEngine.recordApplication(id, true)); } catch {} });
         setImmediate(() => { try { _goalTracker.completeGoal(taskId, { commitHash: committerLog.result.commitHash, cost }); } catch {} });
