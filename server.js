@@ -9404,10 +9404,12 @@ app.post('/api/tasks/add', requireAppAccess, async (req, res) => {
 });
 
 app.post('/api/tasks/run', requireAppAccess, async (req, res) => {
-    const { taskId } = req.body || {};
+    const { taskId, force } = req.body || {};
     if (!taskId) return res.status(400).json({ ok: false, error: 'taskId required' });
     const { data: tasks } = await sbAdmin.from('apex_tasks').select('*').eq('id', taskId).single();
     if (!tasks) return res.status(404).json({ ok: false, error: `${taskId} not found` });
+    if (tasks.status === 'in_progress') return res.status(409).json({ ok: false, error: `${taskId} is already running` });
+    if (tasks.status === 'completed' && !force) return res.status(409).json({ ok: false, error: `${taskId} already completed — pass force:true to re-run` });
     await sbAdmin.from('apex_tasks')
         .update({ status: 'in_progress', updated_at: new Date().toISOString() })
         .eq('id', taskId);
