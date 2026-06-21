@@ -4,6 +4,7 @@ const crypto    = require('crypto');
 const WebSocket = require('ws');
 const tracker   = require('../lib/latency-tracker');
 const runtime   = require('../lib/models/runtime');
+const bus       = require('../lib/event-bus');
 
 // Persistent HTTPS agent — reuses TLS connections across TTS calls.
 // Eliminates ~100-200ms TLS handshake overhead on 2nd+ chunks per session
@@ -299,6 +300,7 @@ async function _claudeVoiceStream({ text, model, anthropicClient, systemPrompt, 
             if (firstToken) {
                 firstToken = false;
                 tracker.mark(turnId, 'claude_first_token', { model });
+                bus.emit(bus.E.CLAUDE_FIRST_TOKEN, { session_id: turnId, model });
             }
             chunker.push(token);
             if (partialBuf.length >= 50) { onPartialTranscript(fullText); partialBuf = ''; }
@@ -385,6 +387,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
 
         // Per-connection identity and state
         const connId             = `gl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        const _sessionStartTs    = Date.now();
         let ready                = false;
         let _suppressGeminiAudio = false;
         let _activeAbort         = null;   // AbortController for the in-flight Claude stream
@@ -435,6 +438,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
                 clearTimeout(_setupTimer);
                 ready = true;
                 safeSend(browserWs, { type: 'ready' });
+                bus.emit(bus.E.VOICE_STARTED, { session_id: connId });
                 if (_intel) { _intel.voiceState.active = true; _intel.voiceState.sessionId = connId; _intel.broadcastVoiceState(); }
                 console.log('[GeminiLive] session ready — tools active, Alex context injected');
                 return;
@@ -504,6 +508,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
                     tracker.mark(_activeTurnId, 'cancel_audio_sent');
 
                     const model  = route === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
+                    bus.emit(bus.E.CLAUDE_STARTED, { session_id: _activeTurnId, model });
                     _activeAbort = new AbortController();
                     const signal = _activeAbort.signal;
                     const turnId = _activeTurnId;
@@ -590,6 +595,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
             if (!_suppressGeminiAudio && _activeTurnId && sc.outputTranscription?.text) {
                 const apexText = sc.outputTranscription.text;
                 safeSend(browserWs, { type: 'transcript_apex_final', text: apexText });
+                bus.emit(bus.E.REFLEX_RESPONSE_SENT, { session_id: _activeTurnId, text: apexText });
                 _trimTranscript();
                 _sessionTranscript.push({ role: 'apex', text: apexText });
             }
@@ -611,6 +617,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
             let msg;
             try { msg = JSON.parse(raw); } catch { return; }
             if (msg.type === 'audio' && msg.data && geminiWs.readyState === WebSocket.OPEN) {
+                bus.emit(bus.E.AUDIO_RECEIVED, { session_id: connId });
                 geminiWs.send(JSON.stringify({
                     realtimeInput: { mediaChunks: [{ mimeType: `audio/pcm;rate=${INPUT_RATE}`, data: msg.data }] }
                 }));
@@ -633,6 +640,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
         };
 
         browserWs.on('close', () => {
+            bus.emit(bus.E.SESSION_COMPLETED, { session_id: connId, duration_ms: Date.now() - _sessionStartTs });
             if (_activeAbort) { _activeAbort.abort(); _activeAbort = null; }
             _suppressGeminiAudio = false;
             if (_activeTurnId) { tracker.endSession(_activeTurnId); _activeTurnId = null; }
