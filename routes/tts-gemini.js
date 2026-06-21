@@ -62,13 +62,13 @@ router.post('/tts/gemini', _auth, async (req, res) => {
     const t0 = Date.now();
     try {
         const text = cleanForTTS(req.body?.text || '');
-        if (!text) return res.status(400).json({ error: 'No text provided' });
-        if (text.length > 4000) return res.status(400).json({ error: 'Text exceeds 4000 char limit' });
+        if (!text) return res.status(400).json({ ok: false, error: 'No text provided' });
+        if (text.length > 4000) return res.status(400).json({ ok: false, error: 'Text exceeds 4000 char limit' });
 
         const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) {
             console.error('[TTS/Gemini] GOOGLE_API_KEY not set');
-            return res.status(503).json({ error: 'GOOGLE_API_KEY not configured' });
+            return res.status(503).json({ ok: false, error: 'GOOGLE_API_KEY not configured' });
         }
 
         const cacheKey = crypto.createHash('sha1').update(text).digest('hex');
@@ -96,24 +96,24 @@ router.post('/tts/gemini', _auth, async (req, res) => {
             gRes = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(payload) });
         } catch (netErr) {
             console.error('[TTS/Gemini] network error:', netErr.message);
-            return res.status(502).json({ error: 'Network error reaching Gemini API' });
+            return res.status(502).json({ ok: false, error: 'Network error reaching Gemini API' });
         }
 
         if (!gRes.ok) {
             const errText = await gRes.text().catch(() => '');
             console.error('[TTS/Gemini] error:', gRes.status, errText.slice(0, 300));
-            return res.status(gRes.status === 429 ? 429 : 502).json({ error: 'Gemini API returned ' + gRes.status });
+            return res.status(gRes.status === 429 ? 429 : 502).json({ ok: false, error: 'Gemini API returned ' + gRes.status });
         }
 
         let json;
         try { json = await gRes.json(); } catch (e) {
-            return res.status(502).json({ error: 'Invalid JSON from Gemini API' });
+            return res.status(502).json({ ok: false, error: 'Invalid JSON from Gemini API' });
         }
 
         const inlineData = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
         if (!inlineData?.data) {
             console.error('[TTS/Gemini] no audio in response:', JSON.stringify(json).slice(0, 300));
-            return res.status(502).json({ error: 'No audio data in Gemini response' });
+            return res.status(502).json({ ok: false, error: 'No audio data in Gemini response' });
         }
 
         const pcm = Buffer.from(inlineData.data, 'base64');

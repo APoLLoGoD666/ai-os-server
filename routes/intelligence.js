@@ -33,7 +33,7 @@ function broadcastVoiceState() {
 }
 
 // POST /api/intelligence/interrupt — barge-in: stop TTS and clear queue
-router.post('/interrupt', requireAppAccess, (req, res) => {
+router.post('/intelligence/interrupt', requireAppAccess, (req, res) => {
     voiceState.interrupted = true;
     voiceState.ttsPlaying  = false;
     broadcastVoiceState();
@@ -42,12 +42,12 @@ router.post('/interrupt', requireAppAccess, (req, res) => {
 });
 
 // GET /api/intelligence/voice-status — current voice pipeline state
-router.get('/voice-status', requireAppAccess, (req, res) => {
+router.get('/intelligence/voice-status', requireAppAccess, (req, res) => {
     res.json({ ok: true, ...voiceState, listeners: voiceState.listeners.size });
 });
 
 // POST /api/intelligence/voice-state — update state (called by voice pipeline internally)
-router.post('/voice-state', requireAppAccess, (req, res) => {
+router.post('/intelligence/voice-state', requireAppAccess, (req, res) => {
     const { active, ttsPlaying, sessionId } = req.body || {};
     if (active      !== undefined) voiceState.active     = !!active;
     if (ttsPlaying  !== undefined) voiceState.ttsPlaying = !!ttsPlaying;
@@ -57,7 +57,7 @@ router.post('/voice-state', requireAppAccess, (req, res) => {
 });
 
 // GET /api/intelligence/lessons — recent agent reflexion lessons
-router.get('/lessons', requireAppAccess, (req, res) => {
+router.get('/intelligence/lessons', requireAppAccess, (req, res) => {
     try {
         const n = Math.min(parseInt(req.query.n) || 20, 50);
         const raw = memory.getRecentLessons(n);
@@ -73,7 +73,7 @@ router.get('/lessons', requireAppAccess, (req, res) => {
 });
 
 // GET /api/intelligence/agent-runs — recent pipeline runs from audit log
-router.get('/agent-runs', requireAppAccess, async (req, res) => {
+router.get('/intelligence/agent-runs', requireAppAccess, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const { data, error } = await _sbClient()
@@ -90,7 +90,7 @@ router.get('/agent-runs', requireAppAccess, async (req, res) => {
 
 // GET /api/intelligence/cost-summary — total spend, success rate, and per-complexity breakdown
 // Uses a capped recent window (last 1000 runs) to avoid full-table scans as history grows
-router.get('/cost-summary', requireAppAccess, async (req, res) => {
+router.get('/intelligence/cost-summary', requireAppAccess, async (req, res) => {
     try {
         const { data, error } = await _sbClient()
             .from('apex_agent_runs')
@@ -130,7 +130,7 @@ router.get('/cost-summary', requireAppAccess, async (req, res) => {
 });
 
 // GET /api/intelligence/news — structured news feed
-router.get('/news', requireAppAccess, async (req, res) => {
+router.get('/intelligence/news', requireAppAccess, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 20, 50);
         const category = req.query.category;
@@ -148,7 +148,7 @@ router.get('/news', requireAppAccess, async (req, res) => {
 });
 
 // POST /api/intelligence/news/refresh — manually trigger news ingest
-router.post('/news/refresh', requireAppAccess, async (req, res) => {
+router.post('/intelligence/news/refresh', requireAppAccess, async (req, res) => {
     try {
         const { ingestNews } = require('../agent-system/news-ingest');
         const count = await ingestNews();
@@ -160,7 +160,7 @@ router.post('/news/refresh', requireAppAccess, async (req, res) => {
 
 // GET /api/intelligence/self-check — Phase 10 self-diagnostics
 // Checks all critical subsystems and returns a health report with remediation hints
-router.get('/self-check', requireAppAccess, async (req, res) => {
+router.get('/intelligence/self-check', requireAppAccess, async (req, res) => {
     const checks = {};
     const t0 = Date.now();
 
@@ -317,7 +317,7 @@ router.get('/self-check', requireAppAccess, async (req, res) => {
 });
 
 // GET /api/intelligence/agent-performance — per-role breakdown from apex_agent_stages
-router.get('/agent-performance', requireAppAccess, async (req, res) => {
+router.get('/intelligence/agent-performance', requireAppAccess, async (req, res) => {
     try {
         const days  = Math.min(parseInt(req.query.days) || 30, 90);
         const since = new Date(Date.now() - days * 86400000).toISOString();
@@ -388,7 +388,7 @@ router.get('/agent-performance', requireAppAccess, async (req, res) => {
 });
 
 // GET /api/intelligence/performance — latency stats and external dependency timings
-router.get('/performance', requireAppAccess, async (req, res) => {
+router.get('/intelligence/performance', requireAppAccess, async (req, res) => {
     try {
         const tracker = require('../lib/latency-tracker');
         const stats   = tracker.stats();
@@ -444,7 +444,7 @@ router.get('/performance', requireAppAccess, async (req, res) => {
 });
 
 // GET /api/intelligence/system-status — unified diagnostics across all subsystems
-router.get('/system-status', requireAppAccess, async (req, res) => {
+router.get('/intelligence/system-status', requireAppAccess, async (req, res) => {
     const t0 = Date.now();
     const result = {};
 

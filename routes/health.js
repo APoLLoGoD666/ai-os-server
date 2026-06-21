@@ -6,7 +6,7 @@ const _auth = require('../lib/app-auth');
 const sb = getSupabaseClient;
 
 router.get('/health/ping', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ ok: true, status: 'ok', timestamp: new Date().toISOString() });
 });
 
 router.get('/health/workouts', _auth, async (req, res) => {

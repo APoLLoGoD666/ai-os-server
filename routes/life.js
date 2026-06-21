@@ -249,6 +249,18 @@ router.get('/life/university/flashcards', _auth, async (req, res) => {
         res.json({ ok: true, flashcards: data || [], due: (data || []).length });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
+router.post('/life/university/flashcards/:id/review', _auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const ease = parseInt(req.body?.ease) || 2; // 1=again 2=good 3=easy
+        const daysMap = { 1: 1, 2: 3, 3: 7 };
+        const days = daysMap[ease] || 3;
+        const next = new Date(Date.now() + days * 86400000).toISOString();
+        const { error } = await sb().from('apex_university_flashcards').update({ next_review_at: next }).eq('id', id);
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, next_review_at: next });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
 router.get('/life/university/sessions', _auth, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);

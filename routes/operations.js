@@ -26,6 +26,7 @@ router.get('/healthz', (req, res) => {
  */
 router.get('/version', (req, res) => {
     res.status(200).json({
+        ok: true,
         version: process.env.npm_package_version || '1.0.0',
         node: process.version
     });
@@ -35,6 +36,7 @@ router.get('/version', (req, res) => {
 router.get('/status', (req, res) => {
     try {
         res.json({
+            ok: true,
             name: _pkg.name,
             version: _pkg.version,
             uptime: process.uptime()
@@ -56,7 +58,7 @@ router.get('/ping', (req, res) => {
 // GET /api/ready — deployment readiness verification endpoint
 router.get('/ready', (req, res) => {
     try {
-        res.json({ status: 'ready', timestamp: new Date().toISOString() });
+        res.json({ ok: true, status: 'ready', timestamp: new Date().toISOString() });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
     }
@@ -66,6 +68,7 @@ router.get('/ready', (req, res) => {
 router.get('/metrics', (req, res) => {
     try {
         res.json({
+            ok: true,
             totalRequests: counter.get(),
             timestamp: new Date().toISOString()
         });
@@ -79,6 +82,7 @@ router.get('/memory-stats', _auth, (req, res) => {
     try {
         const mem = process.memoryUsage();
         res.status(200).json({
+            ok: true,
             heapUsed: mem.heapUsed,
             heapTotal: mem.heapTotal,
             external: mem.external
@@ -92,6 +96,7 @@ router.get('/memory-stats', _auth, (req, res) => {
 router.get('/info', _auth, (req, res) => {
     try {
         res.json({
+            ok: true,
             node_version: process.version,
             platform: process.platform,
             timestamp: new Date().toISOString()
@@ -101,10 +106,10 @@ router.get('/info', _auth, (req, res) => {
     }
 });
 
-// GET /api/uptime — process uptime in seconds as plain JSON number
+// GET /api/uptime — process uptime in seconds
 router.get('/uptime', (req, res) => {
     try {
-        res.json(process.uptime());
+        res.json({ ok: true, uptime: process.uptime() });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
     }
@@ -113,6 +118,7 @@ router.get('/uptime', (req, res) => {
 // GET /api/build-info — public operational diagnostics: Node.js version, platform, architecture
 router.get('/build-info', (req, res) => {
     res.json({
+        ok: true,
         nodeVersion: process.version,
         platform: process.platform,
         arch: process.arch
