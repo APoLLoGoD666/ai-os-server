@@ -2,6 +2,8 @@
 
 const express = require('express');
 const router  = express.Router();
+// M7: Global auth guard — protects ALL routes in this file. If this line is moved or removed,
+// all 25+ memory endpoints (working, episodic, decisions, knowledge graph) become unauthenticated.
 router.use(require('../lib/app-auth'));
 
 const {

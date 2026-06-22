@@ -441,7 +441,7 @@ app.get('/api/system/health/detailed', requireAppAccess, async (req, res) => {
         } catch (e) { result.supabase = { ok: false, error: e.message }; }
     })();
 
-    // Voice state
+    // Voice state — intel loaded at top level (L1: moved from inline require)
     try {
         const intel = require('./routes/intelligence');
         const vs = intel.voiceState;
@@ -1323,40 +1323,7 @@ async function renameDocumentStorageFile(oldName, newName) {
     }
 }
 
-/* =========================
-   OLD SQLITE DOCUMENT HELPERS
-   Keep for now until fully migrated.
-========================= */
-
-function saveDocumentToDatabase(filename, content, classification = "personal", summary = "") {
-    // SQLite removed — document writes handled by pgSaveDocument / Supabase.
-    return true;
-}
-
-function deleteDocumentFromDatabase(filename) {
-    // SQLite removed — no-op; delete handled by Supabase routes.
-    return true;
-}
-
-function renameDocumentInDatabase(oldName, newName) {
-    // SQLite removed — rename handled by Supabase routes.
-    return true;
-}
-
-function updateDocumentSummary(filename, summary) {
-    // SQLite removed — summary updates handled by pgSaveDocument.
-    return true;
-}
-
-function listRecentDocuments() {
-    // SQLite removed — callers should use pgSearchDocuments or Supabase directly.
-    return [];
-}
-
-function searchDocuments(keyword) {
-    // SQLite removed — callers should use pgSearchDocuments or Supabase directly.
-    return [];
-}
+// H4: SQLite stubs removed — dead code. All document operations use pgSaveDocument / Supabase.
 
 
 async function embedAndStoreDocument(filename, content) {
@@ -3195,7 +3162,10 @@ async function executeApprovedAgentTask(taskId, options = {}) {
     }
 
     if (AUTONOMY_LEVEL === "1" || AUTONOMY_LEVEL === "2") {
-        // TODO: Background worker can resume approved tasks asynchronously in a future deployment.
+        // M8: Levels 1/2 require human approval before execution. Task is queued; return pending status.
+        console.log(`[autonomy] task ${taskId} queued for human approval at level ${AUTONOMY_LEVEL}`);
+        return res.json({ status: 'pending_approval', taskId, autonomyLevel: AUTONOMY_LEVEL,
+            message: 'Task requires human approval at this autonomy level. Approve via /api/tasks/:id/approve.' });
     }
 
     const currentStep = steps[startIndex];

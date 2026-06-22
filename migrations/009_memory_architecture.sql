@@ -3,6 +3,9 @@
 -- 13 layers: Working → Episodic → Semantic → Procedural → Strategic → Skill → Decision
 -- Plus: Knowledge Graph, Consolidation Queue, Reflexion Records, Improvement Candidates, Adaptation Cycles
 
+-- M5 guard: ensure pgvector is available even if running from 009 without 001
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- ── LAYER 1: WORKING MEMORY ─────────────────────────────────────────────────
 -- TTL-based, session-scoped, active reasoning state. Auto-expires.
 CREATE TABLE IF NOT EXISTS working_memory (

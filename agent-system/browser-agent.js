@@ -7,7 +7,7 @@ const path = require('path');
 const os = require('os');
 
 const DEFAULT_TIMEOUT = 30000;
-const SESSION_DIR = '/tmp/browser-sessions';
+const SESSION_DIR = require('path').join(os.tmpdir(), 'browser-sessions');
 
 // Domain allowlist — if set, browser functions block URLs not on this list.
 // Populate via BROWSER_ALLOWED_DOMAINS env var (comma-separated) or runtime call.
@@ -15,8 +15,8 @@ const _allowedDomains = process.env.BROWSER_ALLOWED_DOMAINS
     ? new Set(process.env.BROWSER_ALLOWED_DOMAINS.split(',').map(d => d.trim().toLowerCase()).filter(Boolean))
     : null;
 
-// RFC-1918 / loopback / link-local pattern — always blocked regardless of allowlist
-const _PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.0\.0\.0|::1$|fd[0-9a-f]{2}:)/i;
+// RFC-1918 / loopback / link-local / IPv4-mapped IPv6 — always blocked regardless of allowlist
+const _PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.0\.0\.0|::1$|::ffff:|fd[0-9a-f]{2}:|fe80:)/i;
 
 function _checkDomain(url) {
     let parsed;

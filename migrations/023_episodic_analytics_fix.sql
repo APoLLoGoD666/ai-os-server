@@ -9,8 +9,10 @@ CREATE INDEX IF NOT EXISTS idx_em_source ON episodic_memory(source);
 -- Distinguisher: _auditLog writes always set models_used IS NOT NULL;
 --                gateway duplicate writes always have models_used IS NULL.
 -- This UPDATE tags the corrupt rows without deleting them (reversible).
+-- C3 fix: 'gateway_duplicate' is not in the CHECK constraint (candidates: candidate,validated,deprecated,superseded,archived).
+-- Using 'deprecated' as the closest semantic match for contaminated gateway writes.
 UPDATE episodic_memory
-SET status = 'gateway_duplicate'
+SET status = 'deprecated'
 WHERE source = 'orchestrator'
   AND models_used IS NULL
   AND status = 'validated';

@@ -44,7 +44,7 @@ async function _load() {
             .from(MEMORY_TABLE)
             .select("summary, messages")
             .eq("session_key", SESSION_KEY)
-            .single();
+            .maybeSingle();
         if (data?.summary)  _summary  = data.summary;
         if (Array.isArray(data?.messages)) _messages = data.messages;
         _loaded = true;

@@ -18,6 +18,10 @@ const TOOL_TIMEOUT_MS    = 15 * 1000;
 const REQUEST_TIMEOUT_MS = 30 * 1000;
 
 // ── Obsidian ──────────────────────────────────────────────────────────────────
+// M9: Non-Render Linux deployments must set OBSIDIAN_VAULT_PATH explicitly.
+if (!process.env.OBSIDIAN_VAULT_PATH && process.platform !== 'win32' && !process.env.RENDER) {
+    console.warn('[config] OBSIDIAN_VAULT_PATH not set — defaulting to Render path. Set env var for other Linux deployments.');
+}
 const OBSIDIAN_VAULT_PATH = process.env.OBSIDIAN_VAULT_PATH
     || (process.platform === 'win32'
         ? 'C:\\Users\\arwwo\\Desktop\\APEX\\APEX AI OS'

@@ -240,12 +240,18 @@ Output ONLY a JSON object with no markdown:
     ]);
 
     const text = res.content.map(i => i.text || '').join('').trim();
-    const first = text.indexOf('{');
-    const last = text.lastIndexOf('}');
-    if (first === -1 || last === -1) throw new Error(`No plan JSON returned for ${feature.id}`);
     let plan;
-    try { plan = JSON.parse(text.slice(first, last + 1)); }
-    catch (e) { throw new Error(`Plan JSON parse failed for ${feature.id}: ${e.message}`); }
+    try {
+        const first = text.indexOf('{');
+        if (first === -1) throw new Error('No JSON object found');
+        let depth = 0, end = -1;
+        for (let i = first; i < text.length; i++) {
+            if (text[i] === '{') depth++;
+            else if (text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+        }
+        if (end === -1) throw new Error('Unterminated JSON object');
+        plan = JSON.parse(text.slice(first, end + 1));
+    } catch (e) { throw new Error(`Plan JSON parse failed for ${feature.id}: ${e.message}`); }
     _planCache.set(feature.id, plan);
     return plan;
 }

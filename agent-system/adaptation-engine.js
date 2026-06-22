@@ -19,7 +19,7 @@ const _rep = require('./agent-reputation');
 const _sel = require('./dynamic-agent-selector');
 
 // ── Vault persistence ─────────────────────────────────────────────────────────
-const VAULT     = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
+const VAULT     = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\APEX\\APEX AI OS';
 const ADAPT_DIR = path.join(VAULT, 'System', 'Adaptations');
 const REGISTRY  = path.join(ADAPT_DIR, 'adaptation-registry.json');
 

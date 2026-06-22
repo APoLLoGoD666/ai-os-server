@@ -11,7 +11,8 @@ ALTER TABLE apex_agent_runs
   ADD COLUMN IF NOT EXISTS token_usage JSONB;
 
 -- vault_embeddings: fix dimension — was created as VECTOR(1536), code uses 768
--- Drop and recreate to fix (table is empty so no data loss)
+-- H8 WARNING: DROP TABLE is not idempotent — any existing vault embeddings are deleted.
+-- This migration was applied once on 2026-06-13. Do not re-run on a populated database.
 DROP TABLE IF EXISTS vault_embeddings;
 CREATE TABLE vault_embeddings (
     id          BIGSERIAL PRIMARY KEY,

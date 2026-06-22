@@ -7,7 +7,7 @@
 const fs   = require('fs');
 const path = require('path');
 
-const VAULT        = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS';
+const VAULT        = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\APEX\\APEX AI OS';
 const EPISODES_DIR = path.join(VAULT, '12 Memory', 'Episodes');
 const MAX_EPISODES = 200; // hard cap on stored episodes
 
@@ -79,7 +79,7 @@ function _scoreRelevance(queryKws, ep) {
 // 1.0 for <1 day, decays linearly to 0.3 by 90 days
 function _scoreRecency(ep) {
     const ageDays = (Date.now() - new Date(ep.timestamp).getTime()) / 86_400_000;
-    return Math.max(0.3, 1.0 - (ageDays / 90) * 0.7);
+    return Math.max(0, 1.0 - (ageDays / 90) * 0.7);
 }
 
 // Extract the first stage that failed from agentLogs
