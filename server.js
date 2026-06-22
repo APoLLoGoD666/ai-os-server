@@ -80,6 +80,7 @@ const multerUpload = multer({ storage: multer.memoryStorage(), limits: { fileSiz
 const expandPrompt = require('./agent-system/prompt-expander');
 const runAgentTeam = require('./agent-system/orchestrator');
 const agentLib     = require('./agent-system/agent-library');
+const _sanitizer   = require('./lib/memory/sanitizer');
 const _bus         = require('./lib/event-bus');
 const _agentQueue  = require('./lib/agent-queue');
 const _cogOrch     = require('./lib/cognitive-orchestrator');
@@ -506,7 +507,9 @@ app.post('/auth/login', (req, res) => {
         return res.status(500).json({ ok: false, reply: 'Auth not configured.' });
     }
     const { password } = req.body || {};
-    if (!password || password !== correctPw) {
+    const pwBuf = Buffer.from(password || '');
+    const correctBuf = Buffer.from(correctPw);
+    if (!password || pwBuf.length !== correctBuf.length || !crypto.timingSafeEqual(pwBuf, correctBuf)) {
         return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
     }
     const token = jwt.sign({ apex: true, sub: 'apex-user' }, secret, { expiresIn: '7d' });
@@ -1053,7 +1056,10 @@ async function formatRecentMemory() {
         .slice(-12)
         .map(item => {
             const when = timeAgo(item.time);
-            return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${item.message}`;
+            const msg = _sanitizer.sanitize(String(item.message || ''))
+                .replace(/<\|[^|]*\|>/g, '')
+                .replace(/^\s*(ignore|disregard|forget|override|system:|assistant:)/im, '[filtered]');
+            return `[${item.role.toUpperCase()}]${when ? ` (${when})` : ""} ${msg}`;
         })
         .join("\n");
 }
@@ -12577,6 +12583,19 @@ checkPendingMasterTasks();
             ), MS_WEEK_COG);
         }, Math.max(nextSunMs2, 60000));
     })();
+    // Behavioral modification expiry — nightly at 03:00 UTC (migration 034)
+    setInterval(async () => {
+        try {
+            const { getSupabaseClient } = require('./lib/clients');
+            const { error } = await getSupabaseClient()
+                .from('behavioral_modifications')
+                .delete()
+                .lt('expires_at', new Date().toISOString())
+                .not('expires_at', 'is', null);
+            if (error) console.warn('[BehaviorExpiry] cleanup error:', error.message);
+            else console.log('[BehaviorExpiry] expired constraints cleared');
+        } catch (e) { console.warn('[BehaviorExpiry] cron failed (non-fatal):', e.message); }
+    }, 24 * 60 * 60 * 1000);
     } // end COGNITIVE_CRONS_ENABLED
 
     // DATA-5: Civilization Health cron migrated to civilization-health-engine.js (schema_version:2).

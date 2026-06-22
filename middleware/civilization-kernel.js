@@ -315,8 +315,9 @@ function civilizationKernel(req, res, next) {
             ctx.flags.humanReviewRequired = true;
             ctx.telemetry.warnings.push({ stage: 'constitution', risks: gateResult.risks });
         } else if (gateResult.verdict === gate.VERDICT.WARN) {
+            effectiveTokenBudget = Math.round(effectiveTokenBudget * 0.75); // 25% reduction on WARN
             ctx.flags.humanReviewRequired = true;
-            constitutionAction = 'human_review_flagged';
+            constitutionAction = 'token_reduced,human_review_flagged';
             ctx.telemetry.warnings.push({ stage: 'constitution', risks: gateResult.risks });
         }
         // ALLOW: no modification
