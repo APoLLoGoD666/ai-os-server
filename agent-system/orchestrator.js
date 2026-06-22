@@ -1388,6 +1388,24 @@ async function runAgentTeam(spec, taskId) {
         }
     } catch {}
 
+    // RAG knowledge base — query local knowledge graph before pipeline starts so
+    // ARCHITECT and DEVELOPER have access to ingested knowledge (non-fatal, 3s timeout).
+    try {
+        const _rag = require('./rag-bridge');
+        const _ragResult = await Promise.race([
+            _rag.query(spec.objective, 'hybrid', 5),
+            new Promise((_, r) => setTimeout(() => r(new Error('RAG timeout')), 3000)),
+        ]);
+        const _chunks = (_ragResult?.results || []).map(r => r.content || r.text || '').filter(Boolean);
+        if (_chunks.length > 0) {
+            const _ragCtx = `## Knowledge Base\n${_chunks.slice(0, 5).join('\n\n').slice(0, 1500)}`;
+            ctx.obsidianContext = (ctx.obsidianContext ? ctx.obsidianContext + '\n\n' : '') + _ragCtx;
+            console.log(`[Orchestrator] RAG: ${_chunks.length} chunks injected into ARCHITECT context`);
+        }
+    } catch (_ragErr) {
+        // RAG sidecar unavailable or returned no results — non-fatal
+    }
+
     // ── Git worktree isolation (Superpowers pattern) ──────────────────────────
     const ts          = Date.now().toString(36); // base-36 timestamp suffix prevents branch collision on re-run
     const worktreeDir = path.join(os.tmpdir(), `apex-wt-${taskId}`);
