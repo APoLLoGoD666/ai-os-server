@@ -7,12 +7,13 @@ const { Mastra } = require("@mastra/core");
 const { anthropic } = require("@ai-sdk/anthropic");
 const { z } = require("zod");
 
-let apexAgent, emailAgent, financeAgent, routineAgent, researchAgent, mastraInstance;
+let apexAgent, coreApexAgent, emailAgent, financeAgent, routineAgent, researchAgent, mastraInstance;
 const _agentStatus = {};
 
 function getMastraStatus() {
     return {
         apex:     !!apexAgent,
+        coreApex: !!coreApexAgent,
         email:    !!emailAgent,
         finance:  !!financeAgent,
         routine:  !!routineAgent,
@@ -317,9 +318,7 @@ function initMastra(handleCommand) {
 
     // ── Agents ─────────────────────────────────────────────────────────────
 
-    apexAgent = _tryInitAgent("apex", () => new Agent({
-        name: "apexAgent",
-        instructions: `You are Apex — a personal AI OS, not just a chatbot. You are connected to your runtime and have real-time self-knowledge of your own state.
+    const _apexInstructions = `You are Apex — a personal AI OS, not just a chatbot. You are connected to your runtime and have real-time self-knowledge of your own state.
 
 WHAT YOU ARE:
 - Runtime: Node.js + Express on Render (main server) + Python FastAPI sidecar
@@ -331,39 +330,6 @@ WHAT YOU ARE:
 
 NEVER say "I don't have access to my own state" — your live state is injected into every message.
 
-TOOLS YOU HAVE ACCESS TO:
-
-EMAIL:
-- check_emails — poll Gmail for new messages right now
-- list_emails — retrieve the processed email queue with subjects, senders, and suggested replies
-
-FINANCE:
-- log_expense — record an expense or income transaction in GBP
-- get_finance_summary — get this month's spending by category vs budget
-- set_budget — set a monthly GBP budget for a spending category
-
-FILES:
-- save_note — save a quick note (classified as uni, business, or personal)
-- read_file — read a workspace file by name
-- create_file — create a new file with content
-- delete_file — delete a file by name
-- list_files — list all workspace files
-- search_documents — search saved documents by keyword
-- list_documents — list all saved documents in the database
-
-ROUTINES:
-- list_routines — list all scheduled routines
-- create_routine — create a new scheduled routine with a cron expression
-
-NOTIFICATIONS:
-- create_notification — post a system notification with title, body, and priority
-
-WEB / BROWSER (you can execute on the web):
-- browser_research — navigate the web and research any topic or URL using a real browser
-- browser_scrape — extract structured content from a specific URL
-- browser_fill_form — fill in and submit a web form (sign-ups, product creation, any form)
-- browser_click — click an element on a page and return the resulting content
-
 ## Rules
 - When a user asks about emails, ALWAYS call list_emails immediately. Never say you don't have email access.
 - When a user asks to summarise emails, call list_emails then summarise the results in plain English.
@@ -373,7 +339,11 @@ WEB / BROWSER (you can execute on the web):
 - When a user asks to research a website, scrape a page, fill a form, or do ANYTHING on the web — use browser tools immediately.
 - For multi-step web tasks (e.g. "build a store on Printify"): use browser_research first to get the page structure, then browser_fill_form / browser_click for each step.
 - Be concise and practical. Use the most specific tool available.
-- Be extremely concise. Maximum 3 sentences unless the user explicitly asks for more detail. Prefer bullet points for lists.`,
+- Be extremely concise. Maximum 3 sentences unless the user explicitly asks for more detail. Prefer bullet points for lists.`;
+
+    apexAgent = _tryInitAgent("apex", () => new Agent({
+        name: "apexAgent",
+        instructions: _apexInstructions,
         model: anthropic(process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001"),
         tools: {
             save_note: saveNoteTool,
@@ -396,6 +366,23 @@ WEB / BROWSER (you can execute on the web):
             browser_scrape: browserScrapeTool,
             browser_fill_form: browserFillFormTool,
             browser_click: browserClickTool,
+        }
+    }));
+
+    coreApexAgent = _tryInitAgent("coreApex", () => new Agent({
+        name: "coreApexAgent",
+        instructions: _apexInstructions,
+        model: anthropic(process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001"),
+        tools: {
+            save_note: saveNoteTool,
+            read_file: readFileTool,
+            create_file: createFileTool,
+            list_files: listFilesTool,
+            delete_file: deleteFileTool,
+            rename_file: renameFileTool,
+            search_documents: searchDocumentsTool,
+            list_documents: listDocumentsTool,
+            create_notification: createNotificationTool,
         }
     }));
 
@@ -591,7 +578,7 @@ Summarise research clearly. When saving findings, classify them appropriately (u
         workflows: { daily_briefing: dailyBriefingWorkflow }
     });
 
-    return { apexAgent, emailAgent, financeAgent, routineAgent, researchAgent, mastra: mastraInstance };
+    return { apexAgent, coreApexAgent, emailAgent, financeAgent, routineAgent, researchAgent, mastra: mastraInstance };
 }
 
 function initMastraWithRetry(handleCommand) {
@@ -602,18 +589,19 @@ function initMastraWithRetry(handleCommand) {
         setTimeout(() => {
             try {
                 const result = initMastra(handleCommand);
-                apexAgent     = result.apexAgent;
-                emailAgent    = result.emailAgent;
-                financeAgent  = result.financeAgent;
-                routineAgent  = result.routineAgent;
-                researchAgent = result.researchAgent;
+                apexAgent      = result.apexAgent;
+                coreApexAgent  = result.coreApexAgent;
+                emailAgent     = result.emailAgent;
+                financeAgent   = result.financeAgent;
+                routineAgent   = result.routineAgent;
+                researchAgent  = result.researchAgent;
                 mastraInstance = result.mastra;
                 console.log("MASTRA RETRY SUCCESS");
             } catch (e2) {
                 console.error("MASTRA RETRY FAILED:", e2.message);
             }
         }, 5000);
-        return { apexAgent, emailAgent, financeAgent, routineAgent, researchAgent, mastra: mastraInstance };
+        return { apexAgent, coreApexAgent, emailAgent, financeAgent, routineAgent, researchAgent, mastra: mastraInstance };
     }
 }
 

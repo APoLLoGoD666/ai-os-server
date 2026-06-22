@@ -6964,9 +6964,7 @@ Top opportunity: ${selfCtx.opp ? `"${selfCtx.opp.title}" (score ${Math.round((se
 ` : '';
     return `
 You are Apex — a personal AI OS connected to your live runtime.${selfBlock ? '\n' + selfBlock.trimEnd() : ''}
-
-RECENT MEMORY:
-${memoryText}
+${memoryText ? `\nRECENT MEMORY:\n${memoryText}` : ''}
 ${docsText ? `\nRELEVANT SAVED DOCUMENTS:\n${docsText}\n` : ''}
 USER MESSAGE:
 ${userMessage}
@@ -7371,7 +7369,7 @@ app.post("/chat", requireAppAccess, async (req, res) => {
 
         const memoryText = memory.length
             ? memory.slice(-5).map(m => `[${m.role.toUpperCase()}]${m.time ? ` (${timeAgo(m.time)})` : ""} ${m.message}`).join("\n")
-            : "No recent memory.";
+            : "";
         // Skip document search for short conversational messages — saves latency and tokens
         const _needsDocs = userMessage.split(/\s+/).length > 6
             || /file|note|doc|save|search|find|wrote|read|creat|upload|what.*said|remind/i.test(userMessage);
@@ -7393,17 +7391,34 @@ ${preview}
             }).join("\n\n")
             : "";
 
-        const selfCtx = await fetchSelfContext();
+        // Gate self-state on conversational messages — saves ~80 tokens each
+        const _isConversational = userMessage.trim().split(/\s+/).length <= 3
+            || /^(ok|okay|thanks|got it|yes|no|sure|alright|fine|perfect|great|nice|cool|cheers|brilliant|hi|hey|hello|sounds good|good|yep|nope|exactly|right|correct)[\s!?.]*$/i.test(userMessage.trim());
+        const selfCtx = _isConversational ? null : await fetchSelfContext();
+
+        // Prompt for fallback SDK path (includes full memory since no historyMessages there)
         const prompt = buildPrompt(userMessage, memoryText, docsText, selfCtx);
 
         if (mastraAgents && mastraAgents.apexAgent) {
+            // Last 3 turns as structured conversation history — avoids re-sending them in prompt text
             const historyMessages = memory.slice(-3).map(m => ({
                 role: m.role === "user" ? "user" : "assistant",
                 content: m.message
             }));
-            const result = await mastraAgents.apexAgent.generate([
+            // Only send memory older than what's in historyMessages to avoid duplication
+            const _olderMemText = memory.slice(0, -3)
+                .map(m => `[${m.role.toUpperCase()}] ${m.message}`).join('\n');
+            const mastraPrompt = buildPrompt(userMessage, _olderMemText, docsText, selfCtx);
+
+            // Route to lightweight agent (9 core tools) unless email/finance/browser/routine needed
+            const _needsFullTools = /email|mail|inbox|gmail|spend|expense|budget|transaction|finance|money|web|url|http|google|scrape|browser|routine|schedule|cron/i.test(userMessage);
+            const _agent = (!_needsFullTools && mastraAgents.coreApexAgent)
+                ? mastraAgents.coreApexAgent
+                : mastraAgents.apexAgent;
+
+            const result = await _agent.generate([
                 ...historyMessages,
-                { role: "user", content: prompt }
+                { role: "user", content: mastraPrompt }
             ]);
             clearTimeout(chatTimeout);
             const _mastraRaw = result.text || "No response from AI";
