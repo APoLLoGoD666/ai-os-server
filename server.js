@@ -11715,7 +11715,7 @@ server.listen(PORT, () => {
             getMastraStatus = _m.getMastraStatus;
             mastraAgents = initMastra(handleCommand);
             console.log('[Mastra] agents initialised (deferred).');
-        } catch (err) { console.error('[Mastra] INIT ERROR (deferred):', err.message); }
+        } catch (err) { console.error('[Mastra] INIT ERROR (deferred):', err); setTimeout(_loadMastra, 600000); }
     }
     setTimeout(_loadMastra, 300000); // 5 minutes
 

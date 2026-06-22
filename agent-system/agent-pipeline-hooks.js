@@ -4,15 +4,15 @@
 // Wired to Slack for real-time visibility. Wired to governance.js for Level 9 audit trail.
 
 const _slack = (() => {
-    try { return require('../services/slack/slack-agents'); } catch { return null; }
+    try { return require('../services/slack/slack-agents'); } catch (e) { console.warn('[Hooks] slack unavailable:', e.message); return null; }
 })();
 
 const _gov = (() => {
-    try { return require('../lib/governance'); } catch { return null; }
+    try { return require('../lib/governance'); } catch (e) { console.warn('[Hooks] governance unavailable:', e.message); return null; }
 })();
 
 const _outbox = (() => {
-    try { return require('../lib/write-with-outbox'); } catch { return null; }
+    try { return require('../lib/write-with-outbox'); } catch (e) { console.warn('[Hooks] outbox unavailable:', e.message); return null; }
 })();
 
 // Emit a canonical event to the event spine. Fire-and-forget — never throws.
