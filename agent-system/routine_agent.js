@@ -7,7 +7,6 @@ const {
     pgCreateNotification,
     pgLoadMemory,
     pgCreateAgentTask,
-    pgAddMemory
 } = require("../lib/pg_helpers");
 
 const _sbr = require('../lib/clients').getSupabaseClient();
