@@ -64,7 +64,9 @@ async function checkBudgetAlerts() {
                         spent,
                         limit: parseFloat(budget.monthly_limit),
                         pct: Math.round(pct)
-                    }
+                    },
+                    null,
+                    process.env.APEX_HUMAN_ID || '00000000-0000-4000-8000-000000000001'
                 );
                 await pgCreateNotification(
                     "finance",

@@ -151,7 +151,9 @@ async function checkEmails() {
                         sender: email.sender,
                         subject: email.subject,
                         gmail_id: email.gmailId
-                    }
+                    },
+                    null,
+                    process.env.APEX_HUMAN_ID || '00000000-0000-4000-8000-000000000001'
                 );
             }
 

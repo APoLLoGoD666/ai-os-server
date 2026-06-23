@@ -163,7 +163,9 @@ async function analyseUsagePatterns() {
             `I've noticed your patterns. Want me to set up a personalised routine? ${suggestion}`,
             "waiting_approval",
             "",
-            { type: "routine_suggestion", suggestion, topHours }
+            { type: "routine_suggestion", suggestion, topHours },
+            null,
+            process.env.APEX_HUMAN_ID || '00000000-0000-4000-8000-000000000001'
         );
     } catch (error) {
         console.error("PATTERN ANALYSIS ERROR:", error.message);

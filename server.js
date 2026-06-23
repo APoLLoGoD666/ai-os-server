@@ -1343,7 +1343,7 @@ ${preview}
             const command = toolUseInputToCommand(toolUseBlock.name, toolUseBlock.input || {});
 
             if (command) {
-                const result = await handleCommand(command, req.user?.id || 'default');
+                const result = await handleCommand(command, req.identity?.humanId);
                 setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: result.reply }), tags: ['conversation', 'chat', 'tool'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
                 return res.status(result.ok ? 200 : 404).json(result);
             }
