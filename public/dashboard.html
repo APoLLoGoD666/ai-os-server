@@ -7995,234 +7995,369 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
                     <button class="ds-btn cyan" data-fn="checkEmailNow">&#9658; Check inbox now</button>
                 </div>
 
-                <!-- Entity Registry + Relationship Memory — L2 / L3 -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                    <!-- Entity Registry — L2 -->
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Entity Registry</span>
-                                <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(0,212,255,0.10);color:var(--cyan)">L2</span>
-                            </div>
-                            <span style="font-size:10px;color:var(--text-mute)">world model &middot; people &middot; orgs &middot; projects</span>
+                <!-- ═══ CALENDAR ═══ -->
+                <div style="background:#0d1424;border-radius:16px;border:1px solid rgba(255,255,255,0.07);overflow:hidden">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.05)">
+                        <div style="display:flex;align-items:center;gap:14px">
+                            <button onclick="netCalNav(-1)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:7px;width:28px;height:28px;color:#8893a0;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">&#8249;</button>
+                            <div id="net-cal-title" style="font:700 15px/1 'Space Grotesk',sans-serif;color:#eaeff5;min-width:170px;text-align:center">June 2026</div>
+                            <button onclick="netCalNav(1)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:7px;width:28px;height:28px;color:#8893a0;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">&#8250;</button>
+                            <button onclick="netCalNav(0)" style="background:rgba(91,158,255,0.12);border:1px solid rgba(91,158,255,0.25);border-radius:7px;padding:0 10px;height:28px;color:#5b9eff;cursor:pointer;font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.5px">TODAY</button>
                         </div>
-                        <div style="padding:10px">
-                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">
-                                <div style="padding:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:6px;text-align:center">
-                                    <div style="font:600 8px/1 'JetBrains Mono',monospace;color:var(--text-mute);letter-spacing:0.1em;margin-bottom:5px">ENTITIES</div>
-                                    <div id="entityRegistryCount" style="font:700 20px/1 'Space Grotesk',sans-serif;color:var(--cyan)">—</div>
-                                </div>
-                                <div style="padding:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:6px;text-align:center">
-                                    <div style="font:600 8px/1 'JetBrains Mono',monospace;color:var(--text-mute);letter-spacing:0.1em;margin-bottom:5px">MERGE QUEUE</div>
-                                    <div id="entityMergeQueue" style="font:700 20px/1 'Space Grotesk',sans-serif;color:var(--amber)">—</div>
-                                </div>
-                                <div style="padding:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:6px;text-align:center">
-                                    <div style="font:600 8px/1 'JetBrains Mono',monospace;color:var(--text-mute);letter-spacing:0.1em;margin-bottom:5px">KINDS</div>
-                                    <div style="font:700 20px/1 'Space Grotesk',sans-serif;color:var(--text-mid)">7</div>
-                                </div>
-                            </div>
-                            <div style="font:500 9px/1.5 'JetBrains Mono',monospace;color:var(--text-mute);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:4px;padding:7px 9px;letter-spacing:0.05em">
-                                person &middot; org &middot; project &middot; asset &middot; account &middot; market &middot; goal
-                            </div>
-                            <div style="margin-top:8px;font:500 9px/1.4 'JetBrains Mono',monospace;color:var(--amber)">Registry not yet active &mdash; contacts below are the seed dataset</div>
+                        <div style="display:flex;gap:4px">
+                            <button onclick="netCalSetView('day')" id="net-cal-vd" style="background:rgba(91,158,255,0.18);border:1px solid rgba(91,158,255,0.3);border-radius:7px;padding:0 13px;height:28px;color:#5b9eff;cursor:pointer;font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.8px">DAY</button>
+                            <button onclick="netCalSetView('month')" id="net-cal-vm" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:0 13px;height:28px;color:#8893a0;cursor:pointer;font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.8px">MONTH</button>
+                            <button onclick="netCalSetView('year')" id="net-cal-vy" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:0 13px;height:28px;color:#8893a0;cursor:pointer;font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.8px">YEAR</button>
                         </div>
                     </div>
-                    <!-- Relationship Memory — L3 -->
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot purple"></span>
-                                <span class="t-label">Relationship Memory</span>
-                                <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(124,111,255,0.12);color:#7c6fff">L3</span>
-                            </div>
-                            <span style="font-size:10px;color:var(--text-mute)">edge strength &middot; contact decay &middot; follow-up</span>
+                    <div id="net-cal-body" style="min-height:220px"></div>
+                    <div id="net-cal-events" style="border-top:1px solid rgba(255,255,255,0.05);padding:10px 20px;display:flex;align-items:center;gap:12px;min-height:44px">
+                        <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#5b9eff;flex-shrink:0">TODAY</span>
+                        <span style="font:400 11px/1 'Space Grotesk',sans-serif;color:#8893a0">No events scheduled</span>
+                    </div>
+                </div>
+
+                <!-- ═══ STATS + CONTACTS ═══ -->
+                <div style="display:grid;grid-template-columns:5fr 7fr;gap:10px">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                        <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);border-top:2px solid #5b9eff;padding:14px 16px">
+                            <div style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#5b9eff;margin-bottom:8px">INBOX</div>
+                            <div id="commsStatInbox" style="font:700 26px/1 'Space Grotesk',sans-serif;color:#5b9eff">&#8212;</div>
+                            <div style="font:400 9px/1 'JetBrains Mono',monospace;color:#4a5568;margin-top:5px">unread emails</div>
                         </div>
-                        <div style="padding:10px">
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
-                                <div style="padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:6px">
-                                    <div style="font:600 8px/1 'JetBrains Mono',monospace;color:var(--text-mute);letter-spacing:0.1em;margin-bottom:5px">TRACKED EDGES</div>
-                                    <div id="relMemEdges" style="font:700 20px/1 'Space Grotesk',sans-serif;color:#a78bfa">—</div>
-                                </div>
-                                <div style="padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:6px">
-                                    <div style="font:600 8px/1 'JetBrains Mono',monospace;color:var(--text-mute);letter-spacing:0.1em;margin-bottom:5px">FADING</div>
-                                    <div id="relMemFading" style="font:700 20px/1 'Space Grotesk',sans-serif;color:var(--amber)">—</div>
-                                </div>
+                        <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);border-top:2px solid #efb45a;padding:14px 16px">
+                            <div style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#efb45a;margin-bottom:8px">DRAFTS</div>
+                            <div id="commsStatDrafts" style="font:700 26px/1 'Space Grotesk',sans-serif;color:#efb45a">&#8212;</div>
+                            <div style="font:400 9px/1 'JetBrains Mono',monospace;color:#4a5568;margin-top:5px">pending review</div>
+                        </div>
+                        <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);border-top:2px solid #ef4444;padding:14px 16px">
+                            <div style="display:flex;align-items:center;gap:5px;margin-bottom:8px">
+                                <div style="width:5px;height:5px;border-radius:50%;background:#ef4444;box-shadow:0 0 5px #ef4444;animation:pulse 1.5s infinite"></div>
+                                <div style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#ef4444">URGENT</div>
                             </div>
-                            <div style="font:500 9px/1.5 'JetBrains Mono',monospace;color:var(--text-mute);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:4px;padding:7px 9px">
-                                strength = &Sigma; w(channel) &middot; e<sup>&minus;&lambda;&middot;days</sup> &mdash; decays weekly
+                            <div id="commsStatUrgent" style="font:700 26px/1 'Space Grotesk',sans-serif;color:#ef4444">&#8212;</div>
+                            <div style="font:400 9px/1 'JetBrains Mono',monospace;color:#4a5568;margin-top:5px">action required</div>
+                        </div>
+                        <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);border-top:2px solid #3fd29a;padding:14px 16px">
+                            <div style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#3fd29a;margin-bottom:8px">CAL TODAY</div>
+                            <div id="commsStatCal" style="font:700 26px/1 'Space Grotesk',sans-serif;color:#3fd29a">0</div>
+                            <div style="font:400 9px/1 'JetBrains Mono',monospace;color:#4a5568;margin-top:5px">events today</div>
+                        </div>
+                    </div>
+                    <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);padding:16px 18px;display:flex;flex-direction:column">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:7px">
+                                <span style="width:6px;height:6px;border-radius:50%;background:#7c6fff;display:inline-block;flex-shrink:0"></span>
+                                <span style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">Contacts</span>
                             </div>
-                            <div style="margin-top:8px;font:500 9px/1.4 'JetBrains Mono',monospace;color:var(--amber)">Graph not yet active &mdash; feeds from Gmail + Calendar once entity registry is live</div>
+                            <button class="ds-btn xs">Sync</button>
+                        </div>
+                        <input class="chat-input" placeholder="Search contacts&#8230;" style="height:28px;font-size:11px;border-radius:var(--r-md);margin-bottom:10px;width:100%;box-sizing:border-box">
+                        <div style="overflow-y:auto;flex:1">
+                            <table class="ds-table" style="width:100%">
+                                <thead><tr><th>Name</th><th>Company</th><th>Last</th><th>Follow-up</th></tr></thead>
+                                <tbody id="contactsTbody">
+                                    <tr><td colspan="4" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- Needs Attention -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left">
-                            <span class="ds-dot red pulse"></span>
-                            <span class="t-label">Needs Attention</span>
+                <!-- ═══ NEEDS ATTENTION ═══ -->
+                <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);padding:16px 18px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div style="width:6px;height:6px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;animation:pulse 1.5s infinite;flex-shrink:0"></div>
+                            <span style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">Needs Attention</span>
+                            <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#ef4444;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:4px;padding:2px 6px">TOP 3</span>
                         </div>
-                        <span style="font-size:10px;color:var(--text-mute)">Who requires a response?</span>
+                        <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#4a5568">Who requires a response?</span>
                     </div>
                     <div id="networkAttentionList" style="display:flex;flex-direction:column;gap:6px">
                         <div style="font-size:11px;color:var(--text-mute);padding:6px 0;text-align:center">Loading&#8230;</div>
                     </div>
                 </div>
 
-                <div class="ds-grid-stats">
-                    <div class="ds-stat-card ac-cyan">
-                        <div class="ds-stat-label">Inbox</div>
-                        <div class="ds-stat-value cyan" id="commsStatInbox">&#8212;</div>
-                        <div class="ds-stat-sub">unread emails</div>
-                    </div>
-                    <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">Drafts pending</div>
-                        <div class="ds-stat-value amber" id="commsStatDrafts">&#8212;</div>
-                        <div class="ds-stat-sub"><span class="ds-dot amber"></span><span>review before send</span></div>
-                    </div>
-                    <div class="ds-stat-card ac-red">
-                        <div class="ds-stat-label">Urgent</div>
-                        <div class="ds-stat-value red" id="commsStatUrgent">&#8212;</div>
-                        <div class="ds-stat-sub"><span class="ds-dot red pulse"></span><span>action required</span></div>
-                    </div>
-                    <div class="ds-stat-card ac-cyan">
-                        <div class="ds-stat-label">Calendar today</div>
-                        <div class="ds-stat-value" style="color:var(--text-faint)" id="commsStatCal">0</div>
-                        <div class="ds-stat-sub" style="color:var(--text-faint)">no events today</div>
-                    </div>
-                </div>
-
-                <!-- Unified inbox -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left">
-                            <span class="ds-dot cyan"></span>
-                            <span class="t-label">Unified inbox</span>
+                <!-- ═══ UNIFIED INBOX ═══ -->
+                <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);padding:16px 18px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                        <div style="display:flex;align-items:center;gap:7px">
+                            <span style="width:6px;height:6px;border-radius:50%;background:#5b9eff;display:inline-block;flex-shrink:0"></span>
+                            <span style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">Unified Inbox</span>
                         </div>
-                        <div class="ds-panel-header-right">
-                            <span class="ds-badge cyan">Polling 5m</span>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;background:rgba(91,158,255,0.1);color:#5b9eff;border:1px solid rgba(91,158,255,0.2);border-radius:4px;padding:3px 8px">POLLING 5M</span>
                             <button class="ds-btn xs cyan" data-fn="showComposeModal">Compose</button>
                         </div>
                     </div>
-                    <div class="ds-pill-row" id="emailFilterPills">
-                        <button class="ds-pill active" data-fn="filterEmails" data-args='["all","__this__"]'>All</button>
-                        <button class="ds-pill" data-fn="filterEmails" data-args='["urgent","__this__"]'>Urgent</button>
-                        <button class="ds-pill" data-fn="filterEmails" data-args='["draft","__this__"]'>Draft</button>
-                        <button class="ds-pill" data-fn="filterEmails" data-args='["normal","__this__"]'>Normal</button>
-                        <button class="ds-pill" data-fn="filterEmails" data-args='["gmail","__this__"]'><svg width="11" height="9" viewBox="0 0 24 20" style="vertical-align:middle;margin-right:3px"><path d="M20 0H4C2.9 0 2 .9 2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V2c0-1.1-.9-2-2-2z" fill="rgba(234,67,53,0.55)"/><path d="M20 2L12 11 4 2" stroke="white" stroke-width="2" fill="none"/></svg>Gmail</button>
-                        <button class="ds-pill" data-fn="filterEmails" data-args='["linkedin","__this__"]'><svg width="11" height="11" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:3px"><rect width="24" height="24" rx="3" fill="rgba(10,102,194,0.65)"/><path d="M7 10h2v7H7zm1-2a1 1 0 110-2 1 1 0 010 2zm4 2h1.9l.1 1c.4-.7 1.3-1.2 2.4-1.2 2.5 0 3 1.6 3 3.7V17h-2v-3.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2v-7z" fill="white"/></svg>LinkedIn</button>
+                    <div id="emailFilterPills" style="display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap">
+                        <button class="ds-pill active" data-fn="filterEmails" data-args='["all","__this__"]'>ALL</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["urgent","__this__"]' style="display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:#ef4444;flex-shrink:0"></span>PRIORITY</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["draft","__this__"]'>DRAFT</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["icloud","__this__"]' style="display:flex;align-items:center;gap:5px"><svg width="10" height="8" viewBox="0 0 20 13" fill="none"><path d="M15 5C15 5 15.3 2 12.5 2C10.5 2 9.5 3.5 9.5 3.5C9.5 3.5 8.8 2.5 7 2.5C5 2.5 4 4 4 5C4 5 2 5.5 2 7.5C2 9.5 3.5 11 5.5 11H15C17 11 18 9.5 18 8C18 6.5 16.7 5.3 15 5Z" fill="rgba(91,158,255,0.8)"/></svg>ICLOUD</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["gmail","__this__"]' style="display:flex;align-items:center;gap:5px"><svg width="10" height="8" viewBox="0 0 24 20" fill="none"><rect width="24" height="20" rx="3" fill="rgba(234,67,53,0.5)"/><path d="M2 2l10 9L22 2" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>GMAIL</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["outlook","__this__"]' style="display:flex;align-items:center;gap:5px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="rgba(0,114,198,0.65)"/><circle cx="12" cy="12" r="4.5" fill="white" opacity="0.9"/><rect x="15.5" y="7" width="5" height="10" rx="1.5" fill="white" opacity="0.7"/></svg>OUTLOOK</button>
                     </div>
                     <div id="emailList" style="display:flex;flex-direction:column;gap:6px">
                         <div class="ds-skel-row" style="height:48px">Loading inbox&#8230;</div>
                     </div>
                 </div>
 
-                <!-- Calendar + Contacts -->
-                <div class="ds-grid-2">
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Calendar &#8212; this week</span>
+                <!-- ═══ MESSAGING ROW ═══ -->
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+
+                    <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);border-top:2px solid #3fd29a;padding:16px 18px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:9px">
+                                <div style="width:30px;height:30px;border-radius:8px;background:rgba(63,210,154,0.1);border:1px solid rgba(63,210,154,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="rgba(52,199,89,0.3)"/><path d="M7 8h10M7 12h10M7 16h6" stroke="#3fd29a" stroke-width="1.8" stroke-linecap="round"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">SMS &middot; iMessage</div>
+                                    <div style="font:400 9px/1 'JetBrains Mono',monospace;color:#3fd29a;margin-top:3px">iOS Messages</div>
+                                </div>
                             </div>
-                            <div class="ds-panel-header-right">
-                                <button class="ds-btn xs cyan">+ Event</button>
-                            </div>
+                            <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;background:rgba(239,180,90,0.1);color:#efb45a;border:1px solid rgba(239,180,90,0.2);border-radius:4px;padding:3px 7px">SETUP</span>
                         </div>
-                        <div id="comms-cal-today" class="t-label" style="margin-bottom:8px;color:var(--text-faint)">&#8212;</div>
-                        <div id="comms-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+                        <div style="display:flex;flex-direction:column;gap:5px">
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Unread SMS</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#3fd29a">&#8212;</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Latest sender</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#8893a0">&#8212;</span>
+                            </div>
+                            <div style="font:400 9px/1.4 'JetBrains Mono',monospace;color:#efb45a;padding:5px 0 0">Add TWILIO_API_KEY + FROM_NUMBER</div>
                         </div>
                     </div>
 
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot purple"></span>
-                                <span class="t-label">Contacts</span>
+                    <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);border-top:2px solid #25d366;padding:16px 18px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:9px">
+                                <div style="width:30px;height:30px;border-radius:8px;background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.847 2C6.477 2 2.086 6.38 2.073 11.758c0 1.718.457 3.39 1.33 4.867L2 22l5.504-1.44A9.854 9.854 0 0011.847 21.56C17.224 21.56 21.616 17.18 21.616 11.8c0-2.617-1.023-5.076-2.876-6.921A9.727 9.727 0 0011.847 2z"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">WhatsApp</div>
+                                    <div style="font:400 9px/1 'JetBrains Mono',monospace;color:#25d366;margin-top:3px">WhatsApp Business</div>
+                                </div>
                             </div>
-                            <div class="ds-panel-header-right">
-                                <button class="ds-btn xs">Sync</button>
-                            </div>
+                            <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;background:rgba(239,180,90,0.1);color:#efb45a;border:1px solid rgba(239,180,90,0.2);border-radius:4px;padding:3px 7px">SETUP</span>
                         </div>
-                        <input class="chat-input" placeholder="Search contacts&#8230;" style="height:28px;font-size:11px;border-radius:var(--r-md);margin-bottom:10px">
-                        <table class="ds-table">
-                            <thead><tr><th>Name</th><th>Company</th><th>Last</th><th>Follow-up</th></tr></thead>
-                            <tbody id="contactsTbody">
-                                <tr><td colspan="4" style="padding:10px"><div class="skel skel-row skel-wide"></div></td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Channel status row: WhatsApp · SMS · LinkedIn -->
-                <div class="ds-grid-3">
-
-                    <div class="ds-panel accent-amber">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(37,211,102,0.75)" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.847 2C6.477 2 2.086 6.38 2.073 11.758c0 1.718.457 3.39 1.33 4.867L2 22l5.504-1.44A9.854 9.854 0 0011.847 21.56C17.224 21.56 21.616 17.18 21.616 11.8c0-2.617-1.023-5.076-2.876-6.921A9.727 9.727 0 0011.847 2z"/></svg>
-                                <span class="t-label">WhatsApp</span>
+                        <div style="display:flex;flex-direction:column;gap:5px">
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Unread</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#25d366">&#8212;</span>
                             </div>
-                            <div class="ds-panel-header-right">
-                                <span class="ds-badge amber">Setup needed</span>
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Last message</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#8893a0">&#8212;</span>
                             </div>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div class="ds-skel-row">Unread &#183; &#8212;</div>
-                            <div class="ds-skel-row">Last message &#183; &#8212;</div>
-                            <div class="t-mono" style="color:var(--amber);font-size:10px">Add WHATSAPP_TOKEN to env vars.</div>
+                            <div style="font:400 9px/1.4 'JetBrains Mono',monospace;color:#efb45a;padding:5px 0 0">Add WHATSAPP_TOKEN to env vars</div>
                         </div>
                     </div>
 
-                    <div class="ds-panel accent-amber">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><rect width="24" height="24" rx="4" fill="rgba(52,199,89,0.4)"/><path d="M7 12h10M7 8h10M7 16h6" stroke="rgba(52,199,89,0.9)" stroke-width="2" stroke-linecap="round"/></svg>
-                                <span class="t-label">SMS · iMessage</span>
+                    <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);border-top:2px solid #0a66c2;padding:16px 18px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:9px">
+                                <div style="width:30px;height:30px;border-radius:8px;background:rgba(10,102,194,0.12);border:1px solid rgba(10,102,194,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#0a66c2"/><path d="M7 10h2v7H7zm1-2a1 1 0 110-2 1 1 0 010 2zm4 2h1.9l.1 1c.4-.7 1.3-1.2 2.4-1.2 2.5 0 3 1.6 3 3.7V17h-2v-3.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2v-7z" fill="white"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">LinkedIn</div>
+                                    <div style="font:400 9px/1 'JetBrains Mono',monospace;color:#5b9eff;margin-top:3px">Professional network</div>
+                                </div>
                             </div>
-                            <div class="ds-panel-header-right">
-                                <span class="ds-badge amber">Setup needed</span>
-                            </div>
+                            <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;background:rgba(239,180,90,0.1);color:#efb45a;border:1px solid rgba(239,180,90,0.2);border-radius:4px;padding:3px 7px">OFF</span>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div class="ds-skel-row">Unread SMS &#183; &#8212;</div>
-                            <div class="ds-skel-row">Latest sender &#183; &#8212;</div>
-                            <div class="t-mono" style="color:var(--amber);font-size:10px">Add TWILIO_API_KEY + FROM_NUMBER.</div>
-                        </div>
-                    </div>
-
-                    <div class="ds-panel accent-amber">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <svg width="13" height="13" viewBox="0 0 24 24" style="flex-shrink:0"><rect width="24" height="24" rx="3" fill="rgba(10,102,194,0.75)"/><path d="M7 10h2v7H7zm1-2a1 1 0 110-2 1 1 0 010 2zm4 2h1.9l.1 1c.4-.7 1.3-1.2 2.4-1.2 2.5 0 3 1.6 3 3.7V17h-2v-3.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2v-7z" fill="white"/></svg>
-                                <span class="t-label">LinkedIn</span>
+                        <div style="display:flex;flex-direction:column;gap:5px">
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Unread DMs</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#5b9eff">&#8212;</span>
                             </div>
-                            <div class="ds-panel-header-right">
-                                <span class="ds-badge amber">Monitoring off</span>
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Connection requests</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#8893a0">&#8212;</span>
                             </div>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:6px">
-                            <div class="ds-skel-row">Unread DMs &#183; &#8212;</div>
-                            <div class="ds-skel-row">Connection requests &#183; &#8212;</div>
                         </div>
                     </div>
 
                 </div>
 
-                <!-- Birthdays & Anniversaries (full width) -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left">
-                            <span class="ds-dot purple"></span>
-                            <span class="t-label">Birthdays &#183; Anniversaries</span>
+                <!-- ═══ SOCIAL ROW ═══ -->
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+
+                    <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);border-top:2px solid #1877f2;padding:16px 18px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:9px">
+                                <div style="width:30px;height:30px;border-radius:8px;background:rgba(24,119,242,0.1);border:1px solid rgba(24,119,242,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">Facebook</div>
+                                    <div style="font:400 9px/1 'JetBrains Mono',monospace;color:#1877f2;margin-top:3px">Meta social</div>
+                                </div>
+                            </div>
+                            <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;background:rgba(239,180,90,0.1);color:#efb45a;border:1px solid rgba(239,180,90,0.2);border-radius:4px;padding:3px 7px">SETUP</span>
                         </div>
+                        <div style="display:flex;flex-direction:column;gap:5px">
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Notifications</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#1877f2">&#8212;</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Messages</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#8893a0">&#8212;</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);border-top:2px solid #e1306c;padding:16px 18px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:9px">
+                                <div style="width:30px;height:30px;border-radius:8px;background:rgba(225,48,108,0.1);border:1px solid rgba(225,48,108,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="#e1306c" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="#e1306c" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="#e1306c"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">Instagram</div>
+                                    <div style="font:400 9px/1 'JetBrains Mono',monospace;color:#e1306c;margin-top:3px">Meta visual</div>
+                                </div>
+                            </div>
+                            <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;background:rgba(239,180,90,0.1);color:#efb45a;border:1px solid rgba(239,180,90,0.2);border-radius:4px;padding:3px 7px">SETUP</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:5px">
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">DMs unread</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#e1306c">&#8212;</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Mentions</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#8893a0">&#8212;</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);border-top:2px solid #5865f2;padding:16px 18px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:9px">
+                                <div style="width:30px;height:30px;border-radius:8px;background:rgba(88,101,242,0.1);border:1px solid rgba(88,101,242,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <svg width="16" height="13" viewBox="0 0 24 20" fill="#5865f2"><path d="M20.317 1.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 00-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 00-5.487 0 12.36 12.36 0 00-.617-1.23.077.077 0 00-.079-.036A19.496 19.496 0 003.677 1.49a.07.07 0 00-.032.027C.533 6.093-.32 10.555.099 14.961a.082.082 0 00.031.055 19.574 19.574 0 005.856 2.958.078.078 0 00.084-.026c.462-.62.874-1.275 1.226-1.963.021-.04.001-.088-.041-.104a12.876 12.876 0 01-1.872-.878.075.075 0 01-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 01.078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 01.079.009c.12.098.245.195.372.288a.075.075 0 01-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 00-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 00.084.028 19.524 19.524 0 005.86-2.958.076.076 0 00.032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 00-.031-.028zM8.02 12.278c-1.183 0-2.157-1.069-2.157-2.38 0-1.312.956-2.38 2.157-2.38 1.21 0 2.176 1.077 2.157 2.38 0 1.312-.956 2.38-2.157 2.38zm7.975 0c-1.183 0-2.157-1.069-2.157-2.38 0-1.312.955-2.38 2.157-2.38 1.21 0 2.176 1.077 2.157 2.38 0 1.312-.946 2.38-2.157 2.38z"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">Discord</div>
+                                    <div style="font:400 9px/1 'JetBrains Mono',monospace;color:#5865f2;margin-top:3px">Community chat</div>
+                                </div>
+                            </div>
+                            <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;background:rgba(239,180,90,0.1);color:#efb45a;border:1px solid rgba(239,180,90,0.2);border-radius:4px;padding:3px 7px">SETUP</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:5px">
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Mentions</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#5865f2">&#8212;</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;padding:6px 9px;background:rgba(255,255,255,0.02);border-radius:6px">
+                                <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#8893a0">Unreads</span>
+                                <span style="font:600 10px/1 'JetBrains Mono',monospace;color:#8893a0">&#8212;</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ═══ BIRTHDAYS & ANNIVERSARIES ═══ -->
+                <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);padding:16px 18px">
+                    <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px">
+                        <span style="width:6px;height:6px;border-radius:50%;background:#ec7fa3;display:inline-block;flex-shrink:0"></span>
+                        <span style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">Birthdays &amp; Anniversaries</span>
                     </div>
                     <div id="birthdayPanel" style="display:flex;flex-direction:column;gap:6px">
                         <div class="skel skel-wide" style="height:12px;margin:4px 0"></div>
                     </div>
                 </div>
+
+                <!-- Hidden compat divs -->
+                <div id="comms-cal-today" style="display:none"></div>
+                <div id="comms-cal-grid" style="display:none"></div>
+
+                <!-- Calendar IIFE -->
+                <script>(function(){
+                    var _s={view:'day',y:2026,m:5,d:24};
+                    var _MO=['January','February','March','April','May','June','July','August','September','October','November','December'];
+                    var _DY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                    function _init(){var n=new Date();_s.y=n.getFullYear();_s.m=n.getMonth();_s.d=n.getDate();}
+                    function _title(){
+                        var t=document.getElementById('net-cal-title');if(!t)return;
+                        if(_s.view==='day')t.textContent=_MO[_s.m]+' '+_s.d+', '+_s.y;
+                        else if(_s.view==='month')t.textContent=_MO[_s.m]+' '+_s.y;
+                        else t.textContent=''+_s.y;
+                    }
+                    function _rDay(){
+                        var b=document.getElementById('net-cal-body');if(!b)return;
+                        var h='<div style="overflow-y:auto;max-height:300px">';
+                        for(var hr=6;hr<22;hr++){
+                            var lbl=hr<12?hr+' AM':(hr===12?'12 PM':(hr-12)+' PM');
+                            h+='<div style="display:grid;grid-template-columns:52px 1fr">';
+                            h+='<div style="padding:9px 10px 9px 16px;font:400 9px/1 \'JetBrains Mono\',monospace;color:#4a5568;text-align:right;border-right:1px solid rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.03)">'+lbl+'</div>';
+                            h+='<div style="border-bottom:1px solid rgba(255,255,255,0.03);min-height:38px;padding:6px 14px"></div>';
+                            h+='</div>';
+                        }
+                        h+='</div>';
+                        b.innerHTML=h;
+                    }
+                    function _rMonth(){
+                        var b=document.getElementById('net-cal-body');if(!b)return;
+                        var now=new Date();
+                        var fd=new Date(_s.y,_s.m,1).getDay();
+                        var dm=new Date(_s.y,_s.m+1,0).getDate();
+                        var h='<div style="padding:14px 18px">';
+                        h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px">';
+                        _DY.forEach(function(d){h+='<div style="text-align:center;font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:1px;color:#4a5568;padding:4px 0">'+d+'</div>';});
+                        h+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">';
+                        for(var i=0;i<fd;i++)h+='<div></div>';
+                        for(var d=1;d<=dm;d++){
+                            var it=(_s.y===now.getFullYear()&&_s.m===now.getMonth()&&d===now.getDate());
+                            h+='<div onclick="netCalGoDay('+d+')" style="text-align:center;padding:8px 4px;border-radius:7px;font:'+(it?'700':'500')+' 11px/1 \'Space Grotesk\',sans-serif;'+(it?'background:#5b9eff;color:#fff;':'color:#8893a0;')+'cursor:pointer">'+d+'</div>';
+                        }
+                        h+='</div></div>';
+                        b.innerHTML=h;
+                    }
+                    function _rYear(){
+                        var b=document.getElementById('net-cal-body');if(!b)return;
+                        var h='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:18px">';
+                        for(var mi=0;mi<12;mi++){
+                            var ac=(_s.m===mi);
+                            h+='<div onclick="netCalGoMonth('+mi+')" style="background:'+(ac?'rgba(91,158,255,0.14)':'rgba(255,255,255,0.02)')+';border:1px solid '+(ac?'rgba(91,158,255,0.3)':'rgba(255,255,255,0.05)')+';border-radius:9px;padding:11px;cursor:pointer;text-align:center">';
+                            h+='<div style="font:600 10px/1 \'Space Grotesk\',sans-serif;color:'+(ac?'#5b9eff':'#8893a0')+'">'+_MO[mi].slice(0,3).toUpperCase()+'</div>';
+                            h+='</div>';
+                        }
+                        h+='</div>';
+                        b.innerHTML=h;
+                    }
+                    function _vBtns(){
+                        var map={day:'net-cal-vd',month:'net-cal-vm',year:'net-cal-vy'};
+                        Object.keys(map).forEach(function(v){
+                            var el=document.getElementById(map[v]);if(!el)return;
+                            var a=(_s.view===v);
+                            el.style.background=a?'rgba(91,158,255,0.18)':'rgba(255,255,255,0.04)';
+                            el.style.borderColor=a?'rgba(91,158,255,0.3)':'rgba(255,255,255,0.08)';
+                            el.style.color=a?'#5b9eff':'#8893a0';
+                        });
+                    }
+                    function _render(){_title();if(_s.view==='day')_rDay();else if(_s.view==='month')_rMonth();else _rYear();_vBtns();}
+                    window.netCalSetView=function(v){_s.view=v;_render();};
+                    window.netCalNav=function(dir){
+                        if(dir===0){_init();_render();return;}
+                        if(_s.view==='day'){var nd=new Date(_s.y,_s.m,_s.d+dir);_s.y=nd.getFullYear();_s.m=nd.getMonth();_s.d=nd.getDate();}
+                        else if(_s.view==='month'){_s.m+=dir;if(_s.m<0){_s.m=11;_s.y--;}if(_s.m>11){_s.m=0;_s.y++;}}
+                        else{_s.y+=dir;}
+                        _render();
+                    };
+                    window.netCalGoMonth=function(m){_s.m=m;_s.view='month';_render();};
+                    window.netCalGoDay=function(d){_s.d=d;_s.view='day';_render();};
+                    _init();_render();
+                })();</script>
 
             </div>
 
