@@ -8074,7 +8074,7 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
                         </div>
                         <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#4a5568">Who requires a response?</span>
                     </div>
-                    <div id="networkAttentionList" style="display:flex;flex-direction:column;gap:6px">
+                    <div id="networkAttentionList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto">
                         <div style="font-size:11px;color:var(--text-mute);padding:6px 0;text-align:center">Loading&#8230;</div>
                     </div>
                 </div>
@@ -8084,7 +8084,7 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
                         <div style="display:flex;align-items:center;gap:7px">
                             <span style="width:6px;height:6px;border-radius:50%;background:#5b9eff;display:inline-block;flex-shrink:0"></span>
-                            <span style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">Unified Inbox</span>
+                            <span style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5">Inbox</span>
                         </div>
                         <div style="display:flex;align-items:center;gap:8px">
                             <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;background:rgba(91,158,255,0.1);color:#5b9eff;border:1px solid rgba(91,158,255,0.2);border-radius:4px;padding:3px 8px">POLLING 5M</span>
@@ -8099,7 +8099,7 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
                         <button class="ds-pill" data-fn="filterEmails" data-args='["gmail","__this__"]' style="display:flex;align-items:center;gap:5px"><svg width="10" height="8" viewBox="0 0 24 20" fill="none"><rect width="24" height="20" rx="3" fill="rgba(234,67,53,0.5)"/><path d="M2 2l10 9L22 2" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>GMAIL</button>
                         <button class="ds-pill" data-fn="filterEmails" data-args='["outlook","__this__"]' style="display:flex;align-items:center;gap:5px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="rgba(0,114,198,0.65)"/><circle cx="12" cy="12" r="4.5" fill="white" opacity="0.9"/><rect x="15.5" y="7" width="5" height="10" rx="1.5" fill="white" opacity="0.7"/></svg>OUTLOOK</button>
                     </div>
-                    <div id="emailList" style="display:flex;flex-direction:column;gap:6px">
+                    <div id="emailList" style="display:flex;flex-direction:column;gap:6px;max-height:174px;overflow-y:auto">
                         <div class="ds-skel-row" style="height:48px">Loading inbox&#8230;</div>
                     </div>
                 </div>
@@ -8356,7 +8356,10 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
                     };
                     window.netCalGoMonth=function(m){_s.m=m;_s.view='month';_render();};
                     window.netCalGoDay=function(d){_s.d=d;_s.view='day';_render();};
-                    _init();_render();
+                    _init();
+                    if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',_render);}else{_render();}
+                    var _cp=document.getElementById('page-communication');
+                    if(_cp){new MutationObserver(function(ml){ml.forEach(function(m){if(m.attributeName==='class'&&_cp.classList.contains('active'))_render();});}).observe(_cp,{attributes:true});}
                 })();</script>
 
             </div>
