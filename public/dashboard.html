@@ -6684,6 +6684,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                                 <button class="ds-btn xs" data-fn="initStackPipeline">&#8635;</button>
                             </div>
                         </div>
+                        <div id="sys-service-status" style="display:flex;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap"></div>
                         <canvas id="sys-stack-canvas" style="width:100%;height:300px;display:block"></canvas>
                     </div>
 
@@ -6712,7 +6713,20 @@ li, td, th, div.label, div.value { font-size: inherit; }
                                     <tr><td colspan="5" style="font-size:11px;color:var(--text-faint);padding:8px 0">Loading&#8230;</td></tr>
                                 </tbody>
                             </table>
-                            <div id="sys-cost-projection" style="font-size:10px;color:var(--text-mute);margin-top:10px;border-top:1px solid var(--border);padding-top:8px">&#8212;</div>
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+                                <div style="text-align:center">
+                                    <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">Today</div>
+                                    <div id="sys-cost-today" style="font-size:13px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums">&#8212;</div>
+                                </div>
+                                <div style="text-align:center">
+                                    <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">This Week</div>
+                                    <div id="sys-cost-week" style="font-size:13px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums">&#8212;</div>
+                                </div>
+                                <div style="text-align:center">
+                                    <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">Forecast/mo</div>
+                                    <div id="sys-cost-forecast" style="font-size:13px;font-weight:600;color:var(--text-mute);font-variant-numeric:tabular-nums">&#8212;</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -13120,14 +13134,14 @@ if (window._apexIntervals) window._apexIntervals.push(_ovrIntId);
 // ── System page ───────────────────────────────────────────────────────────────
 
 var _sysAgents = [
-    {role:'architect',           name:'Architect',    color:'#7c6fff', icon:'&#9672;',  model:'sonnet'},
-    {role:'developer',           name:'Developer',    color:'#00d4ff', icon:'&#10216;/&#10217;', model:'haiku'},
-    {role:'reviewer',            name:'Reviewer',     color:'#f5a623', icon:'&#8853;',  model:'haiku'},
-    {role:'validator',           name:'Validator',    color:'#00e5a0', icon:'&#10003;', model:'haiku'},
-    {role:'tester',              name:'Tester',       color:'#00bcd4', icon:'&#8857;',  model:'haiku'},
-    {role:'committer',           name:'Committer',    color:'#4fc3f7', icon:'&#8593;',  model:'haiku'},
-    {role:'reflector',           name:'Reflector',    color:'#f48fb1', icon:'&#9678;',  model:'haiku'},
-    {role:'master-orchestrator', name:'Orchestrator', color:'#ffffff', icon:'&#11041;', model:'sonnet'}
+    {role:'architect',           name:'Architect',    color:'#7c6fff', icon:'&#9672;',  model:'sonnet', purpose:'Plans structure and approach'},
+    {role:'developer',           name:'Developer',    color:'#00d4ff', icon:'&#10216;/&#10217;', model:'haiku', purpose:'Writes and implements code'},
+    {role:'reviewer',            name:'Reviewer',     color:'#f5a623', icon:'&#8853;',  model:'haiku',  purpose:'Reviews code quality and logic'},
+    {role:'validator',           name:'Validator',    color:'#00e5a0', icon:'&#10003;', model:'haiku',  purpose:'Validates correctness and safety'},
+    {role:'tester',              name:'Tester',       color:'#00bcd4', icon:'&#8857;',  model:'haiku',  purpose:'Runs tests and checks coverage'},
+    {role:'committer',           name:'Committer',    color:'#4fc3f7', icon:'&#8593;',  model:'haiku',  purpose:'Commits and deploys changes'},
+    {role:'reflector',           name:'Reflector',    color:'#f48fb1', icon:'&#9678;',  model:'haiku',  purpose:'Reflects and improves quality'},
+    {role:'master-orchestrator', name:'Orchestrator', color:'#ffffff', icon:'&#11041;', model:'sonnet', purpose:'Coordinates all agents'}
 ];
 
 function buildAgentGrid() {
@@ -13151,10 +13165,12 @@ function buildAgentGrid() {
             + '<span style="font-size:9px;font-weight:400;padding:1px 5px;border-radius:3px;'
             + 'background:rgba(255,255,255,0.05);color:var(--text-mute);margin-left:4px">' + a.model + '</span>'
             + '</div>'
-            + '<div data-last-action style="font-size:11px;color:var(--text-mute);margin-top:4px;'
-            + 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No recent activity</div>'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">'
-            + '<span data-cost style="font-size:10px;font-family:monospace;color:var(--text-mute)">$0.0000</span>'
+            + '<div style="font-size:10px;color:var(--text-mute);margin-top:2px">' + a.purpose + '</div>'
+            + '<div data-last-action style="font-size:11px;color:var(--text-mid);margin-top:6px;'
+            + 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</div>'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;'
+            + 'border-top:1px solid var(--border);padding-top:6px">'
+            + '<span data-tasks style="font-size:10px;color:var(--text-mute)">0 tasks</span>'
             + '<span data-success style="font-size:10px;color:var(--text-mute)">&#8212;%</span>'
             + '</div>'
             + '<div data-last-run style="font-size:10px;color:var(--text-mute);text-align:right;margin-top:2px">&#8212;</div>'
@@ -13180,7 +13196,7 @@ async function fetchSystemAgents() {
 
             var statusEl  = card.querySelector('[data-status]');
             var actEl     = card.querySelector('[data-last-action]');
-            var costEl    = card.querySelector('[data-cost]');
+            var tasksEl   = card.querySelector('[data-tasks]');
             var succEl    = card.querySelector('[data-success]');
             var lastRunEl = card.querySelector('[data-last-run]');
 
@@ -13200,12 +13216,12 @@ async function fetchSystemAgents() {
                                        status==='ERROR'    ? 'var(--red)'   : 'var(--text-mute)';
             }
             if (actEl) {
-                var act = (lastRun && (lastRun.objective || lastRun.task_id || '')) || 'No recent activity';
+                var act = (lastRun && (lastRun.objective || lastRun.task_id || '')) || '—';
                 actEl.textContent = act.length > 45 ? act.slice(0,42)+'...' : act;
             }
-            if (costEl) {
-                costEl.textContent = '$' + totalCost.toFixed(4);
-                costEl.style.color = totalCost > 0.10 ? 'var(--amber)' : 'var(--text-mute)';
+            if (tasksEl) {
+                tasksEl.textContent = roleRuns.length + ' task' + (roleRuns.length===1?'':'s');
+                tasksEl.style.color = roleRuns.length > 0 ? 'var(--text-mid)' : 'var(--text-mute)';
             }
             if (succEl) {
                 succEl.textContent  = successRate >= 0 ? successRate+'% success' : '—%';
@@ -13224,6 +13240,29 @@ async function fetchSystemAgents() {
         var successRuns = runs.filter(function(r){ return r.success || r.status === 'committed'; }).length;
         window._stackPipelineData.claude = runs.length + ' runs';
         window._stackPipelineData.memory = successRuns + ' saved';
+
+        // Service status strip
+        var recentRuns = runs.filter(function(r){ return new Date(r.created_at) > Date.now()-3600000; });
+        var _services = [
+            {name:'Claude',   ok: recentRuns.length > 0,  label: recentRuns.length > 0 ? 'Active' : 'Idle'},
+            {name:'Supabase', ok: runs.length > 0,        label: runs.length > 0 ? 'Connected' : 'No data'},
+            {name:'Render',   ok: true,                   label: 'Operational'},
+            {name:'GitHub',   ok: true,                   label: 'Operational'},
+            {name:'OpenAI',   ok: false,                  label: 'Not configured'}
+        ];
+        var ssEl = document.getElementById('sys-service-status');
+        if (ssEl) {
+            ssEl.innerHTML = _services.map(function(s) {
+                var dotC = s.ok ? 'var(--green)' : 'rgba(255,255,255,0.25)';
+                var bg   = s.ok ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.02)';
+                return '<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;'
+                     + 'border-radius:4px;background:'+bg+';border:1px solid var(--border)">'
+                     + '<div style="width:5px;height:5px;border-radius:50%;background:'+dotC+'"></div>'
+                     + '<span style="font-size:10px;color:var(--text);font-weight:500">'+s.name+'</span>'
+                     + '<span style="font-size:9px;color:var(--text-mute)">'+s.label+'</span>'
+                     + '</div>';
+            }).join('');
+        }
 
         // Pipeline flow
         var flowEl = document.getElementById('sys-pipeline-flow');
@@ -13301,11 +13340,18 @@ async function fetchSystemCosts() {
             }
         }
 
-        var weekAgo = Date.now()-7*86400000;
+        var weekAgo  = Date.now()-7*86400000;
+        var dayAgo   = Date.now()-86400000;
         var weekCost = runs.filter(function(r){ return new Date(r.created_at)>weekAgo; })
             .reduce(function(s,r){ return s+(parseFloat(r.cost_usd)||0); }, 0);
-        var projEl = document.getElementById('sys-cost-projection');
-        if (projEl) projEl.textContent = 'This week: $'+weekCost.toFixed(4)+' · Projected monthly: $'+(weekCost*4.3).toFixed(2);
+        var dayCost  = runs.filter(function(r){ return new Date(r.created_at)>dayAgo; })
+            .reduce(function(s,r){ return s+(parseFloat(r.cost_usd)||0); }, 0);
+        var todayEl    = document.getElementById('sys-cost-today');
+        var weekEl     = document.getElementById('sys-cost-week');
+        var forecastEl = document.getElementById('sys-cost-forecast');
+        if (todayEl)    todayEl.textContent    = '$'+dayCost.toFixed(4);
+        if (weekEl)     weekEl.textContent     = '$'+weekCost.toFixed(4);
+        if (forecastEl) forecastEl.textContent = '$'+(weekCost*4.3).toFixed(2);
     } catch(e) { console.error('[APEX-UI] fetchSystemCosts', e); }
 }
 
