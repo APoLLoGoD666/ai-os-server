@@ -7067,7 +7067,7 @@ body::after { display: none!important; }
   position: relative!important; overflow: visible!important;
   border-bottom: 1px solid rgba(255,255,255,0.05)!important;
   background: rgba(0,212,255,0.018)!important;
-  padding: 10px 14px!important; margin-bottom: 0!important;
+  padding: 10px 14px!important; margin-bottom: 12px!important;
 }
 .ds-panel-header::after { display: none!important; }
 
@@ -7406,7 +7406,7 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
   }
   .bottom-nav:hover { width: 200px!important; }
   .nav-label {
-    font-size: 13px!important;
+    font-size: 15px!important;
     opacity: 0!important;
     max-width: 0!important;
     overflow: hidden!important;
@@ -7417,6 +7417,10 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
   .nav-btn { flex: none!important; height: 52px!important; justify-content: center!important; padding: 0!important; }
   .bottom-nav:hover .nav-btn { justify-content: flex-start!important; padding: 0 16px!important; }
 }
+
+/* ── Panel overflow + approval body spacing ─────────────────────────── */
+.ds-panel { overflow: visible!important; }
+#opsApprovalsBody { padding-top: 4px!important; }
 
 /* ── Hide global input zone ─────────────────────────────────────────── */
 .input-zone { display: none!important; }
@@ -8053,7 +8057,7 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
                 </div>
 
                 <!-- Net worth hero -->
-                <div style="background:linear-gradient(135deg,rgba(0,212,255,0.07),rgba(124,111,255,0.04));border:1px solid rgba(0,212,255,0.12);border-radius:12px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
+                <div style="background:linear-gradient(135deg,#071a2b,#100e24);border:1px solid rgba(0,212,255,0.25);border-radius:12px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
                     <div>
                         <div class="t-label" style="margin-bottom:6px">Net worth</div>
                         <div id="fin-net-worth-val" style="font-size:32px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums">&#8212;</div>
@@ -12531,25 +12535,42 @@ async function refreshTaskQueuePanel() {
         const data = await fetchJson('/api/tasks');
         if (!data.ok) { el.innerHTML = '<div class="empty-note">Error loading tasks</div>'; return; }
         const frag = [];
+        (data.inProgress || []).forEach(t => {
+            frag.push(`<div class="task-item task-inprogress"><span class="task-item-title">⟳ ${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span></div>`);
+        });
         (data.pending || []).forEach(t => {
             frag.push(`<div class="task-item" data-taskid="${escapeHtml(t.id)}">
                 <span class="task-item-title">${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span>
                 <button class="subpanel-btn task-item-run" data-fn="runTaskById" data-args='["${escapeHtml(t.id)}"]'>▶ Run</button>
             </div>`);
         });
-        (data.inProgress || []).forEach(t => {
-            frag.push(`<div class="task-item task-inprogress"><span class="task-item-title">⟳ ${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span></div>`);
-        });
-        (data.completed || []).slice(-5).reverse().forEach(t => {
+        (data.completed || []).slice(-3).reverse().forEach(t => {
             frag.push(`<div class="task-item task-completed"><span class="task-item-title">✓ ${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span></div>`);
         });
         (data.failed || []).forEach(t => {
             frag.push(`<div class="task-item task-failed"><span class="task-item-title">✗ ${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span></div>`);
         });
-        el.innerHTML = frag.length ? frag.join('') : '<div class="empty-note">No tasks</div>';
+        if (!frag.length) { el.innerHTML = '<div class="empty-note">No tasks</div>'; }
+        else {
+            const LIMIT = 5;
+            const visible = frag.slice(0, LIMIT);
+            const hidden  = frag.slice(LIMIT);
+            let html = visible.join('');
+            if (hidden.length) {
+                html += `<div id="taskQueueExtra" style="display:none">${hidden.join('')}</div>`;
+                html += `<button class="ds-btn xs" style="margin-top:4px;width:100%" onclick="
+                    var x=document.getElementById('taskQueueExtra');
+                    var show=x.style.display==='none';
+                    x.style.display=show?'flex':'none';
+                    x.style.flexDirection='column';
+                    x.style.gap='6px';
+                    this.textContent=show?'Show less ▲':'Show ${hidden.length} more ▼';
+                ">Show ${hidden.length} more ▼</button>`;
+            }
+            el.innerHTML = html;
+        }
         // Update task stat card
         var pending = (data.pending || []).length + (data.inProgress || []).length;
-        var total   = pending + (data.completed || []).length + (data.failed || []).length;
         var tq = document.querySelector('#page-operation .ds-stat-card:nth-child(3) .ds-stat-value');
         if (tq) tq.textContent = pending;
     } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
