@@ -7346,6 +7346,29 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 /* Overview page animations */
 @keyframes ovr-flowY { 0%{transform:translateY(0);opacity:0} 14%{opacity:1} 86%{opacity:1} 100%{transform:translateY(40px);opacity:0} }
 @keyframes ovr-blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── Page header: larger title, stacked layout ──────────────────────── */
+.ds-page-title { font-size: 26px!important; letter-spacing: 0.18em!important; }
+.ds-page-header { align-items: flex-end!important; margin-bottom: 0!important; }
+.ds-page-header-left {
+  flex-direction: column!important;
+  align-items: flex-start!important;
+  gap: 5px!important;
+}
+
+/* ── Stat cards: coloured gradient wash + bolder value ──────────────── */
+.ds-stat-value { font-size: 28px!important; font-weight: 700!important; letter-spacing: -0.02em!important; }
+.ds-stat-label { font-size: 10px!important; letter-spacing: 0.12em!important; font-weight: 700!important; }
+.ds-stat-card.ac-cyan   { background: linear-gradient(135deg, rgba(0,212,255,0.09) 0%, #0d1424 52%)!important; border-left-color: #00d4ff!important; }
+.ds-stat-card.ac-green  { background: linear-gradient(135deg, rgba(0,229,160,0.09) 0%, #0d1424 52%)!important; border-left-color: #00e5a0!important; }
+.ds-stat-card.ac-purple { background: linear-gradient(135deg, rgba(124,111,255,0.09) 0%, #0d1424 52%)!important; border-left-color: #7c6fff!important; }
+.ds-stat-card.ac-amber  { background: linear-gradient(135deg, rgba(245,166,35,0.09) 0%, #0d1424 52%)!important; border-left-color: #f5a623!important; }
+.ds-stat-card.ac-red    { background: linear-gradient(135deg, rgba(255,77,106,0.09) 0%, #0d1424 52%)!important; border-left-color: #ff4d6a!important; }
+
+/* ── Panels: thicker accent top-border, crisper header label ────────── */
+.ds-panel { border-top: 2px solid rgba(0,212,255,0.28)!important; }
+.ds-panel-header .t-label,
+.ds-panel-header .ds-label { font-size: 11px!important; color: #c4d0e3!important; letter-spacing: 0.1em!important; }
 </style>
 </head>
 <body>
@@ -7564,6 +7587,13 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 
             <!-- ══ PAGE: SYSTEM ══ -->
             <div class="page" id="page-system">
+                <div class="ds-page-header">
+                    <div class="ds-page-header-left">
+                        <span class="ds-page-title">System</span>
+                        <span class="ds-page-subtitle">agents &middot; processes &middot; health &middot; control</span>
+                    </div>
+                    <button class="ds-btn cyan" data-fn="refreshSystemPage">&#8635; Refresh</button>
+                </div>
                 <div style="display:flex;flex-direction:column;gap:12px">
 
                     <!-- Domain Agent Chat Modal (functional, hidden) -->
