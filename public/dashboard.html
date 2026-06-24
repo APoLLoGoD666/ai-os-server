@@ -6925,7 +6925,7 @@ input::placeholder, textarea::placeholder, .ds-input::placeholder {
 
 /* ── Token override — deep blue Jarvis palette ───────────────────────── */
 :root {
-  --ax-bg:   #060c18!important;
+  --ax-bg:   #060f1e!important;
   --ax-s1:   #0d1424!important;
   --ax-s2:   #141d30!important;
   --ax-s3:   #1b273d!important;
@@ -6990,20 +6990,19 @@ input::placeholder, textarea::placeholder, .ds-input::placeholder {
 }
 
 /* ── Canvas ───────────────────────────────────────────────────────────── */
-html, body { background: #060c18!important; color: #eef2ff!important; }
+html, body { background: #060f1e!important; color: #eef2ff!important; }
 .app, #app { background: transparent!important; }
 .page-content, .content-area { background: transparent!important; }
 
-/* Animated matrix grid — single layer, clean and subtle */
+/* Thin white grid — fixed behind all content */
 body::before {
   content: ''!important; display: block!important;
   position: fixed!important; inset: 0!important;
   background-image:
-    linear-gradient(rgba(0,212,255,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,212,255,0.02) 1px, transparent 1px)!important;
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)!important;
   background-size: 40px 40px!important;
   pointer-events: none!important; z-index: 0!important;
-  animation: ax-grid 32s linear infinite!important;
 }
 body::after { display: none!important; }
 @keyframes ax-grid { to { background-position: 40px 40px; } }
