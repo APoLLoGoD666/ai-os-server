@@ -7133,20 +7133,9 @@ input::placeholder, textarea::placeholder, .ds-input::placeholder {
 
             <!-- ══ PAGE: SYSTEM ══ -->
             <div class="page" id="page-system">
-                <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+                <div style="display:flex;flex-direction:column;gap:12px">
 
-                    <!-- Section 0: AI Workforce -->
-                    <div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                            <span style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">AI Workforce</span>
-                            <span style="font-size:9px;color:var(--text-mute)">5 specialists</span>
-                        </div>
-                        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px" id="domainAgentGrid">
-                            <!-- populated by initDomainAgentGrid() -->
-                        </div>
-                    </div>
-
-                    <!-- Domain Agent Chat Modal -->
+                    <!-- Domain Agent Chat Modal (functional, hidden) -->
                     <div id="domainAgentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:400;align-items:center;justify-content:center">
                         <div style="width:520px;max-height:70vh;background:var(--surface);border:1px solid var(--border-cyan);border-radius:14px;display:flex;flex-direction:column;overflow:hidden">
                             <div style="padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
@@ -7164,138 +7153,159 @@ input::placeholder, textarea::placeholder, .ds-input::placeholder {
                         </div>
                     </div>
 
-                    <!-- Section 1: AI Agents -->
+                    <!-- 1. Executive Council -->
                     <div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                            <span style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">AI Agents</span>
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <span style="font-size:9px;color:var(--text-mute)">8 agents</span>
-                                <button class="ds-btn xs" data-fn="switchPage" data-args='["operation"]'>View Logs</button>
-                            </div>
+                        <div style="font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:8px">Executive Council</div>
+                        <div id="sys-exec-council" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+                            <!-- populated by buildExecutiveCouncil() -->
                         </div>
-                        <div id="sys-agent-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div>
                     </div>
 
-                    <!-- Section 2: Stack Pipeline Timeline -->
-                    <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden">
-                        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>
-                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">System Flow</span>
-                                <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(99,102,241,0.10);color:var(--accent)">Live</span>
+                    <!-- 2. Command Chain -->
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan pulse"></span>
+                                <span class="t-label">Command Chain</span>
                             </div>
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <span id="sys-stack-pktcount" style="font-size:10px;color:var(--text-mute)">— events</span>
-                                <button class="ds-btn xs" data-fn="initStackPipeline">&#8635;</button>
-                            </div>
+                            <span id="sys-cmd-chain-meta" style="font-size:10px;color:var(--text-mute)">Latest routing trace</span>
                         </div>
-                        <div id="sys-service-status" style="display:flex;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap"></div>
-                        <canvas id="sys-stack-canvas" style="width:100%;height:300px;display:block"></canvas>
+                        <div id="sys-command-chain" style="padding:10px 12px;display:flex;align-items:center;gap:0;overflow-x:auto;min-height:54px">
+                            <!-- populated by buildCommandChain() -->
+                        </div>
                     </div>
 
-                    <!-- Section 3: Roadmap Timeline + Cost Analysis -->
-                    <div style="display:grid;grid-template-columns:1fr 360px;gap:16px">
-                        <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);padding:16px">
-                            <div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:12px">Execution Timeline</div>
-                            <div id="sys-timeline" style="overflow-x:auto;padding-bottom:8px">
-                                <div style="min-width:960px;height:48px;background:rgba(255,255,255,0.02);border-radius:4px"></div>
+                    <!-- 3. Active Systems + Resource Monitor -->
+                    <div style="display:grid;grid-template-columns:1fr 290px;gap:10px;align-items:start">
+                        <div class="ds-panel">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot green"></span>
+                                    <span class="t-label">Active Systems</span>
+                                </div>
                             </div>
-                            <div id="sys-timeline-summary" style="font-size:11px;color:var(--text-mute);margin-top:8px">Loading&#8230;</div>
+                            <div id="sys-active-systems" style="padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                                <!-- populated by buildActiveSystems() -->
+                            </div>
                         </div>
-                        <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);padding:16px">
-                            <div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:10px">Cost Engine</div>
-                            <table style="width:100%;border-collapse:collapse">
-                                <thead>
-                                    <tr>
-                                        <th style="font-size:9px;color:var(--text-mute);text-align:left;padding-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Agent</th>
-                                        <th style="font-size:9px;color:var(--text-mute);text-align:right;padding-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Runs</th>
-                                        <th style="font-size:9px;color:var(--text-mute);text-align:right;padding-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Cost</th>
-                                        <th style="font-size:9px;color:var(--text-mute);text-align:right;padding-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">Avg</th>
-                                        <th style="font-size:9px;color:var(--text-mute);text-align:right;padding-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em">%</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="sys-cost-tbody">
-                                    <tr><td colspan="5" style="font-size:11px;color:var(--text-faint);padding:8px 0">Loading&#8230;</td></tr>
-                                </tbody>
-                            </table>
-                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
-                                <div style="text-align:center">
-                                    <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">Today</div>
-                                    <div id="sys-cost-today" style="font-size:13px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums">&#8212;</div>
+                        <div class="ds-panel">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot amber"></span>
+                                    <span class="t-label">Resource Monitor</span>
                                 </div>
-                                <div style="text-align:center">
-                                    <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">This Week</div>
-                                    <div id="sys-cost-week" style="font-size:13px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums">&#8212;</div>
-                                </div>
-                                <div style="text-align:center">
-                                    <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">Forecast/mo</div>
-                                    <div id="sys-cost-forecast" style="font-size:13px;font-weight:600;color:var(--text-mute);font-variant-numeric:tabular-nums">&#8212;</div>
+                            </div>
+                            <div style="padding:10px">
+                                <div id="sys-service-status" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
+                                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
+                                    <div style="text-align:center;padding:5px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:3px">
+                                        <div style="font-size:8px;color:var(--text-mute);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px">Today</div>
+                                        <div id="sys-cost-today" style="font-size:11px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums">—</div>
+                                    </div>
+                                    <div style="text-align:center;padding:5px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:3px">
+                                        <div style="font-size:8px;color:var(--text-mute);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px">Week</div>
+                                        <div id="sys-cost-week" style="font-size:11px;font-weight:600;color:var(--amber);font-variant-numeric:tabular-nums">—</div>
+                                    </div>
+                                    <div style="text-align:center;padding:5px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:3px">
+                                        <div style="font-size:8px;color:var(--text-mute);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px">Forecast</div>
+                                        <div id="sys-cost-forecast" style="font-size:11px;font-weight:600;color:var(--text-mute);font-variant-numeric:tabular-nums">—</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Section 4: Obsidian Vault Sync -->
-                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);padding:16px">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <div id="vault-status-dot" style="width:6px;height:6px;border-radius:50%;background:var(--text-mute)"></div>
-                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Obsidian Vault</span>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <span id="vault-status-badge" class="ds-badge" style="font-size:9px">Loading&hellip;</span>
-                                <button class="ds-btn xs" data-fn="fetchVaultStatus">&#8635;</button>
-                                <button class="ds-btn xs amber" data-fn="triggerCs249rIngest">Ingest CS249R</button>
-                            </div>
-                        </div>
-                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
-                            <div style="background:var(--surface-2);border-radius:8px;padding:10px;border:1px solid var(--border)">
-                                <div style="font-size:9px;color:var(--text-mute);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.1em">Notes</div>
-                                <div id="vault-note-count" style="font-size:20px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums">&#8212;</div>
-                            </div>
-                            <div style="background:var(--surface-2);border-radius:8px;padding:10px;border:1px solid var(--border)">
-                                <div style="font-size:9px;color:var(--text-mute);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.1em">Last Write</div>
-                                <div id="vault-last-write" style="font-size:11px;font-weight:600;color:var(--text)">&#8212;</div>
-                            </div>
-                            <div style="background:var(--surface-2);border-radius:8px;padding:10px;border:1px solid var(--border)">
-                                <div style="font-size:9px;color:var(--text-mute);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.1em">Buffer</div>
-                                <div id="vault-buffer" style="font-size:11px;font-weight:600;color:var(--text)">&#8212;</div>
-                            </div>
-                        </div>
-                        <div style="font-size:9px;color:var(--text-mute);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.1em">Latest lesson</div>
-                        <div id="vault-recent-lesson" style="font-size:11px;color:var(--text-mid);line-height:1.55;background:var(--surface-2);border-radius:6px;padding:8px 10px;min-height:32px">&#8212;</div>
+                    <!-- 4. AI Workforce (Domain Specialists) -->
+                    <div>
+                        <div style="font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:8px">AI Workforce</div>
+                        <div id="domainAgentGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>
                     </div>
 
-                    <!-- Section 5: Suggestions (collapsible) -->
-                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border)">
-                        <div data-fn="_apexToggleSysSuggestions" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <div style="width:6px;height:6px;border-radius:50%;background:var(--amber)"></div>
-                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">System Suggestions</span>
-                            </div>
-                            <span id="sys-sugg-chev" style="color:var(--text-mute);font-size:12px">&#9656;</span>
+                    <!-- 5. Agent Pipeline -->
+                    <div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                            <span style="font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Agent Pipeline</span>
+                            <button class="ds-btn xs" data-fn="switchPage" data-args='["operation"]'>View Logs</button>
                         </div>
-                        <div id="sys-suggestions" style="display:none;padding:12px 16px;border-top:1px solid var(--border)">
-                            <div class="skel skel-row skel-wide"></div>
+                        <div id="sys-agent-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+                    </div>
+
+                    <!-- 6. System Activity -->
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan pulse"></span>
+                                <span class="t-label">System Activity</span>
+                            </div>
+                            <span style="font-size:10px;color:var(--text-mute)">Newest first</span>
+                        </div>
+                        <div id="sys-activity-feed" style="max-height:240px;overflow-y:auto;padding:4px 0">
+                            <!-- populated by buildSysActivity() -->
                         </div>
                     </div>
 
-                    <!-- Section 6: Latency Trace Viewer -->
-                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden">
-                        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <div style="width:6px;height:6px;border-radius:50%;background:var(--cyan)"></div>
-                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Latency Traces</span>
+                    <!-- 7. Memory Architecture + Automation Center -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start">
+                        <div class="ds-panel">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span id="vault-status-dot" style="width:5px;height:5px;border-radius:50%;background:var(--text-mute);display:inline-block;flex-shrink:0"></span>
+                                    <span class="t-label">Memory Architecture</span>
+                                    <span id="vault-status-badge" class="ds-badge" style="font-size:9px">Loading&hellip;</span>
+                                </div>
+                                <div style="display:flex;gap:5px">
+                                    <button class="ds-btn xs" data-fn="fetchVaultStatus">&#8635;</button>
+                                    <button class="ds-btn xs amber" data-fn="triggerCs249rIngest">Ingest</button>
+                                </div>
+                            </div>
+                            <div style="padding:10px">
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+                                    <div style="padding:7px 8px;background:rgba(99,102,241,0.04);border:1px solid rgba(99,102,241,0.12);border-radius:3px">
+                                        <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">Vault Notes</div>
+                                        <div style="display:flex;align-items:baseline;gap:5px">
+                                            <span id="vault-note-count" style="font-size:18px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums">&#8212;</span>
+                                            <span style="font-size:9px;color:var(--text-mute)">files</span>
+                                        </div>
+                                        <div id="vault-last-write" style="font-size:9px;color:var(--text-mute);margin-top:2px">&#8212;</div>
+                                    </div>
+                                    <div style="padding:7px 8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:3px">
+                                        <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">Buffer</div>
+                                        <div id="vault-buffer" style="font-size:12px;font-weight:600;color:var(--text)">&#8212;</div>
+                                    </div>
+                                </div>
+                                <div id="sys-memory-arch" style="display:flex;flex-direction:column;gap:3px"></div>
+                                <div style="font-size:9px;color:var(--text-mute);margin:7px 0 3px;text-transform:uppercase;letter-spacing:0.08em">Latest lesson</div>
+                                <div id="vault-recent-lesson" style="font-size:10px;color:var(--text-mid);line-height:1.5;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:3px;padding:6px 8px;min-height:28px">&#8212;</div>
+                            </div>
+                        </div>
+                        <div class="ds-panel">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot amber"></span>
+                                    <span class="t-label">Automation Center</span>
+                                </div>
+                            </div>
+                            <div id="sys-automation-center" style="max-height:260px;overflow-y:auto;padding:4px 0">
+                                <!-- populated by buildAutomationCenter() -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 8. Latency Traces (technical) -->
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Latency Traces</span>
                                 <span id="trace-live-dot" style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(0,212,255,0.10);color:var(--cyan)">Live</span>
                             </div>
-                            <div style="display:flex;align-items:center;gap:8px">
+                            <div class="ds-panel-header-right">
                                 <span id="trace-session-count" style="font-size:10px;color:var(--text-mute)">— sessions</span>
                                 <span id="trace-flow-score" style="font-size:10px;color:var(--text-mute)">flow: —</span>
                                 <span id="trace-abandon-rate" style="font-size:10px;color:var(--text-mute)">abandon: —</span>
                                 <button class="ds-btn xs" data-fn="loadLatencyTraces">&#8635;</button>
                             </div>
                         </div>
-                        <!-- Stats bar -->
                         <div id="trace-stats-bar" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)">
                             <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
                                 <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Ack Latency</div>
@@ -7313,9 +7323,22 @@ input::placeholder, textarea::placeholder, .ds-input::placeholder {
                                 <div id="trace-stat-completion-p95" style="font-size:9px;color:var(--text-mute);margin-top:2px">p95: &#8212;</div>
                             </div>
                         </div>
-                        <!-- Session traces -->
                         <div id="trace-session-list" style="max-height:420px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px">
                             <div style="font-size:11px;color:var(--text-mute);padding:20px 0;text-align:center">No sessions yet — traces appear after voice interactions</div>
+                        </div>
+                    </div>
+
+                    <!-- System Suggestions (collapsible) -->
+                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+                        <div data-fn="_apexToggleSysSuggestions" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div style="width:6px;height:6px;border-radius:50%;background:var(--amber)"></div>
+                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">System Suggestions</span>
+                            </div>
+                            <span id="sys-sugg-chev" style="color:var(--text-mute);font-size:12px">&#9656;</span>
+                        </div>
+                        <div id="sys-suggestions" style="display:none;padding:12px 16px;border-top:1px solid var(--border)">
+                            <div class="skel skel-row skel-wide"></div>
                         </div>
                     </div>
 
@@ -8136,87 +8159,17 @@ input::placeholder, textarea::placeholder, .ds-input::placeholder {
                 <!-- SECTION 2 + 3+4: System Map | Activity Feed + Priorities -->
                 <div style="display:grid;grid-template-columns:1fr 300px;gap:14px">
 
-                    <!-- System Map -->
+                    <!-- Governance Map -->
                     <div class="ds-panel">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot purple"></span>
-                                <span class="t-label">Apex System Map</span>
+                                <span class="t-label">Governance Map</span>
                             </div>
-                            <span style="font-size:10px;color:var(--text-mute)">Tap any node to open</span>
+                            <span style="font-size:10px;color:var(--text-mute)">Authority hierarchy</span>
                         </div>
-                        <div style="display:flex;flex-direction:column;align-items:center;gap:0;padding:8px 0 4px">
-
-                            <!-- You -->
-                            <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;width:100%;max-width:420px;opacity:0.55">
-                                <span style="width:6px;height:6px;border-radius:50%;background:var(--text);flex-shrink:0"></span>
-                                <span style="font-size:12px;font-weight:600;color:var(--text);flex:1">You</span>
-                                <span style="font-size:10px;color:var(--text-mute)">Principal</span>
-                            </div>
-                            <div style="width:1px;height:14px;background:var(--border);margin:0 auto"></div>
-
-                            <!-- Command -->
-                            <div data-fn="switchPage" data-args='["command"]' style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;width:100%;max-width:420px;cursor:pointer;transition:border-color 0.15s" onmouseenter="this.style.borderColor='var(--border-strong)'" onmouseleave="this.style.borderColor='var(--border)'">
-                                <span style="width:6px;height:6px;border-radius:50%;background:var(--cyan);flex-shrink:0"></span>
-                                <span style="font-size:12px;font-weight:600;color:var(--text);flex:1">Command</span>
-                                <span style="font-size:10px;color:var(--text-mute)">Voice &amp; text interface</span>
-                                <span style="font-size:10px;color:var(--cyan)" id="ovrMapCmd">Ready</span>
-                            </div>
-                            <div style="width:1px;height:14px;background:var(--border);margin:0 auto"></div>
-
-                            <!-- AI Workforce -->
-                            <div data-fn="switchPage" data-args='["system"]' style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:6px;width:100%;max-width:420px;cursor:pointer;transition:border-color 0.15s" onmouseenter="this.style.borderColor='rgba(99,102,241,0.4)'" onmouseleave="this.style.borderColor='rgba(99,102,241,0.2)'">
-                                <span style="width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0"></span>
-                                <span style="font-size:12px;font-weight:600;color:var(--text);flex:1">AI Workforce</span>
-                                <span style="font-size:10px;color:var(--text-mute)">Agents &amp; automation</span>
-                                <span style="font-size:10px;color:var(--purple)" id="ovrMapAgents">&#8212; active</span>
-                            </div>
-                            <div style="width:1px;height:14px;background:var(--border);margin:0 auto"></div>
-
-                            <!-- Operations + Network row -->
-                            <div style="display:flex;gap:10px;width:100%;max-width:420px">
-                                <div data-fn="switchPage" data-args='["operation"]' style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color 0.15s;min-width:0" onmouseenter="this.style.borderColor='var(--border-strong)'" onmouseleave="this.style.borderColor='var(--border)'">
-                                    <span style="width:6px;height:6px;border-radius:50%;background:var(--amber);flex-shrink:0"></span>
-                                    <span style="font-size:11px;font-weight:600;color:var(--text);flex:1;white-space:nowrap">Operations</span>
-                                    <span style="font-size:10px;color:var(--amber)" id="ovrMapOps">&#8212;</span>
-                                </div>
-                                <div data-fn="switchPage" data-args='["communication"]' style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color 0.15s;min-width:0" onmouseenter="this.style.borderColor='var(--border-strong)'" onmouseleave="this.style.borderColor='var(--border)'">
-                                    <span style="width:6px;height:6px;border-radius:50%;background:var(--cyan);flex-shrink:0"></span>
-                                    <span style="font-size:11px;font-weight:600;color:var(--text);flex:1;white-space:nowrap">Network</span>
-                                    <span style="font-size:10px;color:var(--cyan)" id="ovrMapComms">&#8212;</span>
-                                </div>
-                            </div>
-                            <div style="width:1px;height:14px;background:var(--border);margin:0 auto"></div>
-
-                            <!-- Business + Finance row -->
-                            <div style="display:flex;gap:10px;width:100%;max-width:420px">
-                                <div data-fn="switchPage" data-args='["business"]' style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color 0.15s;min-width:0" onmouseenter="this.style.borderColor='var(--border-strong)'" onmouseleave="this.style.borderColor='var(--border)'">
-                                    <span style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0"></span>
-                                    <span style="font-size:11px;font-weight:600;color:var(--text);flex:1;white-space:nowrap">Business</span>
-                                    <span style="font-size:10px;color:var(--green)" id="ovrMapBiz">&#8212;</span>
-                                </div>
-                                <div data-fn="switchPage" data-args='["finance"]' style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color 0.15s;min-width:0" onmouseenter="this.style.borderColor='var(--border-strong)'" onmouseleave="this.style.borderColor='var(--border)'">
-                                    <span style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0"></span>
-                                    <span style="font-size:11px;font-weight:600;color:var(--text);flex:1;white-space:nowrap">Finance</span>
-                                    <span style="font-size:10px;color:var(--green)" id="ovrMapFin">&#8212;</span>
-                                </div>
-                            </div>
-                            <div style="width:1px;height:14px;background:var(--border);margin:0 auto"></div>
-
-                            <!-- Knowledge row -->
-                            <div style="display:flex;gap:10px;width:100%;max-width:420px">
-                                <div data-fn="switchPage" data-args='["university"]' style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color 0.15s;min-width:0" onmouseenter="this.style.borderColor='var(--border-strong)'" onmouseleave="this.style.borderColor='var(--border)'">
-                                    <span style="width:6px;height:6px;border-radius:50%;background:var(--amber);flex-shrink:0"></span>
-                                    <span style="font-size:11px;font-weight:600;color:var(--text);flex:1;white-space:nowrap">University</span>
-                                    <span style="font-size:10px;color:var(--amber)" id="ovrMapUni">&#8212;</span>
-                                </div>
-                                <div data-fn="switchPage" data-args='["research"]' style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color 0.15s;min-width:0" onmouseenter="this.style.borderColor='var(--border-strong)'" onmouseleave="this.style.borderColor='var(--border)'">
-                                    <span style="width:6px;height:6px;border-radius:50%;background:var(--cyan);flex-shrink:0"></span>
-                                    <span style="font-size:11px;font-weight:600;color:var(--text);flex:1;white-space:nowrap">Research</span>
-                                    <span style="font-size:10px;color:var(--text-mute)" id="ovrMapResearch">Intelligence</span>
-                                </div>
-                            </div>
-
+                        <div style="padding:8px 12px 10px" id="gov-map-root">
+                            <div style="font-size:10px;color:var(--text-mute);padding:16px 0;text-align:center">Loading&#8230;</div>
                         </div>
                     </div>
 
@@ -13474,6 +13427,126 @@ refreshCommandPage();
 _addInterval(refreshCommandPage, 30000);
 
 // ── Overview page ─────────────────────────────────────────────────────────────
+// ── Governance Map ──────────────────────────────────────────────────────────
+var _govActiveExec = null;
+function initGovernanceMap(d) {
+    var root = document.getElementById('gov-map-root');
+    if (!root) return;
+    var runs = d.runs || [];
+    var today = new Date().toDateString();
+    var todayRuns = runs.filter(function(r){ return new Date(r.created_at).toDateString() === today; });
+    var execs = [
+        {id:'ceo', lbl:'CEO', name:'Chief Executive', col:'#a78bfa',
+         stat: d.successRate >= 70 ? 'Healthy' : d.successRate >= 40 ? 'Degraded' : d.successRate >= 0 ? 'Critical' : 'Standby',
+         statC: d.successRate >= 70 ? '#34d399' : d.successRate >= 40 ? '#fbbf24' : d.successRate >= 0 ? '#f87171' : 'rgba(255,255,255,0.3)',
+         kv:[{k:'Success',v:d.successRate>=0?d.successRate+'%':'—'},{k:'Runs',v:runs.length},{k:'Today',v:todayRuns.length}],
+         depts:[{n:'Strategy',a:'Architect, Reflector'},{n:'Research',a:'Researcher'},{n:'Business',a:'Business Agent'}]},
+        {id:'coo', lbl:'COO', name:'Chief Operations', col:'#38bdf8',
+         stat: d.runningAgents > 0 ? d.runningAgents+' active' : d.pendingApprovals > 0 ? d.pendingApprovals+' pending' : 'Clear',
+         statC: d.runningAgents > 0 ? '#38bdf8' : d.pendingApprovals > 0 ? '#fbbf24' : '#34d399',
+         kv:[{k:'Running',v:d.runningAgents||0},{k:'Pending',v:d.pendingApprovals||0},{k:'Today',v:todayRuns.length}],
+         depts:[{n:'Operations',a:'Developer, Committer'},{n:'Automation',a:'Validator, Tester'},{n:'Tasks',a:'Orchestrator'}]},
+        {id:'cfo', lbl:'CFO', name:'Chief Finance', col:'#34d399',
+         stat: d.credit > 0 ? '$'+parseFloat(d.credit).toFixed(2) : 'Not connected',
+         statC: d.credit > 10 ? '#34d399' : d.credit > 3 ? '#fbbf24' : 'rgba(255,255,255,0.3)',
+         kv:[{k:'Credit',v:d.credit>0?'$'+parseFloat(d.credit).toFixed(2):'—'},{k:'Budget',v:d.finData&&d.finData.budget?'$'+d.finData.budget:'—'},{k:'Forecast',v:'—'}],
+         depts:[{n:'Finance',a:'Finance Agent'},{n:'Budget',a:'—'},{n:'Analytics',a:'—'}]},
+        {id:'cio', lbl:'CIO', name:'Chief Intelligence', col:'#6366f1',
+         stat:'Operational', statC:'#34d399',
+         kv:[{k:'Memory',v:'Active'},{k:'APIs',v:'Connected'},{k:'Models',v:'2 active'}],
+         depts:[{n:'System',a:'System Agent'},{n:'Memory',a:'—'},{n:'Intelligence',a:'Reviewer'}]},
+        {id:'cno', lbl:'CNO', name:'Chief Network', col:'#fbbf24',
+         stat: d.urgentEmails > 0 ? d.urgentEmails+' urgent' : d.unreadEmails > 0 ? d.unreadEmails+' new' : 'Clear',
+         statC: d.urgentEmails > 0 ? '#f87171' : d.unreadEmails > 0 ? '#fbbf24' : 'rgba(255,255,255,0.3)',
+         kv:[{k:'Unread',v:d.unreadEmails||0},{k:'Urgent',v:d.urgentEmails||0},{k:'Events',v:(d.calEvts&&d.calEvts.length)?d.calEvts.length:'—'}],
+         depts:[{n:'Communications',a:'Email Agent'},{n:'Network',a:'—'},{n:'Calendar',a:'—'}]}
+    ];
+    var roleC = {architect:'#7c6fff',developer:'#00d4ff',reviewer:'#f5a623',validator:'#00e5a0',tester:'#00bcd4',committer:'#4fc3f7',reflector:'#f48fb1','master-orchestrator':'#ffffff'};
+    var roleN = {architect:'Architect',developer:'Developer',reviewer:'Reviewer',validator:'Validator',tester:'Tester',committer:'Committer',reflector:'Reflector','master-orchestrator':'Orchestrator'};
+    function sep(){ return '<div style="width:1px;height:7px;background:rgba(255,255,255,0.07);margin:3px auto"></div>'; }
+    function execNode(ex) {
+        var act = _govActiveExec === ex.id;
+        return '<div id="gov-ex-'+ex.id+'" onclick="govToggleExec(\''+ex.id+'\')" style="display:flex;align-items:center;gap:7px;padding:5px 9px;background:'+(act?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.02)')+';border:1px solid '+(act?ex.col:'rgba(255,255,255,0.07)')+';border-radius:3px;cursor:pointer;transition:border-color 0.12s">'
+            +'<span style="width:5px;height:5px;border-radius:50%;background:'+ex.col+';flex-shrink:0"></span>'
+            +'<span style="font-size:11px;font-weight:700;color:var(--ax-tx0);flex-shrink:0">'+ex.lbl+'</span>'
+            +'<span style="font-size:9px;color:var(--ax-tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+ex.name+'</span>'
+            +'<span style="font-size:9px;font-weight:600;color:'+ex.statC+';white-space:nowrap;flex-shrink:0">'+ex.stat+'</span>'
+            +'</div>';
+    }
+    function deptExpand(ex) {
+        var h = '<div style="margin:3px 0 4px;padding:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px">';
+        h += '<div style="display:flex;gap:4px;margin-bottom:7px">';
+        ex.kv.forEach(function(kv){
+            h += '<div style="flex:1;text-align:center;padding:5px 6px;background:rgba(255,255,255,0.03);border-radius:2px">'
+               + '<div style="font-size:10px;font-weight:600;color:var(--ax-tx0)">'+kv.v+'</div>'
+               + '<div style="font-size:8px;color:var(--ax-tx2);margin-top:1px">'+kv.k+'</div></div>';
+        });
+        h += '</div><div style="font-size:8px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--ax-tx2);margin-bottom:4px">Departments</div>';
+        ex.depts.forEach(function(dep){
+            h += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">'
+               + '<span style="font-size:10px;color:var(--ax-tx0);min-width:90px">'+dep.n+'</span>'
+               + '<span style="font-size:9px;color:var(--ax-tx2)">'+dep.a+'</span></div>';
+        });
+        return h + '</div>';
+    }
+    var html = '';
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 9px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.13);border-radius:3px">'
+          + '<span style="width:6px;height:6px;border-radius:50%;background:#fff;flex-shrink:0"></span>'
+          + '<span style="font-size:11px;font-weight:700;color:var(--ax-tx0);flex:1">You</span>'
+          + '<span style="font-size:9px;color:var(--ax-tx2)">Principal Authority</span>'
+          + '<span style="font-size:9px;font-weight:600;color:#34d399;margin-left:8px">Online</span></div>';
+    html += sep();
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 9px;background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.18);border-radius:3px">'
+          + '<span style="width:6px;height:6px;border-radius:50%;background:#6366f1;flex-shrink:0"></span>'
+          + '<span style="font-size:11px;font-weight:700;color:var(--ax-tx0);flex:1">Governance</span>'
+          + '<span style="font-size:9px;color:var(--ax-tx2)">Policy &amp; Safety Layer</span>'
+          + '<span style="font-size:9px;font-weight:600;color:#34d399;margin-left:8px">Active</span></div>';
+    html += sep();
+    html += '<div style="font-size:8px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--ax-tx2);margin-bottom:4px">Executive Council</div>';
+    html += '<div id="gov-exec-stack" style="display:flex;flex-direction:column;gap:3px">';
+    execs.forEach(function(ex){ html += execNode(ex); });
+    html += '</div><div id="gov-dept-expand"></div>';
+    html += sep();
+    html += '<div style="font-size:8px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--ax-tx2);margin-bottom:4px">AI Workforce</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">';
+    Object.keys(roleN).forEach(function(role){
+        var rr = runs.filter(function(r){ return (r.role||r.agent_role)===role; });
+        var isRun = rr[0] && rr[0].status==='running';
+        var col = roleC[role]||'rgba(255,255,255,0.3)';
+        html += '<div style="display:flex;align-items:center;gap:5px;padding:4px 7px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:2px">'
+              + '<span style="width:4px;height:4px;border-radius:50%;background:'+col+';flex-shrink:0"></span>'
+              + '<span style="font-size:10px;color:var(--ax-tx0);flex:1">'+roleN[role]+'</span>'
+              + '<span style="font-size:9px;color:'+(isRun?'#38bdf8':'var(--ax-tx2)')+'">'+rr.length+'</span></div>';
+    });
+    html += '</div>' + sep();
+    html += '<div style="font-size:8px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--ax-tx2);margin-bottom:4px">Outputs</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">';
+    [{l:'Decisions',v:d.pendingApprovals>0?d.pendingApprovals+' pending':'Flowing',c:d.pendingApprovals>0?'#fbbf24':'#34d399'},
+     {l:'Messages', v:d.unreadEmails>0?d.unreadEmails+' new':'Clear',c:d.unreadEmails>0?'#38bdf8':'var(--ax-tx2)'},
+     {l:'Finance',  v:d.credit>0?'$'+parseFloat(d.credit).toFixed(2):'—',c:d.credit>10?'#34d399':d.credit>0?'#fbbf24':'var(--ax-tx2)'}
+    ].forEach(function(o){
+        html += '<div style="text-align:center;padding:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:2px">'
+              + '<div style="font-size:10px;font-weight:600;color:'+o.c+'">'+o.v+'</div>'
+              + '<div style="font-size:8px;color:var(--ax-tx2);margin-top:2px">'+o.l+'</div></div>';
+    });
+    html += '</div>';
+    root.innerHTML = html;
+    window.govToggleExec = function(id) {
+        var deptArea = document.getElementById('gov-dept-expand');
+        var execStack = document.getElementById('gov-exec-stack');
+        if (_govActiveExec === id) {
+            _govActiveExec = null;
+            if (deptArea) deptArea.innerHTML = '';
+        } else {
+            _govActiveExec = id;
+            var ex = null;
+            for (var i=0; i<execs.length; i++) { if (execs[i].id===id) { ex=execs[i]; break; } }
+            if (deptArea && ex) deptArea.innerHTML = deptExpand(ex);
+        }
+        if (execStack) execStack.innerHTML = execs.map(function(e){ return execNode(e); }).join('');
+    };
+}
+
 async function initOverviewPage() {
     // Greeting
     var greetEl = document.getElementById('ovr-greeting');
@@ -13531,26 +13604,13 @@ async function initOverviewPage() {
     var taskEl = document.getElementById('ovrStatTasks');
     if (taskEl) { taskEl.textContent = todayRuns.length||'0'; }
 
-    // ── SECTION 2: System Map nodes ───────────────────────────────────────────
-    function _mapNode(id, text, color) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        el.textContent = text;
-        if (color) el.style.color = color;
-    }
-    _mapNode('ovrMapCmd',      'Ready',                                         'var(--green)');
-    _mapNode('ovrMapAgents',   runningAgents>0 ? runningAgents+' running'
-                                               : runs.length>0 ? runs.length+' logged' : '0 active',
-                               runningAgents>0 ? 'var(--cyan)' : 'var(--text-mute)');
-    _mapNode('ovrMapOps',      pendingApprovals>0 ? pendingApprovals+' pending' : 'Clear',
-                               pendingApprovals>0 ? 'var(--amber)' : 'var(--green)');
-    _mapNode('ovrMapComms',    unreadEmails>0 ? unreadEmails+' unread' : 'Clear',
-                               unreadEmails>0 ? 'var(--cyan)' : 'var(--text-mute)');
-    _mapNode('ovrMapBiz',      '—',   'var(--text-mute)');
-    _mapNode('ovrMapFin',      credit>0 ? '$'+credit.toFixed(2)+' credit' : 'Not connected',
-                               credit>10 ? 'var(--green)' : credit>3 ? 'var(--amber)' : 'var(--text-mute)');
-    _mapNode('ovrMapUni',      '—',          'var(--text-mute)');
-    _mapNode('ovrMapResearch', 'Intelligence','var(--text-mute)');
+    // ── SECTION 2: Governance Map ─────────────────────────────────────────────
+    initGovernanceMap({
+        runs: runs, emails: emails, calEvts: calEvts, finData: finData,
+        pendingApprovals: pendingApprovals, runningAgents: runningAgents,
+        unreadEmails: unreadEmails, urgentEmails: urgentEmails,
+        credit: credit, successRate: successRate
+    });
 
     // ── SECTION 3: Activity Feed ───────────────────────────────────────────────
     var feedEl = document.getElementById('ovrFeedBody');
@@ -13768,6 +13828,12 @@ async function fetchSystemAgents() {
                      + '</div>';
             }).join('');
         }
+
+        // New system page sections
+        buildExecutiveCouncil(runs);
+        buildCommandChain(runs);
+        buildActiveSystems(runs);
+        buildSysActivity(runs, []);
 
         // Pipeline flow
         var flowEl = document.getElementById('sys-pipeline-flow');
@@ -14492,13 +14558,188 @@ async function loadLatencyTraces() {
 }
 window.loadLatencyTraces = loadLatencyTraces;
 
+// ── System page new sections ────────────────────────────────────────────────
+function buildExecutiveCouncil(runs) {
+    var el = document.getElementById('sys-exec-council');
+    if (!el) return;
+    var today = new Date().toDateString();
+    var todayRuns = runs.filter(function(r){ return new Date(r.created_at).toDateString()===today; });
+    var running = runs.filter(function(r){ return r.status==='running'; }).length;
+    var successCnt = runs.filter(function(r){ return r.success||r.status==='committed'; }).length;
+    var rate = runs.length ? Math.round(successCnt/runs.length*100) : -1;
+    var cols = {ceo:'#a78bfa',coo:'#38bdf8',cfo:'#34d399',cio:'#6366f1',cno:'#fbbf24'};
+    var defs = [
+        {id:'ceo',lbl:'CEO',name:'Chief Executive',
+         stat:rate>=70?'Healthy':rate>=40?'Degraded':rate>=0?'Critical':'Standby',
+         statC:rate>=70?'#34d399':rate>=40?'#fbbf24':rate>=0?'#f87171':'rgba(255,255,255,0.3)',
+         kv:[{k:'Success',v:rate>=0?rate+'%':'—'},{k:'Today',v:todayRuns.length},{k:'Total',v:runs.length}]},
+        {id:'coo',lbl:'COO',name:'Chief Operations',
+         stat:running>0?running+' running':'Clear',
+         statC:running>0?'#38bdf8':'#34d399',
+         kv:[{k:'Running',v:running},{k:'Today',v:todayRuns.length},{k:'Agents',v:8}]},
+        {id:'cfo',lbl:'CFO',name:'Chief Finance',
+         stat:'Monitor',statC:'rgba(255,255,255,0.4)',
+         kv:[{k:'Budget',v:'—'},{k:'Spend',v:'—'},{k:'Credit',v:'—'}]},
+        {id:'cio',lbl:'CIO',name:'Chief Intelligence',
+         stat:'Active',statC:'#34d399',
+         kv:[{k:'Memory',v:'Vault'},{k:'APIs',v:'Live'},{k:'Models',v:'2'}]},
+        {id:'cno',lbl:'CNO',name:'Chief Network',
+         stat:'Monitor',statC:'rgba(255,255,255,0.4)',
+         kv:[{k:'Email',v:'—'},{k:'Cal',v:'—'},{k:'Alerts',v:'0'}]}
+    ];
+    el.innerHTML = defs.map(function(d){
+        var col = cols[d.id];
+        return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-top:2px solid '+col+';border-radius:4px;padding:10px 12px">'
+            +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+            +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+d.lbl+'</span>'
+            +'<span style="font-size:8px;font-weight:600;color:'+d.statC+'">'+d.stat+'</span>'
+            +'</div>'
+            +'<div style="font-size:9px;color:var(--ax-tx2);margin-bottom:8px">'+d.name+'</div>'
+            +'<div style="display:flex;flex-direction:column;gap:3px">'
+            +d.kv.map(function(kv){
+                return '<div style="display:flex;align-items:center;justify-content:space-between">'
+                    +'<span style="font-size:9px;color:var(--ax-tx2)">'+kv.k+'</span>'
+                    +'<span style="font-size:9px;font-weight:600;color:var(--ax-tx0);font-variant-numeric:tabular-nums">'+kv.v+'</span>'
+                    +'</div>';
+            }).join('')
+            +'</div></div>';
+    }).join('');
+}
+
+function buildCommandChain(runs) {
+    var el = document.getElementById('sys-command-chain');
+    if (!el) return;
+    var last = runs[0];
+    var stages = [
+        {n:'User Input',     col:'rgba(255,255,255,0.7)', val: last ? 'Received' : '—'},
+        {n:'Apex Core',      col:'#6366f1',               val: 'Active'},
+        {n:'Exec Assignment',col:'#a78bfa',               val: last ? 'CEO' : '—'},
+        {n:'Department',     col:'#38bdf8',               val: last ? 'Operations' : '—'},
+        {n:'Agent',          col:'#00d4ff',               val: last ? (last.role||'—') : '—'},
+        {n:'Execution',      col:'#00e5a0',               val: last ? (last.status||'—') : '—'},
+        {n:'Output',         col:'#34d399',               val: last ? (last.success||last.status==='committed'?'Done':'Processing') : '—'}
+    ];
+    var metaEl = document.getElementById('sys-cmd-chain-meta');
+    if (metaEl && last) {
+        var obj = (last.objective||last.task_id||'').slice(0,50);
+        metaEl.textContent = obj || 'Latest routing trace';
+    }
+    el.innerHTML = stages.map(function(s, i){
+        var isLast = i === stages.length - 1;
+        var node = '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0">'
+            +'<div style="font-size:9px;font-weight:600;color:'+s.col+';white-space:nowrap">'+s.n+'</div>'
+            +'<div style="font-size:10px;color:var(--ax-tx1);white-space:nowrap;font-variant-numeric:tabular-nums">'+s.val+'</div>'
+            +'</div>';
+        var arrow = isLast ? '' : '<div style="font-size:10px;color:rgba(255,255,255,0.2);padding:0 6px;flex-shrink:0">&#8594;</div>';
+        return node + arrow;
+    }).join('');
+}
+
+function buildActiveSystems(runs) {
+    var el = document.getElementById('sys-active-systems');
+    if (!el) return;
+    var recentRuns = runs.filter(function(r){ return (Date.now()-new Date(r.created_at))<3600000; });
+    var systems = [
+        {n:'Memory System',      ok:runs.length>0,         s:runs.length>0?'Connected':'No data'},
+        {n:'Research Engine',    ok:recentRuns.length>0,   s:recentRuns.length>0?'Active':'Idle'},
+        {n:'AI Pipeline',        ok:true,                  s:'8 agents ready'},
+        {n:'Knowledge Engine',   ok:runs.length>0,         s:runs.length>0?'Indexed':'Empty'},
+        {n:'Automation Engine',  ok:true,                  s:'Watching'},
+        {n:'Communication Engine',ok:true,                 s:'Polling 5m'}
+    ];
+    el.innerHTML = systems.map(function(s){
+        var dotC = s.ok ? '#34d399' : 'rgba(255,255,255,0.2)';
+        var bg   = s.ok ? 'rgba(52,211,153,0.05)' : 'rgba(255,255,255,0.02)';
+        var bdr  = s.ok ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.06)';
+        return '<div style="padding:7px 8px;background:'+bg+';border:1px solid '+bdr+';border-radius:3px">'
+            +'<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'
+            +'<span style="width:4px;height:4px;border-radius:50%;background:'+dotC+';flex-shrink:0"></span>'
+            +'<span style="font-size:9px;font-weight:600;color:var(--ax-tx0)">'+s.n+'</span>'
+            +'</div>'
+            +'<div style="font-size:9px;color:var(--ax-tx2)">'+s.s+'</div>'
+            +'</div>';
+    }).join('');
+}
+
+function buildSysActivity(runs, emails) {
+    var el = document.getElementById('sys-activity-feed');
+    if (!el) return;
+    var roleMap = {architect:'Architect',developer:'Developer',reviewer:'Reviewer',validator:'Validator',
+        tester:'Tester',committer:'Committer',reflector:'Reflector','master-orchestrator':'Orchestrator'};
+    var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    var ts = function(iso){
+        var d=new Date(iso); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+    };
+    var items = runs.slice(0,20);
+    if (!items.length) {
+        el.innerHTML = '<div style="font-size:10px;color:var(--text-mute);padding:14px 12px;text-align:center">No recent activity</div>';
+        return;
+    }
+    el.innerHTML = items.map(function(r){
+        var role   = roleMap[r.role||r.agent_role||''] || (r.role||'Agent');
+        var status = r.success||r.status==='committed' ? 'completed' : r.status==='running' ? 'running' : 'processed';
+        var obj    = esc((r.objective||r.task_id||'Task').slice(0,60));
+        var dot    = r.success||r.status==='committed' ? '#34d399' : r.status==='running' ? '#38bdf8' : r.status==='failed' ? '#f87171' : 'rgba(255,255,255,0.3)';
+        return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 12px;border-bottom:1px solid rgba(255,255,255,0.04)">'
+            +'<span style="font-size:9px;color:var(--ax-tx2);font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0">'+ts(r.created_at)+'</span>'
+            +'<span style="font-size:10px;color:'+dot+';flex-shrink:0">●</span>'
+            +'<span style="font-size:10px;color:var(--ax-tx0);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+role+' '+status+' · '+obj+'</span>'
+            +'</div>';
+    }).join('');
+}
+
+function buildMemoryArch() {
+    var el = document.getElementById('sys-memory-arch');
+    if (!el) return;
+    var types = [
+        {n:'Working Memory',   col:'#6366f1', d:'Active conversation context'},
+        {n:'Knowledge Base',   col:'#a78bfa', d:'Obsidian vault notes'},
+        {n:'Research Archive', col:'#38bdf8', d:'Processed research data'},
+        {n:'Personal Records', col:'#34d399', d:'User profile and preferences'}
+    ];
+    el.innerHTML = types.map(function(t){
+        return '<div style="display:flex;align-items:center;gap:7px;padding:5px 7px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:2px">'
+            +'<span style="width:5px;height:5px;border-radius:50%;background:'+t.col+';flex-shrink:0"></span>'
+            +'<span style="font-size:10px;color:var(--ax-tx0);flex:1">'+t.n+'</span>'
+            +'<span style="font-size:9px;color:var(--ax-tx2)">'+t.d+'</span>'
+            +'</div>';
+    }).join('');
+}
+
+async function buildAutomationCenter() {
+    var el = document.getElementById('sys-automation-center');
+    if (!el) return;
+    try {
+        var r = await fetch('/api/master/schedules', {headers:{'x-app-key':window._appKey||''}});
+        var d = await r.json();
+        var schedules = (d.ok && (d.schedules||d.tasks||d.data)) || [];
+        if (!schedules.length) {
+            el.innerHTML = '<div style="font-size:10px;color:var(--ax-tx2);padding:14px 12px;text-align:center">No automations scheduled</div>';
+            return;
+        }
+        el.innerHTML = schedules.map(function(s){
+            var active = s.enabled !== false;
+            var dotC = active ? '#34d399' : 'rgba(255,255,255,0.2)';
+            var last = s.last_run||s.lastRun||s.created_at;
+            var lastStr = last ? (function(){ var m=Math.floor((Date.now()-new Date(last))/60000); return m<60?m+'m ago':Math.floor(m/60)+'h ago'; })() : '—';
+            return '<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.04)">'
+                +'<span style="width:4px;height:4px;border-radius:50%;background:'+dotC+';flex-shrink:0"></span>'
+                +'<span style="font-size:10px;color:var(--ax-tx0);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(s.name||s.task||'Automation')+'</span>'
+                +'<span style="font-size:9px;color:var(--ax-tx2);white-space:nowrap">'+lastStr+'</span>'
+                +'</div>';
+        }).join('');
+    } catch(e) {
+        el.innerHTML = '<div style="font-size:10px;color:var(--ax-tx2);padding:14px 12px;text-align:center">Unavailable</div>';
+    }
+}
+
 async function initSystemPage() {
     initDomainAgentGrid();
     buildAgentGrid();
     fetchSystemAgents();
-    initStackPipeline();
     fetchSystemCosts();
-    fetchSystemTimeline();
+    buildMemoryArch();
+    buildAutomationCenter();
     buildSystemSuggestions();
     fetchVaultStatus();
 
