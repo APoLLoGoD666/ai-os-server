@@ -1188,7 +1188,7 @@ app.post("/save-layout", requireAppAccess, (req, res) => {
     }
 });
 
-app.post("/chat", requireAppAccess, async (req, res) => {
+app.post("/chat", requireAppAccess, ...kernelChain, async (req, res) => {
     try {
         const rawMessage = req.body?.message;
 
