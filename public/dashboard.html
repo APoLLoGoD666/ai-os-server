@@ -9135,7 +9135,7 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
                     <!-- L6 Pipeline Throughput -->
                     <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
                         <div style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0">L6 &middot; PIPELINE THROUGHPUT</span><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span></div>
-                        <div style="width:780px;background:#0d1424;border-radius:14px;padding:18px 0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.18)">
+                        <div style="width:100%;background:#0d1424;border-radius:14px;padding:18px 0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.18)">
                             <div style="display:flex;align-items:center;justify-content:space-between;padding:0 24px 4px"><span style="font:600 12px/1 'Space Grotesk',sans-serif;letter-spacing:1.5px;color:#aab6c2">EXECUTION OUTPUTS</span><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:1px">LIVE</span></div>
                             <div style="display:flex;margin-top:14px">
                                 <div style="flex:1;min-width:0;padding:2px 24px"><div style="width:26px;height:2px;background:#8893a0;border-radius:2px;margin-bottom:14px"></div><div style="font:600 15px/1 'Space Grotesk',sans-serif;color:#eaeff5">Queue</div><div id="pipeOutQueue" style="font:600 13px/1 'JetBrains Mono',monospace;color:#aab6c2;margin-top:10px">—</div><div style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0;margin-top:9px">tasks awaiting dispatch</div></div>
@@ -9340,6 +9340,38 @@ if(pipe){
 })();</script>
 
                 <script>(function(){var e=document.getElementById('ovr-clock');function t(){if(e)e.textContent=new Date().toLocaleTimeString('en-GB',{hour12:false});}t();setInterval(t,1000);})();</script>
+
+                <script>(function(){
+var p=document.getElementById('ovr-pipeline');
+if(!p)return;
+// Specialist cards (L4): hide divider + role grid (children 2+)
+p.querySelectorAll('div[style*="overflow:hidden"][style*="padding:13px 14px 15px 17px"]').forEach(function(c){
+  [].slice.call(c.children,2).forEach(function(e){e.style.display='none';});
+});
+// Executive tier strips: hide entirely
+p.querySelectorAll('div[style*="background:#0d1424;border-radius:10px;padding:10px 12px"]').forEach(function(e){
+  e.style.display='none';
+});
+// L3 Domain cards: hide subtitle (child 2)
+p.querySelectorAll('div[style*="background:#0a1628"][style*="border-top:2px solid"]').forEach(function(c){
+  if(c.children[2])c.children[2].style.display='none';
+});
+// L1 Identity Core cards: hide content rows (child 1)
+p.querySelectorAll('div[style*="padding:17px 20px"][style*="border-radius:14px"]').forEach(function(c){
+  if(c.children[1])c.children[1].style.display='none';
+});
+// L2 Sentinel pills: hide description + status (children 2+)
+p.querySelectorAll('div[style*="background:#0a1628"][style*="padding:13px 11px"]').forEach(function(c){
+  [].slice.call(c.children,2).forEach(function(e){e.style.display='none';});
+});
+// L0 Sovereign: hide right status section
+var l0=p.querySelector('div[style*="width:450px"]');
+if(l0){var r=l0.querySelector('div[style*="text-align:right"]');if(r)r.style.display='none';}
+// L6 + L7 columns: hide value/description (children 2+)
+p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
+  [].slice.call(c.children,2).forEach(function(e){e.style.display='none';});
+});
+})();</script>
 
             </div>
 
