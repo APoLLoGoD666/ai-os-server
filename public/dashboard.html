@@ -7373,12 +7373,38 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 /* ── Topbar: page title lives here now ──────────────────────────────── */
 .ds-page-header-left { display: none!important; }
 .ds-page-header { justify-content: flex-end!important; }
+/* ── Pipeline container: transparent so items sit on page grid ───────── */
+#ovr-pipeline { background: none!important; }
+/* ── Topbar: more vertical breathing room ───────────────────────────── */
+.topbar { height: 60px!important; min-height: 60px!important; }
+:root { --topbar-h: 60px!important; }
 
-/* ── Sidebar nav: auto-collapse + larger labels ─────────────────────── */
+/* ── Sidebar nav: fixed overlay — content always full-width ─────────── */
 @media (min-width: 900px) {
-  .app { grid-template-columns: 56px 1fr!important; transition: grid-template-columns 0.22s ease!important; }
-  .app:has(.bottom-nav:hover) { grid-template-columns: 200px 1fr!important; }
-  .bottom-nav { overflow: hidden!important; }
+  .app {
+    grid-template-columns: 1fr!important;
+    grid-template-rows: var(--topbar-h, 48px) 1fr!important;
+    grid-template-areas: "topbar" "content"!important;
+  }
+  .page-and-input { grid-area: content!important; }
+  .bottom-nav {
+    position: fixed!important;
+    top: var(--topbar-h, 48px)!important;
+    left: 0!important;
+    bottom: 0!important;
+    width: 56px!important;
+    height: auto!important;
+    z-index: 500!important;
+    overflow: hidden!important;
+    transition: width 0.22s ease!important;
+    background: rgba(6,15,30,0.97)!important;
+    border-right: 1px solid rgba(0,212,255,0.1)!important;
+    border-top: none!important;
+    flex-direction: column!important;
+    align-items: stretch!important;
+    padding-bottom: 0!important;
+  }
+  .bottom-nav:hover { width: 200px!important; }
   .nav-label {
     font-size: 13px!important;
     opacity: 0!important;
@@ -7387,9 +7413,9 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
     white-space: nowrap!important;
     transition: opacity 0.18s ease, max-width 0.2s ease!important;
   }
-  .app:has(.bottom-nav:hover) .nav-label { opacity: 1!important; max-width: 160px!important; }
-  .nav-btn { justify-content: center!important; padding: 0!important; }
-  .app:has(.bottom-nav:hover) .nav-btn { justify-content: flex-start!important; padding: 0 16px!important; }
+  .bottom-nav:hover .nav-label { opacity: 1!important; max-width: 160px!important; }
+  .nav-btn { flex: none!important; height: 52px!important; justify-content: center!important; padding: 0!important; }
+  .bottom-nav:hover .nav-btn { justify-content: flex-start!important; padding: 0 16px!important; }
 }
 
 /* ── Hide global input zone ─────────────────────────────────────────── */
@@ -15270,7 +15296,7 @@ function buildExecutiveCouncil(runs) {
     ];
     el.innerHTML = defs.map(function(d){
         var col = cols[d.id];
-        return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-top:2px solid '+col+';border-radius:4px;padding:10px 12px">'
+        return '<div style="background:#0d1424;border:1px solid rgba(255,255,255,0.07);border-top:2px solid '+col+';border-radius:4px;padding:10px 12px">'
             +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
             +'<span style="font-size:13px;font-weight:700;color:'+col+'">'+d.lbl+'</span>'
             +'<span style="font-size:8px;font-weight:600;color:'+d.statC+'">'+d.stat+'</span>'
