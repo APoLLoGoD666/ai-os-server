@@ -7246,6 +7246,103 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 ::-webkit-scrollbar-track { background: transparent!important; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1)!important; border-radius: 4px!important; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.3)!important; }
+
+/* ── Spacing normalisation ─────────────────────────────────────────────── */
+
+/* Panel header: the panel already has 16px padding all round.
+   Remove the extra 14px we were adding — it was double-padding.
+   Restore 12px gap below the header so content breathes. */
+.ds-panel-header {
+  padding: 0 0 12px 0!important;
+  margin-bottom: 12px!important;
+  border-bottom: 1px solid rgba(255,255,255,0.05)!important;
+  background: none!important;
+}
+
+/* Panel itself: 16px padding all round (DS default, reinforced) */
+.ds-panel { padding: 16px!important; }
+/* Stat card: 14px all round */
+.ds-stat-card { padding: 14px!important; }
+/* Stat card gap from label → value → sub */
+.ds-stat-card { gap: 5px!important; }
+.ds-stat-label { margin-bottom: 2px!important; }
+.ds-stat-sub   { margin-top: 2px!important; }
+
+/* Stat card grids — consistent 12px gap */
+.ds-grid-stats,
+.ds-grid-stats-6 { gap: 12px!important; }
+
+/* Two/three-col panel grids */
+.ds-grid-2,
+.ds-grid-3,
+.ds-grid-agents { gap: 14px!important; }
+
+/* Pill row inside panels */
+.ds-pill-row { gap: 6px!important; margin-bottom: 14px!important; }
+
+/* List gaps: email items, activity feed rows, notification items */
+#emailList            { gap: 8px!important; }
+#ovrFeedBody          { gap: 6px!important; }
+#ovrPriorityList      { gap: 8px!important; }
+.notif-scroll         { gap: 7px!important; }
+.memory-scroll        { gap: 7px!important; }
+.queue-scroll         { gap: 7px!important; }
+
+/* Email item internal padding */
+.email-item { padding: 10px 12px!important; }
+.email-meta { margin-bottom: 4px!important; }
+.email-actions { margin-top: 8px!important; }
+
+/* Memory + notif items */
+.memory-item { padding: 10px 12px!important; }
+.notif-item  { padding: 9px 12px!important; }
+
+/* Task items */
+.task-item { padding: 9px 12px!important; margin-bottom: 0!important; }
+.task-add-row { margin-bottom: 10px!important; }
+
+/* Routine items */
+.routine-item { padding: 9px 0!important; }
+
+/* Inline content grids inside panel bodies — cap gap at 12px */
+[style*="gap:10px"],
+[style*="gap: 10px"] { gap: 12px!important; }
+
+/* Agent grid cards */
+.ds-agent { padding: 12px!important; gap: 7px!important; }
+
+/* Agent library cards */
+.agent-card { padding: 12px!important; }
+.agent-card-top { gap: 8px!important; }
+.agent-card-desc { margin-top: 6px!important; }
+
+/* Sub-panel */
+.subpanel { padding: 12px!important; }
+.subpanel-header { margin-bottom: 10px!important; }
+
+/* Page header spacing */
+.ds-page-header { padding-bottom: 6px!important; margin-bottom: 4px!important; }
+.ds-page-header-left { gap: 4px!important; }
+
+/* Table cell padding */
+.ds-table th,
+.ds-table td { padding: 10px 12px!important; }
+
+/* Section header (the left-border divs) — ensure they sit well */
+[style*="letter-spacing:0.12em;text-transform:uppercase"],
+[style*="letter-spacing:0.10em;text-transform:uppercase"],
+[style*="letter-spacing:0.14em;text-transform:uppercase"] {
+  margin-top: 4px!important;
+}
+
+/* Bottom nav sidebar items */
+.nav-btn { padding: 0 18px!important; gap: 12px!important; }
+@media (min-width:900px) {
+  .nav-btn { height: 44px!important; }
+}
+
+/* Input zone tighter */
+.input-zone { padding: 0 16px!important; gap: 8px!important; }
 </style>
 </head>
 <body>
