@@ -7369,6 +7369,31 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 .ds-panel { border-top: 2px solid rgba(0,212,255,0.28)!important; }
 .ds-panel-header .t-label,
 .ds-panel-header .ds-label { font-size: 11px!important; color: #c4d0e3!important; letter-spacing: 0.1em!important; }
+
+/* ── Topbar: page title lives here now ──────────────────────────────── */
+.ds-page-header-left { display: none!important; }
+.ds-page-header { justify-content: flex-end!important; }
+
+/* ── Sidebar nav: auto-collapse + larger labels ─────────────────────── */
+@media (min-width: 900px) {
+  .app { grid-template-columns: 56px 1fr!important; }
+  .app:has(.bottom-nav:hover) { grid-template-columns: 200px 1fr!important; }
+  .bottom-nav { overflow: hidden!important; }
+  .nav-label {
+    font-size: 13px!important;
+    opacity: 0!important;
+    max-width: 0!important;
+    overflow: hidden!important;
+    white-space: nowrap!important;
+    transition: opacity 0.18s ease, max-width 0.18s ease!important;
+  }
+  .app:has(.bottom-nav:hover) .nav-label { opacity: 1!important; max-width: 160px!important; }
+  .nav-btn { justify-content: center!important; }
+  .app:has(.bottom-nav:hover) .nav-btn { justify-content: flex-start!important; padding: 0 16px!important; }
+}
+
+/* ── Hide global input zone ─────────────────────────────────────────── */
+.input-zone { display: none!important; }
 </style>
 </head>
 <body>
@@ -7410,6 +7435,10 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
     <!-- ══ TOP BAR ══ -->
     <header class="topbar">
         <button id="mobileNavToggle" aria-label="Open page navigation" style="display:none;position:absolute;left:14px;top:50%;transform:translateY(-50%);background:none;border:1.5px solid rgba(0,212,255,0.4);border-radius:4px;color:#00d4ff;font-size:16px;line-height:1;padding:4px 8px;cursor:pointer;-webkit-tap-highlight-color:transparent;z-index:10;">&#9776;</button>
+        <div id="topbar-pg-info" style="display:flex;flex-direction:column;gap:3px;padding-left:12px;">
+            <div id="topbar-pg-title" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.18em;color:#eef2ff;font-weight:600;line-height:1.1;">COMMAND</div>
+            <div id="topbar-pg-sub" style="font-size:9px;letter-spacing:0.09em;color:rgba(170,190,220,0.6);font-family:'JetBrains Mono',monospace;">ai · interface · control</div>
+        </div>
         <div class="topbar-center" style="display:flex;flex-direction:row;align-items:center;gap:10px">
             <div class="clock-time" id="clockTime">--:--:--</div>
             <div class="clock-date" id="clockDate">--</div>
@@ -7481,7 +7510,7 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
         <div class="page-wrap" id="pageWrap">
 
             <!-- ══ PAGE: COMMAND ══ -->
-            <div class="page" id="page-command">
+            <div class="page active" id="page-command">
 
             <div class="cmd-split">
 
@@ -8573,7 +8602,7 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
             </div>
 
             <!-- ══ PAGE: OVERVIEW ══ -->
-            <div class="page active" id="page-overview">
+            <div class="page" id="page-overview">
 
                 <!-- Page Header -->
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
@@ -9394,13 +9423,13 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 
     <!-- ══ SIDEBAR NAV ══ -->
     <nav class="bottom-nav">
-        <button class="nav-btn active" id="nav-overview">
-            <span class="nav-icon">◈</span>
-            <span class="nav-label">Overview</span>
-        </button>
-        <button class="nav-btn" id="nav-command">
+        <button class="nav-btn active" id="nav-command">
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Command</span>
+        </button>
+        <button class="nav-btn" id="nav-overview">
+            <span class="nav-icon">◈</span>
+            <span class="nav-label">Overview</span>
         </button>
         <button class="nav-btn" id="nav-operation">
             <span class="nav-icon">⊞</span>
@@ -9451,9 +9480,22 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 
 <script>
 (function() {
-    var pages = ['overview', 'command', 'operation', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research'];
-    var activePage = 'overview';
+    var pages = ['command', 'overview', 'operation', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research'];
+    var activePage = 'command';
 
+    var pageMeta = {
+        command:       { title:'COMMAND',     sub:'ai · interface · control' },
+        overview:      { title:'OVERVIEW',    sub:'governance · pipeline · status' },
+        operation:     { title:'OPERATION',   sub:'tasks · agents · schedules' },
+        system:        { title:'SYSTEM',      sub:'agents · processes · health' },
+        finance:       { title:'FINANCE',     sub:'budgets · investing · planning' },
+        communication: { title:'NETWORK',     sub:'comms · messages · contacts' },
+        business:      { title:'BUSINESS',    sub:'ideas · shopify · projects' },
+        health:        { title:'LIFE',        sub:'health · habits · wellbeing' },
+        university:    { title:'UNIVERSITY',  sub:'coursework · revision · notes' },
+        occult:        { title:'OCCULT',      sub:'research · esoteric · archive' },
+        research:      { title:'RESEARCH',    sub:'intelligence · sources · data' }
+    };
     window.switchPage = function(name) {
         document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
         document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -9462,6 +9504,11 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
         if (page) page.classList.add('active');
         if (btn)  btn.classList.add('active');
         activePage = name;
+        var meta = pageMeta[name] || { title: name.toUpperCase(), sub: '' };
+        var pgTitle = document.getElementById('topbar-pg-title');
+        var pgSub   = document.getElementById('topbar-pg-sub');
+        if (pgTitle) pgTitle.textContent = meta.title;
+        if (pgSub)   pgSub.textContent   = meta.sub;
     };
 
     pages.forEach(function(name) {
