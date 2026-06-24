@@ -7359,11 +7359,11 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 /* ── Stat cards: coloured gradient wash + bolder value ──────────────── */
 .ds-stat-value { font-size: 28px!important; font-weight: 700!important; letter-spacing: -0.02em!important; }
 .ds-stat-label { font-size: 10px!important; letter-spacing: 0.12em!important; font-weight: 700!important; }
-.ds-stat-card.ac-cyan   { background: linear-gradient(135deg, rgba(0,212,255,0.09) 0%, #0d1424 52%)!important; border-left-color: #00d4ff!important; }
-.ds-stat-card.ac-green  { background: linear-gradient(135deg, rgba(0,229,160,0.09) 0%, #0d1424 52%)!important; border-left-color: #00e5a0!important; }
-.ds-stat-card.ac-purple { background: linear-gradient(135deg, rgba(124,111,255,0.09) 0%, #0d1424 52%)!important; border-left-color: #7c6fff!important; }
-.ds-stat-card.ac-amber  { background: linear-gradient(135deg, rgba(245,166,35,0.09) 0%, #0d1424 52%)!important; border-left-color: #f5a623!important; }
-.ds-stat-card.ac-red    { background: linear-gradient(135deg, rgba(255,77,106,0.09) 0%, #0d1424 52%)!important; border-left-color: #ff4d6a!important; }
+.ds-stat-card.ac-cyan   { background: linear-gradient(135deg, #071a2b 0%, #0d1424 60%)!important; border-left-color: #00d4ff!important; }
+.ds-stat-card.ac-green  { background: linear-gradient(135deg, #071d18 0%, #0d1424 60%)!important; border-left-color: #00e5a0!important; }
+.ds-stat-card.ac-purple { background: linear-gradient(135deg, #100e24 0%, #0d1424 60%)!important; border-left-color: #7c6fff!important; }
+.ds-stat-card.ac-amber  { background: linear-gradient(135deg, #1b1408 0%, #0d1424 60%)!important; border-left-color: #f5a623!important; }
+.ds-stat-card.ac-red    { background: linear-gradient(135deg, #1c0910 0%, #0d1424 60%)!important; border-left-color: #ff4d6a!important; }
 
 /* ── Panels: thicker accent top-border, crisper header label ────────── */
 .ds-panel { border-top: 2px solid rgba(0,212,255,0.28)!important; }
@@ -7376,7 +7376,7 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 
 /* ── Sidebar nav: auto-collapse + larger labels ─────────────────────── */
 @media (min-width: 900px) {
-  .app { grid-template-columns: 56px 1fr!important; }
+  .app { grid-template-columns: 56px 1fr!important; transition: grid-template-columns 0.22s ease!important; }
   .app:has(.bottom-nav:hover) { grid-template-columns: 200px 1fr!important; }
   .bottom-nav { overflow: hidden!important; }
   .nav-label {
@@ -7385,10 +7385,10 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
     max-width: 0!important;
     overflow: hidden!important;
     white-space: nowrap!important;
-    transition: opacity 0.18s ease, max-width 0.18s ease!important;
+    transition: opacity 0.18s ease, max-width 0.2s ease!important;
   }
   .app:has(.bottom-nav:hover) .nav-label { opacity: 1!important; max-width: 160px!important; }
-  .nav-btn { justify-content: center!important; }
+  .nav-btn { justify-content: center!important; padding: 0!important; }
   .app:has(.bottom-nav:hover) .nav-btn { justify-content: flex-start!important; padding: 0 16px!important; }
 }
 
@@ -7435,9 +7435,9 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
     <!-- ══ TOP BAR ══ -->
     <header class="topbar">
         <button id="mobileNavToggle" aria-label="Open page navigation" style="display:none;position:absolute;left:14px;top:50%;transform:translateY(-50%);background:none;border:1.5px solid rgba(0,212,255,0.4);border-radius:4px;color:#00d4ff;font-size:16px;line-height:1;padding:4px 8px;cursor:pointer;-webkit-tap-highlight-color:transparent;z-index:10;">&#9776;</button>
-        <div id="topbar-pg-info" style="display:flex;flex-direction:column;gap:3px;padding-left:12px;">
-            <div id="topbar-pg-title" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.18em;color:#eef2ff;font-weight:600;line-height:1.1;">COMMAND</div>
-            <div id="topbar-pg-sub" style="font-size:9px;letter-spacing:0.09em;color:rgba(170,190,220,0.6);font-family:'JetBrains Mono',monospace;">ai · interface · control</div>
+        <div id="topbar-pg-info" style="display:flex;flex-direction:column;gap:4px;padding:10px 0 0 16px;">
+            <div id="topbar-pg-title" style="font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.16em;color:#eef2ff;font-weight:600;line-height:1.1;">Command</div>
+            <div id="topbar-pg-sub" style="font-size:9px;letter-spacing:0.09em;color:rgba(170,190,220,0.6);font-family:'JetBrains Mono',monospace;">AI · Interface · Control</div>
         </div>
         <div class="topbar-center" style="display:flex;flex-direction:row;align-items:center;gap:10px">
             <div class="clock-time" id="clockTime">--:--:--</div>
@@ -9484,17 +9484,17 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
     var activePage = 'command';
 
     var pageMeta = {
-        command:       { title:'COMMAND',     sub:'ai · interface · control' },
-        overview:      { title:'OVERVIEW',    sub:'governance · pipeline · status' },
-        operation:     { title:'OPERATION',   sub:'tasks · agents · schedules' },
-        system:        { title:'SYSTEM',      sub:'agents · processes · health' },
-        finance:       { title:'FINANCE',     sub:'budgets · investing · planning' },
-        communication: { title:'NETWORK',     sub:'comms · messages · contacts' },
-        business:      { title:'BUSINESS',    sub:'ideas · shopify · projects' },
-        health:        { title:'LIFE',        sub:'health · habits · wellbeing' },
-        university:    { title:'UNIVERSITY',  sub:'coursework · revision · notes' },
-        occult:        { title:'OCCULT',      sub:'research · esoteric · archive' },
-        research:      { title:'RESEARCH',    sub:'intelligence · sources · data' }
+        command:       { title:'Command',     sub:'AI · Interface · Control' },
+        overview:      { title:'Overview',    sub:'Governance · Pipeline · Status' },
+        operation:     { title:'Operation',   sub:'Tasks · Agents · Schedules' },
+        system:        { title:'System',      sub:'Agents · Processes · Health' },
+        finance:       { title:'Finance',     sub:'Budgets · Investing · Planning' },
+        communication: { title:'Network',     sub:'Comms · Messages · Contacts' },
+        business:      { title:'Business',    sub:'Ideas · Shopify · Projects' },
+        health:        { title:'Life',        sub:'Health · Habits · Wellbeing' },
+        university:    { title:'University',  sub:'Coursework · Revision · Notes' },
+        occult:        { title:'Occult',      sub:'Research · Esoteric · Archive' },
+        research:      { title:'Research',    sub:'Intelligence · Sources · Data' }
     };
     window.switchPage = function(name) {
         document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
