@@ -121,7 +121,7 @@ Deno.serve(async (req: Request) => {
         score:          overallScore,
         by_category:    categoryScores,
         scenario_count: scenarios.length,
-        suite_version:  suiteVersion,
+        suite_version:  ACTIVE_SUITE,
         passed,
         failed,
         evaluated_at:   new Date().toISOString(),

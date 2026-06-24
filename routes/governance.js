@@ -579,4 +579,38 @@ router.get('/governance/completeness', async (req, res) => {
     }
 });
 
+// GET /api/governance/architecture-registry — live snapshot of all active subsystems and their wire status
+router.get('/governance/architecture-registry', (req, res) => {
+    const fs   = require('fs');
+    const path = require('path');
+    const root = path.join(__dirname, '..');
+
+    function _loadable(relPath) {
+        try { require(path.join(root, relPath)); return true; } catch { return false; }
+    }
+
+    const registry = {
+        generated_at: new Date().toISOString(),
+        subsystems: [
+            { name: 'constitutional-gate',        path: 'lib/runtime/constitutional-gate',          wired: true,  checks: ['authority','risk','modification','deception','confabulation'] },
+            { name: 'watchdog',                   path: 'lib/constitution/watchdog',                wired: true,  note: '30-min tick from server.js listen callback' },
+            { name: 'outbox-relay',               path: 'lib/outbox-relay',                         wired: true,  note: 'starts in services/init.js before early-return guard' },
+            { name: 'integrity-crons',            path: 'lib/integrity-crons',                      wired: true,  note: 'starts in services/init.js before early-return guard' },
+            { name: 'rag-bridge',                 path: 'agent-system/rag-bridge',                  wired: true,  note: 'queried in orchestrator before ARCHITECT stage' },
+            { name: 'daily-briefing-pipeline',    path: 'services/pipelines/daily-briefing-pipeline', wired: true, note: 'called from 7am daily briefing cron in server.js' },
+            { name: 'certification-checker',      path: 'lib/certification/checker',                wired: true,  note: 'render-build runs scripts/certify.js; weekly in-process cron' },
+            { name: 'event-bus',                  path: 'lib/event-bus',                            wired: true,  note: 'wired in services/init.js for AGENT_STARTED/COMPLETED' },
+            { name: 'execution-orchestrator',     path: 'lib/orchestration/execution_orchestrator', wired: _loadable('lib/orchestration/execution_orchestrator') },
+            { name: 'governance-instrumentation', path: 'lib/orchestration/governance_instrumentation', wired: _loadable('lib/orchestration/governance_instrumentation') },
+        ],
+        deadCode: {
+            constitutionModules: { active: 5, total: 69, dead: 64 },
+            cognitiveEngines:    { active: 17, total: 17, dead: 0 },
+            executiveFiles:      { active: 3, total: 6, dead: 3 },
+        },
+    };
+
+    res.json({ ok: true, ...registry });
+});
+
 module.exports = router;

@@ -33,6 +33,21 @@ function init(app, sbAdmin) {
     console.log(`[Services] Notion: ${hasNotion ? '✅' : '⚠️  NOTION_API_KEY not set'}`);
     console.log(`[Services] Slack:  ${hasSlack  ? '✅' : '⚠️  SLACK_BOT_TOKEN not set'}`);
 
+    // Phase 0b: start outbox relay and integrity crons regardless of Notion/Slack tokens
+    try {
+        require('../lib/outbox-relay').start();
+        console.log('[Services] Outbox relay started');
+    } catch (e) {
+        console.warn('[Services] outbox relay start failed (non-fatal):', e.message);
+    }
+
+    try {
+        require('../lib/integrity-crons').start();
+        console.log('[Services] Integrity crons registered');
+    } catch (e) {
+        console.warn('[Services] integrity crons failed (non-fatal):', e.message);
+    }
+
     if (!hasNotion && !hasSlack) {
         console.log('[Services] No integration tokens — Notion+Slack disabled. Add NOTION_API_KEY and SLACK_BOT_TOKEN to Render env vars.');
         return;
@@ -142,22 +157,6 @@ function init(app, sbAdmin) {
         } catch (e) {
             console.warn('[Services] health check setup failed:', e.message);
         }
-    }
-
-    // Phase 0b: start outbox relay (5-second tick, outbox → events)
-    try {
-        require('../lib/outbox-relay').start();
-        console.log('[Services] Outbox relay started');
-    } catch (e) {
-        console.warn('[Services] outbox relay start failed (non-fatal):', e.message);
-    }
-
-    // Phase 0b: start integrity crons (backup 24h, reconciliation 7d)
-    try {
-        require('../lib/integrity-crons').start();
-        console.log('[Services] Integrity crons registered');
-    } catch (e) {
-        console.warn('[Services] integrity crons failed (non-fatal):', e.message);
     }
 
     console.log('[Services] Integration layer initialized');

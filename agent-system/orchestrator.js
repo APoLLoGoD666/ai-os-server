@@ -1054,6 +1054,14 @@ async function runAgentTeam(spec, taskId) {
                  complexity: 'unknown', models: {} };
     }
 
+    // Alignment score telemetry — non-blocking, logged before pipeline starts
+    setImmediate(async () => {
+        try {
+            const _align = await require('../lib/founder').score(spec.objective, { subjectType: 'pipeline_task' });
+            console.log(`[Alignment] Score: ${_align.score}/100 — values: ${(_align.triggered_values || []).slice(0, 3).join(', ') || 'none matched'}`);
+        } catch {}
+    });
+
     const ctx = {
         costUsd:          0,
         worktreeRoot:     ROOT,

@@ -234,6 +234,15 @@ function _postResponseHook(ctx) {
     };
 }
 
+// Extract drift state from watchdog's last assessment (lazy, fail-open, no cost on first request)
+function _watchdogGateOpts() {
+    try {
+        const wa = require('../lib/constitution/watchdog').getLastAssessment();
+        if (!wa || wa.tickFailed) return {};
+        return { driftResult: { driftItems: wa.driftIndicators?.items || [] } };
+    } catch { return {}; }
+}
+
 // Main middleware — global try/catch ensures next() is always called
 function civilizationKernel(req, res, next) {
     try {
@@ -251,7 +260,7 @@ function civilizationKernel(req, res, next) {
         // PHASE 3: Constitutional gate (synchronous, fail-open per gate module)
         let gateResult;
         try {
-            gateResult = gate.evaluate(ctx);
+            gateResult = gate.evaluate(ctx, _watchdogGateOpts());
         } catch (_) {
             gateResult = { verdict: gate.VERDICT.RESTRICT, risks: ['GATE_ERROR'], riskScore: 0, auditTrail: [], failedOpen: true };
         }

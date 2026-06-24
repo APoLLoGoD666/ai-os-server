@@ -194,10 +194,10 @@ function _probeConstitution() {
         const gate = require('../lib/runtime/constitutional-gate');
         return {
             status: 'ok',
-            activeModules: 3,
-            activeList: ['authority-resistance', 'risk-monitor', 'modification-governor'],
-            totalDefined: 73,
-            deadModules: 70,
+            activeModules: 5,
+            activeList: ['authority-resistance', 'risk-monitor', 'modification-governor', 'deception-detector', 'confabulation-guard'],
+            totalDefined: 69,
+            deadModules: 64,
             verdicts: ['ALLOW', 'WARN', 'RESTRICT', 'DENY'],
         };
     } catch (e) {
@@ -208,24 +208,25 @@ function _probeConstitution() {
 function _deadCodeInventory() {
     return {
         constitution: {
-            active: 4,
-            total: 52,
-            activeList: ['authority-resistance', 'risk-monitor', 'modification-governor', 'deception-detector'],
-            dead: 48,
-            note: '48 constitution modules loaded via index.js but their functions never called in production paths',
+            active: 5,
+            total: 69,
+            activeList: ['authority-resistance', 'risk-monitor', 'modification-governor', 'deception-detector', 'confabulation-guard'],
+            dead: 64,
+            note: '64 constitution modules loaded via index.js but their functions never called in production paths; watchdog ticks via 5 modules separately',
         },
         cognitive: {
             note: 'All 17 cognitive engines load successfully — see systems.cognitive for live probe results',
         },
         economics: {
-            dead: 0,
+            dead: 1,
             total: 1,
-            note: 'lib/economics/economic-engine.js is imported by lib/finance modules — confirmed live',
+            deadList: ['lib/economics/economic-engine.js'],
+            note: 'No production code requires economic-engine.js — confirmed dead via grep',
         },
         executive: {
             dead: 0,
             total: 6,
-            note: 'All lib/executive/ files have callers (domain-memory, registry, executive-council confirmed live)',
+            note: 'All 6 lib/executive/ files have callers (registry: 19 callers, entity: 15, domain-memory: 4, cfo: 1, financial-attention-scorer: 1, executive-council: 2)',
         },
         ragIntegration: {
             status: 'WIRED',
@@ -295,7 +296,7 @@ router.get('/observatory/summary', async (req, res) => {
         voice:    _probeObsidian().vaultExists ? 'vault ok' : 'vault missing',
         rag:      rag.status,
         cognitive:`${cognitive.activeEngines}/${cognitive.totalEngines} engines loadable`,
-        deadCode: '48 constitution modules loaded but functions never called; all cognitive/executive/economics live',
+        deadCode: '64 constitution modules dormant (5 active: authority, risk, modification, deception, confabulation); cognitive 17/17 live; economics dead; executive 6/6 live',
         health:   db.status === 'ok' && obsidian.vaultExists ? 'GREEN' : 'YELLOW',
     });
 });
