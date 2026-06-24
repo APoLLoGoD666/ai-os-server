@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -7343,6 +7343,10 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 
 /* Input zone tighter */
 .input-zone { padding: 0 16px!important; gap: 8px!important; }
+
+/* Overview page animations */
+@keyframes ovr-flowY { 0%{transform:translateY(0);opacity:0} 14%{opacity:1} 86%{opacity:1} 100%{transform:translateY(40px);opacity:0} }
+@keyframes ovr-blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
 </style>
 </head>
 <body>
@@ -8542,96 +8546,267 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
             <!-- ══ PAGE: OVERVIEW ══ -->
             <div class="page active" id="page-overview">
 
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">Overview</span>
-                        <span class="ds-page-subtitle">What is Apex doing right now?</span>
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">OVERVIEW</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">SYSTEM TOPOLOGY &middot; WHAT APEX IS DOING RIGHT NOW</div>
                     </div>
-                    <div id="ovr-greeting" style="font-size:12px;color:var(--text-mute)"></div>
-                </div>
-
-                <!-- SECTION 1: Executive Briefing -->
-                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
-                    <div class="ds-stat-card ac-green">
-                        <div class="ds-stat-label">System Health</div>
-                        <div class="ds-stat-value green" id="ovrStatHealth">OK</div>
-                        <div class="ds-stat-sub"><span class="ds-dot green"></span>all services</div>
-                    </div>
-                    <div class="ds-stat-card ac-purple">
-                        <div class="ds-stat-label">Active Agents</div>
-                        <div class="ds-stat-value purple" id="ovrStatAgents">&#8212;</div>
-                        <div class="ds-stat-sub">running now</div>
-                    </div>
-                    <div class="ds-stat-card ac-cyan">
-                        <div class="ds-stat-label">Processes</div>
-                        <div class="ds-stat-value cyan" id="ovrStatProcesses">&#8212;</div>
-                        <div class="ds-stat-sub">in progress</div>
-                    </div>
-                    <div class="ds-stat-card ac-red">
-                        <div class="ds-stat-label">Approvals</div>
-                        <div class="ds-stat-value red" id="ovrStatApprovals">&#8212;</div>
-                        <div class="ds-stat-sub"><span class="ds-dot red pulse"></span>need review</div>
-                    </div>
-                    <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">Urgent Items</div>
-                        <div class="ds-stat-value amber" id="ovrStatUrgent">&#8212;</div>
-                        <div class="ds-stat-sub">action required</div>
-                    </div>
-                    <div class="ds-stat-card ac-cyan">
-                        <div class="ds-stat-label">Today's Tasks</div>
-                        <div class="ds-stat-value" id="ovrStatTasks">&#8212;</div>
-                        <div class="ds-stat-sub">prioritised</div>
+                    <div style="text-align:right">
+                        <div id="ovr-clock" style="font:600 18px/1 'JetBrains Mono',monospace;letter-spacing:3px;color:#5b9eff"></div>
+                        <div id="ovr-greeting" style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px"></div>
                     </div>
                 </div>
 
-                <!-- SECTION 2 + 3+4: System Map | Activity Feed + Priorities -->
-                <div style="display:grid;grid-template-columns:1fr 300px;gap:14px">
+                <!-- Stats Row -->
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
+                    <div style="background:#232c39;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">SYSTEM HEALTH</span><span style="width:7px;height:7px;border-radius:2px;background:#3fd29a;flex:0 0 auto"></span></div>
+                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatHealth" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#f3f7fb">OK</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">stable</span></div>
+                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">all services nominal</div>
+                    </div>
+                    <div style="background:#232c39;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">ACTIVE AGENTS</span><span style="width:7px;height:7px;border-radius:2px;background:#5b9eff;flex:0 0 auto"></span></div>
+                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatAgents" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#f3f7fb">18</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">+4 today</span></div>
+                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">running now</div>
+                    </div>
+                    <div style="background:#232c39;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">PROCESSES</span><span style="width:7px;height:7px;border-radius:2px;background:#5b9eff;flex:0 0 auto"></span></div>
+                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatProcesses" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#f3f7fb">42</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">+11 today</span></div>
+                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">in progress</div>
+                    </div>
+                    <div style="background:#232c39;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">APPROVALS</span><span style="width:7px;height:7px;border-radius:2px;background:#efb45a;flex:0 0 auto"></span></div>
+                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatApprovals" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#f3f7fb">3</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">in queue</span></div>
+                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">need review</div>
+                    </div>
+                    <div style="background:#232c39;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">URGENT ITEMS</span><span style="width:7px;height:7px;border-radius:2px;background:#efb45a;flex:0 0 auto"></span></div>
+                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatUrgent" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#efb45a">1</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">low risk</span></div>
+                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">action required</div>
+                    </div>
+                    <div style="background:#232c39;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">TODAY&#39;S TASKS</span><span style="width:7px;height:7px;border-radius:2px;background:#5b9eff;flex:0 0 auto"></span></div>
+                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatTasks" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#f3f7fb">27</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">+6 today</span></div>
+                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">prioritised</div>
+                    </div>
+                </div>
 
-                    <!-- Governance Map -->
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot purple"></span>
-                                <span class="t-label">Governance Map</span>
+                <!-- Governance Pipeline -->
+                <div id="gov-map-root" style="position:relative;border-radius:20px;padding:32px 30px 36px;background-color:rgba(125,155,195,0.022);background-image:radial-gradient(circle at 50% -8%,rgba(91,158,255,0.07),transparent 52%),linear-gradient(rgba(150,175,210,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(150,175,210,0.04) 1px,transparent 1px);background-size:auto,40px 40px,40px 40px">
+                    <div style="position:absolute;top:16px;left:22px;font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:rgba(136,147,160,0.75)">GOVERNANCE MAP &middot; AUTHORITY PIPELINE</div>
+
+                    <!-- L0 Sovereign -->
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:8px">
+                        <div style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0">L0 &middot; SOVEREIGN</span><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span></div>
+                        <div style="width:450px;position:relative;overflow:hidden;background:#232c39;border-radius:15px;padding:19px 22px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 10px 34px rgba(91,158,255,0.10),0 6px 18px rgba(0,0,0,0.26)">
+                            <div style="position:absolute;left:0;top:15px;bottom:15px;width:3px;background:#5b9eff;border-radius:0 3px 3px 0"></div>
+                            <div style="display:flex;align-items:center;gap:15px">
+                                <div style="width:28px;height:28px;flex:0 0 28px;border-radius:8px;background:rgba(91,158,255,0.16);display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;background:#5b9eff;border-radius:2px"></div></div>
+                                <div style="flex:1"><div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#5b9eff">PRINCIPAL AUTHORITY</div><div style="font:600 19px/1 'Space Grotesk',sans-serif;color:#f3f7fb;margin-top:6px">You &middot; Sovereign Operator</div></div>
+                                <div style="text-align:right"><div style="display:flex;align-items:center;gap:7px;justify-content:flex-end"><span style="width:7px;height:7px;border-radius:2px;background:#3fd29a;animation:ovr-blink 3.5s ease-in-out infinite"></span><span style="font:600 11px/1 'JetBrains Mono',monospace;color:#3fd29a;letter-spacing:1px">ONLINE</span></div><div style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;margin-top:7px">0 ESCALATIONS</div></div>
                             </div>
-                            <span style="font-size:10px;color:var(--text-mute)">Authority hierarchy</span>
-                        </div>
-                        <div style="padding:8px 12px 10px" id="gov-map-root">
-                            <div style="font-size:10px;color:var(--text-mute);padding:16px 0;text-align:center">Loading&#8230;</div>
                         </div>
                     </div>
 
-                    <!-- Right column: Activity Feed + Priorities -->
-                    <div style="display:flex;flex-direction:column;gap:12px">
+                    <!-- Connector -->
+                    <div style="height:40px;display:flex;justify-content:center;position:relative;margin:3px 0"><div style="width:1px;height:100%;background:linear-gradient(180deg,rgba(91,158,255,0.06),rgba(91,158,255,0.32),rgba(91,158,255,0.06))"></div><div style="position:absolute;left:50%;top:0;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#9cc6ff;box-shadow:0 0 7px rgba(91,158,255,0.7);animation:ovr-flowY 3s linear infinite"></div></div>
 
-                        <!-- SECTION 3: Live Activity -->
-                        <div class="ds-panel" style="flex:1;min-height:0">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot green pulse"></span>
-                                    <span class="t-label">Live Activity</span>
+                    <!-- L1 Governance -->
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+                        <div style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0">L1 &middot; GOVERNANCE</span><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span></div>
+                        <div style="width:680px;background:#1f2733;border-radius:14px;padding:17px 22px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.18)">
+                            <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:9px"><span style="width:7px;height:7px;border-radius:2px;background:#5b9eff"></span><span style="font:600 12px/1 'Space Grotesk',sans-serif;letter-spacing:1.5px;color:#d3dde6">POLICY &amp; SAFETY LAYER</span></div><span style="font:600 10px/1 'JetBrains Mono',monospace;color:#3fd29a;letter-spacing:1px">ACTIVE</span></div>
+                            <div style="display:flex;gap:38px;margin-top:16px">
+                                <div><div style="display:flex;align-items:center;gap:7px"><span style="width:5px;height:5px;border-radius:1px;background:#5b9eff"></span><span style="font:600 11px/1 'Space Grotesk',sans-serif;color:#c7d2dd">Policy Engine</span></div><div style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;margin-top:7px">enforced</div></div>
+                                <div><div style="display:flex;align-items:center;gap:7px"><span style="width:5px;height:5px;border-radius:1px;background:#5b9eff"></span><span style="font:600 11px/1 'Space Grotesk',sans-serif;color:#c7d2dd">Safety Guards</span></div><div style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;margin-top:7px">monitoring</div></div>
+                                <div><div style="display:flex;align-items:center;gap:7px"><span style="width:5px;height:5px;border-radius:1px;background:#5b9eff"></span><span style="font:600 11px/1 'Space Grotesk',sans-serif;color:#c7d2dd">Audit Trail</span></div><div style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;margin-top:7px">logging</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connector -->
+                    <div style="height:40px;display:flex;justify-content:center;position:relative;margin:3px 0"><div style="width:1px;height:100%;background:linear-gradient(180deg,rgba(91,158,255,0.06),rgba(91,158,255,0.32),rgba(91,158,255,0.06))"></div><div style="position:absolute;left:50%;top:0;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#9cc6ff;box-shadow:0 0 7px rgba(91,158,255,0.7);animation:ovr-flowY 3s linear infinite;animation-delay:0.9s"></div></div>
+
+                    <!-- L2 Executive Council -->
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%">
+                        <div style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0">L2 &middot; EXECUTIVE COUNCIL</span><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span></div>
+                        <div style="width:100%">
+                            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 12px"><span style="font:600 12px/1 'Space Grotesk',sans-serif;letter-spacing:1.5px;color:#aab6c2">EXECUTIVE COUNCIL</span><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:1px">05 OFFICERS &middot; COMMAND TIER</span></div>
+                            <div style="display:flex;gap:14px">
+                                <div style="flex:1;min-width:0;background:#232c39;border-radius:12px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 5px 14px rgba(0,0,0,0.18)">
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#5b9eff;background:rgba(91,158,255,0.14);padding:3px 7px;border-radius:6px">CEO</span><span style="width:7px;height:7px;border-radius:2px;background:#3fd29a;flex:0 0 auto"></span></div>
+                                    <div style="font:600 13px/1.2 'Space Grotesk',sans-serif;color:#eaeff5;margin-top:13px">Chief Executive</div>
+                                    <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.5px;color:#3fd29a;margin-top:8px">Operational</div>
+                                    <div style="font:500 10px/1 'JetBrains Mono',monospace;color:#6c7886;margin-top:7px">12 directives</div>
+                                </div>
+                                <div style="flex:1;min-width:0;background:#232c39;border-radius:12px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 5px 14px rgba(0,0,0,0.18)">
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#5b9eff;background:rgba(91,158,255,0.14);padding:3px 7px;border-radius:6px">COO</span><span style="width:7px;height:7px;border-radius:2px;background:#5b9eff;flex:0 0 auto"></span></div>
+                                    <div style="font:600 13px/1.2 'Space Grotesk',sans-serif;color:#eaeff5;margin-top:13px">Chief Operations</div>
+                                    <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.5px;color:#5b9eff;margin-top:8px">Clear</div>
+                                    <div style="font:500 10px/1 'JetBrains Mono',monospace;color:#6c7886;margin-top:7px">8 workflows</div>
+                                </div>
+                                <div style="flex:1;min-width:0;background:#232c39;border-radius:12px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 5px 14px rgba(0,0,0,0.18)">
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#5b9eff;background:rgba(91,158,255,0.14);padding:3px 7px;border-radius:6px">CFO</span><span style="width:7px;height:7px;border-radius:2px;background:#8893a0;flex:0 0 auto"></span></div>
+                                    <div style="font:600 13px/1.2 'Space Grotesk',sans-serif;color:#eaeff5;margin-top:13px">Chief Finance</div>
+                                    <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.5px;color:#8893a0;margin-top:8px">Standby</div>
+                                    <div style="font:500 10px/1 'JetBrains Mono',monospace;color:#6c7886;margin-top:7px">ledger synced</div>
+                                </div>
+                                <div style="flex:1;min-width:0;background:#232c39;border-radius:12px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 5px 14px rgba(0,0,0,0.18)">
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#5b9eff;background:rgba(91,158,255,0.14);padding:3px 7px;border-radius:6px">CIO</span><span style="width:7px;height:7px;border-radius:2px;background:#3fd29a;flex:0 0 auto"></span></div>
+                                    <div style="font:600 13px/1.2 'Space Grotesk',sans-serif;color:#eaeff5;margin-top:13px">Chief Intelligence</div>
+                                    <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.5px;color:#3fd29a;margin-top:8px">Operational</div>
+                                    <div style="font:500 10px/1 'JetBrains Mono',monospace;color:#6c7886;margin-top:7px">models live</div>
+                                </div>
+                                <div style="flex:1;min-width:0;background:#232c39;border-radius:12px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 5px 14px rgba(0,0,0,0.18)">
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#5b9eff;background:rgba(91,158,255,0.14);padding:3px 7px;border-radius:6px">CNO</span><span style="width:7px;height:7px;border-radius:2px;background:#5b9eff;flex:0 0 auto"></span></div>
+                                    <div style="font:600 13px/1.2 'Space Grotesk',sans-serif;color:#eaeff5;margin-top:13px">Chief Network</div>
+                                    <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.5px;color:#5b9eff;margin-top:8px">Clear</div>
+                                    <div style="font:500 10px/1 'JetBrains Mono',monospace;color:#6c7886;margin-top:7px">links stable</div>
                                 </div>
                             </div>
-                            <div id="ovrFeedBody" style="display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;padding:2px 0">
-                                <div style="font-size:11px;color:var(--text-mute);padding:10px 0;text-align:center">Waiting for activity&#8230;</div>
-                            </div>
                         </div>
+                    </div>
 
-                        <!-- SECTION 4: Priority Center -->
-                        <div class="ds-panel">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot amber"></span>
-                                    <span class="t-label">Today's Priorities</span>
+                    <!-- Connector -->
+                    <div style="height:40px;display:flex;justify-content:center;position:relative;margin:3px 0"><div style="width:1px;height:100%;background:linear-gradient(180deg,rgba(91,158,255,0.06),rgba(91,158,255,0.32),rgba(91,158,255,0.06))"></div><div style="position:absolute;left:50%;top:0;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#9cc6ff;box-shadow:0 0 7px rgba(91,158,255,0.7);animation:ovr-flowY 3s linear infinite;animation-delay:0.4s"></div></div>
+
+                    <!-- L3 AI Workforce -->
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%">
+                        <div style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0">L3 &middot; AI WORKFORCE</span><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span></div>
+                        <div style="width:100%">
+                            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 14px"><span style="font:600 12px/1 'Space Grotesk',sans-serif;letter-spacing:1.5px;color:#aab6c2">AI WORKFORCE</span><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:1px">06 DIVISIONS &middot; 30 AGENTS</span></div>
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start">
+
+                                <!-- Coding / blue -->
+                                <div style="position:relative;background:#212a37;border-radius:14px;padding:15px 16px 17px 19px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                                    <div style="position:absolute;left:0;top:13px;bottom:13px;width:3px;background:#5b9eff;border-radius:0 3px 3px 0"></div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:15px;height:15px;flex:0 0 15px;border-radius:5px;background:#5b9eff"></div><div style="min-width:0"><div style="font:600 14px/1 'Space Grotesk',sans-serif;color:#eaeff5">Coding</div><div style="font:500 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#7f8c99;margin-top:5px;text-transform:uppercase">engineering</div></div></div><div style="display:flex;align-items:center;gap:8px;flex:0 0 auto"><span style="font:600 9px/1 'JetBrains Mono',monospace;color:#5b9eff;background:#5b9eff24;padding:3px 7px;border-radius:6px">8</span><span style="width:7px;height:7px;border-radius:2px;background:#5b9eff;flex:0 0 auto"></span></div></div>
+                                    <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:14px"></div>
+                                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px;margin-top:14px">
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Architect</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:72%;height:100%;border-radius:2px;background:#5b9eff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">72%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Developer</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:88%;height:100%;border-radius:2px;background:#5b9eff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">88%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Reviewer</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:41%;height:100%;border-radius:2px;background:#5b9eff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">41%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Validator</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:56%;height:100%;border-radius:2px;background:#5b9eff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">56%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Tester</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:33%;height:100%;border-radius:2px;background:#5b9eff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">33%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Committer</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:24%;height:100%;border-radius:2px;background:#5b9eff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">24%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Reflector</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:67%;height:100%;border-radius:2px;background:#5b9eff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">67%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Orchestrator</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:91%;height:100%;border-radius:2px;background:#5b9eff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">91%</span></div></div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div id="ovrPriorityList" style="display:flex;flex-direction:column;gap:8px">
-                                <div style="font-size:11px;color:var(--text-mute);padding:10px 0;text-align:center">Loading priorities&#8230;</div>
+
+                                <!-- Sales / green -->
+                                <div style="position:relative;background:#212a37;border-radius:14px;padding:15px 16px 17px 19px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                                    <div style="position:absolute;left:0;top:13px;bottom:13px;width:3px;background:#3fd29a;border-radius:0 3px 3px 0"></div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:15px;height:15px;flex:0 0 15px;border-radius:5px;background:#3fd29a"></div><div style="min-width:0"><div style="font:600 14px/1 'Space Grotesk',sans-serif;color:#eaeff5">Sales</div><div style="font:500 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#7f8c99;margin-top:5px;text-transform:uppercase">revenue</div></div></div><div style="display:flex;align-items:center;gap:8px;flex:0 0 auto"><span style="font:600 9px/1 'JetBrains Mono',monospace;color:#3fd29a;background:#3fd29a24;padding:3px 7px;border-radius:6px">5</span><span style="width:7px;height:7px;border-radius:2px;background:#3fd29a;flex:0 0 auto"></span></div></div>
+                                    <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:14px"></div>
+                                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px;margin-top:14px">
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Prospector</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:64%;height:100%;border-radius:2px;background:#3fd29a"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">64%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Qualifier</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:48%;height:100%;border-radius:2px;background:#3fd29a"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">48%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Negotiator</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:55%;height:100%;border-radius:2px;background:#3fd29a"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">55%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Closer</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:77%;height:100%;border-radius:2px;background:#3fd29a"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">77%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Account Mgr</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:39%;height:100%;border-radius:2px;background:#3fd29a"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">39%</span></div></div>
+                                    </div>
+                                </div>
+
+                                <!-- Health / teal -->
+                                <div style="position:relative;background:#212a37;border-radius:14px;padding:15px 16px 17px 19px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                                    <div style="position:absolute;left:0;top:13px;bottom:13px;width:3px;background:#36c9c9;border-radius:0 3px 3px 0"></div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:15px;height:15px;flex:0 0 15px;border-radius:5px;background:#36c9c9"></div><div style="min-width:0"><div style="font:600 14px/1 'Space Grotesk',sans-serif;color:#eaeff5">Health</div><div style="font:500 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#7f8c99;margin-top:5px;text-transform:uppercase">wellness</div></div></div><div style="display:flex;align-items:center;gap:8px;flex:0 0 auto"><span style="font:600 9px/1 'JetBrains Mono',monospace;color:#36c9c9;background:#36c9c924;padding:3px 7px;border-radius:6px">4</span><span style="width:7px;height:7px;border-radius:2px;background:#36c9c9;flex:0 0 auto"></span></div></div>
+                                    <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:14px"></div>
+                                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px;margin-top:14px">
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Monitor</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:82%;height:100%;border-radius:2px;background:#36c9c9"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">82%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Diagnostician</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:45%;height:100%;border-radius:2px;background:#36c9c9"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">45%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Scheduler</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:30%;height:100%;border-radius:2px;background:#36c9c9"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">30%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Advisor</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:58%;height:100%;border-radius:2px;background:#36c9c9"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">58%</span></div></div>
+                                    </div>
+                                </div>
+
+                                <!-- Advertising / violet -->
+                                <div style="position:relative;background:#212a37;border-radius:14px;padding:15px 16px 17px 19px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                                    <div style="position:absolute;left:0;top:13px;bottom:13px;width:3px;background:#9d8bff;border-radius:0 3px 3px 0"></div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:15px;height:15px;flex:0 0 15px;border-radius:5px;background:#9d8bff"></div><div style="min-width:0"><div style="font:600 14px/1 'Space Grotesk',sans-serif;color:#eaeff5">Advertising</div><div style="font:500 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#7f8c99;margin-top:5px;text-transform:uppercase">growth</div></div></div><div style="display:flex;align-items:center;gap:8px;flex:0 0 auto"><span style="font:600 9px/1 'JetBrains Mono',monospace;color:#9d8bff;background:#9d8bff24;padding:3px 7px;border-radius:6px">5</span><span style="width:7px;height:7px;border-radius:2px;background:#9d8bff;flex:0 0 auto"></span></div></div>
+                                    <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:14px"></div>
+                                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px;margin-top:14px">
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Strategist</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:61%;height:100%;border-radius:2px;background:#9d8bff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">61%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Creative</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:74%;height:100%;border-radius:2px;background:#9d8bff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">74%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Copywriter</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:52%;height:100%;border-radius:2px;background:#9d8bff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">52%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Media Buyer</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:47%;height:100%;border-radius:2px;background:#9d8bff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">47%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Analyst</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:38%;height:100%;border-radius:2px;background:#9d8bff"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">38%</span></div></div>
+                                    </div>
+                                </div>
+
+                                <!-- Finance / amber -->
+                                <div style="position:relative;background:#212a37;border-radius:14px;padding:15px 16px 17px 19px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                                    <div style="position:absolute;left:0;top:13px;bottom:13px;width:3px;background:#efb45a;border-radius:0 3px 3px 0"></div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:15px;height:15px;flex:0 0 15px;border-radius:5px;background:#efb45a"></div><div style="min-width:0"><div style="font:600 14px/1 'Space Grotesk',sans-serif;color:#eaeff5">Finance</div><div style="font:500 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#7f8c99;margin-top:5px;text-transform:uppercase">capital</div></div></div><div style="display:flex;align-items:center;gap:8px;flex:0 0 auto"><span style="font:600 9px/1 'JetBrains Mono',monospace;color:#efb45a;background:#efb45a24;padding:3px 7px;border-radius:6px">4</span><span style="width:7px;height:7px;border-radius:2px;background:#efb45a;flex:0 0 auto"></span></div></div>
+                                    <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:14px"></div>
+                                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px;margin-top:14px">
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Bookkeeper</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:29%;height:100%;border-radius:2px;background:#efb45a"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">29%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Analyst</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:53%;height:100%;border-radius:2px;background:#efb45a"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">53%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Auditor</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:44%;height:100%;border-radius:2px;background:#efb45a"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">44%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Treasurer</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:36%;height:100%;border-radius:2px;background:#efb45a"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">36%</span></div></div>
+                                    </div>
+                                </div>
+
+                                <!-- Research / rose -->
+                                <div style="position:relative;background:#212a37;border-radius:14px;padding:15px 16px 17px 19px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
+                                    <div style="position:absolute;left:0;top:13px;bottom:13px;width:3px;background:#ec7fa3;border-radius:0 3px 3px 0"></div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:15px;height:15px;flex:0 0 15px;border-radius:5px;background:#ec7fa3"></div><div style="min-width:0"><div style="font:600 14px/1 'Space Grotesk',sans-serif;color:#eaeff5">Research</div><div style="font:500 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#7f8c99;margin-top:5px;text-transform:uppercase">intelligence</div></div></div><div style="display:flex;align-items:center;gap:8px;flex:0 0 auto"><span style="font:600 9px/1 'JetBrains Mono',monospace;color:#ec7fa3;background:#ec7fa324;padding:3px 7px;border-radius:6px">4</span><span style="width:7px;height:7px;border-radius:2px;background:#ec7fa3;flex:0 0 auto"></span></div></div>
+                                    <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:14px"></div>
+                                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px;margin-top:14px">
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Scout</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:69%;height:100%;border-radius:2px;background:#ec7fa3"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">69%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Synthesizer</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:57%;height:100%;border-radius:2px;background:#ec7fa3"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">57%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Experimenter</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:62%;height:100%;border-radius:2px;background:#ec7fa3"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">62%</span></div></div>
+                                        <div><div style="font:500 11px/1.1 'Space Grotesk',sans-serif;color:#c7d2dd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Archivist</div><div style="display:flex;align-items:center;gap:9px;margin-top:8px"><div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden"><div style="width:41%;height:100%;border-radius:2px;background:#ec7fa3"></div></div><span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;flex:0 0 auto">41%</span></div></div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
+                    </div>
 
+                    <!-- Connector -->
+                    <div style="height:40px;display:flex;justify-content:center;position:relative;margin:3px 0"><div style="width:1px;height:100%;background:linear-gradient(180deg,rgba(91,158,255,0.06),rgba(91,158,255,0.32),rgba(91,158,255,0.06))"></div><div style="position:absolute;left:50%;top:0;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#9cc6ff;box-shadow:0 0 7px rgba(91,158,255,0.7);animation:ovr-flowY 3s linear infinite;animation-delay:1.4s"></div></div>
+
+                    <!-- L4 Outputs -->
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+                        <div style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0">L4 &middot; OUTPUTS</span><span style="width:16px;height:1px;background:rgba(150,175,210,0.35)"></span></div>
+                        <div style="width:780px;background:#1f2733;border-radius:14px;padding:18px 0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.18)">
+                            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 24px 4px"><span style="font:600 12px/1 'Space Grotesk',sans-serif;letter-spacing:1.5px;color:#aab6c2">SYSTEM OUTPUTS</span><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:1px">LIVE STREAM</span></div>
+                            <div style="display:flex;margin-top:14px">
+                                <div style="flex:1;min-width:0;padding:2px 24px"><div style="width:26px;height:2px;background:#3fd29a;border-radius:2px;margin-bottom:14px"></div><div style="font:600 15px/1 'Space Grotesk',sans-serif;color:#eaeff5">Decisions</div><div style="font:600 13px/1 'Space Grotesk',sans-serif;color:#3fd29a;margin-top:10px">Flowing</div><div style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0;margin-top:9px">governance throughput</div></div>
+                                <div style="flex:1;min-width:0;padding:2px 24px;border-left:1px solid rgba(255,255,255,0.07)"><div style="width:26px;height:2px;background:#5b9eff;border-radius:2px;margin-bottom:14px"></div><div style="font:600 15px/1 'Space Grotesk',sans-serif;color:#eaeff5">Messages</div><div style="font:600 13px/1 'Space Grotesk',sans-serif;color:#5b9eff;margin-top:10px">Clear</div><div style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0;margin-top:9px">comms channel open</div></div>
+                                <div style="flex:1;min-width:0;padding:2px 24px;border-left:1px solid rgba(255,255,255,0.07)"><div style="width:26px;height:2px;background:#efb45a;border-radius:2px;margin-bottom:14px"></div><div style="font:600 15px/1 'Space Grotesk',sans-serif;color:#eaeff5">Finance</div><div style="font:600 13px/1 'Space Grotesk',sans-serif;color:#efb45a;margin-top:10px">Stable</div><div style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0;margin-top:9px">ledger reconciled</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Activity Feed + Priorities -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                    <div style="background:#1f2733;border-radius:14px;padding:16px 18px">
+                        <div style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:rgba(136,147,160,0.75);margin-bottom:14px">LIVE ACTIVITY</div>
+                        <div id="ovrFeedBody" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto">
+                            <div style="font:500 11px/1 'JetBrains Mono',monospace;color:#8893a0;padding:10px 0;text-align:center">Waiting for activity&#8230;</div>
+                        </div>
+                    </div>
+                    <div style="background:#1f2733;border-radius:14px;padding:16px 18px">
+                        <div style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:rgba(136,147,160,0.75);margin-bottom:14px">TODAY&#39;S PRIORITIES</div>
+                        <div id="ovrPriorityList" style="display:flex;flex-direction:column;gap:8px">
+                            <div style="font:500 11px/1 'JetBrains Mono',monospace;color:#8893a0;padding:10px 0;text-align:center">Loading priorities&#8230;</div>
+                        </div>
                     </div>
                 </div>
+
+                <script>(function(){var e=document.getElementById('ovr-clock');function t(){if(e)e.textContent=new Date().toLocaleTimeString('en-GB',{hour12:false});}t();setInterval(t,1000);})();</script>
 
             </div>
 
