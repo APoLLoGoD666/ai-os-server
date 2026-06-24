@@ -9132,6 +9132,111 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 
                 <div id="gov-map-root" style="display:none"></div>
 
+                <!-- Overview expand modal -->
+                <div id="_ovr_mb" style="display:none;position:fixed;inset:0;background:rgba(0,8,20,0.84);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center" onclick="closeOvrModal()">
+                    <div style="background:#0d1424;border-radius:18px;max-width:500px;width:calc(100% - 40px);max-height:80vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,0.09);position:relative" onclick="event.stopPropagation()">
+                        <div style="position:sticky;top:0;background:#0d1424;padding:14px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;border-radius:18px 18px 0 0;z-index:1">
+                            <span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0">APEX INTEL</span>
+                            <button onclick="closeOvrModal()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#aab6c2;font:400 16px/1 sans-serif;width:26px;height:26px;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button>
+                        </div>
+                        <div id="_ovr_mi" style="padding:20px 22px 26px"></div>
+                    </div>
+                </div>
+
+                <script>(function(){
+var css=document.createElement('style');
+css.textContent=[
+  '#ovr-pipeline div[style*="overflow:hidden"][style*="padding:13px 14px 15px 17px"]{cursor:pointer;transition:transform .12s,box-shadow .12s}',
+  '#ovr-pipeline div[style*="overflow:hidden"][style*="padding:13px 14px 15px 17px"]:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(0,0,0,.45)!important}',
+  '#ovr-pipeline div[style*="background:#0a1628"][style*="border-top:2px solid"]{cursor:pointer;transition:transform .12s,opacity .12s}',
+  '#ovr-pipeline div[style*="background:#0a1628"][style*="border-top:2px solid"]:hover{transform:translateY(-2px);opacity:.88}'
+].join('');
+document.head.appendChild(css);
+var _d={
+SYS:{t:'agent',badge:'SYS',color:'#5b9eff',name:'System Agent',purpose:'Handles system health, schedules, notifications, cron, safety reviews, and reflections.',areas:['System Health','Schedules','Notifications','Cron Jobs','Safety Review','Reflections'],limits:['Cannot change env vars, secrets, GitHub, or code without explicit approval.','Must follow existing safety, approval, and autonomy rules.'],exec:['CTO','DevOps Lead','Security Officer'],plan:'Check schedules and notifications first. Propose maintenance steps only. Never touch code or env vars.'},
+FILE:{t:'agent',badge:'FILE',color:'#3fd29a',name:'File Agent',purpose:'Handles documents, files, storage, cleanup, and duplicate detection.',areas:['Documents','Files','Storage','Cleanup','Duplicate Detection'],limits:['Cannot edit code.','Must keep destructive actions behind approval.'],exec:['Data Manager','Archivist','Librarian'],plan:'List documents and files first. Identify duplicates before proposing deletions. All delete and rename steps require approval.'},
+UNI:{t:'agent',badge:'UNI',color:'#7c6fff',name:'Uni Agent',purpose:'Handles coursework, revision, assignments, and university notes.',areas:['Coursework','Revision','Assignments','University Notes'],limits:['Cannot fabricate sources.','Must keep planning grounded in available notes.'],exec:['Academic Director','Study Coordinator'],plan:'Search for relevant university notes before planning. Structure outputs for academic use. Never invent citations or sources.'},
+FIN:{t:'agent',badge:'FIN',color:'#efb45a',name:'Finance Agent',purpose:'Handles budgets, finance notes, investing notes, and financial planning support.',areas:['Budgets','Finance Notes','Investing Notes','Financial Planning'],limits:['Cannot give regulated financial advice.','Must frame outputs as educational or planning support only.'],exec:['CFO','Treasurer','Investment Director'],plan:'Retrieve existing finance and budget documents first. Frame all outputs as planning support only. Clearly label estimates and projections.'},
+BIZ:{t:'agent',badge:'BIZ',color:'#ec7fa3',name:'Business Agent',purpose:'Handles business ideas, Shopify, pitches, AI services, and project plans.',areas:['Business Ideas','Shopify','Pitches','AI Services','Project Plans'],limits:['Cannot make unsupported claims.','Must keep proposals realistic and evidence-aware.'],exec:['CEO','COO','CMO'],plan:'Pull relevant business documents first. Keep proposals grounded. Flag assumptions clearly. Format: problem, approach, next steps.'},
+Coding:{t:'spec',badge:'SYS',color:'#5b9eff',domain:'System Agent',name:'Coding',sub:'Engineering',desc:'Manages the full software development lifecycle from architecture to deployment.',roles:[{n:'Architect',p:72},{n:'Developer',p:88},{n:'Reviewer',p:41},{n:'Validator',p:56},{n:'Tester',p:33},{n:'Committer',p:24},{n:'Reflector',p:67},{n:'Orchestrator',p:91}]},
+Health:{t:'spec',badge:'SYS',color:'#5b9eff',domain:'System Agent',name:'Health',sub:'Wellness',desc:'Monitors system and personal health metrics, runs diagnostics, and recommends interventions.',roles:[{n:'Monitor',p:82},{n:'Diagnostician',p:45},{n:'Scheduler',p:30},{n:'Advisor',p:58}]},
+Storage:{t:'spec',badge:'FILE',color:'#3fd29a',domain:'File Agent',name:'Storage',sub:'Files',desc:'Manages file cataloguing, uploads, retrieval, and indexing across all storage systems.',roles:[{n:'Cataloguer',p:61},{n:'Uploader',p:77},{n:'Retriever',p:84},{n:'Indexer',p:53}]},
+Cleanup:{t:'spec',badge:'FILE',color:'#3fd29a',domain:'File Agent',name:'Cleanup',sub:'Hygiene',desc:'Removes duplicates, archives old files, and maintains a clean organised storage structure.',roles:[{n:'Deduplicator',p:45},{n:'Archiver',p:67},{n:'Shredder',p:32},{n:'Sorter',p:71}]},
+Coursework:{t:'spec',badge:'UNI',color:'#7c6fff',domain:'Uni Agent',name:'Coursework',sub:'Academic',desc:'Plans, researches, writes, and reviews academic coursework and assignment submissions.',roles:[{n:'Planner',p:68},{n:'Researcher',p:74},{n:'Writer',p:52},{n:'Reviewer',p:41}]},
+Revision:{t:'spec',badge:'UNI',color:'#7c6fff',domain:'Uni Agent',name:'Revision',sub:'Learning',desc:'Builds flashcards, reinforces core concepts, prepares exam strategies, and runs practice tests.',roles:[{n:'Flashcards',p:71},{n:'Concepts',p:58},{n:'Exam Prep',p:63},{n:'Practice',p:45}]},
+Finance:{t:'spec',badge:'FIN',color:'#efb45a',domain:'Finance Agent',name:'Finance',sub:'Capital',desc:'Manages bookkeeping, financial analysis, auditing, and treasury operations.',roles:[{n:'Bookkeeper',p:29},{n:'Analyst',p:53},{n:'Auditor',p:44},{n:'Treasurer',p:36}]},
+Sales:{t:'spec',badge:'BIZ',color:'#ec7fa3',domain:'Business Agent',name:'Sales',sub:'Revenue',desc:'Runs the full sales pipeline from prospecting through qualification, negotiation, and closing.',roles:[{n:'Prospector',p:64},{n:'Qualifier',p:48},{n:'Negotiator',p:55},{n:'Closer',p:77},{n:'Account Mgr',p:39}]},
+Advertising:{t:'spec',badge:'BIZ',color:'#ec7fa3',domain:'Business Agent',name:'Advertising',sub:'Growth',desc:'Plans, creates, and distributes advertising campaigns across all channels.',roles:[{n:'Strategist',p:61},{n:'Creative',p:74},{n:'Copywriter',p:52},{n:'Media Buyer',p:47},{n:'Analyst',p:38}]},
+Research:{t:'spec',badge:'BIZ',color:'#ec7fa3',domain:'Business Agent',name:'Research',sub:'Intelligence',desc:'Scouts opportunities, synthesizes findings, runs experiments, and archives intelligence.',roles:[{n:'Scout',p:69},{n:'Synthesizer',p:57},{n:'Experimenter',p:62},{n:'Archivist',p:41}]}
+};
+function _build(d){
+  var c=d.color,h='';
+  h+='<div style="height:3px;background:'+c+';border-radius:3px;margin-bottom:20px"></div>';
+  if(d.t==='agent'){
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+    h+='<span style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:'+c+';background:'+c+'22;padding:4px 10px;border-radius:6px">'+d.badge+'</span>';
+    h+='<span style="font:600 9px/1 \'JetBrains Mono\',monospace;color:#3fd29a;letter-spacing:1px">STANDBY</span></div>';
+    h+='<div style="font:700 20px/1 \'Space Grotesk\',sans-serif;color:#f3f7fb;margin-bottom:8px">'+d.name+'</div>';
+    h+='<div style="font:400 12px/1.65 \'Space Grotesk\',sans-serif;color:#8893a0;margin-bottom:20px">'+d.purpose+'</div>';
+    h+='<div style="height:1px;background:rgba(255,255,255,0.07);margin-bottom:16px"></div>';
+    h+='<div style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#8893a0;margin-bottom:10px">ALLOWED AREAS</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px">';
+    d.areas.forEach(function(a){h+='<span style="font:500 10px/1 \'JetBrains Mono\',monospace;color:'+c+';background:'+c+'18;padding:4px 10px;border-radius:6px">'+a+'</span>';});
+    h+='</div>';
+    h+='<div style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#8893a0;margin-bottom:10px">SAFETY LIMITS</div>';
+    h+='<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:18px">';
+    d.limits.forEach(function(l){h+='<div style="font:400 11px/1.55 \'JetBrains Mono\',monospace;color:#c7d2dd;padding:8px 12px;border-left:2px solid '+c+'55;background:rgba(255,255,255,0.03);border-radius:0 6px 6px 0">'+l+'</div>';});
+    h+='</div>';
+    h+='<div style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#8893a0;margin-bottom:10px">EXECUTIVE TIER</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px">';
+    d.exec.forEach(function(e){h+='<span style="font:600 10px/1 \'JetBrains Mono\',monospace;color:'+c+';background:'+c+'18;padding:4px 10px;border-radius:6px">'+e+'</span>';});
+    h+='</div>';
+    h+='<div style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#8893a0;margin-bottom:10px">PLANNING DIRECTIVE</div>';
+    h+='<div style="font:400 11px/1.6 \'JetBrains Mono\',monospace;color:#aab6c2;padding:12px 14px;background:rgba(255,255,255,0.04);border-radius:8px;border-left:2px solid '+c+'">'+d.plan+'</div>';
+  } else {
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">';
+    h+='<span style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:'+c+';background:'+c+'22;padding:4px 10px;border-radius:6px">'+d.badge+'</span>';
+    h+='<span style="font:500 10px/1 \'JetBrains Mono\',monospace;color:#8893a0">'+d.domain+'</span></div>';
+    h+='<div style="font:700 20px/1 \'Space Grotesk\',sans-serif;color:#f3f7fb;margin-bottom:4px">'+d.name+'</div>';
+    h+='<div style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:#8893a0;text-transform:uppercase;margin-bottom:14px">'+d.sub+'</div>';
+    h+='<div style="font:400 12px/1.65 \'Space Grotesk\',sans-serif;color:#8893a0;margin-bottom:20px">'+d.desc+'</div>';
+    h+='<div style="height:1px;background:rgba(255,255,255,0.07);margin-bottom:16px"></div>';
+    h+='<div style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#8893a0;margin-bottom:12px">ROLE BREAKDOWN</div>';
+    h+='<div style="display:flex;flex-direction:column;gap:10px">';
+    d.roles.forEach(function(r){
+      h+='<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">';
+      h+='<span style="font:500 12px/1 \'Space Grotesk\',sans-serif;color:#c7d2dd">'+r.n+'</span>';
+      h+='<span style="font:600 10px/1 \'JetBrains Mono\',monospace;color:'+c+'">'+r.p+'%</span></div>';
+      h+='<div style="height:4px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden">';
+      h+='<div style="width:'+r.p+'%;height:100%;border-radius:3px;background:'+c+'"></div></div></div>';
+    });
+    h+='</div>';
+  }
+  return h;
+}
+window.openOvrModal=function(k){var d=_d[k];if(!d)return;document.getElementById('_ovr_mi').innerHTML=_build(d);document.getElementById('_ovr_mb').style.display='flex';document.body.style.overflow='hidden';};
+window.closeOvrModal=function(){document.getElementById('_ovr_mb').style.display='none';document.body.style.overflow='';};
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeOvrModal();});
+var pipe=document.getElementById('ovr-pipeline');
+if(pipe){
+  pipe.addEventListener('click',function(e){
+    var el=e.target,depth=0;
+    while(el&&el!==pipe&&depth++<8){
+      var s=el.getAttribute&&el.getAttribute('style')||'';
+      if(s.indexOf('overflow:hidden')>-1&&s.indexOf('padding:13px 14px 15px 17px')>-1){
+        var divs=el.querySelectorAll('div');
+        for(var i=0;i<divs.length;i++){var ds=divs[i].getAttribute('style')||'';if(ds.indexOf('12px/1')>-1&&ds.indexOf('#eaeff5')>-1){var k=divs[i].textContent.trim();if(_d[k]){openOvrModal(k);return;}}}
+      }
+      if(s.indexOf('background:#0a1628')>-1&&s.indexOf('border-top:2px solid')>-1){
+        var spans=el.querySelectorAll('span');
+        for(var j=0;j<spans.length;j++){var ss=spans[j].getAttribute('style')||'';if(ss.indexOf('3px 7px')>-1){var k2=spans[j].textContent.trim();if(_d[k2]){openOvrModal(k2);return;}}}
+      }
+      el=el.parentElement;
+    }
+  });
+}
+})();</script>
+
                 <script>(function(){var e=document.getElementById('ovr-clock');function t(){if(e)e.textContent=new Date().toLocaleTimeString('en-GB',{hour12:false});}t();setInterval(t,1000);})();</script>
 
             </div>
