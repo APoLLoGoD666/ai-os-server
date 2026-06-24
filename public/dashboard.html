@@ -6814,6 +6814,20 @@ li, td, th, div.label, div.value { font-size: inherit; }
                     <button class="ds-btn cyan" data-fn="checkEmailNow">&#9658; Check inbox now</button>
                 </div>
 
+                <!-- Needs Attention -->
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot red pulse"></span>
+                            <span class="t-label">Needs Attention</span>
+                        </div>
+                        <span style="font-size:10px;color:var(--text-mute)">Who requires a response?</span>
+                    </div>
+                    <div id="networkAttentionList" style="display:flex;flex-direction:column;gap:6px">
+                        <div style="font-size:11px;color:var(--text-mute);padding:6px 0;text-align:center">Loading&#8230;</div>
+                    </div>
+                </div>
+
                 <div class="ds-grid-stats">
                     <div class="ds-stat-card ac-cyan">
                         <div class="ds-stat-label">Inbox</div>
@@ -8171,6 +8185,33 @@ li, td, th, div.label, div.value { font-size: inherit; }
             <!-- ══ PAGE: RESEARCH ══ -->
             <div class="page" id="page-research">
                 <div class="apex-research">
+                    <!-- Workflow pipeline strip -->
+                    <div style="display:flex;align-items:center;gap:0;margin-bottom:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+                        <div id="resStageSearch"  style="flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-right:1px solid var(--border);transition:background 0.15s">
+                            <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;color:var(--cyan)">SEARCH</span>
+                            <span style="font-size:9px;color:var(--text-mute);margin-top:2px">Discover</span>
+                        </div>
+                        <div id="resStageArrow1" style="font-size:9px;color:var(--text-faint);padding:0 2px">&#8594;</div>
+                        <div id="resStageScrape"  style="flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-right:1px solid var(--border);transition:background 0.15s">
+                            <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;color:var(--text-mute)">SCRAPE</span>
+                            <span style="font-size:9px;color:var(--text-mute);margin-top:2px">Extract</span>
+                        </div>
+                        <div style="font-size:9px;color:var(--text-faint);padding:0 2px">&#8594;</div>
+                        <div id="resStageAnalyze" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-right:1px solid var(--border);transition:background 0.15s">
+                            <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;color:var(--text-mute)">ANALYZE</span>
+                            <span style="font-size:9px;color:var(--text-mute);margin-top:2px">Process</span>
+                        </div>
+                        <div style="font-size:9px;color:var(--text-faint);padding:0 2px">&#8594;</div>
+                        <div id="resStageSummarize" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-right:1px solid var(--border);transition:background 0.15s">
+                            <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;color:var(--text-mute)">SUMMARIZE</span>
+                            <span style="font-size:9px;color:var(--text-mute);margin-top:2px">Distill</span>
+                        </div>
+                        <div style="font-size:9px;color:var(--text-faint);padding:0 2px">&#8594;</div>
+                        <div id="resStageStore"    style="flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px;transition:background 0.15s">
+                            <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;color:var(--text-mute)">STORE</span>
+                            <span style="font-size:9px;color:var(--text-mute);margin-top:2px">Save</span>
+                        </div>
+                    </div>
                     <!-- Toolbar: query + action buttons -->
                     <div class="apex-research-toolbar">
                         <input class="apex-research-input" id="researchQuery" placeholder="URL, query, or topic…" data-keydown="_apexEnterResearchProxy" />
@@ -12915,202 +12956,153 @@ _addInterval(refreshCommandPage, 30000);
 
 // ── Overview page ─────────────────────────────────────────────────────────────
 async function initOverviewPage() {
-    try {
-        // Greeting
-        var greetEl = document.getElementById('ovr-greeting');
-        var dateEl  = document.getElementById('ovr-date');
-        var motEl   = document.getElementById('ovr-motivational');
-        var h = new Date().getHours();
-        if (greetEl) greetEl.textContent = h < 12 ? 'Good morning, sir.' : h < 18 ? 'Good afternoon, sir.' : 'Good evening, sir.';
-        if (dateEl)  dateEl.textContent  = new Date().toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
-        var phrases = [
-            'Small wins compound into large victories.',
-            'Clarity precedes mastery.',
-            'Every system built is a future freed.',
-            'The margin is in the details.',
-            'Consistency is the highest form of discipline.',
-            'Build it once. Let it run forever.'
-        ];
-        if (motEl) motEl.textContent = '“' + phrases[Math.floor(h / 4) % phrases.length] + '”';
-    } catch(e) { console.error('[APEX-UI] greeting', e); }
+    // Greeting
+    var greetEl = document.getElementById('ovr-greeting');
+    var h = new Date().getHours();
+    if (greetEl) greetEl.textContent = (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening')
+        + ' · ' + new Date().toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
 
-    // Fetch all data in parallel
     var hdrs = {'x-app-key': window._appKey || ''};
-    var [runsR, metricsR, sleepR, workoutsR, financeR, emailsR, calendarR] = await Promise.allSettled([
-        fetch('/api/intelligence/agent-runs', {headers: hdrs}).then(function(r){return r.json();}),
-        fetch('/api/master/metrics',          {headers: hdrs}).then(function(r){return r.json();}),
-        fetch('/api/health/sleep',            {headers: hdrs}).then(function(r){return r.json();}),
-        fetch('/api/health/workouts',         {headers: hdrs}).then(function(r){return r.json();}),
-        fetch('/api/finance/summary',         {headers: hdrs}).then(function(r){return r.json();}),
-        fetch('/api/emails',                  {headers: hdrs}).then(function(r){return r.json();}),
-        fetch('/api/calendar/events',         {headers: hdrs}).then(function(r){return r.json();})
+    var [runsR, metricsR, emailsR, calR, finR, permsR] = await Promise.allSettled([
+        fetch('/api/intelligence/agent-runs', {headers:hdrs}).then(function(r){return r.json();}),
+        fetch('/api/master/metrics',          {headers:hdrs}).then(function(r){return r.json();}),
+        fetch('/api/emails',                  {headers:hdrs}).then(function(r){return r.json();}),
+        fetch('/api/calendar/events',         {headers:hdrs}).then(function(r){return r.json();}),
+        fetch('/api/finance/summary',         {headers:hdrs}).then(function(r){return r.json();}),
+        fetch('/api/master/permissions',      {headers:hdrs}).then(function(r){return r.json();})
     ]);
 
-    var allRuns  = (runsR.status === 'fulfilled'  && runsR.value.ok)  ? (runsR.value.runs  || []) : [];
-    var metrics  = (metricsR.status === 'fulfilled') ? metricsR.value : {};
-    var sleepArr = (sleepR.status === 'fulfilled'  && sleepR.value.ok) ? (sleepR.value.sleep || []) : [];
-    var wkArr    = (workoutsR.status === 'fulfilled' && workoutsR.value.ok) ? (workoutsR.value.workouts || []) : [];
-    var finData  = (financeR.status === 'fulfilled' && financeR.value.ok) ? financeR.value : {};
-    var emailArr = (emailsR.status === 'fulfilled'  && emailsR.value.ok)  ? (emailsR.value.emails || []) : [];
-    var calArr   = (calendarR.status === 'fulfilled' && calendarR.value.ok) ? (calendarR.value.events || []) : [];
+    var runs    = (runsR.status==='fulfilled'  && runsR.value.ok)    ? (runsR.value.runs   || []) : [];
+    var metrics = (metricsR.status==='fulfilled')                     ? (metricsR.value     || {}) : {};
+    var emails  = (emailsR.status==='fulfilled' && emailsR.value.ok) ? (emailsR.value.emails|| []) : [];
+    var calEvts = (calR.status==='fulfilled'   && calR.value.ok)     ? (calR.value.events  || []) : [];
+    var finData = (finR.status==='fulfilled'   && finR.value.ok)     ? finR.value                : {};
+    var perms   = (permsR.status==='fulfilled' && permsR.value.ok)   ? (permsR.value.permissions||[]) : [];
 
-    // ── Wins row ──────────────────────────────────────────────────────────────
-    try {
-        var weekAgo = Date.now() - 7 * 86400000;
-        var thisWeek = allRuns.filter(function(r) { return new Date(r.created_at) > weekAgo; });
-        var successRate = allRuns.length ? Math.round(allRuns.filter(function(r) { return r.success; }).length / allRuns.length * 100) : 0;
-        var wkCnt = wkArr.filter(function(w) { return new Date(w.workout_date || w.date || w.created_at) > weekAgo; }).length;
+    // Derived
+    var pendingApprovals = perms.filter(function(p){ try{ return JSON.parse(p.message).type==='permissionRequest'; }catch(e){ return false; } }).length
+                         || metrics.pendingApprovals || 0;
+    var runningAgents    = runs.filter(function(r){ return r.status==='running'; }).length;
+    var today            = new Date().toDateString();
+    var todayRuns        = runs.filter(function(r){ return new Date(r.created_at).toDateString()===today; });
+    var unreadEmails     = emails.filter(function(e){ return !e.read; }).length;
+    var urgentEmails     = emails.filter(function(e){ return e.priority==='urgent'||e.flagged; }).length;
+    var credit           = parseFloat(metrics.anthropicCredit||metrics.credit||finData.credit||0);
+    var successRate      = runs.length ? Math.round(runs.filter(function(r){return r.success||r.status==='committed';}).length/runs.length*100) : -1;
 
-        var wins = [];
-        if (thisWeek.length > 0) wins.push({label:'FEATURES THIS WEEK', value:thisWeek.length, trend:'↑ building', color:'var(--green)'});
-        if (successRate > 0)     wins.push({label:'PIPELINE SUCCESS',    value:successRate+'%', trend:'→ consistent', color:'var(--cyan)'});
-        if (wkCnt > 0)           wins.push({label:'WORKOUTS THIS WEEK',  value:wkCnt,           trend:'↑ active',    color:'var(--green)'});
-        wins.push({label:'SYSTEM STATUS', value:'ALL OK', trend:'→ nominal', color:'var(--green)'});
+    // ── SECTION 1: Executive Briefing ──────────────────────────────────────────
+    var healthEl = document.getElementById('ovrStatHealth');
+    if (healthEl) {
+        var ok = pendingApprovals < 10 && urgentEmails < 5 && (successRate < 0 || successRate >= 50);
+        healthEl.textContent = ok ? 'OK' : 'WARN';
+        healthEl.style.color = ok ? 'var(--green)' : 'var(--amber)';
+    }
+    var agentsEl = document.getElementById('ovrStatAgents');
+    if (agentsEl) { agentsEl.textContent = runningAgents || runs.filter(function(r){return (Date.now()-new Date(r.created_at))<3600000;}).length || '0'; }
 
-        var winsRow = document.getElementById('ovr-wins-row');
-        if (winsRow) {
-            winsRow.innerHTML = wins.slice(0, 4).map(function(w) {
-                return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">'
-                    + '<div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:8px">' + w.label + '</div>'
-                    + '<div style="font-size:24px;font-weight:600;color:' + w.color + '">' + w.value + '</div>'
-                    + '<div style="font-size:11px;color:var(--text-mute);margin-top:4px">' + w.trend + '</div>'
-                    + '</div>';
+    var procEl = document.getElementById('ovrStatProcesses');
+    if (procEl) { procEl.textContent = todayRuns.length || '0'; }
+
+    var appEl = document.getElementById('ovrStatApprovals');
+    if (appEl) { appEl.textContent = pendingApprovals||'0'; appEl.style.color = pendingApprovals>0?'var(--red)':'var(--green)'; }
+
+    var urgEl = document.getElementById('ovrStatUrgent');
+    if (urgEl) { urgEl.textContent = urgentEmails||'0'; urgEl.style.color = urgentEmails>0?'var(--amber)':'var(--text-mute)'; }
+
+    var taskEl = document.getElementById('ovrStatTasks');
+    if (taskEl) { taskEl.textContent = todayRuns.length||'0'; }
+
+    // ── SECTION 2: System Map nodes ───────────────────────────────────────────
+    function _mapNode(id, text, color) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text;
+        if (color) el.style.color = color;
+    }
+    _mapNode('ovrMapCmd',      'Ready',                                         'var(--green)');
+    _mapNode('ovrMapAgents',   runningAgents>0 ? runningAgents+' running'
+                                               : runs.length>0 ? runs.length+' logged' : '0 active',
+                               runningAgents>0 ? 'var(--cyan)' : 'var(--text-mute)');
+    _mapNode('ovrMapOps',      pendingApprovals>0 ? pendingApprovals+' pending' : 'Clear',
+                               pendingApprovals>0 ? 'var(--amber)' : 'var(--green)');
+    _mapNode('ovrMapComms',    unreadEmails>0 ? unreadEmails+' unread' : 'Clear',
+                               unreadEmails>0 ? 'var(--cyan)' : 'var(--text-mute)');
+    _mapNode('ovrMapBiz',      '—',   'var(--text-mute)');
+    _mapNode('ovrMapFin',      credit>0 ? '$'+credit.toFixed(2)+' credit' : 'Not connected',
+                               credit>10 ? 'var(--green)' : credit>3 ? 'var(--amber)' : 'var(--text-mute)');
+    _mapNode('ovrMapUni',      '—',          'var(--text-mute)');
+    _mapNode('ovrMapResearch', 'Intelligence','var(--text-mute)');
+
+    // ── SECTION 3: Activity Feed ───────────────────────────────────────────────
+    var feedEl = document.getElementById('ovrFeedBody');
+    if (feedEl) {
+        var roleMap = {
+            architect:'Architect', developer:'Developer', reviewer:'Reviewer',
+            validator:'Validator', tester:'Tester', committer:'Committer',
+            reflector:'Reflector', 'master-orchestrator':'Orchestrator'
+        };
+        var _esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+        var _ts  = function(iso){
+            var d=new Date(iso);
+            return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+        };
+        var recent = runs.slice(0,15);
+        if (recent.length) {
+            feedEl.innerHTML = recent.map(function(run) {
+                var role   = roleMap[run.role||run.agent_role||''] || (run.role||'Agent');
+                var status = run.success||run.status==='committed' ? 'completed'
+                           : run.status==='running' ? 'running' : 'processed';
+                var obj    = _esc((run.objective||run.task_id||'Task').slice(0,55));
+                var dot    = run.success||run.status==='committed' ? 'var(--green)'
+                           : run.status==='running' ? 'var(--cyan)'
+                           : run.status==='failed'  ? 'var(--red)'  : 'var(--text-mute)';
+                return '<div style=”display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)”>'
+                    + '<span style=”font-size:10px;color:var(--text-mute);font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0”>'+_ts(run.created_at)+'</span>'
+                    + '<span style=”font-size:11px;color:var(--text);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap”>'
+                    + '<span style=”color:'+dot+';margin-right:5px”>●</span>'+role+' '+status+' · '+obj+'</span></div>';
             }).join('');
+        } else {
+            feedEl.innerHTML = '<div style=”font-size:11px;color:var(--text-mute);padding:10px 0;text-align:center”>No recent activity</div>';
         }
-    } catch(e) { console.error('[APEX-UI] wins', e); }
+    }
 
-    // ── Finance snapshot ──────────────────────────────────────────────────────
-    try {
-        var finSnap = document.getElementById('ovr-finance-snap');
-        if (finSnap) {
-            var credit = parseFloat(metrics.anthropicCredit || metrics.credit || finData.credit || 14.61);
-            var pct    = Math.min(100, credit / 25 * 100).toFixed(1);
-            finSnap.innerHTML =
-                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
-                + '<div style="width:6px;height:6px;border-radius:50%;background:var(--amber)"></div>'
-                + '<span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Finance</span>'
-                + '</div>'
-                + '<div style="font-size:22px;font-weight:600;color:var(--amber)">$' + credit.toFixed(2) + '</div>'
-                + '<div style="font-size:10px;color:var(--text-mute);margin-bottom:8px">AI credits remaining</div>'
-                + '<div style="height:3px;border-radius:2px;background:var(--border);margin-bottom:10px">'
-                + '<div style="height:100%;border-radius:2px;background:var(--amber);width:' + pct + '%"></div>'
-                + '</div>'
-                + (credit < 5 ? '<div style="font-size:10px;color:var(--red)">⚠ Low credit — enable auto-reload</div>' : '')
-                + '<div style="font-size:11px;color:var(--text-mute);margin-top:6px">Bank: not connected</div>';
-        }
-    } catch(e) { console.error('[APEX-UI] finance-snap', e); }
+    // ── SECTION 4: Priority Center ─────────────────────────────────────────────
+    var prioEl = document.getElementById('ovrPriorityList');
+    if (prioEl) {
+        var priorities = [];
+        var todayEvts = calEvts.filter(function(ev){ return new Date(ev.start||ev.date).toDateString()===today; });
 
-    // ── Health snapshot ───────────────────────────────────────────────────────
-    try {
-        var hlSnap = document.getElementById('ovr-health-snap');
-        if (hlSnap) {
-            var lastSleep = sleepArr.length ? (sleepArr[sleepArr.length - 1].hours || sleepArr[sleepArr.length - 1].duration || '—') : '—';
-            var weekAgo2  = Date.now() - 7 * 86400000;
-            var wkCnt2    = wkArr.filter(function(w) { return new Date(w.workout_date || w.date || w.created_at) > weekAgo2; }).length;
-            hlSnap.innerHTML =
-                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
-                + '<div style="width:6px;height:6px;border-radius:50%;background:var(--green)"></div>'
-                + '<span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Health</span>'
-                + '</div>'
-                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-                + '<div><div style="font-size:9px;color:var(--text-mute)">SLEEP</div>'
-                + '<div style="font-size:16px;font-weight:600;color:var(--text)">' + (lastSleep === '—' ? '—' : lastSleep + 'h') + '</div></div>'
-                + '<div><div style="font-size:9px;color:var(--text-mute)">WORKOUTS</div>'
-                + '<div style="font-size:16px;font-weight:600;color:var(--text)">' + wkCnt2 + '<span style="font-size:10px;color:var(--text-mute)"> this week</span></div></div>'
-                + '<div><div style="font-size:9px;color:var(--text-mute)">CALORIES</div>'
-                + '<div style="font-size:16px;font-weight:600;color:var(--text)">—</div></div>'
-                + '<div><div style="font-size:9px;color:var(--text-mute)">WATER</div>'
-                + '<div style="font-size:16px;font-weight:600;color:var(--text)">—</div></div>'
+        if (pendingApprovals>0)
+            priorities.push({level:'HIGH',   color:'var(--red)',    text:pendingApprovals+' approval'+(pendingApprovals===1?'':'s')+' awaiting review', source:'Operation'});
+        if (urgentEmails>0)
+            priorities.push({level:'HIGH',   color:'var(--amber)',  text:urgentEmails+' urgent message'+(urgentEmails===1?'':'s')+' requiring response', source:'Network'});
+        if (credit>0 && credit<5)
+            priorities.push({level:'HIGH',   color:'var(--amber)',  text:'AI credit low — $'+credit.toFixed(2)+' remaining', source:'Finance'});
+
+        var todayEv = todayEvts[0];
+        if (todayEv)
+            priorities.push({level:'NORMAL', color:'var(--cyan)',   text:(todayEv.title||todayEv.summary||'Meeting')+' — today', source:'Network'});
+        if (runningAgents>0)
+            priorities.push({level:'NORMAL', color:'var(--purple)', text:runningAgents+' agent'+(runningAgents===1?' is':' are')+' currently executing', source:'System'});
+
+        var failedRuns = runs.filter(function(r){ return r.status==='failed'; });
+        if (failedRuns.length>0)
+            priorities.push({level:'NORMAL', color:'var(--red)',    text:failedRuns.length+' agent run'+(failedRuns.length===1?'':'s')+' failed recently', source:'System'});
+        if (unreadEmails>0 && urgentEmails===0)
+            priorities.push({level:'NORMAL', color:'var(--text-mute)', text:unreadEmails+' unread emails', source:'Network'});
+
+        if (priorities.length===0)
+            priorities.push({level:'NORMAL', color:'var(--green)',  text:'All systems operating normally', source:'Overview'});
+
+        var _esc2 = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+        prioEl.innerHTML = priorities.slice(0,6).map(function(p) {
+            return '<div style=”display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)”>'
+                + '<span style=”font-size:9px;font-weight:700;letter-spacing:0.1em;color:'+p.color+';white-space:nowrap;min-width:46px”>'+p.level+'</span>'
+                + '<span style=”font-size:11px;color:var(--text);flex:1;line-height:1.4”>'+_esc2(p.text)+'</span>'
+                + '<span style=”font-size:9px;color:var(--text-mute);white-space:nowrap”>'+p.source+'</span>'
                 + '</div>';
-        }
-    } catch(e) { console.error('[APEX-UI] health-snap', e); }
-
-    // ── System snapshot ───────────────────────────────────────────────────────
-    try {
-        var sysSnap = document.getElementById('ovr-system-snap');
-        if (sysSnap) {
-            var complete   = metrics.featuresComplete || allRuns.filter(function(r){return r.success;}).length || 0;
-            var approvals  = metrics.pendingApprovals || 0;
-            var lastRun    = allRuns[0];
-            var relTime    = function(d) {
-                if (!d) return '';
-                var diff = Date.now() - new Date(d);
-                var min  = Math.floor(diff / 60000);
-                return min < 60 ? min + 'm ago' : Math.floor(min / 60) + 'h ago';
-            };
-            sysSnap.innerHTML =
-                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
-                + '<div style="width:6px;height:6px;border-radius:50%;background:var(--cyan)"></div>'
-                + '<span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">System</span>'
-                + '</div>'
-                + '<div style="font-size:22px;font-weight:600;color:var(--cyan)">' + complete
-                + '<span style="font-size:13px;color:var(--text-mute)"> / 109</span></div>'
-                + '<div style="font-size:10px;color:var(--text-mute);margin-bottom:10px">features complete</div>'
-                + (lastRun ? '<div style="font-size:11px;color:var(--text-mid)">Last: ' + (lastRun.task_id || '—')
-                    + ' · <span style="color:' + (lastRun.success ? 'var(--green)' : 'var(--amber)') + '">' + (lastRun.success ? 'success' : 'failed') + '</span>'
-                    + ' · ' + relTime(lastRun.created_at) + '</div>' : '')
-                + '<div style="font-size:11px;margin-top:6px;color:' + (approvals > 0 ? 'var(--amber)' : 'var(--text-mute)') + '">'
-                + approvals + ' approval' + (approvals !== 1 ? 's' : '') + ' pending</div>';
-        }
-    } catch(e) { console.error('[APEX-UI] system-snap', e); }
-
-    // ── Communications snapshot ───────────────────────────────────────────────
-    try {
-        var commsSnap = document.getElementById('ovr-comms-snap');
-        if (commsSnap) {
-            var unread  = emailArr.filter(function(e){return !e.read;}).length;
-            var urgent  = emailArr.filter(function(e){return e.priority === 'urgent' || e.flagged;}).length;
-            var today   = new Date().toDateString();
-            var todayEv = calArr.filter(function(ev){ return new Date(ev.start || ev.date).toDateString() === today; });
-            var nextEv  = todayEv[0];
-            commsSnap.innerHTML =
-                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
-                + '<div style="width:6px;height:6px;border-radius:50%;background:var(--cyan)"></div>'
-                + '<span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute);flex:1">Communications</span>'
-                + '<span data-fn="switchPage" data-args=\'["communication"]\' style="font-size:10px;color:var(--cyan);cursor:pointer">→ Go to Comms</span>'
-                + '</div>'
-                + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">'
-                + '<div><div style="font-size:9px;color:var(--text-mute)">EMAIL</div>'
-                + '<div style="font-size:18px;font-weight:600;color:var(--text)">' + unread + '</div>'
-                + '<div style="font-size:10px;color:var(--text-mute)">unread</div></div>'
-                + '<div><div style="font-size:9px;color:var(--text-mute)">URGENT</div>'
-                + '<div style="font-size:18px;font-weight:600;color:' + (urgent > 0 ? 'var(--red)' : 'var(--text)') + '">' + urgent + '</div>'
-                + '<div style="font-size:10px;color:var(--text-mute)">flagged</div></div>'
-                + '<div><div style="font-size:9px;color:var(--text-mute)">CALENDAR</div>'
-                + '<div style="font-size:18px;font-weight:600;color:var(--text)">' + todayEv.length + '</div>'
-                + '<div style="font-size:10px;color:var(--text-mute)">today</div></div>'
-                + '<div><div style="font-size:9px;color:var(--text-mute)">NEXT</div>'
-                + '<div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.3">' + (nextEv ? (nextEv.title || nextEv.summary || 'Event') : '—') + '</div></div>'
-                + '</div>';
-        }
-    } catch(e) { console.error('[APEX-UI] comms-snap', e); }
-
-    // ── Section summary cards ─────────────────────────────────────────────────
-    try {
-        var credit2    = parseFloat(metrics.anthropicCredit || metrics.credit || finData.credit || 14.61);
-        var lastSleep2 = sleepArr.length ? (sleepArr[sleepArr.length - 1].hours || '—') : '—';
-        var approvals2 = metrics.pendingApprovals || 0;
-        var summaryCards = [
-            {label:'FINANCE',    page:'finance',    value: '$' + credit2.toFixed(2), sub:'AI credits',    color:'var(--amber)'},
-            {label:'HEALTH',     page:'health',     value: lastSleep2 === '—' ? '—' : lastSleep2 + 'h', sub:'last sleep', color:'var(--green)'},
-            {label:'BUSINESS',   page:'business',   value: approvals2,   sub:'approvals', color: approvals2 > 0 ? 'var(--red)' : 'var(--text)'},
-            {label:'UNIVERSITY', page:'university', value: '—',      sub:'assignments due', color:'var(--text-mute)'},
-            {label:'OCCULT',     page:'occult',     value: '—',      sub:'practices today', color:'var(--text-mute)'}
-        ];
-        var summaryRow = document.getElementById('ovr-summary-row');
-        if (summaryRow) {
-            summaryRow.innerHTML = summaryCards.map(function(c) {
-                return '<div data-fn="switchPage" data-args=\'["'+c.page+'"]\' '
-                    + ' style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:border-color 0.15s"'
-                    + ''
-                    + '>'
-                    + '<div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px">' + c.label + '</div>'
-                    + '<div style="font-size:18px;font-weight:600;color:' + c.color + '">' + c.value + '</div>'
-                    + '<div style="font-size:10px;color:var(--text-mute);margin-top:3px">' + c.sub + '</div>'
-                    + '</div>';
-            }).join('');
-        }
-    } catch(e) { console.error('[APEX-UI] summary', e); }
+        }).join('');
+    }
 }
 
 // Hook initOverviewPage into switchPage without touching the original
@@ -14095,9 +14087,42 @@ function filterEmails(filter, btn) {
     }
 }
 
+function populateNetworkAttention() {
+    var el = document.getElementById('networkAttentionList');
+    if (!el) return;
+    fetch('/api/emails').then(function(r){return r.json();}).then(function(d){
+        var emails = (d.ok && d.emails) ? d.emails : [];
+        var urgent  = emails.filter(function(e){ return e.priority==='urgent'||e.flagged||e.urgent; });
+        var unread  = emails.filter(function(e){ return !e.read && !e.draft; }).slice(0,3);
+        var items   = urgent.concat(unread.filter(function(e){ return !urgent.includes(e); })).slice(0,5);
+        if (!items.length) {
+            el.innerHTML = '<div style="font-size:11px;color:var(--green);padding:6px 0">No urgent items — inbox clear</div>';
+            return;
+        }
+        var _esc = function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+        el.innerHTML = items.map(function(e){
+            var isUrgent = e.priority==='urgent'||e.flagged||e.urgent;
+            var dot      = isUrgent ? 'var(--red)' : 'var(--text-mute)';
+            var badge    = isUrgent ? '<span style="font-size:9px;color:var(--red);font-weight:700;margin-left:6px">URGENT</span>' : '';
+            return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)">'
+                +'<span style="width:6px;height:6px;border-radius:50%;background:'+dot+';flex-shrink:0"></span>'
+                +'<div style="flex:1;min-width:0">'
+                +'<div style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(e.from||'Unknown sender')+'</div>'
+                +'<div style="font-size:10px;color:var(--text-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(e.subject||'(no subject)')+'</div>'
+                +'</div>'
+                +badge
+                +'<button class="ds-btn xs cyan" data-fn="quickReply" data-to="'+_esc(e.from||'')+'" data-stop="1">Reply</button>'
+                +'</div>';
+        }).join('');
+    }).catch(function(){
+        el.innerHTML = '<div style="font-size:11px;color:var(--text-mute);padding:6px 0">Email not configured</div>';
+    });
+}
+
 function initCommunicationPage() {
     buildWeekCalendar();
     fetchCommsEmails();
+    populateNetworkAttention();
 }
 
 (function(){
@@ -15568,6 +15593,21 @@ window.apexFeedPush = function(tag, msg, type){
     body.insertBefore(entry, body.firstChild);
     var entries=body.querySelectorAll('.apex-feed-entry');
     if(entries.length>_feedMax)entries[entries.length-1].remove();
+    // Mirror to Overview Activity Feed
+    var ovrFeed=document.getElementById('ovrFeedBody');
+    if(ovrFeed){
+        var dot=type==='error'?'var(--red)':type==='success'?'var(--green)':type==='agent'?'var(--purple)':'var(--text-mute)';
+        var ovrRow=document.createElement('div');
+        ovrRow.style.cssText='display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)';
+        ovrRow.innerHTML='<span style="font-size:10px;color:var(--text-mute);font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0">'+_feedTs()+'</span>'
+            +'<span style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+            +'<span style="color:'+dot+';margin-right:5px">●</span>'+_escHtml(msg)+'</span>';
+        var placeholder=ovrFeed.querySelector('div[style*="text-align:center"]');
+        if(placeholder)placeholder.remove();
+        ovrFeed.insertBefore(ovrRow,ovrFeed.firstChild);
+        var ovrEntries=ovrFeed.children;
+        if(ovrEntries.length>20)ovrFeed.removeChild(ovrEntries[ovrEntries.length-1]);
+    }
 };
 
 window.apexFeedClear = function(){
@@ -15701,11 +15741,41 @@ window.browserFill = async function() {
     } catch(e) { out.textContent = 'Error: ' + e.message; }
 };
 
+function _resStageLight(active){
+    var map={search:'resStageSearch',scrape:'resStageScrape',crawl:'resStageScrape',map:'resStageScrape'};
+    var stageId=map[active]||'resStageSearch';
+    ['resStageSearch','resStageScrape','resStageAnalyze','resStageSummarize','resStageStore'].forEach(function(id){
+        var el=document.getElementById(id);
+        if(!el)return;
+        var isActive=id===stageId;
+        el.style.background=isActive?'rgba(56,189,248,0.08)':'';
+        var label=el.querySelector('span');
+        if(label)label.style.color=isActive?'var(--cyan)':'var(--text-mute)';
+    });
+}
+function _resStageComplete(){
+    ['resStageAnalyze','resStageSummarize','resStageStore'].forEach(function(id,i){
+        var el=document.getElementById(id);
+        if(!el)return;
+        setTimeout(function(){
+            el.style.background='rgba(52,211,153,0.06)';
+            var label=el.querySelector('span');
+            if(label)label.style.color='var(--green)';
+        },i*300);
+    });
+    setTimeout(function(){
+        ['resStageSearch','resStageScrape','resStageAnalyze','resStageSummarize','resStageStore'].forEach(function(id){
+            var el=document.getElementById(id);
+            if(el){el.style.background='';var l=el.querySelector('span');if(l)l.style.color='var(--text-mute)';}
+        });
+    },2500);
+}
 window.apexResearch = function(mode){
     var q=document.getElementById('researchQuery');
     if(!q)return;
     var query=q.value.trim();
     if(!query){q.focus();return;}
+    _resStageLight(mode);
     var results=document.getElementById('apexResResults');
     var empty=document.getElementById('apexResEmpty');
     if(empty)empty.style.display='none';
@@ -15732,6 +15802,7 @@ window.apexResearch = function(mode){
         _setBtnsDisabled(false);
         window.apexTrackLatency(Date.now()-t0);
         _renderResearchResult(mode, query, d, results);
+        _resStageComplete();
         window.apexFeedPush('RESEARCH','Done in '+(Date.now()-t0)+'ms','research');
     })
     .catch(function(e){
