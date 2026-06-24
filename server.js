@@ -479,7 +479,7 @@ app.get('/health', async (req, res) => {
 });
 
 // GET /api/system/health/detailed — unified observability snapshot
-app.get('/api/system/health/detailed', requireAppAccess, async (req, res) => {
+app.get('/api/system/health/detailed', ...kernelChain, async (req, res) => {
     const t0 = Date.now();
     const result = {
         timestamp:  Date.now(),
