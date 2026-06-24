@@ -6919,298 +6919,333 @@ input::placeholder, textarea::placeholder, .ds-input::placeholder {
 
 <style>
 /* ══════════════════════════════════════════════════════════════════════
-   APEX — JARVIS v3 · Deep Space · Matrix · Every element earns its place.
+   APEX — COMMAND CENTRE · Identity Layer · v4
+   Deep space blue. Clean hierarchy. Every pixel earns its place.
    ══════════════════════════════════════════════════════════════════════ */
 
-/* ── Deep space tokens ───────────────────────────────────────────────── */
+/* ── Token override — deep blue Jarvis palette ───────────────────────── */
 :root {
-  --ax-bg:   #010308!important;
-  --ax-s1:   #05060e!important;
-  --ax-s2:   #0a0b17!important;
-  --ax-s3:   #10111f!important;
-  --ax-bd:   rgba(0,212,255,0.12)!important;
-  --ax-bd-h: rgba(0,212,255,0.28)!important;
+  --ax-bg:   #060c18!important;
+  --ax-s1:   #0d1424!important;
+  --ax-s2:   #141d30!important;
+  --ax-s3:   #1b273d!important;
+  --ax-bd:   rgba(255,255,255,0.07)!important;
+  --ax-bd-h: rgba(255,255,255,0.13)!important;
   --ax-acc:  #00d4ff!important;
   --ax-acc2: #38c8ff!important;
   --ax-accd: rgba(0,212,255,0.08)!important;
-  --ax-bd-a: rgba(0,212,255,0.5)!important;
-  --ax-tx0:  #eaf2ff!important;
-  --ax-tx1:  rgba(200,220,255,0.75)!important;
-  --ax-tx2:  rgba(140,175,230,0.48)!important;
-  --ax-tx3:  rgba(90,130,190,0.3)!important;
+  --ax-bd-a: rgba(0,212,255,0.28)!important;
+  --ax-tx0:  #eef2ff!important;
+  --ax-tx1:  #b4c1d8!important;
+  --ax-tx2:  #6e85a4!important;
+  --ax-tx3:  #3d5070!important;
   --ax-cyn:  #00d4ff!important;
-  --ax-grn:  #00e87a!important;
-  --ax-pur:  #a78bfa!important;
-  --ax-amb:  #fbbf24!important;
-  --ax-red:  #f87171!important;
+  --ax-grn:  #00e5a0!important;
+  --ax-pur:  #7c6fff!important;
+  --ax-amb:  #f5a623!important;
+  --ax-red:  #ff4d6a!important;
+
+  /* Bridge all legacy variables to the new Jarvis palette */
+  --bg: var(--ax-bg)!important; --bg-base: var(--ax-bg)!important;
+  --bg-surface: var(--ax-s1)!important; --bg-raised: var(--ax-s2)!important;
+  --surface: var(--ax-s1)!important; --surface-1: var(--ax-s1)!important;
+  --surface-2: var(--ax-s2)!important; --surface-3: var(--ax-s3)!important;
+  --s1: var(--ax-s1)!important; --s2: var(--ax-s2)!important;
+  --s3: var(--ax-s3)!important; --s4: var(--ax-s3)!important;
+  --border: var(--ax-bd)!important; --border-dim: var(--ax-bd)!important;
+  --border-strong: var(--ax-bd-h)!important;
+  --b0: rgba(255,255,255,0.04)!important; --b1: var(--ax-bd)!important;
+  --b2: var(--ax-bd-h)!important; --b3: var(--ax-bd-h)!important;
+  --bd: var(--ax-bd)!important; --bd-h: var(--ax-bd-h)!important; --bd-a: var(--ax-bd-a)!important;
+  --text: var(--ax-tx0)!important; --text-mid: var(--ax-tx1)!important;
+  --text-mute: var(--ax-tx2)!important; --text-faint: var(--ax-tx3)!important;
+  --muted: var(--ax-tx2)!important; --muted2: var(--ax-tx3)!important;
+  --tx0: var(--ax-tx0)!important; --tx1: var(--ax-tx1)!important;
+  --tx2: var(--ax-tx2)!important; --tx3: var(--ax-tx3)!important;
+  --v12-tx0: var(--ax-tx0)!important; --v12-tx1: var(--ax-tx1)!important;
+  --v12-tx2: var(--ax-tx2)!important; --v12-tx3: var(--ax-tx3)!important;
+  --v12-bd: var(--ax-bd)!important; --v12-bd-h: var(--ax-bd-h)!important;
+  --v12-bd-a: var(--ax-bd-a)!important; --v12-bg: var(--ax-bg)!important;
+  --v12-s1: var(--ax-s1)!important; --v12-s2: var(--ax-s2)!important;
+  --v12-s3: var(--ax-s3)!important; --v12-s4: var(--ax-s3)!important;
+  --v12-a: var(--ax-acc)!important; --v12-a2: var(--ax-acc2)!important;
+  --v12-a-dim: var(--ax-accd)!important;
+  --v12-ok: var(--ax-grn)!important; --v12-warn: var(--ax-amb)!important;
+  --v12-err: var(--ax-red)!important; --v12-info: var(--ax-cyn)!important;
+  --cyan: var(--ax-cyn)!important; --green: var(--ax-grn)!important;
+  --amber: var(--ax-amb)!important; --red: var(--ax-red)!important;
+  --purple: var(--ax-pur)!important;
+  --primary: var(--ax-acc)!important; --primary-dim: var(--ax-accd)!important;
+  --primary-glow: rgba(0,212,255,0.35)!important;
+  --success: var(--ax-grn)!important; --danger: var(--ax-red)!important;
+  --accent: var(--ax-acc)!important; --accent-hover: var(--ax-acc2)!important;
+  --accent-dim: var(--ax-accd)!important;
+  /* Spacing */
+  --space-1: 4px!important; --space-2: 8px!important;
+  --space-3: 12px!important; --space-4: 16px!important;
+  --space-5: 20px!important; --space-6: 24px!important; --space-8: 32px!important;
+  /* Radius */
+  --r-sm: 6px!important; --r-md: 8px!important;
+  --r-lg: 10px!important; --r-xl: 12px!important; --r-pill: 999px!important;
 }
 
-/* ── Dual-layer animated matrix background ───────────────────────────── */
-html, body { background: #010308!important; }
+/* ── Canvas ───────────────────────────────────────────────────────────── */
+html, body { background: #060c18!important; color: #eef2ff!important; }
 .app, #app { background: transparent!important; }
+.page-content, .content-area { background: transparent!important; }
+
+/* Animated matrix grid — single layer, clean and subtle */
 body::before {
   content: ''!important; display: block!important;
   position: fixed!important; inset: 0!important;
   background-image:
-    linear-gradient(rgba(0,212,255,0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,212,255,0.032) 1px, transparent 1px),
-    linear-gradient(rgba(0,212,255,0.012) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,212,255,0.012) 1px, transparent 1px)!important;
-  background-size: 24px 24px, 24px 24px, 120px 120px, 120px 120px!important;
+    linear-gradient(rgba(0,212,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.02) 1px, transparent 1px)!important;
+  background-size: 40px 40px!important;
   pointer-events: none!important; z-index: 0!important;
-  animation: ax-grid-drift 20s linear infinite!important;
+  animation: ax-grid 32s linear infinite!important;
 }
-body::after {
-  content: ''!important; display: block!important;
-  position: fixed!important; inset: 0!important;
-  background: radial-gradient(ellipse 80% 60% at 50% 0%, transparent 40%, rgba(1,3,8,0.7) 100%)!important;
-  pointer-events: none!important; z-index: 0!important;
-}
-@keyframes ax-grid-drift {
-  0%   { background-position: 0 0, 0 0, 0 0, 0 0; }
-  100% { background-position: 24px 24px, 24px 24px, 120px 120px, 120px 120px; }
-}
+body::after { display: none!important; }
+@keyframes ax-grid { to { background-position: 40px 40px; } }
 
-/* ── Scan-line sweep on panel headers ────────────────────────────────── */
-@keyframes hud-scan {
-  0%   { transform: translateX(-100%); opacity: 0; }
-  8%   { opacity: 1; }
-  92%  { opacity: 1; }
-  100% { transform: translateX(100%); opacity: 0; }
-}
-.ds-panel-header {
-  position: relative!important;
-  overflow: hidden!important;
-  border-bottom: 1px solid rgba(0,212,255,0.1)!important;
-  background: rgba(0,212,255,0.02)!important;
-}
-.ds-panel-header::after {
-  content: ''!important;
-  position: absolute!important; inset: 0!important;
-  background: linear-gradient(90deg, transparent 0%, rgba(0,212,255,0.06) 50%, transparent 100%)!important;
-  animation: hud-scan 9s ease-in-out infinite!important;
-  pointer-events: none!important;
-}
-.ds-panel:nth-child(2)  .ds-panel-header::after { animation-delay: -1.5s!important; }
-.ds-panel:nth-child(3)  .ds-panel-header::after { animation-delay: -3s!important; }
-.ds-panel:nth-child(4)  .ds-panel-header::after { animation-delay: -4.5s!important; }
-.ds-panel:nth-child(5)  .ds-panel-header::after { animation-delay: -6s!important; }
-.ds-panel:nth-child(6)  .ds-panel-header::after { animation-delay: -7.5s!important; }
-.ds-panel:nth-child(7)  .ds-panel-header::after { animation-delay: -2.2s!important; }
-.ds-panel:nth-child(8)  .ds-panel-header::after { animation-delay: -3.7s!important; }
-.ds-panel:nth-child(9)  .ds-panel-header::after { animation-delay: -5.1s!important; }
-.ds-panel:nth-child(10) .ds-panel-header::after { animation-delay: -6.6s!important; }
-
-/* ── Page titles — Cinzel, multi-layer glow ──────────────────────────── */
+/* ── Page titles — Cinzel ONLY here ──────────────────────────────────── */
 .ds-page-title {
   font-family: 'Cinzel', serif!important;
-  font-size: 22px!important; font-weight: 700!important;
-  letter-spacing: 0.35em!important; text-transform: uppercase!important;
-  color: #eaf2ff!important;
-  text-shadow:
-    0 0 15px rgba(0,212,255,0.8),
-    0 0 40px rgba(0,212,255,0.4),
-    0 0 80px rgba(0,212,255,0.15)!important;
-  padding-bottom: 4px!important;
+  font-size: 18px!important; font-weight: 700!important;
+  letter-spacing: 0.32em!important; text-transform: uppercase!important;
+  color: #eef2ff!important;
+  text-shadow: 0 0 18px rgba(0,212,255,0.55), 0 0 48px rgba(0,212,255,0.18)!important;
 }
 .ds-page-subtitle {
   font-family: 'JetBrains Mono', monospace!important;
-  font-size: 9px!important; letter-spacing: 0.4em!important;
-  color: rgba(0,212,255,0.35)!important;
-  text-transform: uppercase!important;
+  font-size: 10px!important; letter-spacing: 0.28em!important;
+  color: rgba(0,212,255,0.38)!important; text-transform: uppercase!important;
 }
 
-/* ── Section labels (panel header .t-label, .ds-label) ──────────────── */
+/* ── Panel header labels — system font, readable ─────────────────────── */
 .t-label, .ds-label {
-  font-family: 'Cinzel', serif!important;
-  font-size: 9px!important; font-weight: 700!important;
-  letter-spacing: 0.25em!important; text-transform: uppercase!important;
-  color: rgba(0,212,255,0.7)!important;
-  text-shadow: 0 0 8px rgba(0,212,255,0.3)!important;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif!important;
+  font-size: 10px!important; font-weight: 600!important;
+  letter-spacing: 0.14em!important; text-transform: uppercase!important;
+  color: #6e85a4!important; text-shadow: none!important;
 }
+.t-label.cyan, .ds-label.cyan     { color: rgba(0,212,255,0.65)!important; }
+.t-label.green, .ds-label.green   { color: rgba(0,229,160,0.65)!important; }
+.t-label.purple, .ds-label.purple { color: rgba(124,111,255,0.65)!important; }
+.t-label.amber, .ds-label.amber   { color: rgba(245,166,35,0.65)!important; }
+.t-label.red, .ds-label.red       { color: rgba(255,77,106,0.65)!important; }
+.t-label-tiny { font-size: 9px!important; }
 
-/* ── Inline section header divs (uppercase labels in page body) ──────── */
+/* ── Inline section header divs ──────────────────────────────────────── */
 [style*="letter-spacing:0.12em;text-transform:uppercase"],
 [style*="letter-spacing:0.10em;text-transform:uppercase"],
 [style*="letter-spacing:0.14em;text-transform:uppercase"] {
-  font-family: 'Cinzel', serif!important;
-  font-size: 11px!important; font-weight: 700!important;
-  letter-spacing: 0.3em!important;
-  color: rgba(0,212,255,0.75)!important;
-  text-shadow: 0 0 12px rgba(0,212,255,0.3)!important;
-  border-left: 2px solid rgba(0,212,255,0.5)!important;
-  padding-left: 10px!important;
-  padding-bottom: 6px!important;
-  border-bottom: 1px solid rgba(0,212,255,0.08)!important;
-  margin-bottom: 12px!important;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif!important;
+  font-size: 10px!important; font-weight: 700!important;
+  letter-spacing: 0.18em!important; color: #b4c1d8!important;
+  border-left: 2px solid rgba(0,212,255,0.4)!important;
+  padding-left: 10px!important; padding-bottom: 6px!important;
+  border-bottom: 1px solid rgba(255,255,255,0.05)!important;
+  margin-bottom: 14px!important; text-shadow: none!important;
 }
 
-/* ── Panels — deep-space HUD ─────────────────────────────────────────── */
+/* ── Panels ───────────────────────────────────────────────────────────── */
 .ds-panel {
-  background: rgba(1,3,10,0.94)!important;
-  border: 1px solid rgba(0,212,255,0.12)!important;
-  border-top: 1px solid rgba(0,212,255,0.28)!important;
-  border-radius: 2px!important;
-  box-shadow:
-    0 1px 0 rgba(0,212,255,0.08) inset,
-    0 4px 32px rgba(0,0,0,0.6),
-    0 0 0 1px rgba(0,212,255,0.03) inset!important;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease!important;
+  background: #0d1424!important;
+  border: 1px solid rgba(255,255,255,0.07)!important;
+  border-top: 1px solid rgba(0,212,255,0.2)!important;
+  border-radius: 8px!important;
+  box-shadow: 0 2px 18px rgba(0,0,0,0.35)!important;
+  transition: border-color 0.2s, box-shadow 0.2s!important;
   position: relative!important;
 }
 .ds-panel:hover {
-  border-color: rgba(0,212,255,0.24)!important;
-  border-top-color: rgba(0,212,255,0.5)!important;
-  box-shadow:
-    0 1px 0 rgba(0,212,255,0.14) inset,
-    0 4px 48px rgba(0,0,0,0.7),
-    0 0 28px rgba(0,212,255,0.06)!important;
+  border-color: rgba(255,255,255,0.1)!important;
+  border-top-color: rgba(0,212,255,0.35)!important;
+  box-shadow: 0 4px 28px rgba(0,0,0,0.5)!important;
 }
+.ds-panel-header {
+  position: relative!important; overflow: visible!important;
+  border-bottom: 1px solid rgba(255,255,255,0.05)!important;
+  background: rgba(0,212,255,0.018)!important;
+  padding: 10px 14px!important; margin-bottom: 0!important;
+}
+.ds-panel-header::after { display: none!important; }
 
-/* ── Stat cards ──────────────────────────────────────────────────────── */
+/* ── Stat cards ───────────────────────────────────────────────────────── */
 .ds-stat-card {
-  background: rgba(1,3,10,0.94)!important;
-  border: 1px solid rgba(0,212,255,0.1)!important;
-  border-top: 1px solid rgba(0,212,255,0.22)!important;
-  border-radius: 2px!important;
+  background: #0d1424!important;
+  border: 1px solid rgba(255,255,255,0.07)!important;
+  border-top: 1px solid rgba(0,212,255,0.15)!important;
+  border-radius: 8px!important;
   transition: border-color 0.2s, box-shadow 0.2s!important;
 }
 .ds-stat-card:hover {
-  border-color: rgba(0,212,255,0.22)!important;
-  border-top-color: rgba(0,212,255,0.45)!important;
-  box-shadow: 0 0 20px rgba(0,212,255,0.07)!important;
+  border-color: rgba(255,255,255,0.11)!important;
+  border-top-color: rgba(0,212,255,0.28)!important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4)!important;
 }
 .ds-stat-card.ac-cyan::before   { background: linear-gradient(90deg,#00d4ff,transparent)!important; }
-.ds-stat-card.ac-green::before  { background: linear-gradient(90deg,#00e87a,transparent)!important; }
-.ds-stat-card.ac-purple::before { background: linear-gradient(90deg,#a78bfa,transparent)!important; }
-.ds-stat-card.ac-amber::before  { background: linear-gradient(90deg,#fbbf24,transparent)!important; }
-.ds-stat-card.ac-red::before    { background: linear-gradient(90deg,#f87171,transparent)!important; }
-.ds-stat-value           { text-shadow: 0 0 18px currentColor!important; }
-.ds-stat-value.cyan      { color: #00d4ff!important; }
-.ds-stat-value.green     { color: #00e87a!important; }
-.ds-stat-value.amber     { color: #fbbf24!important; }
-.ds-stat-value.red       { color: #f87171!important; }
-.ds-stat-value.purple    { color: #a78bfa!important; }
+.ds-stat-card.ac-green::before  { background: linear-gradient(90deg,#00e5a0,transparent)!important; }
+.ds-stat-card.ac-purple::before { background: linear-gradient(90deg,#7c6fff,transparent)!important; }
+.ds-stat-card.ac-amber::before  { background: linear-gradient(90deg,#f5a623,transparent)!important; }
+.ds-stat-card.ac-red::before    { background: linear-gradient(90deg,#ff4d6a,transparent)!important; }
+.ds-stat-label { font-size: 10px!important; letter-spacing: 0.12em!important; color: #6e85a4!important; }
+.ds-stat-value { text-shadow: 0 0 10px currentColor!important; }
+.ds-stat-value.cyan   { color: #00d4ff!important; }
+.ds-stat-value.green  { color: #00e5a0!important; }
+.ds-stat-value.amber  { color: #f5a623!important; }
+.ds-stat-value.red    { color: #ff4d6a!important; }
+.ds-stat-value.purple { color: #7c6fff!important; }
+.ds-stat-sub { font-size: 11px!important; color: #6e85a4!important; }
 
-/* ── Status dots ─────────────────────────────────────────────────────── */
-.ds-dot             { box-shadow: 0 0 6px currentColor!important; }
-.ds-dot.cyan        { background: #00d4ff!important; box-shadow: 0 0 8px #00d4ff!important; }
-.ds-dot.green       { background: #00e87a!important; box-shadow: 0 0 8px #00e87a!important; }
-.ds-dot.purple, .ds-dot.indigo { background: #a78bfa!important; box-shadow: 0 0 8px #a78bfa!important; }
-.ds-dot.amber       { background: #fbbf24!important; box-shadow: 0 0 8px #fbbf24!important; }
-.ds-dot.red         { background: #f87171!important; box-shadow: 0 0 8px #f87171!important; }
+/* ── Status dots ──────────────────────────────────────────────────────── */
+.ds-dot.cyan        { background: #00d4ff!important; box-shadow: 0 0 5px rgba(0,212,255,0.6)!important; }
+.ds-dot.green       { background: #00e5a0!important; box-shadow: 0 0 5px rgba(0,229,160,0.6)!important; }
+.ds-dot.purple, .ds-dot.indigo { background: #7c6fff!important; box-shadow: 0 0 5px rgba(124,111,255,0.6)!important; }
+.ds-dot.amber       { background: #f5a623!important; box-shadow: 0 0 5px rgba(245,166,35,0.6)!important; }
+.ds-dot.red         { background: #ff4d6a!important; box-shadow: 0 0 5px rgba(255,77,106,0.6)!important; }
 @keyframes ax-pulse {
-  0%,100% { opacity:1; box-shadow: 0 0 8px currentColor; }
-  50%     { opacity:0.2; box-shadow: 0 0 2px currentColor; }
+  0%,100% { opacity:1; }
+  50%     { opacity:0.3; transform: scale(0.8); }
 }
 .ds-dot.pulse { animation: ax-pulse 1.8s ease-in-out infinite!important; }
 
-/* ── Buttons ─────────────────────────────────────────────────────────── */
+/* ── Buttons — system font, never Cinzel ─────────────────────────────── */
 .ds-btn {
-  font-family: 'Cinzel', serif!important;
-  letter-spacing: 0.14em!important;
-  border-color: rgba(0,212,255,0.18)!important;
-  color: rgba(0,212,255,0.7)!important;
-  transition: all 0.2s!important;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif!important;
+  font-size: 12px!important; font-weight: 500!important;
+  letter-spacing: 0.02em!important;
+  border-color: rgba(255,255,255,0.1)!important;
+  color: #b4c1d8!important; border-radius: 6px!important;
+  transition: background 0.15s, border-color 0.15s, color 0.15s!important;
 }
 .ds-btn:hover {
-  border-color: rgba(0,212,255,0.45)!important;
-  color: #00d4ff!important;
-  background: rgba(0,212,255,0.07)!important;
-  box-shadow: 0 0 14px rgba(0,212,255,0.1)!important;
-  text-shadow: 0 0 8px rgba(0,212,255,0.5)!important;
+  background: rgba(255,255,255,0.04)!important;
+  border-color: rgba(255,255,255,0.16)!important;
+  color: #eef2ff!important;
+  text-shadow: none!important; box-shadow: none!important;
 }
 .ds-btn.cyan, .ds-btn.primary {
-  background: rgba(0,212,255,0.1)!important;
-  border-color: rgba(0,212,255,0.5)!important;
-  color: #00d4ff!important;
-  box-shadow: 0 0 14px rgba(0,212,255,0.12)!important;
+  color: #00d4ff!important; border-color: rgba(0,212,255,0.28)!important;
+  background: transparent!important;
 }
 .ds-btn.cyan:hover, .ds-btn.primary:hover {
-  background: rgba(0,212,255,0.2)!important;
-  box-shadow: 0 0 24px rgba(0,212,255,0.2)!important;
+  background: rgba(0,212,255,0.08)!important;
+  border-color: rgba(0,212,255,0.45)!important;
+  box-shadow: none!important;
 }
-.ds-btn.amber  { color: #fbbf24!important; border-color: rgba(251,191,36,0.3)!important; }
-.ds-btn.red    { color: #f87171!important; border-color: rgba(248,113,113,0.3)!important; }
-.ds-btn.purple { color: #a78bfa!important; border-color: rgba(167,139,250,0.3)!important; }
-.ds-btn.green  { color: #00e87a!important; border-color: rgba(0,232,122,0.3)!important; }
+.ds-btn.green  { color: #00e5a0!important; border-color: rgba(0,229,160,0.25)!important; }
+.ds-btn.green:hover  { background: rgba(0,229,160,0.07)!important; }
+.ds-btn.amber  { color: #f5a623!important; border-color: rgba(245,166,35,0.25)!important; }
+.ds-btn.red    { color: #ff4d6a!important; border-color: rgba(255,77,106,0.25)!important; }
+.ds-btn.purple { color: #7c6fff!important; border-color: rgba(124,111,255,0.25)!important; }
+.ds-btn.filled-cyan {
+  background: rgba(0,212,255,0.1)!important; border-color: rgba(0,212,255,0.4)!important;
+  color: #00d4ff!important; font-weight: 600!important;
+}
+.ds-btn.filled-cyan:hover { background: rgba(0,212,255,0.18)!important; }
+.ds-btn.filled-green {
+  background: rgba(0,229,160,0.1)!important; border-color: rgba(0,229,160,0.4)!important;
+  color: #00e5a0!important; font-weight: 600!important;
+}
+.ds-btn.xs { font-size: 10px!important; letter-spacing: 0.08em!important; }
+.ds-btn.sm { font-size: 11px!important; }
+.ds-btn.lg { font-size: 13px!important; }
 
-/* ── Sidebar nav ─────────────────────────────────────────────────────── */
-@media (min-width:900px) {
-  .bottom-nav {
-    background: rgba(1,2,8,0.99)!important;
-    border-right: 1px solid rgba(0,212,255,0.08)!important;
-  }
+/* ── Nav — clean, system font ─────────────────────────────────────────── */
+.nav-btn, .nav-label {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif!important;
+  text-shadow: none!important; filter: none!important;
 }
-.nav-item {
-  font-family: 'Cinzel',serif!important;
-  letter-spacing: 0.1em!important; font-size: 8px!important;
-  transition: color 0.2s, text-shadow 0.2s!important;
+.nav-btn:hover  { color: #b4c1d8!important; background: rgba(255,255,255,0.03)!important; }
+.nav-btn.active {
+  color: #00d4ff!important; text-shadow: none!important;
+  background: rgba(0,212,255,0.05)!important;
+  border-left: 2px solid #00d4ff!important;
 }
-.nav-item.active, [data-page].active {
-  color: #00d4ff!important;
-  text-shadow: 0 0 12px rgba(0,212,255,0.5)!important;
-}
-.nav-icon, .nav-item svg { filter: drop-shadow(0 0 4px rgba(0,212,255,0.25)); }
+.nav-btn.active .nav-icon, .nav-btn:hover .nav-icon { opacity: 0.9!important; }
+.nav-icon, .nav-btn svg { filter: none!important; }
 
-/* ── Topbar ──────────────────────────────────────────────────────────── */
-.app-header, .topbar, header {
-  background: rgba(1,2,8,0.99)!important;
-  border-bottom: 1px solid rgba(0,212,255,0.08)!important;
-  backdrop-filter: blur(20px)!important;
-}
+/* ── Topbar ────────────────────────────────────────────────────────────── */
+.bottom-nav { background: #060c18!important; border-right: 1px solid rgba(255,255,255,0.07)!important; }
 
-/* ── Inputs ──────────────────────────────────────────────────────────── */
-input, textarea, select, .ds-input, .ds-textarea {
-  background: rgba(0,212,255,0.025)!important;
-  border-color: rgba(0,212,255,0.12)!important;
-  color: #eaf2ff!important;
-  transition: border-color 0.2s, box-shadow 0.2s!important;
+/* ── Inputs ────────────────────────────────────────────────────────────── */
+input, textarea, select {
+  background: rgba(255,255,255,0.04)!important;
+  border-color: rgba(255,255,255,0.1)!important; color: #eef2ff!important;
 }
 input:focus, textarea:focus, select:focus {
-  border-color: rgba(0,212,255,0.45)!important;
-  box-shadow: 0 0 0 2px rgba(0,212,255,0.06), 0 0 18px rgba(0,212,255,0.08)!important;
-  outline: none!important;
+  border-color: rgba(0,212,255,0.38)!important;
+  box-shadow: 0 0 0 2px rgba(0,212,255,0.06)!important; outline: none!important;
 }
+input::placeholder, textarea::placeholder { color: #3d5070!important; }
 
-/* ── Badges ──────────────────────────────────────────────────────────── */
-.ds-badge {
-  background: rgba(0,212,255,0.08)!important;
-  color: rgba(0,212,255,0.85)!important;
-  border: 1px solid rgba(0,212,255,0.22)!important;
-}
-.ds-badge.green  { background: rgba(0,232,122,0.08)!important; color: #00e87a!important; border-color: rgba(0,232,122,0.25)!important; }
-.ds-badge.amber  { background: rgba(251,191,36,0.08)!important; color: #fbbf24!important; border-color: rgba(251,191,36,0.25)!important; }
-.ds-badge.red    { background: rgba(248,113,113,0.08)!important; color: #f87171!important; border-color: rgba(248,113,113,0.25)!important; }
-.ds-badge.grey   { background: rgba(255,255,255,0.04)!important; color: var(--ax-tx2)!important; border-color: rgba(0,212,255,0.07)!important; }
+/* ── Badges ────────────────────────────────────────────────────────────── */
+.ds-badge.cyan   { color: #00d4ff!important; background: rgba(0,212,255,0.08)!important; border-color: rgba(0,212,255,0.22)!important; }
+.ds-badge.green  { color: #00e5a0!important; background: rgba(0,229,160,0.08)!important; border-color: rgba(0,229,160,0.22)!important; }
+.ds-badge.purple { color: #7c6fff!important; background: rgba(124,111,255,0.08)!important; border-color: rgba(124,111,255,0.22)!important; }
+.ds-badge.amber  { color: #f5a623!important; background: rgba(245,166,35,0.08)!important; border-color: rgba(245,166,35,0.22)!important; }
+.ds-badge.red    { color: #ff4d6a!important; background: rgba(255,77,106,0.08)!important; border-color: rgba(255,77,106,0.22)!important; }
+.ds-badge.grey   { color: #6e85a4!important; background: rgba(255,255,255,0.04)!important; border-color: rgba(255,255,255,0.08)!important; }
 
-/* ── Tables ──────────────────────────────────────────────────────────── */
+/* ── Tables ────────────────────────────────────────────────────────────── */
 .ds-table th {
-  color: rgba(0,212,255,0.55)!important;
-  border-bottom-color: rgba(0,212,255,0.1)!important;
-  font-family: 'Cinzel',serif!important;
-  font-size: 8px!important;
-  letter-spacing: 0.2em!important;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif!important;
+  font-size: 10px!important; color: #6e85a4!important;
+  border-bottom-color: rgba(255,255,255,0.07)!important; letter-spacing: 0.1em!important;
 }
-.ds-table td { border-bottom-color: rgba(0,212,255,0.05)!important; }
-.ds-table tr:hover td { background: rgba(0,212,255,0.03)!important; }
+.ds-table td { border-bottom-color: rgba(255,255,255,0.04)!important; font-size: 12px!important; }
+.ds-table tr:hover td { background: rgba(255,255,255,0.018)!important; }
 
-/* ── Text selection ──────────────────────────────────────────────────── */
-::selection { background: rgba(0,212,255,0.2)!important; color: #eaf2ff!important; }
+/* ── Typography — size bump across the board ─────────────────────────── */
+.t-body, .t-body-mid { font-size: 13px!important; line-height: 1.55!important; }
+.t-small { font-size: 11px!important; line-height: 1.45!important; }
+.t-h3 { font-size: 13px!important; font-weight: 600!important; }
+.stat-num { font-size: 22px!important; font-variant-numeric: tabular-nums!important; color: #eef2ff!important; }
+.stat-lbl { font-size: 10px!important; letter-spacing: 0.14em!important; color: #6e85a4!important; }
+.stat-sub { font-size: 10px!important; color: #6e85a4!important; }
+.email-sender  { font-size: 12px!important; font-weight: 600!important; color: #eef2ff!important; }
+.email-subject { font-size: 13px!important; font-weight: 600!important; color: #eef2ff!important; }
+.email-summary { font-size: 12px!important; color: #b4c1d8!important; line-height: 1.5!important; }
+.memory-item   { font-size: 12px!important; line-height: 1.5!important; color: #b4c1d8!important; }
+.notif-item    { font-size: 12px!important; color: #b4c1d8!important; }
+.routine-name  { font-size: 12px!important; color: #eef2ff!important; }
+.task-item-title { font-size: 12px!important; color: #b4c1d8!important; }
+.agent-card-name { font-size: 13px!important; color: #eef2ff!important; }
+.agent-card-desc { font-size: 11px!important; line-height: 1.45!important; color: #6e85a4!important; }
+.chat-msg { font-size: 13px!important; line-height: 1.55!important; }
+.empty-note { font-size: 12px!important; color: #3d5070!important; }
+.ds-skel-row, .ds-skel { font-size: 11px!important; }
+.panel-error  { font-size: 12px!important; }
+.agent-log-item { font-size: 11px!important; color: #6e85a4!important; }
+.timeline-meta  { font-size: 10px!important; color: #3d5070!important; }
+.clock-time { font-size: 14px!important; }
+.clock-date { font-size: 9px!important; }
 
-/* ── Custom scrollbar ────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 3px!important; height: 3px!important; }
-::-webkit-scrollbar-track { background: rgba(0,212,255,0.02)!important; }
-::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.2)!important; border-radius: 2px!important; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.4)!important; }
+/* ── Page spacing ──────────────────────────────────────────────────────── */
+.page { padding: 18px!important; gap: 16px!important; background: transparent!important; }
+#page-system > div:first-child { padding: 0!important; gap: 16px!important; }
 
-/* ── App layout / page container ─────────────────────────────────────── */
-.app { background: transparent!important; }
-.page { gap: 14px!important; padding: 18px!important; }
-.page-content, .content-area { background: transparent!important; }
+/* ── Agents ────────────────────────────────────────────────────────────── */
+.ds-agent { background: #0d1424!important; border-color: rgba(255,255,255,0.07)!important; border-radius: 8px!important; }
+.ds-agent:hover { background: #141d30!important; border-color: rgba(255,255,255,0.12)!important; }
 
-/* ── Override System page inner padding ──────────────────────────────── */
-#page-system > div:first-child { padding: 0!important; gap: 14px!important; }
+/* ── Agent card (library) ──────────────────────────────────────────────── */
+.agent-card { background: #0d1424!important; border-color: rgba(255,255,255,0.07)!important; border-radius: 8px!important; }
+.agent-card:hover { border-color: rgba(0,212,255,0.18)!important; }
+
+/* ── Pills ─────────────────────────────────────────────────────────────── */
+.ds-pill { border-color: rgba(255,255,255,0.08)!important; color: #6e85a4!important; }
+.ds-pill:hover { border-color: rgba(255,255,255,0.14)!important; color: #b4c1d8!important; }
+.ds-pill.active { color: #00d4ff!important; border-color: rgba(0,212,255,0.28)!important; background: rgba(0,212,255,0.07)!important; }
+
+/* ── Selection + scrollbar ─────────────────────────────────────────────── */
+::selection { background: rgba(0,212,255,0.18)!important; color: #eef2ff!important; }
+::-webkit-scrollbar { width: 4px!important; height: 4px!important; }
+::-webkit-scrollbar-track { background: transparent!important; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1)!important; border-radius: 4px!important; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.3)!important; }
 </style>
 </head>
 <body>
