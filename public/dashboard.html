@@ -7692,12 +7692,16 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 
             <!-- ══ PAGE: SYSTEM ══ -->
             <div class="page" id="page-system">
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">System</span>
-                        <span class="ds-page-subtitle">agents &middot; processes &middot; health &middot; control</span>
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">SYSTEM</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">INFRASTRUCTURE &middot; AUTOMATION &middot; SECURITY &middot; PLATFORM HEALTH</div>
                     </div>
-                    <button class="ds-btn cyan" data-fn="refreshSystemPage">&#8635; Refresh</button>
+                    <div style="text-align:right">
+                        <button class="ds-btn cyan" data-fn="refreshSystemPage">&#8635; Refresh</button>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">SYS &middot; SYSTEM AGENT</div>
+                    </div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:12px">
 
@@ -7987,12 +7991,16 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
             <!-- ══ PAGE: COMMUNICATION ══ -->
             <div class="page" id="page-communication">
 
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">Network</span>
-                        <span class="ds-page-subtitle">email &#183; messages &#183; calendar &#183; contacts</span>
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">NETWORK</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">EMAIL &middot; MESSAGING &middot; CALENDAR &middot; CONTACTS</div>
                     </div>
-                    <button class="ds-btn cyan" data-fn="checkEmailNow">&#9658; Check inbox now</button>
+                    <div style="text-align:right">
+                        <button class="ds-btn cyan" data-fn="checkEmailNow">&#9658; Check inbox now</button>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">NET &middot; COMMUNICATIONS</div>
+                    </div>
                 </div>
 
                 <!-- ═══ CALENDAR ═══ -->
@@ -8367,12 +8375,16 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
             <!-- ══ PAGE: FINANCE ══ -->
             <div class="page" id="page-finance">
 
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">Finance</span>
-                        <span class="ds-page-subtitle">banking &#183; invoices &#183; budgets &#183; taxes</span>
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">FINANCE</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">BANKING &middot; BUDGETS &middot; FORECASTING &middot; INVESTMENTS</div>
                     </div>
-                    <button class="ds-btn cyan" data-fn="logExpenseQuick">+ Log expense</button>
+                    <div style="text-align:right">
+                        <button class="ds-btn cyan" data-fn="logExpenseQuick">+ Log expense</button>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">FIN &middot; FINANCE AGENT</div>
+                    </div>
                 </div>
 
                 <!-- Net worth hero -->
@@ -8598,6 +8610,18 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
             <!-- ══ PAGE: OPERATION ══ -->
             <div class="page" id="page-operation">
 
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">OPERATIONS</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">TASKS &middot; PIPELINE &middot; SCHEDULES &middot; APPROVALS</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#5b9eff;background:rgba(91,158,255,0.1);padding:5px 12px;border-radius:6px;display:inline-block">OPS</div>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">EXECUTION ENGINE</div>
+                    </div>
+                </div>
+
                 <!-- Pipeline Flow Header -->
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;margin-bottom:16px">
                     <div style="background:#0d1424;padding:14px 16px;text-align:center">
@@ -8817,12 +8841,16 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 
             <!-- ══ PAGE: HEALTH ══ -->
             <div class="page" id="page-health">
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">Health</span>
-                        <span class="ds-page-subtitle">sleep &#183; exercise &#183; nutrition &#183; recovery</span>
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">HEALTH</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">SLEEP &middot; NUTRITION &middot; EXERCISE &middot; MENTAL &middot; WELLNESS</div>
                     </div>
-                    <button class="ds-btn cyan" data-fn="logHealthVoice">&#127897; Log via voice</button>
+                    <div style="text-align:right">
+                        <button class="ds-btn cyan" data-fn="logHealthVoice">&#127897; Log via voice</button>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">HLTH &middot; HEALTH AGENT</div>
+                    </div>
                 </div>
 
                 <div class="ds-grid-stats-6">
@@ -9043,66 +9071,6 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
                     </div>
                 </div>
 
-                <!-- Civilisation Score — L8 Telemetry -->
-                <div style="background:#0d1424;border-radius:14px;border:1px solid rgba(91,158,255,0.12);padding:14px 20px;margin-top:16px;display:flex;align-items:center;justify-content:space-between">
-                    <div>
-                        <div style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-bottom:8px">CIVILISATION SCORE &middot; L8 TELEMETRY</div>
-                        <div style="display:flex;align-items:baseline;gap:8px">
-                            <span style="font:700 26px/1 'Space Grotesk',sans-serif;color:#f3f7fb">—</span>
-                            <span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">/ 100 composite</span>
-                        </div>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;color:#efb45a;margin-top:6px">4 domains unmeasured &middot; activate layers to score</div>
-                    </div>
-                    <div style="display:flex;gap:20px">
-                        <div style="text-align:center"><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:0.1em;margin-bottom:5px">HEALTH</div><div style="font:700 15px/1 'Space Grotesk',sans-serif;color:#3fd29a">OK</div></div>
-                        <div style="text-align:center"><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:0.1em;margin-bottom:5px">EXECUTION</div><div id="civScoreExecution" style="font:700 15px/1 'Space Grotesk',sans-serif;color:#5b9eff">—</div></div>
-                        <div style="text-align:center"><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:0.1em;margin-bottom:5px">BUSINESS</div><div style="font:700 15px/1 'Space Grotesk',sans-serif;color:#8893a0">—</div></div>
-                        <div style="text-align:center"><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:0.1em;margin-bottom:5px">WEALTH</div><div style="font:700 15px/1 'Space Grotesk',sans-serif;color:#8893a0">—</div></div>
-                        <div style="text-align:center"><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:0.1em;margin-bottom:5px">NETWORK</div><div style="font:700 15px/1 'Space Grotesk',sans-serif;color:#8893a0">—</div></div>
-                        <div style="text-align:center"><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:0.1em;margin-bottom:5px">LEARNING</div><div style="font:700 15px/1 'Space Grotesk',sans-serif;color:#8893a0">—</div></div>
-                    </div>
-                </div>
-
-                <!-- Stats Row -->
-                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
-                    <div style="background:#0d1424;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
-                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">HEALTH &middot; L8</span><span style="width:7px;height:7px;border-radius:2px;background:#3fd29a;flex:0 0 auto"></span></div>
-                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatHealth" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#f3f7fb">OK</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">stable</span></div>
-                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">all services nominal</div>
-                    </div>
-                    <div style="background:#0d1424;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
-                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">EXECUTION &middot; L4</span><span style="width:7px;height:7px;border-radius:2px;background:#5b9eff;flex:0 0 auto"></span></div>
-                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatAgents" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#f3f7fb">18</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">+4 today</span></div>
-                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">running now</div>
-                    </div>
-                    <div style="background:#0d1424;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
-                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">PROCESSES</span><span style="width:7px;height:7px;border-radius:2px;background:#5b9eff;flex:0 0 auto"></span></div>
-                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatProcesses" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#f3f7fb">42</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">+11 today</span></div>
-                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">in progress</div>
-                    </div>
-                    <div style="background:#0d1424;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
-                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">GOVERNANCE</span><span style="width:7px;height:7px;border-radius:2px;background:#efb45a;flex:0 0 auto"></span></div>
-                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatApprovals" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#f3f7fb">3</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">in queue</span></div>
-                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">need review</div>
-                    </div>
-                    <div style="background:#0d1424;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
-                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">RISK &middot; L5</span><span style="width:7px;height:7px;border-radius:2px;background:#efb45a;flex:0 0 auto"></span></div>
-                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatUrgent" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#efb45a">1</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">low risk</span></div>
-                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">action required</div>
-                    </div>
-                    <div style="background:#0d1424;border-radius:14px;padding:16px 17px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.20)">
-                        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.4px;color:#8893a0">PIPELINE FLOW</span><span style="width:7px;height:7px;border-radius:2px;background:#5b9eff;flex:0 0 auto"></span></div>
-                        <div style="display:flex;align-items:baseline;gap:8px;margin-top:16px"><div id="ovrStatTasks" style="margin:0;font:600 33px/1 'Space Grotesk',sans-serif;letter-spacing:-0.5px;color:#f3f7fb">27</div><span style="font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">+6 today</span></div>
-                        <div style="height:1px;background:rgba(255,255,255,0.06);margin-top:15px"></div>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.4px;color:#8893a0;margin-top:11px">prioritised</div>
-                    </div>
-                </div>
-
                 <!-- Governance Pipeline -->
                 <div id="ovr-pipeline" style="position:relative;padding:32px 30px 36px">
                     <div style="position:absolute;top:16px;left:22px;font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:rgba(136,147,160,0.75)">GOVERNANCE MAP &middot; AUTHORITY PIPELINE</div>
@@ -9192,7 +9160,7 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
                             <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
                                 <div style="background:#0a1628;border-radius:10px;padding:13px 11px;border-top:2px solid rgba(243,247,251,0.45)"><div style="font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:rgba(243,247,251,0.55);margin-bottom:7px">CHIEF EXEC</div><div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5;margin-bottom:7px">Chief Executive</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Direction &amp; strategy</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Goal prioritization</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:9px">Mission alignment</div><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#3fd29a">ACTIVE</div></div>
                                 <div style="background:#0a1628;border-radius:10px;padding:13px 11px;border-top:2px solid #5b9eff"><div style="font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#5b9eff;margin-bottom:7px">CHIEF OPS</div><div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5;margin-bottom:7px">Chief Operations</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Execution coordination</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Workflow oversight</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:9px">Delivery management</div><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#3fd29a">ACTIVE</div></div>
-                                <div style="background:#0a1628;border-radius:10px;padding:13px 11px;border-top:2px solid #3fd29a"><div style="font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#3fd29a;margin-bottom:7px">CHIEF KNOW</div><div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5;margin-bottom:7px">Chief Knowledge</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Info coordination</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Memory oversight</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:9px">Research governance</div><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#3fd29a">ACTIVE</div></div>
+                                <div style="background:#0a1628;border-radius:10px;padding:13px 11px;border-top:2px solid #3fd29a"><div style="font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#3fd29a;margin-bottom:7px">CHIEF INTEL</div><div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5;margin-bottom:7px">Chief Intelligence</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Info coordination</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Memory oversight</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:9px">Research governance</div><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#3fd29a">ACTIVE</div></div>
                                 <div style="background:#0a1628;border-radius:10px;padding:13px 11px;border-top:2px solid #efb45a"><div style="font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#efb45a;margin-bottom:7px">CHIEF FIN</div><div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5;margin-bottom:7px">Chief Finance</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Resource allocation</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Budgeting &amp; treasury</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:9px">Investment oversight</div><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#3fd29a">ACTIVE</div></div>
                                 <div style="background:#0a1628;border-radius:10px;padding:13px 11px;border-top:2px solid #ec7fa3"><div style="font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#ec7fa3;margin-bottom:7px">CHIEF GROWTH</div><div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5;margin-bottom:7px">Chief Growth</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Opportunity detection</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Revenue strategy</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:9px">Market expansion</div><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#3fd29a">ACTIVE</div></div>
                                 <div style="background:#0a1628;border-radius:10px;padding:13px 11px;border-top:2px solid #7c6fff"><div style="font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#7c6fff;margin-bottom:7px">CHIEF GOV</div><div style="font:600 11px/1 'Space Grotesk',sans-serif;color:#eaeff5;margin-bottom:7px">Chief Governance</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Compliance oversight</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:4px">Audit management</div><div style="font:400 8px/1.4 'JetBrains Mono',monospace;color:#7f8c99;margin-bottom:9px">Policy evolution</div><div style="font:600 8px/1 'JetBrains Mono',monospace;color:#3fd29a">ACTIVE</div></div>
@@ -9418,22 +9386,6 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 
                 </div>
 
-                <!-- Activity Feed + Priorities -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                    <div style="background:#0d1424;border-radius:14px;padding:16px 18px">
-                        <div style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:rgba(136,147,160,0.75);margin-bottom:14px">LIVE ACTIVITY</div>
-                        <div id="ovrFeedBody" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto">
-                            <div style="font:500 11px/1 'JetBrains Mono',monospace;color:#8893a0;padding:10px 0;text-align:center">Waiting for activity&#8230;</div>
-                        </div>
-                    </div>
-                    <div style="background:#0d1424;border-radius:14px;padding:16px 18px">
-                        <div style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:rgba(136,147,160,0.75);margin-bottom:14px">TODAY&#39;S PRIORITIES</div>
-                        <div id="ovrPriorityList" style="display:flex;flex-direction:column;gap:8px">
-                            <div style="font:500 11px/1 'JetBrains Mono',monospace;color:#8893a0;padding:10px 0;text-align:center">Loading priorities&#8230;</div>
-                        </div>
-                    </div>
-                </div>
-
                 <div id="gov-map-root" style="display:none"></div>
 
                 <!-- Overview expand modal -->
@@ -9632,12 +9584,16 @@ p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
             <!-- ══ PAGE: BUSINESS ══ -->
             <div class="page" id="page-business">
 
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">Business</span>
-                        <span class="ds-page-subtitle">revenue &#183; clients &#183; leads &#183; growth</span>
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">BUSINESS</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">REVENUE &middot; CLIENTS &middot; SALES &middot; GROWTH &middot; MARKETING</div>
                     </div>
-                    <button class="ds-btn cyan" data-fn="refreshBizPage">&#8635; Refresh</button>
+                    <div style="text-align:right">
+                        <button class="ds-btn cyan" data-fn="refreshBizPage">&#8635; Refresh</button>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">BIZ &middot; BUSINESS AGENT</div>
+                    </div>
                 </div>
 
                 <div class="ds-grid-stats">
@@ -9792,12 +9748,16 @@ p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
             <!-- ══ PAGE: UNIVERSITY ══ -->
             <div class="page" id="page-university">
 
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">University</span>
-                        <span class="ds-page-subtitle">modules &#183; assignments &#183; flashcards &#183; study</span>
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">UNIVERSITY</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">MODULES &middot; ASSIGNMENTS &middot; FLASHCARDS &middot; STUDY</div>
                     </div>
-                    <button class="ds-btn amber" data-fn="pomodoroToggle">&#9658; Start session</button>
+                    <div style="text-align:right">
+                        <button class="ds-btn amber" data-fn="pomodoroToggle">&#9658; Start session</button>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">UNI &middot; UNIVERSITY AGENT</div>
+                    </div>
                 </div>
 
                 <div class="ds-grid-stats">
@@ -9948,12 +9908,16 @@ p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
 
             <!-- ══ PAGE: OCCULT ══ -->
             <div class="page" id="page-occult">
-                <div class="ds-page-header">
-                    <div class="ds-page-header-left">
-                        <span class="ds-page-title">Occult</span>
-                        <span class="ds-page-subtitle">spiritual &#183; journal &#183; psychology &#183; reflection</span>
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">OCCULT</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">SPIRITUAL &middot; JOURNAL &middot; PSYCHOLOGY &middot; REFLECTION</div>
                     </div>
-                    <button class="ds-btn purple" data-fn="logSpiritualSession">+ Log session</button>
+                    <div style="text-align:right">
+                        <button class="ds-btn purple" data-fn="logSpiritualSession">+ Log session</button>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">OCC &middot; MINDFULNESS</div>
+                    </div>
                 </div>
 
                 <div class="ds-grid-stats">
@@ -10078,6 +10042,19 @@ p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
 
             <!-- ══ PAGE: RESEARCH ══ -->
             <div class="page" id="page-research">
+
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">RESEARCH</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">DISCOVER &middot; SYNTHESISE &middot; ANALYSE &middot; ARCHIVE</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#38bdf8;background:rgba(56,189,248,0.1);padding:5px 12px;border-radius:6px;display:inline-block">RES</div>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">RESEARCH ENGINE</div>
+                    </div>
+                </div>
+
                 <div class="apex-research">
                     <!-- Workflow pipeline strip -->
                     <div style="display:flex;align-items:center;gap:0;margin-bottom:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
@@ -10142,6 +10119,18 @@ p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
             <!-- ══ BROWSER PAGE ══ -->
             <div class="page" id="page-browser">
                 <div style="padding:16px;display:flex;flex-direction:column;gap:12px;height:100%;box-sizing:border-box;overflow-y:auto">
+
+                    <!-- Page Header -->
+                    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                        <div>
+                            <div class="ds-page-title" style="letter-spacing:7px">BROWSER</div>
+                            <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">WEB ACCESS &middot; RESEARCH &middot; SCREENSHOTS &middot; AUTOMATION</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#5b9eff;background:rgba(91,158,255,0.1);padding:5px 12px;border-radius:6px;display:inline-block">WEB</div>
+                            <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">WEB AGENT</div>
+                        </div>
+                    </div>
 
                     <!-- URL + action buttons -->
                     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
