@@ -7422,8 +7422,509 @@ input::placeholder, textarea::placeholder { color: #3d5070!important; }
 .ds-panel { overflow: visible!important; }
 #opsApprovalsBody { padding-top: 4px!important; }
 
-/* ── Hide global input zone ─────────────────────────────────────────── */
+/* ── Hide global input zone ─────────────────────────���───────────────── */
 .input-zone { display: none!important; }
+</style>
+
+<style>
+/* ════════════════════════════════════════════════════════════════════════
+   APEX FINAL PASS — Precision Refinement Layer
+   Fixes critical bugs, enforces design consistency, adds polish.
+   Every rule here is intentional. Do not remove.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ── CRITICAL FIX 1: Unhide page title headers ────────────────────────
+   Previous layer set ds-page-header-left to display:none — reverting.
+   Page titles need to show on every page. ───────────────────────────── */
+.ds-page-header-left {
+  display: flex!important;
+  flex-direction: column!important;
+  align-items: flex-start!important;
+  gap: 4px!important;
+}
+.ds-page-header { justify-content: space-between!important; }
+
+/* ── CRITICAL FIX 2: Page title typography ────────────────────────────
+   Cinzel + glow was a style experiment. Reverting to Space Grotesk
+   which matches the inline headers on the overview page exactly. ───── */
+.ds-page-title {
+  font-family: 'Space Grotesk', system-ui, sans-serif!important;
+  font-size: 22px!important;
+  font-weight: 700!important;
+  letter-spacing: 0.22em!important;
+  text-transform: uppercase!important;
+  color: #f3f7fb!important;
+  text-shadow: none!important;
+  line-height: 1!important;
+}
+.ds-page-subtitle {
+  font-family: 'JetBrains Mono', monospace!important;
+  font-size: 10px!important;
+  font-weight: 500!important;
+  letter-spacing: 2px!important;
+  color: #8893a0!important;
+  text-transform: uppercase!important;
+  text-shadow: none!important;
+  margin-top: 2px!important;
+}
+
+/* ── CRITICAL FIX 3: ovr-flowY updated for 52px connector height ────── */
+@keyframes ovr-flowY {
+  0%   { transform: translateY(0);    opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translateY(52px); opacity: 0; }
+}
+
+/* ── CRITICAL FIX 4: Restore Apex Dark card border-radius ────────────
+   The normalization to 4px breaks the premium rounded card aesthetic.
+   Restore to the designed values. ────────────────────────────────────  */
+#page-overview   [style*="border-radius:10px"],
+#page-overview   [style*="border-radius:12px"],
+#page-overview   [style*="border-radius:14px"],
+#page-overview   [style*="border-radius:15px"],
+#page-system     [style*="border-radius:10px"],
+#page-system     [style*="border-radius:12px"],
+#page-system     [style*="border-radius:14px"],
+#page-finance    [style*="border-radius:10px"],
+#page-finance    [style*="border-radius:12px"],
+#page-finance    [style*="border-radius:14px"],
+#page-operation  [style*="border-radius:10px"],
+#page-operation  [style*="border-radius:12px"],
+#page-business   [style*="border-radius:10px"],
+#page-business   [style*="border-radius:12px"],
+#page-health     [style*="border-radius:10px"],
+#page-health     [style*="border-radius:12px"],
+#page-university [style*="border-radius:10px"],
+#page-university [style*="border-radius:12px"],
+#page-occult     [style*="border-radius:10px"],
+#page-occult     [style*="border-radius:12px"],
+#page-files      [style*="border-radius:10px"],
+#page-files      [style*="border-radius:12px"],
+#page-memory     [style*="border-radius:10px"],
+#page-memory     [style*="border-radius:12px"],
+#page-agents     [style*="border-radius:10px"],
+#page-agents     [style*="border-radius:12px"],
+#page-tasks      [style*="border-radius:10px"],
+#page-tasks      [style*="border-radius:12px"],
+#page-schedule   [style*="border-radius:10px"],
+#page-schedule   [style*="border-radius:12px"],
+#page-docs       [style*="border-radius:10px"],
+#page-docs       [style*="border-radius:12px"],
+#page-notifs     [style*="border-radius:10px"],
+#page-notifs     [style*="border-radius:12px"] {
+  border-radius: inherit!important;
+}
+
+/* ── TYPOGRAPHY: Space Grotesk for all display text ─────────────────── */
+[style*="font:'Space Grotesk'"],
+[style*="font-family:'Space Grotesk'"],
+[style*="'Space Grotesk',sans-serif"] {
+  font-family: 'Space Grotesk', system-ui, sans-serif!important;
+}
+
+/* ── NAVIGATION: Domain-colored active states + accessible targets ───── */
+@media (min-width: 900px) {
+  /* Give the sidebar icons enough space to be 44px touch targets */
+  .nav-btn { min-height: 44px!important; }
+
+  /* Domain-colored active indicator - matches page domain color */
+  .nav-btn.active[data-page="overview"]  { border-left-color: rgba(255,255,255,0.5)!important; }
+  .nav-btn.active[data-page="system"]    { border-left-color: #5b9eff!important; color: #5b9eff!important; background: rgba(91,158,255,0.06)!important; }
+  .nav-btn.active[data-page="files"]     { border-left-color: #3fd29a!important; color: #3fd29a!important; background: rgba(63,210,154,0.06)!important; }
+  .nav-btn.active[data-page="university"]{ border-left-color: #7c6fff!important; color: #7c6fff!important; background: rgba(124,111,255,0.06)!important; }
+  .nav-btn.active[data-page="finance"]   { border-left-color: #efb45a!important; color: #efb45a!important; background: rgba(239,180,90,0.06)!important; }
+  .nav-btn.active[data-page="business"]  { border-left-color: #ec7fa3!important; color: #ec7fa3!important; background: rgba(236,127,163,0.06)!important; }
+
+  /* Smooth hover transition on all nav items */
+  .nav-btn {
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease!important;
+  }
+
+  /* Nav separator between groups */
+  .ds-sidebar-footer {
+    margin-top: auto!important;
+    border-top: 1px solid rgba(255,255,255,0.06)!important;
+    padding: 10px 18px!important;
+  }
+}
+
+/* ── SIDEBAR BACKGROUND: match Apex Dark navy ────────────────────────── */
+.bottom-nav { background: #060f1e!important; }
+
+/* ── APP BACKGROUND: grid on deep navy (not black) ───────────────────── */
+html, body { background: #06101f!important; }
+body::before {
+  background-image:
+    linear-gradient(rgba(91,158,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91,158,255,0.03) 1px, transparent 1px)!important;
+  background-size: 40px 40px!important;
+}
+
+/* ── PAGE LAYOUT: breathing room + consistent gap ────────────────────── */
+.page { padding: 20px!important; gap: 16px!important; }
+#page-system > div:first-child { padding: 0!important; gap: 16px!important; }
+#page-command { padding: 0!important; }
+
+/* ── TOPBAR HEIGHT: consistent ──────────────────────────────────────── */
+.topbar { height: 48px!important; min-height: 48px!important; max-height: 48px!important; }
+:root { --topbar-h: 48px!important; }
+
+/* ── INTERACTIVE TRANSITIONS: every clickable element ───────────────── */
+button, [role="button"], .nav-btn, .ds-btn, .more-sheet-btn,
+.approve-btn, .deny-btn, .send-btn, .mic-btn, .clear-chat-btn {
+  transition: background 0.12s ease, border-color 0.12s ease,
+              color 0.12s ease, opacity 0.12s ease, transform 0.1s ease!important;
+}
+button:active, [role="button"]:active, .ds-btn:active {
+  transform: translateY(1px)!important;
+}
+
+/* ── CURSOR: every interactive element ─────────────────────────────── */
+button, [role="button"], [onclick], .nav-btn, .ds-btn,
+.approve-btn, .deny-btn, a, select, label[for] {
+  cursor: pointer!important;
+}
+
+/* ── FOCUS VISIBLE: accessibility ──────────────────────────────────── */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid rgba(91,158,255,0.7)!important;
+  outline-offset: 2px!important;
+  border-radius: 4px!important;
+}
+.nav-btn:focus-visible { outline-offset: -2px!important; }
+
+/* ── SCROLLBARS: slightly more visible ─────────────────────────────── */
+::-webkit-scrollbar { width: 4px!important; height: 4px!important; }
+::-webkit-scrollbar-track { background: transparent!important; }
+::-webkit-scrollbar-thumb {
+  background: rgba(91,158,255,0.18)!important;
+  border-radius: 4px!important;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(91,158,255,0.38)!important; }
+
+/* ── SELECTION: cyan highlight ─────────────────────────────────────── */
+::selection { background: rgba(91,158,255,0.25)!important; color: #f3f7fb!important; }
+
+/* ── PREFERS REDUCED MOTION: kill all animations ───────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms!important;
+    animation-iteration-count: 1!important;
+    transition-duration: 0.01ms!important;
+  }
+  .ovr-flowY, [class*="ovr-"], body::before { animation: none!important; }
+}
+
+/* ── DS-PANEL: polish Apex Dark cards ──────────────────────────────── */
+.ds-panel {
+  background: #0d1424!important;
+  border: 1px solid rgba(255,255,255,0.07)!important;
+  border-top: 2px solid rgba(91,158,255,0.25)!important;
+  border-radius: 14px!important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05),
+              0 8px 24px rgba(0,0,0,0.28)!important;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease!important;
+  padding: 20px 24px!important;
+  overflow: visible!important;
+}
+.ds-panel:hover {
+  border-top-color: rgba(91,158,255,0.4)!important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06),
+              0 12px 36px rgba(0,0,0,0.35)!important;
+}
+.ds-panel-header {
+  padding: 0 0 14px!important;
+  margin-bottom: 14px!important;
+  border-bottom: 1px solid rgba(255,255,255,0.06)!important;
+  background: none!important;
+}
+
+/* ── DS-STAT-CARD: Apex Dark style ─────────────────────────────────── */
+.ds-stat-card {
+  background: #0d1424!important;
+  border: 1px solid rgba(255,255,255,0.07)!important;
+  border-radius: 12px!important;
+  padding: 16px!important;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease!important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 14px rgba(0,0,0,0.2)!important;
+}
+.ds-stat-card:hover {
+  border-color: rgba(255,255,255,0.12)!important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.3)!important;
+}
+.ds-stat-value { font-size: 26px!important; font-weight: 700!important; }
+.ds-stat-label { font-size: 9px!important; letter-spacing: 0.14em!important; color: #8893a0!important; margin-bottom: 6px!important; }
+
+/* ── DS-BTN: tighten to Apex Dark palette ──────────────────────────── */
+.ds-btn {
+  font-family: 'JetBrains Mono', monospace!important;
+  font-size: 9px!important;
+  font-weight: 600!important;
+  letter-spacing: 0.12em!important;
+  text-transform: uppercase!important;
+  height: 28px!important;
+  padding: 0 12px!important;
+  border-radius: 7px!important;
+  border: 1px solid rgba(255,255,255,0.1)!important;
+  background: transparent!important;
+  color: #aab6c2!important;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease!important;
+  cursor: pointer!important;
+  display: inline-flex!important;
+  align-items: center!important;
+  gap: 5px!important;
+  white-space: nowrap!important;
+  box-shadow: none!important;
+}
+.ds-btn:hover {
+  color: #f3f7fb!important;
+  border-color: rgba(255,255,255,0.18)!important;
+  background: rgba(255,255,255,0.04)!important;
+}
+.ds-btn:active { transform: translateY(1px)!important; }
+.ds-btn.cyan, .ds-btn.primary {
+  color: #5b9eff!important;
+  border-color: rgba(91,158,255,0.35)!important;
+  background: rgba(91,158,255,0.08)!important;
+}
+.ds-btn.cyan:hover, .ds-btn.primary:hover {
+  background: rgba(91,158,255,0.14)!important;
+  border-color: rgba(91,158,255,0.5)!important;
+}
+.ds-btn.green { color: #3fd29a!important; border-color: rgba(63,210,154,0.3)!important; background: rgba(63,210,154,0.06)!important; }
+.ds-btn.green:hover { background: rgba(63,210,154,0.12)!important; border-color: rgba(63,210,154,0.5)!important; }
+.ds-btn.amber { color: #efb45a!important; border-color: rgba(239,180,90,0.3)!important; background: rgba(239,180,90,0.06)!important; }
+.ds-btn.amber:hover { background: rgba(239,180,90,0.12)!important; border-color: rgba(239,180,90,0.5)!important; }
+.ds-btn.red, .ds-btn.danger { color: #f87171!important; border-color: rgba(248,113,113,0.3)!important; background: rgba(248,113,113,0.06)!important; }
+.ds-btn.red:hover { background: rgba(248,113,113,0.12)!important; border-color: rgba(248,113,113,0.5)!important; }
+.ds-btn.purple { color: #7c6fff!important; border-color: rgba(124,111,255,0.3)!important; background: rgba(124,111,255,0.06)!important; }
+.ds-btn.purple:hover { background: rgba(124,111,255,0.12)!important; border-color: rgba(124,111,255,0.5)!important; }
+.ds-btn:disabled { opacity: 0.35!important; cursor: not-allowed!important; transform: none!important; }
+.ds-btn.xs { height: 22px!important; padding: 0 8px!important; font-size: 8px!important; }
+.ds-btn.sm { height: 26px!important; }
+.ds-btn.lg { height: 34px!important; font-size: 10px!important; padding: 0 16px!important; }
+
+/* ── DS-BADGE: Apex Dark pill style ────────────────────────────────── */
+.ds-badge {
+  font-family: 'JetBrains Mono', monospace!important;
+  font-size: 8px!important;
+  font-weight: 600!important;
+  letter-spacing: 0.1em!important;
+  text-transform: uppercase!important;
+  padding: 3px 7px!important;
+  border-radius: 5px!important;
+  border: none!important;
+  display: inline-flex!important;
+  align-items: center!important;
+  gap: 4px!important;
+}
+.ds-badge.cyan   { background: rgba(91,158,255,0.12)!important;  color: #5b9eff!important; }
+.ds-badge.green  { background: rgba(63,210,154,0.12)!important;  color: #3fd29a!important; }
+.ds-badge.purple { background: rgba(124,111,255,0.12)!important; color: #7c6fff!important; }
+.ds-badge.amber  { background: rgba(239,180,90,0.12)!important;  color: #efb45a!important; }
+.ds-badge.red, .ds-badge.danger { background: rgba(248,113,113,0.12)!important; color: #f87171!important; }
+.ds-badge.grey   { background: rgba(255,255,255,0.06)!important; color: #8893a0!important; }
+
+/* ── DS-TABLE: clean row structure ─────────────────────────────────── */
+.ds-table th {
+  font-family: 'JetBrains Mono', monospace!important;
+  font-size: 9px!important;
+  font-weight: 600!important;
+  letter-spacing: 0.14em!important;
+  text-transform: uppercase!important;
+  color: #8893a0!important;
+  padding: 8px 12px!important;
+  border-bottom: 1px solid rgba(255,255,255,0.07)!important;
+  background: transparent!important;
+}
+.ds-table td {
+  font-size: 12px!important;
+  color: #c7d2dd!important;
+  padding: 9px 12px!important;
+  border-bottom: 1px solid rgba(255,255,255,0.04)!important;
+  vertical-align: middle!important;
+  line-height: 1.4!important;
+}
+.ds-table tr:last-child td { border-bottom: none!important; }
+.ds-table tr:hover td { background: rgba(255,255,255,0.025)!important; }
+
+/* ── INPUTS: Apex Dark focus ring ───────────────────────────────────── */
+input, textarea, select,
+.ds-input, .ds-select, .ds-textarea {
+  background: rgba(13,20,36,0.8)!important;
+  border: 1px solid rgba(255,255,255,0.1)!important;
+  border-radius: 8px!important;
+  color: #f3f7fb!important;
+  font-size: 13px!important;
+  padding: 8px 12px!important;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease!important;
+  outline: none!important;
+}
+input:focus, textarea:focus, select:focus,
+.ds-input:focus, .ds-select:focus, .ds-textarea:focus {
+  border-color: rgba(91,158,255,0.5)!important;
+  box-shadow: 0 0 0 3px rgba(91,158,255,0.1)!important;
+}
+input::placeholder, textarea::placeholder { color: #4a5a70!important; }
+
+/* ── OVERVIEW PIPELINE: card hover + section spacing ───────────────── */
+#ovr-pipeline { background: transparent!important; padding: 24px 28px 32px!important; }
+
+/* Sovereign card hover */
+#ovr-pipeline [style*="width:450px"] {
+  transition: box-shadow 0.15s ease, transform 0.12s ease!important;
+}
+#ovr-pipeline [style*="width:450px"]:hover {
+  transform: translateY(-2px)!important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07),
+              0 14px 40px rgba(91,158,255,0.14),
+              0 6px 20px rgba(0,0,0,0.32)!important;
+}
+
+/* Memory Fabric + grid cards: add transition */
+#ovr-pipeline [style*="border-radius:12px"],
+#ovr-pipeline [style*="border-radius:14px"],
+#ovr-pipeline [style*="border-radius:10px"] {
+  transition: opacity 0.12s ease, transform 0.12s ease, box-shadow 0.15s ease!important;
+}
+
+/* Section wrapper gap: increase breathing room between header and content */
+#ovr-pipeline > div > div[style*="flex-direction:column"] { gap: 16px!important; }
+
+/* ── PIPELINE SECTION HEADER: match the inline bold style exactly ───── */
+#ovr-pipeline [style*="width:100%;display:flex;align-items:center;gap:14px"] {
+  margin-bottom: 4px!important;
+}
+
+/* ── AGENT PAGE CARDS: hover lift ──────────────────────────────────── */
+.ds-agent, .agent-card {
+  background: #0d1424!important;
+  border: 1px solid rgba(255,255,255,0.07)!important;
+  border-radius: 12px!important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease!important;
+}
+.ds-agent:hover, .agent-card:hover {
+  border-color: rgba(255,255,255,0.13)!important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3)!important;
+  transform: translateY(-1px)!important;
+}
+
+/* ── APPROVE / DENY BUTTONS ─────────────────────────────────────────── */
+.approve-btn {
+  font-family: 'JetBrains Mono', monospace!important;
+  height: 24px!important; padding: 0 10px!important; border-radius: 6px!important;
+  font-size: 8px!important; font-weight: 600!important; letter-spacing: 0.1em!important;
+  text-transform: uppercase!important; border: 1px solid rgba(63,210,154,0.3)!important;
+  background: rgba(63,210,154,0.06)!important; color: #3fd29a!important;
+}
+.approve-btn:hover { background: rgba(63,210,154,0.14)!important; border-color: rgba(63,210,154,0.5)!important; }
+.deny-btn {
+  font-family: 'JetBrains Mono', monospace!important;
+  height: 24px!important; padding: 0 10px!important; border-radius: 6px!important;
+  font-size: 8px!important; font-weight: 600!important; letter-spacing: 0.1em!important;
+  text-transform: uppercase!important; border: 1px solid rgba(248,113,113,0.3)!important;
+  background: rgba(248,113,113,0.06)!important; color: #f87171!important;
+}
+.deny-btn:hover { background: rgba(248,113,113,0.14)!important; border-color: rgba(248,113,113,0.5)!important; }
+
+/* ── STATUS DOTS: Apex Dark glow ────────────────────────────────────── */
+.ds-dot.cyan    { background: #5b9eff!important; box-shadow: 0 0 5px rgba(91,158,255,0.5)!important; }
+.ds-dot.green   { background: #3fd29a!important; box-shadow: 0 0 5px rgba(63,210,154,0.5)!important; }
+.ds-dot.purple  { background: #7c6fff!important; box-shadow: 0 0 5px rgba(124,111,255,0.5)!important; }
+.ds-dot.amber   { background: #efb45a!important; box-shadow: 0 0 5px rgba(239,180,90,0.5)!important; }
+.ds-dot.red     { background: #f87171!important; box-shadow: 0 0 5px rgba(248,113,113,0.5)!important; }
+.ds-dot.grey    { background: #8893a0!important; }
+
+/* ── NOTIFICATION + MEMORY ITEMS: clean row hover ──────────────────── */
+.notif-item, .memory-item {
+  border-radius: 8px!important;
+  transition: background 0.1s ease!important;
+}
+.notif-item:hover, .memory-item:hover { background: rgba(255,255,255,0.025)!important; }
+
+/* ── CHAT MESSAGES: better line-height + spacing ────────────────────── */
+.chat-msg { line-height: 1.6!important; font-size: 13px!important; }
+
+/* ── TYPOGRAPHY HELPERS ──────────────────────────────────────────────── */
+.t-label, .ds-label {
+  font-family: 'JetBrains Mono', monospace!important;
+  font-size: 9px!important; font-weight: 600!important;
+  letter-spacing: 0.14em!important; text-transform: uppercase!important;
+  color: #8893a0!important; text-shadow: none!important;
+}
+.t-body   { font-family: 'Space Grotesk', system-ui, sans-serif!important; font-size: 13px!important; line-height: 1.55!important; }
+.t-small  { font-size: 11px!important; color: #aab6c2!important; line-height: 1.5!important; }
+.t-mono   { font-family: 'JetBrains Mono', monospace!important; font-variant-numeric: tabular-nums!important; }
+.t-stat   { font-family: 'JetBrains Mono', monospace!important; font-size: 24px!important; font-weight: 700!important; color: #f3f7fb!important; font-variant-numeric: tabular-nums!important; }
+
+/* ── EMPTY STATES ────────────────────────────────────────────────────── */
+.empty-note, .panel-error {
+  font-family: 'Space Grotesk', system-ui, sans-serif!important;
+  font-size: 12px!important; color: #4a5a70!important;
+  text-align: center!important; padding: 32px 16px!important;
+  line-height: 1.6!important;
+}
+
+/* ── MODAL OVERLAY: glassmorphism ───────────────────────────────────── */
+#domainAgentModal, #_ovr_mb {
+  backdrop-filter: blur(8px)!important;
+  -webkit-backdrop-filter: blur(8px)!important;
+  background: rgba(4,10,22,0.8)!important;
+}
+#domainAgentModal > div, #_ovr_card {
+  background: #0d1424!important;
+  border: 1px solid rgba(255,255,255,0.1)!important;
+  border-radius: 16px!important;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(91,158,255,0.1)!important;
+}
+
+/* ── PAGE HEADER: consistent border + spacing across all pages ──────── */
+.ds-page-header {
+  border-bottom: 1px solid rgba(255,255,255,0.07)!important;
+  padding-bottom: 16px!important;
+  margin-bottom: 4px!important;
+}
+
+/* ── RESPONSIVE: 2-col stat grids collapse on narrow viewports ─────── */
+@media (max-width: 640px) {
+  .ds-grid-stats { grid-template-columns: repeat(2, 1fr)!important; }
+  .ds-grid-stats-6 { grid-template-columns: repeat(2, 1fr)!important; }
+  .page { padding: 12px!important; gap: 12px!important; }
+}
+
+/* ── SKELETONS ───────────────────────────────────────────────────────── */
+.skel, .skeleton {
+  background: linear-gradient(90deg, #0d1424 25%, #141d30 50%, #0d1424 75%)!important;
+  background-size: 200% 100%!important;
+  animation: apex-skel 1.8s ease-in-out infinite!important;
+  border-radius: 4px!important;
+}
+@keyframes apex-skel {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skel, .skeleton { animation: none!important; background: #141d30!important; }
+}
+
+/* ── TOPBAR POLISH ───────────────────────────────────────────────────── */
+.topbar {
+  background: rgba(6,12,24,0.97)!important;
+  border-bottom: 1px solid rgba(255,255,255,0.07)!important;
+}
+
+/* ── NAV ICON SIZE CONSISTENCY ──────────────────────────────────────── */
+.nav-icon { font-size: 15px!important; width: 18px!important; text-align: center!important; }
+.nav-label { font-family: 'Space Grotesk', system-ui, sans-serif!important; font-size: 12px!important; font-weight: 500!important; letter-spacing: 0.02em!important; text-transform: none!important; }
+
+/* ── OVERVIEW PIPELINE: information return path strip ───────────────── */
+#ovr-pipeline > [style*="border:1px solid rgba(255,255,255,0.06)"] {
+  border-radius: 10px!important;
+  margin-top: 8px!important;
+}
+
 </style>
 </head>
 <body>
