@@ -15351,12 +15351,23 @@ async function apexDoLogin(){
   var pw=document.getElementById('apexLoginPw').value;
   var btn=document.getElementById('apexLoginBtn');
   var err=document.getElementById('apexLoginErr');
+  if(!pw.trim()){err.textContent='Enter your password.';err.style.display='block';return;}
   btn.disabled=true;btn.textContent='Signing in…';err.style.display='none';
   try{
     var r=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw}),credentials:'include'});
     if(r.ok){localStorage.setItem('apex_app_key',pw);window.location.href='/';}
-    else{err.style.display='block';btn.disabled=false;btn.textContent='Sign in';}
-  }catch(e){err.style.display='block';btn.disabled=false;btn.textContent='Sign in';}
+    else{
+      var msg='Incorrect password.';
+      try{var d=await r.json();if(d&&d.reply)msg=d.reply;}catch(e){}
+      if(r.status===429)msg='Too many attempts — wait a few minutes and try again.';
+      if(r.status===500)msg='Server error: '+msg;
+      err.textContent=msg;err.style.display='block';
+      btn.disabled=false;btn.textContent='SIGN IN';
+    }
+  }catch(e){
+    err.textContent='Network error — check connection.';
+    err.style.display='block';btn.disabled=false;btn.textContent='SIGN IN';
+  }
 }
 </script>
 
