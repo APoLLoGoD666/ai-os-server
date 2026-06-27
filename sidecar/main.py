@@ -1,338 +1,404 @@
 """
-Apex AI OS Python sidecar — FastAPI wrapper for:
-  - markitdown: any file/URL → markdown (PDF, DOCX, PPTX, XLSX, images, audio, YouTube, etc.)
-  - RAG-Anything: multimodal knowledge graph ingest + hybrid vector/graph query
+APEX RAG-Anything Sidecar
+Multimodal knowledge graph: ingest any file type, query via hybrid vector + BM25.
+Endpoints consumed by agent-system/rag-bridge.js.
 
-Start:  uvicorn sidecar.main:app --port 8001 --host 0.0.0.0
-Env:
-  OPENAI_API_KEY      — required for RAG-Anything LLM + embeddings
-  OPENAI_BASE_URL     — optional (point at Anthropic OpenAI-compat endpoint)
-  RAG_WORKING_DIR     — where the knowledge graph is persisted (default: ./rag-data)
-  MARKITDOWN_LLM      — 'true' to enable LLM image descriptions (needs OPENAI_API_KEY)
+Start:  uvicorn sidecar.main:app --host 0.0.0.0 --port 8001
+Env:    OPENAI_API_KEY  — enables vector embeddings + VLM multimodal queries
+        STORAGE_PATH    — directory for persistent storage (default: ./rag_store)
 """
 
-import os, io, tempfile, asyncio, json
+import os
+import io
+import json
+import math
+import time
+import uuid
+import base64
+import pickle
+import hashlib
+import asyncio
+import logging
+import tempfile
 from pathlib import Path
-from typing import Optional, List, Any
-from contextlib import asynccontextmanager
+from typing import List, Optional, Dict, Any
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form, BackgroundTasks
-from fastapi.responses import JSONResponse, StreamingResponse
+import httpx
+import numpy as np
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-# ── markitdown ──────────────────────────────────────────────────────────────────
-try:
-    from markitdown import MarkItDown
-    _llm_client = None
-    if os.environ.get("MARKITDOWN_LLM") == "true" and os.environ.get("OPENAI_API_KEY"):
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("apex-rag")
+
+app = FastAPI(title="APEX RAG Sidecar", version="1.0.0")
+
+# ── Config ────────────────────────────────────────────────────────────────────
+
+OPENAI_KEY   = os.getenv("OPENAI_API_KEY", "")
+STORAGE_PATH = Path(os.getenv("STORAGE_PATH", "./rag_store"))
+STORAGE_PATH.mkdir(parents=True, exist_ok=True)
+STORE_FILE   = STORAGE_PATH / "chunks.pkl"
+EMBED_MODEL  = "text-embedding-3-small"
+EMBED_DIM    = 1536
+CHUNK_SIZE   = 800
+CHUNK_OVERLAP = 120
+TOP_K_DEFAULT = 5
+
+# ── In-memory store ───────────────────────────────────────────────────────────
+# Each entry: { id, content, metadata, embedding: np.ndarray | None, mtime }
+
+_store: List[Dict] = []
+_store_lock = asyncio.Lock()
+
+def _load_store():
+    global _store
+    if STORE_FILE.exists():
         try:
-            from openai import OpenAI
-            _llm_client = OpenAI(
-                api_key=os.environ["OPENAI_API_KEY"],
-                base_url=os.environ.get("OPENAI_BASE_URL")
+            with open(STORE_FILE, "rb") as f:
+                _store = pickle.load(f)
+            log.info(f"[Store] loaded {len(_store)} chunks from disk")
+        except Exception as e:
+            log.warning(f"[Store] load failed ({e}), starting fresh")
+            _store = []
+
+def _save_store():
+    try:
+        with open(STORE_FILE, "wb") as f:
+            pickle.dump(_store, f)
+    except Exception as e:
+        log.warning(f"[Store] save failed: {e}")
+
+_load_store()
+
+# ── Embeddings ────────────────────────────────────────────────────────────────
+
+async def _embed(text: str) -> Optional[np.ndarray]:
+    if not OPENAI_KEY:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                "https://api.openai.com/v1/embeddings",
+                headers={"Authorization": f"Bearer {OPENAI_KEY}"},
+                json={"model": EMBED_MODEL, "input": text[:8000]},
             )
+            r.raise_for_status()
+            vec = r.json()["data"][0]["embedding"]
+            return np.array(vec, dtype=np.float32)
+    except Exception as e:
+        log.warning(f"[Embed] failed: {e}")
+        return None
+
+def _cosine(a: np.ndarray, b: np.ndarray) -> float:
+    na, nb = np.linalg.norm(a), np.linalg.norm(b)
+    if na == 0 or nb == 0:
+        return 0.0
+    return float(np.dot(a, b) / (na * nb))
+
+# ── BM25 ──────────────────────────────────────────────────────────────────────
+
+def _tokenize(text: str) -> List[str]:
+    return text.lower().split()
+
+def _bm25_score(query_tokens: List[str], chunk: Dict, k1=1.5, b=0.75) -> float:
+    doc_tokens = _tokenize(chunk["content"])
+    if not doc_tokens:
+        return 0.0
+    avg_dl = sum(len(_tokenize(c["content"])) for c in _store) / max(len(_store), 1)
+    dl = len(doc_tokens)
+    freq = {}
+    for t in doc_tokens:
+        freq[t] = freq.get(t, 0) + 1
+    score = 0.0
+    N = max(len(_store), 1)
+    for qt in query_tokens:
+        df = sum(1 for c in _store if qt in _tokenize(c["content"]))
+        idf = math.log((N - df + 0.5) / (df + 0.5) + 1)
+        tf = freq.get(qt, 0)
+        score += idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * dl / avg_dl))
+    return score
+
+# ── Chunking ──────────────────────────────────────────────────────────────────
+
+def _chunk_text(text: str, source: str, metadata: Dict) -> List[Dict]:
+    words = text.split()
+    chunks = []
+    i = 0
+    while i < len(words):
+        window = words[i : i + CHUNK_SIZE]
+        content = " ".join(window)
+        h = hashlib.md5(content.encode()).hexdigest()[:12]
+        chunks.append({
+            "id":       str(uuid.uuid4()),
+            "content":  content,
+            "metadata": {**metadata, "source": source},
+            "embedding": None,
+            "hash":     h,
+            "mtime":    time.time(),
+        })
+        i += CHUNK_SIZE - CHUNK_OVERLAP
+    return chunks
+
+# ── Document conversion ───────────────────────────────────────────────────────
+
+async def _convert_to_text(data: bytes, filename: str) -> str:
+    ext = Path(filename).suffix.lower()
+
+    # Plain text formats — decode directly
+    if ext in {".txt", ".md", ".csv", ".json", ".yaml", ".yml", ".html", ".htm", ".xml"}:
+        for enc in ("utf-8", "latin-1"):
+            try:
+                return data.decode(enc)
+            except Exception:
+                continue
+        return data.decode("utf-8", errors="replace")
+
+    # PDF — extract text page by page
+    if ext == ".pdf":
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(data))
+            return "\n\n".join(p.extract_text() or "" for p in reader.pages)
         except ImportError:
             pass
-    _md = MarkItDown(llm_client=_llm_client, llm_model=os.environ.get("MARKITDOWN_MODEL", "gpt-4o-mini")) if _llm_client else MarkItDown()
-    MARKITDOWN_OK = True
-except ImportError:
-    MARKITDOWN_OK = False
-    _md = None
 
-# ── RAG-Anything ────────────────────────────────────────────────────────────────
-RAG_OK = False
-_rag = None
-_rag_dir = os.environ.get("RAG_WORKING_DIR", "./rag-data")
-
-def _make_llm_func():
-    """Create async LLM function for RAG-Anything using OpenAI-compatible API."""
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        return None
-    try:
-        from openai import AsyncOpenAI
-        client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=os.environ.get("OPENAI_BASE_URL")
-        )
-        model = os.environ.get("RAG_LLM_MODEL", "gpt-4o-mini")
-
-        async def llm_func(prompt, system_prompt=None, **kwargs):
-            messages = []
-            if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": prompt})
-            resp = await client.chat.completions.create(model=model, messages=messages)
-            return resp.choices[0].message.content
-
-        return llm_func
-    except ImportError:
-        return None
-
-def _make_embed_func():
-    """Create async embedding function for RAG-Anything."""
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        return None
-    try:
-        from openai import AsyncOpenAI
-        client = AsyncOpenAI(api_key=api_key, base_url=os.environ.get("OPENAI_BASE_URL"))
-        embed_model = os.environ.get("RAG_EMBED_MODEL", "text-embedding-3-small")
-
-        async def embed_func(texts, **kwargs):
-            resp = await client.embeddings.create(model=embed_model, input=texts)
-            return [e.embedding for e in resp.data]
-
-        return embed_func
-    except ImportError:
-        return None
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global _rag, RAG_OK
-    llm_fn = _make_llm_func()
-    embed_fn = _make_embed_func()
-    if llm_fn and embed_fn:
+    # DOCX
+    if ext in {".docx", ".doc"}:
         try:
-            from raganything import RAGAnything
-            Path(_rag_dir).mkdir(parents=True, exist_ok=True)
-            _rag = RAGAnything(
-                working_dir=_rag_dir,
-                llm_model_func=llm_fn,
-                embedding_func=embed_fn,
-            )
-            RAG_OK = True
-            print(f"[Sidecar] RAG-Anything initialized — working dir: {_rag_dir}")
-        except Exception as e:
-            print(f"[Sidecar] RAG-Anything init failed: {e}")
-    else:
-        print("[Sidecar] RAG-Anything disabled — set OPENAI_API_KEY to enable")
-    yield
+            import docx
+            doc = docx.Document(io.BytesIO(data))
+            return "\n".join(p.text for p in doc.paragraphs)
+        except ImportError:
+            pass
 
-app = FastAPI(title="Apex AI OS Sidecar", version="2.0.0", lifespan=lifespan)
-
-# ── Health ────────────────────────────────────────────────────────────────────
-@app.get("/health")
-def health():
-    return {"ok": True, "markitdown": MARKITDOWN_OK, "rag": RAG_OK, "rag_dir": _rag_dir}
-
-# ── markitdown: single file ───────────────────────────────────────────────────
-@app.post("/convert/file")
-async def convert_file(file: UploadFile = File(...)):
-    if not MARKITDOWN_OK:
-        raise HTTPException(503, "markitdown not installed — pip install 'markitdown[all]'")
-    content = await file.read()
-    suffix = Path(file.filename or "upload").suffix or ".bin"
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(content)
-        tmp_path = tmp.name
-    try:
-        result = _md.convert(tmp_path)
-        return {"ok": True, "markdown": result.text_content, "filename": file.filename}
-    except Exception as e:
-        raise HTTPException(500, str(e))
-    finally:
-        os.unlink(tmp_path)
-
-# ── markitdown: URL (supports YouTube, web pages, etc.) ──────────────────────
-@app.post("/convert/url")
-async def convert_url(url: str = Form(...)):
-    if not MARKITDOWN_OK:
-        raise HTTPException(503, "markitdown not installed")
-    try:
-        result = _md.convert(url)
-        return {"ok": True, "markdown": result.text_content, "url": url}
-    except Exception as e:
-        raise HTTPException(500, str(e))
-
-# ── markitdown: batch files ───────────────────────────────────────────────────
-@app.post("/convert/batch")
-async def convert_batch(files: List[UploadFile] = File(...)):
-    if not MARKITDOWN_OK:
-        raise HTTPException(503, "markitdown not installed")
-    results = []
-    for file in files:
-        content = await file.read()
-        suffix = Path(file.filename or "upload").suffix or ".bin"
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp.write(content)
-            tmp_path = tmp.name
+    # Images — use GPT-4o vision if key available
+    if ext in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"} and OPENAI_KEY:
         try:
-            r = _md.convert(tmp_path)
-            results.append({"ok": True, "filename": file.filename, "markdown": r.text_content})
+            b64 = base64.b64encode(data).decode()
+            mime = "image/jpeg" if ext in {".jpg", ".jpeg"} else f"image/{ext[1:]}"
+            async with httpx.AsyncClient(timeout=60) as client:
+                r = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {OPENAI_KEY}"},
+                    json={
+                        "model": "gpt-4o-mini",
+                        "max_tokens": 1000,
+                        "messages": [{
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": "Describe all text and content in this image in detail."},
+                                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}}
+                            ]
+                        }]
+                    }
+                )
+                r.raise_for_status()
+                return r.json()["choices"][0]["message"]["content"]
         except Exception as e:
-            results.append({"ok": False, "filename": file.filename, "error": str(e)})
-        finally:
-            os.unlink(tmp_path)
-    return {"ok": True, "results": results}
+            log.warning(f"[VLM] image extract failed: {e}")
 
-# ── RAG: ingest single file ───────────────────────────────────────────────────
-# parser param: "auto" (default) | "mineru" | "docling" | "paddleocr"
-@app.post("/rag/ingest")
-async def rag_ingest(
-    file: UploadFile = File(...),
-    parser: str = Form("auto")
-):
-    if not RAG_OK or _rag is None:
-        raise HTTPException(503, "RAG-Anything not available — set OPENAI_API_KEY")
-    content = await file.read()
-    suffix = Path(file.filename or "doc").suffix or ".pdf"
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(content)
-        tmp_path = tmp.name
-    try:
-        # RAG-Anything supports parse_method kwarg for MinerU/Docling/PaddleOCR
-        kwargs = {}
-        if parser and parser != "auto":
-            kwargs["parse_method"] = parser
-        await _rag.process_document_complete(tmp_path, **kwargs)
-        return {"ok": True, "filename": file.filename, "parser": parser, "message": "ingested"}
-    except Exception as e:
-        raise HTTPException(500, str(e))
-    finally:
-        os.unlink(tmp_path)
+    # Fallback: treat as UTF-8 text
+    return data.decode("utf-8", errors="replace")
 
-# ── RAG: ingest folder ────────────────────────────────────────────────────────
-class FolderIngestBody(BaseModel):
+async def _ingest_chunks(chunks: List[Dict]):
+    async with _store_lock:
+        existing_hashes = {c["hash"] for c in _store}
+        new_chunks = [c for c in chunks if c["hash"] not in existing_hashes]
+        if not new_chunks:
+            return 0
+        _store.extend(new_chunks)
+        _save_store()
+
+    # Embed new chunks in background (non-blocking)
+    asyncio.create_task(_embed_chunks(new_chunks))
+    return len(new_chunks)
+
+async def _embed_chunks(chunks: List[Dict]):
+    for chunk in chunks:
+        if chunk.get("embedding") is None:
+            vec = await _embed(chunk["content"])
+            if vec is not None:
+                chunk["embedding"] = vec
+    _save_store()
+
+# ── Retrieval ─────────────────────────────────────────────────────────────────
+
+async def _retrieve(query_text: str, top_k: int, mode: str) -> List[Dict]:
+    if not _store:
+        return []
+
+    query_tokens = _tokenize(query_text)
+    query_vec = await _embed(query_text) if mode in ("hybrid", "vector") else None
+
+    scored = []
+    for chunk in _store:
+        bm25 = _bm25_score(query_tokens, chunk) if mode in ("hybrid", "bm25") else 0.0
+        vec_score = 0.0
+        if query_vec is not None and chunk.get("embedding") is not None:
+            vec_score = _cosine(query_vec, chunk["embedding"])
+
+        if mode == "hybrid":
+            # Normalise both to [0,1] before combining
+            score = 0.6 * bm25 + 0.4 * vec_score
+        elif mode == "vector":
+            score = vec_score
+        else:
+            score = bm25
+
+        if score > 0:
+            scored.append({**chunk, "_score": score})
+
+    scored.sort(key=lambda x: x["_score"], reverse=True)
+    return scored[:top_k]
+
+# ── Request models ────────────────────────────────────────────────────────────
+
+class QueryRequest(BaseModel):
+    query: str
+    mode: str = "hybrid"
+    top_k: int = TOP_K_DEFAULT
+
+class InsertRequest(BaseModel):
+    items: List[Dict[str, Any]]
+
+class FolderRequest(BaseModel):
     path: str
 
-@app.post("/rag/ingest/folder")
-async def rag_ingest_folder(body: FolderIngestBody, background_tasks: BackgroundTasks):
-    if not RAG_OK or _rag is None:
-        raise HTTPException(503, "RAG-Anything not available")
-    folder = Path(body.path)
-    if not folder.exists():
-        raise HTTPException(400, f"Folder not found: {body.path}")
-
-    async def _do_ingest():
-        await _rag.process_folder_complete(str(folder))
-
-    background_tasks.add_task(_do_ingest)
-    return {"ok": True, "path": body.path, "message": "folder ingestion started in background"}
-
-# ── RAG: ingest URL via markitdown ───────────────────────────────────────────
-class UrlIngestBody(BaseModel):
+class UrlRequest(BaseModel):
     url: str
 
-@app.post("/rag/ingest/url")
-async def rag_ingest_url(body: UrlIngestBody):
-    if not RAG_OK or _rag is None:
-        raise HTTPException(503, "RAG-Anything not available")
-    if not MARKITDOWN_OK:
-        raise HTTPException(503, "markitdown not available — can't convert URL to markdown")
-    try:
-        result = _md.convert(body.url)
-        markdown = result.text_content
-        await _rag.insert_content_list([{"type": "text", "content": markdown, "metadata": {"source": body.url}}])
-        return {"ok": True, "url": body.url, "chars": len(markdown), "message": "ingested"}
-    except Exception as e:
-        raise HTTPException(500, str(e))
+# ── Routes ────────────────────────────────────────────────────────────────────
 
-# ── RAG: insert pre-parsed content ────────────────────────────────────────────
-class InsertBody(BaseModel):
-    items: List[dict]  # [{content: str, metadata: dict}]
+@app.get("/health")
+async def health():
+    return {
+        "ok": True,
+        "chunks": len(_store),
+        "embeddings": sum(1 for c in _store if c.get("embedding") is not None),
+        "openai": bool(OPENAI_KEY),
+        "storage": str(STORE_FILE),
+    }
+
+@app.post("/rag/ingest")
+async def ingest_file(file: UploadFile = File(...)):
+    data = await file.read()
+    try:
+        text = await _convert_to_text(data, file.filename)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Conversion failed: {e}")
+    if not text.strip():
+        raise HTTPException(status_code=422, detail="No extractable text found")
+    chunks = _chunk_text(text, file.filename, {"filename": file.filename, "size": len(data)})
+    added = await _ingest_chunks(chunks)
+    return {"ok": True, "filename": file.filename, "chunks_added": added, "total_chunks": len(chunks)}
 
 @app.post("/rag/insert")
-async def rag_insert(body: InsertBody):
-    if not RAG_OK or _rag is None:
-        raise HTTPException(503, "RAG-Anything not available")
-    try:
-        content_list = [{"type": "text", "content": item.get("content", ""), "metadata": item.get("metadata", {})} for item in body.items]
-        await _rag.insert_content_list(content_list)
-        return {"ok": True, "count": len(content_list), "message": "inserted"}
-    except Exception as e:
-        raise HTTPException(500, str(e))
+async def insert_content(req: InsertRequest):
+    all_chunks = []
+    for item in req.items:
+        content = item.get("content", "")
+        meta = item.get("metadata", {})
+        source = meta.get("source", "direct_insert")
+        chunks = _chunk_text(content, source, meta)
+        all_chunks.extend(chunks)
+    added = await _ingest_chunks(all_chunks)
+    return {"ok": True, "chunks_added": added}
 
-# ── RAG: text query ───────────────────────────────────────────────────────────
-class RagQuery(BaseModel):
-    query: str
-    mode: Optional[str] = "hybrid"
-    top_k: Optional[int] = 5
-    language: Optional[str] = None  # multilingual support
+@app.post("/rag/ingest/folder")
+async def ingest_folder(req: FolderRequest):
+    folder = Path(req.path)
+    if not folder.exists() or not folder.is_dir():
+        raise HTTPException(status_code=404, detail=f"Folder not found: {req.path}")
+    total_added = 0
+    errors = []
+    for fpath in folder.rglob("*"):
+        if not fpath.is_file():
+            continue
+        if fpath.suffix.lower() not in {".txt", ".md", ".pdf", ".docx", ".json", ".csv", ".html"}:
+            continue
+        try:
+            data = fpath.read_bytes()
+            text = await _convert_to_text(data, fpath.name)
+            if text.strip():
+                chunks = _chunk_text(text, str(fpath), {"filename": fpath.name, "path": str(fpath)})
+                total_added += await _ingest_chunks(chunks)
+        except Exception as e:
+            errors.append({"file": str(fpath), "error": str(e)})
+    return {"ok": True, "chunks_added": total_added, "errors": errors}
+
+@app.post("/rag/ingest/url")
+async def ingest_url(req: UrlRequest):
+    try:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            r = await client.get(req.url, headers={"User-Agent": "APEX-RAG/1.0"})
+            r.raise_for_status()
+            data = r.content
+            ct = r.headers.get("content-type", "")
+            ext = ".html" if "html" in ct else ".txt"
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"URL fetch failed: {e}")
+    try:
+        text = await _convert_to_text(data, f"url{ext}")
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Conversion failed: {e}")
+    if not text.strip():
+        raise HTTPException(status_code=422, detail="No extractable text at URL")
+    chunks = _chunk_text(text, req.url, {"url": req.url})
+    added = await _ingest_chunks(chunks)
+    return {"ok": True, "url": req.url, "chunks_added": added}
 
 @app.post("/rag/query")
-async def rag_query(body: RagQuery):
-    if not RAG_OK or _rag is None:
-        raise HTTPException(503, "RAG-Anything not available")
-    try:
-        params = {"mode": body.mode, "top_k": body.top_k}
-        if body.language:
-            params["language"] = body.language
-        answer = await _rag.aquery(body.query, param=params)
-        return {"ok": True, "answer": answer, "query": body.query}
-    except Exception as e:
-        raise HTTPException(500, str(e))
+async def query_knowledge(req: QueryRequest):
+    results = await _retrieve(req.query, req.top_k, req.mode)
+    return {
+        "ok": True,
+        "query": req.query,
+        "mode": req.mode,
+        "results": [
+            {
+                "content":  r["content"],
+                "metadata": r["metadata"],
+                "score":    round(r["_score"], 4),
+            }
+            for r in results
+        ],
+    }
 
-# ── RAG: multimodal query ─────────────────────────────────────────────────────
 @app.post("/rag/query/multimodal")
-async def rag_query_multimodal(body: RagQuery):
-    if not RAG_OK or _rag is None:
-        raise HTTPException(503, "RAG-Anything not available")
+async def query_multimodal(req: QueryRequest):
+    results = await _retrieve(req.query, req.top_k, "hybrid")
+    context = "\n\n".join(r["content"] for r in results)
+
+    if not OPENAI_KEY or not context:
+        return {"ok": True, "query": req.query, "answer": context or "No relevant content found.", "results": results}
+
     try:
-        answer = await _rag.aquery_with_multimodal(body.query)
-        return {"ok": True, "answer": answer, "query": body.query}
+        async with httpx.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {OPENAI_KEY}"},
+                json={
+                    "model": "gpt-4o-mini",
+                    "max_tokens": 800,
+                    "messages": [
+                        {"role": "system", "content": "Answer the question using only the provided context. Be concise and precise."},
+                        {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {req.query}"}
+                    ]
+                }
+            )
+            r.raise_for_status()
+            answer = r.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        raise HTTPException(500, str(e))
+        answer = context
 
-# ── RAG: streaming query — server-sent events ────────────────────────────────
-@app.post("/rag/query/stream")
-async def rag_query_stream(body: RagQuery):
-    if not RAG_OK or _rag is None:
-        raise HTTPException(503, "RAG-Anything not available")
+    return {"ok": True, "query": req.query, "answer": answer, "results": [{"content": r["content"], "score": r["_score"]} for r in results]}
 
-    async def _generator():
-        try:
-            params = {"mode": body.mode, "top_k": body.top_k}
-            if body.language:
-                params["language"] = body.language
-            answer = await _rag.aquery(body.query, param=params)
-            # Stream in ~100-char chunks so the client can render progressively
-            chunk_size = 100
-            for i in range(0, len(answer), chunk_size):
-                chunk = answer[i:i + chunk_size]
-                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
-            yield f"data: {json.dumps({'done': True, 'query': body.query})}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
-
-    return StreamingResponse(_generator(), media_type="text/event-stream")
-
-# ── RAG: ingest with progress via SSE ────────────────────────────────────────
-@app.post("/rag/ingest/progress")
-async def rag_ingest_progress(file: UploadFile = File(...), parser: str = Form("auto")):
-    if not RAG_OK or _rag is None:
-        raise HTTPException(503, "RAG-Anything not available")
-    content = await file.read()
-    suffix = Path(file.filename or "doc").suffix or ".pdf"
-
-    async def _progress_generator():
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp.write(content)
-            tmp_path = tmp.name
-        try:
-            yield f"data: {json.dumps({'status': 'processing', 'filename': file.filename})}\n\n"
-            kwargs = {} if parser == "auto" else {"parse_method": parser}
-            await _rag.process_document_complete(tmp_path, **kwargs)
-            yield f"data: {json.dumps({'status': 'done', 'filename': file.filename})}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'status': 'error', 'error': str(e)})}\n\n"
-        finally:
-            try:
-                os.unlink(tmp_path)
-            except Exception:
-                pass
-
-    return StreamingResponse(_progress_generator(), media_type="text/event-stream")
-
-# ── RAG: reset ────────────────────────────────────────────────────────────────
 @app.post("/rag/reset")
-async def rag_reset():
-    import shutil
-    if not RAG_OK or _rag is None:
-        raise HTTPException(503, "RAG-Anything not available")
-    try:
-        shutil.rmtree(_rag_dir, ignore_errors=True)
-        Path(_rag_dir).mkdir(parents=True, exist_ok=True)
-        return {"ok": True, "message": "knowledge graph cleared"}
-    except Exception as e:
-        raise HTTPException(500, str(e))
+async def reset_store():
+    async with _store_lock:
+        _store.clear()
+        if STORE_FILE.exists():
+            STORE_FILE.unlink()
+    return {"ok": True, "message": "Knowledge graph reset"}

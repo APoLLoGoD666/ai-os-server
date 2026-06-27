@@ -3,7 +3,7 @@
 <head>
     <meta name="apex-version" content="v10" />
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' wss: https:; img-src 'self' data: blob:; media-src 'self' blob: data:; worker-src 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' wss: https:; img-src 'self' data: blob:; media-src 'self' blob: data:; worker-src 'self';" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <title>APEX AI OS</title>
     <link rel="manifest" href="/manifest.json">
@@ -6425,7 +6425,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
     <p style="color:rgba(232,244,255,0.4);font-size:12px;margin:0 0 26px;letter-spacing:0.06em;">Enter your password to continue.</p>
     <input type="password" id="apexLoginPw" placeholder="Password" autofocus
       style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:12px 14px;color:#e8f4ff;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;" />
-    <button id="apexLoginBtn" onclick="apexDoLogin()"
+    <button id="apexLoginBtn" data-fn="apexDoLogin"
       style="margin-top:12px;width:100%;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.1em;">
       SIGN IN
     </button>
@@ -6436,9 +6436,9 @@ li, td, th, div.label, div.value { font-size: inherit; }
 </div>
 
 <!-- ══ COMMAND PALETTE ══ -->
-<div class="cmd-palette" id="cmdPalette" onclick="if(!event.target.closest('.cmd-box'))closeCommandPalette()">
+<div class="cmd-palette" id="cmdPalette" data-fn="closeCommandPalette" data-not-in=".cmd-box">
     <div class="cmd-box">
-        <input class="cmd-input" id="cmdInput" placeholder="Search commands…" oninput="renderCmdList(this.value)" onkeydown="cmdKeyNav(event)" autocomplete="off" spellcheck="false">
+        <input class="cmd-input" id="cmdInput" placeholder="Search commands…" data-input="_apexCmdInputProxy" data-keydown="cmdKeyNav" autocomplete="off" spellcheck="false">
         <div class="cmd-list" id="cmdList"></div>
     </div>
 </div>
@@ -6468,22 +6468,22 @@ li, td, th, div.label, div.value { font-size: inherit; }
     <!-- ══ MOBILE PAGE NAV DROPDOWN (mobile only) ══ -->
     <div id="mobileNavDropdown" style="display:none;position:fixed;top:var(--topbar-h,48px);left:0;right:0;z-index:8000;background:rgba(6,8,12,0.97);border-bottom:1px solid rgba(0,212,255,0.15);padding:8px 0;">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(0,212,255,0.06);">
-            <button class="_mnav-btn" onclick="window._mobileNavTo('command')">COMMAND</button>
-            <button class="_mnav-btn" onclick="window._mobileNavTo('overview')">OVERVIEW</button>
-            <button class="_mnav-btn" onclick="window._mobileNavTo('operation')">OPS</button>
-            <button class="_mnav-btn" onclick="window._mobileNavTo('system')">SYSTEM</button>
-            <button class="_mnav-btn" onclick="window._mobileNavTo('communication')">COMMS</button>
-            <button class="_mnav-btn" onclick="window._mobileNavTo('finance')">FINANCE</button>
-            <button class="_mnav-btn" onclick="window._mobileNavTo('business')">BUSINESS</button>
-            <button class="_mnav-btn" onclick="window._mobileNavTo('university')">UNI</button>
-            <button class="_mnav-btn" onclick="window._mobileNavTo('health')">LIFE</button>
-            <button class="_mnav-btn" onclick="window._mobileNavTo('occult')">OCCULT</button>
-            <button class="_mnav-btn" onclick="window._mobileNavTo('research')">RESEARCH</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["command"]'>COMMAND</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["overview"]'>OVERVIEW</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["operation"]'>OPS</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["system"]'>SYSTEM</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["communication"]'>COMMS</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["finance"]'>FINANCE</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["business"]'>BUSINESS</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["university"]'>UNI</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["health"]'>LIFE</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["occult"]'>OCCULT</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["research"]'>RESEARCH</button>
         </div>
     </div>
 
     <!-- ══ HELP OVERLAY ══ -->
-    <div class="help-overlay" id="helpOverlay" onclick="if(event.target===this)toggleHelpOverlay()">
+    <div class="help-overlay" id="helpOverlay" data-fn="toggleHelpOverlay" data-self-only="1">
         <div class="help-box">
             <h3>⌨ Keyboard Shortcuts</h3>
             <div class="help-grid">
@@ -6496,19 +6496,19 @@ li, td, th, div.label, div.value { font-size: inherit; }
                 <div class="help-row"><span class="help-key">ESC</span><span class="help-desc">Close overlay / drawer</span></div>
                 <div class="help-row"><span class="help-key">⇧R</span><span class="help-desc">Run next feature</span></div>
             </div>
-            <div style="text-align:right;margin-top:14px"><button class="ds-btn grey btn--xs" onclick="toggleHelpOverlay()">Close</button></div>
+            <div style="text-align:right;margin-top:14px"><button class="ds-btn grey btn--xs" data-fn="toggleHelpOverlay">Close</button></div>
         </div>
     </div>
 
     <!-- ══ AGENT DRAWER ══ -->
-    <div class="agent-drawer-overlay" id="agentDrawerOverlay" onclick="closeAgentDrawer()"></div>
+    <div class="agent-drawer-overlay" id="agentDrawerOverlay" data-fn="closeAgentDrawer"></div>
     <div class="agent-drawer" id="agentDrawer">
         <div class="agent-drawer-header">
             <div>
                 <div class="t-h2" id="drawerAgentTitle">Agent</div>
                 <div class="t-small" style="color:var(--text-mute);margin-top:2px" id="drawerAgentModel"></div>
             </div>
-            <button class="agent-drawer-close" onclick="closeAgentDrawer()">✕</button>
+            <button class="agent-drawer-close" data-fn="closeAgentDrawer">✕</button>
         </div>
         <div class="agent-drawer-body" id="drawerAgentBody">
             <div class="skel skel-wide" style="margin-bottom:8px"></div>
@@ -6532,7 +6532,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                     <div class="cmd-stage" id="cmdStage">
 
                         <!-- APEX Plasma Orb -->
-                        <canvas id="plasmaOrb" onclick="window.startVoice && window.startVoice()" style="cursor:pointer;"></canvas>
+                        <canvas id="plasmaOrb" data-fn="startVoice" data-guard="1" style="cursor:pointer;"></canvas>
                         <div style="position:absolute;top:calc(50% + 148px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;">
                             <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.22em;color:#00d4ff;">APEX</span>
                             <span id="plasmaOrbSubLabel" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.15em;color:#1a3050;">STANDBY · TAP TO SPEAK</span>
@@ -6552,7 +6552,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <div id="apexTtsToggle" style="display:none" data-provider="gemini">
                             <span id="apexTtsDot"></span><span id="apexTtsLabel"></span>
                         </div>
-                        <div id="apexLivePill" style="display:none" onclick="window.toggleGeminiLive && window.toggleGeminiLive()">
+                        <div id="apexLivePill" style="display:none" data-fn="toggleGeminiLive" data-guard="1">
                             <span id="apexLiveDot"></span><span id="apexLiveLabel">LIVE · OFF</span>
                         </div>
                         <!-- Gemini Live transcript overlay -->
@@ -6611,7 +6611,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                             <div class="apex-feed-live"></div>
                             ACTIVITY FEED
                         </div>
-                        <button onclick="apexFeedClear()" style="background:none;border:none;color:rgba(242,242,242,0.15);font-size:8.5px;letter-spacing:0.12em;cursor:pointer;font-family:'JetBrains Mono',monospace;padding:0">CLR</button>
+                        <button data-fn="apexFeedClear" style="background:none;border:none;color:rgba(242,242,242,0.15);font-size:8.5px;letter-spacing:0.12em;cursor:pointer;font-family:'JetBrains Mono',monospace;padding:0">CLR</button>
                     </div>
                     <div class="apex-feed-body" id="apexFeedBody">
                         <div class="apex-feed-entry">
@@ -6649,12 +6649,12 @@ li, td, th, div.label, div.value { font-size: inherit; }
                                     <span id="damTitle" style="font-size:13px;font-weight:600;color:var(--text)">Agent</span>
                                     <span id="damCategory" class="ds-badge" style="margin-left:8px"></span>
                                 </div>
-                                <button onclick="closeDomainAgentModal()" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:20px">&times;</button>
+                                <button data-fn="closeDomainAgentModal" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:20px">&times;</button>
                             </div>
                             <div id="damLog" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:160px"></div>
                             <div style="padding:12px;border-top:1px solid var(--border);display:flex;gap:8px">
-                                <input id="damInput" class="ds-input" placeholder="Ask this agent…" style="flex:1" onkeydown="if(event.key==='Enter')sendDomainAgentMsg()">
-                                <button class="ds-btn cyan" onclick="sendDomainAgentMsg()">Send</button>
+                                <input id="damInput" class="ds-input" placeholder="Ask this agent…" style="flex:1" data-keydown="_apexEnterDomainMsgProxy">
+                                <button class="ds-btn cyan" data-fn="sendDomainAgentMsg">Send</button>
                             </div>
                         </div>
                     </div>
@@ -6665,7 +6665,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                             <span style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Agent Pipeline</span>
                             <div style="display:flex;align-items:center;gap:8px">
                                 <span style="font-size:9px;color:var(--text-mute)">8 agents</span>
-                                <button class="ds-btn xs" onclick="switchPage('operation')">View Logs</button>
+                                <button class="ds-btn xs" data-fn="switchPage" data-args='["operation"]'>View Logs</button>
                             </div>
                         </div>
                         <div id="sys-agent-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div>
@@ -6681,7 +6681,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                             </div>
                             <div style="display:flex;align-items:center;gap:8px">
                                 <span id="sys-stack-pktcount" style="font-size:10px;color:var(--text-mute)">— events</span>
-                                <button class="ds-btn xs" onclick="initStackPipeline()">&#8635;</button>
+                                <button class="ds-btn xs" data-fn="initStackPipeline">&#8635;</button>
                             </div>
                         </div>
                         <canvas id="sys-stack-canvas" style="width:100%;height:300px;display:block"></canvas>
@@ -6725,8 +6725,8 @@ li, td, th, div.label, div.value { font-size: inherit; }
                             </div>
                             <div style="display:flex;align-items:center;gap:8px">
                                 <span id="vault-status-badge" class="ds-badge" style="font-size:9px">Loading&hellip;</span>
-                                <button class="ds-btn xs" onclick="fetchVaultStatus()">&#8635;</button>
-                                <button class="ds-btn xs amber" onclick="triggerCs249rIngest()">Ingest CS249R</button>
+                                <button class="ds-btn xs" data-fn="fetchVaultStatus">&#8635;</button>
+                                <button class="ds-btn xs amber" data-fn="triggerCs249rIngest">Ingest CS249R</button>
                             </div>
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
@@ -6749,7 +6749,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
                     <!-- Section 5: Suggestions (collapsible) -->
                     <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border)">
-                        <div onclick="var c=document.getElementById('sys-suggestions');var a=document.getElementById('sys-sugg-chev');c.style.display=c.style.display==='none'?'block':'none';a.textContent=c.style.display==='none'?'▸':'▾'" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+                        <div data-fn="_apexToggleSysSuggestions" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
                             <div style="display:flex;align-items:center;gap:8px">
                                 <div style="width:6px;height:6px;border-radius:50%;background:var(--amber)"></div>
                                 <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">System Suggestions</span>
@@ -6758,6 +6758,45 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         </div>
                         <div id="sys-suggestions" style="display:none;padding:12px 16px;border-top:1px solid var(--border)">
                             <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+
+                    <!-- Section 6: Latency Trace Viewer -->
+                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden">
+                        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div style="width:6px;height:6px;border-radius:50%;background:var(--cyan)"></div>
+                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Latency Traces</span>
+                                <span id="trace-live-dot" style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(0,212,255,0.10);color:var(--cyan)">Live</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span id="trace-session-count" style="font-size:10px;color:var(--text-mute)">— sessions</span>
+                                <span id="trace-flow-score" style="font-size:10px;color:var(--text-mute)">flow: —</span>
+                                <span id="trace-abandon-rate" style="font-size:10px;color:var(--text-mute)">abandon: —</span>
+                                <button class="ds-btn xs" data-fn="loadLatencyTraces">&#8635;</button>
+                            </div>
+                        </div>
+                        <!-- Stats bar -->
+                        <div id="trace-stats-bar" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)">
+                            <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
+                                <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Ack Latency</div>
+                                <div id="trace-stat-ack" style="font-size:13px;font-weight:600;color:var(--cyan);font-variant-numeric:tabular-nums">&#8212;</div>
+                                <div id="trace-stat-ack-p95" style="font-size:9px;color:var(--text-mute);margin-top:2px">p95: &#8212;</div>
+                            </div>
+                            <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
+                                <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Meaningful</div>
+                                <div id="trace-stat-meaningful" style="font-size:13px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums">&#8212;</div>
+                                <div id="trace-stat-meaningful-p95" style="font-size:9px;color:var(--text-mute);margin-top:2px">p95: &#8212;</div>
+                            </div>
+                            <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
+                                <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Completion</div>
+                                <div id="trace-stat-completion" style="font-size:13px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums">&#8212;</div>
+                                <div id="trace-stat-completion-p95" style="font-size:9px;color:var(--text-mute);margin-top:2px">p95: &#8212;</div>
+                            </div>
+                        </div>
+                        <!-- Session traces -->
+                        <div id="trace-session-list" style="max-height:420px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px">
+                            <div style="font-size:11px;color:var(--text-mute);padding:20px 0;text-align:center">No sessions yet — traces appear after voice interactions</div>
                         </div>
                     </div>
 
@@ -6772,7 +6811,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <span class="ds-page-title">Comms</span>
                         <span class="ds-page-subtitle">email &#183; calendar &#183; messaging</span>
                     </div>
-                    <button class="ds-btn cyan" onclick="checkEmailNow()">&#9658; Check inbox now</button>
+                    <button class="ds-btn cyan" data-fn="checkEmailNow">&#9658; Check inbox now</button>
                 </div>
 
                 <div class="ds-grid-stats">
@@ -6807,16 +6846,16 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         </div>
                         <div class="ds-panel-header-right">
                             <span class="ds-badge cyan">Polling 5m</span>
-                            <button class="ds-btn xs cyan" onclick="showComposeModal()">Compose</button>
+                            <button class="ds-btn xs cyan" data-fn="showComposeModal">Compose</button>
                         </div>
                     </div>
                     <div class="ds-pill-row" id="emailFilterPills">
-                        <button class="ds-pill active" onclick="filterEmails('all',this)">All</button>
-                        <button class="ds-pill" onclick="filterEmails('urgent',this)">Urgent</button>
-                        <button class="ds-pill" onclick="filterEmails('draft',this)">Draft</button>
-                        <button class="ds-pill" onclick="filterEmails('normal',this)">Normal</button>
-                        <button class="ds-pill" onclick="filterEmails('gmail',this)"><svg width="11" height="9" viewBox="0 0 24 20" style="vertical-align:middle;margin-right:3px"><path d="M20 0H4C2.9 0 2 .9 2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V2c0-1.1-.9-2-2-2z" fill="rgba(234,67,53,0.55)"/><path d="M20 2L12 11 4 2" stroke="white" stroke-width="2" fill="none"/></svg>Gmail</button>
-                        <button class="ds-pill" onclick="filterEmails('linkedin',this)"><svg width="11" height="11" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:3px"><rect width="24" height="24" rx="3" fill="rgba(10,102,194,0.65)"/><path d="M7 10h2v7H7zm1-2a1 1 0 110-2 1 1 0 010 2zm4 2h1.9l.1 1c.4-.7 1.3-1.2 2.4-1.2 2.5 0 3 1.6 3 3.7V17h-2v-3.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2v-7z" fill="white"/></svg>LinkedIn</button>
+                        <button class="ds-pill active" data-fn="filterEmails" data-args='["all","__this__"]'>All</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["urgent","__this__"]'>Urgent</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["draft","__this__"]'>Draft</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["normal","__this__"]'>Normal</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["gmail","__this__"]'><svg width="11" height="9" viewBox="0 0 24 20" style="vertical-align:middle;margin-right:3px"><path d="M20 0H4C2.9 0 2 .9 2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V2c0-1.1-.9-2-2-2z" fill="rgba(234,67,53,0.55)"/><path d="M20 2L12 11 4 2" stroke="white" stroke-width="2" fill="none"/></svg>Gmail</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["linkedin","__this__"]'><svg width="11" height="11" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:3px"><rect width="24" height="24" rx="3" fill="rgba(10,102,194,0.65)"/><path d="M7 10h2v7H7zm1-2a1 1 0 110-2 1 1 0 010 2zm4 2h1.9l.1 1c.4-.7 1.3-1.2 2.4-1.2 2.5 0 3 1.6 3 3.7V17h-2v-3.4c0-.8 0-1.9-1.2-1.9s-1.3.9-1.3 1.8V17h-2v-7z" fill="white"/></svg>LinkedIn</button>
                     </div>
                     <div id="emailList" style="display:flex;flex-direction:column;gap:6px">
                         <div class="ds-skel-row" style="height:48px">Loading inbox&#8230;</div>
@@ -6938,7 +6977,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <span class="ds-page-title">Finance</span>
                         <span class="ds-page-subtitle">banking &#183; invoices &#183; budgets &#183; taxes</span>
                     </div>
-                    <button class="ds-btn cyan" onclick="logExpenseQuick()">+ Log expense</button>
+                    <button class="ds-btn cyan" data-fn="logExpenseQuick">+ Log expense</button>
                 </div>
 
                 <!-- Net worth hero -->
@@ -7195,24 +7234,24 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
                 <!-- APPROVALS -->
                 <div class="ds-panel">
-                    <div class="ds-panel-header" style="cursor:pointer" onclick="toggleOpsApprovals()">
+                    <div class="ds-panel-header" style="cursor:pointer" data-fn="toggleOpsApprovals">
                         <span class="ds-panel-dot" style="background:var(--red)"></span>
                         <span class="ds-panel-title">Permission approvals</span>
                         <div class="ds-panel-right">
                             <span class="ds-badge red">7 pending</span>
-                            <button class="ds-btn red btn--xs" onclick="event.stopPropagation();denyAllApprovals()">Deny all</button>
+                            <button class="ds-btn red btn--xs" data-fn="denyAllApprovals" data-stop="1">Deny all</button>
                             <span id="opsApprovalsChev" style="color:var(--text-mute);font-size:12px;margin-left:4px">&#9660;</span>
                         </div>
                     </div>
                     <div id="opsApprovalsBody">
                         <div class="ds-pill-row" style="margin-bottom:14px">
-                            <button class="ds-pill active" onclick="filterOpsApprovals('all')">All <span class="ds-pill-count" id="opsCountAll">7</span></button>
-                            <button class="ds-pill" onclick="filterOpsApprovals('comms')">Comms <span class="ds-pill-count" id="opsCountComms">2</span></button>
-                            <button class="ds-pill" onclick="filterOpsApprovals('finance')">Finance <span class="ds-pill-count" id="opsCountFinance">2</span></button>
-                            <button class="ds-pill" onclick="filterOpsApprovals('health')">Health <span class="ds-pill-count" id="opsCountHealth">2</span></button>
-                            <button class="ds-pill" onclick="filterOpsApprovals('ops')">Ops <span class="ds-pill-count" id="opsCountOps">1</span></button>
-                            <button class="ds-pill" onclick="filterOpsApprovals('simple-first')">Simple first</button>
-                            <button class="ds-pill" onclick="filterOpsApprovals('complex-last')">Complex last</button>
+                            <button class="ds-pill active" data-fn="filterOpsApprovals" data-args='["all"]'>All <span class="ds-pill-count" id="opsCountAll">7</span></button>
+                            <button class="ds-pill" data-fn="filterOpsApprovals" data-args='["comms"]'>Comms <span class="ds-pill-count" id="opsCountComms">2</span></button>
+                            <button class="ds-pill" data-fn="filterOpsApprovals" data-args='["finance"]'>Finance <span class="ds-pill-count" id="opsCountFinance">2</span></button>
+                            <button class="ds-pill" data-fn="filterOpsApprovals" data-args='["health"]'>Health <span class="ds-pill-count" id="opsCountHealth">2</span></button>
+                            <button class="ds-pill" data-fn="filterOpsApprovals" data-args='["ops"]'>Ops <span class="ds-pill-count" id="opsCountOps">1</span></button>
+                            <button class="ds-pill" data-fn="filterOpsApprovals" data-args='["simple-first"]'>Simple first</button>
+                            <button class="ds-pill" data-fn="filterOpsApprovals" data-args='["complex-last"]'>Complex last</button>
                         </div>
                         <div id="permissionCards" style="display:flex;flex-direction:column;gap:12px">
                                 <!-- populated by pollPermissions() -->
@@ -7253,13 +7292,13 @@ li, td, th, div.label, div.value { font-size: inherit; }
                             <span class="t-label">Task queue</span>
                         </div>
                         <div class="ds-panel-header-right">
-                            <button class="ds-btn xs amber" onclick="toggleTaskAddRow()">+ Add</button>
+                            <button class="ds-btn xs amber" data-fn="toggleTaskAddRow">+ Add</button>
                         </div>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:6px">
                         <div id="taskAddRow" style="display:none;gap:6px;margin-bottom:4px">
                             <input id="taskAddInput" class="ds-input" placeholder="Task description…">
-                            <button class="ds-btn xs green" onclick="addTaskFromInput()">Save</button>
+                            <button class="ds-btn xs green" data-fn="addTaskFromInput">Save</button>
                         </div>
                         <div id="taskQueuePanel"><div class="skel skel-row skel-wide"></div></div>
                         <!-- Pipeline controls preserved for JS -->
@@ -7310,7 +7349,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <span class="ds-page-title">Life</span>
                         <span class="ds-page-subtitle">health &#183; sleep &#183; spiritual &#183; journal</span>
                     </div>
-                    <button class="ds-btn cyan" onclick="logHealthVoice()">&#127897; Log via voice</button>
+                    <button class="ds-btn cyan" data-fn="logHealthVoice">&#127897; Log via voice</button>
                 </div>
 
                 <div class="ds-grid-stats-6">
@@ -7422,7 +7461,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <div class="ds-panel-header">
                             <span class="ds-panel-dot" style="background:var(--purple)"></span>
                             <span class="ds-panel-title">Spiritual sessions</span>
-                            <div class="ds-panel-right"><button class="ds-btn purple btn--xs" onclick="logSpiritualSession()">+ Log</button></div>
+                            <div class="ds-panel-right"><button class="ds-btn purple btn--xs" data-fn="logSpiritualSession">+ Log</button></div>
                         </div>
                         <div id="spiritualSessionsList" style="display:flex;flex-direction:column;gap:6px">
                             <div class="skel skel-row skel-wide"></div>
@@ -7453,7 +7492,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         </div>
                         <textarea class="ds-input" id="journalTextarea" placeholder="Today&#39;s entry &#8212; speak it or type it&#8230;" style="height:80px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box"></textarea>
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
-                            <button class="ds-btn cyan btn--xs" onclick="submitJournalEntry()">Save entry</button>
+                            <button class="ds-btn cyan btn--xs" data-fn="submitJournalEntry">Save entry</button>
                             <span id="hlthJournalWordCount" class="t-mono" style="color:var(--text-mute);font-size:10px">0 words</span>
                         </div>
                         <div style="padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;margin-top:8px">
@@ -7497,14 +7536,14 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <div class="t-label" style="margin-bottom:6px">Pomodoro</div>
                         <div class="t-stat" id="pomodoroDisplay" style="color:var(--cyan);font-size:28px;font-variant-numeric:tabular-nums">25:00</div>
                         <div style="display:flex;gap:6px;justify-content:center;margin-top:8px">
-                            <button class="ds-btn cyan btn--xs" id="pomodoroStartBtn" onclick="pomodoroToggle()">&#9658; Start</button>
-                            <button class="ds-btn grey btn--xs" onclick="pomodoroReset()">&#8635;</button>
+                            <button class="ds-btn cyan btn--xs" id="pomodoroStartBtn" data-fn="pomodoroToggle">&#9658; Start</button>
+                            <button class="ds-btn grey btn--xs" data-fn="pomodoroReset">&#8635;</button>
                         </div>
                     </div>
                     <div style="flex:1">
                         <div class="t-label" style="margin-bottom:4px">Flashcards due</div>
                         <div class="t-stat" style="color:var(--purple);font-size:22px"><span id="flashcardDueCount">&#8212;</span></div>
-                        <button class="ds-btn purple btn--xs" style="margin-top:6px" onclick="openFlashcardSession()">Start session</button>
+                        <button class="ds-btn purple btn--xs" style="margin-top:6px" data-fn="openFlashcardSession">Start session</button>
                     </div>
                     <div style="flex:1">
                         <div class="t-label" style="margin-bottom:6px">Recent study sessions</div>
@@ -7563,7 +7602,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <span class="ds-page-title">Business</span>
                         <span class="ds-page-subtitle">CRM &#183; projects &#183; approvals &#183; tasks</span>
                     </div>
-                    <button class="ds-btn cyan" onclick="refreshBizPage()">&#8635; Refresh</button>
+                    <button class="ds-btn cyan" data-fn="refreshBizPage">&#8635; Refresh</button>
                 </div>
 
                 <div class="ds-grid-stats">
@@ -7598,7 +7637,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         </div>
                         <div class="ds-panel-header-right">
                             <span class="ds-badge red" id="bizApprovalBadge">&#8212;</span>
-                            <button class="ds-btn xs red" onclick="denyAllApprovals()">Deny all</button>
+                            <button class="ds-btn xs red" data-fn="denyAllApprovals">Deny all</button>
                         </div>
                     </div>
                     <div id="bizApprovalList" style="display:flex;flex-direction:column;gap:8px">
@@ -7614,7 +7653,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                             <span class="t-label">CRM &#183; client pipeline</span>
                         </div>
                         <div class="ds-panel-header-right">
-                            <button class="ds-btn xs" id="bizCrmViewBtn" onclick="toggleBizCrmView()">&#9778; Kanban</button>
+                            <button class="ds-btn xs" id="bizCrmViewBtn" data-fn="toggleBizCrmView">&#9778; Kanban</button>
                             <button class="ds-btn xs purple">+ Add client</button>
                         </div>
                     </div>
@@ -7671,12 +7710,12 @@ li, td, th, div.label, div.value { font-size: inherit; }
                                 <span class="t-label">Task queue &#183; by priority</span>
                             </div>
                             <div class="ds-panel-header-right">
-                                <button class="ds-btn xs amber" onclick="toggleTaskAddRow()">+ Add</button>
+                                <button class="ds-btn xs amber" data-fn="toggleTaskAddRow">+ Add</button>
                             </div>
                         </div>
                         <div id="taskAddRow" style="display:none;gap:6px;margin-bottom:6px">
                             <input id="taskAddInput" class="ds-input" placeholder="Task description&#8230;">
-                            <button class="ds-btn xs green" onclick="addTaskFromInput()">Save</button>
+                            <button class="ds-btn xs green" data-fn="addTaskFromInput">Save</button>
                         </div>
                         <div id="bizTaskQueue" style="display:flex;flex-direction:column;gap:6px">
                             <div class="skel skel-row skel-wide"></div>
@@ -7723,7 +7762,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <span class="ds-page-title">University</span>
                         <span class="ds-page-subtitle">modules &#183; assignments &#183; flashcards &#183; study</span>
                     </div>
-                    <button class="ds-btn amber" onclick="pomodoroToggle()">&#9658; Start session</button>
+                    <button class="ds-btn amber" data-fn="pomodoroToggle">&#9658; Start session</button>
                 </div>
 
                 <div class="ds-grid-stats">
@@ -7765,8 +7804,8 @@ li, td, th, div.label, div.value { font-size: inherit; }
                             </div>
                         </div>
                         <div style="display:flex;gap:6px">
-                            <button class="ds-btn xs cyan" id="uniPomoBtn" onclick="pomodoroToggle()">&#9658; Start</button>
-                            <button class="ds-btn xs" onclick="pomodoroReset()">&#8635;</button>
+                            <button class="ds-btn xs cyan" id="uniPomoBtn" data-fn="pomodoroToggle">&#9658; Start</button>
+                            <button class="ds-btn xs" data-fn="pomodoroReset">&#8635;</button>
                         </div>
                         <div id="uniPomoPhase" class="t-label" style="color:var(--text-mute)">focus</div>
                     </div>
@@ -7811,7 +7850,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                                 <span class="t-label">Flashcards &#183; <span id="flashcardDueCountB">&#8212;</span> due</span>
                             </div>
                             <div class="ds-panel-header-right">
-                                <button class="ds-btn xs purple" onclick="openFlashcardSession()">&#9658; Start session</button>
+                                <button class="ds-btn xs purple" data-fn="openFlashcardSession">&#9658; Start session</button>
                             </div>
                         </div>
                         <div id="uni-flashcard-preview" style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">
@@ -7849,9 +7888,9 @@ li, td, th, div.label, div.value { font-size: inherit; }
                     <div style="width:440px;background:var(--surface);border:1px solid var(--border-cyan);border-radius:14px;padding:24px">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
                             <span class="t-label">Flashcard session · <span id="fc-remaining">&#8212;</span> remaining</span>
-                            <button onclick="closeFlashcardSession()" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:20px">&times;</button>
+                            <button data-fn="closeFlashcardSession" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:20px">&times;</button>
                         </div>
-                        <div style="perspective:900px;height:160px;cursor:pointer" onclick="flipFlashcard()">
+                        <div style="perspective:900px;height:160px;cursor:pointer" data-fn="flipFlashcard">
                             <div id="fc-inner" style="position:relative;width:100%;height:100%;transition:transform 0.5s;transform-style:preserve-3d">
                                 <div id="fc-front" style="position:absolute;inset:0;backface-visibility:hidden;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center">
                                     <div id="fc-front-text" style="font-size:16px;font-weight:600;color:var(--text)">&#8212;</div>
@@ -7863,9 +7902,9 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         </div>
                         <div style="font-size:11px;color:var(--text-mute);text-align:center;margin-top:8px">Tap card to reveal answer</div>
                         <div style="display:flex;gap:8px;margin-top:16px;justify-content:center">
-                            <button class="ds-btn red" onclick="rateFlashcard(1)">&#128582; Hard</button>
-                            <button class="ds-btn amber" onclick="rateFlashcard(3)">&#128528; OK</button>
-                            <button class="ds-btn green" onclick="rateFlashcard(5)">&#128512; Easy</button>
+                            <button class="ds-btn red" data-fn="rateFlashcard" data-args='[1]'>&#128582; Hard</button>
+                            <button class="ds-btn amber" data-fn="rateFlashcard" data-args='[3]'>&#128528; OK</button>
+                            <button class="ds-btn green" data-fn="rateFlashcard" data-args='[5]'>&#128512; Easy</button>
                         </div>
                     </div>
                 </div>
@@ -7879,7 +7918,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <span class="ds-page-title">Occult</span>
                         <span class="ds-page-subtitle">spiritual &#183; journal &#183; psychology &#183; reflection</span>
                     </div>
-                    <button class="ds-btn purple" onclick="logSpiritualSession()">+ Log session</button>
+                    <button class="ds-btn purple" data-fn="logSpiritualSession">+ Log session</button>
                 </div>
 
                 <div class="ds-grid-stats">
@@ -7914,9 +7953,9 @@ li, td, th, div.label, div.value { font-size: inherit; }
                                 <span class="t-label">Occult journal &#183; dream log</span>
                             </div>
                         </div>
-                        <textarea class="ds-input" id="occultJournal" placeholder="Log a dream, ritual, insight or synchronicity&#8230;" style="height:100px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box" oninput="updateOccultWordCount()"></textarea>
+                        <textarea class="ds-input" id="occultJournal" placeholder="Log a dream, ritual, insight or synchronicity&#8230;" style="height:100px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box" data-input="updateOccultWordCount"></textarea>
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-                            <button class="ds-btn amber btn--xs" onclick="saveOccultJournal()">Save entry</button>
+                            <button class="ds-btn amber btn--xs" data-fn="saveOccultJournal">Save entry</button>
                             <span id="occ-word-count" class="t-mono" style="color:var(--text-mute);font-size:10px">0 words</span>
                         </div>
                         <div class="t-label" style="margin-top:12px;margin-bottom:6px">Recent entries</div>
@@ -7932,7 +7971,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                                 <span class="t-label">Spiritual sessions</span>
                             </div>
                             <div class="ds-panel-header-right">
-                                <button class="ds-btn purple btn--xs" onclick="logSpiritualSession()">+ Log</button>
+                                <button class="ds-btn purple btn--xs" data-fn="logSpiritualSession">+ Log</button>
                             </div>
                         </div>
                         <div id="occ-sessions" style="display:flex;flex-direction:column;gap:6px">
@@ -7985,7 +8024,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
                 <!-- Weekly reflection (collapsible, highlighted on Sundays) -->
                 <div class="ds-panel" id="occ-reflection-panel">
-                    <div class="ds-panel-header" style="cursor:pointer" onclick="toggleOccReflection()">
+                    <div class="ds-panel-header" style="cursor:pointer" data-fn="toggleOccReflection">
                         <div class="ds-panel-header-left">
                             <span class="ds-dot cyan"></span>
                             <span class="t-label" id="occ-reflection-label">Weekly reflection</span>
@@ -7996,7 +8035,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                     </div>
                     <div id="occ-reflection-body" style="display:none">
                         <textarea class="ds-input" id="occReflectionText" placeholder="This week I learned&#8230; What went well&#8230; What to improve&#8230;" style="height:120px;resize:none;padding:10px;line-height:1.5;width:100%;box-sizing:border-box"></textarea>
-                        <button class="ds-btn cyan btn--xs" style="margin-top:6px" onclick="saveOccReflection()">Save reflection</button>
+                        <button class="ds-btn cyan btn--xs" style="margin-top:6px" data-fn="saveOccReflection">Save reflection</button>
                     </div>
                 </div>
 
@@ -8007,24 +8046,24 @@ li, td, th, div.label, div.value { font-size: inherit; }
                 <div class="apex-research">
                     <!-- Toolbar: query + action buttons -->
                     <div class="apex-research-toolbar">
-                        <input class="apex-research-input" id="researchQuery" placeholder="URL, query, or topic…" onkeydown="if(event.key==='Enter')apexResearch('search')" />
-                        <button class="apex-res-btn" id="resBtnSearch" onclick="apexResearch('search')">⊹ Search</button>
-                        <button class="apex-res-btn" id="resBtnScrape" onclick="apexResearch('scrape')">⊘ Scrape URL</button>
-                        <button class="apex-res-btn" id="resBtnCrawl"  onclick="apexResearch('crawl')">⊛ Crawl Site</button>
-                        <button class="apex-res-btn" id="resBtnMap"    onclick="apexResearch('map')">⊕ Map</button>
-                        <button class="apex-res-btn" id="resBtnClear"  onclick="apexResClear()" style="border-color:rgba(239,68,68,0.2);color:rgba(239,68,68,0.6)">✕ Clear</button>
+                        <input class="apex-research-input" id="researchQuery" placeholder="URL, query, or topic…" data-keydown="_apexEnterResearchProxy" />
+                        <button class="apex-res-btn" id="resBtnSearch" data-fn="apexResearch" data-args='["search"]'>⊹ Search</button>
+                        <button class="apex-res-btn" id="resBtnScrape" data-fn="apexResearch" data-args='["scrape"]'>⊘ Scrape URL</button>
+                        <button class="apex-res-btn" id="resBtnCrawl"  data-fn="apexResearch" data-args='["crawl"]'>⊛ Crawl Site</button>
+                        <button class="apex-res-btn" id="resBtnMap"    data-fn="apexResearch" data-args='["map"]'>⊕ Map</button>
+                        <button class="apex-res-btn" id="resBtnClear"  data-fn="apexResClear" style="border-color:rgba(239,68,68,0.2);color:rgba(239,68,68,0.6)">✕ Clear</button>
                     </div>
 
                     <!-- File drop zone (MarkItDown) -->
                     <div class="apex-file-drop" id="apexFileDrop"
-                         onclick="document.getElementById('apexFileInput').click()"
+                         data-fn="_apexTriggerFileInput"
                          ondragover="event.preventDefault();this.classList.add('drag-over')"
                          ondragleave="this.classList.remove('drag-over')"
                          ondrop="apexFileDropHandler(event)">
                         <div class="apex-file-drop-icon">⊞</div>
                         <div class="apex-file-drop-text">Drop file to extract text</div>
                         <div class="apex-file-drop-sub">PDF · DOCX · PPTX · XLSX · Images · Audio · HTML · …</div>
-                        <input type="file" id="apexFileInput" style="display:none" onchange="apexFileRead(this.files[0])" />
+                        <input type="file" id="apexFileInput" style="display:none" data-change="_apexFileReadProxy" />
                     </div>
 
                     <!-- Results panel -->
@@ -8045,9 +8084,9 @@ li, td, th, div.label, div.value { font-size: inherit; }
                     <!-- URL + action buttons -->
                     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                         <input id="browserUrl" type="url" placeholder="https://…" style="flex:1;min-width:180px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:4px;font-size:13px;outline:none" />
-                        <button onclick="browserAction('research')" style="background:rgba(6,182,212,0.1);border:1px solid var(--cyan);color:var(--cyan);padding:8px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer">⊹ RESEARCH</button>
-                        <button onclick="browserAction('screenshot')" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);padding:8px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer">⊙ SCREENSHOT</button>
-                        <button onclick="browserAction('pdf')" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);padding:8px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer">⊘ PDF</button>
+                        <button data-fn="browserAction" data-args='["research"]' style="background:rgba(6,182,212,0.1);border:1px solid var(--cyan);color:var(--cyan);padding:8px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer">⊹ RESEARCH</button>
+                        <button data-fn="browserAction" data-args='["screenshot"]' style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);padding:8px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer">⊙ SCREENSHOT</button>
+                        <button data-fn="browserAction" data-args='["pdf"]' style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);padding:8px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer">⊘ PDF</button>
                     </div>
 
                     <!-- Form fill -->
@@ -8056,7 +8095,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         <input id="browserFillUrl" type="url" placeholder="Page URL" style="background:var(--surface);border:1px solid var(--border-dim);color:var(--text);padding:7px 10px;border-radius:4px;font-size:12px;outline:none" />
                         <input id="browserFillSelector" type="text" placeholder="CSS selector  e.g. #email" style="background:var(--surface);border:1px solid var(--border-dim);color:var(--text);padding:7px 10px;border-radius:4px;font-size:12px;outline:none" />
                         <input id="browserFillText" type="text" placeholder="Value to fill" style="background:var(--surface);border:1px solid var(--border-dim);color:var(--text);padding:7px 10px;border-radius:4px;font-size:12px;outline:none" />
-                        <button onclick="browserFill()" style="background:rgba(6,182,212,0.1);border:1px solid var(--cyan);color:var(--cyan);padding:7px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer;align-self:flex-start">⊕ FILL FORM</button>
+                        <button data-fn="browserFill" style="background:rgba(6,182,212,0.1);border:1px solid var(--cyan);color:var(--cyan);padding:7px 14px;border-radius:4px;font-size:12px;letter-spacing:0.08em;cursor:pointer;align-self:flex-start">⊕ FILL FORM</button>
                     </div>
 
                     <!-- Results -->
@@ -8070,69 +8109,69 @@ li, td, th, div.label, div.value { font-size: inherit; }
 
         <!-- ══ INPUT ZONE ══ -->
         <div class="input-zone">
-            <button class="mic-btn" id="micBtn" onclick="toggleListening()" title="Voice input">🎤</button>
+            <button class="mic-btn" id="micBtn" data-fn="toggleListening" title="Voice input">🎤</button>
             <input class="chat-input" id="chatInput" type="text" placeholder="Ask APEX anything…" autocomplete="off" />
-            <button class="clear-chat-btn" onclick="clearChat()" title="Clear chat">Clear</button>
-            <button class="auto-listen-btn on" id="autoListenBtn" onclick="toggleAutoListen()" title="Toggle auto-listen">Auto</button>
-            <button class="send-btn" onclick="sendChatCommand()" title="Send">&#10148;</button>
+            <button class="clear-chat-btn" data-fn="clearChat" title="Clear chat">Clear</button>
+            <button class="auto-listen-btn on" id="autoListenBtn" data-fn="toggleAutoListen" title="Toggle auto-listen">Auto</button>
+            <button class="send-btn" data-fn="sendChatCommand" title="Send">&#10148;</button>
         </div>
 
     </div><!-- .page-and-input -->
 
     <!-- ══ SIDEBAR NAV ══ -->
     <nav class="bottom-nav">
-        <button class="nav-btn active" id="nav-command" onclick="switchPage('command')">
+        <button class="nav-btn active" id="nav-command">
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Command</span>
         </button>
-        <button class="nav-btn" id="nav-overview" onclick="switchPage('overview')">
+        <button class="nav-btn" id="nav-overview">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Overview</span>
         </button>
-        <button class="nav-btn" id="nav-operation" onclick="switchPage('operation')">
+        <button class="nav-btn" id="nav-operation">
             <span class="nav-icon">⊞</span>
             <span class="nav-label">Operation</span>
             <span class="ds-notif-badge red" id="navOpsBadge" style="display:none"></span>
         </button>
-        <button class="nav-btn" id="nav-system" onclick="switchPage('system')">
+        <button class="nav-btn" id="nav-system">
             <span class="nav-icon">◉</span>
             <span class="nav-label">System</span>
             <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
         </button>
-        <button class="nav-btn" id="nav-communication" onclick="switchPage('communication')">
+        <button class="nav-btn" id="nav-communication">
             <span class="nav-icon">✉</span>
             <span class="nav-label">Comms</span>
             <span class="ds-notif-badge cyan" id="navCommsBadge" style="display:none">5</span>
         </button>
-        <button class="nav-btn" id="nav-finance" onclick="switchPage('finance')">
+        <button class="nav-btn" id="nav-finance">
             <span class="nav-icon">◎</span>
             <span class="nav-label">Finance</span>
         </button>
-        <button class="nav-btn" id="nav-business" onclick="switchPage('business')">
+        <button class="nav-btn" id="nav-business">
             <span class="nav-icon">◧</span>
             <span class="nav-label">Business</span>
         </button>
-        <button class="nav-btn" id="nav-university" onclick="switchPage('university')">
+        <button class="nav-btn" id="nav-university">
             <span class="nav-icon">◫</span>
             <span class="nav-label">University</span>
         </button>
-        <button class="nav-btn" id="nav-health" onclick="switchPage('health')">
+        <button class="nav-btn" id="nav-health">
             <span class="nav-icon">◑</span>
             <span class="nav-label">Health</span>
         </button>
-        <button class="nav-btn" id="nav-occult" onclick="switchPage('occult')">
+        <button class="nav-btn" id="nav-occult">
             <span class="nav-icon">◬</span>
             <span class="nav-label">Occult</span>
         </button>
-        <button class="nav-btn" id="nav-research" onclick="switchPage('research')">
+        <button class="nav-btn" id="nav-research">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Research</span>
         </button>
-        <button class="nav-btn" id="nav-browser" onclick="switchPage('browser')">
+        <button class="nav-btn" id="nav-browser">
             <span class="nav-icon">⊡</span>
             <span class="nav-label">Browser</span>
         </button>
-        <button class="nav-btn" id="nav-more" style="display:none" onclick="toggleMobileMore()" aria-label="More pages">
+        <button class="nav-btn" id="nav-more" style="display:none" aria-label="More pages">
             <span class="nav-icon" style="letter-spacing:-1px">•••</span>
             <span class="nav-label">More</span>
         </button>
@@ -8155,6 +8194,13 @@ li, td, th, div.label, div.value { font-size: inherit; }
         activePage = name;
     };
 
+    pages.forEach(function(name) {
+        var btn = document.getElementById('nav-' + name);
+        if (btn) btn.addEventListener('click', function() { window.switchPage(name); });
+    });
+    var moreBtn = document.getElementById('nav-more');
+    if (moreBtn) moreBtn.addEventListener('click', function() { if (typeof toggleMobileMore === 'function') toggleMobileMore(); });
+
     var startX = 0, startY = 0;
     var pw = document.getElementById('pageWrap');
     if (pw) {
@@ -8175,11 +8221,142 @@ li, td, th, div.label, div.value { font-size: inherit; }
 })();
 </script>
 <script>
+// ══ APEX EVENT DISPATCHER ════════════════════════════════════════════════
+// CSP-compliant. Handles data-fn, data-change, data-input, data-keydown,
+// data-hover, data-unhover. Replaces all inline onclick/on* attributes.
+(function() {
+  'use strict';
+
+  function parseArgs(el) {
+    var raw = el.getAttribute('data-args');
+    if (!raw) return [];
+    try {
+      var args = JSON.parse(raw);
+      return args.map(function(a) { return a === '__this__' ? el : a; });
+    } catch(e) { console.warn('[APEX dispatcher] bad data-args:', raw); return []; }
+  }
+
+  function callFn(fnName, el, args) {
+    var fn = window[fnName];
+    if (el.hasAttribute('data-guard') && typeof fn !== 'function') return;
+    if (typeof fn !== 'function') { console.warn('[APEX dispatcher] unknown fn:', fnName); return; }
+    fn.apply(el, args);
+  }
+
+  // Click
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-fn]');
+    if (!el) return;
+    if (el.hasAttribute('data-self-only') && e.target !== el) return;
+    var notIn = el.getAttribute('data-not-in');
+    if (notIn && e.target.closest(notIn)) return;
+    if (el.hasAttribute('data-stop')) e.stopPropagation();
+    callFn(el.getAttribute('data-fn'), el, parseArgs(el));
+  });
+
+  // Change
+  document.addEventListener('change', function(e) {
+    var el = e.target.closest('[data-change]');
+    if (!el) return;
+    callFn(el.getAttribute('data-change'), el, parseArgs(el).concat([e]));
+  });
+
+  // Input
+  document.addEventListener('input', function(e) {
+    var el = e.target.closest('[data-input]');
+    if (!el) return;
+    callFn(el.getAttribute('data-input'), el, [el.value, e]);
+  });
+
+  // Keydown
+  document.addEventListener('keydown', function(e) {
+    var el = e.target.closest('[data-keydown]');
+    if (!el) return;
+    callFn(el.getAttribute('data-keydown'), el, [e]);
+  });
+
+  // Mouseover / mouseout
+  document.addEventListener('mouseover', function(e) {
+    var el = e.target.closest('[data-hover]');
+    if (!el) return;
+    callFn(el.getAttribute('data-hover'), el, [e]);
+  });
+  document.addEventListener('mouseout', function(e) {
+    var el = e.target.closest('[data-unhover]');
+    if (!el) return;
+    callFn(el.getAttribute('data-unhover'), el, [e]);
+  });
+
+  // ── Proxy / helper functions ─────────────────────────────────────────
+
+  // Sys-suggestions collapsible toggle
+  window._apexToggleSysSuggestions = function() {
+    var c = document.getElementById('sys-suggestions');
+    var a = document.getElementById('sys-sugg-chev');
+    if (!c) return;
+    c.style.display = c.style.display === 'none' ? 'block' : 'none';
+    if (a) a.textContent = c.style.display === 'none' ? '▸' : '▾';
+  };
+
+  // File input trigger
+  window._apexTriggerFileInput = function() {
+    var f = document.getElementById('apexFileInput');
+    if (f) f.click();
+  };
+
+  // File change proxy — passes files[0] to apexFileRead
+  window._apexFileReadProxy = function() {
+    if (this.files && this.files[0] && typeof apexFileRead === 'function') apexFileRead(this.files[0]);
+  };
+
+  // Command input proxy — passes current value to renderCmdList
+  window._apexCmdInputProxy = function(val) {
+    if (typeof renderCmdList === 'function') renderCmdList(val);
+  };
+
+  // Enter key for apexResearch
+  window._apexEnterResearchProxy = function(e) {
+    if (e.key === 'Enter' && typeof apexResearch === 'function') apexResearch('search');
+  };
+
+  // Enter key for sendDomainAgentMsg
+  window._apexEnterDomainMsgProxy = function(e) {
+    if (e.key === 'Enter' && typeof sendDomainAgentMsg === 'function') sendDomainAgentMsg();
+  };
+
+  // viewNotification — reads args from individual data-* attrs
+  window._apexViewNotifProxy = function() {
+    if (typeof viewNotification !== 'function') return;
+    viewNotification(
+      this.dataset.id || '',
+      decodeURIComponent(this.dataset.notifTitle || ''),
+      decodeURIComponent(this.dataset.notifMsg || ''),
+      this.dataset.read === 'true'
+    );
+  };
+
+  // Remove modal helpers
+  window._apexRemoveQrModal = function() {
+    var m = document.getElementById('comms-qr-modal'); if (m) m.remove();
+  };
+  window._apexRemoveComposeModal = function() {
+    var m = document.getElementById('compose-modal'); if (m) m.remove();
+  };
+
+  // Dynamic refetch proxy — reads fn name from calling context
+  window._apexRefetchProxy = function() {
+    var name = this && this.getAttribute && this.getAttribute('data-refetch-fn');
+    if (name && typeof window[name] === 'function') window[name]();
+  };
+
+})();
+</script>
+<script>
 // ══ CONFIG ════════════════════════════════════════════════════════════
 const API_BASE = "";
-let APP_KEY = sessionStorage.getItem('apex_app_key') || new URLSearchParams(window.location.search).get("app_key") || "";
+let APP_KEY = localStorage.getItem('apex_app_key') || new URLSearchParams(window.location.search).get("app_key") || "";
 if (APP_KEY) {
-    sessionStorage.setItem('apex_app_key', APP_KEY);
+    localStorage.setItem('apex_app_key', APP_KEY);
     const _u = new URL(window.location.href);
     if (_u.searchParams.has('app_key')) {
         _u.searchParams.delete('app_key');
@@ -8187,8 +8364,33 @@ if (APP_KEY) {
     }
 }
 window._apexAppKey = APP_KEY;
+window._appKey = APP_KEY;
+function _showKeyModal() {
+    if (document.getElementById('apexKeyOverlay')) return;
+    var overlay = document.createElement('div');
+    overlay.id = 'apexKeyOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(8,9,14,0.97);display:flex;align-items:center;justify-content:center;z-index:99999;font-family:monospace';
+    overlay.innerHTML = '<div style="background:#0d0e14;border:1px solid #1e2235;border-radius:12px;padding:36px 40px;max-width:380px;width:90%;text-align:center"><div style="color:#7b8cff;font-size:13px;letter-spacing:3px;text-transform:uppercase;margin-bottom:20px">APEX AI OS</div><div style="color:#888;font-size:12px;margin-bottom:20px">Enter your access key to continue</div><input id="apexKeyInput" type="password" placeholder="Access key…" style="width:100%;background:#0a0b10;border:1px solid #2a2f45;border-radius:8px;color:#e0e0e0;font-family:monospace;font-size:14px;padding:12px 14px;box-sizing:border-box;outline:none;margin-bottom:12px"><button id="apexKeyBtn" style="width:100%;background:#7b8cff;border:none;border-radius:8px;color:#fff;font-family:monospace;font-size:13px;font-weight:600;padding:12px;cursor:pointer;letter-spacing:1px">UNLOCK</button><div id="apexKeyErr" style="color:#ff6b6b;font-size:11px;margin-top:10px;min-height:16px"></div></div>';
+    document.body.appendChild(overlay);
+    function tryKey(){
+        var k=(document.getElementById('apexKeyInput').value||'').trim();
+        if(!k){document.getElementById('apexKeyErr').textContent='Key required';return;}
+        fetch('/api/config',{headers:{'x-app-key':k}}).then(function(r){
+            if(r.ok){
+                localStorage.setItem('apex_app_key',k);
+                APP_KEY=k;window._appKey=k;window._apexAppKey=k;
+                overlay.remove();
+                if(typeof refreshFast==='function')refreshFast();
+            } else { document.getElementById('apexKeyErr').textContent='Invalid key — try again'; }
+        }).catch(function(){document.getElementById('apexKeyErr').textContent='Cannot reach server';});
+    }
+    document.getElementById('apexKeyBtn').addEventListener('click',tryKey);
+    document.getElementById('apexKeyInput').addEventListener('keydown',function(e){if(e.key==='Enter')tryKey();});
+    setTimeout(function(){var i=document.getElementById('apexKeyInput');if(i)i.focus();},100);
+}
+if (!APP_KEY) { _showKeyModal(); }
 const MAX_ITEMS           = 5;
-const REFRESH_INTERVAL_MS = 18000;
+const REFRESH_INTERVAL_MS = 30000;
 
 // ══ STATE ═════════════════════════════════════════════════════════════
 let isListening         = false;
@@ -8205,15 +8407,12 @@ let dgMuted             = false;  // true while AI is speaking — ignore SR tra
 let currentAudio        = null;
 let currentAbort        = null;
 let speakQueue          = [];
-// ── TTS provider toggle ────────────────────────────────────────────────────
-// 'deepgram' (default) or 'gemini' — persisted in localStorage
-var _ttsProvider = (function(){
-    try { return localStorage.getItem('apex_tts_provider') || 'gemini'; } catch(_){ return 'gemini'; }
-})();
-function getTtsUrl()      { return _ttsProvider === 'gemini' ? '/api/tts/gemini' : '/api/tts'; }
-function getTtsMimeType() { return _ttsProvider === 'gemini' ? 'audio/wav' : 'audio/mpeg'; }
+// ── TTS provider — locked to Gemini 2.5 (Orus voice) ─────────────────────────
+var _ttsProvider = 'gemini';
+function getTtsUrl()      { return '/api/tts/gemini'; }
+function getTtsMimeType() { return 'audio/wav'; }
 window.setTtsProvider = function(p) {
-    _ttsProvider = (p === 'gemini') ? 'gemini' : 'deepgram';
+    _ttsProvider = 'gemini'; // always Gemini — no fallback
     try { localStorage.setItem('apex_tts_provider', _ttsProvider); } catch(_){}
     var tog  = document.getElementById('apexTtsToggle');
     var dot  = document.getElementById('apexTtsDot');
@@ -8291,6 +8490,25 @@ function _glStopAudio() {
     GL.nextPlayAt = GL.playCtx ? GL.playCtx.currentTime : 0;
 }
 
+// Inline AudioWorklet processor — avoids serving a separate file.
+// Sends 128-sample chunks (8ms at 16kHz) vs ScriptProcessor's 4096 (256ms),
+// reducing speech_end → VAD detection latency by up to 248ms.
+var _micWorkletUrl = (function() {
+    try {
+        var src = [
+            'class MicProcessor extends AudioWorkletProcessor {',
+            '    process(inputs) {',
+            '        var ch = inputs[0] && inputs[0][0];',
+            '        if (ch) this.port.postMessage(ch.slice(0));',
+            '        return true;',
+            '    }',
+            '}',
+            'registerProcessor("mic-processor", MicProcessor);',
+        ].join('\n');
+        return URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
+    } catch(_) { return null; }
+})();
+
 async function _glStart() {
     if (GL.active) return;
     GL.active = true;
@@ -8302,7 +8520,7 @@ async function _glStart() {
 
     // Build WebSocket URL
     var proto  = location.protocol === 'https:' ? 'wss' : 'ws';
-    var appKey = (function(){ try { return sessionStorage.getItem('apex_app_key') || window._apexAppKey || ''; } catch(_){ return window._apexAppKey || ''; } })();
+    var appKey = (function(){ try { return localStorage.getItem('apex_app_key') || window._apexAppKey || ''; } catch(_){ return window._apexAppKey || ''; } })();
     var wsUrl  = proto + '://' + location.host + '/ws/gemini-live' + (appKey ? '?app_key=' + encodeURIComponent(appKey) : '');
 
     GL.ws = new WebSocket(wsUrl);
@@ -8331,14 +8549,27 @@ async function _glStart() {
             _glSetStatus('Listening…');
         } else if (msg.type === 'audio') {
             _glPlayPCM(msg.data);
+        } else if (msg.type === 'cancel_audio') {
+            // Barge-in: clear buffered Gemini audio before Claude audio arrives
+            _glStopAudio();
+            _glSetStatus('Processing…');
         } else if (msg.type === 'transcript_user') {
             var el = document.getElementById('apexLiveUserText');
             if (el) el.textContent = msg.text;
             if (msg.text && typeof renderChatMessage === 'function') renderChatMessage('user', msg.text);
-        } else if (msg.type === 'transcript_apex') {
+        } else if (msg.type === 'transcript_apex_partial') {
+            // Progressive update during Claude streaming — live transcript bar only
+            var el2p = document.getElementById('apexLiveApexText');
+            if (el2p) el2p.textContent = msg.text;
+        } else if (msg.type === 'transcript_apex_final' || msg.type === 'transcript_apex') {
+            // Final transcript — update bar and append to chat log
             var el2 = document.getElementById('apexLiveApexText');
             if (el2) el2.textContent = msg.text;
             if (msg.text && typeof renderChatMessage === 'function') renderChatMessage('ai', msg.text);
+        } else if (msg.type === 'route') {
+            // Show which model handled this turn (optional UI indicator)
+            var indicator = document.getElementById('apexLiveRouteIndicator');
+            if (indicator) indicator.textContent = msg.route === 'gemini' ? '◆ Gemini' : '◆ Claude ' + msg.route;
         } else if (msg.type === 'turn_complete') {
             _glSetStatus('Listening…');
         } else if (msg.type === 'error') {
@@ -8352,6 +8583,32 @@ async function _glStart() {
     GL.nextPlayAt = 0;
 }
 
+// Shared PCM sender — used by both AudioWorkletNode and ScriptProcessorNode paths.
+function _glSendPCMChunk(pcmF32, actualRate) {
+    if (!GL.ws || GL.ws.readyState !== WebSocket.OPEN) return;
+    var samples;
+    if (actualRate !== 16000) {
+        var ratio  = actualRate / 16000;
+        var outLen = Math.floor(pcmF32.length / ratio);
+        samples = new Int16Array(outLen);
+        for (var i = 0; i < outLen; i++) {
+            samples[i] = Math.max(-32768, Math.min(32767, pcmF32[Math.floor(i * ratio)] * 32768));
+        }
+    } else {
+        samples = new Int16Array(pcmF32.length);
+        for (var i = 0; i < pcmF32.length; i++) {
+            samples[i] = Math.max(-32768, Math.min(32767, pcmF32[i] * 32768));
+        }
+    }
+    var bytes = new Uint8Array(samples.buffer);
+    var b64 = (function(u8) {
+        var s = '', i = 0, n = u8.length, chunk = 8192;
+        for (; i < n; i += chunk) s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+        return btoa(s);
+    })(bytes);
+    GL.ws.send(JSON.stringify({ type: 'audio', data: b64 }));
+}
+
 async function _glStartMic() {
     try {
         GL.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
@@ -8363,38 +8620,32 @@ async function _glStartMic() {
             GL.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
 
-        GL.source    = GL.audioCtx.createMediaStreamSource(GL.stream);
-        GL.processor = GL.audioCtx.createScriptProcessor(4096, 1, 1);
-
+        GL.source = GL.audioCtx.createMediaStreamSource(GL.stream);
         var actualRate = GL.audioCtx.sampleRate;
-        GL.processor.onaudioprocess = function(e) {
-            if (!GL.ws || GL.ws.readyState !== WebSocket.OPEN) return;
-            var pcmF32 = e.inputBuffer.getChannelData(0);
-            var samples;
-            // Downsample to 16 kHz if AudioContext is at a higher rate
-            if (actualRate !== 16000) {
-                var ratio   = actualRate / 16000;
-                var outLen  = Math.floor(pcmF32.length / ratio);
-                samples = new Int16Array(outLen);
-                for (var i = 0; i < outLen; i++) {
-                    var idx = Math.floor(i * ratio);
-                    samples[i] = Math.max(-32768, Math.min(32767, pcmF32[idx] * 32768));
-                }
-            } else {
-                samples = new Int16Array(pcmF32.length);
-                for (var i = 0; i < pcmF32.length; i++) {
-                    samples[i] = Math.max(-32768, Math.min(32767, pcmF32[i] * 32768));
-                }
-            }
-            // Base64 encode
-            var bytes = new Uint8Array(samples.buffer);
-            var b64   = btoa(String.fromCharCode.apply(null, bytes));
-            GL.ws.send(JSON.stringify({ type: 'audio', data: b64 }));
-        };
 
+        // AudioWorklet path — 128-sample chunks (8ms at 16kHz).
+        // Reduces mic-capture latency from 256ms (ScriptProcessor) to ~8ms.
+        if (_micWorkletUrl && window.AudioWorklet && GL.audioCtx.audioWorklet) {
+            try {
+                await GL.audioCtx.audioWorklet.addModule(_micWorkletUrl);
+                GL.processor = new AudioWorkletNode(GL.audioCtx, 'mic-processor');
+                GL.processor.port.onmessage = function(ev) { _glSendPCMChunk(ev.data, actualRate); };
+                GL.source.connect(GL.processor);
+                GL.processor.connect(GL.audioCtx.destination);
+                console.log('[GeminiLive] AudioWorklet mic at', actualRate, 'Hz (8ms chunks)');
+                return;
+            } catch (wletErr) {
+                console.warn('[GeminiLive] AudioWorklet failed, falling back to ScriptProcessor:', wletErr.message);
+                if (GL.processor) { try { GL.processor.disconnect(); } catch(_){} GL.processor = null; }
+            }
+        }
+
+        // ScriptProcessorNode fallback — 4096 samples (256ms at 16kHz)
+        GL.processor = GL.audioCtx.createScriptProcessor(4096, 1, 1);
+        GL.processor.onaudioprocess = function(e) { _glSendPCMChunk(e.inputBuffer.getChannelData(0), actualRate); };
         GL.source.connect(GL.processor);
         GL.processor.connect(GL.audioCtx.destination);
-        console.log('[GeminiLive] mic running at', actualRate, 'Hz →', actualRate !== 16000 ? 'downsampled to 16k' : '16k native');
+        console.log('[GeminiLive] ScriptProcessor mic at', actualRate, 'Hz (256ms chunks)');
     } catch(err) {
         console.error('[GeminiLive] mic error:', err);
         _glSetStatus('Mic error: ' + err.message);
@@ -8448,24 +8699,7 @@ window.startVoice = function() {
         _glStop(true);
         try { localStorage.setItem('apex_gemini_live', '0'); } catch(_){}
     } else {
-        var glTimeout = setTimeout(function() {
-            if (!GL.ws || GL.ws.readyState !== WebSocket.OPEN) {
-                console.warn('[GeminiLive] connection timeout — falling back to legacy pipeline');
-                _glStop(false);
-                toggleListening();
-            }
-        }, 5000);
-        var _origOnMessage = function(ev) {
-            var msg; try { msg = JSON.parse(ev.data); } catch { return; }
-            if (msg.type === 'ready') clearTimeout(glTimeout);
-        };
-        _glStart().then(function() {
-            if (GL.ws) GL.ws.addEventListener('message', _origOnMessage, { once: true });
-        }).catch(function() {
-            clearTimeout(glTimeout);
-            toggleListening();
-        });
-        try { localStorage.setItem('apex_gemini_live', '1'); } catch(_){}
+        toggleListening();
     }
 };
 
@@ -8498,7 +8732,7 @@ let cachedEmailCount    = 0;
 let cachedActiveRoutines = 0;
 let _emailCache         = {};
 let _currentDraftEmailId = null;
-const voiceSpeed        = 1.3;
+const voiceSpeed        = 1.5;
 let _t0Voice            = 0;
 const inFlightRefreshes = {};
 const renderSigs        = {};
@@ -8687,7 +8921,7 @@ function _httSpeak(text) {
     if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
     if (_httSafetyTimer) { clearTimeout(_httSafetyTimer); _httSafetyTimer = null; }
     const wordCount = text.trim().split(/\s+/).length;
-    const safetyMs  = Math.min(60000, Math.max(8000, wordCount * 1000 + 6000));
+    const safetyMs  = Math.min(40000, Math.max(5000, wordCount * 480 + 2000));
     fetch(buildApiUrl(getTtsUrl()), {
         method: 'POST',
         headers: buildApiHeaders({ 'Content-Type': 'application/json' }),
@@ -8702,7 +8936,6 @@ function _httSpeak(text) {
         _httAudio = _apexAudio;
         _httAudio.src = url;
         _httAudio.load();
-        _httAudio.playbackRate = _isTouchDevice ? 1.3 : 1.5;
         _httSafetyTimer = setTimeout(() => {
             console.warn('[HTT] audio safety timeout — cleaning up');
             if (_httAudio) { try { _apexAudio.pause(); _apexAudio.src = ''; } catch(_) {} _httAudio = null; }
@@ -8748,7 +8981,8 @@ function buildApiUrl(path) {
 }
 
 function buildApiHeaders(extra = {}) {
-    return APP_KEY ? { ...extra, "x-app-key": APP_KEY } : extra;
+    const key = APP_KEY || window._appKey || window._apexAppKey || '';
+    return key ? { ...extra, "x-app-key": key } : extra;
 }
 
 function escapeHtml(v) {
@@ -8780,6 +9014,11 @@ async function fetchJson(path, options = {}) {
     }
     let data;
     try { data = text ? JSON.parse(text) : {}; } catch { throw new Error(`Invalid JSON from ${path}.`); }
+    if (res.status === 401) {
+        APP_KEY = ''; window._appKey = ''; window._apexAppKey = '';
+        localStorage.removeItem('apex_app_key');
+        _showKeyModal();
+    }
     if (!res.ok) throw new Error(data.reply || data.error || "Request failed.");
     return data;
 }
@@ -9000,24 +9239,41 @@ async function speakWithElevenLabs(text) {
 
     try {
         console.log(`[LATENCY] +${Date.now() - _t0Voice}ms TTS request sent | provider:${_ttsProvider}`);
-        const ac = new AbortController();
-        currentAbort = ac;
-        const fetchRes = await fetch(buildApiUrl(getTtsUrl()), {
-            method: "POST",
-            headers: buildApiHeaders({ "Content-Type": "application/json" }),
-            body: JSON.stringify({ text: phrase }),
-            signal: ac.signal,
-            credentials: "same-origin"
-        });
-        if (!fetchRes.ok) return false;
+        // Consume pre-fetched audio blob if speak() started it in parallel
+        let _resolvedBlobUrl = null;
+        if (_ttsPrefetch.has(phrase)) {
+            const _p = _ttsPrefetch.get(phrase);
+            _ttsPrefetch.delete(phrase);
+            _resolvedBlobUrl = await _p;
+        }
+        if (!_resolvedBlobUrl) {
+            const ac = new AbortController();
+            currentAbort = ac;
+            let fetchRes;
+            const _retryDelays = [2000, 8000];
+            for (let _attempt = 0; _attempt <= _retryDelays.length; _attempt++) {
+                fetchRes = await fetch(buildApiUrl(getTtsUrl()), {
+                    method: "POST",
+                    headers: buildApiHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ text: phrase }),
+                    signal: ac.signal,
+                    credentials: "same-origin"
+                });
+                if (fetchRes.ok || fetchRes.status !== 429) break;
+                if (_attempt < _retryDelays.length) {
+                    console.warn(`[TTS] 429 — retry ${_attempt + 1} in ${_retryDelays[_attempt]}ms`);
+                    await new Promise(r => setTimeout(r, _retryDelays[_attempt]));
+                }
+            }
+            if (!fetchRes.ok) return false;
+            const buf = await fetchRes.arrayBuffer();
+            const mimeType = fetchRes.headers.get('content-type') || getTtsMimeType();
+            _resolvedBlobUrl = URL.createObjectURL(new Blob([buf], { type: mimeType.split(';')[0].trim() }));
+        }
 
-        // arrayBuffer → Blob approach is the only path that reliably works on iOS Safari
-        const buf  = await fetchRes.arrayBuffer();
-        const blob = new Blob([buf], { type: getTtsMimeType() });
-
-        // Revoke the previous blob URL before creating the new one
+        // Revoke the previous blob URL before assigning the new one
         if (_apexBlobUrl) { try { URL.revokeObjectURL(_apexBlobUrl); } catch (_) {} }
-        _apexBlobUrl = URL.createObjectURL(blob);
+        _apexBlobUrl = _resolvedBlobUrl;
 
         _apexAudio.src          = _apexBlobUrl;
         _apexAudio.playbackRate = _isTouchDevice ? 1.3 : voiceSpeed;
@@ -9054,50 +9310,7 @@ async function speakWithElevenLabs(text) {
     }
 }
 
-function _speakDesktop(phrase, { onEnd } = {}) {
-    window.speechSynthesis.cancel();
-    if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
-    const utt = new SpeechSynthesisUtterance(phrase);
-    utt.rate = 1.08; utt.pitch = 0.95; utt.volume = 1;
-    const voice = _selectedVoice || _pickVoice();
-    if (voice) utt.voice = voice;
-    console.log(`[Speak] _speakDesktop — voice:"${voice ? voice.name : 'default'}" phrase:"${phrase.slice(0, 60)}"`);
-    utt.onstart = () => { console.log('[Speak] _speakDesktop started'); };
-    utt.onend   = () => {
-        console.log('[Speak] _speakDesktop ended');
-        if (onEnd) onEnd();
-    };
-    utt.onerror = (ev) => {
-        console.warn('[Speak] _speakDesktop error:', ev.error);
-        if (onEnd) onEnd();
-    };
-    window.speechSynthesis.speak(utt);
-}
-
-function _speakFallback(phrase, { onEnd } = {}) {
-    if (isIOSPWA) console.log("[APEX iOS] _speakFallback called, text:", phrase.slice(0, 50));
-    window.speechSynthesis.cancel();
-    if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
-    const _truncated = (phrase.split(/[.!?]/)[0] || phrase).slice(0, 160).trim();
-    console.log('[Speak] speechSynthesis truncated to:', _truncated);
-    const utt = new SpeechSynthesisUtterance(_truncated);
-    utt.rate = 1.08; utt.pitch = 0.95; utt.volume = 1;
-    const voice = _selectedVoice || _pickVoice();
-    if (voice) utt.voice = voice;
-    console.log(`[Speak] speechSynthesis fallback — voice:"${voice ? voice.name : 'default'}" phrase:"${_truncated.slice(0, 60)}"`);
-    utt.onstart = () => { console.log('[Speak] speechSynthesis started'); };
-    utt.onend   = () => {
-        console.log('[Speak] speechSynthesis ended');
-        if (onEnd) onEnd();
-    };
-    utt.onerror = (ev) => {
-        console.warn('[Speak] speechSynthesis error:', ev.error);
-        if (onEnd) onEnd();
-    };
-    if (isIOSPWA) console.log(`[iOS] speechSynthesis speaking: "${phrase.slice(0, 60)}"`);
-    if (isIOSPWA && 'audioSession' in navigator) navigator.audioSession.type = 'play-and-record';
-    setTimeout(() => { if (isIOSPWA) console.log("[APEX iOS] speechSynthesis.speak fired"); window.speechSynthesis.speak(utt); }, 100);
-}
+// _speakDesktop and _speakFallback removed — TTS is locked to Gemini (/api/tts/gemini)
 
 function showTypingIndicator() {
     const el = document.getElementById("typingIndicator");
@@ -9114,34 +9327,14 @@ function hideTypingIndicator() {
 async function _speakInternal(text, useFiller) {
     try {
         muteDeepgram();
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
         const phrase = cleanForSpeech(text);
         if (!phrase) return;
 
         setOrbState("speaking");
         const filler = useFiller ? _pickFiller() : null;
 
-        if (isIOSPWA) {
-            if (filler) {
-                const fillerOk = await speakWithElevenLabs(filler);
-                if (!fillerOk && isSpeakingNow) {
-                    await new Promise(r => setTimeout(r, 500));
-                    await new Promise(r => _speakFallback(filler, { onEnd: r }));
-                }
-            }
-            const ok = await speakWithElevenLabs(phrase);
-            if (!ok && isSpeakingNow) {
-                await new Promise(r => setTimeout(r, 500));
-                await new Promise(r => _speakFallback(phrase, { onEnd: r }));
-            }
-        } else {
-            if (filler) {
-                const _fo = await speakWithElevenLabs(filler);
-                if (!_fo && isSpeakingNow) await new Promise(r => _speakDesktop(filler, { onEnd: r }));
-            }
-            const _mo = await speakWithElevenLabs(phrase);
-            if (!_mo && isSpeakingNow) await new Promise(r => _speakDesktop(phrase, { onEnd: r }));
-        }
+        if (filler) await speakWithElevenLabs(filler);
+        await speakWithElevenLabs(phrase);
     } catch (_) {}
 }
 
@@ -9170,7 +9363,7 @@ async function _processSpeak() {
         console.log('[Speak] safety timer → unmuteDeepgram, 3s silence countdown begins');
         unmuteDeepgram();
         setOrbState(autoListen && isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
-    }, isIOSPWA ? Math.min(8000, Math.max(2500, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(' ').length : 3) * 500) + 2000)) : Math.max(45000, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(/\s+/).length : 100) * 400) + 10000));
+    }, isIOSPWA ? Math.min(8000, Math.max(2500, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(' ').length : 3) * 500) + 2000)) : Math.max(15000, ((speakQueue[0] && speakQueue[0].text ? speakQueue[0].text.split(/\s+/).length : 30) * 350) + 5000));
 
     while (speakQueue.length) {
         const { text, useFiller } = speakQueue.shift();
@@ -9205,8 +9398,36 @@ async function _processSpeak() {
     }
 }
 
+const _ttsPrefetch = new Map();
+
+function _splitSentences(text) {
+    const parts = text.match(/[^.!?]+[.!?]*/g);
+    return parts ? parts.map(s => s.trim()).filter(s => s.length > 3) : [text];
+}
+
+async function _doTtsFetch(phrase) {
+    try {
+        const r = await fetch(buildApiUrl(getTtsUrl()), {
+            method: 'POST',
+            headers: buildApiHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ text: phrase }),
+            credentials: 'same-origin'
+        });
+        if (!r.ok) return null;
+        const buf = await r.arrayBuffer();
+        const mime = r.headers.get('content-type') || getTtsMimeType();
+        return URL.createObjectURL(new Blob([buf], { type: mime.split(';')[0].trim() }));
+    } catch (_) { return null; }
+}
+
 function speak(text, { useFiller = false } = {}) {
-    speakQueue.push({ text, useFiller });
+    const cleaned = cleanForSpeech(text);
+    if (!cleaned) return;
+    const sentences = _splitSentences(cleaned);
+    sentences.forEach((s, i) => {
+        _ttsPrefetch.set(s, _doTtsFetch(s));
+        speakQueue.push({ text: s, useFiller: i === 0 && useFiller });
+    });
     _processSpeak();
 }
 
@@ -9269,9 +9490,14 @@ function _startInterruptListener() {
         const transcript = res.transcript.trim();
         const wordCount  = transcript.split(/\s+/).filter(w => w.length >= 2).length;
         const msSinceVoice = Date.now() - _lastHighDbMs;
-        console.log(`[Interrupt] "${transcript}" — words:${wordCount} lastHighDb:${msSinceVoice}ms ago`);
+        // Echo guard: discard if >55% of words match what Apex is currently saying
+        const _phraseWords = (_currentSpeakPhrase || '').toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/);
+        const _txWords = transcript.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+        const _echoHits = _txWords.filter(w => _phraseWords.includes(w)).length;
+        const _isEcho = _txWords.length > 0 && (_echoHits / _txWords.length) >= 0.55;
+        console.log(`[Interrupt] "${transcript}" — words:${wordCount} conf:${res.confidence.toFixed(2)} echo:${_isEcho} lastHighDb:${msSinceVoice}ms ago`);
         if (!isSpeakingNow) { _stopInterruptListener(); return; }
-        if (wordCount > 2 && (Date.now() - (window._ttsPlayStartMs || 0)) > 3000) {
+        if (wordCount >= 3 && res.confidence >= 0.65 && !_isEcho && (Date.now() - (window._ttsPlayStartMs || 0)) > 2000) {
             _vadInterruptSR = null;
             interruptSpeech();
             document.getElementById("chatInput").value = transcript;
@@ -10085,6 +10311,35 @@ function renderChatMessage(role, message) {
     }
 }
 
+/**
+ * Progressive response renderer — Stage 3.2
+ * Reveals stream_plan chunks with their configured delays on a single bubble.
+ * Creates "thinking out loud" perception from a single HTTP response.
+ */
+async function renderProgressiveResponse(chunks) {
+    const log = document.getElementById('chatLog');
+    if (!log || !chunks || !chunks.length) return;
+
+    const nearBottom = (log.scrollHeight - log.scrollTop - log.clientHeight) < 160;
+
+    // Create bubble immediately (replaces typing indicator feel)
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble ai';
+    log.appendChild(bubble);
+    if (nearBottom) log.scrollTop = log.scrollHeight;
+
+    for (var i = 0; i < chunks.length; i++) {
+        var chunk = chunks[i];
+        if (chunk.delay > 0) {
+            await new Promise(function(r) { setTimeout(r, chunk.delay); });
+        }
+        var sep = bubble.textContent ? '\n\n' : '';
+        bubble.textContent += sep + (chunk.content || '');
+        log.scrollTop = log.scrollHeight;
+    }
+}
+window.renderProgressiveResponse = renderProgressiveResponse;
+
 function renderCentreApprovalCard(message) {
     const existing = document.getElementById("centreApproval");
     if (existing) existing.remove();
@@ -10097,8 +10352,8 @@ function renderCentreApprovalCard(message) {
         <div class="capp-label">⚡ Approval Required</div>
         <div class="capp-text">${escapeHtml(shortenText(clean, 200))}</div>
         <div class="capp-actions">
-            <button class="capp-btn yes" onclick="sendApprovalDecision('approved')">✓ Approve</button>
-            <button class="capp-btn no"  onclick="sendApprovalDecision('rejected')">✕ Reject</button>
+            <button class="capp-btn yes" data-fn="sendApprovalDecision" data-args='["approved"]'>✓ Approve</button>
+            <button class="capp-btn no"  data-fn="sendApprovalDecision" data-args='["rejected"]'>✕ Reject</button>
         </div>
     `;
 
@@ -10133,9 +10388,16 @@ async function sendChatCommandFromText(command, options = {}) {
         hideTypingIndicator();
         const reply = data.reply || "No reply.";
         if (!silent) {
-            renderChatMessage("ai", reply);
-            setOrbState("speaking");
-            speak(reply, { useFiller: wasVoice });
+            const plan = data.stream_plan;
+            if (plan && plan.enabled && plan.chunks && plan.chunks.length > 1) {
+                setOrbState("speaking");
+                await renderProgressiveResponse(plan.chunks);
+                speak(reply, { useFiller: wasVoice });
+            } else {
+                renderChatMessage("ai", reply);
+                setOrbState("speaking");
+                speak(reply, { useFiller: wasVoice });
+            }
         } else {
             setOrbState("ready");
         }
@@ -10279,7 +10541,11 @@ function renderNotifStrip() {
     }
     strip.innerHTML = cachedNotifications.slice(0, 14).map(item => `
         <div class="notif-chip ${item.read ? "" : "unread"}"
-             onclick="viewNotification('${String(item.id).replace(/[^a-zA-Z0-9_-]/g,'')}', '${encodeURIComponent(item.title || "")}', '${encodeURIComponent(item.message || "")}', ${item.read ? "true" : "false"})">
+             data-fn="_apexViewNotifProxy"
+             data-id="${String(item.id).replace(/[^a-zA-Z0-9_-]/g,'')}"
+             data-notif-title="${encodeURIComponent(item.title || '')}"
+             data-notif-msg="${encodeURIComponent(item.message || '')}"
+             data-read="${item.read ? 'true' : 'false'}">
             ${!item.read ? '<span class="notif-pip"></span>' : ""}
             ${escapeHtml(shortenText(item.title || "Notification", 40))}
         </div>
@@ -10344,8 +10610,8 @@ function renderApprovalQueue() {
             ${summary}
             <div class="queue-card-meta">Task ${escapeHtml(String(task.id))}</div>
             <div class="queue-actions">
-                <button class="queue-btn yes" onclick="approveAgentTask(${parseInt(task.id,10)||0}, this)">Approve</button>
-                <button class="queue-btn no"  onclick="rejectAgentTask(${parseInt(task.id,10)||0}, this)">Reject</button>
+                <button class="queue-btn yes" data-fn="approveAgentTask" data-args='[${parseInt(task.id,10)||0},"__this__"]'>Approve</button>
+                <button class="queue-btn no"  data-fn="rejectAgentTask" data-args='[${parseInt(task.id,10)||0},"__this__"]'>Reject</button>
             </div>
         </div>`;
     }).join("");
@@ -10436,11 +10702,11 @@ async function refreshEmailPanel() {
             const draftBtns = hasReply && !statusSent
                 ? `<div class="email-actions">
                     <div style="font-size:10px;color:#ff9f43;font-weight:700;margin-bottom:5px">DRAFT — not sent</div>
-                    <button class="email-btn approve" onclick="previewEmailDraft('${String(e.id).replace(/[^a-f0-9-]/gi,'')}')">Review &amp; Send</button>
-                    <button class="email-btn reject"  onclick="rejectEmail('${String(e.id).replace(/[^a-f0-9-]/gi,'')}')">Discard</button>
+                    <button class="email-btn approve" data-fn="previewEmailDraft" data-args='["${String(e.id).replace(/[^a-f0-9-]/gi,'')}"]'>Review &amp; Send</button>
+                    <button class="email-btn reject"  data-fn="rejectEmail" data-args='["${String(e.id).replace(/[^a-f0-9-]/gi,'')}"]'>Discard</button>
                    </div>`
                 : `<div style="font-size:10px;color:var(--muted);margin-top:5px">${escapeHtml(e.status || "")}</div>`;
-            const actionBtns = draftBtns + `<div class="email-reply-row"><button class="email-btn reply" onclick="openReplyDraft('${String(e.id).replace(/[^a-f0-9-]/gi,'')}')">Reply</button></div>`;
+            const actionBtns = draftBtns + `<div class="email-reply-row"><button class="email-btn reply" data-fn="openReplyDraft" data-args='["${String(e.id).replace(/[^a-f0-9-]/gi,'')}"]'>Reply</button></div>`;
             return `
                 <div class="email-item" id="email-${e.id}"${isUrgent ? ' style="border-left:2px solid #ff4d6d"' : ''}>
                     <div class="email-meta">
@@ -10672,7 +10938,7 @@ async function refreshRoutinesPanel() {
                     <div class="routine-name">${escapeHtml(r.name)}</div>
                     <div class="routine-cron">${escapeHtml(r.schedule_cron)}</div>
                 </div>
-                <button class="routine-toggle${r.active ? " on" : ""}" onclick="toggleRoutine(${parseInt(r.id,10)||0}, ${!r.active})" title="${r.active ? "Disable" : "Enable"}"></button>
+                <button class="routine-toggle${r.active ? " on" : ""}" data-fn="toggleRoutine" data-args='[${parseInt(r.id,10)||0},${!r.active}]' title="${r.active ? "Disable" : "Enable"}"></button>
             </div>`).join("");
     } catch (err) {
         el.innerHTML = `<div class="empty-note">${escapeHtml(err.message)}</div>`;
@@ -10711,11 +10977,11 @@ async function addRoutineQuick() {
 }
 
 async function refreshFast() {
-    await Promise.all([refreshMemory(), loadNotifications(), loadTasks()]);
+    await Promise.allSettled([refreshMemory(), loadNotifications(), loadTasks()]);
 }
 
 async function refreshSlow() {
-    await Promise.all([refreshEmailPanel(), refreshFinancePanel(), refreshRoutinesPanel()]);
+    await Promise.allSettled([refreshEmailPanel(), refreshFinancePanel(), refreshRoutinesPanel()]);
 }
 
 async function refreshAll() {
@@ -10819,7 +11085,7 @@ function renderCmdList(query) {
     _cmdActive = 0;
     const el = document.getElementById("cmdList");
     el.innerHTML = filtered.map((c, i) =>
-        `<div class="cmd-item${i === 0 ? " active" : ""}" data-idx="${i}" onclick="executeCmdItem(${CMD_LIST.indexOf(c)})">
+        `<div class="cmd-item${i === 0 ? " active" : ""}" data-idx="${i}" data-fn="executeCmdItem" data-args='[${CMD_LIST.indexOf(c)}]'>
             <span class="cmd-icon">${c.icon}</span>
             <span class="cmd-label">${c.label}</span>
             <span class="cmd-hint">${c.hint || ""}</span>
@@ -10947,7 +11213,7 @@ async function refreshTaskQueuePanel() {
         (data.pending || []).forEach(t => {
             frag.push(`<div class="task-item" data-taskid="${escapeHtml(t.id)}">
                 <span class="task-item-title">${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span>
-                <button class="subpanel-btn task-item-run" onclick="runTaskById('${escapeHtml(t.id)}')">▶ Run</button>
+                <button class="subpanel-btn task-item-run" data-fn="runTaskById" data-args='["${escapeHtml(t.id)}"]'>▶ Run</button>
             </div>`);
         });
         (data.inProgress || []).forEach(t => {
@@ -11056,8 +11322,8 @@ async function pollPermissions() {
                 <div class="t-body-mid">${reason}</div>
                 ${approach ? `<div class="t-small" style="font-style:italic;color:var(--text-mute);padding:6px 10px;background:rgba(255,255,255,0.025);border-left:2px solid rgba(255,255,255,0.08);border-radius:0 6px 6px 0">Implementation: ${approach}</div>` : ''}
                 <div class="ds-approval-actions">
-                    <button class="ds-btn green btn--lg" style="justify-content:center" onclick="approveFeature('${fid}', true)">✓ Approve</button>
-                    <button class="ds-btn red btn--lg" style="justify-content:center" onclick="approveFeature('${fid}', false)">✕ Deny</button>
+                    <button class="ds-btn green btn--lg" style="justify-content:center" data-fn="approveFeature" data-args='["${fid}",true]'>✓ Approve</button>
+                    <button class="ds-btn red btn--lg" style="justify-content:center" data-fn="approveFeature" data-args='["${fid}",false]'>✕ Deny</button>
                 </div>
             </div>`;
         }).filter(Boolean);
@@ -11144,7 +11410,7 @@ async function refreshTimelinePanel() {
                 ? `<a href="${ghUrl}" target="_blank" class="timeline-commit">${escapeHtml(entry.commitHash)}</a>`
                 : '—';
             const tid = escapeHtml(entry.taskId);
-            return `<div class="task-item ${cls}" onclick="toggleTimelineLogs('${tid}')" style="cursor:pointer;display:block;">
+            return `<div class="task-item ${cls}" data-fn="toggleTimelineLogs" data-args='["${tid}"]' style="cursor:pointer;display:block;">
                 <div class="task-item-title">${icon} ${tid}: ${escapeHtml(entry.objective || entry.taskId)}</div>
                 <div class="timeline-meta">${ago}${dur ? ' · ' + dur : ''} · ${hashLink}</div>
                 <div id="tlogs-${tid}" class="timeline-logs" style="display:none">${_renderAgentLogs(entry.agentLogs)}</div>
@@ -11294,8 +11560,8 @@ async function refreshAgentLibrary() {
         const cats = [...new Set(_agentData.map(a => a.category))].sort();
         if (catBar) {
             catBar.innerHTML =
-                `<button onclick="_agentSetCat('')" class="agent-cat-pill${_agentFilterCat===''?' active':''}" data-cat="">All</button>` +
-                cats.map(c => `<button onclick="_agentSetCat('${c}')" class="agent-cat-pill${_agentFilterCat===c?' active':''}" data-cat="${c}">${c}</button>`).join('');
+                `<button data-fn="_agentSetCat" data-args='[""]' class="agent-cat-pill${_agentFilterCat===''?' active':''}" data-cat="">All</button>` +
+                cats.map(c => `<button data-fn="_agentSetCat" data-args='["${c}"]' class="agent-cat-pill${_agentFilterCat===c?' active':''}" data-cat="${c}">${c}</button>`).join('');
         }
         _renderAgentList(_agentData);
     } catch (e) {
@@ -11329,7 +11595,7 @@ function _renderAgentList(agents) {
                     <div class="agent-card-name">${escapeHtml(a.name)}</div>
                     <div class="agent-card-cat">${escapeHtml(a.category)}</div>
                 </div>
-                <button class="agent-invoke-btn" onclick="invokeAgentFromDash('${escapeHtml(a.slug)}','${escapeHtml(a.name).replace(/'/g,'\\x27')}')" title="Invoke this agent">Ask</button>
+                <button class="agent-invoke-btn" data-fn="invokeAgentFromDash" data-args='["${escapeHtml(a.slug)}","${escapeHtml(a.name).replace(/'/g,'\\x27')}"]' title="Invoke this agent">Ask</button>
             </div>
             ${a.description ? `<div class="agent-card-desc">${escapeHtml(a.description.slice(0,100))}${a.description.length>100?'…':''}</div>` : ''}
         </div>`).join('');
@@ -11905,7 +12171,7 @@ window.addEventListener('unload', function() {
      refreshJournalPanel, refreshHabitTracker, refreshPsychologyPanel, refreshUniversityPanel].forEach(function(){});
 });
 </script>
-<div class="email-draft-modal" id="emailDraftModal" onclick="if(event.target===this)closeEmailDraftModal()">
+<div class="email-draft-modal" id="emailDraftModal" data-fn="closeEmailDraftModal" data-self-only="1">
     <div class="email-draft-box">
         <div class="email-draft-title">Draft Reply</div>
         <div class="email-draft-not-sent">⚠ DRAFT — This email has NOT been sent</div>
@@ -11923,10 +12189,10 @@ window.addEventListener('unload', function() {
         </div>
         <div class="email-draft-prompt-row">
             <input class="email-draft-prompt-input" id="draftPrompt" type="text" placeholder="Adjust tone or focus… (optional)" />
-            <button class="email-draft-btn regenerate" onclick="regenerateAiDraft()">Regenerate</button>
+            <button class="email-draft-btn regenerate" data-fn="regenerateAiDraft">Regenerate</button>
         </div>
         <div class="email-draft-actions">
-            <button class="email-draft-btn cancel" onclick="closeEmailDraftModal()">Cancel</button>
+            <button class="email-draft-btn cancel" data-fn="closeEmailDraftModal">Cancel</button>
             <button class="email-draft-btn send" id="draftSendBtn">Send Email</button>
         </div>
     </div>
@@ -11955,14 +12221,21 @@ window.addEventListener('unload', function() {
 ">HOLD TO TALK</button>
 
 <script>
-// ── Login overlay — shown when apex_token cookie is absent ──
-function hasCookie(){return document.cookie.split(';').some(c=>c.trim().startsWith('apex_token='));}
+// ── Login overlay — shown when session cookie is absent ──
+// apex_token is httpOnly (XSS-safe); apex_session=1 is the JS-readable indicator
+function hasCookie(){return document.cookie.split(';').some(c=>c.trim().startsWith('apex_session='));}
 (function(){
   var overlay=document.getElementById('apexLoginOverlay');
   if(overlay){overlay.style.display=hasCookie()?'none':'flex';}
   var pw=document.getElementById('apexLoginPw');
   if(pw){pw.addEventListener('keydown',function(e){if(e.key==='Enter')apexDoLogin();});}
 })();
+setInterval(function() {
+    if (!hasCookie()) {
+        var overlay = document.getElementById('apexLoginOverlay');
+        if (overlay && overlay.style.display === 'none') { overlay.style.display = 'flex'; }
+    }
+}, 60000);
 
 async function apexDoLogin(){
   var pw=document.getElementById('apexLoginPw').value;
@@ -11971,7 +12244,7 @@ async function apexDoLogin(){
   btn.disabled=true;btn.textContent='Signing in…';err.style.display='none';
   try{
     var r=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw}),credentials:'include'});
-    if(r.ok){window.location.href='/';}
+    if(r.ok){localStorage.setItem('apex_app_key',pw);window.location.href='/';}
     else{err.style.display='block';btn.disabled=false;btn.textContent='Sign in';}
   }catch(e){err.style.display='block';btn.disabled=false;btn.textContent='Sign in';}
 }
@@ -12000,7 +12273,7 @@ function safeTimeout(fn, ms) { var id = setTimeout(fn, ms); return id; }
 
 // ── Panel error helper ────────────────────────────────────────────────
 function panelError(container, refetchFnName) {
-    container.innerHTML = '<div class="panel-error" onclick="' + refetchFnName + '()"><span class="ds-dot red"></span> Failed to load · <span style="text-decoration:underline;cursor:pointer">Retry</span></div>';
+    container.innerHTML = '<div class="panel-error" data-fn="_apexRefetchProxy" data-refetch="1"><span class="ds-dot red"></span> Failed to load · <span style="text-decoration:underline;cursor:pointer">Retry</span></div>';
 }
 
 // ── Chart.js defaults ─────────────────────────────────────────────────
@@ -12237,7 +12510,7 @@ function initMoodSelector() {
     var container = document.getElementById('moodFacesRow');
     if (!container) return;
     container.innerHTML = _moodFaces.map(function(f, i) {
-        return '<button class="mood-face" onclick="selectMood(' + ((i+1)*2) + ', this)" aria-label="Mood ' + ((i+1)*2) + ' out of 10">' + f + '</button>';
+        return '<button class="mood-face" data-fn="selectMood" data-args=\'[' + ((i+1)*2) + ',"__this__"]\' aria-label="Mood ' + ((i+1)*2) + ' out of 10">' + f + '</button>';
     }).join('');
 }
 window.selectMood = async function(score, btn) {
@@ -12410,7 +12683,7 @@ if (!isIOSPWA) { setTimeout(function() { var ci = document.getElementById('chatI
 // ── Command page data functions ───────────────────────────────────────────────
 async function fetchCommandProgress() {
     try {
-        const r = await fetch('/api/intelligence/cost-summary');
+        const r = await fetch('/api/intelligence/cost-summary', {headers: buildApiHeaders()});
         const d = await r.json();
         if (d.ok) {
             const el = document.getElementById('cmdStatRuns');
@@ -12425,7 +12698,7 @@ async function fetchCommandProgress() {
         }
     } catch(e) {}
     try {
-        const r = await fetch('/api/intelligence/agent-runs?limit=100');
+        const r = await fetch('/api/intelligence/agent-runs?limit=100', {headers: buildApiHeaders()});
         const d = await r.json();
         const runs = d.runs || [];
         const done = runs.filter(function(r){return r.success;}).length;
@@ -12457,7 +12730,7 @@ async function fetchCommandProgress() {
 
 async function fetchCommandUpdates() {
     try {
-        const r = await fetch('/api/intelligence/agent-runs?limit=8');
+        const r = await fetch('/api/intelligence/agent-runs?limit=8', {headers: buildApiHeaders()});
         const d = await r.json();
         const tbody = document.getElementById('recentRunsPanel');
         if (d.ok && tbody) {
@@ -12475,7 +12748,7 @@ async function fetchCommandUpdates() {
         }
         const metrics = document.getElementById('metricsPanel');
         if (metrics) {
-            const r2 = await fetch('/api/intelligence/cost-summary');
+            const r2 = await fetch('/api/intelligence/cost-summary', {headers: buildApiHeaders()});
             const d2 = await r2.json();
             if (d2.ok) {
                 metrics.innerHTML = '<div style="display:flex;gap:16px;flex-wrap:wrap">'
@@ -12514,7 +12787,7 @@ async function fetchCommandNews() {
     try {
         const el = document.getElementById('cmdNewsFeed');
         if (!el) return;
-        const r = await fetch('/api/intelligence/news');
+        const r = await fetch('/api/intelligence/news', {headers: buildApiHeaders()});
         const d = await r.json();
         if (!d.ok || !d.articles || !d.articles.length) {
             el.innerHTML = '<div class="t-small" style="color:var(--text-mute)">No intel feed configured</div>';
@@ -12693,7 +12966,7 @@ async function initOverviewPage() {
                 '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
                 + '<div style="width:6px;height:6px;border-radius:50%;background:var(--cyan)"></div>'
                 + '<span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute);flex:1">Communications</span>'
-                + '<span onclick="switchPage(\'communication\')" style="font-size:10px;color:var(--cyan);cursor:pointer">→ Go to Comms</span>'
+                + '<span data-fn="switchPage" data-args=\'["communication"]\' style="font-size:10px;color:var(--cyan);cursor:pointer">→ Go to Comms</span>'
                 + '</div>'
                 + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">'
                 + '<div><div style="font-size:9px;color:var(--text-mute)">EMAIL</div>'
@@ -12726,10 +12999,10 @@ async function initOverviewPage() {
         var summaryRow = document.getElementById('ovr-summary-row');
         if (summaryRow) {
             summaryRow.innerHTML = summaryCards.map(function(c) {
-                return '<div onclick="switchPage(\'' + c.page + '\')"'
+                return '<div data-fn="switchPage" data-args=\'["'+c.page+'"]\' '
                     + ' style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:border-color 0.15s"'
-                    + ' onmouseover="this.style.borderColor=\'var(--cyan)\'"'
-                    + ' onmouseout="this.style.borderColor=\'var(--border)\'">'
+                    + ''
+                    + '>'
                     + '<div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px">' + c.label + '</div>'
                     + '<div style="font-size:18px;font-weight:600;color:' + c.color + '">' + c.value + '</div>'
                     + '<div style="font-size:10px;color:var(--text-mute);margin-top:3px">' + c.sub + '</div>'
@@ -12773,9 +13046,9 @@ function buildAgentGrid() {
             + ' style="background:var(--surface);border-radius:10px;padding:12px 14px;'
             + 'border:1px solid var(--border);border-top:2px solid ' + a.color + ';'
             + 'cursor:pointer;transition:border-color 0.15s,transform 0.15s"'
-            + ' onclick="openAgentDrawer(\'' + a.role + '\')"'
-            + ' onmouseover="this.style.transform=\'translateY(-2px)\'"'
-            + ' onmouseout="this.style.transform=\'\'">'
+            + ' data-fn="openAgentDrawer" data-args=\'["'+a.role+'"]\' '
+            + ''
+            + '>'
             + '<div style="display:flex;align-items:center;justify-content:space-between">'
             + '<span style="font-size:16px;color:' + a.color + '">' + a.icon + '</span>'
             + '<span data-status style="font-size:9px;padding:2px 7px;border-radius:3px;'
@@ -13021,7 +13294,7 @@ async function buildSystemSuggestions() {
                 return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-faint)">'
                     + '<div style="width:5px;height:5px;border-radius:50%;background:var(--amber);flex-shrink:0"></div>'
                     + '<span style="font-size:11px;color:var(--text-mute);flex:1">'+s.text+'</span>'
-                    + '<button class="ds-btn xs" onclick="switchPage(\''+s.page+'\')">'+s.btn+'</button>'
+                    + '<button class="ds-btn xs" data-fn="switchPage" data-args=\'["'+s.page+'"]\' >'+s.btn+'</button>'
                     + '</div>';
             }).join('');
         }
@@ -13295,8 +13568,8 @@ function initDomainAgentGrid() {
     grid.innerHTML = slugs.map(function(s) {
         var m = _DA_META[s] || {icon:'?',color:'var(--cyan)',label:s};
         return '<div style="background:var(--surface);border-radius:10px;padding:14px;border:1px solid var(--border);border-top:2px solid '+m.color+';cursor:pointer;transition:transform 150ms;text-align:center"'
-            +' onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'\'"'
-            +' onclick="openDomainAgent(\''+s+'\')">'
+            +''
+            +' data-fn="openDomainAgent" data-args=\'["'+s+'"]\' >'
             + '<div style="font-size:22px;margin-bottom:6px">'+m.icon+'</div>'
             + '<div style="font-size:11px;font-weight:600;color:var(--text)">'+m.label+'</div>'
             + '<div style="font-size:9px;color:var(--text-mute);margin-top:2px;text-transform:uppercase;letter-spacing:0.1em">Agent</div>'
@@ -13429,6 +13702,152 @@ async function triggerCs249rIngest() {
 }
 window.triggerCs249rIngest = triggerCs249rIngest;
 
+// ── Latency Trace Viewer ──────────────────────────────────────────────────────
+var _TRACE_SPANS = [
+    'audio_received','memory_lookup_start','memory_lookup_end',
+    'claude_start','claude_first_token','tool_dispatch','tool_complete',
+    'tts_start','first_audio','first_meaningful_output','user_interrupted','completed'
+];
+var _SPAN_COLOR = {
+    audio_received:'#00d4ff', memory_lookup_start:'#6366f1', memory_lookup_end:'#6366f1',
+    claude_start:'#8b5cf6', claude_first_token:'#22c55e', tool_dispatch:'#f59e0b',
+    tool_complete:'#f59e0b', tts_start:'#06b6d4', first_audio:'#00d4ff',
+    first_meaningful_output:'#22c55e', user_interrupted:'#ef4444', completed:'#71717a'
+};
+
+function _msLabel(v) { return v == null ? '—' : v + 'ms'; }
+
+function _traceCard(s) {
+    var base = s.spans.audio_received || s.start;
+    var total = (s.spans.completed || (base + 1)) - base;
+    var interrupted = s.interrupted;
+
+    // Find bottleneck: largest gap between consecutive present spans
+    var presentSpans = _TRACE_SPANS.filter(function(n) { return s.spans[n] != null; });
+    var maxGap = 0, bottleneckSpan = null;
+    for (var i = 1; i < presentSpans.length; i++) {
+        var gap = s.spans[presentSpans[i]] - s.spans[presentSpans[i-1]];
+        // Discard negative or impossibly large gaps (> 1 hour) — these indicate
+        // clock-source mismatch or a stale span value, not a real bottleneck.
+        if (gap > 0 && gap < 3600000 && gap > maxGap) { maxGap = gap; bottleneckSpan = presentSpans[i]; }
+    }
+
+    // Waterfall bars
+    var bars = presentSpans.map(function(n) {
+        var t = s.spans[n] - base;
+        var pct = Math.min(100, total > 0 ? (t / total) * 100 : 0).toFixed(1);
+        var col = _SPAN_COLOR[n] || '#aaa';
+        var isBottleneck = n === bottleneckSpan;
+        var labelColor = isBottleneck ? '#f59e0b' : 'var(--text-mute)';
+        var dotStyle = isBottleneck
+            ? 'width:8px;height:8px;border-radius:50%;background:' + col + ';flex-shrink:0;box-shadow:0 0 6px ' + col
+            : 'width:6px;height:6px;border-radius:50%;background:' + col + ';flex-shrink:0';
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
+            + '<div style="' + dotStyle + '"></div>'
+            + '<div style="flex:1;position:relative;height:3px;background:rgba(255,255,255,0.05);border-radius:2px">'
+            + '<div style="position:absolute;left:0;top:0;height:3px;width:' + pct + '%;background:' + col + ';border-radius:2px;opacity:0.7"></div>'
+            + '</div>'
+            + '<span style="font-size:9px;color:' + labelColor + ';min-width:70px;text-align:right">'
+            + n.replace(/_/g,' ') + '</span>'
+            + '<span style="font-size:9px;color:' + (isBottleneck ? '#f59e0b' : 'var(--text)') + ';min-width:48px;text-align:right;font-weight:' + (isBottleneck ? '700' : '400') + '">'
+            + _msLabel(Math.round(t)) + '</span>'
+            + '</div>';
+    }).join('');
+
+    var execBadgeColor = {REFLEX:'var(--cyan)',EXECUTIVE:'var(--accent)',BACKGROUND:'var(--text-mute)'}[s.execution_class] || 'var(--text-mute)';
+    var snapshotHtml = '';
+    if (s.snapshots && s.snapshots.claude_start) {
+        var snap = s.snapshots.claude_start;
+        snapshotHtml = '<span style="font-size:9px;color:var(--text-mute)">agents:' + (snap.active_agent_runs||0) + ' tools:' + (snap.pending_tool_calls||0) + '</span>';
+    }
+
+    return '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;' + (interrupted ? 'border-left:3px solid #ef4444' : '') + '">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+        + '<div style="display:flex;align-items:center;gap:8px">'
+        + '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,0.06);color:' + execBadgeColor + '">' + (s.execution_class||'—') + '</span>'
+        + (interrupted ? '<span style="font-size:9px;color:#ef4444">&#9888; interrupted</span>' : '')
+        + snapshotHtml
+        + '</div>'
+        + '<div style="display:flex;gap:12px">'
+        + '<span style="font-size:9px;color:var(--text-mute)">ack <span style="color:var(--cyan)">' + _msLabel(s.ack_latency) + '</span></span>'
+        + '<span style="font-size:9px;color:var(--text-mute)">real <span style="color:var(--accent)">' + _msLabel(s.meaningful_latency) + '</span></span>'
+        + '<span style="font-size:9px;color:var(--text-mute)">total <span style="color:var(--text)">' + _msLabel(s.completion_latency) + '</span></span>'
+        + '</div>'
+        + '</div>'
+        + bars
+        + (bottleneckSpan ? '<div style="margin-top:6px;font-size:9px;color:#f59e0b">&#9654; bottleneck: ' + bottleneckSpan.replace(/_/g,' ') + ' (+' + maxGap + 'ms)</div>' : '')
+        + '</div>';
+}
+
+async function loadLatencyTraces() {
+    try {
+        var stats = await fetchJson('/api/latency-stats');
+        var traces = await fetchJson('/api/latency-traces');
+
+        // Update header counts
+        var countEl = document.getElementById('trace-session-count');
+        if (countEl) countEl.textContent = (stats.total_sessions || 0) + ' sessions';
+
+        var flowEl = document.getElementById('trace-flow-score');
+        if (flowEl) {
+            var fs = stats.conversation_flow_score;
+            flowEl.textContent = 'flow: ' + (fs != null ? (fs * 100).toFixed(0) + '%' : '—');
+            flowEl.style.color = fs == null ? 'var(--text-mute)' : fs >= 0.9 ? 'var(--green)' : fs >= 0.7 ? 'var(--amber)' : 'var(--red)';
+        }
+
+        var abandEl = document.getElementById('trace-abandon-rate');
+        if (abandEl) {
+            var ar = stats.abandonment_rate;
+            abandEl.textContent = 'abandon: ' + (ar != null ? (ar * 100).toFixed(0) + '%' : '—');
+            abandEl.style.color = ar == null ? 'var(--text-mute)' : ar <= 0.05 ? 'var(--green)' : ar <= 0.15 ? 'var(--amber)' : 'var(--red)';
+        }
+
+        // Stats bar
+        function _fillStat(elId, p95Id, metric) {
+            var el = document.getElementById(elId);
+            var p95el = document.getElementById(p95Id);
+            if (!el) return;
+            if (!metric) { el.textContent = '—'; if (p95el) p95el.textContent = 'p95: —'; return; }
+            el.textContent = _msLabel(metric.p50);
+            if (p95el) p95el.textContent = 'p95: ' + _msLabel(metric.p95);
+        }
+        var ov = stats.overall || {};
+        _fillStat('trace-stat-ack', 'trace-stat-ack-p95', ov.ack_latency);
+        _fillStat('trace-stat-meaningful', 'trace-stat-meaningful-p95', ov.meaningful_latency);
+        _fillStat('trace-stat-completion', 'trace-stat-completion-p95', ov.completion_latency);
+
+        // Session list — most recent first
+        var list = document.getElementById('trace-session-list');
+        if (!list) return;
+        var sessions = (traces.sessions || []).slice().reverse();
+        var active = traces.active || [];
+
+        if (!sessions.length && !active.length) {
+            list.innerHTML = '<div style="font-size:11px;color:var(--text-mute);padding:20px 0;text-align:center">No sessions yet — traces appear after voice interactions</div>';
+            return;
+        }
+
+        var html = '';
+        // Active sessions first (in-flight)
+        active.forEach(function(s) {
+            html += '<div style="background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:10px 12px">'
+                + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+                + '<div style="width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:pulse 1s infinite"></div>'
+                + '<span style="font-size:9px;color:var(--cyan)">IN FLIGHT</span>'
+                + '<span style="font-size:9px;color:var(--text-mute)">' + (s.execution_class||'EXECUTIVE') + '</span>'
+                + '</div>'
+                + '<div style="font-size:9px;color:var(--text-mute)">running ' + Math.round((Date.now() - s.start) / 1000) + 's</div>'
+                + '</div>';
+        });
+        sessions.forEach(function(s) { html += _traceCard(s); });
+        list.innerHTML = html;
+    } catch(e) {
+        var list2 = document.getElementById('trace-session-list');
+        if (list2) list2.innerHTML = '<div style="font-size:11px;color:var(--red);padding:12px">Error loading traces: ' + e.message + '</div>';
+    }
+}
+window.loadLatencyTraces = loadLatencyTraces;
+
 async function initSystemPage() {
     initDomainAgentGrid();
     buildAgentGrid();
@@ -13439,11 +13858,14 @@ async function initSystemPage() {
     buildSystemSuggestions();
     fetchVaultStatus();
 
+    loadLatencyTraces();
+
     if (!_sysPageInited) {
         _sysPageInited = true;
         var id1 = setInterval(fetchSystemAgents, 45000);
         var id2 = setInterval(fetchSystemCosts, 120000);
-        if (window._apexIntervals) window._apexIntervals.push(id1, id2);
+        var id3 = setInterval(loadLatencyTraces, 2000);
+        if (window._apexIntervals) window._apexIntervals.push(id1, id2, id3);
     }
 }
 
@@ -13513,7 +13935,7 @@ function fetchCommsEmails() {
                     + '</div><span style="font-size:10px;color:var(--text-mute);white-space:nowrap">' + (m.time||'') + '</span></div>'
                     + '<div style="font-size:12px;color:var(--text-mid);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.subject||'(no subject)') + '</div>'
                     + '<div style="display:flex;gap:6px;margin-top:6px;align-items:center">'
-                    + '<button class="ds-btn xs cyan" onclick="quickReply(event,\'' + fromEsc + '\')">Reply</button>'
+                    + '<button class="ds-btn xs cyan" data-fn="quickReply" data-to="' + fromEsc.replace(/"/g,'&quot;') + '" data-stop="1">Reply</button>'
                     + urgBadge + draftBadge
                     + '</div></div>';
             });
@@ -13524,21 +13946,40 @@ function fetchCommsEmails() {
     });
 }
 
-function quickReply(ev, to) {
-    ev.stopPropagation();
+function quickReply(to) {
+    // When called via dispatcher, `this` is the button element; read data-to if arg not passed
+    to = to || (this && this.dataset && this.dataset.to) || '';
     var existing = document.getElementById('comms-qr-modal');
     if (existing) existing.remove();
     var modal = document.createElement('div');
     modal.id = 'comms-qr-modal';
     modal.style.cssText = 'position:fixed;bottom:80px;right:24px;width:320px;background:var(--surface);border:1px solid var(--border-cyan);border-radius:10px;padding:14px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.5)';
-    modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="t-label">Reply to: <span style="color:var(--cyan)">' + to + '</span></span><button onclick="document.getElementById(\'comms-qr-modal\').remove()" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:16px">&times;</button></div><textarea class="ds-input" id="commsReplyBody" placeholder="Type reply…" style="height:70px;resize:none;padding:8px;width:100%;box-sizing:border-box"></textarea><div style="display:flex;gap:6px;margin-top:8px"><button class="ds-btn cyan" onclick="sendQuickReply(\'' + to.replace(/'/g,"\\'") + '\')">Send</button><button class="ds-btn xs" onclick="document.getElementById(\'comms-qr-modal\').remove()">Cancel</button></div>';
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
+    var lbl = document.createElement('span'); lbl.className = 't-label';
+    lbl.innerHTML = 'Reply to: <span style="color:var(--cyan)">' + to + '</span>';
+    var xBtn = document.createElement('button');
+    xBtn.style.cssText = 'background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:16px';
+    xBtn.innerHTML = '&times;';
+    xBtn.addEventListener('click', function() { modal.remove(); });
+    hdr.appendChild(lbl); hdr.appendChild(xBtn);
+    var ta = document.createElement('textarea');
+    ta.className = 'ds-input'; ta.id = 'commsReplyBody'; ta.placeholder = 'Type reply…';
+    ta.style.cssText = 'height:70px;resize:none;padding:8px;width:100%;box-sizing:border-box';
+    var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:6px;margin-top:8px';
+    var sBtn = document.createElement('button'); sBtn.className = 'ds-btn cyan'; sBtn.textContent = 'Send';
+    sBtn.addEventListener('click', function() { sendQuickReply(to); });
+    var cBtn = document.createElement('button'); cBtn.className = 'ds-btn xs'; cBtn.textContent = 'Cancel';
+    cBtn.addEventListener('click', function() { modal.remove(); });
+    row.appendChild(sBtn); row.appendChild(cBtn);
+    modal.appendChild(hdr); modal.appendChild(ta); modal.appendChild(row);
     document.body.appendChild(modal);
 }
 
 function sendQuickReply(to) {
     var body = (document.getElementById('commsReplyBody')||{}).value||'';
     if (!body.trim()) return;
-    fetch('/api/email/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:to,body:body})})
+    fetch('/api/send-reply',{method:'POST',headers:{'Content-Type':'application/json','x-app-key':APP_KEY,'x-user-confirmed':'true'},body:JSON.stringify({to:to,body:body})})
         .then(function(r){return r.json();}).then(function(d){
             var m = document.getElementById('comms-qr-modal');
             if (m) m.remove();
@@ -13639,7 +14080,7 @@ function fetchFinanceData() {
         var ytdEl = document.getElementById('fin-expenses-ytd');
         if (ytdEl) ytdEl.textContent = '£'+total.toFixed(2);
     }).catch(function(){});
-    fetch('/api/intelligence/cost-summary').then(function(r){return r.json();}).then(function(d){
+    fetch('/api/intelligence/cost-summary', {headers: buildApiHeaders()}).then(function(r){return r.json();}).then(function(d){
         if (!d.ok) return;
         var el = document.getElementById('finStatCredit');
         var sub = document.getElementById('finStatCreditSub');
@@ -13731,8 +14172,8 @@ function fetchBizApprovals() {
             return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2);border:1px solid rgba(255,77,106,0.2);border-radius:8px">'
                 + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text)">'+(a.description||a.task||'Task')+'</div>'
                 + '<div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+(a.category||'general')+' · '+(a.risk||'medium')+' risk</div></div>'
-                + '<button class="ds-btn xs green" onclick="approveTask(\''+a.id+'\')">Approve</button>'
-                + '<button class="ds-btn xs red" onclick="denyTask(\''+a.id+'\')">Deny</button>'
+                + '<button class="ds-btn xs green" data-fn="approveTask" data-args=\'["'+a.id+'"]\' >Approve</button>'
+                + '<button class="ds-btn xs red" data-fn="denyTask" data-args=\'["'+a.id+'"]\' >Deny</button>'
                 + '</div>';
         }).join('');
     }).catch(function(){
@@ -13742,7 +14183,7 @@ function fetchBizApprovals() {
 }
 
 function fetchBizCrm() {
-    fetch('/api/crm/clients').then(function(r){return r.json();}).then(function(d){
+    fetch('/api/operations/clients',{headers:{'x-app-key':APP_KEY}}).then(function(r){return r.json();}).then(function(d){
         var clients = d.clients || d.data || [];
         _bizCrmData = clients;
         var tb = document.getElementById('bizCrmTbody');
@@ -13755,14 +14196,14 @@ function fetchBizCrm() {
         }
         tb.innerHTML = clients.map(function(c){
             var stageBadge = { lead:'cyan', proposal:'amber', negotiation:'purple', won:'green' }[c.stage||'lead'] || 'cyan';
-            return '<tr><td style="font-weight:600">'+(c.name||c.client_name||'—')+'</td><td><span class="ds-badge '+stageBadge+'">'+(c.stage||'lead')+'</span></td><td class="t-mono">'+(c.value?'£'+c.value:'—')+'</td><td style="color:var(--text-mute)">'+(c.follow_up||'—')+'</td><td><button class="ds-btn xs" onclick="editCrmClient(\''+c.id+'\')">Edit</button></td></tr>';
+            return '<tr><td style="font-weight:600">'+(c.name||c.client_name||'—')+'</td><td><span class="ds-badge '+stageBadge+'">'+(c.stage||'lead')+'</span></td><td class="t-mono">'+(c.value?'£'+c.value:'—')+'</td><td style="color:var(--text-mute)">'+(c.follow_up||'—')+'</td><td><button class="ds-btn xs" data-fn="editCrmClient" data-args=\'["'+c.id+'"]\' >Edit</button></td></tr>';
         }).join('');
         if (_bizCrmView === 'kanban') buildKanban(clients);
     }).catch(function(){});
 }
 
 function fetchBizProjects() {
-    fetch('/api/projects').then(function(r){return r.json();}).then(function(d){
+    fetch('/api/operations/projects',{headers:{'x-app-key':APP_KEY}}).then(function(r){return r.json();}).then(function(d){
         var projects = d.projects || d.data || [];
         var panel = document.getElementById('bizProjectsPanel');
         var statEl = document.getElementById('bizStatProjects');
@@ -14040,7 +14481,7 @@ function fetchHealthSupplements() {
         }
         panel.innerHTML = sups.map(function(s){
             var taken = s.taken_today || false;
-            return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px" onclick="toggleSupplement(\''+s.id+'\')" style="cursor:pointer"><span style="width:16px;height:16px;border:1.5px solid '+(taken?'var(--green)':'var(--border-strong)')+';border-radius:4px;background:'+(taken?'var(--green)':'transparent')+';color:#06080c;display:grid;place-items:center;font-size:11px;font-weight:700">'+(taken?'&#10003;':'')+'</span><span class="t-small" style="color:var(--text)">'+(s.name||'Supplement')+(s.dose?' &#183; '+s.dose:'')+'</span><span class="t-mono" style="color:'+(taken?'var(--green)':'var(--text-mute)')+'">'+( taken?'taken':'pending')+'</span></div>';
+            return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px" data-fn="toggleSupplement" data-args=\'["'+s.id+'"]\' style="cursor:pointer"><span style="width:16px;height:16px;border:1.5px solid '+(taken?'var(--green)':'var(--border-strong)')+';border-radius:4px;background:'+(taken?'var(--green)':'transparent')+';color:#06080c;display:grid;place-items:center;font-size:11px;font-weight:700">'+(taken?'&#10003;':'')+'</span><span class="t-small" style="color:var(--text)">'+(s.name||'Supplement')+(s.dose?' &#183; '+s.dose:'')+'</span><span class="t-mono" style="color:'+(taken?'var(--green)':'var(--text-mute)')+'">'+( taken?'taken':'pending')+'</span></div>';
         }).join('');
     }).catch(function(){
         var panel = document.getElementById('hlthSupplementList');
@@ -14323,7 +14764,24 @@ function showComposeModal() {
     var modal = document.createElement('div');
     modal.id = 'compose-modal';
     modal.style.cssText = 'position:fixed;bottom:80px;right:24px;width:340px;background:var(--surface);border:1px solid var(--border-cyan);border-radius:10px;padding:16px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.5)';
-    modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="t-label">New email</span><button onclick="document.getElementById(\'compose-modal\').remove()" style="background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:18px">&times;</button></div><input class="ds-input" id="composeTo" placeholder="To:" style="margin-bottom:6px;width:100%;box-sizing:border-box"><input class="ds-input" id="composeSubject" placeholder="Subject:" style="margin-bottom:6px;width:100%;box-sizing:border-box"><textarea class="ds-input" id="composeBody" placeholder="Message…" style="height:80px;resize:none;padding:8px;width:100%;box-sizing:border-box"></textarea><div style="display:flex;gap:6px;margin-top:8px"><button class="ds-btn cyan" onclick="sendComposedEmail()">Send</button><button class="ds-btn xs" onclick="document.getElementById(\'compose-modal\').remove()">Cancel</button></div>';
+    function closeModal() { modal.remove(); }
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
+    var lbl = document.createElement('span'); lbl.className = 't-label'; lbl.textContent = 'New email';
+    var xBtn = document.createElement('button');
+    xBtn.style.cssText = 'background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:18px';
+    xBtn.innerHTML = '&times;'; xBtn.addEventListener('click', closeModal);
+    hdr.appendChild(lbl); hdr.appendChild(xBtn);
+    var toIn = document.createElement('input'); toIn.className = 'ds-input'; toIn.id = 'composeTo'; toIn.placeholder = 'To:'; toIn.style.cssText = 'margin-bottom:6px;width:100%;box-sizing:border-box';
+    var subIn = document.createElement('input'); subIn.className = 'ds-input'; subIn.id = 'composeSubject'; subIn.placeholder = 'Subject:'; subIn.style.cssText = 'margin-bottom:6px;width:100%;box-sizing:border-box';
+    var ta = document.createElement('textarea'); ta.className = 'ds-input'; ta.id = 'composeBody'; ta.placeholder = 'Message…'; ta.style.cssText = 'height:80px;resize:none;padding:8px;width:100%;box-sizing:border-box';
+    var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:6px;margin-top:8px';
+    var sBtn = document.createElement('button'); sBtn.className = 'ds-btn cyan'; sBtn.textContent = 'Send';
+    sBtn.addEventListener('click', sendComposedEmail);
+    var cBtn = document.createElement('button'); cBtn.className = 'ds-btn xs'; cBtn.textContent = 'Cancel';
+    cBtn.addEventListener('click', closeModal);
+    row.appendChild(sBtn); row.appendChild(cBtn);
+    modal.appendChild(hdr); modal.appendChild(toIn); modal.appendChild(subIn); modal.appendChild(ta); modal.appendChild(row);
     document.body.appendChild(modal);
 }
 
@@ -14332,7 +14790,7 @@ function sendComposedEmail() {
     var subject = (document.getElementById('composeSubject')||{}).value||'';
     var body = (document.getElementById('composeBody')||{}).value||'';
     if (!to.trim() || !body.trim()) return;
-    fetch('/api/email/send', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({to:to,subject:subject,body:body}) })
+    fetch('/api/send-reply', { method:'POST', headers:{'Content-Type':'application/json','x-app-key':APP_KEY,'x-user-confirmed':'true'}, body:JSON.stringify({to:to,subject:subject,body:body}) })
         .then(function(r){return r.json();}).then(function(d){
             var m = document.getElementById('compose-modal'); if (m) m.remove();
             if (typeof showToast==='function') showToast(d.ok?'Email sent':'Send failed');
@@ -14340,7 +14798,7 @@ function sendComposedEmail() {
 }
 
 function approveTask(id) {
-    fetch('/api/tasks/'+id+'/approve', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({approved:true}) })
+    fetch('/api/tasks/approve', { method:'POST', headers:{'Content-Type':'application/json','x-app-key':APP_KEY}, body:JSON.stringify({taskId:id,approved:true}) })
         .then(function(r){return r.json();}).then(function(d){
             if (d.ok) { fetchBizApprovals(); if(typeof pollPermissions==='function') pollPermissions(); }
         }).catch(function(){});
@@ -14893,21 +15351,21 @@ document.addEventListener('DOMContentLoaded',function(){
     <span class="as-page-pill" id="asPagePill">Command</span>
   </div>
   <div id="asTabs">
-    <div class="as-tab on" data-tab="add" onclick="asTab(this,'add')">Add</div>
-    <div class="as-tab" data-tab="layers" onclick="asTab(this,'layers')">Layers</div>
-    <div class="as-tab" data-tab="props" onclick="asTab(this,'props')">Props</div>
+    <div class="as-tab on" data-tab="add" data-fn="asTab" data-args='["__this__","add"]'>Add</div>
+    <div class="as-tab" data-tab="layers" data-fn="asTab" data-args='["__this__","layers"]'>Layers</div>
+    <div class="as-tab" data-tab="props" data-fn="asTab" data-args='["__this__","props"]'>Props</div>
   </div>
   <div id="asBody">
     <!-- Add tab -->
     <div id="asTabAdd" class="as-cat">
       <div class="as-cat-lbl">Widgets</div>
       <div class="as-grid">
-        <div class="as-item" onclick="asAddWidget('checklist')"><div class="as-ico">✅</div><div class="as-lbl">Checklist</div></div>
-        <div class="as-item" onclick="asAddWidget('news')"><div class="as-ico">📰</div><div class="as-lbl">Brief</div></div>
-        <div class="as-item" onclick="asAddWidget('hud')"><div class="as-ico">🏷</div><div class="as-lbl">HUD Tag</div></div>
-        <div class="as-item" onclick="asAddWidget('clock')"><div class="as-ico">🕐</div><div class="as-lbl">Clock</div></div>
-        <div class="as-item" onclick="asAddWidget('text')"><div class="as-ico">✍</div><div class="as-lbl">Text</div></div>
-        <div class="as-item" onclick="asAddWidget('note')"><div class="as-ico">📝</div><div class="as-lbl">Note</div></div>
+        <div class="as-item" data-fn="asAddWidget" data-args='["checklist"]'><div class="as-ico">✅</div><div class="as-lbl">Checklist</div></div>
+        <div class="as-item" data-fn="asAddWidget" data-args='["news"]'><div class="as-ico">📰</div><div class="as-lbl">Brief</div></div>
+        <div class="as-item" data-fn="asAddWidget" data-args='["hud"]'><div class="as-ico">🏷</div><div class="as-lbl">HUD Tag</div></div>
+        <div class="as-item" data-fn="asAddWidget" data-args='["clock"]'><div class="as-ico">🕐</div><div class="as-lbl">Clock</div></div>
+        <div class="as-item" data-fn="asAddWidget" data-args='["text"]'><div class="as-ico">✍</div><div class="as-lbl">Text</div></div>
+        <div class="as-item" data-fn="asAddWidget" data-args='["note"]'><div class="as-ico">📝</div><div class="as-lbl">Note</div></div>
       </div>
     </div>
     <!-- Layers tab — #csLayers used by existing sidebar JS -->
@@ -15039,14 +15497,24 @@ function _updateTopbarAgents(){
     el.textContent=running||'—';
 }
 
-/* Patch the global fetch to track latency on API calls */
+/* Patch global fetch: auto-inject x-app-key on /api/ calls + latency tracking */
 (function(){
     var _origFetch=window.fetch;
     window.fetch=function(url, opts){
         var t0=Date.now();
-        return _origFetch.apply(this,arguments).then(function(r){
-            var ms=Date.now()-t0;
-            if(typeof url==='string'&&url.includes('/api/')){
+        var isApi=typeof url==='string'&&(url.includes('/api/')||url.startsWith('/notifications')||url.startsWith('/agent-tasks'));
+        if(isApi){
+            var key=window._appKey||window._apexAppKey||APP_KEY||'';
+            if(key){
+                opts=opts||{};
+                var existing=opts.headers||{};
+                var merged=Object.assign({'x-app-key':key},existing);
+                opts=Object.assign({},opts,{headers:merged});
+            }
+        }
+        return _origFetch.call(this,url,opts).then(function(r){
+            if(isApi){
+                var ms=Date.now()-t0;
                 window.apexTrackLatency(ms);
                 var tag=url.replace(/.*\/api\//,'').split('?')[0].split('/')[0].toUpperCase().slice(0,12);
                 if(ms>800)window.apexFeedPush(tag,'Slow response — '+ms+'ms','error');
@@ -15308,18 +15776,18 @@ window.apexFileDropHandler = function(e){
 <button id="floatingPTT" aria-label="Push to talk"></button>
 
 <!-- ══ MOBILE MORE SHEET ══ -->
-<div class="more-sheet-overlay" id="moreSheetOverlay" onclick="closeMobileMore()"></div>
+<div class="more-sheet-overlay" id="moreSheetOverlay" data-fn="closeMobileMore"></div>
 <div class="more-sheet" id="moreSheet" role="dialog" aria-label="More pages">
     <div class="more-sheet-handle"></div>
     <div class="more-sheet-title">Pages</div>
     <div class="more-sheet-grid">
-        <button class="more-sheet-btn" id="more-nav-system"        onclick="moreNavTo('system')"        aria-label="System"><span class="more-sheet-icon">◉</span><span class="more-sheet-label">System</span></button>
-        <button class="more-sheet-btn" id="more-nav-communication" onclick="moreNavTo('communication')" aria-label="Communication"><span class="more-sheet-icon">✉</span><span class="more-sheet-label">Comms</span></button>
-        <button class="more-sheet-btn" id="more-nav-finance"       onclick="moreNavTo('finance')"       aria-label="Finance"><span class="more-sheet-icon">◎</span><span class="more-sheet-label">Finance</span></button>
-        <button class="more-sheet-btn" id="more-nav-business"      onclick="moreNavTo('business')"      aria-label="Business"><span class="more-sheet-icon">◧</span><span class="more-sheet-label">Business</span></button>
-        <button class="more-sheet-btn" id="more-nav-university"    onclick="moreNavTo('university')"    aria-label="University"><span class="more-sheet-icon">◫</span><span class="more-sheet-label">Uni</span></button>
-        <button class="more-sheet-btn" id="more-nav-occult"        onclick="moreNavTo('occult')"        aria-label="Occult"><span class="more-sheet-icon">◬</span><span class="more-sheet-label">Occult</span></button>
-        <button class="more-sheet-btn" id="more-nav-research"      onclick="moreNavTo('research')"      aria-label="Research"><span class="more-sheet-icon">◈</span><span class="more-sheet-label">Research</span></button>
+        <button class="more-sheet-btn" id="more-nav-system"        data-fn="moreNavTo" data-args='["system"]'        aria-label="System"><span class="more-sheet-icon">◉</span><span class="more-sheet-label">System</span></button>
+        <button class="more-sheet-btn" id="more-nav-communication" data-fn="moreNavTo" data-args='["communication"]' aria-label="Communication"><span class="more-sheet-icon">✉</span><span class="more-sheet-label">Comms</span></button>
+        <button class="more-sheet-btn" id="more-nav-finance"       data-fn="moreNavTo" data-args='["finance"]'       aria-label="Finance"><span class="more-sheet-icon">◎</span><span class="more-sheet-label">Finance</span></button>
+        <button class="more-sheet-btn" id="more-nav-business"      data-fn="moreNavTo" data-args='["business"]'      aria-label="Business"><span class="more-sheet-icon">◧</span><span class="more-sheet-label">Business</span></button>
+        <button class="more-sheet-btn" id="more-nav-university"    data-fn="moreNavTo" data-args='["university"]'    aria-label="University"><span class="more-sheet-icon">◫</span><span class="more-sheet-label">Uni</span></button>
+        <button class="more-sheet-btn" id="more-nav-occult"        data-fn="moreNavTo" data-args='["occult"]'        aria-label="Occult"><span class="more-sheet-icon">◬</span><span class="more-sheet-label">Occult</span></button>
+        <button class="more-sheet-btn" id="more-nav-research"      data-fn="moreNavTo" data-args='["research"]'      aria-label="Research"><span class="more-sheet-icon">◈</span><span class="more-sheet-label">Research</span></button>
     </div>
 </div>
 

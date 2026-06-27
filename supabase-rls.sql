@@ -91,3 +91,30 @@ CREATE POLICY "authenticated_all" ON gmail_tokens
   FOR ALL TO authenticated
   USING (true)
   WITH CHECK (true);
+
+-- ── documents ─────────────────────────────────────────────────────────────────
+-- M10 fix: documents table was missing RLS — anon key could read all documents.
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "authenticated_all" ON documents
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- ── apex_agent_runs ───────────────────────────────────────────────────────────
+-- M10 fix: apex_agent_runs table was missing RLS — anon key could read task history.
+ALTER TABLE apex_agent_runs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "authenticated_all" ON apex_agent_runs
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- ── memory (generic) ──────────────────────────────────────────────────────────
+-- M10 fix: memory table was missing RLS.
+ALTER TABLE memory ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "authenticated_all" ON memory
+  FOR ALL TO authenticated
+  USING (true)
+  WITH CHECK (true);
