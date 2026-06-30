@@ -143,5 +143,21 @@ async function syncGoogleCalendar() {
     return { count: rows.length };
 }
 
+const _LABEL_PRIORITY = { finance: 3, work: 2, personal: 2, notifications: 1, newsletter: 0 };
+
+router.get('/communications/emails', _auth, async (req, res) => {
+    try {
+        const { data, error } = await sb().from('email_threads')
+            .select('thread_id,subject,sender,snippet,labels,date,is_read')
+            .order('date', { ascending: false }).limit(50);
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        const emails = (data || []).map(e => ({
+            ...e,
+            priority: Math.max(...(e.labels || []).map(l => _LABEL_PRIORITY[l] ?? 0))
+        })).sort((a, b) => b.priority - a.priority || new Date(b.date) - new Date(a.date));
+        res.json({ ok: true, emails });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;
 module.exports.syncGoogleCalendar = syncGoogleCalendar;
