@@ -52,7 +52,10 @@ async function retryRate(sampleSize = 100) {
 // Of tasks that failed, what fraction eventually had a matching success?
 async function recoveryRate(sampleSize = 40) {
     const failures = getFailureEpisodes(sampleSize);
-    if (!failures.length) return null;
+    if (!failures.length) {
+        const count = episodeCount ? episodeCount() : 0;
+        return count > 0 ? 1.0 : null;
+    }
 
     const sb = _getSb();
     if (!sb) return null;

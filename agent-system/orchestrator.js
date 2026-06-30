@@ -683,6 +683,9 @@ Reply JSON: {"passed":bool,"failedCases":["what failed and why"]}`;
         result = { passed: false, failedCases: ['VALIDATOR schema error: passed field missing or non-boolean'], note: null };
     } else if (!Array.isArray(result.failedCases)) {
         result.failedCases = result.passed ? [] : ['VALIDATOR schema error: failedCases field missing or non-array'];
+    } else if (!result.passed && result.failedCases.length === 0) {
+        // Model returned passed:false with no explanation — synthesize a reason so the error message is non-empty
+        result.failedCases = ['VALIDATOR: passed=false with no failedCases — implementation does not satisfy expected behaviors'];
     }
 
     console.log(`[Validator] passed=${result.passed}${(result.failedCases || []).length ? ' — ' + result.failedCases[0] : ''}`);
@@ -1267,6 +1270,9 @@ async function runAgentTeam(spec, taskId) {
         // agent_pipeline is the standard execution path — falls through to pipeline stages
         // ── End route authority ──────────────────────────────────────────────────
 
+        setImmediate(() => _gateway.storeMemory({ layer: 1, taskId, source: 'pipeline:START',
+            content: JSON.stringify({ objective: spec.objective, complexity, routeType: routeDecision.type }),
+            requestingEntity: 'orchestrator' }).catch(() => {}));
         ctx.gatewayPkg = await _gateway.getContext({
             taskId,
             description:     spec.objective,
@@ -1597,6 +1603,10 @@ async function runAgentTeam(spec, taskId) {
         agentLogs.push(architectLog);
         _checkBudget(ctx);
         console.log(`[Orchestrator] ARCHITECT (${architectLog.duration}ms) — ${architectLog.result.testCases?.length || 0} test cases`);
+        // Write architectural plan to working memory for cross-run traceability
+        setImmediate(() => _gateway.storeMemory({ layer: 1, taskId, source: 'pipeline:ARCHITECT',
+            content: JSON.stringify({ objective: spec.objective, testCases: architectLog.result.testCases, filesToModify: architectLog.result.filesToModify }),
+            requestingEntity: 'orchestrator' }).catch(() => {}));
         // Record that retrieved lessons influenced this architectural decision
         if (_gwLessonsRaw?.length) {
             setImmediate(() => {
@@ -1637,6 +1647,10 @@ async function runAgentTeam(spec, taskId) {
             developerLog._attempt = attempt;
             agentLogs.push(developerLog);
             console.log(`[Orchestrator] DEVELOPER (${developerLog.duration}ms) — ${developerLog.result.applied?.length || 0} files written`);
+            // Write files-applied list to working memory for stage traceability
+            setImmediate(() => _gateway.storeMemory({ layer: 1, taskId, source: `pipeline:DEVELOPER:attempt${attempt}`,
+                content: JSON.stringify({ filesApplied: (developerLog.result.applied || []).map(e => e.file || e) }),
+                requestingEntity: 'orchestrator' }).catch(() => {}));
 
             if (!developerLog.result.applied?.length) {
                 lastFailure = `DEVELOPER wrote no files (routing returned empty). You MUST write at least one file from filesToModify: [${(spec.filesToModify || []).join(', ')}]. Create the file if it does not exist — return only the complete file content.`;
@@ -1695,6 +1709,10 @@ async function runAgentTeam(spec, taskId) {
                 if (attempt < MAX_ATTEMPTS) { console.log('[Orchestrator] retrying after syntax failure...'); continue; }
                 return _fail(lastFailure);
             }
+            // Write TESTER pass to working memory — confirms syntax-clean state
+            setImmediate(() => _gateway.storeMemory({ layer: 1, taskId, source: `pipeline:TESTER:attempt${attempt}`,
+                content: JSON.stringify({ passed: true, filesChecked: filesModified }),
+                requestingEntity: 'orchestrator' }).catch(() => {}));
 
             lastFailure = null;
             _successAttempt = attempt;
@@ -1716,39 +1734,50 @@ async function runAgentTeam(spec, taskId) {
             spec._stagedDeployment = true; // flag so hooks can handle downstream
         }
 
-        // Executive CTO gate — staged/critical deployments consult CTO before commit
-        if (_deployPolicy === 'staged' || complexity === 'critical') {
+        // Executive gates — config-driven via executive_roles table (falls back to hardcoded)
+        {
+            const _trigCtx = { deploymentPolicy: _deployPolicy, attempt: _successAttempt, costUsd: 0, complexity, taskId };
+            let _triggeredRoles = [];
             try {
-                const { consultExecutive } = require('../lib/cognitive/runtime');
-                const changedFiles = (developerLog?.result?.applied || []).map(e => e.file || e);
-                const _ctoDecision = await consultExecutive('cto',
-                    `Approve deployment of "${spec.objective.slice(0, 120)}" (${complexity})?`,
-                    { changedFiles, complexity, testsPassed: testerLog?.result?.passed, reviewPassed: reviewerLog?.result?.passed }
-                );
-                if (_ctoDecision.escalate) {
-                    console.warn('[CTO_GATE] escalated to Founder:', _ctoDecision.rationale);
-                    return _fail(`[CTO_GATE] escalated to Founder: ${_ctoDecision.rationale || 'requires Founder approval'}`);
-                }
-                const _ctoChoice = (_ctoDecision.decision || _ctoDecision.choice || '').toLowerCase();
-                if (_ctoChoice.includes('reject') || _ctoChoice.includes('hold') || _ctoChoice.includes('deny')) {
-                    return _fail(`[CTO_GATE] CTO held deployment: ${_ctoDecision.rationale || _ctoChoice}`);
-                }
-                console.log(`[CTO_GATE] approved (confidence=${_ctoDecision.confidence})`);
-            } catch (e) {
-                console.error('[CTO_GATE] consultation unavailable — blocking for safety:', e.message);
-                return _fail(`[CTO_GATE] consultation unavailable — blocked for safety: ${e.message}`);
+                _triggeredRoles = await require('../lib/executive/trigger-evaluator').getTriggeredRoles(_trigCtx);
+            } catch {
+                // hardcoded fallback
+                if (_deployPolicy === 'staged' || complexity === 'critical') _triggeredRoles.push('cto');
+                if (_successAttempt > 2) _triggeredRoles.push('coo');
             }
-        }
 
-        // Executive COO alert — repeated failures escalate to COO
-        if (_successAttempt > 2) {
-            try {
-                const { consultExecutive } = require('../lib/cognitive/runtime');
-                await consultExecutive('coo',
-                    `Task "${spec.objective.slice(0, 100)}" succeeded on attempt ${_successAttempt}/${MAX_ATTEMPTS} — review retry pattern`,
-                    { attempts: _successAttempt, maxAttempts: MAX_ATTEMPTS, complexity, taskId }
-                );
-            } catch {}
+            const { consultExecutive } = require('../lib/cognitive/runtime');
+
+            if (_triggeredRoles.includes('cto')) {
+                try {
+                    const changedFiles = (developerLog?.result?.applied || []).map(e => e.file || e);
+                    const _ctoDecision = await consultExecutive('cto',
+                        `Approve deployment of "${spec.objective.slice(0, 120)}" (${complexity})?`,
+                        { changedFiles, complexity, testsPassed: testerLog?.result?.passed, reviewPassed: reviewerLog?.result?.passed, taskId }
+                    );
+                    if (_ctoDecision.escalate) {
+                        console.warn('[CTO_GATE] escalated to Founder:', _ctoDecision.rationale);
+                        return _fail(`[CTO_GATE] escalated to Founder: ${_ctoDecision.rationale || 'requires Founder approval'}`);
+                    }
+                    const _ctoChoice = (_ctoDecision.decision || _ctoDecision.choice || '').toLowerCase();
+                    if (_ctoChoice.includes('reject') || _ctoChoice.includes('hold') || _ctoChoice.includes('deny')) {
+                        return _fail(`[CTO_GATE] CTO held deployment: ${_ctoDecision.rationale || _ctoChoice}`);
+                    }
+                    console.log(`[CTO_GATE] approved (confidence=${_ctoDecision.confidence})`);
+                } catch (e) {
+                    console.error('[CTO_GATE] consultation unavailable — blocking for safety:', e.message);
+                    return _fail(`[CTO_GATE] consultation unavailable — blocked for safety: ${e.message}`);
+                }
+            }
+
+            if (_triggeredRoles.includes('coo')) {
+                try {
+                    await consultExecutive('coo',
+                        `Task "${spec.objective.slice(0, 100)}" succeeded on attempt ${_successAttempt}/${MAX_ATTEMPTS} — review retry pattern`,
+                        { attempts: _successAttempt, maxAttempts: MAX_ATTEMPTS, complexity, taskId }
+                    );
+                } catch {}
+            }
         }
 
         // Step 5 — COMMITTER (commit in worktree → merge to main → push)
@@ -1790,18 +1819,27 @@ async function runAgentTeam(spec, taskId) {
         console.log(`[Orchestrator] ── ${taskId} COMPLETE — ${committerLog.result.commitHash} ──`);
 
         setImmediate(() => _hooks.onPipelineComplete({ success: true, commitHash: committerLog.result.commitHash, cost: ctx.costUsd.toFixed(5), duration: Date.now() - _pipelineStart, taskId, traceId: ctx.traceId, agentLogs, spec, complexity, attempts: _successAttempt, agentTokens: { ...ctx.agentTokens } }).catch(() => {}));
-        setImmediate(async () => {
-            try {
-                const govResult = await _gov.onPipelineComplete(taskId, ctx.traceId, { graphId: ctx.graphId, spanId: ctx.spanId, conditionsMet: ctx.conditionsMet, commitSha: committerLog.result.commitHash, costUsd: ctx.costUsd, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, complexity, agentLogs, spec, attempts: _successAttempt, agentTokens: ctx.agentTokens });
-                if (govResult && govResult.blockedDecisions && govResult.blockedDecisions.length > 0) {
-                    console.warn('[orchestrator] governance blocked decisions:', govResult.blockedDecisions.length, { taskId });
-                }
-            } catch (govErr) {
-                console.error('[orchestrator] governance evaluation failed (non-fatal):', govErr.message);
+        // Governance gate — synchronous so caller receives governance verdict with the result
+        let _govBlockedDecisions = [];
+        try {
+            const govResult = await _gov.onPipelineComplete(taskId, ctx.traceId, { graphId: ctx.graphId, spanId: ctx.spanId, conditionsMet: ctx.conditionsMet, commitSha: committerLog.result.commitHash, costUsd: ctx.costUsd, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, complexity, agentLogs, spec, attempts: _successAttempt, agentTokens: ctx.agentTokens });
+            if (govResult && govResult.blockedDecisions && govResult.blockedDecisions.length > 0) {
+                _govBlockedDecisions = govResult.blockedDecisions;
+                console.warn('[orchestrator] governance blocked decisions:', _govBlockedDecisions.length, { taskId });
             }
-        });
+        } catch (govErr) {
+            console.error('[orchestrator] governance evaluation failed (non-fatal):', govErr.message);
+        }
         setImmediate(() => _reflector(spec, agentLogs, true, taskId, ctx.traceId, ctx).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity, ctx).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
+        // Close reflexion loop: lessons that accompanied a successful pipeline run are confirmed as influential
+        if (_gwLessonsRaw?.length) {
+            setImmediate(() => {
+                for (const l of _gwLessonsRaw) {
+                    if (l.content) _reflexionTracker.recordInfluence(l.content, taskId, 'pipeline_success').catch(() => {});
+                }
+            });
+        }
         // Cognitive feedback loop — closes the loop: outcomes → evolution → future behavior
         if (ctx.runtimeControls?.feedbackLoop) {
             setImmediate(() => ctx.runtimeControls.feedbackLoop.process(taskId, ctx.traceId, { success: true, agentLogs, complexity, cost, attempts: _successAttempt, objective: spec.objective }).catch(() => {}));
@@ -1823,25 +1861,28 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => { try { (ctx._appliedAdaptIds || []).forEach(id => _adaptEngine.recordApplication(id, true)); } catch {} });
         setImmediate(() => { try { _goalTracker.completeGoal(taskId, { commitHash: committerLog.result.commitHash, cost }); } catch {} });
 
-        // CFO alert if cost is high
-        if (parseFloat(cost) > 1.50) {
-            setImmediate(async () => {
-                try {
+        // CFO alert — config-driven via trigger-evaluator
+        setImmediate(async () => {
+            try {
+                const _cfoCtx = { deploymentPolicy: null, attempt: 0, costUsd: parseFloat(cost), complexity, taskId };
+                const _roles  = await require('../lib/executive/trigger-evaluator').getTriggeredRoles(_cfoCtx).catch(() => (parseFloat(cost) > 1.50 ? ['cfo'] : []));
+                if (_roles.includes('cfo')) {
                     const { consultExecutive } = require('../lib/cognitive/runtime');
                     await consultExecutive('cfo',
                         `Task "${spec.objective.slice(0, 80)}" cost $${cost} (cap $2.00) — within limits but high`,
                         { taskId, cost_usd: parseFloat(cost), complexity }
                     ).catch(() => {});
-                } catch (_) {}
-            });
-        }
+                }
+            } catch (_) {}
+        });
 
         _lastRunModels = { ...ctx.agentModels };
         return {
-            success:    true,
-            commitHash: committerLog.result.commitHash,
+            success:              true,
+            commitHash:           committerLog.result.commitHash,
             agentLogs,
-            error:      null,
+            error:                null,
+            govBlockedDecisions:  _govBlockedDecisions,
             cost,
             complexity,
             models:     ctx.agentModels,
