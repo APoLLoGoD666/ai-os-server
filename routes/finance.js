@@ -106,4 +106,82 @@ router.get('/finance/profit-loss', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+router.post('/finance/invoices', _auth, async (req, res) => {
+    try {
+        const { title, amount, client_name, due_date, status, notes } = req.body || {};
+        if (!title) return res.status(400).json({ ok: false, error: 'title required' });
+        if (amount == null) return res.status(400).json({ ok: false, error: 'amount required' });
+        const { data, error } = await sb().from('apex_invoices')
+            .insert({ title, amount: Number(amount), client_name: client_name || null, due_date: due_date || null, status: status || 'draft', notes: notes || null })
+            .select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, invoice: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.patch('/finance/invoices/:id', _auth, async (req, res) => {
+    try {
+        const allowed = ['status', 'amount', 'due_date', 'client_name', 'notes'];
+        const patch = {};
+        for (const k of allowed) if (req.body?.[k] !== undefined) patch[k] = req.body[k];
+        if (!Object.keys(patch).length) return res.status(400).json({ ok: false, error: 'no fields to update' });
+        if (patch.amount) patch.amount = Number(patch.amount);
+        const { data, error } = await sb().from('apex_invoices').update(patch).eq('id', req.params.id).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, invoice: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.post('/finance/subscriptions', _auth, async (req, res) => {
+    try {
+        const { name, amount, billing_cycle, category, active, next_billing_date } = req.body || {};
+        if (!name) return res.status(400).json({ ok: false, error: 'name required' });
+        const { data, error } = await sb().from('apex_subscriptions')
+            .insert({ name, amount: amount != null ? Number(amount) : null, billing_cycle: billing_cycle || 'monthly', category: category || null, active: active !== false, next_billing_date: next_billing_date || null })
+            .select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, subscription: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.patch('/finance/subscriptions/:id', _auth, async (req, res) => {
+    try {
+        const allowed = ['name', 'amount', 'active', 'next_billing_date', 'category', 'billing_cycle'];
+        const patch = {};
+        for (const k of allowed) if (req.body?.[k] !== undefined) patch[k] = req.body[k];
+        if (!Object.keys(patch).length) return res.status(400).json({ ok: false, error: 'no fields to update' });
+        if (patch.amount) patch.amount = Number(patch.amount);
+        if (patch.active !== undefined) patch.active = !!patch.active;
+        const { data, error } = await sb().from('apex_subscriptions').update(patch).eq('id', req.params.id).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, subscription: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.post('/finance/investments', _auth, async (req, res) => {
+    try {
+        const { name, type, amount, current_value, platform, notes } = req.body || {};
+        if (!name) return res.status(400).json({ ok: false, error: 'name required' });
+        const { data, error } = await sb().from('apex_investments')
+            .insert({ name, type: type || null, amount: amount != null ? Number(amount) : null, current_value: current_value != null ? Number(current_value) : null, platform: platform || null, notes: notes || null })
+            .select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, investment: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.patch('/finance/investments/:id', _auth, async (req, res) => {
+    try {
+        const allowed = ['name', 'type', 'amount', 'current_value', 'platform', 'notes'];
+        const patch = {};
+        for (const k of allowed) if (req.body?.[k] !== undefined) patch[k] = req.body[k];
+        if (!Object.keys(patch).length) return res.status(400).json({ ok: false, error: 'no fields to update' });
+        if (patch.amount) patch.amount = Number(patch.amount);
+        if (patch.current_value) patch.current_value = Number(patch.current_value);
+        const { data, error } = await sb().from('apex_investments').update(patch).eq('id', req.params.id).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, investment: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;

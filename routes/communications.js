@@ -143,6 +143,26 @@ async function syncGoogleCalendar() {
     return { count: rows.length };
 }
 
+router.post('/calendar/events', _auth, async (req, res) => {
+    try {
+        const { title, event_date, start_time, end_time, location, description, status } = req.body || {};
+        if (!title) return res.status(400).json({ ok: false, error: 'title required' });
+        if (!event_date) return res.status(400).json({ ok: false, error: 'event_date required (YYYY-MM-DD)' });
+        const { data, error } = await sb().from('apex_calendar_events').insert({
+            title,
+            event_date,
+            start_time: start_time || null,
+            end_time: end_time || null,
+            all_day: !start_time,
+            location: location || null,
+            description: description || null,
+            status: status || 'confirmed',
+        }).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, event: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 const _LABEL_PRIORITY = { finance: 3, work: 2, personal: 2, notifications: 1, newsletter: 0 };
 
 router.get('/communications/emails', _auth, async (req, res) => {

@@ -277,4 +277,14 @@ router.get('/life/university/reading-list', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+router.patch('/university/assignments/:id/complete', _auth, async (req, res) => {
+    try {
+        const { completed = true } = req.body || {};
+        const { data, error } = await sb().from('apex_university_assignments')
+            .update({ completed: !!completed }).eq('id', req.params.id).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, assignment: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;
