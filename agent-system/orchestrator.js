@@ -363,6 +363,19 @@ Frontend testCases MUST include:
         _adaptCtx = _adaptEngine.formatRecsAsContext(_recs);
     } catch {}
 
+    let _confCtx = '';
+    try {
+        const _ce = require('./confidence-estimator');
+        _confCtx = _ce.getConfidenceContext(spec.objective, spec._planComplexity || 'moderate');
+    } catch {}
+
+    let _planQCtx = '';
+    try {
+        const _pqr = require('./planning-quality-registry');
+        const _pqRaw = _pqr.formatQualityContext(spec._planComplexity || 'moderate', _dynSelector.detectCategory(spec.objective));
+        if (_pqRaw) _planQCtx = _pqRaw.slice(0, 200);
+    } catch {}
+
     let _similarCtx = '';
     try {
         const _similar = await _indexer.searchSimilar(spec.objective, 3);
@@ -393,7 +406,9 @@ Frontend testCases MUST include:
         (_kgCtx ? '\n\n' + _kgCtx : '') +
         (ctx.obsidianContext ? '\n\nSYSTEM MEMORY:\n' + ctx.obsidianContext : '') +
         (_similarCtx ? '\n\nSIMILAR PAST TASKS:\n' + _similarCtx : '') +
-        (_adaptCtx ? '\n\n' + _adaptCtx : ''),
+        (_adaptCtx ? '\n\n' + _adaptCtx : '') +
+        (_confCtx ? '\n\n' + _confCtx : '') +
+        (_planQCtx ? '\n\n' + _planQCtx : ''),
         800, 'ARCHITECT', ctx
     );
 
@@ -1553,6 +1568,15 @@ async function runAgentTeam(spec, taskId) {
                 incidentCauses: graphContext.incidentCauses || [],
                 relevantLessons: graphContext.lessons || [],
             };
+        }
+
+        // Step 0.5 — simulation pass (complex/critical only, zero model cost)
+        if (complexity === 'complex' || complexity === 'critical') {
+            try {
+                const _tp = require('./task-planner');
+                const _sim = await _tp.decomposeGoal(spec.objective, { simulate: true });
+                console.log(`[Orchestrator] SIM PLAN — complexity:${_sim.complexity} risk:${_sim.risk.toFixed(2)}`);
+            } catch {}
         }
 
         // Step 0 — RESEARCHER (optional, pre-ARCHITECT web context fetch)

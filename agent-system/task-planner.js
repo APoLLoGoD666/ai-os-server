@@ -91,9 +91,28 @@ Goal: ${goal}`;
         };
     }
 
+    // Split guard: decompose subtasks with >3 files or >6 steps into per-file atomic units
+    const _rawSubs = (parsed.subtasks || []).slice(0, maxSubtasks);
+    const _guardedSubs = [];
+    for (const st of _rawSubs) {
+        const files = st.filesToModify || [];
+        const steps = st.steps || [];
+        if (files.length <= 3 && steps.length <= 6) { _guardedSubs.push(st); continue; }
+        const fileGroups = files.length > 1 ? files.map(f => [f]) : [[]];
+        fileGroups.forEach((fg, i) => {
+            if (_guardedSubs.length < maxSubtasks) {
+                _guardedSubs.push({ ...st,
+                    objective:     files.length > 1 ? `${st.objective} — ${fg[0]}` : st.objective,
+                    filesToModify: fg,
+                    steps:         steps.slice(i * 3, i * 3 + 3),
+                    _splitFrom:    st.objective });
+            }
+        });
+    }
+
     return {
         goal, complexity, risk, simulated: false,
-        subtasks: (parsed.subtasks || []).slice(0, maxSubtasks).map(st => ({
+        subtasks: _guardedSubs.map(st => ({
             ...st,
             complexity: st.complexity || estimateComplexity(st.objective),
             risk:       scoreRisk(st.objective)

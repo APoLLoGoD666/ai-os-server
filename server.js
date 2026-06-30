@@ -3898,6 +3898,17 @@ app.patch('/api/autonomy/goals/:id/status', requireAppAccess, (req, res) => {
     }
 });
 
+// Cognition — compact self-evaluation report (success rate, cost, top fail stage, cognition score)
+app.get('/api/cognition/self-evaluation', requireAppAccess, async (req, res) => {
+    try {
+        const _se = require('./agent-system/self-evaluator');
+        const report = await _se.getFullReport();
+        res.json({ ok: true, ...report });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // Autonomy layer — generate a full system self-evaluation (5 dimensions, 0-10 score)
 app.get('/api/autonomy/evaluation', requireAppAccess, async (req, res) => {
     try {

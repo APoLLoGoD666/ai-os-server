@@ -430,8 +430,60 @@ async function generateRunEvaluation(runId) {
     return ev;
 }
 
+/**
+ * Compact report for the /api/cognition/self-evaluation endpoint.
+ * Reads episodic memory directly — zero model calls.
+ */
+async function getFullReport() {
+    const count        = _ep.episodeCount();
+    const allEps       = _ep.getSimilarExperiences('', { limit: 100 });
+    const successRate  = count > 0 ? _ep.getSuccessRate(50) : null;
+
+    // Week-over-week delta: compare last 7 days vs prior 7 days
+    const now = Date.now();
+    const DAY = 86_400_000;
+    const thisWeek = allEps.filter(ep => now - new Date(ep.timestamp).getTime() <  7 * DAY);
+    const lastWeek = allEps.filter(ep => {
+        const age = now - new Date(ep.timestamp).getTime();
+        return age >= 7 * DAY && age < 14 * DAY;
+    });
+    const thisRate = thisWeek.length ? thisWeek.filter(ep => ep.success).length / thisWeek.length : null;
+    const lastRate = lastWeek.length ? lastWeek.filter(ep => ep.success).length / lastWeek.length : null;
+    const weekOverWeekDelta = (thisRate !== null && lastRate !== null) ? +(thisRate - lastRate).toFixed(3) : null;
+
+    // Average cost per successful run
+    const succEps = allEps.filter(ep => ep.success && ep.cost);
+    const avgCostPerSuccessUsd = succEps.length
+        ? +(succEps.reduce((s, ep) => s + parseFloat(ep.cost || 0), 0) / succEps.length).toFixed(5)
+        : null;
+
+    // Top failing stage across all failure episodes
+    const failEps = _ep.getFailureEpisodes(50);
+    const stageCounts = {};
+    for (const ep of failEps) { if (ep.failedStage) stageCounts[ep.failedStage] = (stageCounts[ep.failedStage] || 0) + 1; }
+    const topFailStage = Object.keys(stageCounts).sort((a, b) => stageCounts[b] - stageCounts[a])[0] || null;
+
+    const lessonContent  = (() => { try { return require('./obsidian-memory').getLessons(); } catch { return ''; } })();
+    const lessonCount    = (lessonContent.match(/^## /mg) || []).length;
+
+    const sysEval       = await generateSystemEvaluation().catch(() => null);
+    const cognitionScore = sysEval ? sysEval.overallScore : null;
+
+    return {
+        rollingSuccessRate:   successRate,
+        weekOverWeekDelta,
+        avgCostPerSuccessUsd,
+        topFailStage,
+        lessonCount,
+        cognitionScore,
+        episodeCount:         count,
+        generatedAt:          new Date().toISOString(),
+    };
+}
+
 module.exports = {
     getLatestEvaluation,
     generateSystemEvaluation,
     generateRunEvaluation,
+    getFullReport,
 };

@@ -28,8 +28,30 @@ function _escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Cognition-weights loader — 60-min TTL memoization
+let _cwCache = null;
+let _cwLoadedAt = 0;
+const _CW_TTL_MS = 60 * 60 * 1000;
+const _CW_PATH = path.join(ROOT, 'config', 'cognition-weights.json');
+function _loadCognitionWeights() {
+    if (_cwCache && Date.now() - _cwLoadedAt < _CW_TTL_MS) return _cwCache;
+    try {
+        _cwCache = JSON.parse(fs.readFileSync(_CW_PATH, 'utf8'));
+        _cwLoadedAt = Date.now();
+    } catch {
+        _cwCache = { routingOverrides: {} };
+    }
+    return _cwCache;
+}
+
 // Pre-classify feature before planning — selects model tier for planFeature
 function _preClassifyFeature(feature) {
+    const weights = _loadCognitionWeights();
+    const id = (feature.id || '').toLowerCase();
+    if (weights.routingOverrides && weights.routingOverrides[id]) {
+        const ov = weights.routingOverrides[id];
+        if ((ov.confidence ?? 0) >= 0.7) return ov.tier;
+    }
     const t = `${feature.id} ${feature.title}`.toLowerCase();
     if (/\b(auth|password|secret|api.?key|jwt|oauth|stripe|payment|security|encrypt|rls|rbac|permiss|hash|session)\b/.test(t))
         return 'critical';
