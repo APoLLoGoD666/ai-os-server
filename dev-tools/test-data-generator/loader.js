@@ -231,7 +231,7 @@ async function insertApexTransactions(datasetId) {
   if (!rows.length) return 0;
   const sb = _supabase();
   await sb.from('apex_transactions').delete().like('description', '[SYNTHETIC]%');
-  const { error } = await sb.from('apex_transactions').insert(rows);
+  const { error } = await sb.from('apex_transactions').insert(rows.map(({ synthetic, dataset_id, removable, ...rest }) => rest));
   if (error) throw new Error(`apex_transactions insert failed: ${error.message}`);
   return rows.length;
 }
@@ -241,7 +241,7 @@ async function insertApexInvoices(datasetId) {
   if (!rows.length) return 0;
   const sb = _supabase();
   await sb.from('apex_invoices').delete().like('title', '[SYNTHETIC]%');
-  const { error } = await sb.from('apex_invoices').insert(rows);
+  const { error } = await sb.from('apex_invoices').insert(rows.map(({ synthetic, dataset_id, removable, source, ...rest }) => rest));
   if (error) throw new Error(`apex_invoices insert failed: ${error.message}`);
   return rows.length;
 }
@@ -251,20 +251,22 @@ async function insertHealthRecords(datasetId) {
   if (!workouts.length) return { workouts: 0, nutritionLogs: 0, sleepLogs: 0, bodyMeasurements: 0 };
   const sb = _supabase();
 
+  const _strip = ({ synthetic, dataset_id, removable, source, ...rest }) => rest;
+
   await sb.from('apex_workouts').delete().like('notes', '[SYNTHETIC]%');
-  const { error: e1 } = await sb.from('apex_workouts').insert(workouts);
+  const { error: e1 } = await sb.from('apex_workouts').insert(workouts.map(_strip));
   if (e1) throw new Error(`apex_workouts insert failed: ${e1.message}`);
 
   await sb.from('apex_nutrition_log').delete().like('food_name', '[SYNTHETIC]%');
-  const { error: e2 } = await sb.from('apex_nutrition_log').insert(nutritionLogs);
+  const { error: e2 } = await sb.from('apex_nutrition_log').insert(nutritionLogs.map(_strip));
   if (e2) throw new Error(`apex_nutrition_log insert failed: ${e2.message}`);
 
   await sb.from('apex_sleep_log').delete().like('notes', '[SYNTHETIC]%');
-  const { error: e3 } = await sb.from('apex_sleep_log').upsert(sleepLogs, { onConflict: 'date' });
+  const { error: e3 } = await sb.from('apex_sleep_log').upsert(sleepLogs.map(_strip), { onConflict: 'date' });
   if (e3) throw new Error(`apex_sleep_log upsert failed: ${e3.message}`);
 
   await sb.from('apex_body_measurements').delete().like('notes', '[SYNTHETIC]%');
-  const { error: e4 } = await sb.from('apex_body_measurements').insert(bodyMeasurements);
+  const { error: e4 } = await sb.from('apex_body_measurements').insert(bodyMeasurements.map(_strip));
   if (e4) throw new Error(`apex_body_measurements insert failed: ${e4.message}`);
 
   return { workouts: workouts.length, nutritionLogs: nutritionLogs.length, sleepLogs: sleepLogs.length, bodyMeasurements: bodyMeasurements.length };

@@ -649,11 +649,11 @@ function generateSupplements(datasetId) {
   const m = synthMeta(datasetId);
   const today = '2026-06-30';
   return [
-    { name: '[SYNTHETIC] Vitamin D3 2000IU',    taken: true,  log_date: today, ...m },
-    { name: '[SYNTHETIC] Omega-3 Fish Oil',      taken: true,  log_date: today, ...m },
-    { name: '[SYNTHETIC] Magnesium Glycinate',   taken: false, log_date: today, ...m },
-    { name: '[SYNTHETIC] Creatine Monohydrate',  taken: true,  log_date: today, ...m },
-    { name: '[SYNTHETIC] Zinc',                  taken: false, log_date: today, ...m },
+    { id: 'synth-sup-0001', name: '[SYNTHETIC] Vitamin D3 2000IU',    taken: true,  log_date: today, ...m },
+    { id: 'synth-sup-0002', name: '[SYNTHETIC] Omega-3 Fish Oil',      taken: true,  log_date: today, ...m },
+    { id: 'synth-sup-0003', name: '[SYNTHETIC] Magnesium Glycinate',   taken: false, log_date: today, ...m },
+    { id: 'synth-sup-0004', name: '[SYNTHETIC] Creatine Monohydrate',  taken: true,  log_date: today, ...m },
+    { id: 'synth-sup-0005', name: '[SYNTHETIC] Zinc',                  taken: false, log_date: today, ...m },
   ];
 }
 
@@ -685,14 +685,14 @@ function generateSpiritualRecords(datasetId) {
   if (datasetId !== DATASET_IDS.TIER3) return [];
   const m = synthMeta(datasetId);
   return [
-    { practice_type: '[SYNTHETIC] Meditation',  duration_minutes: 20, notes: '[SYNTHETIC] Morning sit — focused on breath', ...m },
-    { practice_type: '[SYNTHETIC] Reading',      duration_minutes: 30, notes: '[SYNTHETIC] Power of Now — chapter 4',        ...m },
-    { practice_type: '[SYNTHETIC] Meditation',  duration_minutes: 15, notes: '[SYNTHETIC] Evening wind-down',               ...m },
-    { practice_type: '[SYNTHETIC] Sigil work',  duration_minutes: 10, notes: '[SYNTHETIC] Weekly ritual',                   ...m },
-    { practice_type: '[SYNTHETIC] Meditation',  duration_minutes: 25, notes: '[SYNTHETIC] Deep focus session',              ...m },
-    { practice_type: '[SYNTHETIC] Reading',      duration_minutes: 40, notes: '[SYNTHETIC] Key insight on presence',         ...m },
-    { practice_type: '[SYNTHETIC] Mindfulness', duration_minutes: 10, notes: '[SYNTHETIC] Mid-day reset',                   ...m },
-    { practice_type: '[SYNTHETIC] Meditation',  duration_minutes: 20, notes: '[SYNTHETIC] Gratitude focus',                  ...m },
+    { type: '[SYNTHETIC] Meditation',  duration_m: 20, notes: '[SYNTHETIC] Morning sit, focused on breath', ...m },
+    { type: '[SYNTHETIC] Reading',      duration_m: 30, notes: '[SYNTHETIC] Power of Now, chapter 4',        ...m },
+    { type: '[SYNTHETIC] Meditation',  duration_m: 15, notes: '[SYNTHETIC] Evening wind-down',               ...m },
+    { type: '[SYNTHETIC] Sigil work',  duration_m: 10, notes: '[SYNTHETIC] Weekly ritual',                   ...m },
+    { type: '[SYNTHETIC] Meditation',  duration_m: 25, notes: '[SYNTHETIC] Deep focus session',              ...m },
+    { type: '[SYNTHETIC] Reading',      duration_m: 40, notes: '[SYNTHETIC] Key insight on presence',         ...m },
+    { type: '[SYNTHETIC] Mindfulness', duration_m: 10, notes: '[SYNTHETIC] Mid-day reset',                   ...m },
+    { type: '[SYNTHETIC] Meditation',  duration_m: 20, notes: '[SYNTHETIC] Gratitude focus',                  ...m },
   ];
 }
 
@@ -701,10 +701,10 @@ function generateUniversityRecords(datasetId) {
   const m = synthMeta(datasetId);
 
   const modules = [
-    { name: '[SYNTHETIC] Introduction to Computer Science', code: 'CS101', credits: 20, status: 'active',    grade: null, ...m },
-    { name: '[SYNTHETIC] Data Structures & Algorithms',     code: 'CS201', credits: 20, status: 'active',    grade: null, ...m },
-    { name: '[SYNTHETIC] Web Development Fundamentals',     code: 'CS150', credits: 20, status: 'completed', grade: 72,   ...m },
-    { name: '[SYNTHETIC] Database Systems',                 code: 'CS220', credits: 20, status: 'completed', grade: 68,   ...m },
+    { name: '[SYNTHETIC] Introduction to Computer Science', description: '[SYNTHETIC] CS101 — core theory', credits: 20, active: true,  ...m },
+    { name: '[SYNTHETIC] Data Structures & Algorithms',     description: '[SYNTHETIC] CS201 — algorithms',  credits: 20, active: true,  ...m },
+    { name: '[SYNTHETIC] Web Development Fundamentals',     description: '[SYNTHETIC] CS150 — grade: 72%',  credits: 20, active: false, ...m },
+    { name: '[SYNTHETIC] Database Systems',                 description: '[SYNTHETIC] CS220 — grade: 68%',  credits: 20, active: false, ...m },
   ];
 
   const assignments = [
@@ -725,11 +725,11 @@ function generateUniversityRecords(datasetId) {
   ];
 
   const readingList = [
-    { title: '[SYNTHETIC] Clean Code',                author: '[SYNTHETIC] Robert C. Martin', status: 'reading',   rating: null, notes: '[SYNTHETIC] Chapter 7 — Error Handling', ...m },
-    { title: '[SYNTHETIC] The Pragmatic Programmer',  author: '[SYNTHETIC] Hunt & Thomas',    status: 'completed', rating: 5,    notes: '[SYNTHETIC] Excellent — re-reading for CS101', ...m },
-    { title: '[SYNTHETIC] Introduction to Algorithms',author: '[SYNTHETIC] CLRS',              status: 'reading',   rating: null, notes: '[SYNTHETIC] Slow but thorough — for CS201',     ...m },
-    { title: '[SYNTHETIC] Deep Work',                 author: '[SYNTHETIC] Cal Newport',       status: 'completed', rating: 5,    notes: '[SYNTHETIC] Core productivity framework',        ...m },
-    { title: '[SYNTHETIC] Designing Data-Intensive Apps', author: '[SYNTHETIC] Kleppmann',    status: 'pending',   rating: null, notes: '[SYNTHETIC] Queued after CS201',                ...m },
+    { title: '[SYNTHETIC] Clean Code',                author: '[SYNTHETIC] Robert C. Martin', status: 'reading',   notes: '[SYNTHETIC] Chapter 7 — Error Handling', ...m },
+    { title: '[SYNTHETIC] The Pragmatic Programmer',  author: '[SYNTHETIC] Hunt & Thomas',    status: 'completed', notes: '[SYNTHETIC] Excellent — re-reading for CS101', ...m },
+    { title: '[SYNTHETIC] Introduction to Algorithms',author: '[SYNTHETIC] CLRS',              status: 'reading',   notes: '[SYNTHETIC] Slow but thorough — for CS201',     ...m },
+    { title: '[SYNTHETIC] Deep Work',                 author: '[SYNTHETIC] Cal Newport',       status: 'completed', notes: '[SYNTHETIC] Core productivity framework',        ...m },
+    { title: '[SYNTHETIC] Designing Data-Intensive Apps', author: '[SYNTHETIC] Kleppmann',    status: 'want-to-read', notes: '[SYNTHETIC] Queued after CS201',             ...m },
   ];
 
   return { modules, assignments, flashcards, readingList };
@@ -752,11 +752,11 @@ function generateSubscriptions(datasetId) {
   if (datasetId !== DATASET_IDS.TIER3) return [];
   const m = synthMeta(datasetId);
   return [
-    { name: '[SYNTHETIC] DigitalOcean Hosting',   amount: 24.50, currency: 'GBP', billing_cycle: 'monthly', status: 'active', next_billing_date: '2026-07-05', category: 'Technology',   ...m },
-    { name: '[SYNTHETIC] JetBrains All Products', amount: 18.99, currency: 'GBP', billing_cycle: 'monthly', status: 'active', next_billing_date: '2026-07-04', category: 'Technology',   ...m },
-    { name: '[SYNTHETIC] Adobe Creative Cloud',   amount: 54.99, currency: 'GBP', billing_cycle: 'monthly', status: 'active', next_billing_date: '2026-07-10', category: 'Technology',   ...m },
-    { name: '[SYNTHETIC] Gym Membership',          amount: 45.00, currency: 'GBP', billing_cycle: 'monthly', status: 'active', next_billing_date: '2026-07-01', category: 'Health',       ...m },
-    { name: '[SYNTHETIC] Notion Pro',              amount: 8.00,  currency: 'GBP', billing_cycle: 'monthly', status: 'active', next_billing_date: '2026-07-15', category: 'Productivity', ...m },
+    { name: '[SYNTHETIC] DigitalOcean Hosting',   amount: 24.50, billing_cycle: 'monthly', active: true, next_billing_date: '2026-07-05', category: 'Technology',   ...m },
+    { name: '[SYNTHETIC] JetBrains All Products', amount: 18.99, billing_cycle: 'monthly', active: true, next_billing_date: '2026-07-04', category: 'Technology',   ...m },
+    { name: '[SYNTHETIC] Adobe Creative Cloud',   amount: 54.99, billing_cycle: 'monthly', active: true, next_billing_date: '2026-07-10', category: 'Technology',   ...m },
+    { name: '[SYNTHETIC] Gym Membership',          amount: 45.00, billing_cycle: 'monthly', active: true, next_billing_date: '2026-07-01', category: 'Health',       ...m },
+    { name: '[SYNTHETIC] Notion Pro',              amount: 8.00,  billing_cycle: 'monthly', active: true, next_billing_date: '2026-07-15', category: 'Productivity', ...m },
   ];
 }
 
@@ -764,9 +764,9 @@ function generateInvestments(datasetId) {
   if (datasetId !== DATASET_IDS.TIER3) return [];
   const m = synthMeta(datasetId);
   return [
-    { name: '[SYNTHETIC] S&P 500 Index Fund', ticker: 'VUSA', type: 'ETF',     current_value: 8450.00,  purchase_value: 7200.00,  return_pct: 17.4, currency: 'GBP', updated_at: '2026-06-30T00:00:00.000Z', ...m },
-    { name: '[SYNTHETIC] Bitcoin',             ticker: 'BTC',  type: 'Crypto',  current_value: 2100.00,  purchase_value: 1500.00,  return_pct: 40.0, currency: 'GBP', updated_at: '2026-06-30T00:00:00.000Z', ...m },
-    { name: '[SYNTHETIC] UK Pension Fund',     ticker: null,   type: 'Pension', current_value: 12400.00, purchase_value: 10000.00, return_pct: 24.0, currency: 'GBP', updated_at: '2026-06-01T00:00:00.000Z', ...m },
+    { name: '[SYNTHETIC] S&P 500 Index Fund', type: 'ETF',     amount: 7200.00,  current_value: 8450.00,  platform: 'Vanguard',  notes: '[SYNTHETIC] VUSA ETF — 17.4% return', ...m },
+    { name: '[SYNTHETIC] Bitcoin',             type: 'Crypto',  amount: 1500.00,  current_value: 2100.00,  platform: 'Coinbase',  notes: '[SYNTHETIC] BTC — 40% return',         ...m },
+    { name: '[SYNTHETIC] UK Pension Fund',     type: 'Pension', amount: 10000.00, current_value: 12400.00, platform: 'Nest',      notes: '[SYNTHETIC] 24% return since inception', ...m },
   ];
 }
 
@@ -774,17 +774,14 @@ function generateApexTransactions(datasetId) {
   const { transactions } = generateFinancialRecords(datasetId);
   return transactions.map(t => ({
     amount:      t.amount,
-    currency:    t.currency,
     description: t.description,
     category:    t.category,
-    merchant:    t.merchant,
     date:        t.date.split('T')[0],
-    account:     t.account,
     type:        t.type,
+    source:      'test',
     synthetic:   true,
     dataset_id:  datasetId,
     removable:   true,
-    source:      'test',
   }));
 }
 
