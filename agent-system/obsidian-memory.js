@@ -1,6 +1,7 @@
 "use strict";
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { obsidianRead: _apiRead, obsidianWrite: _apiWrite, obsidianAppend: _apiAppend } = require('./obsidian-client');
 const _gateway = require('../lib/memory/gateway');
 
@@ -9,6 +10,10 @@ const VAULT = process.env.OBSIDIAN_VAULT_PATH || 'C:\\Users\\arwwo\\Desktop\\AI 
 // In-memory lesson buffer — lessons logged in this session are instantly available
 // without waiting for a disk round-trip. Capped at 50 entries.
 const _lessonBuffer = [];
+
+// Dedup window — prevents identical lessons from being written multiple times per session.
+// Keyed by SHA-1 of normalized lesson text (first 200 chars, lowercased). Capped at 200 entries.
+const _lessonHashes = new Set();
 
 // Lazy Supabase client for lesson persistence across restarts
 let _sb = null;
@@ -70,6 +75,14 @@ module.exports = {
     },
 
     async logLesson(lesson, { taskId, traceId } = {}) {
+        // Hash-dedup: skip exact-duplicate lessons within this session
+        const _hash = crypto.createHash('sha1')
+            .update(lesson.trim().toLowerCase().slice(0, 200))
+            .digest('hex').slice(0, 12);
+        if (_lessonHashes.has(_hash)) return { diskOk: false, supabaseOk: null, skipped: true };
+        _lessonHashes.add(_hash);
+        if (_lessonHashes.size > 200) _lessonHashes.delete(_lessonHashes.values().next().value);
+
         const now  = new Date();
         const date = now.toISOString().split('T')[0];
         const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });

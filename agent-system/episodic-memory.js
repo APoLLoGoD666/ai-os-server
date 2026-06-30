@@ -186,8 +186,30 @@ function episodeCount() {
     try { return fs.readdirSync(EPISODES_DIR).filter(f => f.startsWith('ep-')).length; } catch { return 0; }
 }
 
+/**
+ * Patch an existing episode with additional fields (e.g. lessonText from reflector).
+ * Non-destructive: uses Object.assign, so existing fields are preserved.
+ */
+function updateEpisode(id, patch) {
+    if (!id) return false;
+    try {
+        const p = _epPath(id);
+        if (!fs.existsSync(p)) return false;
+        const ep = JSON.parse(fs.readFileSync(p, 'utf8'));
+        Object.assign(ep, patch);
+        fs.writeFileSync(p, JSON.stringify(ep, null, 2), 'utf8');
+        const idx = _cache.findIndex(e => e.id === id);
+        if (idx >= 0) Object.assign(_cache[idx], patch);
+        return true;
+    } catch (e) {
+        console.warn('[EpisodicMemory] updateEpisode failed (non-fatal):', e.message);
+        return false;
+    }
+}
+
 module.exports = {
     storeEpisode,
+    updateEpisode,
     getSimilarExperiences,
     getFailureEpisodes,
     getSuccessRate,

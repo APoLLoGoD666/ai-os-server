@@ -15,6 +15,7 @@ const _dynSelector  = require('./dynamic-agent-selector');
 const _execVerifier = require('./execution-verifier');
 const _goalTracker  = require('./goal-tracker');
 const _adaptEngine  = require('./adaptation-engine');
+const _rf           = require('./reflection-engine');
 
 // ── Runtime layer — EA runtime + Memory Gateway + Task Router ─────────────────
 // NOTE: ModelInterface (selector/output-capture/feedback) is used by executive entities
@@ -838,28 +839,14 @@ async function _committer(spec, branchName, ctx) {
 // Generates a one-sentence lesson, stored in Obsidian/Lessons.md.
 // Future tasks read this via obsidianContext, making agents smarter over time.
 async function _reflector(spec, agentLogs, success, taskId = null, traceId = null, ctx = null) {
-    const SYSTEM = `You are the REFLECTOR for Apex AI OS. After each pipeline run, extract ONE concrete actionable lesson.
-Rules: Be specific — name the pattern, file type, or error. One sentence only. No filler words.
-Examples: "Agents must check for existing routes before adding new ones to avoid 404 on duplicate paths."
-          "Files over 15KB should be split into domain-specific routes/ files before attempting edits."
-          "REVIEWER correctly caught missing try/catch on async DB calls — always wrap supabase queries."`;
-
-    const summary = agentLogs.slice(-4).map(l =>
-        `${l.role}: ${JSON.stringify(l.result || {}).slice(0, 150)}`
-    ).join('\n');
-
     try {
-        // Always use the cheapest available model for reflexion — it's post-run, non-critical
-        const reflexModel = M.HAIKU;
-        const res = await _callClaude(reflexModel, SYSTEM,
-            `Task: ${spec.objective}\nOutcome: ${success ? 'SUCCESS' : 'FAILURE'}\nPipeline:\n${summary}`,
-            100, 'REFLECTOR', ctx
-        );
-        const lesson = res.content[0]?.text?.trim();
+        // Use reflection-engine: context-aware, deduplicates against recent lessons
+        const lesson = await _rf.generateReflectionLesson(spec, agentLogs, success, null);
         if (lesson && lesson.length > 10) {
             // Single authoritative write path: gateway → apex_lessons
             _gateway.storeMemory({ layer: 10, source: 'reflector', taskId, content: `[Auto-Reflexion] ${lesson}`, tags: ['auto_reflexion', success ? 'success' : 'failure'], importance: 6, requestingEntity: 'orchestrator' }).catch(() => {});
             try { _indexer.indexLesson(`[Auto-Reflexion] ${lesson}`); } catch {}
+            if (taskId) setImmediate(() => { try { _episodic.updateEpisode(taskId, { lessonText: lesson }); } catch {} });
             console.log(`[Reflector] lesson stored via gateway — ${lesson.slice(0, 80)}`);
             // Register lesson in reflexion tracker for closed-loop behavior verification
             setImmediate(async () => {
