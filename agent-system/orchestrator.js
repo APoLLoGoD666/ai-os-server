@@ -1471,6 +1471,7 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _reflector(spec, agentLogs, false, taskId, ctx.traceId, ctx).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity, ctx).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs, models: ctx.agentModels, failureReason: error }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
+        setImmediate(() => { try { require('../lib/memory/skill-memory').recordExecution(complexity, 'pipeline', false, { source: 'pipeline:FAIL', traceId: ctx.traceId }).catch(() => {}); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: false, complexity, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs }); } catch {} });
         setImmediate(() => { try { (ctx._appliedAdaptIds || []).forEach(id => _adaptEngine.recordApplication(id, false)); } catch {} });
         // North Star proposal — if failures cluster around a pattern, propose a constraint
@@ -1857,6 +1858,7 @@ async function runAgentTeam(spec, taskId) {
         });
         setImmediate(() => _reputation.invalidateCache());
         setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: true, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs, models: ctx.agentModels }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
+        setImmediate(() => { try { require('../lib/memory/skill-memory').recordExecution(complexity, 'pipeline', true, { source: 'pipeline:SUCCESS', traceId: ctx.traceId }).catch(() => {}); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: true, complexity, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs }); } catch {} });
         setImmediate(() => { try { (ctx._appliedAdaptIds || []).forEach(id => _adaptEngine.recordApplication(id, true)); } catch {} });
         setImmediate(() => { try { _goalTracker.completeGoal(taskId, { commitHash: committerLog.result.commitHash, cost }); } catch {} });
