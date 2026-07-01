@@ -1263,6 +1263,10 @@ app.post("/chat", requireAppAccess, ...kernelChain, async (req, res) => {
             : "";
         const _temporalLine = _temporal ? `[APEX TEMPORAL CONTEXT] ${_sessionTracker.formatForPrompt(_temporal)}\n\n` : '';
         const memoryText = _temporalLine + _memBase;
+
+        // Start gateway context fetch in parallel with doc search — joins before prompt build
+        const _chatGwPromise = _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 1500, taskId: req.conversationId }).catch(() => null);
+
         // Skip document search for short conversational messages — saves latency and tokens
         const _needsDocs = userMessage.split(/\s+/).length > 6
             || /file|note|doc|save|search|find|wrote|read|creat|upload|what.*said|remind/i.test(userMessage);
@@ -1289,8 +1293,15 @@ ${preview}
             || /^(ok|okay|thanks|got it|yes|no|sure|alright|fine|perfect|great|nice|cool|cheers|brilliant|hi|hey|hello|sounds good|good|yep|nope|exactly|right|correct)[\s!?.]*$/i.test(userMessage.trim());
         const selfCtx = _isConversational ? null : await fetchSelfContext();
 
+        // Await gateway context (was fetching in parallel with doc search and selfCtx)
+        const _chatGatewayCtx = _isConversational ? null : await _chatGwPromise;
+
+        // Domain specialist detection — mirrors voice-chat line 1838
+        const _chatDomainSlug = detectDomain(userMessage);
+        const _chatDomainAgent = _chatDomainSlug ? _DOMAIN_AGENTS[_chatDomainSlug] : null;
+
         // Prompt for fallback SDK path (includes full memory since no historyMessages there)
-        const prompt = buildPrompt(userMessage, memoryText, docsText, selfCtx);
+        const prompt = buildPrompt(userMessage, memoryText, docsText, selfCtx, _chatGatewayCtx);
 
         if (mastraAgents && mastraAgents.apexAgent) {
             // Last 3 turns as structured conversation history — avoids re-sending them in prompt text
@@ -1301,7 +1312,10 @@ ${preview}
             // Only send memory older than what's in historyMessages to avoid duplication
             const _olderMemText = (_temporalLine || '') + memory.slice(0, -3)
                 .map(m => `[${m.role.toUpperCase()}] ${m.message}`).join('\n');
-            const mastraPrompt = buildPrompt(userMessage, _olderMemText, docsText, selfCtx);
+            const mastraPrompt = [
+                _chatDomainAgent ? `SPECIALIST CONTEXT — ${_chatDomainAgent.name.toUpperCase()}:\n${_chatDomainAgent.system_prompt}` : null,
+                buildPrompt(userMessage, _olderMemText, docsText, selfCtx, _chatGatewayCtx),
+            ].filter(Boolean).join('\n\n---\n\n');
 
             // Route to lightweight agent (9 core tools) unless email/finance/browser/routine needed
             const _needsFullTools = /email|mail|inbox|gmail|spend|expense|budget|transaction|finance|money|web|url|http|google|scrape|browser|routine|schedule|cron/i.test(userMessage);
@@ -4311,6 +4325,16 @@ app.post('/api/governance/apply-migration-005', requireAppAccess, async (req, re
         res.json({ ok: true, message: 'Migration 005 applied successfully' });
     } catch (e) {
         try { await pool.end(); } catch {}
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// Civilization runtime status — isRunning, cycle count, last cycle summary
+app.get('/api/admin/civilization-status', requireAppAccess, (req, res) => {
+    try {
+        const civRuntime = require('./lib/intelligence/civilization-runtime');
+        res.json({ ok: true, isRunning: civRuntime.isRunning(), cycleCount: civRuntime.getCycleCount() });
+    } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
     }
 });
