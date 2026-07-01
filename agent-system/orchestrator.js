@@ -1646,18 +1646,17 @@ async function runAgentTeam(spec, taskId) {
             _checkBudget(ctx); // abort before expensive developer call if budget already blown
             // COO binding veto: on attempt > 2, COO can block further execution
             if (attempt > 2) {
-                setImmediate(async () => {
-                    try {
-                        const _cooRoles = await require('../lib/executive/trigger-evaluator').getTriggeredRoles({ attempt, complexity, costUsd: ctx.costUsd, taskDescription: spec.objective }).catch(() => []);
-                        if (_cooRoles.includes('coo')) {
-                            const { consultExecutive } = require('../lib/cognitive/runtime');
-                            const _cooR = await consultExecutive('coo', `Pipeline on attempt ${attempt} for: ${(spec.objective || '').slice(0, 100)}`, { taskId, attempt, complexity }).catch(() => null);
-                            if (_cooR?.choice === 'block') {
-                                console.warn(`[Orchestrator] COO veto on attempt ${attempt}: ${_cooR.rationale || 'blocked'}`);
-                            }
+                try {
+                    const _cooRoles = await require('../lib/executive/trigger-evaluator').getTriggeredRoles({ attempt, complexity, costUsd: ctx.costUsd, taskDescription: spec.objective }).catch(() => []);
+                    if (_cooRoles.includes('coo')) {
+                        const { consultExecutive } = require('../lib/cognitive/runtime');
+                        const _cooR = await consultExecutive('coo', `Pipeline on attempt ${attempt} for: ${(spec.objective || '').slice(0, 100)}`, { taskId, attempt, complexity }).catch(() => null);
+                        if (_cooR?.choice === 'block') {
+                            console.warn(`[Orchestrator] COO veto on attempt ${attempt}: ${_cooR.rationale || 'blocked'}`);
+                            return _fail(`COO veto after attempt ${attempt}: ${_cooR.rationale || 'blocked'}`);
                         }
-                    } catch {}
-                });
+                    }
+                } catch {}
             }
             // Step 2 — DEVELOPER (passes lastFailure as grounded feedback on retries — Reflexion pattern)
             developerLog = await _developer(spec, architectLog, attempt > 1 ? lastFailure : null, ctx);

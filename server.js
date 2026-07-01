@@ -1242,6 +1242,7 @@ app.post("/chat", requireAppAccess, ...kernelChain, async (req, res) => {
                 _eae.recordTransition({ sessionId: req.conversationId });
                 _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply: _agentReply, intent: _agentIntent2, mode: _agentMode });
                 setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: _agentReply }), tags: ['conversation', 'chat', 'agent'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+                setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); if ((_agentReply||'').split(/\s+/).length > 20) { require('./lib/memory/consolidation-engine').submit('episode', req.conversationId||`chat-${Date.now()}`, { objective:`Chat: ${userMessage.slice(0,120)}`, success:true, source:'chat_agent', reply:(_agentReply||'').slice(0,200) }, 25).catch(()=>{}); require('./lib/intelligence/knowledge-validator').submitLesson((_agentReply||'').slice(0,400), { taskId:req.conversationId, sourceType:'chat_exchange' }).catch(()=>{}); } });
                 return res.status(200).json({ ok: true, reply: _agentReply, response_mode: _agentMode, stream_plan: _agentPlan });
             } catch (e) {
                 if (res.headersSent) return;
@@ -1321,7 +1322,7 @@ ${preview}
             _eae.recordTransition({ sessionId: req.conversationId });
             _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode });
             setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'mastra'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
-            setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); });
+            setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); if ((reply||'').split(/\s+/).length > 20) { require('./lib/memory/consolidation-engine').submit('episode', req.conversationId||`chat-${Date.now()}`, { objective:`Chat: ${userMessage.slice(0,120)}`, success:true, source:'chat_mastra', reply:(reply||'').slice(0,200) }, 25).catch(()=>{}); require('./lib/intelligence/knowledge-validator').submitLesson((reply||'').slice(0,400), { taskId:req.conversationId, sourceType:'chat_exchange' }).catch(()=>{}); } });
             return res.status(200).json({
                 ok: true,
                 reply,
@@ -1349,6 +1350,7 @@ ${preview}
             if (command) {
                 const result = await handleCommand(command, req.identity?.humanId);
                 setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: result.reply }), tags: ['conversation', 'chat', 'tool'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+                setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); if ((result.reply||'').split(/\s+/).length > 20) { require('./lib/memory/consolidation-engine').submit('episode', req.conversationId||`chat-${Date.now()}`, { objective:`Chat: ${userMessage.slice(0,120)}`, success:true, source:'chat_tool', reply:(result.reply||'').slice(0,200) }, 25).catch(()=>{}); require('./lib/intelligence/knowledge-validator').submitLesson((result.reply||'').slice(0,400), { taskId:req.conversationId, sourceType:'chat_exchange' }).catch(()=>{}); } });
                 return res.status(result.ok ? 200 : 404).json(result);
             }
         }
@@ -1366,7 +1368,7 @@ ${preview}
         _eae.recordTransition({ sessionId: req.conversationId });
         _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _sdkIntent, mode: _sdkMode });
         setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'sdk'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
-        setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); });
+        setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); if ((reply||'').split(/\s+/).length > 20) { require('./lib/memory/consolidation-engine').submit('episode', req.conversationId||`chat-${Date.now()}`, { objective:`Chat: ${userMessage.slice(0,120)}`, success:true, source:'chat_sdk', reply:(reply||'').slice(0,200) }, 25).catch(()=>{}); require('./lib/intelligence/knowledge-validator').submitLesson((reply||'').slice(0,400), { taskId:req.conversationId, sourceType:'chat_exchange' }).catch(()=>{}); } });
 
         return res.status(200).json({
             ok: true,
