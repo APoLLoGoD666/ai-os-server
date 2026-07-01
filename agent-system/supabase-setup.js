@@ -327,7 +327,7 @@ async function createAllTables() {
 
     // Enable RLS on tables missing it — service_role bypasses RLS, so zero functional change
     try {
-        const pgPool = require('../pg_database');
+        const pgPool = require('../lib/pg_database');
         await pgPool.query('ALTER TABLE documents ENABLE ROW LEVEL SECURITY');
         await pgPool.query('ALTER TABLE memory ENABLE ROW LEVEL SECURITY');
         console.log('[SupabaseSetup] ✓ RLS enabled on documents, memory');
