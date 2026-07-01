@@ -6801,6 +6801,40 @@ li, td, th, div.label, div.value { font-size: inherit; }
                         </div>
                     </div>
 
+                    <!-- Section 7: Civilization Loop Status -->
+                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden" id="civLoopCard">
+                        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div style="width:6px;height:6px;border-radius:50%;background:var(--green)" id="civDot"></div>
+                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Civilization Loop</span>
+                                <span id="civBadge" style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(34,197,94,0.10);color:var(--green)">&#8212;</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span id="civCycleCount" style="font-size:10px;color:var(--text-mute)">— cycles</span>
+                                <button class="ds-btn xs" data-fn="refreshCivStatus">&#8635;</button>
+                                <button class="ds-btn xs cyan" data-fn="runCivCycleNow">Run Now</button>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border)">
+                            <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
+                                <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Health</div>
+                                <div id="civHealth" style="font-size:16px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums">&#8212;</div>
+                            </div>
+                            <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
+                                <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Status</div>
+                                <div id="civStatus" style="font-size:11px;font-weight:600;color:var(--text)">&#8212;</div>
+                            </div>
+                            <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
+                                <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Cycles</div>
+                                <div id="civCycles" style="font-size:16px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums">&#8212;</div>
+                            </div>
+                            <div style="background:var(--surface-2);padding:8px 12px;text-align:center">
+                                <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Last Phase</div>
+                                <div id="civLastPhase" style="font-size:10px;color:var(--text-mute)">&#8212;</div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -10490,6 +10524,41 @@ async function sendChatCommand() {
     await sendChatCommandFromText(msg);
 }
 
+// ══ CIVILIZATION LOOP ════════════════════════════════════════════════
+async function refreshCivStatus() {
+    try {
+        const d = await fetchJson('/api/admin/civilization-status');
+        const running = d.isRunning;
+        document.getElementById('civDot').style.background = running ? 'var(--green)' : 'var(--text-faint)';
+        document.getElementById('civBadge').textContent = running ? 'Running' : 'Stopped';
+        document.getElementById('civBadge').style.color = running ? 'var(--green)' : 'var(--text-mute)';
+        document.getElementById('civCycleCount').textContent = (d.cycleCount ?? '—') + ' cycles';
+        document.getElementById('civCycles').textContent = d.cycleCount ?? '—';
+        document.getElementById('civStatus').textContent = running ? 'Active' : 'Idle';
+        if (d.lastHealth != null) {
+            document.getElementById('civHealth').textContent = d.lastHealth + '/100';
+            document.getElementById('civHealth').style.color = d.lastHealth >= 70 ? 'var(--green)' : d.lastHealth >= 50 ? 'var(--amber)' : 'var(--red)';
+        }
+        if (d.lastCycle?.phases) {
+            const phases = Object.entries(d.lastCycle.phases);
+            const failed = phases.filter(([,p]) => p.status === 'error').map(([n]) => n);
+            document.getElementById('civLastPhase').textContent = failed.length ? '⚠ ' + failed.join(', ') : 'All OK';
+            document.getElementById('civLastPhase').style.color = failed.length ? 'var(--red)' : 'var(--green)';
+        }
+    } catch (e) {
+        document.getElementById('civStatus').textContent = 'Unavailable';
+    }
+}
+async function runCivCycleNow() {
+    try {
+        const d = await fetchJson('/api/governance/run-cycle', { method: 'POST' });
+        apexFeedEntry('Civilization cycle triggered manually', 'system');
+        setTimeout(refreshCivStatus, 3000);
+    } catch (e) {
+        apexFeedEntry('Failed to trigger civilization cycle: ' + e.message, 'error');
+    }
+}
+
 // ══ MEMORY ════════════════════════════════════════════════════════════
 async function refreshMemory() {
     return runRefresh("memory", async () => {
@@ -14005,8 +14074,15 @@ function initCommunicationPage() {
     window.switchPage = function(name){
         if (typeof _prevComm==='function') _prevComm(name);
         if (name==='communication') initCommunicationPage();
+        if (name==='system') refreshCivStatus();
     };
 })();
+// Auto-load civilization status when page is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(refreshCivStatus, 1500); });
+} else {
+    setTimeout(refreshCivStatus, 1500);
+}
 
 // ── FINANCE PAGE ──────────────────────────────────────────────────────────────
 var _finCharts = {};

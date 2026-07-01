@@ -1204,6 +1204,7 @@ app.post("/chat", requireAppAccess, ...kernelChain, async (req, res) => {
             });
         }
 
+        const _chatT0 = Date.now();
         const chatTimeout = setTimeout(() => {
             if (!res.headersSent) res.status(504).json({ ok: false, reply: "Request timed out. Please try again." });
         }, 25000);
@@ -1267,6 +1268,24 @@ app.post("/chat", requireAppAccess, ...kernelChain, async (req, res) => {
         // Start gateway context fetch in parallel with doc search — joins before prompt build
         const _chatGwPromise = _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 1500, taskId: req.conversationId }).catch(() => null);
 
+        // Step 2.4: Top opportunities — fetch in parallel, skip for conversational
+        const _wordCount = userMessage.trim().split(/\s+/).length;
+        const _chatOppPromise = _wordCount > 6
+            ? require('./lib/intelligence/opportunity-engine').getTopOpportunities(3).catch(() => [])
+            : Promise.resolve([]);
+
+        // Step 2.2: Executive council — only for strategic queries (>20 words + intent keywords)
+        const _isStrategic = _wordCount > 20
+            && /plan|strategy|strateg|decision|priorit|business|revenue|growth|invest|roadmap|goal|focus|next.*step|what.*should/i.test(userMessage);
+        const _EXEC_ROLE_MAP = { finance: 'cfo', technology: 'cto', legal: 'clo', growth: 'cgo', strategy: 'cso', operations: 'coo' };
+        const _execRole = _isStrategic ? (_EXEC_ROLE_MAP[detectDomain(userMessage)] || 'cso') : null;
+        const _chatExecPromise = _execRole
+            ? Promise.race([
+                require('./lib/cognitive/runtime').consultExecutive(_execRole, userMessage.slice(0, 300), { taskId: req.conversationId }).catch(() => null),
+                new Promise(r => setTimeout(() => r(null), 3000)),
+              ])
+            : Promise.resolve(null);
+
         // Skip document search for short conversational messages — saves latency and tokens
         const _needsDocs = userMessage.split(/\s+/).length > 6
             || /file|note|doc|save|search|find|wrote|read|creat|upload|what.*said|remind/i.test(userMessage);
@@ -1296,12 +1315,31 @@ ${preview}
         // Await gateway context (was fetching in parallel with doc search and selfCtx)
         const _chatGatewayCtx = _isConversational ? null : await _chatGwPromise;
 
+        // Step 2.1: Cognitive directive (non-fatal; only for >15-word messages)
+        const _chatCogDirective = _isConversational ? null
+            : await require('./lib/cognitive/chat-cognitive-layer').getDirective(userMessage, _chatGatewayCtx).catch(() => null);
+
+        // Step 2.4: Resolve top opportunities
+        const _chatTopOpps = await _chatOppPromise;
+
+        // Step 2.2: Resolve executive verdict
+        const _chatExecVerdict = await _chatExecPromise;
+
         // Domain specialist detection — mirrors voice-chat line 1838
         const _chatDomainSlug = detectDomain(userMessage);
         const _chatDomainAgent = _chatDomainSlug ? _DOMAIN_AGENTS[_chatDomainSlug] : null;
 
+        // Build enriched gateway context block (opportunities + executive verdict)
+        const _chatEnrichedCtx = _chatGatewayCtx ? { ..._chatGatewayCtx } : {};
+        if (_chatTopOpps?.length) {
+            _chatEnrichedCtx._top_opportunities = _chatTopOpps.slice(0, 3).map(o => `• ${o.title} (score ${Math.round((o.composite_score||0)*100)}/100)`).join('\n');
+        }
+        if (_chatExecVerdict?.decision || _chatExecVerdict?.rationale) {
+            _chatEnrichedCtx._executive_verdict = `[${(_execRole||'cso').toUpperCase()}] ${_chatExecVerdict.decision || ''}: ${(_chatExecVerdict.rationale||'').slice(0,200)}`;
+        }
+
         // Prompt for fallback SDK path (includes full memory since no historyMessages there)
-        const prompt = buildPrompt(userMessage, memoryText, docsText, selfCtx, _chatGatewayCtx);
+        const prompt = buildPrompt(userMessage, memoryText, docsText, selfCtx, _chatEnrichedCtx);
 
         if (mastraAgents && mastraAgents.apexAgent) {
             // Last 3 turns as structured conversation history — avoids re-sending them in prompt text
@@ -1314,7 +1352,8 @@ ${preview}
                 .map(m => `[${m.role.toUpperCase()}] ${m.message}`).join('\n');
             const mastraPrompt = [
                 _chatDomainAgent ? `SPECIALIST CONTEXT — ${_chatDomainAgent.name.toUpperCase()}:\n${_chatDomainAgent.system_prompt}` : null,
-                buildPrompt(userMessage, _olderMemText, docsText, selfCtx, _chatGatewayCtx),
+                _chatCogDirective ? `COGNITIVE DIRECTIVE: ${_chatCogDirective}` : null,
+                buildPrompt(userMessage, _olderMemText, docsText, selfCtx, _chatEnrichedCtx),
             ].filter(Boolean).join('\n\n---\n\n');
 
             // Route to lightweight agent (9 core tools) unless email/finance/browser/routine needed
@@ -1337,6 +1376,17 @@ ${preview}
             _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode });
             setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'mastra'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
             setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); if ((reply||'').split(/\s+/).length > 20) { require('./lib/memory/consolidation-engine').submit('episode', req.conversationId||`chat-${Date.now()}`, { objective:`Chat: ${userMessage.slice(0,120)}`, success:true, source:'chat_mastra', reply:(reply||'').slice(0,200) }, 25).catch(()=>{}); require('./lib/intelligence/knowledge-validator').submitLesson((reply||'').slice(0,400), { taskId:req.conversationId, sourceType:'observation' }).catch(()=>{}); } });
+            // Step 3.4: Feed meta-reasoning observations so cognitive evolution can track chat quality
+            if (!_isConversational) {
+                setImmediate(() => {
+                    require('./lib/cognitive/meta-reasoning-engine').record(
+                        req.conversationId, null,
+                        { success: true, cost_usd: 0, duration_ms: Date.now() - _chatT0, agent_logs: [] },
+                        { reasoning_mode: _chatCogDirective ? (_chatCogDirective.match(/REASONING MODE: (\w+)/)?.[1] || 'ANALYTICAL') : 'ANALYTICAL' },
+                        null
+                    ).catch(() => {});
+                });
+            }
             return res.status(200).json({
                 ok: true,
                 reply,
@@ -4367,11 +4417,14 @@ app.get('/api/cognitive/report', requireAppAccess, async (req, res) => {
     }
 });
 
-// Civilization runtime status — isRunning, cycle count, last cycle summary
-app.get('/api/admin/civilization-status', requireAppAccess, (req, res) => {
+// Civilization runtime status — isRunning, cycle count, last health snapshot
+app.get('/api/admin/civilization-status', requireAppAccess, async (req, res) => {
     try {
         const civRuntime = require('./lib/intelligence/civilization-runtime');
-        res.json({ ok: true, isRunning: civRuntime.isRunning(), cycleCount: civRuntime.getCycleCount() });
+        const sb = require('./lib/clients').getSupabaseClient();
+        const { data: snap } = await sb.from('civilization_health_snapshots')
+            .select('score,classification').order('created_at', { ascending: false }).limit(1).single().catch(() => ({ data: null }));
+        res.json({ ok: true, isRunning: civRuntime.isRunning(), cycleCount: civRuntime.getCycleCount(), lastHealth: snap?.score ?? null, lastClassification: snap?.classification ?? null });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
     }
