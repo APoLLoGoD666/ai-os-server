@@ -26,6 +26,19 @@ async function runDailyBriefing(pgPool) {
       console.warn('[daily-briefing] notion tasks:', e.message);
     }
 
+    // Fetch latest civilisation score (non-fatal)
+    let civilisationScore = null;
+    try {
+      const { getSupabaseClient } = require('../../lib/clients');
+      const { data: cs } = await getSupabaseClient()
+        .from('civilisation_scores')
+        .select('score, scored_at')
+        .order('scored_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      civilisationScore = cs?.score ?? null;
+    } catch (_) {}
+
     // Post to Slack
     await slackBriefings.postDailyBriefing({
       date,
@@ -35,6 +48,7 @@ async function runDailyBriefing(pgPool) {
       apiSpend: data.apiSpend,
       topPriorities,
       healthScore: data.healthScore,
+      civilisationScore,
       voiceSessions: data.voiceSessions,
       activeProjects: data.activeProjects,
     });

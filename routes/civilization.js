@@ -392,4 +392,80 @@ router.post('/civilization/reality/tick', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// ─── Civilisation Score ────────────────────────────────────────────────────────
+
+router.get('/civilization/score/latest', _auth, async (req, res) => {
+  try {
+    const { data, error } = await _sb()
+      .from('civilisation_scores')
+      .select('*')
+      .order('scored_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return res.status(500).json({ ok: false, error: error.message });
+    res.json({ ok: true, score: data || null });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/civilization/score/domains', _auth, async (req, res) => {
+  try {
+    // Latest score per domain (subquery via Supabase: order + limit per domain)
+    const { data, error } = await _sb()
+      .from('domain_scores')
+      .select('domain, score, inputs, taken_at')
+      .gte('taken_at', new Date(Date.now() - 7 * 86400000).toISOString())
+      .order('taken_at', { ascending: false })
+      .limit(70); // 7 domains × 10 days safety margin
+    if (error) return res.status(500).json({ ok: false, error: error.message });
+    // Deduplicate to latest per domain
+    const latest = {};
+    for (const row of (data || [])) {
+      if (!latest[row.domain]) latest[row.domain] = row;
+    }
+    res.json({ ok: true, domains: Object.values(latest) });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/civilization/score/history', _auth, async (req, res) => {
+  try {
+    const days = Math.min(parseInt(req.query.days || '30'), 90);
+    const { data, error } = await _sb()
+      .from('civilisation_scores')
+      .select('scored_at, score, breakdown')
+      .gte('scored_at', new Date(Date.now() - days * 86400000).toISOString())
+      .order('scored_at', { ascending: true });
+    if (error) return res.status(500).json({ ok: false, error: error.message });
+    res.json({ ok: true, history: data || [] });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.post('/civilization/score/compute', _auth, async (req, res) => {
+  try {
+    const { computeAndStore } = require('../lib/civilization/domain-scorer');
+    const result = await computeAndStore();
+    res.json({ ok: true, ...result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ─── Admission Rules ───────────────────────────────────────────────────────────
+
+router.get('/civilization/admission/rules', _auth, async (req, res) => {
+  try {
+    const { status } = req.query;
+    let q = _sb().from('admission_rules').select('*').order('component');
+    if (status) q = q.eq('status', status);
+    const { data, error } = await q;
+    if (error) return res.status(500).json({ ok: false, error: error.message });
+    res.json({ ok: true, rules: data || [] });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.post('/civilization/admission/evaluate', _auth, async (req, res) => {
+  try {
+    const { evaluateAll } = require('../lib/civilization/admission-engine');
+    const result = await evaluateAll();
+    res.json({ ok: true, ...result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;

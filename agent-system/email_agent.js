@@ -139,6 +139,23 @@ async function checkEmails() {
 
             if (!saved) continue;
 
+            // Durable event spine write + in-memory bus emit
+            const _now = new Date().toISOString();
+            try {
+                const { writeWithOutbox } = require('../lib/write-with-outbox');
+                await writeWithOutbox(null, {
+                    source:      'gmail',
+                    type:        'email.parsed',
+                    payload:     { sender: email.sender, subject: email.subject, gmail_id: email.gmailId, priority: triage.priority },
+                    natural_key: email.gmailId,
+                    occurred_at: _now,
+                });
+            } catch (_) {}
+            try {
+                const bus = require('../lib/event-bus');
+                bus.emit(bus.E.EMAIL_PARSED, { sender: email.sender, subject: email.subject, occurred_at: _now });
+            } catch (_) {}
+
             if (triage.needs_approval || triage.priority === "urgent") {
                 await pgCreateAgentTask(
                     `Email from ${email.sender}: ${triage.summary || email.subject}`,

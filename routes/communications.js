@@ -128,6 +128,24 @@ async function syncGoogleCalendar() {
 
     console.log(`[Calendar] Synced ${rows.length} events from Google Calendar`);
 
+    // Durable outbox write + in-memory bus emit per event
+    for (const ev of rows) {
+        try {
+            const { writeWithOutbox } = require('../lib/write-with-outbox');
+            await writeWithOutbox(null, {
+                source:      'calendar',
+                type:        'calendar.synced',
+                payload:     { google_event_id: ev.google_event_id, title: ev.title, event_date: ev.event_date },
+                natural_key: ev.google_event_id,
+                occurred_at: new Date().toISOString(),
+            });
+        } catch (_) {}
+        try {
+            const bus = require('../lib/event-bus');
+            bus.emit(bus.E.CALENDAR_EVENT_SYNCED, ev);
+        } catch (_) {}
+    }
+
     // Phase U2: store calendar summary via canonical write pathway (importance gate → gateway)
     setImmediate(() => {
         const _imp     = require('../lib/memory/importance-engine');

@@ -32,7 +32,27 @@ async function runWeeklyReview(pgPool, obsidianUrl, anthropicClient) {
       status: 'Decided',
     }).catch(e => console.warn('[weekly-review] notion decision:', e.message));
 
+    // Fetch civilisation score for the week
+    let civilisationScore = null;
+    let domainBreakdown   = null;
+    try {
+      const { getSupabaseClient } = require('../../lib/clients');
+      const sb = getSupabaseClient();
+      const weekAgoIso = new Date(Date.now() - 7 * 86400000).toISOString();
+      const { data: cs } = await sb.from('civilisation_scores')
+        .select('score, breakdown, scored_at')
+        .gte('scored_at', weekAgoIso)
+        .order('scored_at', { ascending: false })
+        .limit(1).maybeSingle();
+      civilisationScore = cs?.score ?? null;
+      domainBreakdown   = cs?.breakdown ?? null;
+    } catch (_) {}
+
     // 5. Slack summary
+    const domainSummary = domainBreakdown
+      ? Object.entries(domainBreakdown).map(([d, v]) => `${d}: ${v.score}`).join(' · ')
+      : null;
+
     await slackBriefings.postWeeklyReview({
       weekOf,
       wins: synthesis.wins || data.wins || [],
@@ -43,6 +63,8 @@ async function runWeeklyReview(pgPool, obsidianUrl, anthropicClient) {
       healthSummary: data.healthSummary,
       financeSummary: data.financeSummary,
       universitySummary: data.universitySummary,
+      civilisationScore,
+      domainSummary,
       priorities: synthesis.priorities || [],
       lessonsLearned: data.lessons || [],
     });

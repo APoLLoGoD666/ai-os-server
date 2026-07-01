@@ -48,6 +48,20 @@ function init(app, sbAdmin) {
         console.warn('[Services] integrity crons failed (non-fatal):', e.message);
     }
 
+    try {
+        require('../lib/entities/relationship-consumer').register();
+        console.log('[Services] Relationship consumer registered');
+    } catch (e) {
+        console.warn('[Services] relationship consumer failed (non-fatal):', e.message);
+    }
+
+    try {
+        require('../lib/pwa/notification-scheduler').start();
+        console.log('[Services] Push notification scheduler started');
+    } catch (e) {
+        console.warn('[Services] notification scheduler failed (non-fatal):', e.message);
+    }
+
     if (!hasNotion && !hasSlack) {
         console.log('[Services] No integration tokens — Notion+Slack disabled. Add NOTION_API_KEY and SLACK_BOT_TOKEN to Render env vars.');
         return;

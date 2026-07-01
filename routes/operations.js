@@ -208,4 +208,47 @@ router.get('/operations/proposals', _auth, async (req, res) => {
     }
 });
 
+// ── Migration runner ──────────────────────────────────────────────────────────
+// POST /api/operations/migrations/run — apply one migration file by number
+// Requires DATABASE_URL in Render env vars.
+router.post('/operations/migrations/run', _auth, async (req, res) => {
+    const { migration } = req.body || {};
+    if (!migration) return res.status(400).json({ ok: false, error: 'migration number required (e.g. "042")' });
+
+    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('[YOUR-PASSWORD]')) {
+        return res.status(503).json({ ok: false, error: 'DATABASE_URL not configured. Set the real Supabase connection string in Render env vars.' });
+    }
+
+    // Find the migration file
+    const fs   = require('fs');
+    const path = require('path');
+    const dir  = path.join(__dirname, '..', 'migrations');
+    const files = fs.readdirSync(dir).filter(f => f.startsWith(migration) && f.endsWith('.sql'));
+    if (!files.length) return res.status(404).json({ ok: false, error: `No migration file found starting with ${migration}` });
+    const file = files[0];
+
+    const { Pool } = require('pg');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 30000 });
+    try {
+        const sql = fs.readFileSync(path.join(dir, file), 'utf8');
+        await pool.query(sql);
+        await pool.end();
+        res.json({ ok: true, applied: file });
+    } catch (e) {
+        try { await pool.end(); } catch {}
+        res.status(500).json({ ok: false, error: e.message, file });
+    }
+});
+
+// GET /api/operations/migrations/list — list available migration files
+router.get('/operations/migrations/list', _auth, (req, res) => {
+    const fs   = require('fs');
+    const path = require('path');
+    try {
+        const dir   = path.join(__dirname, '..', 'migrations');
+        const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
+        res.json({ ok: true, migrations: files });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;

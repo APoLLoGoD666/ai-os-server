@@ -11,6 +11,7 @@ async function postDailyBriefing(data) {
     apiSpend = 0,
     topPriorities = [],
     healthScore = null,
+    civilisationScore = null,
     voiceSessions = 0,
     activeProjects = 0,
   } = data;
@@ -27,6 +28,7 @@ async function postDailyBriefing(data) {
     ]),
     dividerBlock(),
     sectionBlock(`*Top Priorities:*\n${topPriorities.map((p, i) => `${i + 1}. ${p}`).join('\n') || '— none set'}`),
+    ...(civilisationScore != null ? [sectionBlock(`*Civilisation Score:* ${civilisationScore}/100`)] : []),
     ...(healthScore != null ? [sectionBlock(`*Health Score:* ${healthScore}/100`)] : []),
     contextBlock(`Generated at ${new Date().toLocaleTimeString()} · APEX AI OS`),
   ];
@@ -45,6 +47,8 @@ async function postWeeklyReview(data) {
     healthSummary = '',
     financeSummary = '',
     universitySummary = '',
+    civilisationScore = null,
+    domainSummary = null,
     priorities = [],
     lessonsLearned = [],
   } = data;
@@ -64,6 +68,7 @@ async function postWeeklyReview(data) {
     ...(healthSummary ? [sectionBlock(`*Health:*\n${healthSummary}`)] : []),
     ...(financeSummary ? [sectionBlock(`*Finance:*\n${financeSummary}`)] : []),
     ...(universitySummary ? [sectionBlock(`*University:*\n${universitySummary}`)] : []),
+    ...(civilisationScore != null ? [sectionBlock(`*Civilisation Score:* ${civilisationScore}/100${domainSummary ? `\n${domainSummary}` : ''}`)] : []),
     ...(lessonsLearned.length ? [sectionBlock(`*Lessons Learned:*\n${lessonsLearned.map(l => `• ${l}`).join('\n')}`)] : []),
     dividerBlock(),
     sectionBlock(`*Next Week Priorities:*\n${priorities.map((p, i) => `${i + 1}. ${p}`).join('\n') || '— not set'}`),
