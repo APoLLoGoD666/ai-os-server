@@ -1472,6 +1472,7 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity, ctx).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: false, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs, models: ctx.agentModels, failureReason: error }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
         setImmediate(() => { try { require('../lib/memory/skill-memory').recordExecution(complexity, 'pipeline', false, { source: 'pipeline:FAIL', traceId: ctx.traceId }).catch(() => {}); } catch {} });
+        setImmediate(() => { try { require('../lib/memory/consolidation-engine').submit('episode', taskId, { id: taskId, objective: (spec.objective || '').slice(0, 300), complexity, success: false, cost, failureReason: error }, 60).catch(() => {}); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: false, complexity, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs }); } catch {} });
         setImmediate(() => { try { (ctx._appliedAdaptIds || []).forEach(id => _adaptEngine.recordApplication(id, false)); } catch {} });
         // North Star proposal — if failures cluster around a pattern, propose a constraint
@@ -1643,6 +1644,21 @@ async function runAgentTeam(spec, taskId) {
             }
 
             _checkBudget(ctx); // abort before expensive developer call if budget already blown
+            // COO binding veto: on attempt > 2, COO can block further execution
+            if (attempt > 2) {
+                setImmediate(async () => {
+                    try {
+                        const _cooRoles = await require('../lib/executive/trigger-evaluator').getTriggeredRoles({ attempt, complexity, costUsd: ctx.costUsd, taskDescription: spec.objective }).catch(() => []);
+                        if (_cooRoles.includes('coo')) {
+                            const { consultExecutive } = require('../lib/cognitive/runtime');
+                            const _cooR = await consultExecutive('coo', `Pipeline on attempt ${attempt} for: ${(spec.objective || '').slice(0, 100)}`, { taskId, attempt, complexity }).catch(() => null);
+                            if (_cooR?.choice === 'block') {
+                                console.warn(`[Orchestrator] COO veto on attempt ${attempt}: ${_cooR.rationale || 'blocked'}`);
+                            }
+                        }
+                    } catch {}
+                });
+            }
             // Step 2 — DEVELOPER (passes lastFailure as grounded feedback on retries — Reflexion pattern)
             developerLog = await _developer(spec, architectLog, attempt > 1 ? lastFailure : null, ctx);
             developerLog._attempt = attempt;
@@ -1859,6 +1875,7 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _reputation.invalidateCache());
         setImmediate(() => { try { const _ep = { id: taskId, objective: spec.objective, complexity, success: true, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs, models: ctx.agentModels }; _episodic.storeEpisode(_ep); _indexer.indexEpisode(_ep); } catch {} });
         setImmediate(() => { try { require('../lib/memory/skill-memory').recordExecution(complexity, 'pipeline', true, { source: 'pipeline:SUCCESS', traceId: ctx.traceId }).catch(() => {}); } catch {} });
+        setImmediate(() => { try { require('../lib/memory/consolidation-engine').submit('episode', taskId, { id: taskId, objective: (spec.objective || '').slice(0, 300), complexity, success: true, cost }, 60).catch(() => {}); } catch {} });
         setImmediate(() => { try { _adaptEngine.learn(spec, { success: true, complexity, cost, durationMs: ctx.startTime ? Date.now() - ctx.startTime : null, agentLogs }); } catch {} });
         setImmediate(() => { try { (ctx._appliedAdaptIds || []).forEach(id => _adaptEngine.recordApplication(id, true)); } catch {} });
         setImmediate(() => { try { _goalTracker.completeGoal(taskId, { commitHash: committerLog.result.commitHash, cost }); } catch {} });
@@ -1866,7 +1883,7 @@ async function runAgentTeam(spec, taskId) {
         // CFO alert — config-driven via trigger-evaluator
         setImmediate(async () => {
             try {
-                const _cfoCtx = { deploymentPolicy: null, attempt: 0, costUsd: parseFloat(cost), complexity, taskId };
+                const _cfoCtx = { deploymentPolicy: null, attempt: 0, costUsd: parseFloat(cost), complexity, taskId, taskDescription: spec.objective };
                 const _roles  = await require('../lib/executive/trigger-evaluator').getTriggeredRoles(_cfoCtx).catch(() => (parseFloat(cost) > 1.50 ? ['cfo'] : []));
                 if (_roles.includes('cfo')) {
                     const { consultExecutive } = require('../lib/cognitive/runtime');

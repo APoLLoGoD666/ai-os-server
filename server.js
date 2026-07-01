@@ -27,15 +27,12 @@ function _sinkError(label, err) {
     _errBuffer.push(entry);
     if (_errBuffer.length > 20) _errBuffer.shift();
     if (!process.env.SENTRY_DSN) {
-        // Deferred write — sbAdmin may not be ready yet at startup
+        // Deferred write — sbAdmin is the module-level singleton (defined at line 113);
+        // setImmediate fires after module init so sbAdmin is guaranteed to be set.
         setImmediate(() => {
             try {
-                const { createClient } = require('@supabase/supabase-js');
-                const _sb = process.env.SUPABASE_URL
-                    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || '')
-                    : null;
-                if (_sb) {
-                    _sb.from('apex_notifications').insert({
+                if (sbAdmin) {
+                    sbAdmin.from('apex_notifications').insert({
                         id: `err-${Date.now()}`,
                         message: `[${label}] ${msg}`,
                         type: 'error',
@@ -89,8 +86,9 @@ const _timingEng   = require('./lib/response-timing-engine');
 const _pcm         = require('./lib/persistent-cognition-manager');
 const _eae         = require('./lib/executive-arbitration-engine');
 const _spe         = require('./lib/strategic-planning-engine');
-const _gateway     = require('./lib/memory/gateway');
-const _wm          = require('./lib/memory/working-memory');
+const _gateway        = require('./lib/memory/gateway');
+const _wm             = require('./lib/memory/working-memory');
+const _sessionTracker = require('./lib/temporal/session-tracker');
 const { embedText } = require('./lib/embed');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
 const { DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
@@ -1254,11 +1252,16 @@ app.post("/chat", requireAppAccess, ...kernelChain, async (req, res) => {
 
         // ── Domain routing: uses full memory+tools loop below ─────────────────
 
-        const memory = await loadMemory();
+        const [memory, _temporal] = await Promise.all([
+            loadMemory(),
+            _sessionTracker.getSessionContext(req.conversationId).catch(() => null),
+        ]);
 
-        const memoryText = memory.length
+        const _memBase = memory.length
             ? memory.slice(-5).map(m => `[${m.role.toUpperCase()}]${m.time ? ` (${timeAgo(m.time)})` : ""} ${m.message}`).join("\n")
             : "";
+        const _temporalLine = _temporal ? `[APEX TEMPORAL CONTEXT] ${_sessionTracker.formatForPrompt(_temporal)}\n\n` : '';
+        const memoryText = _temporalLine + _memBase;
         // Skip document search for short conversational messages — saves latency and tokens
         const _needsDocs = userMessage.split(/\s+/).length > 6
             || /file|note|doc|save|search|find|wrote|read|creat|upload|what.*said|remind/i.test(userMessage);
@@ -1295,7 +1298,7 @@ ${preview}
                 content: m.message
             }));
             // Only send memory older than what's in historyMessages to avoid duplication
-            const _olderMemText = memory.slice(0, -3)
+            const _olderMemText = (_temporalLine || '') + memory.slice(0, -3)
                 .map(m => `[${m.role.toUpperCase()}] ${m.message}`).join('\n');
             const mastraPrompt = buildPrompt(userMessage, _olderMemText, docsText, selfCtx);
 
@@ -1318,6 +1321,7 @@ ${preview}
             _eae.recordTransition({ sessionId: req.conversationId });
             _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode });
             setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'mastra'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+            setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); });
             return res.status(200).json({
                 ok: true,
                 reply,
@@ -1362,6 +1366,7 @@ ${preview}
         _eae.recordTransition({ sessionId: req.conversationId });
         _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _sdkIntent, mode: _sdkMode });
         setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'sdk'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+        setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); });
 
         return res.status(200).json({
             ok: true,
@@ -1782,7 +1787,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         // _isGreeting: Alex context only, 3s timeout cap (pgLoadFacts can hang)
         // full path: all 7 sources in parallel
         const _wikiReader = (() => { try { return require('./agent-system/wiki-reader'); } catch { return null; } })();
-        let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', lcMemCtx = '', lcRagCtx = '', gatewayCtx = null;
+        let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', lcMemCtx = '', lcRagCtx = '', gatewayCtx = null, _voiceTemporal = null;
         if (_isConversational) {
             // zero context — fastest possible path
         } else if (_isGreeting) {
@@ -1791,7 +1796,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                 new Promise(r => setTimeout(() => r(''), 3000))
             ]).catch(() => '');
         } else {
-            [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx, gatewayCtx] = await Promise.all([
+            [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx, gatewayCtx, _voiceTemporal] = await Promise.all([
                 getMemorySummary().catch(() => ''),
                 formatRecentMemory().catch(() => ''),
                 buildAlexContext().catch(() => ''),
@@ -1800,6 +1805,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                 lcMemory.getContext(userMessage).catch(() => ''),
                 lcRag.retrieveContext(userMessage).catch(() => ''),
                 _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 2000, taskId: req.conversationId }).catch(() => null),
+                _sessionTracker.getSessionContext(req.conversationId).catch(() => null),
             ]);
             // Phase U2 Phase 5: write current conversation to working memory (TTL 2h)
             setImmediate(() => _wm.set(req.conversationId || 'voice', 'current_conversation', { message: userMessage, at: new Date().toISOString() }, { source: 'voice_chat', ttlSeconds: 7200 }).catch(() => {}));
@@ -1850,6 +1856,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                     caller: 'voice_chat',
                     maxTokens: _isConversational ? 45 : 200,
                     system: [
+                        _voiceTemporal ? `TEMPORAL CONTEXT: ${_sessionTracker.formatForPrompt(_voiceTemporal)}` : '',
                         enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
                         alexContext,
                         gatewayCtx?.lessons?.length ? `LESSONS LEARNED:\n${gatewayCtx.lessons.slice(0, 3).map(l => `• ${l.content}`).join('\n')}` : '',
@@ -1897,6 +1904,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         // Save this exchange to memory asynchronously — never block the response
         setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'voice', 'exchange'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
+        setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('voice', 'conversation', true, { source: 'voice_chat' }).catch(() => {}); });
 
         // LangChain memory — persist conversation with summary compression
         setImmediate(() => lcMemory.addExchange(userMessage, reply).catch(() => {}));
