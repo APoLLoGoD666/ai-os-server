@@ -4329,6 +4329,44 @@ app.post('/api/governance/apply-migration-005', requireAppAccess, async (req, re
     }
 });
 
+// Deep health check — subsystem-level; use for Render monitoring + ops dashboards
+app.get('/health/deep', requireAppAccess, async (req, res) => {
+    const t = Date.now();
+    const checks = {};
+    try {
+        const { getSupabaseClient } = require('./lib/clients');
+        const sb = getSupabaseClient();
+        const { error } = await sb.from('apex_notifications').select('id', { head: true, count: 'exact' });
+        checks.supabase = { ok: !error, latency_ms: Date.now() - t };
+    } catch (e) { checks.supabase = { ok: false, error: e.message }; }
+    try {
+        const t2 = Date.now();
+        const gwCtx = await _gateway.getContext({ description: 'health check', requestingEntity: 'api_client', tokenBudget: 100, taskId: 'health' }).catch(() => null);
+        checks.gateway = { ok: !!gwCtx, latency_ms: Date.now() - t2 };
+    } catch (e) { checks.gateway = { ok: false, error: e.message }; }
+    try {
+        const civRuntime = require('./lib/intelligence/civilization-runtime');
+        checks.civilization = { ok: true, isRunning: civRuntime.isRunning(), cycleCount: civRuntime.getCycleCount() };
+    } catch (e) { checks.civilization = { ok: false, error: e.message }; }
+    const allOk = Object.values(checks).every(c => c.ok);
+    res.status(allOk ? 200 : 207).json({ ok: allOk, latency_ms: Date.now() - t, checks });
+});
+
+// Weekly cognitive intelligence report
+app.get('/api/cognitive/report', requireAppAccess, async (req, res) => {
+    try {
+        const reporter = require('./lib/cognitive/reporting/intelligence-evolution-reporter');
+        const period = req.query.period || 'weekly';
+        const fn = period === 'monthly' ? reporter.generateMonthlyReport
+                 : period === 'quarterly' ? reporter.generateQuarterlyReport
+                 : reporter.generateWeeklyReport;
+        const report = await fn();
+        res.json({ ok: true, period, report });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // Civilization runtime status — isRunning, cycle count, last cycle summary
 app.get('/api/admin/civilization-status', requireAppAccess, (req, res) => {
     try {
