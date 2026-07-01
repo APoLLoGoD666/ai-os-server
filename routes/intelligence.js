@@ -308,7 +308,8 @@ router.get('/intelligence/self-check', requireAppAccess, async (req, res) => {
     res.json({
         ok: allOk,
         status: allOk ? 'healthy' : 'degraded',
-        score: `${score}%`,
+        score,
+        score_pct: `${score}%`,
         issues,
         checks,
         latency_ms: Date.now() - t0,
