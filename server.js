@@ -4655,6 +4655,23 @@ require('./routes/gemini-live').attach(server, {
     anthropicClient:  client,
 });
 
+// Wire reality loop — observational closure on every completed pipeline run
+// Receives AGENT_COMPLETED, runs drift attribution, emits Control Plane feedback.
+// No execution authority — pure truth ingestion. Toggle via REALITY_LOOP_ENABLED=true.
+if (process.env.REALITY_LOOP_ENABLED === 'true') {
+    const _realityLoop = require('./lib/reality/reality_loop');
+    _bus.on(_bus.E.AGENT_COMPLETED, ({ task_id, elapsed_ms, ok }) => {
+        setImmediate(() => {
+            _realityLoop.process({
+                execution_result:       { task_id, success: !!ok, duration_ms: elapsed_ms ?? 0 },
+                control_plane_snapshot: { allowed: true },
+                external_signals:       null,
+            }).catch(() => {});
+        });
+    });
+    console.log('[RealityLoop] wired — listening for AGENT_COMPLETED');
+}
+
 // Wire civilization loop → agent pipeline
 // civilization-runtime PHASE 5 emits this when an opportunity passes the anti-goal gate
 _bus.on('civilization:opportunity:execute', ({ opportunityId, objective, route }) => {
