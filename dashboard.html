@@ -12364,7 +12364,7 @@ async function apexDoLogin(){
   btn.disabled=true;btn.textContent='Signing in…';err.style.display='none';
   try{
     var r=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw}),credentials:'include'});
-    if(r.ok){localStorage.setItem('apex_app_key',pw);window.location.href='/';}
+    if(r.ok){localStorage.setItem('apex_app_key',pw);document.getElementById('apexLoginOverlay').style.display='none';}
     else{err.style.display='block';btn.disabled=false;btn.textContent='Sign in';}
   }catch(e){err.style.display='block';btn.disabled=false;btn.textContent='Sign in';}
 }
