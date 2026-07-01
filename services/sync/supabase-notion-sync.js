@@ -3,14 +3,12 @@
 // Bidirectional synchronization engine: Supabase ↔ Notion
 // Idempotent, checkpointed, conflict-resolved
 
-const { createClient } = require('@supabase/supabase-js');
+const { getSupabaseClient } = require('../../lib/clients');
 
 // Checkpoint store (in-memory, survives restarts via Supabase)
 const CHECKPOINT_TABLE = 'apex_sync_checkpoints';
 
-function _sb() {
-    return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
+function _sb() { return getSupabaseClient(); }
 
 async function _getCheckpoint(key) {
     try {
