@@ -226,6 +226,7 @@ router.post('/voice-chat', _auth, async (req, res) => {
         if (res.headersSent) return;
         return res.status(200).json({ ok: true, reply });
     } catch (error) {
+        clearTimeout(vcTimeout);
         console.error('VOICE CHAT ERROR:', error);
         if (res.headersSent) return;
         return res.status(error?.status || 500).json({
