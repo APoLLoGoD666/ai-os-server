@@ -1782,58 +1782,6 @@ app.get("/icon-512.png", (req, res) => {
     res.set("Content-Type", "image/png").set("Cache-Control", "public, max-age=604800").send(_icon512);
 });
 
-app.post("/api/speak", requireAppAccess, async (req, res) => {
-    try {
-        const text = String(req.body?.text || "").trim();
-        if (!text) return res.status(400).json({ ok: false, reply: "No text provided." });
-
-        const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
-        if (!apiKey) return res.status(500).json({ ok: false, reply: "GOOGLE_API_KEY not configured." });
-
-        const voiceName = 'Orus';
-        const t0 = Date.now();
-        const gRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text }] }],
-                    generationConfig: {
-                        responseModalities: ['AUDIO'],
-                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } }
-                    }
-                })
-            }
-        );
-        if (!gRes.ok) {
-            const errText = await gRes.text().catch(() => '');
-            console.error(`[Speak] Gemini error ${gRes.status}:`, errText.slice(0, 200));
-            return res.status(502).json({ ok: false, reply: `Gemini TTS failed: ${gRes.status}` });
-        }
-        const json = await gRes.json();
-        const inlineData = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-        if (!inlineData?.data) return res.status(502).json({ ok: false, reply: 'No audio in Gemini response' });
-
-        const pcm = Buffer.from(inlineData.data, 'base64');
-        const wav = Buffer.alloc(44 + pcm.length);
-        wav.write('RIFF', 0); wav.writeUInt32LE(36 + pcm.length, 4); wav.write('WAVE', 8);
-        wav.write('fmt ', 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
-        wav.writeUInt32LE(24000, 24); wav.writeUInt32LE(48000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
-        wav.write('data', 36); wav.writeUInt32LE(pcm.length, 40); pcm.copy(wav, 44);
-
-        console.log(`[Speak] Gemini TTS ${Date.now() - t0}ms · ${wav.length}B · voice:${voiceName}`);
-        res.setHeader("Content-Type", "audio/wav");
-        res.setHeader("Content-Length", String(wav.length));
-        return res.send(wav);
-    } catch (error) {
-        console.error("[Speak] unexpected error:", error.message, error.stack);
-        if (!res.headersSent) return res.status(500).json({ ok: false, reply: error.message || "Speak failed." });
-        return res.end();
-    }
-});
-
-
 // APEX tools extracted to lib/apex-tools.js
 
 app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
@@ -2117,56 +2065,6 @@ app.post("/api/transcribe", requireAppAccess, multerUpload.single("audio"), asyn
     }
 });
 
-app.post('/api/tts', requireAppAccess, async (req, res) => {
-    try {
-        const text = (req.body?.text || '').trim();
-        if (!text) return res.status(400).json({ error: 'No text provided' });
-
-        const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
-        if (!apiKey) return res.status(503).json({ error: 'GOOGLE_API_KEY not configured' });
-
-        const voiceName = 'Orus';
-        const t0 = Date.now();
-        const gRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text }] }],
-                    generationConfig: {
-                        responseModalities: ['AUDIO'],
-                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } }
-                    }
-                })
-            }
-        );
-        if (!gRes.ok) {
-            const errText = await gRes.text().catch(() => '');
-            console.error('[TTS] Gemini error:', gRes.status, errText.slice(0, 200));
-            return res.status(502).json({ error: 'TTS failed', detail: errText.slice(0, 200) });
-        }
-        const json = await gRes.json();
-        const inlineData = json?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-        if (!inlineData?.data) return res.status(502).json({ error: 'No audio in Gemini response' });
-
-        const pcm = Buffer.from(inlineData.data, 'base64');
-        const wav = Buffer.alloc(44 + pcm.length);
-        wav.write('RIFF', 0); wav.writeUInt32LE(36 + pcm.length, 4); wav.write('WAVE', 8);
-        wav.write('fmt ', 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
-        wav.writeUInt32LE(24000, 24); wav.writeUInt32LE(48000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
-        wav.write('data', 36); wav.writeUInt32LE(pcm.length, 40); pcm.copy(wav, 44);
-
-        res.set('Content-Type', 'audio/wav');
-        res.set('Content-Length', String(wav.length));
-        res.set('Cache-Control', 'no-store');
-        res.send(wav);
-        console.log(`[TTS] Gemini ${Date.now() - t0}ms · ${wav.length}B · voice:${voiceName} · "${text.substring(0, 50)}"`);
-    } catch (err) {
-        console.error('[TTS] error:', err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
 
 app.post("/api/mastra/run", requireAppAccess, async (req, res) => {
     try {
@@ -4708,6 +4606,25 @@ server.listen(PORT, () => {
             console.log('[Startup] Adaptation cycle cleanup complete');
         } catch (e) {
             console.warn('[Startup] Adaptation cycle cleanup failed (non-fatal):', e.message);
+        }
+    });
+
+    // Recover agent tasks left in_progress by a previous crashed deploy
+    setImmediate(async () => {
+        try {
+            const cutoff = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+            const { data: stuck } = await sbAdmin.from('apex_tasks')
+                .select('id, title')
+                .eq('status', 'in_progress')
+                .gt('created_at', cutoff);
+            if (stuck?.length) {
+                console.log(`[Startup] Recovering ${stuck.length} in-progress task(s) from previous deploy`);
+                for (const task of stuck) {
+                    _agentQueue.enqueue(task.id, () => _startAutoPipeline(task.id), { label: task.title || task.id });
+                }
+            }
+        } catch (e) {
+            console.warn('[Startup] Task recovery failed (non-fatal):', e.message);
         }
     });
 
