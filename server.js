@@ -1351,7 +1351,13 @@ ${preview}
 
         // Domain specialist detection — mirrors voice-chat line 1838
         const _chatDomainSlug = detectDomain(userMessage);
-        const _chatDomainAgent = _chatDomainSlug ? _DOMAIN_AGENTS[_chatDomainSlug] : null;
+        let _chatDomainAgent = _chatDomainSlug ? _DOMAIN_AGENTS[_chatDomainSlug] : null;
+        // F2: skip specialist if skill confidence < 0.4 (domain not yet mastered)
+        if (_chatDomainAgent && _chatDomainSlug) {
+            const _sra = require('./lib/cognitive/skill-routing-advisor');
+            const _chatSkillConf = await _sra.getConfidence(_chatDomainSlug).catch(() => 0.5);
+            if (_chatSkillConf < 0.4) _chatDomainAgent = null;
+        }
 
         // Build enriched gateway context block (opportunities + executive verdict)
         const _chatEnrichedCtx = _chatGatewayCtx ? { ..._chatGatewayCtx } : {};
@@ -1419,6 +1425,12 @@ ${preview}
                         null
                     ).catch(() => {});
                 });
+                // B5: trigger cognitive evolution every 100 substantive chat exchanges
+                _chatCountSinceEvolution++;
+                if (_chatCountSinceEvolution >= 100) {
+                    _chatCountSinceEvolution = 0;
+                    setImmediate(() => { require('./lib/cognitive/cognitive-evolution-engine').runEvolutionCycle().catch(() => {}); });
+                }
             }
             return res.status(200).json({
                 ok: true,
@@ -1936,7 +1948,13 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
 
         // Domain agent routing — inject specialist context into tool-use loop
         const _domainSlug = detectDomain(userMessage);
-        const _domainAgent = _domainSlug ? _DOMAIN_AGENTS[_domainSlug] : null;
+        let _domainAgent = _domainSlug ? _DOMAIN_AGENTS[_domainSlug] : null;
+        // F2: skip specialist if skill confidence < 0.4
+        if (_domainAgent && _domainSlug) {
+            const _sra = require('./lib/cognitive/skill-routing-advisor');
+            const _vcSkillConf = await _sra.getConfidence(_domainSlug).catch(() => 0.5);
+            if (_vcSkillConf < 0.4) _domainAgent = null;
+        }
         if (_domainAgent) console.log(`[LATENCY] +${Date.now() - t0}ms domain: ${_domainAgent.name}`);
         let finalReply = '';
 
@@ -4490,6 +4508,108 @@ app.post('/api/governance/run-cycle', requireAppAccess, async (req, res) => {
     }
 });
 
+// A1: Cron-triggered civilization cycle (called by Render cron)
+app.post('/api/cron/civilization', requireCronAccess, async (req, res) => {
+    try {
+        const civRuntime = require('./lib/intelligence/civilization-runtime');
+        const result = await civRuntime.runOnce();
+        res.json({ ok: true, result });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// A3: civilization-status extended — includes last 5 cycle audit rows
+app.get('/api/admin/civilization-status-v2', requireAppAccess, async (req, res) => {
+    try {
+        const civRuntime = require('./lib/intelligence/civilization-runtime');
+        const sb = require('./lib/clients').getSupabaseClient();
+        const [snapRes, cycleRes] = await Promise.allSettled([
+            sb.from('civilization_health_snapshots').select('score,classification').order('created_at', { ascending: false }).limit(1).single(),
+            sb.from('civilization_cycle_log').select('cycle_id,started_at,completed_at,health_score,phases,cycle_cost_usd').order('started_at', { ascending: false }).limit(5),
+        ]);
+        const snap   = snapRes.status   === 'fulfilled' ? snapRes.value.data   : null;
+        const cycles = cycleRes.status  === 'fulfilled' ? (cycleRes.value.data || []) : [];
+        res.json({ ok: true, isRunning: civRuntime.isRunning(), cycleCount: civRuntime.getCycleCount(), lastHealth: snap?.score ?? null, lastClassification: snap?.classification ?? null, recentCycles: cycles });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// D3: improvement queue inspection endpoint
+app.get('/api/admin/improvements/queue', requireAppAccess, async (req, res) => {
+    try {
+        const gov = require('./lib/intelligence/improvement-governor');
+        const [review, governance, autoQ, summary] = await Promise.all([
+            gov.getPendingReview(),
+            gov.getPendingGovernance(),
+            gov.getPendingAutoQueue ? gov.getPendingAutoQueue() : Promise.resolve([]),
+            gov.getSummary(),
+        ]);
+        res.json({ ok: true, review, governance, auto_queue: autoQ, summary });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// E2: recent executive verdicts
+app.get('/api/executive/verdicts', requireAppAccess, async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit || '10', 10), 50);
+        const sb = require('./lib/clients').getSupabaseClient();
+        const { data, error } = await sb.from('executive_verdicts')
+            .select('id,task_id,role,decision,rationale,confidence,created_at')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+        if (error) throw error;
+        res.json({ ok: true, verdicts: data || [] });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// G3: cron execution history
+app.get('/api/cron/history', requireAppAccess, async (req, res) => {
+    try {
+        const days = Math.min(parseInt(req.query.days || '7', 10), 30);
+        const since = new Date(Date.now() - days * 86_400_000).toISOString();
+        const sb = require('./lib/clients').getSupabaseClient();
+        const { data, error } = await sb.from('cron_run_log')
+            .select('id,job_name,started_at,duration_ms,status,error')
+            .gte('started_at', since)
+            .order('started_at', { ascending: false })
+            .limit(100);
+        if (error) throw error;
+        res.json({ ok: true, days, runs: data || [] });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// G4: memory layer stats
+app.get('/api/memory/stats', requireAppAccess, async (req, res) => {
+    try {
+        const sb = require('./lib/clients').getSupabaseClient();
+        const [pgMem, lessons, semantic, kg] = await Promise.allSettled([
+            sb.from('memory').select('id', { count: 'exact', head: true }),
+            sb.from('apex_lessons').select('id', { count: 'exact', head: true }),
+            sb.from('semantic_memories').select('id', { count: 'exact', head: true }),
+            sb.from('knowledge_nodes').select('id', { count: 'exact', head: true }),
+        ]);
+        res.json({
+            ok: true,
+            layers: {
+                pg_memory:        pgMem.status      === 'fulfilled' ? (pgMem.value.count      || 0) : null,
+                apex_lessons:     lessons.status    === 'fulfilled' ? (lessons.value.count    || 0) : null,
+                semantic_memories: semantic.status  === 'fulfilled' ? (semantic.value.count  || 0) : null,
+                knowledge_nodes:  kg.status         === 'fulfilled' ? (kg.value.count         || 0) : null,
+            },
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 app.use((req, res) => {
     res.status(404).json({
         ok: false,
@@ -4509,6 +4629,7 @@ app.use((err, req, res, next) => {
 });
 
 let _lastPipelineActivity = Date.now();
+let _chatCountSinceEvolution = 0; // B5: trigger cognitive evolution every 100 non-conversational chats
 
 const server = require("http").createServer(app);
 // Render's load balancer uses 75s idle timeout; set Node's keepAlive below that to avoid 502s
