@@ -590,6 +590,10 @@ function _serveDashboard(req, res) {
 }
 app.get('/', requireAuth, _serveDashboard);
 app.get('/dashboard.html', requireAuth, _serveDashboard);
+app.get('/login', (req, res) => {
+    const { LOGIN_HTML } = require('./lib/middleware');
+    res.send(LOGIN_HTML);
+});
 app.get('/sw.js', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.sendFile(path.join(__dirname, 'public', 'sw.js'));
@@ -610,7 +614,9 @@ app.post('/auth/login', (req, res) => {
     const pwBuf = Buffer.from(password || '');
     const correctBuf = Buffer.from(correctPw);
     if (!password || pwBuf.length !== correctBuf.length || !crypto.timingSafeEqual(pwBuf, correctBuf)) {
-        return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
+        const wantsJsonErr = (req.headers['content-type'] || '').includes('application/json');
+        if (wantsJsonErr) return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
+        return res.redirect(302, '/login?error=1');
     }
     const token = jwt.sign({ apex: true, sub: 'apex-user' }, secret, { expiresIn: '7d' });
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
@@ -627,7 +633,10 @@ app.post('/auth/login', (req, res) => {
         sameSite: 'Lax',
         maxAge: 7 * 24 * 60 * 60 * 1000
     });
-    return res.json({ ok: true });
+    const wantsJson = (req.headers['content-type'] || '').includes('application/json');
+    if (wantsJson) return res.json({ ok: true });
+    // Native form POST — browser handles cookie persistence and redirect (fixes iOS PWA WebKit bug)
+    return res.redirect(302, '/');
 });
 
 app.post('/auth/logout', (req, res) => {
