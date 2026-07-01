@@ -1920,7 +1920,6 @@ async function runAgentTeam(spec, taskId) {
         });
         _cleanup();
         const cost = ctx.costUsd.toFixed(5);
-        memory.logLesson(`Task ${taskId} failed: ${err.message}`, { taskId, traceId: ctx.traceId });
         setImmediate(() => _reflector(spec, agentLogs, false, taskId, ctx.traceId, ctx).catch(e => console.warn('[Orchestrator] reflector error:', e.message)));
         setImmediate(() => _auditLog(taskId, spec, false, agentLogs, cost, complexity, ctx).catch(e => console.warn('[Orchestrator] auditLog error:', e.message)));
         if (ctx.runtimeControls?.feedbackLoop) {
