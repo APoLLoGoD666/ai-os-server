@@ -1,8 +1,8 @@
-const CACHE = "apex-v10";
-const SHELL = ["/dashboard.html", "/manifest.json"];
+const CACHE = "apex-v11";
+const SHELL = ["/dashboard.html", "/manifest.json", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", e => {
-    e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
+    e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(() => {})));
     self.skipWaiting();
 });
 
@@ -17,13 +17,9 @@ self.addEventListener("activate", e => {
 
 self.addEventListener("fetch", e => {
     const url = new URL(e.request.url);
-
-    // API calls, non-GET, and cross-origin (localhost health probes etc) — let browser handle directly
     if (e.request.method !== "GET") return;
-    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return;
     if (url.pathname.startsWith("/api/") || url.pathname === "/chat") return;
 
-    // Shell (root + dashboard.html) — network first, cache fallback
     if (url.pathname === '/' || url.pathname.includes('dashboard.html')) {
         e.respondWith(
             fetch(e.request)
@@ -39,8 +35,37 @@ self.addEventListener("fetch", e => {
         return;
     }
 
-    // Static assets — cache first, network fallback
     e.respondWith(
         caches.match(e.request).then(cached => cached || fetch(e.request))
+    );
+});
+
+// ── Push notifications ────────────────────────────────────────────────────────
+
+self.addEventListener("push", e => {
+    let data = { title: "APEX", body: "", icon: "/icon-192.png", url: "/dashboard.html" };
+    try { if (e.data) data = { ...data, ...e.data.json() }; } catch {}
+
+    e.waitUntil(
+        self.registration.showNotification(data.title, {
+            body:    data.body,
+            icon:    data.icon || "/icon-192.png",
+            badge:   "/icon-192.png",
+            vibrate: [200, 100, 200],
+            data:    { url: data.url || "/dashboard.html" },
+            actions: [{ action: "open", title: "Open APEX" }],
+        })
+    );
+});
+
+self.addEventListener("notificationclick", e => {
+    e.notification.close();
+    const url = e.notification.data?.url || "/dashboard.html";
+    e.waitUntil(
+        clients.matchAll({ type: "window", includeUncontrolled: true }).then(wins => {
+            const existing = wins.find(w => w.url.includes("dashboard.html") && "focus" in w);
+            if (existing) return existing.focus();
+            return clients.openWindow(url);
+        })
     );
 });
