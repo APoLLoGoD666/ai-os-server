@@ -94,18 +94,8 @@ const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system
 const { DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
 const { kernelChain } = require('./lib/kernel');
 
-// ── LangChain modules — lazy-loaded on first voice-chat to avoid startup RSS hit
-let lcMemory = { getContext: async () => '', addExchange: async () => {}, clearMemory: async () => {} };
-let lcRag    = { retrieveContext: async () => '' };
-let _lcLoaded = false;
-async function _ensureLCLoaded() {
-    if (_lcLoaded) return;
-    _lcLoaded = true;
-    try { lcMemory = require('./agent-system/langchain-memory'); console.log('[LC] memory loaded'); }
-    catch (e) { console.warn('[LC] memory load failed:', e.message); }
-    try { lcRag = require('./agent-system/langchain-rag'); console.log('[LC] rag loaded'); }
-    catch (e) { console.warn('[LC] rag load failed:', e.message); }
-}
+// LangChain memory removed — gateway layer 2 + formatRecentMemory() provide equivalent context
+// without the separate apex_lc_sessions table write path
 // ─────────────────────────────────────────────────────────────────────────────
 
 const sbAdmin = require('./lib/clients').getSupabaseClient();
@@ -1865,8 +1855,6 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         const t0 = Date.now();
         console.log("[LATENCY] +0ms request received");
 
-        // Lazy-load LangChain on first request — avoids startup RSS hit
-        _ensureLCLoaded().catch(() => {});
 
         const userMessage = rawMessage.trim();
 
@@ -1905,7 +1893,7 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         // _isGreeting: Alex context only, 3s timeout cap (pgLoadFacts can hang)
         // full path: all 7 sources in parallel
         const _wikiReader = (() => { try { return require('./agent-system/wiki-reader'); } catch { return null; } })();
-        let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', lcMemCtx = '', lcRagCtx = '', gatewayCtx = null, _voiceTemporal = null;
+        let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', gatewayCtx = null, _voiceTemporal = null;
         if (_isConversational) {
             // zero context — fastest possible path
         } else if (_isGreeting) {
@@ -1917,14 +1905,12 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
                 new Promise(r => setTimeout(() => r(['', null]), 3000))
             ]).catch(() => ['', null]);
         } else {
-            [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx, gatewayCtx, _voiceTemporal] = await Promise.all([
+            [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, gatewayCtx, _voiceTemporal] = await Promise.all([
                 getMemorySummary().catch(() => ''),
                 formatRecentMemory().catch(() => ''),
                 buildAlexContext().catch(() => ''),
                 pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
                 _wikiReader ? _wikiReader.getWikiContext(userMessage).catch(() => '') : Promise.resolve(''),
-                lcMemory.getContext(userMessage).catch(() => ''),
-                lcRag.retrieveContext(userMessage).catch(() => ''),
                 _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 2000, taskId: req.conversationId }).catch(() => null),
                 _sessionTracker.getSessionContext(req.conversationId).catch(() => null),
             ]);
@@ -1944,8 +1930,6 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         // Build enriched context block for system prompt
         const contextParts = [];
         if (wikiCtx)     contextParts.push(`VAULT CONTEXT:\n${wikiCtx}`);
-        if (lcMemCtx)    contextParts.push(`CONVERSATION HISTORY:\n${lcMemCtx}`);
-        if (lcRagCtx)    contextParts.push(`VAULT SEARCH:\n${lcRagCtx}`);
         if (memSummary)  contextParts.push(`MEMORY SUMMARY:\n${memSummary}`);
         if (recentMem)   contextParts.push(`RECENT CONVERSATION:\n${recentMem}`);
         if (docsText)    contextParts.push(`WORKSPACE DOCUMENTS:\n${docsText}`);
@@ -2033,8 +2017,6 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'voice', 'exchange'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
         setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('voice', 'conversation', true, { source: 'voice_chat' }).catch(() => {}); });
 
-        // LangChain memory — persist conversation with summary compression
-        setImmediate(() => lcMemory.addExchange(userMessage, reply).catch(() => {}));
         // Upgrade 1: fire-and-forget fact extraction — never blocks response
         setImmediate(() => extractAndSaveFacts(userMessage, reply).catch(() => {}));
         // Phase 2 — Founder Continuity: observe communication patterns and preferences
