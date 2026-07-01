@@ -6802,7 +6802,7 @@ li, td, th, div.label, div.value { font-size: inherit; }
                     </div>
 
                     <!-- Section 7: Civilization Loop Status -->
-                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden" id="civLoopCard">
+                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden;margin-bottom:0" id="civLoopCard">
                         <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
                             <div style="display:flex;align-items:center;gap:8px">
                                 <div style="width:6px;height:6px;border-radius:50%;background:var(--green)" id="civDot"></div>
@@ -6832,6 +6832,49 @@ li, td, th, div.label, div.value { font-size: inherit; }
                                 <div style="font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Last Phase</div>
                                 <div id="civLastPhase" style="font-size:10px;color:var(--text-mute)">&#8212;</div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 8: Executive Verdicts -->
+                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden">
+                        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span class="ds-dot" style="background:var(--accent)"></span>
+                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Executive Verdicts</span>
+                            </div>
+                            <button class="ds-btn xs" data-fn="refreshExecutiveVerdicts">&#8635;</button>
+                        </div>
+                        <div id="execVerdictsPanel" style="padding:8px 12px;max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+                            <div style="font-size:10px;color:var(--text-faint);padding:12px 0;text-align:center">Loading…</div>
+                        </div>
+                    </div>
+
+                    <!-- Section 9: Memory Layer Stats -->
+                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden">
+                        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span class="ds-dot cyan"></span>
+                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Memory Layers</span>
+                            </div>
+                            <button class="ds-btn xs" data-fn="refreshMemoryStats">&#8635;</button>
+                        </div>
+                        <div id="memStatsPanel" style="padding:8px 16px">
+                            <div style="font-size:10px;color:var(--text-faint);padding:12px 0;text-align:center">Loading…</div>
+                        </div>
+                    </div>
+
+                    <!-- Section 10: Cron History -->
+                    <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden">
+                        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span class="ds-dot" style="background:var(--amber,#f59e0b)"></span>
+                                <span style="font-size:10px;font-weight:500;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-mute)">Cron History</span>
+                                <span style="font-size:9px;color:var(--text-faint)">last 7 days</span>
+                            </div>
+                            <button class="ds-btn xs" data-fn="refreshCronHistory">&#8635;</button>
+                        </div>
+                        <div id="cronHistoryPanel" style="padding:4px 0;max-height:260px;overflow-y:auto">
+                            <div style="font-size:10px;color:var(--text-faint);padding:12px;text-align:center">Loading…</div>
                         </div>
                     </div>
 
@@ -11725,6 +11768,13 @@ refreshRecentRuns();
 setInterval(refreshRecentRuns, 45000);
 refreshLessons();
 setInterval(refreshLessons, 120000);
+// Intelligence panels — load once on init, refresh periodically
+refreshExecutiveVerdicts();
+setInterval(refreshExecutiveVerdicts, 120000);
+refreshMemoryStats();
+setInterval(refreshMemoryStats, 300000);
+refreshCronHistory();
+setInterval(refreshCronHistory, 120000);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
