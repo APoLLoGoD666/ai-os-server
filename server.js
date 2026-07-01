@@ -476,6 +476,28 @@ app.get('/health', async (req, res) => {
     });
 });
 
+app.get('/health/deep', requireAppAccess, async (req, res) => {
+    const components = {};
+    await Promise.allSettled([
+        (async () => {
+            try { await sbAdmin.from('apex_notifications').select('id').limit(1); components.supabase = { ok: true }; }
+            catch (e) { components.supabase = { ok: false, error: e.message }; }
+        })(),
+        (async () => {
+            try { await _gateway.getContext({ tokenBudget: 100, requestingEntity: 'health_check' }); components.gateway = { ok: true }; }
+            catch (e) { components.gateway = { ok: false, error: e.message }; }
+        })(),
+        (async () => {
+            try {
+                const civ = require('./lib/intelligence/civilization-runtime');
+                components.civilization = { ok: true, isRunning: civ.isRunning(), cycleCount: civ.getCycleCount() };
+            } catch (e) { components.civilization = { ok: false, error: e.message }; }
+        })(),
+    ]);
+    const ok = Object.values(components).every(c => c.ok);
+    return res.status(ok ? 200 : 503).json({ ok, components, checkedAt: new Date().toISOString() });
+});
+
 // GET /api/system/health/detailed — unified observability snapshot
 app.get('/api/system/health/detailed', ...kernelChain, async (req, res) => {
     const t0 = Date.now();
@@ -1254,16 +1276,18 @@ app.post("/chat", requireAppAccess, ...kernelChain, async (req, res) => {
 
         // ── Domain routing: uses full memory+tools loop below ─────────────────
 
-        const [memory, _temporal] = await Promise.all([
+        const [memory, _temporal, _wmSummary] = await Promise.all([
             loadMemory(),
             _sessionTracker.getSessionContext(req.conversationId).catch(() => null),
+            _wm.buildContextSummary(req.conversationId).catch(() => ''),
         ]);
 
         const _memBase = memory.length
             ? memory.slice(-5).map(m => `[${m.role.toUpperCase()}]${m.time ? ` (${timeAgo(m.time)})` : ""} ${m.message}`).join("\n")
             : "";
         const _temporalLine = _temporal ? `[APEX TEMPORAL CONTEXT] ${_sessionTracker.formatForPrompt(_temporal)}\n\n` : '';
-        const memoryText = _temporalLine + _memBase;
+        const _wmLine = _wmSummary ? `[SESSION CONTEXT]\n${_wmSummary}\n\n` : '';
+        const memoryText = _wmLine + _temporalLine + _memBase;
 
         // Start gateway context fetch in parallel with doc search — joins before prompt build
         const _chatGwPromise = _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 1500, taskId: req.conversationId }).catch(() => null);
@@ -1376,6 +1400,15 @@ ${preview}
             _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode });
             setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'mastra'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
             setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('./lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); if ((reply||'').split(/\s+/).length > 20) { require('./lib/memory/consolidation-engine').submit('episode', req.conversationId||`chat-${Date.now()}`, { objective:`Chat: ${userMessage.slice(0,120)}`, success:true, source:'chat_mastra', reply:(reply||'').slice(0,200) }, 25).catch(()=>{}); require('./lib/intelligence/knowledge-validator').submitLesson((reply||'').slice(0,400), { taskId:req.conversationId, sourceType:'observation' }).catch(()=>{}); } });
+            // Step 3.6: Persist session semantic state for multi-turn continuity
+            setImmediate(() => {
+                _wm.set(req.conversationId, 'chat_context', {
+                    domain: _chatDomainSlug || null,
+                    executiveFocus: _execRole || null,
+                    cognitiveMode: _chatCogDirective?.match(/REASONING MODE: (\w+)/)?.[1] || null,
+                    lastIntent: userMessage.slice(0, 120),
+                }, { ttlSeconds: 3600, source: 'chat' }).catch(() => {});
+            });
             // Step 3.4: Feed meta-reasoning observations so cognitive evolution can track chat quality
             if (!_isConversational) {
                 setImmediate(() => {
@@ -1857,10 +1890,13 @@ app.post("/api/voice-chat", requireAppAccess, async (req, res) => {
         if (_isConversational) {
             // zero context — fastest possible path
         } else if (_isGreeting) {
-            alexContext = await Promise.race([
-                buildAlexContext(),
-                new Promise(r => setTimeout(() => r(''), 3000))
-            ]).catch(() => '');
+            [alexContext, gatewayCtx] = await Promise.race([
+                Promise.all([
+                    buildAlexContext().catch(() => ''),
+                    _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 500, layers: [0, 2, 10], taskId: req.conversationId }).catch(() => null),
+                ]),
+                new Promise(r => setTimeout(() => r(['', null]), 3000))
+            ]).catch(() => ['', null]);
         } else {
             [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, lcMemCtx, lcRagCtx, gatewayCtx, _voiceTemporal] = await Promise.all([
                 getMemorySummary().catch(() => ''),
@@ -4427,6 +4463,19 @@ app.get('/api/admin/civilization-status', requireAppAccess, async (req, res) => 
         res.json({ ok: true, isRunning: civRuntime.isRunning(), cycleCount: civRuntime.getCycleCount(), lastHealth: snap?.score ?? null, lastClassification: snap?.classification ?? null });
     } catch (e) {
         res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.get('/api/cognitive/report', requireAppAccess, async (req, res) => {
+    try {
+        const period = req.query.period || 'weekly';
+        const reporter = require('./lib/cognitive/reporting/intelligence-evolution-reporter');
+        const fn = { weekly: 'generateWeeklyReport', monthly: 'generateMonthlyReport', quarterly: 'generateQuarterlyReport' }[period];
+        if (!fn) return res.status(400).json({ ok: false, error: 'period must be weekly|monthly|quarterly' });
+        const report = await reporter[fn]();
+        return res.json({ ok: true, period, report });
+    } catch (e) {
+        return res.status(500).json({ ok: false, error: e.message });
     }
 });
 
