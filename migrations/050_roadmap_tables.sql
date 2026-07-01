@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS apex_supplements (
 
 CREATE TABLE IF NOT EXISTS apex_supplement_log (
   id             uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  supplement_id  uuid        REFERENCES apex_supplements(id) ON DELETE CASCADE,
+  supplement_id  text,
   taken_at       timestamptz NOT NULL DEFAULT now()
 );
 
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS apex_habits (
 
 CREATE TABLE IF NOT EXISTS apex_habit_log (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  habit_id    uuid        REFERENCES apex_habits(id) ON DELETE CASCADE,
+  habit_id    bigint      REFERENCES apex_habits(id) ON DELETE CASCADE,
   completed   boolean     NOT NULL DEFAULT true,
   notes       text,
   logged_at   timestamptz NOT NULL DEFAULT now()
