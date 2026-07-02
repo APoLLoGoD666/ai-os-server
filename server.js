@@ -4373,16 +4373,16 @@ server.listen(PORT, () => {
         }
     });
 
-    // Recover agent tasks left in_progress by a previous crashed deploy
+    // Recover agent tasks left in_progress or pending by a previous crashed deploy
     setImmediate(async () => {
         try {
             const cutoff = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
             const { data: stuck } = await sbAdmin.from('apex_tasks')
                 .select('id, title')
-                .eq('status', 'in_progress')
+                .in('status', ['in_progress', 'pending'])
                 .gt('created_at', cutoff);
             if (stuck?.length) {
-                console.log(`[Startup] Recovering ${stuck.length} in-progress task(s) from previous deploy`);
+                console.log(`[Startup] Recovering ${stuck.length} task(s) from previous deploy`);
                 for (const task of stuck) {
                     _agentQueue.enqueue(task.id, () => _startAutoPipeline(task.id), { label: task.title || task.id });
                 }
