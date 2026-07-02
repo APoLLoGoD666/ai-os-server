@@ -1,7 +1,8 @@
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
-markitdown[all]>=0.1.6
-raganything>=0.1.0
-lightrag-hku>=1.3.0
-python-multipart>=0.0.9
 httpx>=0.27.0
+python-multipart>=0.0.9
+pydantic>=2.0.0
+pypdf>=3.0.0
+python-docx>=0.8.11
+numpy>=1.24.0,<2.0

@@ -3,19 +3,16 @@ const router = require('express').Router();
 const { createClient } = require('@supabase/supabase-js');
 const { google } = require('googleapis');
 const _auth = require('../lib/app-auth');
+const _gateway = require('../lib/memory/gateway');
 
-function sb() {
-    return createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-    );
-}
+const _sbClient = (() => { let c; return () => { if (!c) c = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY); return c; }; })();
+function sb() { return _sbClient(); }
 
 async function getGCalClient() {
     const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET } = process.env;
     if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET) return null;
     // Prefer DB-stored token (written by re-auth flow), fall back to env var
-    const { pgGetGmailToken } = require('../pg_helpers');
+    const { pgGetGmailToken } = require('../lib/pg_helpers');
     const dbToken = await pgGetGmailToken().catch(() => null);
     const refreshToken = dbToken || process.env.GMAIL_REFRESH_TOKEN;
     if (!refreshToken) return null;
@@ -26,10 +23,10 @@ async function getGCalClient() {
 
 router.get('/contacts', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_contacts').select('*').order('name', { ascending: true }).limit(50);
-        if (error) return res.json({ ok: true, contacts: [] });
+        const { data, error } = await sb().from('apex_contacts').select('id,name,email,phone,company,created_at').order('name', { ascending: true }).limit(50);
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, contacts: data || [] });
-    } catch (e) { res.json({ ok: true, contacts: [], error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 router.get('/calendar/events', _auth, async (req, res) => {
@@ -39,14 +36,14 @@ router.get('/calendar/events', _auth, async (req, res) => {
         const endDate  = new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
         const { data, error } = await sb()
             .from('apex_calendar_events')
-            .select('*')
+            .select('id,title,event_date,start_time,end_time,all_day,location,status')
             .gte('event_date', today)
             .lte('event_date', endDate)
             .order('event_date', { ascending: true })
             .limit(50);
-        if (error) return res.json({ ok: true, events: [] });
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, events: data || [] });
-    } catch (e) { res.json({ ok: true, events: [], error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // POST /api/calendar/sync — pull events from Google Calendar into apex_calendar_events
@@ -69,14 +66,18 @@ async function syncGoogleCalendar() {
 
     let events = [];
     try {
-        const res = await cal.events.list({
-            calendarId: 'primary',
-            timeMin:    now.toISOString(),
-            timeMax:    maxDate.toISOString(),
-            singleEvents: true,
-            orderBy: 'startTime',
-            maxResults: 100,
-        });
+        const res = await Promise.race([
+            cal.events.list({
+                calendarId: 'primary',
+                timeMin:    now.toISOString(),
+                timeMax:    maxDate.toISOString(),
+                singleEvents: true,
+                orderBy: 'startTime',
+                maxResults: 100,
+                timeout:    15000,
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Google Calendar API timeout (15s)')), 15000)),
+        ]);
         events = res.data.items || [];
     } catch (e) {
         if (/insufficient.*scope|accessNotConfigured|forbidden/i.test(e.message)) {
@@ -114,15 +115,87 @@ async function syncGoogleCalendar() {
     });
 
     if (error) {
-        // No unique constraint on google_event_id — delete future rows and re-insert
-        await client.from('apex_calendar_events').delete().gte('event_date', now.toISOString().split('T')[0]);
+        // No unique constraint on google_event_id — insert new rows first, then remove stale ones
+        const syncStart = new Date().toISOString();
         const { error: insertErr } = await client.from('apex_calendar_events').insert(rows);
         if (insertErr) throw new Error(insertErr.message);
+        // Delete only rows that pre-date this sync (brief duplicates are acceptable, data loss is not)
+        await client.from('apex_calendar_events')
+            .delete()
+            .gte('event_date', now.toISOString().split('T')[0])
+            .lt('created_at', syncStart);
     }
 
     console.log(`[Calendar] Synced ${rows.length} events from Google Calendar`);
+
+    // Durable outbox write + in-memory bus emit per event
+    for (const ev of rows) {
+        try {
+            const { writeWithOutbox } = require('../lib/write-with-outbox');
+            await writeWithOutbox(null, {
+                source:      'calendar',
+                type:        'calendar.synced',
+                payload:     { google_event_id: ev.google_event_id, title: ev.title, event_date: ev.event_date },
+                natural_key: ev.google_event_id,
+                occurred_at: new Date().toISOString(),
+            });
+        } catch (_) {}
+        try {
+            const bus = require('../lib/event-bus');
+            bus.emit(bus.E.CALENDAR_EVENT_SYNCED, ev);
+        } catch (_) {}
+    }
+
+    // Phase U2: store calendar summary via canonical write pathway (importance gate → gateway)
+    setImmediate(() => {
+        const _imp     = require('../lib/memory/importance-engine');
+        const titles   = rows.slice(0, 5).map(r => r.title).join(', ');
+        const content  = `Calendar synced ${rows.length} upcoming events: ${titles}`;
+        const { classification } = _imp.score(content, { source: 'calendar_sync' });
+        if (classification === 'IGNORE') return;
+        const layer = _imp.recommendLayer('calendar_sync', classification);
+        if (!layer) return;
+        _gateway.storeMemory({ layer, source: 'calendar_sync', content, tags: ['calendar', 'schedule'], requestingEntity: 'system' }).catch(() => {});
+    });
+
     return { count: rows.length };
 }
+
+router.post('/calendar/events', _auth, async (req, res) => {
+    try {
+        const { title, event_date, start_time, end_time, location, description, status } = req.body || {};
+        if (!title) return res.status(400).json({ ok: false, error: 'title required' });
+        if (!event_date) return res.status(400).json({ ok: false, error: 'event_date required (YYYY-MM-DD)' });
+        const { data, error } = await sb().from('apex_calendar_events').insert({
+            title,
+            event_date,
+            start_time: start_time || null,
+            end_time: end_time || null,
+            all_day: !start_time,
+            location: location || null,
+            description: description || null,
+            status: status || 'confirmed',
+        }).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, event: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+const _LABEL_PRIORITY = { finance: 3, work: 2, personal: 2, notifications: 1, newsletter: 0 };
+
+router.get('/communications/emails', _auth, async (req, res) => {
+    try {
+        const { data, error } = await sb().from('email_threads')
+            .select('thread_id,subject,sender,snippet,labels,date,is_read')
+            .order('date', { ascending: false }).limit(50);
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        const emails = (data || []).map(e => ({
+            ...e,
+            priority: Math.max(...(e.labels || []).map(l => _LABEL_PRIORITY[l] ?? 0))
+        })).sort((a, b) => b.priority - a.priority || new Date(b.date) - new Date(a.date));
+        res.json({ ok: true, emails });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
 
 module.exports = router;
 module.exports.syncGoogleCalendar = syncGoogleCalendar;

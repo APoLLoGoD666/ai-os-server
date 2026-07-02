@@ -134,7 +134,7 @@ async function ingestAllToVault(memory) {
             const content = await fetchChapter(key);
             if (!content) { failed++; continue; }
             memory.write(
-                `References/CS249R/vol${ch.vol}/${key}.md`,
+                `09 Knowledge/CS249R/vol${ch.vol}/${key}.md`,
                 `# ${ch.title}\n\n` +
                 `*Source: CS249R Machine Learning Systems (Harvard Edge) — https://mlsysbook.ai*\n` +
                 `*Keywords: ${ch.keywords.slice(0, 6).join(', ')}*\n\n${content}`
@@ -146,7 +146,7 @@ async function ingestAllToVault(memory) {
     // Write index note
     const vol1 = entries.filter(([,c]) => c.vol === 1).map(([k,c]) => `- [[vol1/${k}|${c.title}]]`).join('\n');
     const vol2 = entries.filter(([,c]) => c.vol === 2).map(([k,c]) => `- [[vol2/${k}|${c.title}]]`).join('\n');
-    memory.write('References/CS249R/INDEX.md',
+    memory.write('09 Knowledge/CS249R/INDEX.md',
         `# CS249R: Machine Learning Systems\n\n` +
         `*Harvard Edge AI Research Group — https://mlsysbook.ai*\n\n` +
         `> Comprehensive textbook on building, optimizing, and deploying ML systems.\n` +

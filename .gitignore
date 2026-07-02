@@ -1,14 +1,24 @@
 node_modules
 .env
 logs/
+
+# Render API response snapshots — contain live secrets
+render-env-vars.json
+render-env-response.json
 ai_pipeline.db
 local_ai_backups
 local_ai_proposals
-ai_pipeline.db
 get_gmail_token.js
 *.bak
 temp-*
 backups/
+
+# Local MCP config — may contain API tokens, never commit
+.mcp.json
+.claude-session-lock.json
+
+# Claude Code agent worktrees — ephemeral isolation dirs, never commit
+.claude/worktrees/
 
 # Ruflo runtime databases and ephemeral state
 ruvector.db
@@ -23,3 +33,49 @@ ruvector.db
 .claude-flow/learning/
 .claude-flow/daemon-state.json
 .claude-flow/daemon.pid
+
+.env.vault
+.env.backup
+
+# Audit/report artifacts — working notes, not source code
+reports/
+audit/*.md
+FULL_STACK_DUMP.txt
+d.score
+120s
+*.score
+
+# Root-level audit report files
+APEX_*.md
+AUTHORITY_*.md
+AUTH_*.md
+CANONICAL_*.md
+COMPONENT_MAP.md
+DATABASE_CERTIFICATION.md
+DEAD_CODE_*.md
+DEF001_*.md
+DIRECT_PROVIDER_MATRIX.md
+DUAL_EPISODIC_INVESTIGATION.md
+FINAL_CERTIFICATION_REPORT.md
+INTEGRATION_CERTIFICATION.md
+LANGCHAIN_MIGRATION_REPORT.md
+MEMORY_*.md
+MIGRATION_*.md
+MODEL_*.md
+PHASE*.md
+PIPELINE_EVIDENCE.md
+POST_009_BASELINE.md
+REPORT_VALIDATION.md
+ROUTE_*.md
+ROUTING_CERTIFICATION.md
+SCHEDULER_MAP.md
+SECURITY_*.md
+SOURCE_OF_TRUTH_REGISTRY.md
+STABILIZATION_EXECUTION_PLAN.md
+SYSTEM_*.md
+U2_CHANGELOG.md
+U3B_RECOMMENDATION.md
+U4*.md
+WAVE*.md
+WRITE_AUTHORITY_MAP.md
+IMPLEMENTATION*.md
