@@ -29,10 +29,32 @@ function _escapeRegex(str) {
 }
 
 // Cognition-weights loader — 60-min TTL memoization
+// Primary source: Supabase adaptation_cycles.routing_table (survives Render deploys)
+// Fallback: config/cognition-weights.json (local file, empty after fresh deploy)
 let _cwCache = null;
 let _cwLoadedAt = 0;
 const _CW_TTL_MS = 60 * 60 * 1000;
 const _CW_PATH = path.join(ROOT, 'config', 'cognition-weights.json');
+
+async function _refreshCognitionWeightsFromSupabase() {
+    if (!_sb) return;
+    try {
+        const { data } = await _sb.from('adaptation_cycles')
+            .select('routing_table')
+            .not('routing_table', 'is', null)
+            .order('started_at', { ascending: false })
+            .limit(1)
+            .single();
+        if (data?.routing_table) {
+            _cwCache = data.routing_table;
+            _cwLoadedAt = Date.now();
+        }
+    } catch { /* non-fatal — local file fallback remains active */ }
+}
+
+// Populate cache from Supabase on module load (non-blocking)
+setImmediate(() => _refreshCognitionWeightsFromSupabase().catch(() => {}));
+
 function _loadCognitionWeights() {
     if (_cwCache && Date.now() - _cwLoadedAt < _CW_TTL_MS) return _cwCache;
     try {
@@ -41,6 +63,8 @@ function _loadCognitionWeights() {
     } catch {
         _cwCache = { routingOverrides: {} };
     }
+    // Trigger background Supabase refresh on TTL expiry
+    setImmediate(() => _refreshCognitionWeightsFromSupabase().catch(() => {}));
     return _cwCache;
 }
 

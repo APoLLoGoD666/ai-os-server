@@ -3,14 +3,16 @@
 //
 // Data flow:
 //   episodic-memory  ─┐
-//   agent-reputation  ├─▶ 3 analysis passes ─▶ adaptation records ─▶ registry (vault)
+//   agent-reputation  ├─▶ 3 analysis passes ─▶ adaptation records ─▶ registry (vault) + Supabase
 //   dynamic-selector  ─┘                              │
 //   reflection-engine ─────────────────────────────────┘
 //
-// Zero API cost: pure data analysis. No orchestrator internals modified. No DB schema changes.
+// Zero API cost: pure data analysis. No orchestrator internals modified.
+// Supabase persistence: routing_table written to adaptation_cycles after every cycle.
 
 const fs   = require('fs');
 const path = require('path');
+const { getSupabaseClient } = require('../lib/clients');
 
 const _ep    = require('./episodic-memory');
 const _epMem = require('../lib/memory/episodic-memory-pg');
@@ -357,6 +359,7 @@ async function runCycle() {
     const existing = _loadRegistry().adaptations || [];
     const merged   = _merge(existing, fresh);
     _saveRegistry(merged);
+    setImmediate(() => _persistRoutingTable(merged).catch(() => {}));
 
     const active = merged.filter(a => a.active);
     const byType = {};
@@ -472,6 +475,42 @@ function getSnapshot() {
         registryPath: REGISTRY,
         generatedAt: new Date().toISOString(),
     };
+}
+
+// Persist active routing adaptations to Supabase so they survive Render deploys.
+// Inserts a routing_snapshot row into adaptation_cycles with the full routing state.
+// Non-blocking — called via setImmediate from runCycle(); never throws to caller.
+async function _persistRoutingTable(adaptations) {
+    const sb = getSupabaseClient();
+    if (!sb) return;
+    const active = (adaptations || []).filter(a => {
+        if (!a.active) return false;
+        if (new Date(a.expiresAt).getTime() < Date.now()) return false;
+        return true;
+    });
+    const routingState = active.filter(a => a.type === TYPES.ROUTING || a.type === TYPES.MODEL_TIER);
+    const routingTable = {
+        routingOverrides:  {},
+        adaptationState:   routingState,
+        retryStrategies:   active.filter(a => a.type === TYPES.RETRY_STRATEGY).reduce((acc, a) => {
+            acc[a.target] = a.params;
+            return acc;
+        }, {}),
+        updatedAt: new Date().toISOString(),
+        totalActive: active.length,
+    };
+    const cycleId = `rte-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
+    try {
+        await sb.from('adaptation_cycles').insert({
+            cycle_id:     cycleId,
+            cycle_type:   'routing_snapshot',
+            started_at:   new Date().toISOString(),
+            status:       'complete',
+            routing_table: routingTable,
+        });
+    } catch (e) {
+        console.warn('[AdaptationEngine] Supabase routing_table persist failed (non-fatal):', e.message);
+    }
 }
 
 module.exports = {
