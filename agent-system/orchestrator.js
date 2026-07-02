@@ -1579,7 +1579,8 @@ async function runAgentTeam(spec, taskId) {
         }
 
         // Step 0.5 — simulation pass (complex/critical only, zero model cost)
-        if (complexity === 'complex' || complexity === 'critical') {
+        // Set SIMULATION_ENABLED=false to disable without a code change (default: enabled)
+        if ((complexity === 'complex' || complexity === 'critical') && process.env.SIMULATION_ENABLED !== 'false') {
             try {
                 const _tp = require('./task-planner');
                 const _sim = await _tp.decomposeGoal(spec.objective, { simulate: true });
