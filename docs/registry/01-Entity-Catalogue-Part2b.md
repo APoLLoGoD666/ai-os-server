@@ -180,7 +180,7 @@
 | ENT-001088 | CLAUDE.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/CLAUDE.md | Production | HIGH |
 | ENT-001089 | settings.json | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/settings.json | Production | HIGH |
 
-Block 18 capacity: 30 slots. 70 additional agent definitions exist in .claude/agents/; IDs to be assigned in registry v2.
+Block 18 capacity: 30 slots. 71 additional agent definitions assigned in Block 24 (ENT-001208–ENT-001278). All .claude/agents/ files are now fully registered.
 
 ---
 
@@ -320,7 +320,83 @@ Block 18 capacity: 30 slots. 70 additional agent definitions exist in .claude/ag
 | ENT-001206 | sessions (table) | DB | TABLE | Supabase — ARCH-15 §6.5 stateful user session tracking through 8-phase pipeline | Production | HIGH |
 | ENT-001207 | audit_records (table) | DB | TABLE | Supabase — ARCH-15 §6.7 append-only governed state transition log | Production | HIGH |
 
-*ENT-001208 → ENT-001299 reserved for .claude agent definition overflow (Block 18 exhausted at 30 slots; 74+ agents pending v2).*
+*Agent definition overflow — 69 files not fitting in Block 18's 30 slots (ENT-001208 → ENT-001276):*
+
+| ID | Name | Family | Type | Path | Status | Confidence |
+|----|------|--------|------|------|--------|------------|
+| ENT-001208 | agents/browser/browser-agent.yaml | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/browser/browser-agent.yaml | Production | HIGH |
+| ENT-001209 | agents/flow-nexus/authentication.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/authentication.md | Production | HIGH |
+| ENT-001210 | agents/flow-nexus/challenges.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/challenges.md | Production | HIGH |
+| ENT-001211 | agents/flow-nexus/neural-network.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/neural-network.md | Production | HIGH |
+| ENT-001212 | agents/flow-nexus/payments.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/payments.md | Production | HIGH |
+| ENT-001213 | agents/flow-nexus/sandbox.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/sandbox.md | Production | HIGH |
+| ENT-001214 | agents/flow-nexus/swarm.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/swarm.md | Production | HIGH |
+| ENT-001215 | agents/flow-nexus/user-tools.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/user-tools.md | Production | HIGH |
+| ENT-001216 | agents/flow-nexus/workflow.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/workflow.md | Production | HIGH |
+| ENT-001217 | agents/github/code-review-swarm.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/code-review-swarm.md | Production | HIGH |
+| ENT-001218 | agents/github/github-modes.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/github-modes.md | Production | HIGH |
+| ENT-001219 | agents/github/issue-tracker.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/issue-tracker.md | Production | HIGH |
+| ENT-001220 | agents/github/multi-repo-swarm.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/multi-repo-swarm.md | Production | HIGH |
+| ENT-001221 | agents/github/pr-manager.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/pr-manager.md | Production | HIGH |
+| ENT-001222 | agents/github/project-board-sync.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/project-board-sync.md | Production | HIGH |
+| ENT-001223 | agents/github/release-manager.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/release-manager.md | Production | HIGH |
+| ENT-001224 | agents/github/release-swarm.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/release-swarm.md | Production | HIGH |
+| ENT-001225 | agents/github/repo-architect.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/repo-architect.md | Production | HIGH |
+| ENT-001226 | agents/github/swarm-issue.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/swarm-issue.md | Production | HIGH |
+| ENT-001227 | agents/github/swarm-pr.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/swarm-pr.md | Production | HIGH |
+| ENT-001228 | agents/github/sync-coordinator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/sync-coordinator.md | Production | HIGH |
+| ENT-001229 | agents/github/workflow-automation.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/workflow-automation.md | Production | HIGH |
+| ENT-001230 | agents/goal/agent.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/goal/agent.md | Production | HIGH |
+| ENT-001231 | agents/goal/goal-planner.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/goal/goal-planner.md | Production | HIGH |
+| ENT-001232 | agents/optimization/benchmark-suite.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/optimization/benchmark-suite.md | Production | HIGH |
+| ENT-001233 | agents/optimization/load-balancer.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/optimization/load-balancer.md | Production | HIGH |
+| ENT-001234 | agents/optimization/performance-monitor.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/optimization/performance-monitor.md | Production | HIGH |
+| ENT-001235 | agents/optimization/resource-allocator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/optimization/resource-allocator.md | Production | HIGH |
+| ENT-001236 | agents/optimization/topology-optimizer.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/optimization/topology-optimizer.md | Production | HIGH |
+| ENT-001237 | agents/payments/agentic-payments.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/payments/agentic-payments.md | Production | HIGH |
+| ENT-001238 | agents/sona/sona-learning-optimizer.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sona/sona-learning-optimizer.md | Production | HIGH |
+| ENT-001239 | agents/sparc/architecture.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sparc/architecture.md | Production | HIGH |
+| ENT-001240 | agents/sparc/pseudocode.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sparc/pseudocode.md | Production | HIGH |
+| ENT-001241 | agents/sparc/refinement.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sparc/refinement.md | Production | HIGH |
+| ENT-001242 | agents/sparc/specification.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sparc/specification.md | Production | HIGH |
+| ENT-001243 | agents/specialized/spec-mobile-react-native.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/specialized/spec-mobile-react-native.md | Production | HIGH |
+| ENT-001244 | agents/sublinear/consensus-coordinator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sublinear/consensus-coordinator.md | Production | HIGH |
+| ENT-001245 | agents/sublinear/matrix-optimizer.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sublinear/matrix-optimizer.md | Production | HIGH |
+| ENT-001246 | agents/sublinear/pagerank-analyzer.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sublinear/pagerank-analyzer.md | Production | HIGH |
+| ENT-001247 | agents/sublinear/performance-optimizer.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sublinear/performance-optimizer.md | Production | HIGH |
+| ENT-001248 | agents/sublinear/trading-predictor.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sublinear/trading-predictor.md | Production | HIGH |
+| ENT-001249 | agents/swarm/adaptive-coordinator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/swarm/adaptive-coordinator.md | Production | HIGH |
+| ENT-001250 | agents/swarm/hierarchical-coordinator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/swarm/hierarchical-coordinator.md | Production | HIGH |
+| ENT-001251 | agents/swarm/mesh-coordinator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/swarm/mesh-coordinator.md | Production | HIGH |
+| ENT-001252 | agents/templates/automation-smart-agent.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/automation-smart-agent.md | Production | HIGH |
+| ENT-001253 | agents/templates/base-template-generator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/base-template-generator.md | Production | HIGH |
+| ENT-001254 | agents/templates/coordinator-swarm-init.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/coordinator-swarm-init.md | Production | HIGH |
+| ENT-001255 | agents/templates/github-pr-manager.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/github-pr-manager.md | Production | HIGH |
+| ENT-001256 | agents/templates/implementer-sparc-coder.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/implementer-sparc-coder.md | Production | HIGH |
+| ENT-001257 | agents/templates/memory-coordinator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/memory-coordinator.md | Production | HIGH |
+| ENT-001258 | agents/templates/orchestrator-task.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/orchestrator-task.md | Production | HIGH |
+| ENT-001259 | agents/templates/performance-analyzer.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/performance-analyzer.md | Production | HIGH |
+| ENT-001260 | agents/templates/sparc-coordinator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/sparc-coordinator.md | Production | HIGH |
+| ENT-001261 | agents/testing/production-validator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/testing/production-validator.md | Production | HIGH |
+| ENT-001262 | agents/testing/tdd-london-swarm.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/testing/tdd-london-swarm.md | Production | HIGH |
+| ENT-001263 | agents/v3/adr-architect.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/adr-architect.md | Production | HIGH |
+| ENT-001264 | agents/v3/aidefence-guardian.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/aidefence-guardian.md | Production | HIGH |
+| ENT-001265 | agents/v3/claims-authorizer.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/claims-authorizer.md | Production | HIGH |
+| ENT-001266 | agents/v3/collective-intelligence-coordinator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/collective-intelligence-coordinator.md | Production | HIGH |
+| ENT-001267 | agents/v3/ddd-domain-expert.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/ddd-domain-expert.md | Production | HIGH |
+| ENT-001268 | agents/v3/injection-analyst.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/injection-analyst.md | Production | HIGH |
+| ENT-001269 | agents/v3/memory-specialist.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/memory-specialist.md | Production | HIGH |
+| ENT-001270 | agents/v3/performance-engineer.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/performance-engineer.md | Production | HIGH |
+| ENT-001271 | agents/v3/pii-detector.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/pii-detector.md | Production | HIGH |
+| ENT-001272 | agents/v3/reasoningbank-learner.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/reasoningbank-learner.md | Production | HIGH |
+| ENT-001273 | agents/v3/security-architect.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/security-architect.md | Production | HIGH |
+| ENT-001274 | agents/v3/security-architect-aidefence.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/security-architect-aidefence.md | Production | HIGH |
+| ENT-001275 | agents/v3/security-auditor.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/security-auditor.md | Production | HIGH |
+| ENT-001276 | agents/v3/sparc-orchestrator.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/sparc-orchestrator.md | Production | HIGH |
+| ENT-001277 | agents/v3/swarm-memory-manager.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/swarm-memory-manager.md | Production | HIGH |
+| ENT-001278 | agents/v3/v3-integration-architect.md | AGT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/v3-integration-architect.md | Production | HIGH |
+
+*ENT-001279 → ENT-001299 reserved for future agent additions.*
 
 ---
 

@@ -391,11 +391,15 @@ async function civilizationKernel(req, res, next) {
 
         // PHASE 3: Constitutional gate (synchronous, fail-open per gate module)
         let gateResult;
+        const _gateT0 = Date.now();
         try {
             gateResult = gate.evaluate(ctx, _watchdogGateOpts());
         } catch (_) {
             gateResult = { verdict: gate.VERDICT.RESTRICT, risks: ['GATE_ERROR'], riskScore: 0, auditTrail: [], failedOpen: true };
         }
+        // F1: gate latency telemetry — observe P95 for one week; adjust 400ms deadline if needed
+        const _gateDurationMs = Date.now() - _gateT0;
+        if (_gateDurationMs > 100) console.warn(`[kernel] gate latency=${_gateDurationMs}ms verdict=${gateResult.verdict} requestId=${ctx.requestId}`);
 
         // B3: Supplementary ARCH-14 §4.2 rule evaluation
         const archRules = _evaluateArchRules(req, ctx);

@@ -1037,9 +1037,80 @@ Quick lookup surface. Every permanent ID with canonical name and path. Sorted as
 | ENT-001205 | resource_consumption (table) | Supabase — ARCH-15 §6.6 |
 | ENT-001206 | sessions (table) | Supabase — ARCH-15 §6.5 |
 | ENT-001207 | audit_records (table) | Supabase — ARCH-15 §6.7 |
+| ENT-001208 | agents/browser/browser-agent.yaml | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/browser/browser-agent.yaml |
+| ENT-001209 | agents/flow-nexus/authentication.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/authentication.md |
+| ENT-001210 | agents/flow-nexus/challenges.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/challenges.md |
+| ENT-001211 | agents/flow-nexus/neural-network.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/neural-network.md |
+| ENT-001212 | agents/flow-nexus/payments.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/payments.md |
+| ENT-001213 | agents/flow-nexus/sandbox.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/sandbox.md |
+| ENT-001214 | agents/flow-nexus/swarm.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/swarm.md |
+| ENT-001215 | agents/flow-nexus/user-tools.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/user-tools.md |
+| ENT-001216 | agents/flow-nexus/workflow.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/flow-nexus/workflow.md |
+| ENT-001217 | agents/github/code-review-swarm.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/code-review-swarm.md |
+| ENT-001218 | agents/github/github-modes.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/github-modes.md |
+| ENT-001219 | agents/github/issue-tracker.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/issue-tracker.md |
+| ENT-001220 | agents/github/multi-repo-swarm.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/multi-repo-swarm.md |
+| ENT-001221 | agents/github/pr-manager.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/pr-manager.md |
+| ENT-001222 | agents/github/project-board-sync.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/project-board-sync.md |
+| ENT-001223 | agents/github/release-manager.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/release-manager.md |
+| ENT-001224 | agents/github/release-swarm.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/release-swarm.md |
+| ENT-001225 | agents/github/repo-architect.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/repo-architect.md |
+| ENT-001226 | agents/github/swarm-issue.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/swarm-issue.md |
+| ENT-001227 | agents/github/swarm-pr.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/swarm-pr.md |
+| ENT-001228 | agents/github/sync-coordinator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/sync-coordinator.md |
+| ENT-001229 | agents/github/workflow-automation.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/github/workflow-automation.md |
+| ENT-001230 | agents/goal/agent.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/goal/agent.md |
+| ENT-001231 | agents/goal/goal-planner.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/goal/goal-planner.md |
+| ENT-001232 | agents/optimization/benchmark-suite.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/optimization/benchmark-suite.md |
+| ENT-001233 | agents/optimization/load-balancer.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/optimization/load-balancer.md |
+| ENT-001234 | agents/optimization/performance-monitor.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/optimization/performance-monitor.md |
+| ENT-001235 | agents/optimization/resource-allocator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/optimization/resource-allocator.md |
+| ENT-001236 | agents/optimization/topology-optimizer.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/optimization/topology-optimizer.md |
+| ENT-001237 | agents/payments/agentic-payments.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/payments/agentic-payments.md |
+| ENT-001238 | agents/sona/sona-learning-optimizer.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sona/sona-learning-optimizer.md |
+| ENT-001239 | agents/sparc/architecture.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sparc/architecture.md |
+| ENT-001240 | agents/sparc/pseudocode.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sparc/pseudocode.md |
+| ENT-001241 | agents/sparc/refinement.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sparc/refinement.md |
+| ENT-001242 | agents/sparc/specification.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sparc/specification.md |
+| ENT-001243 | agents/specialized/spec-mobile-react-native.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/specialized/spec-mobile-react-native.md |
+| ENT-001244 | agents/sublinear/consensus-coordinator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sublinear/consensus-coordinator.md |
+| ENT-001245 | agents/sublinear/matrix-optimizer.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sublinear/matrix-optimizer.md |
+| ENT-001246 | agents/sublinear/pagerank-analyzer.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sublinear/pagerank-analyzer.md |
+| ENT-001247 | agents/sublinear/performance-optimizer.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sublinear/performance-optimizer.md |
+| ENT-001248 | agents/sublinear/trading-predictor.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/sublinear/trading-predictor.md |
+| ENT-001249 | agents/swarm/adaptive-coordinator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/swarm/adaptive-coordinator.md |
+| ENT-001250 | agents/swarm/hierarchical-coordinator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/swarm/hierarchical-coordinator.md |
+| ENT-001251 | agents/swarm/mesh-coordinator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/swarm/mesh-coordinator.md |
+| ENT-001252 | agents/templates/automation-smart-agent.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/automation-smart-agent.md |
+| ENT-001253 | agents/templates/base-template-generator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/base-template-generator.md |
+| ENT-001254 | agents/templates/coordinator-swarm-init.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/coordinator-swarm-init.md |
+| ENT-001255 | agents/templates/github-pr-manager.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/github-pr-manager.md |
+| ENT-001256 | agents/templates/implementer-sparc-coder.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/implementer-sparc-coder.md |
+| ENT-001257 | agents/templates/memory-coordinator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/memory-coordinator.md |
+| ENT-001258 | agents/templates/orchestrator-task.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/orchestrator-task.md |
+| ENT-001259 | agents/templates/performance-analyzer.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/performance-analyzer.md |
+| ENT-001260 | agents/templates/sparc-coordinator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/templates/sparc-coordinator.md |
+| ENT-001261 | agents/testing/production-validator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/testing/production-validator.md |
+| ENT-001262 | agents/testing/tdd-london-swarm.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/testing/tdd-london-swarm.md |
+| ENT-001263 | agents/v3/adr-architect.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/adr-architect.md |
+| ENT-001264 | agents/v3/aidefence-guardian.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/aidefence-guardian.md |
+| ENT-001265 | agents/v3/claims-authorizer.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/claims-authorizer.md |
+| ENT-001266 | agents/v3/collective-intelligence-coordinator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/collective-intelligence-coordinator.md |
+| ENT-001267 | agents/v3/ddd-domain-expert.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/ddd-domain-expert.md |
+| ENT-001268 | agents/v3/injection-analyst.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/injection-analyst.md |
+| ENT-001269 | agents/v3/memory-specialist.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/memory-specialist.md |
+| ENT-001270 | agents/v3/performance-engineer.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/performance-engineer.md |
+| ENT-001271 | agents/v3/pii-detector.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/pii-detector.md |
+| ENT-001272 | agents/v3/reasoningbank-learner.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/reasoningbank-learner.md |
+| ENT-001273 | agents/v3/security-architect.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/security-architect.md |
+| ENT-001274 | agents/v3/security-architect-aidefence.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/security-architect-aidefence.md |
+| ENT-001275 | agents/v3/security-auditor.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/security-auditor.md |
+| ENT-001276 | agents/v3/sparc-orchestrator.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/sparc-orchestrator.md |
+| ENT-001277 | agents/v3/swarm-memory-manager.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/swarm-memory-manager.md |
+| ENT-001278 | agents/v3/v3-integration-architect.md | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/agents/v3/v3-integration-architect.md |
 
 ---
 
-*Total entities: 1027*
+*Total entities: 1096*
 
 *End of 03 — Canonical Identifiers*
