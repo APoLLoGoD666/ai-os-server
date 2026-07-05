@@ -4062,6 +4062,7 @@ app.post('/api/wiki/consolidate', requireAppAccess, async (req, res) => {
 })();
 
 app.use('/api', require('./routes/tts-gemini'));
+app.use('/api', require('./routes/registry'));
 app.use('/', require('./src/routes/telemetry/index.js')({ requireAppAccess, getStatus: getMastraStatus, errBuffer: _errBuffer, gitSha: GIT_SHA }));
 
 // One-time migration runner — applies migrations/005_level9_governance.sql
