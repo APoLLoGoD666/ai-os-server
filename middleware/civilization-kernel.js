@@ -302,42 +302,53 @@ function _evaluateArchRules(req, ctx) {
 
 // B2: Write mandatory ARCH-14 §4.4 gate record — FAIL-SOFT, never blocks response.
 // Maps to ARCH-15 §6.3 governance_records schema.
-function _writeGateRecord(record) {
-    setImmediate(async () => {
-        try {
-            const sb = _getSb();
-            if (!sb) return;
-            const decision = record.gate_result === 'BLOCK' ? 'BLOCKED' : 'APPROVED';
-            const content  = JSON.stringify({ ...record, ts: new Date().toISOString() });
-            const row = {
-                record_type:             'CONSTITUTIONAL_GATE_EVALUATION',
-                actor_identity_snapshot: record.actor_snapshot || {},
-                action_type:             'GATE_EVALUATION',
-                entity_type:             'REQUEST',
-                request_id:              record.request_id,
-                decision,
-                decision_basis:          record.blocked_by || record.verdict || 'ALLOW',
-                evidence_refs:           record.rule_results ? [record.rule_results] : [],
-                autonomy_level:          record.autonomy_level || 3,
-                has_constitutional_impact: decision === 'BLOCKED',
-                chain_hash:              crypto.createHash('sha256').update(content).digest('hex'),
-                gate_result:             record.gate_result,
-                governance_score:        record.governance_score != null
-                                             ? parseFloat(Number(record.governance_score * 100).toFixed(2))
-                                             : null,
-                verdict:                 record.verdict,
-                risks:                   record.risks || [],
-                rule_results:            record.rule_results ? { rules: record.rule_results } : null,
-            };
-            await sb.from('governance_records').insert(row);
-        } catch (e) {
-            console.warn('[kernel] gate-record write failed:', e.message);
-        }
-    });
+// Returns a Promise that always resolves (never rejects) — FAIL-SOFT.
+// Callers may await for INV-RT3 compliance or call fire-and-forget.
+async function _writeGateRecord(record) {
+    try {
+        const sb = _getSb();
+        if (!sb) return;
+        const decision = record.gate_result === 'BLOCK' ? 'BLOCKED' : 'APPROVED';
+        const content  = JSON.stringify({ ...record, ts: new Date().toISOString() });
+        const row = {
+            record_type:             'CONSTITUTIONAL_GATE_EVALUATION',
+            actor_identity_snapshot: record.actor_snapshot || {},
+            action_type:             'GATE_EVALUATION',
+            entity_type:             'REQUEST',
+            request_id:              record.request_id,
+            decision,
+            decision_basis:          record.blocked_by || record.verdict || 'ALLOW',
+            evidence_refs:           record.rule_results ? [record.rule_results] : [],
+            autonomy_level:          record.autonomy_level || 3,
+            has_constitutional_impact: decision === 'BLOCKED',
+            chain_hash:              crypto.createHash('sha256').update(content).digest('hex'),
+            gate_result:             record.gate_result,
+            governance_score:        record.governance_score != null
+                                         ? parseFloat(Number(record.governance_score * 100).toFixed(2))
+                                         : null,
+            verdict:                 record.verdict,
+            risks:                   record.risks || [],
+            rule_results:            record.rule_results ? { rules: record.rule_results } : null,
+        };
+        await sb.from('governance_records').insert(row);
+    } catch (e) {
+        console.warn('[kernel] gate-record write failed:', e.message);
+    }
+}
+
+// INV-RT3: true when the gate record must be committed before the HTTP response is sent.
+// Applies to state-mutating methods only; excludes health/observability endpoints.
+function _requiresSyncGateWrite(req) {
+    const method = (req.method || '').toUpperCase();
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return false;
+    const p = (req.path || req.url || '').toLowerCase();
+    if (/^\/(health|cron\/health)(\/|$)/.test(p))                              return false;
+    if (/^\/api\/(latency-stats|latency-traces|system\/events)(\/|$)/.test(p)) return false;
+    return true;
 }
 
 // Main middleware — global try/catch ensures next() is always called
-function civilizationKernel(req, res, next) {
+async function civilizationKernel(req, res, next) {
     try {
         // PHASE 1: Initialize context
         const ctx = ec.initializeContext(req);
@@ -402,18 +413,25 @@ function civilizationKernel(req, res, next) {
         ctx.flags.autonomyLevel   = alLevel;
         ctx.flags.archRuleResults = archRules.ruleResults;
 
-        // B2: Mandatory gate audit record (ARCH-14 §4.4) — FAIL-SOFT
-        _writeGateRecord({
-            request_id:      ctx.requestId,
-            actor_snapshot:  ctx.identity || {},
-            gate_result:     gateResult.verdict === gate.VERDICT.DENY ? 'BLOCK' : 'PASS',
+        // B2 / INV-RT3: Mandatory gate audit record (ARCH-14 §4.4).
+        // For state-mutating requests: await so the DB row is committed before next() fires.
+        // For read-only requests: fire-and-forget (no latency impact).
+        const _gateRecordPayload = {
+            request_id:       ctx.requestId,
+            actor_snapshot:   ctx.identity || {},
+            gate_result:      gateResult.verdict === gate.VERDICT.DENY ? 'BLOCK' : 'PASS',
             governance_score: govScore,
-            autonomy_level:  alLevel,
-            blocked_by:      gateResult.verdict === gate.VERDICT.DENY ? (gateResult.risks || [])[0] : null,
-            verdict:         gateResult.verdict,
-            risks:           gateResult.risks || [],
-            rule_results:    archRules.ruleResults,
-        });
+            autonomy_level:   alLevel,
+            blocked_by:       gateResult.verdict === gate.VERDICT.DENY ? (gateResult.risks || [])[0] : null,
+            verdict:          gateResult.verdict,
+            risks:            gateResult.risks || [],
+            rule_results:     archRules.ruleResults,
+        };
+        if (_requiresSyncGateWrite(req)) {
+            await _writeGateRecord(_gateRecordPayload);  // FAIL-SOFT: always resolves
+        } else {
+            _writeGateRecord(_gateRecordPayload);         // fire-and-forget
+        }
 
         ec.hydrateContext(ctx, 'constitution', {
             evaluated:  true,
