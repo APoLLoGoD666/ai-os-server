@@ -189,6 +189,8 @@ async function _callClaude(model, systemPrompt, userContent, maxTokens, role, ct
         system:     [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
         messages:   [{ role: 'user', content: userContent }],
         maxTokens:  maxTokens || 800,
+        traceId:    ctx.traceId,
+        taskId:     ctx.taskId || null,
     });
     _trackCost(res.usage, model, role, ctx);
     return res;
@@ -203,6 +205,8 @@ async function _callWrite(model, systemPrompt, userContent, role, ctx) {
         system:    [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
         messages:  [{ role: 'user', content: userContent }],
         maxTokens: 8096,
+        traceId:   ctx.traceId,
+        taskId:    ctx.taskId || null,
     });
     _trackCost(res.usage, model, role, ctx);
     return res;
@@ -605,6 +609,8 @@ Reply JSON: {"file":"name","passed":bool,"issues":["specific actionable issue"]}
                 messages: [{ role: 'user', content:
                     `SPEC:\n${JSON.stringify(spec, null, 2)}\n\nFILE: ${filename}\n\`\`\`\n${fileContent.slice(0, 4000)}\n\`\`\`` }],
                 maxTokens: 800,
+                traceId:  ctx.traceId,
+                taskId:   ctx.taskId || null,
             });
             _trackCost(response.usage, ctx.agentModels.reviewer, 'REVIEWER', ctx);
             const text = response.content[0]?.text?.trim();
@@ -1073,6 +1079,7 @@ async function runAgentTeam(spec, taskId) {
         startTime:        Date.now(),
         agentTokens:      {},
         traceId:          randomUUID(),
+        taskId,
         paidClient:       process.env.ANTHROPIC_API_KEY
             ? require('../lib/clients').getAnthropicClient()
             : null,
