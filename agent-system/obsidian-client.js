@@ -29,7 +29,12 @@ async function obsidianRead(notePath) {
     }
 }
 
-async function obsidianWrite(notePath, content) {
+// ARCH-13: all Obsidian writes should route through the REFLECTOR agent.
+// Pass source:'REFLECTOR' from reflection-engine.js to suppress this warning.
+async function obsidianWrite(notePath, content, { source } = {}) {
+    if (source !== 'REFLECTOR') {
+        console.warn(`[obsidian-governance] direct write to "${notePath}" bypasses REFLECTOR (caller should route via reflection-engine)`);
+    }
     if (process.env.OBSIDIAN_URL && process.env.OBSIDIAN_API_KEY) {
         const ctrl = new AbortController();
         const _t = setTimeout(() => ctrl.abort(), 5000);

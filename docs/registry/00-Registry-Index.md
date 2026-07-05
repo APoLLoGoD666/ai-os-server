@@ -1,8 +1,8 @@
 # APEX CIVILISATION — CANONICAL ENTITY REGISTRY
 ## 00 · Registry Index
 
-**Registry Version:** 1.0.0
-**Registry Date:** 2026-07-05
+**Registry Version:** 1.1.0
+**Registry Date:** 2026-07-05 (v1.0.0) / 2026-07-05 (v1.1.0 — Block 24 added)
 **Registry Authority:** Chief Cartographer
 **Operating Mode:** STRICT READ ONLY — Identity Only
 **Source of Truth:** This Registry
@@ -87,12 +87,13 @@ IDs are permanent. They are never changed. They are never reused.
 | Block 21 | ENT-001110 → ENT-001129 | Piper TTS Assets |
 | Block 22 | ENT-001130 → ENT-001139 | Middleware Files |
 | Block 23 | ENT-001140 → ENT-001199 | Unknown / Unclassified |
+| Block 24 | ENT-001200 → ENT-001299 | Session v1.1 Additions (migrations 055–058, DB tables, agent overflow) |
 
 ---
 
 ## Registry Construction Date
 
-2026-07-03 through 2026-07-05. Evidence gathered by direct filesystem inspection of `C:/Users/arwwo/Desktop/APEX/Scripts`. Total entities catalogued: 1,019. Registry declared v1.0.0 stable: 2026-07-05.
+2026-07-03 through 2026-07-05. Evidence gathered by direct filesystem inspection of `C:/Users/arwwo/Desktop/APEX/Scripts`. Total entities catalogued: 1,027. Registry declared v1.0.0 stable: 2026-07-05. Block 24 added 2026-07-05 (v1.1.0) to register migrations 055–058 and their four DB tables.
 
 ---
 

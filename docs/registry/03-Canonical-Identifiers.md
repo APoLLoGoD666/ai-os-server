@@ -1029,9 +1029,17 @@ Quick lookup surface. Every permanent ID with canonical name and path. Sorted as
 | ENT-001197 | .swarm/memory.db | C:/Users/arwwo/Desktop/APEX/Scripts/.swarm/memory.db |
 | ENT-001198 | .claude/memory.db | C:/Users/arwwo/Desktop/APEX/Scripts/.claude/memory.db |
 | ENT-001199 | test-data-generator/ | C:/Users/arwwo/Desktop/APEX/Scripts/test-data-generator |
+| ENT-001200 | 055_vault_embeddings_provider.sql | C:/Users/arwwo/Desktop/APEX/Scripts/migrations/055_vault_embeddings_provider.sql |
+| ENT-001201 | 056_governance_records.sql | C:/Users/arwwo/Desktop/APEX/Scripts/migrations/056_governance_records.sql |
+| ENT-001202 | 057_resource_consumption.sql | C:/Users/arwwo/Desktop/APEX/Scripts/migrations/057_resource_consumption.sql |
+| ENT-001203 | 058_arch15_missing_tables.sql | C:/Users/arwwo/Desktop/APEX/Scripts/migrations/058_arch15_missing_tables.sql |
+| ENT-001204 | governance_records (table) | Supabase — ARCH-15 §6.3 |
+| ENT-001205 | resource_consumption (table) | Supabase — ARCH-15 §6.6 |
+| ENT-001206 | sessions (table) | Supabase — ARCH-15 §6.5 |
+| ENT-001207 | audit_records (table) | Supabase — ARCH-15 §6.7 |
 
 ---
 
-*Total entities: 1019*
+*Total entities: 1027*
 
 *End of 03 — Canonical Identifiers*

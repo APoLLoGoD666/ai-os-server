@@ -10,9 +10,9 @@
 
 | Metric | Count |
 |---|---|
-| Total entities catalogued | 1,019 |
-| Total ID slots assigned (including gaps) | ENT-000001 → ENT-001199 |
-| Highest ID assigned | ENT-001199 |
+| Total entities catalogued | 1,027 |
+| Total ID slots assigned (including gaps) | ENT-000001 → ENT-001299 |
+| Highest ID assigned | ENT-001207 |
 | IDs with gaps (unassigned within blocks) | ~180 |
 | Entities with full attribute tables | 9 (Block 01 only) |
 | Entities in compact catalogue rows | 1,010 |
@@ -48,7 +48,8 @@
 | 21 | ENT-001110 → ENT-001121 | Piper TTS Assets | 12 |
 | 22 | ENT-001130 → ENT-001131 | Middleware Files | 2 |
 | 23 | ENT-001140 → ENT-001199 | Overflow & Unclassified | 60 |
-| **TOTAL** | | | **~963** |
+| 24 | ENT-001200 → ENT-001299 | Session v1.1 Additions | 8 |
+| **TOTAL** | | | **~971** |
 
 ---
 
@@ -56,7 +57,7 @@
 
 | Family | Code | Count (approx) |
 |---|---|---|
-| Database | DB | 255 (200 tables + 55 migrations) |
+| Database | DB | 267 (204 tables + 59 migrations + 4 special) |
 | Library / Utility | UTIL / RNT / MEM / KNW / GOV / EXEC | 230+ (Block 07 lib files) |
 | Documentation | DOC | 94 |
 | Configuration | CFG | 75 (env vars + config files + root cfg) |
@@ -106,7 +107,9 @@ The following entities could not be assigned IDs within their designated blocks:
 |---|---|---|
 | lib/ subsystem files (Block 07 exhausted) | ~104 files | First 46 assigned in Block 23; ~58 pending v2 |
 | Database tables (Block 10 exhausted) | ~11 tables | Assigned in Block 23 |
-| Agent definitions (Block 18 partial) | ~70 .claude agents | Pending v2 |
+| Session v1.1 DB tables (governance_records, resource_consumption, sessions, audit_records) | 4 tables | Assigned Block 24: ENT-001204–ENT-001207 |
+| Session v1.1 migrations (055–058) | 4 files | Assigned Block 24: ENT-001200–ENT-001203 |
+| Agent definitions (Block 18 partial) | 74+ .claude agents | Pending v2 — ENT-001208–ENT-001299 reserved |
 | Script files (Block 13 partial) | ~2 scripts | Pending v2 |
 
 ---

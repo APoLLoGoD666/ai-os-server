@@ -305,6 +305,25 @@ Block 18 capacity: 30 slots. 70 additional agent definitions exist in .claude/ag
 
 ---
 
+## BLOCK 24 — Session v1.1 Additions (ENT-001200 → ENT-001299)
+
+*Added 2026-07-05. Block created to accommodate migrations 055–058 and their corresponding DB tables, plus future .claude agent definition overflow.*
+
+| ID | Name | Family | Type | Path | Status | Confidence |
+|----|------|--------|------|------|--------|------------|
+| ENT-001200 | 055_vault_embeddings_provider.sql | DB | SQL | C:/Users/arwwo/Desktop/APEX/Scripts/migrations/055_vault_embeddings_provider.sql | Production | HIGH |
+| ENT-001201 | 056_governance_records.sql | DB | SQL | C:/Users/arwwo/Desktop/APEX/Scripts/migrations/056_governance_records.sql | Production | HIGH |
+| ENT-001202 | 057_resource_consumption.sql | DB | SQL | C:/Users/arwwo/Desktop/APEX/Scripts/migrations/057_resource_consumption.sql | Production | HIGH |
+| ENT-001203 | 058_arch15_missing_tables.sql | DB | SQL | C:/Users/arwwo/Desktop/APEX/Scripts/migrations/058_arch15_missing_tables.sql | Production | HIGH |
+| ENT-001204 | governance_records (table) | DB | TABLE | Supabase — ARCH-15 §6.3 gate audit log; append-only | Production | HIGH |
+| ENT-001205 | resource_consumption (table) | DB | TABLE | Supabase — ARCH-15 §6.6 cost accounting per model invocation; append-only | Production | HIGH |
+| ENT-001206 | sessions (table) | DB | TABLE | Supabase — ARCH-15 §6.5 stateful user session tracking through 8-phase pipeline | Production | HIGH |
+| ENT-001207 | audit_records (table) | DB | TABLE | Supabase — ARCH-15 §6.7 append-only governed state transition log | Production | HIGH |
+
+*ENT-001208 → ENT-001299 reserved for .claude agent definition overflow (Block 18 exhausted at 30 slots; 74+ agents pending v2).*
+
+---
+
 ## Registry v1.0.0 Overflow Notice
 
 The following lib/ subsystem files received IDs in Block 23 (ENT-001140 onward) due to Block 07 slot exhaustion (230-slot limit). Full coverage of all ~334 lib/ files and all overflow database tables will be assigned in registry v2.

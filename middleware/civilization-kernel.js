@@ -9,7 +9,9 @@ const ec         = require('../lib/runtime/execution-context');
 const gate       = require('../lib/runtime/constitutional-gate');
 const goalGraph  = require('../lib/goals/goal-graph');
 const attention  = require('../lib/attention/attention-engine');
-const memGateway = require('../lib/memory/gateway');
+const crypto       = require('crypto');
+const memGateway   = require('../lib/memory/gateway');
+const govStateView = require('../lib/orchestration/governance_global_state_view');
 
 // Kernel request log (backward compat)
 const LOG_FILE   = path.join(__dirname, '../logs/kernel.ndjson');
@@ -25,6 +27,21 @@ function _audit(record) {
 
 const LAYER_EPISODIC = 2;
 const LAYER_DECISION = 7;
+
+// ARCH-14 §3.3 — governance score thresholds by AUTONOMY_LEVEL (0.0–1.0 scale)
+const AL_THRESHOLD = { 1: 0.95, 2: 0.90, 3: 0.75, 4: 0.60, 5: 0.50, 6: 0.40 };
+
+// Rule 4: path patterns that constitute irreversible state destruction
+const DESTRUCTIVE_PATTERNS = ['/drop', '/force-delete', '/hard-delete', '/truncate', '/purge'];
+
+let _sbClient = null;
+function _getSb() {
+    if (_sbClient) return _sbClient;
+    if (!process.env.SUPABASE_URL) return null;
+    const { createClient } = require('@supabase/supabase-js');
+    _sbClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY);
+    return _sbClient;
+}
 
 function _attentionTier(score) {
     if (score >= 0.65) return 'HIGH';
@@ -123,6 +140,9 @@ function _postResponseHook(ctx) {
                 attentionScore:      ctx.attention.score,
                 attentionTier:       ctx.attention.executionHint,
                 tokenBudget:         ctx.flags.effectiveTokenBudget,
+                governanceScore:     ctx.flags.governanceScore    ?? null,
+                autonomyLevel:       ctx.flags.autonomyLevel      ?? 3,
+                archRuleResults:     ctx.flags.archRuleResults    || [],
                 memoryStatus:        'pending',
                 writeVerified:       false,
                 durationMs:          null,
@@ -243,6 +263,79 @@ function _watchdogGateOpts() {
     } catch { return {}; }
 }
 
+// B1: Read live governance score from in-memory state view (synchronous, never throws).
+function _getGovernanceScore() {
+    try { return govStateView.get_cluster_health_report().avg_governance_score ?? null; } catch (_) { return null; }
+}
+
+// B3: ARCH-14 §4.2 supplementary constitutional rule evaluation.
+// Rule 4 — Preserve State; Rule 5 — Human Oversight at AL3.
+function _evaluateArchRules(req, ctx) {
+    const ruleResults = [];
+    let blockedBy = null;
+
+    const urlPath   = (req.path || req.url || '').toLowerCase();
+    const method    = (req.method || '').toUpperCase();
+    const execClass = ctx.identity?.executionClass || 'REFLEX';
+    const hasExec   = execClass === 'EXECUTIVE' || execClass === 'SOVEREIGN';
+
+    // Rule 4 — irreversible state destruction requires EXECUTIVE
+    const isDestructive = method === 'DELETE' && DESTRUCTIVE_PATTERNS.some(p => urlPath.includes(p));
+    if (isDestructive && !hasExec) {
+        ruleResults.push({ rule: 'RULE_4', result: 'FAIL', reason: 'RULE_4_IRREVERSIBLE_STATE_RISK' });
+        blockedBy = 'RULE_4_IRREVERSIBLE_STATE_RISK';
+    } else {
+        ruleResults.push({ rule: 'RULE_4', result: 'PASS' });
+    }
+
+    // Rule 5 — force-terminate requires EXECUTIVE at AL3
+    const needsExec = urlPath.includes('/force-terminate') || urlPath.includes('/force_terminate');
+    if (needsExec && !hasExec) {
+        ruleResults.push({ rule: 'RULE_5', result: 'FAIL', reason: 'RULE_5_APPROVAL_REQUIRED' });
+        if (!blockedBy) blockedBy = 'RULE_5_APPROVAL_REQUIRED';
+    } else {
+        ruleResults.push({ rule: 'RULE_5', result: 'PASS' });
+    }
+
+    return { passed: !blockedBy, blockedBy, ruleResults };
+}
+
+// B2: Write mandatory ARCH-14 §4.4 gate record — FAIL-SOFT, never blocks response.
+// Maps to ARCH-15 §6.3 governance_records schema.
+function _writeGateRecord(record) {
+    setImmediate(async () => {
+        try {
+            const sb = _getSb();
+            if (!sb) return;
+            const decision = record.gate_result === 'BLOCK' ? 'BLOCKED' : 'APPROVED';
+            const content  = JSON.stringify({ ...record, ts: new Date().toISOString() });
+            const row = {
+                record_type:             'CONSTITUTIONAL_GATE_EVALUATION',
+                actor_identity_snapshot: record.actor_snapshot || {},
+                action_type:             'GATE_EVALUATION',
+                entity_type:             'REQUEST',
+                request_id:              record.request_id,
+                decision,
+                decision_basis:          record.blocked_by || record.verdict || 'ALLOW',
+                evidence_refs:           record.rule_results ? [record.rule_results] : [],
+                autonomy_level:          record.autonomy_level || 3,
+                has_constitutional_impact: decision === 'BLOCKED',
+                chain_hash:              crypto.createHash('sha256').update(content).digest('hex'),
+                gate_result:             record.gate_result,
+                governance_score:        record.governance_score != null
+                                             ? parseFloat(Number(record.governance_score * 100).toFixed(2))
+                                             : null,
+                verdict:                 record.verdict,
+                risks:                   record.risks || [],
+                rule_results:            record.rule_results ? { rules: record.rule_results } : null,
+            };
+            await sb.from('governance_records').insert(row);
+        } catch (e) {
+            console.warn('[kernel] gate-record write failed:', e.message);
+        }
+    });
+}
+
 // Main middleware — global try/catch ensures next() is always called
 function civilizationKernel(req, res, next) {
     try {
@@ -257,6 +350,34 @@ function civilizationKernel(req, res, next) {
             authStatus:     'PENDING',
         });
 
+        // B1: Governance score threshold check (ARCH-14 §3.3)
+        const govScore  = _getGovernanceScore();
+        const alLevel   = parseInt(process.env.AUTONOMY_LEVEL || '3', 10);
+        const threshold = AL_THRESHOLD[alLevel] ?? 0.75;
+        if (govScore !== null && govScore < threshold) {
+            ctx.flags.governanceScore = govScore;
+            ctx.flags.autonomyLevel   = alLevel;
+            res.setHeader('X-Apex-Request-Id',  ctx.requestId);
+            res.setHeader('X-Apex-Constitution', gate.VERDICT.DENY);
+            _writeGateRecord({
+                request_id:      ctx.requestId,
+                actor_snapshot:  ctx.identity || {},
+                gate_result:     'BLOCK',
+                governance_score: govScore,
+                autonomy_level:  alLevel,
+                blocked_by:      'GOVERNANCE_SCORE_BELOW_THRESHOLD',
+                verdict:         gate.VERDICT.DENY,
+                risks:           ['GOVERNANCE_SCORE_BELOW_THRESHOLD'],
+                rule_results:    [],
+            });
+            return res.status(403).json({
+                error:     'GOVERNANCE_SCORE_BELOW_THRESHOLD',
+                score:     govScore,
+                threshold,
+                requestId: ctx.requestId,
+            });
+        }
+
         // PHASE 3: Constitutional gate (synchronous, fail-open per gate module)
         let gateResult;
         try {
@@ -264,6 +385,35 @@ function civilizationKernel(req, res, next) {
         } catch (_) {
             gateResult = { verdict: gate.VERDICT.RESTRICT, risks: ['GATE_ERROR'], riskScore: 0, auditTrail: [], failedOpen: true };
         }
+
+        // B3: Supplementary ARCH-14 §4.2 rule evaluation
+        const archRules = _evaluateArchRules(req, ctx);
+        if (!archRules.passed) {
+            gateResult = {
+                verdict:    gate.VERDICT.DENY,
+                risks:      [archRules.blockedBy, ...(gateResult.risks || [])],
+                auditTrail: gateResult.auditTrail || [],
+                riskScore:  gateResult.riskScore  || 0,
+            };
+        }
+
+        // Store for post-hook access
+        ctx.flags.governanceScore = govScore;
+        ctx.flags.autonomyLevel   = alLevel;
+        ctx.flags.archRuleResults = archRules.ruleResults;
+
+        // B2: Mandatory gate audit record (ARCH-14 §4.4) — FAIL-SOFT
+        _writeGateRecord({
+            request_id:      ctx.requestId,
+            actor_snapshot:  ctx.identity || {},
+            gate_result:     gateResult.verdict === gate.VERDICT.DENY ? 'BLOCK' : 'PASS',
+            governance_score: govScore,
+            autonomy_level:  alLevel,
+            blocked_by:      gateResult.verdict === gate.VERDICT.DENY ? (gateResult.risks || [])[0] : null,
+            verdict:         gateResult.verdict,
+            risks:           gateResult.risks || [],
+            rule_results:    archRules.ruleResults,
+        });
 
         ec.hydrateContext(ctx, 'constitution', {
             evaluated:  true,

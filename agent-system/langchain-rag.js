@@ -10,7 +10,7 @@
 const fs   = require("fs");
 const path = require("path");
 const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
-const { embedText } = require("../lib/embed");
+const { embedText, embedTextWithMeta } = require("../lib/embed");
 
 const VAULT_PATH    = process.env.OBSIDIAN_VAULT_PATH
     || path.join("C:\\Users\\arwwo\\Desktop\\AI Scripts\\APEX AI OS");
@@ -203,14 +203,15 @@ async function _embedNewChunks(chunks) {
     for (let i = 0; i < toEmbed.length; i++) {
         const c = toEmbed[i];
         try {
-            const vec = await embedText(`${c.filename || c.source}\n${c.text}`);
-            if (!vec) { _stats.embedErrors++; continue; }
+            const meta = await embedTextWithMeta(`${c.filename || c.source}\n${c.text}`);
+            if (!meta) { _stats.embedErrors++; continue; }
             const { error } = await sb.from('vault_embeddings').upsert({
                 source:     c.source,
                 chunk_hash: c._hash,
                 chunk_text: c.text,
-                embedding:  JSON.stringify(vec),
+                embedding:  JSON.stringify(meta.embedding),
                 mtime:      c.mtime || null,
+                provider:   meta.provider,
             }, { onConflict: 'source,chunk_hash' });
             if (!error) embedded++;
         } catch {}
