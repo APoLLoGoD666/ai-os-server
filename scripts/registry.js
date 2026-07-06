@@ -14,6 +14,8 @@ const twin   = reg.twin;
 const impact = reg.impact;
 const qry         = reg.query;
 const constraints = reg.constraints;
+const prediction  = reg.prediction;
+const temporal    = reg.temporal;
 
 const [,, cmd, ...args] = process.argv;
 
@@ -320,6 +322,114 @@ switch (cmd) {
         break;
     }
 
+    case 'temporal': {
+        const sub = args[0];
+        if (sub === 'diff') {
+            const days = args[1] || '7';
+            console.log(`\nHealth changes in the last ${days} day(s)…\n`);
+            temporal.diff({ days }).then(r => {
+                if (!r.ok) { console.error(`  Error: ${r.error}`); process.exit(1); }
+                console.log(`  Since:   ${r.since}`);
+                console.log(`  Changes: ${r.total_changes}\n`);
+                for (const c of r.changes) {
+                    console.log(`  ${c.entity_id}  ${(c.entity_name || '').slice(0, 35)}`);
+                    for (const t of c.transitions) {
+                        const delta = t.score_delta > 0 ? `+${t.score_delta}` : String(t.score_delta);
+                        console.log(`    ${t.from.padEnd(10)} → ${t.to.padEnd(10)} (Δ${delta})  ${t.recorded_at}`);
+                    }
+                }
+                console.log('');
+            });
+        } else if (sub === 'timeline') {
+            const id    = args[1];
+            const limit = args[2] || '20';
+            if (!id) { console.error('Usage: registry temporal timeline ENT-NNNNNN [limit]'); process.exit(1); }
+            temporal.timeline(id, { limit }).then(r => {
+                if (!r.ok) { console.error(`  Error: ${r.error}`); process.exit(1); }
+                console.log(`\nHealth timeline for ${id}  ${r.entity_name || ''}  (${r.total} snapshots)\n`);
+                for (const h of r.history) {
+                    const score = h.health_score != null ? `score=${h.health_score}` : '';
+                    console.log(`  ${h.recorded_at}  ${h.health_label.padEnd(10)} ${score}`);
+                }
+                console.log('');
+            });
+        } else if (sub === 'trend') {
+            const id = args[1];
+            if (!id) { console.error('Usage: registry temporal trend ENT-NNNNNN'); process.exit(1); }
+            temporal.trend(id).then(r => {
+                if (!r.ok) { console.error(`  Error: ${r.error}`); process.exit(1); }
+                console.log(`\nTrend for ${id}:  ${r.trend}  (slope=${r.slope}, ${r.snapshots} snapshots)\n`);
+                if (r.score_range) {
+                    console.log(`  Score range: ${r.score_range.min} – ${r.score_range.max}  latest: ${r.score_range.latest}`);
+                }
+                console.log('');
+            });
+        } else {
+            console.log('Usage:\n  registry temporal diff [days]          — health label changes\n  registry temporal timeline ENT-NNNNNN  — full history\n  registry temporal trend ENT-NNNNNN     — rising/falling/stable\n');
+        }
+        break;
+    }
+
+    case 'simulate': {
+        const sub = args[0];
+        if (sub === 'migration') {
+            const filename = args[1];
+            if (!filename) { console.error('Usage: registry simulate migration <filename.sql>'); process.exit(1); }
+            console.log(`\nSimulating migration: ${filename}\n`);
+            const r = prediction.simulateMigration(filename);
+            console.log(`  Governed:     ${r.governed}`);
+            console.log(`  Preflight:    ${r.preflight_ok ? '✓ pass' : '✗ fail'}`);
+            console.log(`  Overall Risk: ${r.overall_risk}`);
+            console.log(`  Status:       ${r.header?.status || '—'}`);
+            if (r.warnings.length) {
+                console.log('\n  Warnings:');
+                for (const w of r.warnings) console.log(`    !  ${w}`);
+            }
+            if (r.entity_simulations?.length) {
+                console.log('\n  Entity Impact:');
+                for (const e of r.entity_simulations) {
+                    if (e.error) { console.log(`    ? ${e.id}  ${e.error}`); continue; }
+                    const blast = e.blast_radius ? `blast=${e.blast_radius.total}` : '';
+                    console.log(`    ${e.id}  ${(e.name || '').slice(0, 35).padEnd(36)} [${e.risk}]  health=${e.health?.score}  ${blast}`);
+                }
+            }
+            console.log(`\n  (${r.duration_ms}ms)\n`);
+            if (!r.ok) process.exit(1);
+        } else if (sub === 'entity') {
+            const id = args[1];
+            if (!id) { console.error('Usage: registry simulate entity ENT-NNNNNN [--status VALUE] [--family VALUE]'); process.exit(1); }
+            const changes = {};
+            for (let i = 2; i < args.length; i += 2) {
+                if (args[i] && args[i].startsWith('--')) changes[args[i].slice(2)] = args[i + 1];
+            }
+            if (!Object.keys(changes).length) { console.error('Specify at least one proposed change, e.g. --status DEPRECATED'); process.exit(1); }
+            console.log(`\nSimulating entity change: ${id}  ${JSON.stringify(changes)}\n`);
+            const r = prediction.simulateEntityChange(id, changes);
+            if (!r.ok) { console.error(`  Error: ${r.error}`); process.exit(1); }
+            console.log(`  Entity:  ${r.entity_id}  ${r.entity_name}`);
+            console.log(`  Health:  ${r.health.current.score} (${r.health.current.label})  →  ${r.health.proposed.score} (${r.health.proposed.label})  Δ${r.health.delta > 0 ? '+' : ''}${r.health.delta}`);
+            console.log(`  Risk:    ${r.current_risk}`);
+            console.log(`  Blast:   ${r.blast_radius.total} total (${r.blast_radius.direct} direct)`);
+            if (r.projection_changes.length) {
+                console.log('\n  Projection Changes:');
+                for (const p of r.projection_changes) console.log(`    ${p.projection.padEnd(14)} ${p.from}  →  ${p.to}`);
+            }
+            if (r.at_risk_dependents.length) {
+                console.log('\n  At-Risk Dependents:');
+                for (const d of r.at_risk_dependents.slice(0, 10)) console.log(`    ${d.id}  ${(d.name || '').slice(0, 35)}  [${d.rel_type}]`);
+                if (r.at_risk_dependents.length > 10) console.log(`    … and ${r.at_risk_dependents.length - 10} more`);
+            }
+            if (r.new_constraint_violations.length) {
+                console.log('\n  New Constraint Violations:');
+                for (const v of r.new_constraint_violations) console.log(`    ✗  [${v.severity}]  ${v.rule}  ${v.detail}`);
+            }
+            console.log(`\n  (${r.duration_ms}ms)\n`);
+        } else {
+            console.log('Usage:\n  registry simulate entity ENT-NNNNNN [--status VALUE] [--family VALUE]\n  registry simulate migration <filename.sql>\n');
+        }
+        break;
+    }
+
     case 'constraints': {
         const full = args.includes('--full');
         console.log(`\nEvaluating architectural constraints${full ? ' (full — includes computed rules)' : ''}…\n`);
@@ -400,5 +510,10 @@ Commands:
   query capabilities                    List all registered intents
   query <intent> [--key value ...]     Execute a query intent
   constraints [--full]                  Architectural constraint check (--full for computed rules)
+  simulate entity ENT-NNNNNN [--status VALUE]  Predict impact of entity field changes
+  simulate migration <filename.sql>    Simulate migration: preflight + entity health predictions
+  temporal diff [days]                  Health label changes in the last N days (default 7)
+  temporal timeline ENT-NNNNNN [limit] Full health history for one entity
+  temporal trend ENT-NNNNNN            Score trend: rising / falling / stable
 `);
 }

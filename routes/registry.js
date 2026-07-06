@@ -15,6 +15,8 @@ const twin    = reg.twin;
 const impact  = reg.impact;
 const qry         = reg.query;
 const constraints = reg.constraints;
+const prediction  = reg.prediction;
+const temporal    = reg.temporal;
 
 // GET /api/registry/entity/:id
 router.get('/registry/entity/:id', (req, res) => {
@@ -177,6 +179,38 @@ router.get('/registry/migrations/scan', (req, res) => {
 router.get('/registry/migrations/preflight/:filename', (req, res) => {
     const result = ml.preflight(req.params.filename);
     res.status(result.ok ? 200 : 400).json(result);
+});
+
+// POST /api/registry/simulate/entity  — body: { id, ...proposedChanges }
+router.post('/registry/simulate/entity', (req, res) => {
+    const { id, ...changes } = req.body || {};
+    if (!id) return res.status(400).json({ error: 'id is required' });
+    const result = prediction.simulateEntityChange(id, changes);
+    res.status(result.ok ? 200 : 404).json(result);
+});
+
+// GET /api/registry/simulate/migration/:filename
+router.get('/registry/simulate/migration/:filename', (req, res) => {
+    const result = prediction.simulateMigration(req.params.filename);
+    res.status(result.ok ? 200 : 400).json(result);
+});
+
+// GET /api/registry/temporal/diff?days=7
+router.get('/registry/temporal/diff', async (req, res) => {
+    const result = await temporal.diff({ days: req.query.days });
+    res.status(result.ok ? 200 : 503).json(result);
+});
+
+// GET /api/registry/temporal/timeline/:id?limit=50
+router.get('/registry/temporal/timeline/:id', async (req, res) => {
+    const result = await temporal.timeline(req.params.id, { limit: req.query.limit });
+    res.status(result.ok ? 200 : 503).json(result);
+});
+
+// GET /api/registry/temporal/trend/:id?snapshots=30
+router.get('/registry/temporal/trend/:id', async (req, res) => {
+    const result = await temporal.trend(req.params.id, { snapshots: req.query.snapshots });
+    res.status(result.ok ? 200 : 503).json(result);
 });
 
 // GET /api/registry/constraints?full=true
