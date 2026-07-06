@@ -16,6 +16,7 @@ const qry         = reg.query;
 const constraints = reg.constraints;
 const prediction  = reg.prediction;
 const temporal    = reg.temporal;
+const caps        = reg.capabilities;
 
 const [,, cmd, ...args] = process.argv;
 
@@ -322,6 +323,89 @@ switch (cmd) {
         break;
     }
 
+    case 'capability': {
+        const sub = args[0];
+
+        if (!sub || sub === 'status') {
+            // System-wide capability status report
+            console.log('\nCapability Status Report\n' + '─'.repeat(55));
+            const report = caps.fullReport();
+            const s = report.summary;
+            console.log(`  Operational: ${s.operational}  Degraded: ${s.degraded}  Down: ${s.down}  Total: ${s.total}\n`);
+            const STATUS_ICON = { OPERATIONAL: '●', DEGRADED: '!', DOWN: '✗', UNKNOWN: '?' };
+            const CRIT_COLOR  = { CRITICAL: '◈◈', HIGH: '◈', MEDIUM: '!', LOW: '·', MINIMAL: '·' };
+            for (const c of report.capabilities) {
+                const icon = STATUS_ICON[c.status] || '?';
+                const crit = CRIT_COLOR[c.criticality] || '';
+                console.log(`  ${icon}  ${c.name.padEnd(28)} [${c.criticality}${crit ? ' ' + crit : ''}]  ${c.status}`);
+                if (c.issues.length) {
+                    for (const iss of c.issues.slice(0, 3)) {
+                        console.log(`       ${iss.id}  ${(iss.name || '').slice(0,30)}  [${iss.strength}]  ${iss.health}`);
+                    }
+                }
+            }
+            console.log('');
+
+        } else if (sub === 'degradation') {
+            const id = args[1];
+            if (!id) { console.error('Usage: registry capability degradation ENT-NNNNNN'); process.exit(1); }
+            const entity = eng.lookup(id);
+            console.log(`\nCapability Degradation — ${id}  ${entity ? entity.name : '(unknown)'}\n`);
+            const result = caps.degradationFrom(id);
+            if (!result.affected.length) {
+                console.log('  No capabilities are affected by this entity.\n');
+            } else {
+                const SEV_ICON = { CRITICAL: '◈◈', HIGH: '◈', MEDIUM: '!', LOW: '·', MINIMAL: '·' };
+                console.log(`  Worst severity: ${result.worst_severity}  |  ${result.affected_count} capability(ies) affected\n`);
+                for (const a of result.affected) {
+                    const icon = SEV_ICON[a.severity] || '?';
+                    console.log(`  ${icon}  ${a.name.padEnd(30)} [${a.criticality}]  →  Severity: ${a.severity}  [${a.strength} dep]`);
+                    console.log(`       Reason: ${a.reason}`);
+                }
+                console.log('');
+            }
+
+        } else if (sub === 'list') {
+            console.log('\nDefined Capabilities:\n');
+            for (const c of caps.all()) {
+                const CRIT = { CRITICAL: '◈◈', HIGH: '◈', MEDIUM: '!', LOW: '·' };
+                console.log(`  ${(CRIT[c.criticality] || ' ').padEnd(3)} ${c.name.padEnd(28)} [${c.criticality}]  ${c.entity_count} entities  — ${c.id}`);
+            }
+            console.log('');
+
+        } else {
+            // Treat sub as a capability id
+            const capDef = caps.getCapability(sub);
+            if (!capDef) {
+                console.error(`Unknown capability: "${sub}". Run: registry capability list`);
+                process.exit(1);
+            }
+            const status = caps.statusOf(sub);
+            const STATUS_ICON = { OPERATIONAL: '●', DEGRADED: '!', DOWN: '✗', UNKNOWN: '?' };
+            console.log(`\nCapability: ${capDef.name}  [${capDef.criticality}]\n${'─'.repeat(50)}`);
+            console.log(`  Status:   ${STATUS_ICON[status.status] || '?'}  ${status.status}`);
+            console.log(`  Entities: ${status.entity_count}  (${status.healthy_deps} healthy)`);
+            console.log(`  Desc:     ${capDef.description}`);
+            if (status.issues.length) {
+                console.log('\n  Issues:');
+                for (const iss of status.issues) {
+                    const icon = iss.health === 'down' ? '✗' : '!';
+                    console.log(`    ${icon}  ${iss.id}  ${(iss.name || '').slice(0, 35).padEnd(36)} [${iss.strength}]  ${iss.health}`);
+                    if (iss.detail) console.log(`       ${iss.detail}`);
+                }
+            }
+            console.log(`\n  Dependencies:`);
+            for (const dep of capDef.depends_on) {
+                const entity = eng.lookup(dep.id);
+                const name   = entity ? entity.name : '(not found)';
+                const icon   = dep.strength === 'required' ? '◈' : dep.strength === 'fallback' ? '◇' : '○';
+                console.log(`    ${icon}  ${dep.id}  ${name.slice(0, 35).padEnd(36)} [${dep.strength}]  ${dep.reason}`);
+            }
+            console.log('');
+        }
+        break;
+    }
+
     case 'temporal': {
         const sub = args[0];
         if (sub === 'diff') {
@@ -515,5 +599,9 @@ Commands:
   temporal diff [days]                  Health label changes in the last N days (default 7)
   temporal timeline ENT-NNNNNN [limit] Full health history for one entity
   temporal trend ENT-NNNNNN            Score trend: rising / falling / stable
+  capability [status]                   System-wide capability health report
+  capability list                       List all defined capabilities
+  capability <id>                       Status and dependencies for one capability
+  capability degradation ENT-NNNNNN    Which capabilities degrade if this entity fails?
 `);
 }

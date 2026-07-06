@@ -17,6 +17,7 @@ const qry         = reg.query;
 const constraints = reg.constraints;
 const prediction  = reg.prediction;
 const temporal    = reg.temporal;
+const caps        = reg.capabilities;
 
 // GET /api/registry/entity/:id
 router.get('/registry/entity/:id', (req, res) => {
@@ -193,6 +194,29 @@ router.post('/registry/simulate/entity', (req, res) => {
 router.get('/registry/simulate/migration/:filename', (req, res) => {
     const result = prediction.simulateMigration(req.params.filename);
     res.status(result.ok ? 200 : 400).json(result);
+});
+
+// GET /api/registry/capabilities
+router.get('/registry/capabilities', (req, res) => {
+    res.json(caps.all());
+});
+
+// GET /api/registry/capabilities/status
+router.get('/registry/capabilities/status', (req, res) => {
+    res.json(caps.fullReport());
+});
+
+// GET /api/registry/capabilities/:id
+router.get('/registry/capabilities/:id', (req, res) => {
+    const def = caps.getCapability(req.params.id);
+    if (!def) return res.status(404).json({ error: `Unknown capability: "${req.params.id}"` });
+    const status = caps.statusOf(req.params.id);
+    res.json({ ...def, ...status });
+});
+
+// GET /api/registry/capabilities/degradation/:entityId
+router.get('/registry/capabilities/degradation/:entityId', (req, res) => {
+    res.json(caps.degradationFrom(req.params.entityId));
 });
 
 // GET /api/registry/temporal/diff?days=7

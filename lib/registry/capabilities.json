@@ -1,0 +1,113 @@
+{
+  "constitutional_governance": {
+    "name": "Constitutional Governance",
+    "description": "Enforces civilisation charter, autonomy levels, and governance scoring at every runtime boundary. Fail-closed by design.",
+    "criticality": "CRITICAL",
+    "arch_refs": ["ARCH-14"],
+    "depends_on": [
+      { "id": "ENT-000388", "strength": "required", "reason": "fail-closed gate; blocks all non-compliant requests at the Express boundary" },
+      { "id": "ENT-001130", "strength": "required", "reason": "civilization-kernel loads and invokes the gate on every inbound request" },
+      { "id": "ENT-000003", "strength": "required", "reason": "constitutional charter — declarative rule source evaluated at runtime" },
+      { "id": "ENT-000005", "strength": "required", "reason": "governance scoring subsystem" },
+      { "id": "ENT-000004", "strength": "optional", "reason": "autonomy level gating — degrades to conservative autonomy if absent" },
+      { "id": "ENT-001204", "strength": "required", "reason": "governance_records table — persistence for every gate decision" },
+      { "id": "ENT-000245", "strength": "optional", "reason": "governance.js runtime enforcement layer" }
+    ]
+  },
+
+  "ai_reasoning": {
+    "name": "AI Reasoning",
+    "description": "Core AI chat, cognitive processing, and LLM-backed responses via the Anthropic API.",
+    "criticality": "HIGH",
+    "arch_refs": [],
+    "depends_on": [
+      { "id": "ENT-000010", "strength": "required", "reason": "Anthropic API — primary LLM provider; no responses without it" },
+      { "id": "ENT-000011", "strength": "required", "reason": "Claude AI model — active reasoning engine" },
+      { "id": "ENT-000231", "strength": "required", "reason": "chat-context.js — manages conversation context for every request" },
+      { "id": "ENT-000420", "strength": "optional", "reason": "chat-cognitive-layer.js — cognitive enhancement; degrades gracefully" },
+      { "id": "ENT-000040", "strength": "required", "reason": "server.js — request entry point and response delivery" },
+      { "id": "ENT-000256", "strength": "required", "reason": "pg_helpers.js — database access layer for conversation memory" },
+      { "id": "ENT-000054", "strength": "required", "reason": "Supabase Postgres — conversation and memory persistence" }
+    ]
+  },
+
+  "agent_system": {
+    "name": "Agent System",
+    "description": "Autonomous agent tasks, scheduling, and multi-agent coordination.",
+    "criticality": "HIGH",
+    "arch_refs": [],
+    "depends_on": [
+      { "id": "ENT-000116", "strength": "required", "reason": "agents.js — agent lifecycle management and task dispatch" },
+      { "id": "ENT-000051", "strength": "required", "reason": "task-router.js — routes incoming tasks to the correct agent" },
+      { "id": "ENT-000238", "strength": "required", "reason": "cron-scheduler.js — scheduled task execution engine" },
+      { "id": "ENT-000042", "strength": "optional", "reason": "cron.js — background worker; degrades to on-demand only if absent" },
+      { "id": "ENT-000565", "strength": "required", "reason": "agent_schedules table — persistent schedule store" },
+      { "id": "ENT-000054", "strength": "required", "reason": "Supabase Postgres — agent state and result persistence" },
+      { "id": "ENT-000040", "strength": "required", "reason": "server.js — agent API endpoints" }
+    ]
+  },
+
+  "authentication": {
+    "name": "Authentication",
+    "description": "User identity verification, session management, and access control enforcement.",
+    "criticality": "HIGH",
+    "arch_refs": [],
+    "depends_on": [
+      { "id": "ENT-000228", "strength": "required", "reason": "app-auth.js — authentication middleware; all protected routes depend on it" },
+      { "id": "ENT-000260", "strength": "required", "reason": "session-state-registry.js — session tracking and validation" },
+      { "id": "ENT-000388", "strength": "required", "reason": "constitutional-gate.js — access control enforcement layer" },
+      { "id": "ENT-001206", "strength": "required", "reason": "sessions table — session persistence store" },
+      { "id": "ENT-000054", "strength": "required", "reason": "Supabase Postgres — underlying session and auth data store" }
+    ]
+  },
+
+  "database_persistence": {
+    "name": "Database Persistence",
+    "description": "All Postgres-backed data storage — the foundational data layer. Every other capability depends on this.",
+    "criticality": "CRITICAL",
+    "arch_refs": [],
+    "depends_on": [
+      { "id": "ENT-000054", "strength": "required", "reason": "Supabase Postgres — primary relational database" },
+      { "id": "ENT-000024", "strength": "required", "reason": "Supabase platform — managed infrastructure layer" },
+      { "id": "ENT-000256", "strength": "required", "reason": "pg_helpers.js — database abstraction and query helpers" },
+      { "id": "ENT-000255", "strength": "required", "reason": "pg_database.js — connection pool management" }
+    ]
+  },
+
+  "file_storage": {
+    "name": "File Storage",
+    "description": "Binary file upload, download, and management via Supabase Storage.",
+    "criticality": "MEDIUM",
+    "arch_refs": [],
+    "depends_on": [
+      { "id": "ENT-000055", "strength": "required", "reason": "Supabase Storage — object store for all binary files" },
+      { "id": "ENT-000261", "strength": "required", "reason": "storage.js — storage API wrapper and file management" },
+      { "id": "ENT-000024", "strength": "required", "reason": "Supabase platform" }
+    ]
+  },
+
+  "notifications": {
+    "name": "Notifications",
+    "description": "Push notification delivery and alert management.",
+    "criticality": "MEDIUM",
+    "arch_refs": [],
+    "depends_on": [
+      { "id": "ENT-000602", "strength": "required", "reason": "apex_notifications table — notification queue and delivery log" },
+      { "id": "ENT-000054", "strength": "required", "reason": "Supabase Postgres — notification persistence" },
+      { "id": "ENT-000040", "strength": "required", "reason": "server.js — notification push endpoints" }
+    ]
+  },
+
+  "voice_tts": {
+    "name": "Voice & TTS",
+    "description": "Text-to-speech synthesis and voice conversation processing.",
+    "criticality": "LOW",
+    "arch_refs": [],
+    "depends_on": [
+      { "id": "ENT-000488", "strength": "required", "reason": "tts-gemini.js — primary TTS synthesis engine" },
+      { "id": "ENT-000012", "strength": "required", "reason": "Google Gemini API — cloud TTS provider" },
+      { "id": "ENT-000490", "strength": "optional", "reason": "voice-chat.js — voice conversation handler; text-only fallback exists" },
+      { "id": "ENT-001115", "strength": "fallback", "reason": "local Piper voice model — fallback when Gemini API is unavailable" }
+    ]
+  }
+}
