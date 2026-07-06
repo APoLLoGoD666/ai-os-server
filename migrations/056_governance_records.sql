@@ -1,3 +1,9 @@
+-- @apex-migration
+-- @ent-refs:   ENT-001204
+-- @arch-refs:  ARCH-15
+-- @block:      24
+-- @status:     EXECUTED
+-- @description: Creates governance_records table (constitutional gate evaluation log)
 -- governance_records table — ARCH-15 §6.3 + gate-record extensions
 -- One row per constitutional gate evaluation and governed state transition.
 -- Append-only: no updated_at column.

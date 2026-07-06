@@ -9,6 +9,7 @@ const eng     = reg.engine;
 const rels    = reg.relationships;
 const val     = reg.validator;
 const proj    = reg.projections;
+const ml      = reg.migrationLifecycle;
 
 // GET /api/registry/entity/:id
 router.get('/registry/entity/:id', (req, res) => {
@@ -100,6 +101,22 @@ router.get('/registry/projection/entity/:id', (req, res) => {
     if (!e) return res.status(404).json({ error: 'Not found', id: req.params.id });
     const results = proj.checkAllProjections(e);
     res.json({ id: e.id, name: e.name, projections: results });
+});
+
+// GET /api/registry/migrations/compliance
+router.get('/registry/migrations/compliance', (req, res) => {
+    res.json(ml.complianceReport());
+});
+
+// GET /api/registry/migrations/scan
+router.get('/registry/migrations/scan', (req, res) => {
+    res.json({ migrations: ml.scanMigrations() });
+});
+
+// GET /api/registry/migrations/preflight/:filename
+router.get('/registry/migrations/preflight/:filename', (req, res) => {
+    const result = ml.preflight(req.params.filename);
+    res.status(result.ok ? 200 : 400).json(result);
 });
 
 module.exports = router;

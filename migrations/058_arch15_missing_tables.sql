@@ -1,3 +1,9 @@
+-- @apex-migration
+-- @ent-refs:   ENT-001206, ENT-001207
+-- @arch-refs:  ARCH-15, ARCH-14
+-- @block:      24
+-- @status:     EXECUTED
+-- @description: Creates sessions and audit_records tables (ARCH-15 §6.5, §6.7)
 -- ARCH-15 §6.5 sessions table (SOT-004, ARCH-14)
 -- Tracks stateful user sessions through the 8-phase runtime pipeline.
 CREATE TABLE IF NOT EXISTS sessions (

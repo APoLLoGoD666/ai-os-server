@@ -1,3 +1,9 @@
+-- @apex-migration
+-- @ent-refs:   ENT-001205
+-- @arch-refs:  ARCH-15, ARCH-14
+-- @block:      24
+-- @status:     EXECUTED
+-- @description: Creates resource_consumption table (model invocation cost accounting)
 -- resource_consumption table — ARCH-15 §6.6 / ARCH-14 Phase 8 reconciliation
 -- Append-only cost accounting per model invocation. No updated_at column.
 CREATE TABLE IF NOT EXISTS resource_consumption (
