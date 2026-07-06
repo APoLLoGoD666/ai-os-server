@@ -18,6 +18,8 @@ const constraints = reg.constraints;
 const prediction  = reg.prediction;
 const temporal    = reg.temporal;
 const caps        = reg.capabilities;
+const snap        = reg.snapshot;
+const scenario    = reg.scenario;
 
 // GET /api/registry/entity/:id
 router.get('/registry/entity/:id', (req, res) => {
@@ -269,6 +271,48 @@ router.post('/registry/query/batch', (req, res) => {
     const queries = req.body;
     if (!Array.isArray(queries)) return res.status(400).json({ error: 'body must be an array' });
     res.json(qry.queryBatch(queries));
+});
+
+// GET /api/registry/system/health — capability-first system health view
+router.get('/registry/system/health', (req, res) => {
+    const result = qry.query('composite.capability_health', { include_entities: req.query.include_entities });
+    res.status(result.ok ? 200 : 500).json(result.ok ? result.result : result);
+});
+
+// ── Snapshots ─────────────────────────────────────────────────────────────────
+
+// POST /api/registry/snapshot/take  — body: { label? }
+router.post('/registry/snapshot/take', async (req, res) => {
+    const result = await snap.takeSnapshot({ label: req.body?.label });
+    res.status(result.ok ? 200 : 503).json(result);
+});
+
+// GET /api/registry/snapshot/list?limit=20
+router.get('/registry/snapshot/list', async (req, res) => {
+    const result = await snap.listSnapshots({ limit: req.query.limit });
+    res.status(result.ok ? 200 : 503).json(result);
+});
+
+// GET /api/registry/snapshot/:id
+router.get('/registry/snapshot/:id', async (req, res) => {
+    const result = await snap.getSnapshot(req.params.id);
+    res.status(result.ok ? 200 : (result.error?.includes('not found') ? 404 : 503)).json(result);
+});
+
+// GET /api/registry/snapshot/diff/:id1/:id2
+router.get('/registry/snapshot/diff/:id1/:id2', async (req, res) => {
+    const result = await snap.diffSnapshots(req.params.id1, req.params.id2);
+    res.status(result.ok ? 200 : 503).json(result);
+});
+
+// ── Scenario simulation ───────────────────────────────────────────────────────
+
+// POST /api/registry/scenario  — body: { name?, changes: [{ entity_id, proposed }] }
+router.post('/registry/scenario', (req, res) => {
+    const { name, changes } = req.body || {};
+    if (!changes || !changes.length) return res.status(400).json({ error: 'changes array is required' });
+    const result = scenario.runScenario({ name, changes });
+    res.status(result.ok ? 200 : 400).json(result);
 });
 
 module.exports = router;

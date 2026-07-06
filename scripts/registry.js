@@ -17,6 +17,8 @@ const constraints = reg.constraints;
 const prediction  = reg.prediction;
 const temporal    = reg.temporal;
 const caps        = reg.capabilities;
+const snap        = reg.snapshot;
+const scenario    = reg.scenario;
 
 const [,, cmd, ...args] = process.argv;
 
@@ -587,6 +589,155 @@ switch (cmd) {
         break;
     }
 
+    case 'snapshot': {
+        const sub = args[0];
+        if (!sub || sub === 'list') {
+            const limit = args[1] || '20';
+            snap.listSnapshots({ limit }).then(r => {
+                if (!r.ok) { console.error(`  Error: ${r.error}`); process.exit(1); }
+                console.log(`\nArchitecture Snapshots  (${r.count} of ${limit})\n${'─'.repeat(55)}`);
+                for (const s of r.snapshots) {
+                    const label = s.label ? `  "${s.label}"` : '';
+                    const caps  = s.snapshot_data?.capability_summary
+                        ? `  [${s.snapshot_data.capability_summary.operational || 0}✓ ${s.snapshot_data.capability_summary.degraded || 0}! ${s.snapshot_data.capability_summary.down || 0}✗]`
+                        : '';
+                    console.log(`  #${String(s.id).padEnd(6)} ${s.created_at}  entities=${s.entity_count}  rels=${s.relationship_count}${caps}${label}`);
+                }
+                console.log('');
+            });
+        } else if (sub === 'take') {
+            const label = args.slice(1).join(' ') || null;
+            console.log('\nTaking architecture snapshot…');
+            snap.takeSnapshot({ label }).then(r => {
+                if (!r.ok) { console.error(`  Error: ${r.error}`); process.exit(1); }
+                console.log(`  ID:         #${r.id}`);
+                console.log(`  Created:    ${r.created_at}`);
+                if (r.label) console.log(`  Label:      ${r.label}`);
+                console.log(`  Entities:   ${r.summary.entity_count}`);
+                console.log(`  Relations:  ${r.summary.relationship_count}`);
+                const cs = r.summary.capability_summary;
+                if (cs) console.log(`  Capability: ${cs.operational || 0} operational  ${cs.degraded || 0} degraded  ${cs.down || 0} down`);
+                console.log(`  (${r.duration_ms}ms)\n`);
+            });
+        } else if (sub === 'get') {
+            const id = args[1];
+            if (!id) { console.error('Usage: registry snapshot get <id>'); process.exit(1); }
+            snap.getSnapshot(id).then(r => {
+                if (!r.ok) { console.error(`  Error: ${r.error}`); process.exit(1); }
+                console.log(JSON.stringify(r.snapshot, null, 2));
+            });
+        } else if (sub === 'diff') {
+            const id1 = args[1];
+            const id2 = args[2];
+            if (!id1 || !id2) { console.error('Usage: registry snapshot diff <id1> <id2>'); process.exit(1); }
+            snap.diffSnapshots(id1, id2).then(r => {
+                if (!r.ok) { console.error(`  Error: ${r.error}`); process.exit(1); }
+                console.log(`\nSnapshot Diff  #${r.from.id} → #${r.to.id}`);
+                console.log(`${'─'.repeat(55)}`);
+                console.log(`  From: ${r.from.created_at}${r.from.label ? ' "' + r.from.label + '"' : ''}`);
+                console.log(`  To:   ${r.to.created_at}${r.to.label ? ' "' + r.to.label + '"' : ''}`);
+                console.log(`\nDeltas:`);
+                const ed = r.deltas.entities;
+                const rd = r.deltas.relationships;
+                console.log(`  Entities:      ${ed.before} → ${ed.after}  (${ed.delta >= 0 ? '+' : ''}${ed.delta})`);
+                console.log(`  Relationships: ${rd.before} → ${rd.after}  (${rd.delta >= 0 ? '+' : ''}${rd.delta})`);
+                if (r.capability_changes.length) {
+                    console.log(`\nCapability Changes (${r.capability_changes.length}):`);
+                    for (const c of r.capability_changes) {
+                        console.log(`  ${c.name.padEnd(28)} ${c.change}: ${c.before || '—'} → ${c.after || '—'}`);
+                    }
+                }
+                if (r.health_changes.length) {
+                    console.log(`\nHealth Distribution Changes:`);
+                    for (const h of r.health_changes) {
+                        const d = h.delta >= 0 ? `+${h.delta}` : String(h.delta);
+                        console.log(`  ${h.status.padEnd(12)} ${h.before} → ${h.after}  (${d})`);
+                    }
+                }
+                if (r.risk_changes.newly_high_risk.length) {
+                    console.log(`\nNewly High-Risk (${r.risk_changes.newly_high_risk.length}):`);
+                    for (const e of r.risk_changes.newly_high_risk) {
+                        console.log(`  ◈  ${e.id}  ${(e.name || '').slice(0, 35)}  [${e.risk_level}]`);
+                    }
+                }
+                if (r.risk_changes.resolved.length) {
+                    console.log(`\nResolved Risk (${r.risk_changes.resolved.length}):`);
+                    for (const e of r.risk_changes.resolved) {
+                        console.log(`  ✓  ${e.id}  ${(e.name || '').slice(0, 35)}  [was ${e.risk_level}]`);
+                    }
+                }
+                if (!r.has_changes) console.log('\n  No architectural changes detected between these snapshots.');
+                console.log(`\n  (${r.duration_ms}ms)\n`);
+            });
+        } else {
+            console.log('Usage:\n  registry snapshot take [label]         — capture snapshot\n  registry snapshot list [limit]          — list recent snapshots\n  registry snapshot get <id>              — full snapshot JSON\n  registry snapshot diff <id1> <id2>     — architectural diff\n');
+        }
+        break;
+    }
+
+    case 'scenario': {
+        // registry scenario --entity ENT-000001 --status DEPRECATED --entity ENT-000002 --status INACTIVE --name "decommission batch"
+        const name    = (() => { const i = args.indexOf('--name'); return i >= 0 ? args[i + 1] : null; })();
+        const changes = [];
+        for (let i = 0; i < args.length; i++) {
+            if (args[i] === '--entity' && args[i + 1]) {
+                const entityId = args[i + 1];
+                const proposed = {};
+                let j = i + 2;
+                while (j < args.length && args[j] !== '--entity' && args[j] !== '--name') {
+                    if (args[j].startsWith('--')) { proposed[args[j].slice(2)] = args[j + 1]; j += 2; }
+                    else break;
+                }
+                changes.push({ entity_id: entityId, proposed });
+            }
+        }
+        if (!changes.length) {
+            console.log('Usage:\n  registry scenario --entity ENT-NNNNNN [--status VALUE] [--entity ENT-NNNNNN --status VALUE] [--name "label"]\n');
+            break;
+        }
+
+        console.log(`\nRunning scenario${name ? ' "' + name + '"' : ''}: ${changes.length} entity change(s)…\n`);
+        const r = scenario.runScenario({ name, changes });
+
+        if (!r.ok) { console.error(`  Error: ${r.error}`); process.exit(1); }
+
+        const URGENCY_ICON = { HALT: '⊘ HALT', REVIEW_REQUIRED: '! REVIEW_REQUIRED', PROCEED_WITH_CAUTION: '~ PROCEED_WITH_CAUTION', PROCEED: '✓ PROCEED' };
+        console.log(`Recommendation: ${URGENCY_ICON[r.recommendation.urgency] || r.recommendation.urgency}`);
+        console.log(`Confidence:     ${(r.recommendation.confidence * 100).toFixed(0)}%`);
+        console.log(`Rationale:      ${r.recommendation.rationale}`);
+
+        if (r.entity_impacts.length) {
+            console.log(`\nEntity Impacts (${r.entity_impacts.length}):`);
+            for (const e of r.entity_impacts) {
+                if (!e.ok) { console.log(`  ?  ${e.entity_id}  error: ${e.error}`); continue; }
+                const hd = e.health_delta != null ? `  Δhealth=${e.health_delta > 0 ? '+' : ''}${e.health_delta}` : '';
+                console.log(`  ${e.entity_id}  ${(e.name || '').slice(0, 35)}  at_risk=${e.at_risk_count}${hd}`);
+            }
+        }
+
+        if (r.capability_impacts.length) {
+            const SEV_ICON = { CRITICAL: '◈◈', HIGH: '◈', MEDIUM: '!', LOW: '·', MINIMAL: '·' };
+            console.log(`\nCapability Degradation (${r.capability_impacts.length}):`);
+            for (const c of r.capability_impacts) {
+                const icon = SEV_ICON[c.severity] || '?';
+                console.log(`  ${icon}  ${(c.capability_name || c.capability_id).padEnd(28)} [${c.criticality || '?'}]  severity: ${c.severity}`);
+            }
+        }
+
+        if (r.constraint_check.failures.length) {
+            console.log(`\nConstraint Failures (${r.constraint_check.failures.length}):`);
+            for (const f of r.constraint_check.failures) {
+                const blocking = f.blocking ? '  ⊘ BLOCKING' : '';
+                console.log(`  ✗  ${f.rule}  [${f.severity}]${blocking}`);
+            }
+        }
+
+        const { summary: cs } = r.constraint_check;
+        console.log(`\nConstraint Summary: ${cs.pass} pass  ${cs.fail} fail  ${cs.blocking} blocking`);
+        console.log(`Duration: ${r.duration_ms}ms\n`);
+        break;
+    }
+
     default:
         console.log(`
 APEX Registry CLI  (${eng.count()} entities loaded)
@@ -616,5 +767,10 @@ Commands:
   capability list                       List all defined capabilities
   capability <id>                       Status and dependencies for one capability
   capability degradation ENT-NNNNNN    Which capabilities degrade if this entity fails?
+  snapshot take [label]                 Capture full architecture snapshot to DB
+  snapshot list [limit]                 List recent snapshots (newest first)
+  snapshot get <id>                     Retrieve a snapshot by ID
+  snapshot diff <id1> <id2>            Architectural diff between two snapshots
+  scenario --entity ENT-NNNNNN [--status VALUE] [--entity ...]  Multi-entity what-if simulation
 `);
 }
