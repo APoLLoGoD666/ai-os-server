@@ -307,11 +307,11 @@ router.get('/registry/snapshot/diff/:id1/:id2', async (req, res) => {
 
 // ── Scenario simulation ───────────────────────────────────────────────────────
 
-// POST /api/registry/scenario  — body: { name?, changes: [{ entity_id, proposed }] }
+// POST /api/registry/scenario  — body: { name?, changes: [{ entity_id, proposed }], record_decision? }
 router.post('/registry/scenario', (req, res) => {
-    const { name, changes } = req.body || {};
+    const { name, changes, record_decision } = req.body || {};
     if (!changes || !changes.length) return res.status(400).json({ error: 'changes array is required' });
-    const result = scenario.runScenario({ name, changes });
+    const result = scenario.runScenario({ name, changes, record_decision: !!record_decision });
     res.status(result.ok ? 200 : 400).json(result);
 });
 
@@ -321,6 +321,24 @@ router.post('/registry/capabilities/monitor', async (req, res) => {
     const monitor = require('../lib/registry/capability-monitor');
     const result  = await monitor.runAlertCheck();
     res.json(result);
+});
+
+// GET /api/registry/cron/health-check — combined capability + twin scan (Render cron target)
+// Runs capability alert check and twin state refresh in parallel.
+// Wire this URL as a Render cron job (e.g. every 30 minutes).
+router.get('/registry/cron/health-check', async (req, res) => {
+    const monitor = require('../lib/registry/capability-monitor');
+    const limit   = req.query.limit ? parseInt(req.query.limit) : 50;
+    const [capResult, twinResult] = await Promise.all([
+        monitor.runAlertCheck(),
+        twin.refreshAll({ limit }),
+    ]);
+    res.json({
+        ok:           capResult.ok,
+        ran_at:       new Date().toISOString(),
+        capability:   capResult,
+        twin_refresh: twinResult,
+    });
 });
 
 module.exports = router;
