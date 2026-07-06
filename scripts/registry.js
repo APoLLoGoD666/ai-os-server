@@ -701,40 +701,50 @@ switch (cmd) {
 
         if (!r.ok) { console.error(`  Error: ${r.error}`); process.exit(1); }
 
-        const URGENCY_ICON = { HALT: '⊘ HALT', REVIEW_REQUIRED: '! REVIEW_REQUIRED', PROCEED_WITH_CAUTION: '~ PROCEED_WITH_CAUTION', PROCEED: '✓ PROCEED' };
-        console.log(`Recommendation: ${URGENCY_ICON[r.recommendation.urgency] || r.recommendation.urgency}`);
-        console.log(`Confidence:     ${(r.recommendation.confidence * 100).toFixed(0)}%`);
-        console.log(`Rationale:      ${r.recommendation.rationale}`);
+        const ex = r.executive;
+        const SEV_ICON = { CRITICAL: '◈◈', HIGH: '◈', MEDIUM: '!', LOW: '·', MINIMAL: '·' };
+        const URGENCY_ICON = { HALT: '⊘', REVIEW_REQUIRED: '!', PROCEED_WITH_CAUTION: '~', PROCEED: '✓' };
 
-        if (r.entity_impacts.length) {
-            console.log(`\nEntity Impacts (${r.entity_impacts.length}):`);
-            for (const e of r.entity_impacts) {
-                if (!e.ok) { console.log(`  ?  ${e.entity_id}  error: ${e.error}`); continue; }
-                const hd = e.health_delta != null ? `  Δhealth=${e.health_delta > 0 ? '+' : ''}${e.health_delta}` : '';
-                console.log(`  ${e.entity_id}  ${(e.name || '').slice(0, 35)}  at_risk=${e.at_risk_count}${hd}`);
+        console.log(`Executive Summary\n${'─'.repeat(55)}`);
+        console.log(`  Risk:          ${ex.risk}`);
+        console.log(`  Urgency:       ${URGENCY_ICON[ex.urgency] || '?'}  ${ex.urgency}`);
+        console.log(`  Confidence:    ${(ex.confidence * 100).toFixed(0)}%`);
+
+        if (ex.capability_impacts.length) {
+            console.log(`\nCapability Impact:`);
+            for (const c of ex.capability_impacts) {
+                const icon = SEV_ICON[c.severity] || '?';
+                console.log(`  ${icon}  ${c.capability.padEnd(30)} [${c.criticality}]  →  ${c.severity}`);
             }
         }
 
-        if (r.capability_impacts.length) {
-            const SEV_ICON = { CRITICAL: '◈◈', HIGH: '◈', MEDIUM: '!', LOW: '·', MINIMAL: '·' };
-            console.log(`\nCapability Degradation (${r.capability_impacts.length}):`);
-            for (const c of r.capability_impacts) {
-                const icon = SEV_ICON[c.severity] || '?';
-                console.log(`  ${icon}  ${(c.capability_name || c.capability_id).padEnd(28)} [${c.criticality || '?'}]  severity: ${c.severity}`);
+        console.log(`\nRuntime:         ${ex.runtime_unavailable} service(s) unavailable`);
+        console.log(`Documentation:   ${ex.documentation_drift} drift`);
+        console.log(`Constraints:     ${ex.constraints_violated} violated`);
+        if (ex.migrations_at_risk.length) {
+            console.log(`Migrations:      ${ex.migrations_at_risk.join(', ')}`);
+        }
+
+        console.log(`\nRationale: ${ex.rationale}`);
+
+        if (r.entity_impacts.length) {
+            console.log(`\nEntity Details (${r.entity_impacts.length}):`);
+            for (const e of r.entity_impacts) {
+                if (!e.ok) { console.log(`  ?  ${e.entity_id}  error: ${e.error}`); continue; }
+                const hd = e.health_delta != null ? `  Δhealth=${e.health_delta > 0 ? '+' : ''}${e.health_delta}` : '';
+                console.log(`  ${e.entity_id}  ${(e.name || '').slice(0, 35).padEnd(36)} at_risk=${e.at_risk_count}${hd}`);
             }
         }
 
         if (r.constraint_check.failures.length) {
-            console.log(`\nConstraint Failures (${r.constraint_check.failures.length}):`);
+            console.log(`\nConstraint Failures:`);
             for (const f of r.constraint_check.failures) {
                 const blocking = f.blocking ? '  ⊘ BLOCKING' : '';
                 console.log(`  ✗  ${f.rule}  [${f.severity}]${blocking}`);
             }
         }
 
-        const { summary: cs } = r.constraint_check;
-        console.log(`\nConstraint Summary: ${cs.pass} pass  ${cs.fail} fail  ${cs.blocking} blocking`);
-        console.log(`Duration: ${r.duration_ms}ms\n`);
+        console.log(`\n(${r.duration_ms}ms)\n`);
         break;
     }
 
