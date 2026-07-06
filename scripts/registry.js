@@ -515,28 +515,41 @@ switch (cmd) {
     }
 
     case 'constraints': {
-        const full = args.includes('--full');
+        const full    = args.includes('--full');
+        const verbose = args.includes('--verbose') || args.includes('-v');
         console.log(`\nEvaluating architectural constraints${full ? ' (full — includes computed rules)' : ''}…\n`);
         const result = constraints.check({ full });
 
         const SICON = { CRITICAL: '◈◈', ERROR: '✗', WARN: '!', PASS: '✓' };
         for (const r of result.results) {
             if (r.status === 'PASS') {
-                console.log(`  ${SICON.PASS}  ${r.rule}`);
+                console.log(`  ${SICON.PASS}  ${r.rule}${r.owner ? '  [' + r.owner + ']' : ''}`);
             } else {
-                const icon = SICON[r.severity] || '?';
-                console.log(`  ${icon}  ${r.rule}  [${r.severity}]  — ${r.violations.length} violation(s)`);
+                const icon     = SICON[r.severity] || '?';
+                const blocking = r.blocking ? '  ⊘ BLOCKING' : '';
+                const archRef  = r.arch_ref ? `  [${r.arch_ref}]` : '';
+                console.log(`  ${icon}  ${r.rule}  [${r.severity}]${blocking}${archRef}  — ${r.violations.length} violation(s)`);
+                if (r.owner) console.log(`       Owner: ${r.owner}`);
                 for (const v of r.violations.slice(0, 10)) {
                     console.log(`       ${v.id || ''}  ${v.detail || ''}`);
                 }
                 if (r.violations.length > 10) console.log(`       … and ${r.violations.length - 10} more`);
+                if (verbose && r.remediation) {
+                    console.log(`\n       Remediation:`);
+                    for (const line of r.remediation.split('. ').filter(Boolean)) {
+                        console.log(`         ${line.trim()}.`);
+                    }
+                    console.log('');
+                }
             }
         }
 
         const s = result.summary;
-        console.log(`\nResult: ${s.pass} pass  ${s.fail} fail  (${s.errors} error(s)  ${s.warnings} warning(s))  in ${result.duration_ms}ms`);
-        if (!full) console.log('  Run with --full to include computed projection/impact rules.\n');
-        else console.log('');
+        console.log(`\nResult: ${s.pass} pass  ${s.fail} fail  (${s.errors} error(s)  ${s.warnings} warning(s)  ${s.blocking} blocking)  in ${result.duration_ms}ms`);
+        if (s.blocking) console.log(`  ⊘  ${s.blocking} blocking constraint(s) — resolve before deploying.`);
+        if (!full) console.log('  Run with --full to include computed projection/impact rules.');
+        if (!verbose && result.results.some(r => r.status !== 'PASS')) console.log('  Run with --verbose to see remediation steps.');
+        console.log('');
         if (!result.ok) process.exit(1);
         break;
     }

@@ -3,42 +3,97 @@
     "description": "ENT-000388 (Constitutional Gate) must be ACTIVE — system integrity depends on it",
     "severity": "CRITICAL",
     "type": "static",
-    "check": "constitutional_gate_healthy"
+    "check": "constitutional_gate_healthy",
+    "owner": "founder",
+    "rationale": "The constitutional gate is fail-closed by design. Any status other than ACTIVE means all inbound requests bypass constitutional validation, creating a governance hole that cannot be detected at runtime.",
+    "remediation": "Restore ENT-000388 to ACTIVE status. Inspect lib/runtime/constitutional-gate.js for startup failures. Check server logs for 'constitutional-gate' error lines. Do not set status manually without verifying the module loads cleanly.",
+    "arch_ref": "ARCH-14",
+    "blocking": true,
+    "auto_fix": false,
+    "evidence": ["ENT-000388 status === ACTIVE", "projection.runtime SYNC", "projection.physical SYNC"]
   },
+
   "NO_ORPHANED_RELATIONSHIPS": {
     "description": "All relationship endpoints must reference registered entities",
     "severity": "ERROR",
     "type": "static",
-    "check": "no_orphaned_relationships"
+    "check": "no_orphaned_relationships",
+    "owner": "registry",
+    "rationale": "Orphaned edges corrupt graph traversal and impact analysis. An edge pointing to an unregistered ID silently inflates blast-radius counts and may generate false capability-degradation alerts.",
+    "remediation": "For each orphaned ID: either register the missing entity in the Registry catalogue, or remove the stale relationship entry from relationships.js SEED.",
+    "arch_ref": null,
+    "blocking": false,
+    "auto_fix": false,
+    "evidence": ["all relationship from/to IDs resolve in engine.lookup()"]
   },
+
   "GOVERNED_MIGRATION_APPROVED": {
     "description": "Governed migrations must not be stuck at PROPOSED or VALIDATED — they must reach APPROVED or beyond",
     "severity": "WARN",
     "type": "static",
-    "check": "governed_migration_approved"
+    "check": "governed_migration_approved",
+    "owner": "registry",
+    "rationale": "A governed migration stuck at PROPOSED means a Registry-declared schema or data change has not been reviewed. Applying it without approval bypasses the governance lifecycle and may introduce undocumented state.",
+    "remediation": "Advance the migration @status header: PROPOSED → VALIDATED → APPROVED. Run: registry migrate preflight <filename> to check for errors. Do not apply until status is APPROVED.",
+    "arch_ref": "ARCH-14",
+    "blocking": false,
+    "auto_fix": false,
+    "evidence": ["migration @status in [APPROVED, EXECUTING, EXECUTED, VERIFIED]"]
   },
+
   "ACTIVE_SERVICE_MONITORED": {
     "description": "All ACTIVE SERVICE/MIDDLEWARE/API entities must have a SYNC monitoring projection",
     "severity": "ERROR",
     "type": "computed",
-    "check": "active_service_monitored"
+    "check": "active_service_monitored",
+    "owner": "operations",
+    "rationale": "An ACTIVE service without a monitoring projection is invisible to the operational team. Failures will go undetected until user-reported. The monitoring projection verifies that the entity appears in the monitoring configuration.",
+    "remediation": "Wire the entity into the monitoring system (dashboard, alert rule, or health-check endpoint). Update the monitoring projection source configuration to include the entity path or ID. Recheck with: registry projection entity <ENT-ID>.",
+    "arch_ref": null,
+    "blocking": false,
+    "auto_fix": false,
+    "evidence": ["projection.monitoring status === SYNC"]
   },
+
   "GOV_ENTITY_DOCUMENTED": {
     "description": "All GOV-family entities must have a SYNC documentation projection",
     "severity": "WARN",
     "type": "computed",
-    "check": "gov_entity_documented"
+    "check": "gov_entity_documented",
+    "owner": "founder",
+    "rationale": "Governance entities encode architectural decisions that affect the whole civilisation. Without documentation, the rationale behind governance rules becomes untraceable, making future changes uninformed and risky.",
+    "remediation": "Create a documentation file in docs/ that references the entity's ENT-ID. The documentation projection search will detect ENT-ID mentions in .md files under docs/. At minimum document: purpose, authority source, and what happens if this entity fails.",
+    "arch_ref": "ARCH-14",
+    "blocking": false,
+    "auto_fix": false,
+    "evidence": ["projection.documentation status === SYNC", "docs/ contains file mentioning ENT-ID"]
   },
+
   "ACTIVE_FILE_IN_REPO": {
     "description": "All ACTIVE FILE/ROUTE/MIDDLEWARE entities must be tracked in git (repository projection SYNC)",
     "severity": "WARN",
     "type": "computed",
-    "check": "active_file_in_repo"
+    "check": "active_file_in_repo",
+    "owner": "registry",
+    "rationale": "An ACTIVE file not tracked in git is either undeployed, incorrectly registered, or has been removed without a status update. Any of these conditions means the Registry no longer reflects truth.",
+    "remediation": "Option A: git add <path> to track the file and commit. Option B: Update the entity status in the catalogue to INACTIVE or REMOVED if the file was intentionally deleted. Run: registry projection entity <ENT-ID> to confirm.",
+    "arch_ref": null,
+    "blocking": false,
+    "auto_fix": false,
+    "evidence": ["projection.repository status === SYNC", "git ls-files returns the entity path"]
   },
+
   "HIGH_IMPACT_ENTITY_DOCUMENTED": {
     "description": "Entities classified CRITICAL or HIGH impact risk must have a SYNC documentation projection",
     "severity": "WARN",
     "type": "computed",
-    "check": "high_impact_entity_documented"
+    "check": "high_impact_entity_documented",
+    "owner": "founder",
+    "rationale": "High-impact entities affect many dependents and capabilities. Without documentation, any change to them is made without understanding the blast radius — increasing the probability of cascading failures.",
+    "remediation": "Create documentation in docs/ covering: purpose, known dependents, capability membership, change protocol, and known risks. Reference the ENT-ID so the documentation projection can detect it.",
+    "arch_ref": null,
+    "blocking": false,
+    "auto_fix": false,
+    "evidence": ["projection.documentation status === SYNC", "impact.quickRisk returns CRITICAL or HIGH"]
   }
 }
