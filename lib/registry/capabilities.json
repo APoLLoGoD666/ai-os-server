@@ -3,6 +3,8 @@
     "name": "Constitutional Governance",
     "description": "Enforces civilisation charter, autonomy levels, and governance scoring at every runtime boundary. Fail-closed by design.",
     "criticality": "CRITICAL",
+    "owner": "founder",
+    "lifecycle": "ACTIVE",
     "arch_refs": ["ARCH-14"],
     "depends_on": [
       { "id": "ENT-000388", "strength": "required", "reason": "fail-closed gate; blocks all non-compliant requests at the Express boundary" },
@@ -19,6 +21,8 @@
     "name": "AI Reasoning",
     "description": "Core AI chat, cognitive processing, and LLM-backed responses via the Anthropic API.",
     "criticality": "HIGH",
+    "owner": "founder",
+    "lifecycle": "ACTIVE",
     "arch_refs": [],
     "depends_on": [
       { "id": "ENT-000010", "strength": "required", "reason": "Anthropic API — primary LLM provider; no responses without it" },
@@ -35,6 +39,8 @@
     "name": "Agent System",
     "description": "Autonomous agent tasks, scheduling, and multi-agent coordination.",
     "criticality": "HIGH",
+    "owner": "founder",
+    "lifecycle": "ACTIVE",
     "arch_refs": [],
     "depends_on": [
       { "id": "ENT-000116", "strength": "required", "reason": "agents.js — agent lifecycle management and task dispatch" },
@@ -51,6 +57,8 @@
     "name": "Authentication",
     "description": "User identity verification, session management, and access control enforcement.",
     "criticality": "HIGH",
+    "owner": "security",
+    "lifecycle": "ACTIVE",
     "arch_refs": [],
     "depends_on": [
       { "id": "ENT-000228", "strength": "required", "reason": "app-auth.js — authentication middleware; all protected routes depend on it" },
@@ -65,6 +73,8 @@
     "name": "Database Persistence",
     "description": "All Postgres-backed data storage — the foundational data layer. Every other capability depends on this.",
     "criticality": "CRITICAL",
+    "owner": "infrastructure",
+    "lifecycle": "ACTIVE",
     "arch_refs": [],
     "depends_on": [
       { "id": "ENT-000054", "strength": "required", "reason": "Supabase Postgres — primary relational database" },
@@ -78,6 +88,8 @@
     "name": "File Storage",
     "description": "Binary file upload, download, and management via Supabase Storage.",
     "criticality": "MEDIUM",
+    "owner": "infrastructure",
+    "lifecycle": "ACTIVE",
     "arch_refs": [],
     "depends_on": [
       { "id": "ENT-000055", "strength": "required", "reason": "Supabase Storage — object store for all binary files" },
@@ -90,6 +102,8 @@
     "name": "Notifications",
     "description": "Push notification delivery and alert management.",
     "criticality": "MEDIUM",
+    "owner": "operations",
+    "lifecycle": "ACTIVE",
     "arch_refs": [],
     "depends_on": [
       { "id": "ENT-000602", "strength": "required", "reason": "apex_notifications table — notification queue and delivery log" },
@@ -102,6 +116,8 @@
     "name": "Voice & TTS",
     "description": "Text-to-speech synthesis and voice conversation processing.",
     "criticality": "LOW",
+    "owner": "founder",
+    "lifecycle": "ACTIVE",
     "arch_refs": [],
     "depends_on": [
       { "id": "ENT-000488", "strength": "required", "reason": "tts-gemini.js — primary TTS synthesis engine" },
