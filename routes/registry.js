@@ -315,4 +315,12 @@ router.post('/registry/scenario', (req, res) => {
     res.status(result.ok ? 200 : 400).json(result);
 });
 
+// POST /api/registry/capabilities/monitor  — run capability alert check (cron-safe)
+// Fires WS alerts and writes to apex_notifications for DEGRADED/DOWN capabilities.
+router.post('/registry/capabilities/monitor', async (req, res) => {
+    const monitor = require('../lib/registry/capability-monitor');
+    const result  = await monitor.runAlertCheck();
+    res.json(result);
+});
+
 module.exports = router;
