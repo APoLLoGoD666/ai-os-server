@@ -12,6 +12,7 @@ const proj    = reg.projections;
 const ml      = reg.migrationLifecycle;
 const disco   = reg.discovery;
 const twin    = reg.twin;
+const impact  = reg.impact;
 
 // GET /api/registry/entity/:id
 router.get('/registry/entity/:id', (req, res) => {
@@ -103,6 +104,18 @@ router.get('/registry/projection/entity/:id', (req, res) => {
     if (!e) return res.status(404).json({ error: 'Not found', id: req.params.id });
     const results = proj.checkAllProjections(e);
     res.json({ id: e.id, name: e.name, projections: results });
+});
+
+// GET /api/registry/impact/:id?depth=5&direction=upstream
+router.get('/registry/impact/:id', (req, res) => {
+    const id        = req.params.id;
+    const depth     = req.query.depth     ? parseInt(req.query.depth)    : 5;
+    const direction = req.query.direction || 'upstream';
+
+    if (!eng.lookup(id)) return res.status(404).json({ error: 'Not found', id });
+
+    const report = impact.analyze(id, { depth, direction });
+    res.json(report);
 });
 
 // GET /api/registry/twin/:id  — DB-first Digital Twin (recomputes if stale)

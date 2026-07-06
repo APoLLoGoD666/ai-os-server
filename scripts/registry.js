@@ -4,13 +4,14 @@
 // Usage: node scripts/registry.js <command> [args]
 
 require('dotenv').config();
-const reg   = require('../lib/registry');
-const eng   = reg.engine;
-const rels  = reg.relationships;
-const val   = reg.validator;
-const proj  = reg.projections;
-const disco = reg.discovery;
-const twin  = reg.twin;
+const reg    = require('../lib/registry');
+const eng    = reg.engine;
+const rels   = reg.relationships;
+const val    = reg.validator;
+const proj   = reg.projections;
+const disco  = reg.discovery;
+const twin   = reg.twin;
+const impact = reg.impact;
 
 const [,, cmd, ...args] = process.argv;
 
@@ -191,6 +192,70 @@ switch (cmd) {
         break;
     }
 
+    case 'impact': {
+        const id        = args[0];
+        const depthArg  = args.indexOf('--depth');
+        const dirArg    = args.indexOf('--direction');
+        const depth     = depthArg >= 0 ? parseInt(args[depthArg + 1]) : 5;
+        const direction = dirArg   >= 0 ? args[dirArg + 1] : 'upstream';
+
+        if (!id) { console.error('Usage: registry impact ENT-NNNNNN [--depth N] [--direction upstream|downstream|both]'); process.exit(1); }
+        const e = eng.lookup(id);
+        if (!e) { console.error(`Not found: ${id}`); process.exit(1); }
+
+        console.log(`\nAnalysing impact… (this may take a moment on first run)`);
+        const report = impact.analyze(id, { depth, direction });
+
+        const RISK_ICON = { CRITICAL: '◈◈', HIGH: '◈', MEDIUM: '!', LOW: '·' };
+        console.log(`\nImpact Analysis — ${id}  ${e.name}`);
+        console.log(`${'─'.repeat(55)}`);
+        console.log(`  Direction:  ${direction}`);
+        console.log(`  Depth:      ${depth} hops`);
+        console.log(`  Risk:       ${RISK_ICON[report.risk_level] || '?'}  ${report.risk_level}`);
+        console.log(`\nBlast Radius:`);
+        console.log(`  Direct:     ${report.blast_radius.direct}`);
+        console.log(`  Transitive: ${report.blast_radius.transitive}`);
+        console.log(`  Total:      ${report.blast_radius.total}`);
+
+        if (Object.keys(report.affected.by_family).length) {
+            console.log('\nAffected by Family:');
+            for (const [fam, ids] of Object.entries(report.affected.by_family).sort((a,b) => b[1].length - a[1].length)) {
+                console.log(`  ${fam.padEnd(10)} ${ids.length}`);
+            }
+        }
+
+        if (Object.keys(report.affected.by_type).length) {
+            console.log('\nAffected by Type:');
+            for (const [typ, ids] of Object.entries(report.affected.by_type).sort((a,b) => b[1].length - a[1].length)) {
+                console.log(`  ${typ.padEnd(14)} ${ids.length}`);
+            }
+        }
+
+        if (report.affected.direct.length) {
+            console.log('\nDirect Dependents (depth 1):');
+            for (const d of report.affected.direct.slice(0, 20)) {
+                console.log(`  ${d.id}  ${(d.name || '').slice(0, 40).padEnd(42)}  [${d.family || '—'}]  ${d.rel_type || ''}`);
+            }
+            if (report.affected.direct.length > 20) console.log(`  … and ${report.affected.direct.length - 20} more`);
+        }
+
+        if (report.affected.migrations.length) {
+            console.log('\nMigrations touching affected entities:');
+            for (const m of report.affected.migrations) {
+                console.log(`  ● ${m.filename.padEnd(42)} [${m.status}]`);
+            }
+        }
+
+        if (report.affected.docs.length) {
+            console.log('\nDocs referencing affected entities:');
+            for (const d of report.affected.docs.slice(0, 10)) console.log(`  ${d}`);
+            if (report.affected.docs.length > 10) console.log(`  … and ${report.affected.docs.length - 10} more`);
+        }
+
+        console.log('');
+        break;
+    }
+
     case 'twin': {
         const id = args[0];
         if (!id) { console.error('Usage: registry twin ENT-NNNNNN'); process.exit(1); }
@@ -269,5 +334,6 @@ Commands:
   projection entity <ENT-NNNNNN>       All projections for one entity
   twin <ENT-NNNNNN>                    Digital Twin — live operational state
   discover [ENT-NNNNNN|merge]          Auto-discover relationships from code
+  impact <ENT-NNNNNN> [--depth N] [--direction upstream|downstream|both]
 `);
 }
