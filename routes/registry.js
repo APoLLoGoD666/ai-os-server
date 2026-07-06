@@ -307,12 +307,24 @@ router.get('/registry/snapshot/diff/:id1/:id2', async (req, res) => {
 
 // ── Scenario simulation ───────────────────────────────────────────────────────
 
-// POST /api/registry/scenario  — body: { name?, changes: [{ entity_id, proposed }], record_decision? }
+// POST /api/registry/scenario  — body: { name?, changes: [{ entity_id, proposed }], edge_patches?, record_decision? }
 router.post('/registry/scenario', (req, res) => {
-    const { name, changes, record_decision } = req.body || {};
+    const { name, changes, edge_patches, record_decision } = req.body || {};
     if (!changes || !changes.length) return res.status(400).json({ error: 'changes array is required' });
-    const result = scenario.runScenario({ name, changes, record_decision: !!record_decision });
+    const result = scenario.runScenario({ name, changes, edge_patches, record_decision: !!record_decision });
     res.status(result.ok ? 200 : 400).json(result);
+});
+
+// POST /api/registry/scenario/outcome  — body: { memory_id, outcome, quality, post_analysis? }
+// Records the real-world outcome of a scenario decision for learning/calibration.
+router.post('/registry/scenario/outcome', async (req, res) => {
+    const { memory_id, outcome, quality, post_analysis } = req.body || {};
+    if (!memory_id || !outcome || !quality) {
+        return res.status(400).json({ error: 'memory_id, outcome, and quality are required' });
+    }
+    const dm = require('../lib/memory/decision-memory');
+    const ok = await dm.recordOutcome(memory_id, outcome, quality, post_analysis || null);
+    res.status(ok ? 200 : 503).json({ ok, memory_id });
 });
 
 // POST /api/registry/capabilities/monitor  — run capability alert check (cron-safe)
@@ -323,21 +335,23 @@ router.post('/registry/capabilities/monitor', async (req, res) => {
     res.json(result);
 });
 
-// GET /api/registry/cron/health-check — combined capability + twin scan (Render cron target)
-// Runs capability alert check and twin state refresh in parallel.
+// GET /api/registry/cron/health-check — combined capability + twin scan + snapshot (Render cron target)
+// Runs capability alert check, twin state refresh, and architecture snapshot in parallel.
 // Wire this URL as a Render cron job (e.g. every 30 minutes).
 router.get('/registry/cron/health-check', async (req, res) => {
     const monitor = require('../lib/registry/capability-monitor');
     const limit   = req.query.limit ? parseInt(req.query.limit) : 50;
-    const [capResult, twinResult] = await Promise.all([
+    const [capResult, twinResult, snapResult] = await Promise.all([
         monitor.runAlertCheck(),
         twin.refreshAll({ limit }),
+        snap.takeSnapshot({ label: 'cron-health-check' }),
     ]);
     res.json({
         ok:           capResult.ok,
         ran_at:       new Date().toISOString(),
         capability:   capResult,
         twin_refresh: twinResult,
+        snapshot:     snapResult,
     });
 });
 
