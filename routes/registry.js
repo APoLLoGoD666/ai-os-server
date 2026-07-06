@@ -13,7 +13,8 @@ const ml      = reg.migrationLifecycle;
 const disco   = reg.discovery;
 const twin    = reg.twin;
 const impact  = reg.impact;
-const qry     = reg.query;
+const qry         = reg.query;
+const constraints = reg.constraints;
 
 // GET /api/registry/entity/:id
 router.get('/registry/entity/:id', (req, res) => {
@@ -176,6 +177,13 @@ router.get('/registry/migrations/scan', (req, res) => {
 router.get('/registry/migrations/preflight/:filename', (req, res) => {
     const result = ml.preflight(req.params.filename);
     res.status(result.ok ? 200 : 400).json(result);
+});
+
+// GET /api/registry/constraints?full=true
+router.get('/registry/constraints', (req, res) => {
+    const full   = req.query.full === 'true';
+    const result = constraints.check({ full });
+    res.status(result.ok ? 200 : 422).json(result);
 });
 
 // GET /api/registry/query/capabilities

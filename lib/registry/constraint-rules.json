@@ -1,0 +1,44 @@
+{
+  "CONSTITUTIONAL_GATE_HEALTHY": {
+    "description": "ENT-000388 (Constitutional Gate) must be ACTIVE — system integrity depends on it",
+    "severity": "CRITICAL",
+    "type": "static",
+    "check": "constitutional_gate_healthy"
+  },
+  "NO_ORPHANED_RELATIONSHIPS": {
+    "description": "All relationship endpoints must reference registered entities",
+    "severity": "ERROR",
+    "type": "static",
+    "check": "no_orphaned_relationships"
+  },
+  "GOVERNED_MIGRATION_APPROVED": {
+    "description": "Governed migrations must not be stuck at PROPOSED or VALIDATED — they must reach APPROVED or beyond",
+    "severity": "WARN",
+    "type": "static",
+    "check": "governed_migration_approved"
+  },
+  "ACTIVE_SERVICE_MONITORED": {
+    "description": "All ACTIVE SERVICE/MIDDLEWARE/API entities must have a SYNC monitoring projection",
+    "severity": "ERROR",
+    "type": "computed",
+    "check": "active_service_monitored"
+  },
+  "GOV_ENTITY_DOCUMENTED": {
+    "description": "All GOV-family entities must have a SYNC documentation projection",
+    "severity": "WARN",
+    "type": "computed",
+    "check": "gov_entity_documented"
+  },
+  "ACTIVE_FILE_IN_REPO": {
+    "description": "All ACTIVE FILE/ROUTE/MIDDLEWARE entities must be tracked in git (repository projection SYNC)",
+    "severity": "WARN",
+    "type": "computed",
+    "check": "active_file_in_repo"
+  },
+  "HIGH_IMPACT_ENTITY_DOCUMENTED": {
+    "description": "Entities classified CRITICAL or HIGH impact risk must have a SYNC documentation projection",
+    "severity": "WARN",
+    "type": "computed",
+    "check": "high_impact_entity_documented"
+  }
+}

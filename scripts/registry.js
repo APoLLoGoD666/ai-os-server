@@ -12,7 +12,8 @@ const proj   = reg.projections;
 const disco  = reg.discovery;
 const twin   = reg.twin;
 const impact = reg.impact;
-const qry    = reg.query;
+const qry         = reg.query;
+const constraints = reg.constraints;
 
 const [,, cmd, ...args] = process.argv;
 
@@ -319,6 +320,33 @@ switch (cmd) {
         break;
     }
 
+    case 'constraints': {
+        const full = args.includes('--full');
+        console.log(`\nEvaluating architectural constraints${full ? ' (full — includes computed rules)' : ''}…\n`);
+        const result = constraints.check({ full });
+
+        const SICON = { CRITICAL: '◈◈', ERROR: '✗', WARN: '!', PASS: '✓' };
+        for (const r of result.results) {
+            if (r.status === 'PASS') {
+                console.log(`  ${SICON.PASS}  ${r.rule}`);
+            } else {
+                const icon = SICON[r.severity] || '?';
+                console.log(`  ${icon}  ${r.rule}  [${r.severity}]  — ${r.violations.length} violation(s)`);
+                for (const v of r.violations.slice(0, 10)) {
+                    console.log(`       ${v.id || ''}  ${v.detail || ''}`);
+                }
+                if (r.violations.length > 10) console.log(`       … and ${r.violations.length - 10} more`);
+            }
+        }
+
+        const s = result.summary;
+        console.log(`\nResult: ${s.pass} pass  ${s.fail} fail  (${s.errors} error(s)  ${s.warnings} warning(s))  in ${result.duration_ms}ms`);
+        if (!full) console.log('  Run with --full to include computed projection/impact rules.\n');
+        else console.log('');
+        if (!result.ok) process.exit(1);
+        break;
+    }
+
     case 'query': {
         const intent = args[0];
         if (!intent || intent === 'capabilities') {
@@ -371,5 +399,6 @@ Commands:
   impact <ENT-NNNNNN> [--depth N] [--direction upstream|downstream|both]
   query capabilities                    List all registered intents
   query <intent> [--key value ...]     Execute a query intent
+  constraints [--full]                  Architectural constraint check (--full for computed rules)
 `);
 }
