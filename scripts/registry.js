@@ -12,6 +12,7 @@ const proj   = reg.projections;
 const disco  = reg.discovery;
 const twin   = reg.twin;
 const impact = reg.impact;
+const qry    = reg.query;
 
 const [,, cmd, ...args] = process.argv;
 
@@ -318,6 +319,39 @@ switch (cmd) {
         break;
     }
 
+    case 'query': {
+        const intent = args[0];
+        if (!intent || intent === 'capabilities') {
+            const caps = qry.capabilities();
+            console.log(`\nRegistered intents (${caps.length}):\n`);
+            for (const c of caps) {
+                console.log(`  ${c.intent.padEnd(32)} ${c.description}`);
+                const ps = Object.entries(c.params || {});
+                if (ps.length) {
+                    for (const [k, v] of ps) console.log(`    ${('--' + k).padEnd(20)} ${v}`);
+                }
+            }
+            console.log('');
+            break;
+        }
+        // Parse --key value pairs from remaining args
+        const params = {};
+        for (let i = 1; i < args.length; i += 2) {
+            if (args[i] && args[i].startsWith('--')) {
+                params[args[i].slice(2)] = args[i + 1];
+            }
+        }
+        const resp = qry.query(intent, params);
+        if (!resp.ok) {
+            console.error(`\nError: ${resp.error}`);
+            if (resp.hint) console.error(`Hint:  ${resp.hint}`);
+            process.exit(1);
+        }
+        console.log(JSON.stringify(resp.result, null, 2));
+        console.log(`\n(${resp.duration_ms}ms)`);
+        break;
+    }
+
     default:
         console.log(`
 APEX Registry CLI  (${eng.count()} entities loaded)
@@ -335,5 +369,7 @@ Commands:
   twin <ENT-NNNNNN>                    Digital Twin — live operational state
   discover [ENT-NNNNNN|merge]          Auto-discover relationships from code
   impact <ENT-NNNNNN> [--depth N] [--direction upstream|downstream|both]
+  query capabilities                    List all registered intents
+  query <intent> [--key value ...]     Execute a query intent
 `);
 }

@@ -13,6 +13,7 @@ const ml      = reg.migrationLifecycle;
 const disco   = reg.discovery;
 const twin    = reg.twin;
 const impact  = reg.impact;
+const qry     = reg.query;
 
 // GET /api/registry/entity/:id
 router.get('/registry/entity/:id', (req, res) => {
@@ -175,6 +176,33 @@ router.get('/registry/migrations/scan', (req, res) => {
 router.get('/registry/migrations/preflight/:filename', (req, res) => {
     const result = ml.preflight(req.params.filename);
     res.status(result.ok ? 200 : 400).json(result);
+});
+
+// GET /api/registry/query/capabilities
+router.get('/registry/query/capabilities', (req, res) => {
+    res.json(qry.capabilities());
+});
+
+// GET /api/registry/query?intent=...&[key=value...]
+router.get('/registry/query', (req, res) => {
+    const { intent, ...rest } = req.query;
+    if (!intent) return res.status(400).json({ error: 'intent is required' });
+    res.json(qry.query(intent, rest));
+});
+
+// POST /api/registry/query  — body: { intent, params }
+router.post('/registry/query', (req, res) => {
+    const { intent, params = {} } = req.body || {};
+    if (!intent) return res.status(400).json({ error: 'intent is required' });
+    const result = qry.query(intent, params);
+    res.status(result.ok ? 200 : 400).json(result);
+});
+
+// POST /api/registry/query/batch  — body: [{ intent, params?, alias? }]
+router.post('/registry/query/batch', (req, res) => {
+    const queries = req.body;
+    if (!Array.isArray(queries)) return res.status(400).json({ error: 'body must be an array' });
+    res.json(qry.queryBatch(queries));
 });
 
 module.exports = router;
