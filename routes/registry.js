@@ -105,18 +105,46 @@ router.get('/registry/projection/entity/:id', (req, res) => {
     res.json({ id: e.id, name: e.name, projections: results });
 });
 
-// GET /api/registry/twin/:id  — Digital Twin live state
-router.get('/registry/twin/:id', (req, res) => {
+// GET /api/registry/twin/:id  — DB-first Digital Twin (recomputes if stale)
+router.get('/registry/twin/:id', async (req, res) => {
     const e = eng.lookup(req.params.id);
     if (!e) return res.status(404).json({ error: 'Not found', id: req.params.id });
-    const state = twin.computeState(e);
-    res.json(state);
+    try {
+        const state = await twin.getState(e);
+        res.json(state);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// GET /api/registry/discover?id=ENT-NNNNNN  — candidate relationships
+// POST /api/registry/twin/:id/refresh  — force recompute + persist
+router.post('/registry/twin/:id/refresh', async (req, res) => {
+    const e = eng.lookup(req.params.id);
+    if (!e) return res.status(404).json({ error: 'Not found', id: req.params.id });
+    try {
+        const state = await twin.getState(e, { forceRefresh: true });
+        res.json({ ok: true, state });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/registry/twin/refresh-all  — bulk refresh (cron target)
+router.post('/registry/twin/refresh-all', async (req, res) => {
+    const limit = req.body?.limit || null;
+    try {
+        const result = await twin.refreshAll({ limit });
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/registry/discover?id=ENT-NNNNNN&passes=js,sql,docs
 router.get('/registry/discover', (req, res) => {
-    const id    = req.query.id;
-    const edges = id ? disco.discoverFor(id) : disco.discover();
+    const id      = req.query.id;
+    const passes  = req.query.passes ? req.query.passes.split(',') : undefined;
+    const edges   = id ? disco.discoverFor(id, passes) : disco.discover(passes);
     res.json({ count: edges.length, edges });
 });
 

@@ -198,23 +198,33 @@ switch (cmd) {
         if (!e) { console.error(`Not found: ${id}`); process.exit(1); }
         const state = twin.computeState(e);
         const HEALTH_ICON = { active: '●', inactive: '○', missing: '✗', external: '⊙', present: '◎', degraded: '!', unknown: '?' };
+        const scoreStr = state.health_score != null
+            ? `  score=${state.health_score}  confidence=${state.confidence}`
+            : '';
         console.log(`\nDigital Twin — ${id}  ${e.name}`);
         console.log(`${'─'.repeat(50)}`);
-        console.log(`  Health:    ${HEALTH_ICON[state.health] || '?'}  ${state.health.toUpperCase()}`);
-        console.log(`  Physical:  ${state.physical || '—'}`);
-        console.log(`  Runtime:   ${state.runtime_loaded || '—'}`);
+        console.log(`  Health:     ${HEALTH_ICON[state.health] || '?'}  ${state.health.toUpperCase()}${scoreStr}`);
+        console.log(`  Physical:   ${state.physical || '—'}`);
+        console.log(`  Runtime:    ${state.runtime_loaded || '—'}`);
         console.log(`  Documented: ${state.documented || '—'}`);
         if (state.last_git_commit) {
             console.log(`  Last commit: ${state.last_git_commit.slice(0, 8)}  ${state.last_git_date || ''}`);
+        }
+        if (state.evidence && state.evidence.length) {
+            console.log(`\n  Evidence:`);
+            for (const s of state.evidence) {
+                const bar = '█'.repeat(Math.round(s.value * 8)) + '░'.repeat(8 - Math.round(s.value * 8));
+                console.log(`    ${s.source.padEnd(14)} [${bar}]  ${(s.value * 100).toFixed(0)}%  w=${s.weight}`);
+            }
         }
         console.log(`\n  Projections:`);
         for (const p of state.projections) {
             const icon = { SYNC: '✓', DRIFT: '✗', SKIP: '·', NOT_IMPLEMENTED: '○' }[p.status] || '?';
             const detail = p.detail || p.reason || p.path || '';
-            console.log(`    ${icon}  ${p.projection.padEnd(14)} ${p.status}${detail ? '  // ' + detail.slice(0, 80) : ''}`);
+            console.log(`    ${icon}  ${p.projection.padEnd(14)} ${p.status}${detail ? '  // ' + detail.slice(0, 70) : ''}`);
         }
         console.log(`\n  Relationships: ${state.relationships.outgoing.length} out  ${state.relationships.incoming.length} in`);
-        console.log(`  Checked:   ${state.last_checked}\n`);
+        console.log(`  Checked:    ${state.last_checked}\n`);
         break;
     }
 
