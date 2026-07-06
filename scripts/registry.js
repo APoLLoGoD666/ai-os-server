@@ -4,11 +4,13 @@
 // Usage: node scripts/registry.js <command> [args]
 
 require('dotenv').config();
-const reg  = require('../lib/registry');
-const eng  = reg.engine;
-const rels = reg.relationships;
-const val  = reg.validator;
-const proj = reg.projections;
+const reg   = require('../lib/registry');
+const eng   = reg.engine;
+const rels  = reg.relationships;
+const val   = reg.validator;
+const proj  = reg.projections;
+const disco = reg.discovery;
+const twin  = reg.twin;
 
 const [,, cmd, ...args] = process.argv;
 
@@ -189,6 +191,58 @@ switch (cmd) {
         break;
     }
 
+    case 'twin': {
+        const id = args[0];
+        if (!id) { console.error('Usage: registry twin ENT-NNNNNN'); process.exit(1); }
+        const e = eng.lookup(id);
+        if (!e) { console.error(`Not found: ${id}`); process.exit(1); }
+        const state = twin.computeState(e);
+        const HEALTH_ICON = { active: '●', inactive: '○', missing: '✗', external: '⊙', present: '◎', degraded: '!', unknown: '?' };
+        console.log(`\nDigital Twin — ${id}  ${e.name}`);
+        console.log(`${'─'.repeat(50)}`);
+        console.log(`  Health:    ${HEALTH_ICON[state.health] || '?'}  ${state.health.toUpperCase()}`);
+        console.log(`  Physical:  ${state.physical || '—'}`);
+        console.log(`  Runtime:   ${state.runtime_loaded || '—'}`);
+        console.log(`  Documented: ${state.documented || '—'}`);
+        if (state.last_git_commit) {
+            console.log(`  Last commit: ${state.last_git_commit.slice(0, 8)}  ${state.last_git_date || ''}`);
+        }
+        console.log(`\n  Projections:`);
+        for (const p of state.projections) {
+            const icon = { SYNC: '✓', DRIFT: '✗', SKIP: '·', NOT_IMPLEMENTED: '○' }[p.status] || '?';
+            const detail = p.detail || p.reason || p.path || '';
+            console.log(`    ${icon}  ${p.projection.padEnd(14)} ${p.status}${detail ? '  // ' + detail.slice(0, 80) : ''}`);
+        }
+        console.log(`\n  Relationships: ${state.relationships.outgoing.length} out  ${state.relationships.incoming.length} in`);
+        console.log(`  Checked:   ${state.last_checked}\n`);
+        break;
+    }
+
+    case 'discover': {
+        const sub = args[0];
+        if (sub === 'merge') {
+            console.log('\nMerging discovered relationships into graph…');
+            const added = disco.mergeIntoGraph();
+            console.log(`  Added: ${added} new relationship(s)\n`);
+        } else {
+            const id = sub;
+            let edges;
+            if (id && /^ENT-\d{6}$/.test(id)) {
+                edges = disco.discoverFor(id);
+                console.log(`\nDiscovered relationships for ${id}  (${edges.length}):\n`);
+            } else {
+                edges = disco.discover();
+                console.log(`\nAll discovered relationships  (${edges.length}):\n`);
+            }
+            for (const e of edges.slice(0, 50)) {
+                console.log(`  ${e.from}  →[${e.type}]→  ${e.to}  // ${e.label || ''}`);
+            }
+            if (edges.length > 50) console.log(`  … and ${edges.length - 50} more`);
+            console.log('');
+        }
+        break;
+    }
+
     default:
         console.log(`
 APEX Registry CLI  (${eng.count()} entities loaded)
@@ -203,5 +257,7 @@ Commands:
   stats                                 Registry statistics
   projection check                      Physical projection drift report
   projection entity <ENT-NNNNNN>       All projections for one entity
+  twin <ENT-NNNNNN>                    Digital Twin — live operational state
+  discover [ENT-NNNNNN|merge]          Auto-discover relationships from code
 `);
 }

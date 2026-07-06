@@ -1,0 +1,72 @@
+{
+  "physical": {
+    "description": "Entity's registered path exists on local filesystem",
+    "requires_path": true,
+    "scope": {
+      "types": ["FILE", "SQL", "SEED_SCRIPT", "FOLDER", "DATABASE_FILE"]
+    },
+    "validator": "file_exists"
+  },
+  "repository": {
+    "description": "Entity is tracked in the git repository",
+    "requires_path": true,
+    "scope": {
+      "types": ["FILE", "SQL", "SEED_SCRIPT", "FOLDER", "DATABASE_FILE"]
+    },
+    "validator": "git_tracked"
+  },
+  "runtime": {
+    "description": "Entity is loaded in the running Express process",
+    "requires_path": true,
+    "scope": {
+      "families": ["RNT", "RTE", "AUT", "GOV"],
+      "types": ["FILE", "SERVICE", "ROUTE", "API", "MIDDLEWARE", "CONFIG"]
+    },
+    "validator": "content_contains_path",
+    "sources": ["server.js", "routes/"]
+  },
+  "documentation": {
+    "description": "Entity is referenced by ENT-ID in architecture documentation",
+    "scope": {
+      "families": ["GOV", "CIV", "CORE", "RNT", "RTE", "AUT"]
+    },
+    "validator": "id_in_content",
+    "sources": ["docs/"]
+  },
+  "knowledge": {
+    "description": "Entity's source file is indexed in the graphify knowledge graph",
+    "requires_path": true,
+    "scope": {
+      "families": ["RNT", "RTE", "AUT", "GOV"],
+      "types": ["FILE", "SQL"]
+    },
+    "validator": "in_graph",
+    "graph_file": "graphify-out/graph.json"
+  },
+  "dashboard": {
+    "description": "Entity is visible in dashboard.html",
+    "scope": {
+      "families": ["GOV", "CIV", "EXEC"]
+    },
+    "validator": "id_in_content",
+    "sources": ["dashboard.html"]
+  },
+  "monitoring": {
+    "description": "Entity is referenced in the telemetry and observability layer",
+    "scope": {
+      "families": ["RNT", "GOV", "AUT"],
+      "types": ["TABLE", "SERVICE", "ROUTE", "API", "MIDDLEWARE"]
+    },
+    "validator": "id_or_name_in_content",
+    "sources": ["src/routes/telemetry/index.js", "docs/OBSERVABILITY-ATLAS.md"]
+  },
+  "memory": {
+    "description": "Entity is present in the episodic memory and vault",
+    "scope": {
+      "families": ["CIV", "GOV", "CORE", "EXEC"],
+      "types": ["SERVICE", "TABLE", "MIDDLEWARE"]
+    },
+    "validator": "id_or_name_in_content",
+    "sources": ["VAULT:Claude-Memory"]
+  }
+}

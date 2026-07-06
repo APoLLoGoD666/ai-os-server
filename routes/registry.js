@@ -10,6 +10,8 @@ const rels    = reg.relationships;
 const val     = reg.validator;
 const proj    = reg.projections;
 const ml      = reg.migrationLifecycle;
+const disco   = reg.discovery;
+const twin    = reg.twin;
 
 // GET /api/registry/entity/:id
 router.get('/registry/entity/:id', (req, res) => {
@@ -101,6 +103,21 @@ router.get('/registry/projection/entity/:id', (req, res) => {
     if (!e) return res.status(404).json({ error: 'Not found', id: req.params.id });
     const results = proj.checkAllProjections(e);
     res.json({ id: e.id, name: e.name, projections: results });
+});
+
+// GET /api/registry/twin/:id  — Digital Twin live state
+router.get('/registry/twin/:id', (req, res) => {
+    const e = eng.lookup(req.params.id);
+    if (!e) return res.status(404).json({ error: 'Not found', id: req.params.id });
+    const state = twin.computeState(e);
+    res.json(state);
+});
+
+// GET /api/registry/discover?id=ENT-NNNNNN  — candidate relationships
+router.get('/registry/discover', (req, res) => {
+    const id    = req.query.id;
+    const edges = id ? disco.discoverFor(id) : disco.discover();
+    res.json({ count: edges.length, edges });
 });
 
 // GET /api/registry/migrations/compliance
