@@ -362,10 +362,13 @@ async function civilizationKernel(req, res, next) {
         });
 
         // B1: Governance score threshold check (ARCH-14 §3.3)
+        // Exempt non-API paths (dashboard HTML, static assets) — gate is for API operations only.
+        const _reqPath  = (req.path || req.url || '').toLowerCase();
+        const _isApiPath = _reqPath.startsWith('/api/') || _reqPath === '/api';
         const govScore  = _getGovernanceScore();
         const alLevel   = parseInt(process.env.AUTONOMY_LEVEL || '3', 10);
         const threshold = AL_THRESHOLD[alLevel] ?? 0.75;
-        if (govScore !== null && govScore < threshold) {
+        if (_isApiPath && govScore !== null && govScore < threshold) {
             ctx.flags.governanceScore = govScore;
             ctx.flags.autonomyLevel   = alLevel;
             res.setHeader('X-Apex-Request-Id',  ctx.requestId);
