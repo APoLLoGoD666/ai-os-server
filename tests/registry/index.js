@@ -30,6 +30,7 @@ const suites = [
     { name: 'ctx',              run: require('./ctx.test')              },
     { name: 'events',           run: require('./events.test')           },
     { name: 'state-version',   run: require('./state-version.test')   },
+    { name: 'kernel',          run: require('./kernel.test')          },
     { name: 'cache',            run: require('./cache.test')            },
     { name: 'traversal',        run: require('./traversal.test')        },
 ];
