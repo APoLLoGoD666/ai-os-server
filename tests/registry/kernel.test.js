@@ -14,8 +14,8 @@ module.exports = async function run() {
             assert(Object.isFrozen(Registry), 'Registry should be frozen to prevent API mutation');
         });
 
-        await test('Registry exposes all nine public surfaces', () => {
-            const surfaces = ['query', 'impact', 'predict', 'snapshot', 'scenario', 'discover', 'validate', 'events', 'visualize'];
+        await test('Registry exposes all twelve public surfaces', () => {
+            const surfaces = ['query', 'impact', 'predict', 'snapshot', 'scenario', 'discover', 'validate', 'events', 'visualize', 'observatory', 'constitution', 'temporal'];
             for (const s of surfaces) {
                 assert(s in Registry, `Registry missing surface: ${s}`);
             }

@@ -1,6 +1,7 @@
 node_modules
 .env
 .registry-cache/
+runtime/live/
 logs/
 
 # Render API response snapshots — contain live secrets

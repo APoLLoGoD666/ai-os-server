@@ -36,6 +36,7 @@ const suites = [
     { name: 'query-cache',      run: require('./query-cache.test')      },
     { name: 'visualize',        run: require('./visualize.test')        },
     { name: 'optimizer',        run: require('./optimizer.test')        },
+    { name: 'universe',         run: require('./universe.test')         },
 ];
 
 async function main() {
