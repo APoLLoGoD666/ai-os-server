@@ -29,6 +29,7 @@ const suites = [
     { name: 'twin',             run: require('./twin.test')             },
     { name: 'ctx',              run: require('./ctx.test')              },
     { name: 'cache',            run: require('./cache.test')            },
+    { name: 'traversal',        run: require('./traversal.test')        },
 ];
 
 async function main() {
