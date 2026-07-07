@@ -14,8 +14,8 @@ module.exports = async function run() {
             assert(Object.isFrozen(Registry), 'Registry should be frozen to prevent API mutation');
         });
 
-        await test('Registry exposes all eight public surfaces', () => {
-            const surfaces = ['query', 'impact', 'predict', 'snapshot', 'scenario', 'discover', 'validate', 'events'];
+        await test('Registry exposes all nine public surfaces', () => {
+            const surfaces = ['query', 'impact', 'predict', 'snapshot', 'scenario', 'discover', 'validate', 'events', 'visualize'];
             for (const s of surfaces) {
                 assert(s in Registry, `Registry missing surface: ${s}`);
             }
@@ -220,6 +220,51 @@ module.exports = async function run() {
             Registry.events.emit('_KERNEL_COUNT_');
             Registry.events.clear('_KERNEL_COUNT_');
             assert.strictEqual(count, 2);
+        });
+    });
+
+    await suite('Registry.visualize', async () => {
+        await test('visualize.toMermaid is a function', () => {
+            assert(typeof Registry.visualize.toMermaid === 'function');
+        });
+
+        await test('visualize.toDot is a function', () => {
+            assert(typeof Registry.visualize.toDot === 'function');
+        });
+
+        await test('visualize.toAscii is a function', () => {
+            assert(typeof Registry.visualize.toAscii === 'function');
+        });
+
+        await test('visualize.subgraphMermaid is a function', () => {
+            assert(typeof Registry.visualize.subgraphMermaid === 'function');
+        });
+
+        await test('toMermaid on real impact report returns flowchart string', () => {
+            const report = Registry.impact(KNOWN_ID, { depth: 2 });
+            assert(report !== null);
+            const s = Registry.visualize.toMermaid(report);
+            assert(typeof s === 'string');
+            assert(s.startsWith('flowchart LR'));
+        });
+    });
+
+    await suite('Registry.query.batchAsync and cache', async () => {
+        await test('query.batchAsync is a function', () => {
+            assert(typeof Registry.query.batchAsync === 'function');
+        });
+
+        await test('query.batchAsync returns a Promise resolving to array', async () => {
+            const results = await Registry.query.batchAsync([
+                { intent: 'entity.lookup', params: { id: KNOWN_ID } },
+            ]);
+            assert(Array.isArray(results));
+            assert.strictEqual(results[0].ok, true);
+        });
+
+        await test('query.cache exposes stats() and invalidate()', () => {
+            assert(typeof Registry.query.cache.stats      === 'function');
+            assert(typeof Registry.query.cache.invalidate === 'function');
         });
     });
 

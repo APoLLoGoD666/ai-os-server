@@ -170,6 +170,130 @@ module.exports = async function run() {
         });
     });
 
+    await suite('GraphTraversal.articulationPoints', async () => {
+        // Linear chain A–B–C–D: removing B disconnects A from C–D; removing C disconnects A–B from D.
+        const AP_ADJ = new Map([
+            ['A', [{ from: 'A', to: 'B', type: 'x', confidence: 1 }]],
+            ['B', [{ from: 'B', to: 'A', type: 'x', confidence: 1 },
+                   { from: 'B', to: 'C', type: 'x', confidence: 1 }]],
+            ['C', [{ from: 'C', to: 'B', type: 'x', confidence: 1 },
+                   { from: 'C', to: 'D', type: 'x', confidence: 1 }]],
+            ['D', [{ from: 'D', to: 'C', type: 'x', confidence: 1 }]],
+        ]);
+
+        await test('returns a Set', () => {
+            const aps = GraphTraversal.articulationPoints(AP_ADJ);
+            assert(aps instanceof Set);
+        });
+
+        await test('empty adjacency returns empty Set', () => {
+            const aps = GraphTraversal.articulationPoints(new Map());
+            assert(aps instanceof Set);
+            assert.strictEqual(aps.size, 0);
+        });
+
+        await test('identifies interior nodes of a linear chain as APs', () => {
+            const aps = GraphTraversal.articulationPoints(AP_ADJ);
+            assert(aps.has('B'), 'B should be an articulation point (bridges A and C-D)');
+            assert(aps.has('C'), 'C should be an articulation point (bridges A-B and D)');
+        });
+
+        await test('leaf nodes of a chain are NOT articulation points', () => {
+            const aps = GraphTraversal.articulationPoints(AP_ADJ);
+            assert(!aps.has('A'), 'A is a leaf — not an AP');
+            assert(!aps.has('D'), 'D is a leaf — not an AP');
+        });
+
+        await test('fully-connected triangle has no articulation points', () => {
+            const tri = new Map([
+                ['A', [{ from: 'A', to: 'B', type: 'x', confidence: 1 }, { from: 'A', to: 'C', type: 'x', confidence: 1 }]],
+                ['B', [{ from: 'B', to: 'A', type: 'x', confidence: 1 }, { from: 'B', to: 'C', type: 'x', confidence: 1 }]],
+                ['C', [{ from: 'C', to: 'A', type: 'x', confidence: 1 }, { from: 'C', to: 'B', type: 'x', confidence: 1 }]],
+            ]);
+            const aps = GraphTraversal.articulationPoints(tri);
+            assert.strictEqual(aps.size, 0, 'no APs in a triangle — any removal leaves the rest connected');
+        });
+
+        await test('real registry graph returns a Set (smoke test)', () => {
+            const { GraphCache } = require('../../lib/registry/impact/graph');
+            const impact         = require('../../lib/registry/impact');
+            impact.analyze('ENT-000388', { depth: 3 });
+            const fwd = GraphCache.forward();
+            assert(fwd instanceof Map);
+            const aps = GraphTraversal.articulationPoints(fwd);
+            assert(aps instanceof Set);
+        });
+    });
+
+    await suite('GraphTraversal.stronglyConnectedComponents', async () => {
+        // A→B→C→A (cycle), D→A (external)
+        const SCC_ADJ = new Map([
+            ['A', [{ from: 'A', to: 'B', type: 'x', confidence: 1 }]],
+            ['B', [{ from: 'B', to: 'C', type: 'x', confidence: 1 }]],
+            ['C', [{ from: 'C', to: 'A', type: 'x', confidence: 1 }]],
+            ['D', [{ from: 'D', to: 'A', type: 'x', confidence: 1 }]],
+        ]);
+
+        await test('returns an Array', () => {
+            const sccs = GraphTraversal.stronglyConnectedComponents(SCC_ADJ);
+            assert(Array.isArray(sccs));
+        });
+
+        await test('empty adjacency returns empty Array', () => {
+            const sccs = GraphTraversal.stronglyConnectedComponents(new Map());
+            assert.deepStrictEqual(sccs, []);
+        });
+
+        await test('identifies the A–B–C cycle as a single SCC of size 3', () => {
+            const sccs = GraphTraversal.stronglyConnectedComponents(SCC_ADJ);
+            const big  = sccs.find(s => s.length === 3);
+            assert(big, 'should find one SCC of size 3 (the A–B–C cycle)');
+            const set = new Set(big);
+            assert(set.has('A') && set.has('B') && set.has('C'), 'SCC should contain A, B, C');
+        });
+
+        await test('D is its own SCC (no cycle back to D)', () => {
+            const sccs = GraphTraversal.stronglyConnectedComponents(SCC_ADJ);
+            const d    = sccs.find(s => s.includes('D'));
+            assert(d, 'D should appear in some SCC');
+            assert.strictEqual(d.length, 1, 'D should be a singleton SCC');
+        });
+
+        await test('sorted by size descending', () => {
+            const sccs = GraphTraversal.stronglyConnectedComponents(SCC_ADJ);
+            for (let i = 1; i < sccs.length; i++) {
+                assert(sccs[i - 1].length >= sccs[i].length, 'SCCs should be sorted by size desc');
+            }
+        });
+
+        await test('DAG (no cycles) returns all singletons', () => {
+            // A→B→C, no back edges
+            const dag = new Map([
+                ['A', [{ from: 'A', to: 'B', type: 'x', confidence: 1 }]],
+                ['B', [{ from: 'B', to: 'C', type: 'x', confidence: 1 }]],
+                ['C', []],
+            ]);
+            const sccs = GraphTraversal.stronglyConnectedComponents(dag);
+            assert(sccs.every(s => s.length === 1), 'all SCCs should be singletons in a DAG');
+        });
+
+        await test('impact.cycles intent reports cycles via SCC', () => {
+            const { query } = require('../../lib/registry/query');
+            const r = query('impact.cycles', {});
+            assert.strictEqual(r.ok, true, r.error);
+            assert(typeof r.result.cycle_count === 'number');
+            assert(Array.isArray(r.result.cycles));
+        });
+
+        await test('impact.articulation_points intent reports APs', () => {
+            const { query } = require('../../lib/registry/query');
+            const r = query('impact.articulation_points', {});
+            assert.strictEqual(r.ok, true, r.error);
+            assert(typeof r.result.count === 'number');
+            assert(Array.isArray(r.result.articulation_points));
+        });
+    });
+
     await suite('GraphTraversal integration — impact and relationships', async () => {
         await test('impact.analyze produces correct blast_radius (uses GraphTraversal internally)', () => {
             const r = impact.analyze('ENT-000388', { depth: 2 });
