@@ -13,7 +13,8 @@
     "setup-local": "npx playwright install chromium",
     "app": "electron apex-electron.js",
     "render-build": "node scripts/certify.js && npm install && npx playwright install chromium --with-deps && pip install \"markitdown[all]\" --quiet || true",
-    "certify": "node scripts/certify.js"
+    "certify": "node scripts/certify.js",
+    "test:registry": "node tests/registry/index.js"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.77",
