@@ -1,7 +1,7 @@
 require("./instrument.js");
 require("dotenv").config();
 
-const GIT_SHA = (() => { try { return require('child_process').execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'unknown'; } })();
+const { GIT_SHA, _errBuffer, _sinkError, getMastraStatus, setMastraStatus, getInitMastra, setInitMastra } = require('./lib/server-state');
 
 const Sentry = require("@sentry/node");
 
@@ -19,30 +19,7 @@ const Sentry = require("@sentry/node");
     if (!process.env.SLACK_BOT_TOKEN) console.warn('[STARTUP] SLACK_BOT_TOKEN not set — Slack integration disabled');
 })();
 
-// Error sink — writes to apex_notifications when Sentry DSN is absent
-const _errBuffer = [];
-function _sinkError(label, err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const entry = { label, msg, stack: err?.stack?.split('\n').slice(0,4).join(' | '), ts: new Date().toISOString() };
-    _errBuffer.push(entry);
-    if (_errBuffer.length > 20) _errBuffer.shift();
-    if (!process.env.SENTRY_DSN) {
-        // Deferred write — sbAdmin is the module-level singleton (defined at line 113);
-        // setImmediate fires after module init so sbAdmin is guaranteed to be set.
-        setImmediate(() => {
-            try {
-                if (sbAdmin) {
-                    sbAdmin.from('apex_notifications').insert({
-                        id: `err-${Date.now()}`,
-                        message: `[${label}] ${msg}`,
-                        type: 'error',
-                        read: false
-                    }).then(() => {}).catch(() => {});
-                }
-            } catch (_) {}
-        });
-    }
-}
+// Error sink — _errBuffer, _sinkError, GIT_SHA imported from lib/server-state.js
 
 // Prevent silent crashes from taking down the server
 process.on('uncaughtException', (err) => {
@@ -266,8 +243,7 @@ const {
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./agent-system/cloud_autopilot");
 const { checkEmails, sendEmailReply, initEmailAgent } = require("./agent-system/email_agent");
 // mastra_agents is lazy-loaded after server stabilises to avoid startup OOM
-let initMastra = () => null;
-let getMastraStatus = () => ({ apex: false, email: false, finance: false, routine: false, research: false, mastra: false, details: { status: 'not yet loaded' } });
+// initMastra/getMastraStatus are managed via lib/server-state.js setters
 const { categoriseTransaction, checkBudgetAlerts, parseCsvTransactions, FINANCE_CATEGORIES } = require("./agent-system/finance_agent");
 const { initRoutineAgent } = require("./agent-system/routine_agent");
 const { runReflectionCheck } = require("./agent-system/reflection_agent");
@@ -4469,9 +4445,9 @@ server.listen(PORT, () => {
                 return;
             }
             const _m = require('./agent-system/mastra_agents');
-            initMastra = _m.initMastra;
-            getMastraStatus = _m.getMastraStatus;
-            mastraAgents = initMastra(handleCommand);
+            setInitMastra(_m.initMastra);
+            setMastraStatus(_m.getMastraStatus);
+            mastraAgents = getInitMastra()(handleCommand);
             console.log('[Mastra] agents initialised (deferred).');
         } catch (err) { console.error('[Mastra] INIT ERROR (deferred):', err); setTimeout(_loadMastra, 600000); }
     }
@@ -4744,8 +4720,8 @@ checkPendingMasterTasks();
 
 
     // Mastra agent framework — real load deferred 5 min via _loadMastra() above.
-    // initMastra is the stub (() => null) here; this call is intentionally harmless.
-    mastraAgents = initMastra(handleCommand);
+    // getInitMastra() returns the stub (() => null) here; this call is intentionally harmless.
+    mastraAgents = getInitMastra()(handleCommand);
 
     // Ruflo daemon — auto-starts 10 min after server stabilises
     // Detached so it runs independently and doesn't hold the event loop.
