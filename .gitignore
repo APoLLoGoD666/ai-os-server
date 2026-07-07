@@ -25,6 +25,9 @@ backups/
 # Graphify generated output — large AST/graph cache, regenerated on demand
 graphify-out/
 
+# GitNexus parse cache — large local-only AST index, regenerated on demand
+.gitnexus/
+
 # Runtime state — ephemeral, regenerated on start
 data/memory.json
 data/governance_events.jsonl
