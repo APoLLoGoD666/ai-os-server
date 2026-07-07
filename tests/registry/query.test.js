@@ -94,4 +94,103 @@ module.exports = async function run() {
             assert(Array.isArray(caps) || (typeof caps === 'object'), 'should return intents list');
         });
     });
+
+    await suite('Query Planner', async () => {
+        await test('plan() returns object with intent, subsystem, executable', () => {
+            const p = qry.plan('entity.lookup', { id: KNOWN_ID });
+            assert.strictEqual(p.intent, 'entity.lookup');
+            assert.strictEqual(p.subsystem, 'engine');
+            assert.strictEqual(p.executable, true);
+        });
+
+        await test('plan() routes impact.* to impact subsystem', () => {
+            const p = qry.plan('impact.analyze', { id: KNOWN_ID });
+            assert.strictEqual(p.subsystem, 'impact');
+        });
+
+        await test('plan() routes twin.* to twin subsystem', () => {
+            const p = qry.plan('twin.state', {});
+            assert.strictEqual(p.subsystem, 'twin');
+        });
+
+        await test('plan() routes snapshot.* to snapshot subsystem', () => {
+            const p = qry.plan('snapshot.list', {});
+            assert.strictEqual(p.subsystem, 'snapshot');
+        });
+
+        await test('plan() routes composite.* to composite subsystem', () => {
+            const p = qry.plan('composite.system_health', {});
+            assert.strictEqual(p.subsystem, 'composite');
+        });
+
+        await test('plan() for unknown intent sets executable:false', () => {
+            const p = qry.plan('no.such.intent', {});
+            assert.strictEqual(p.executable, false);
+        });
+
+        await test('planBatch() returns array of plans matching input length', () => {
+            const plans = qry.planBatch([
+                { intent: 'entity.lookup',  params: { id: KNOWN_ID }, alias: 'ent' },
+                { intent: 'impact.analyze', params: { id: KNOWN_ID }               },
+            ]);
+            assert.strictEqual(plans.length, 2);
+            assert.strictEqual(plans[0].alias, 'ent');
+            assert.strictEqual(plans[0].subsystem, 'engine');
+            assert.strictEqual(plans[1].subsystem, 'impact');
+        });
+
+        await test('subsystems() returns list with engine and impact', () => {
+            const subs = qry.subsystems();
+            assert(Array.isArray(subs));
+            const names = subs.map(s => s.name);
+            assert(names.includes('engine'),    'engine subsystem should be listed');
+            assert(names.includes('impact'),    'impact subsystem should be listed');
+            assert(names.includes('twin'),      'twin subsystem should be listed');
+            assert(names.includes('snapshot'),  'snapshot subsystem should be listed');
+            assert(names.includes('composite'), 'composite subsystem should be listed');
+        });
+
+        await test('subsystems() entries have name, description, intents', () => {
+            const subs = qry.subsystems();
+            for (const s of subs) {
+                assert(typeof s.name === 'string',        'subsystem should have name');
+                assert(typeof s.description === 'string', 'subsystem should have description');
+                assert(Array.isArray(s.intents),          'subsystem should have intents array');
+            }
+        });
+
+        await test('engine subsystem intents includes entity.lookup', () => {
+            const subs   = qry.subsystems();
+            const engine = subs.find(s => s.name === 'engine');
+            assert(engine, 'engine subsystem should exist');
+            assert(engine.intents.includes('entity.lookup'), 'entity.lookup should be routed to engine');
+        });
+
+        await test('merge() keyed — merges batch results by alias', () => {
+            const results = qry.queryBatch([
+                { intent: 'entity.lookup', params: { id: KNOWN_ID }, alias: 'ent' },
+            ]);
+            const merged = qry.merge(results, 'keyed');
+            assert(typeof merged === 'object');
+            assert('ent' in merged, 'keyed merge should use alias as key');
+        });
+
+        await test('merge() assign — merges successful results via Object.assign', () => {
+            const results = qry.queryBatch([
+                { intent: 'entity.stats', params: {}, alias: 'stats' },
+            ]);
+            const merged = qry.merge(results, 'assign');
+            assert(typeof merged === 'object');
+            assert('total' in merged, 'assign merge should include result fields');
+        });
+
+        await test('merge() array — returns array of result values', () => {
+            const results = qry.queryBatch([
+                { intent: 'entity.stats', params: {} },
+            ]);
+            const merged = qry.merge(results, 'array');
+            assert(Array.isArray(merged));
+            assert.strictEqual(merged.length, 1);
+        });
+    });
 };
