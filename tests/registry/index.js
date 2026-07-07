@@ -12,20 +12,23 @@ require('dotenv').config();
 const { reset, totals } = require('./_runner');
 
 const suites = [
-    { name: 'engine',        run: require('./engine.test')        },
-    { name: 'relationships', run: require('./relationships.test') },
-    { name: 'discovery',     run: require('./discovery.test')     },
-    { name: 'projections',   run: require('./projections.test')   },
-    { name: 'health',        run: require('./health.test')        },
-    { name: 'impact',        run: require('./impact.test')        },
-    { name: 'constraints',   run: require('./constraints.test')   },
-    { name: 'prediction',    run: require('./prediction.test')    },
-    { name: 'capabilities',  run: require('./capabilities.test')  },
-    { name: 'monitor',       run: require('./monitor.test')       },
-    { name: 'query',         run: require('./query.test')         },
-    { name: 'scenario',      run: require('./scenario.test')      },
-    { name: 'snapshot',      run: require('./snapshot.test')      },
-    { name: 'twin',          run: require('./twin.test')          },
+    { name: 'engine',           run: require('./engine.test')           },
+    { name: 'relationships',    run: require('./relationships.test')    },
+    { name: 'discovery',        run: require('./discovery.test')        },
+    { name: 'projections',      run: require('./projections.test')      },
+    { name: 'health',           run: require('./health.test')           },
+    { name: 'impact',           run: require('./impact.test')           },
+    { name: 'constraints',      run: require('./constraints.test')      },
+    { name: 'prediction',       run: require('./prediction.test')       },
+    { name: 'capabilities',     run: require('./capabilities.test')     },
+    { name: 'capability-graph', run: require('./capability-graph.test') },
+    { name: 'monitor',          run: require('./monitor.test')          },
+    { name: 'query',            run: require('./query.test')            },
+    { name: 'scenario',         run: require('./scenario.test')         },
+    { name: 'snapshot',         run: require('./snapshot.test')         },
+    { name: 'twin',             run: require('./twin.test')             },
+    { name: 'ctx',              run: require('./ctx.test')              },
+    { name: 'cache',            run: require('./cache.test')            },
 ];
 
 async function main() {
