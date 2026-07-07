@@ -25,6 +25,12 @@ backups/
 # Graphify generated output — large AST/graph cache, regenerated on demand
 graphify-out/
 
+# Runtime state — ephemeral, regenerated on start
+data/memory.json
+data/governance_events.jsonl
+data/timeline.json
+data/notifications.json
+
 # Ruflo runtime databases and ephemeral state
 ruvector.db
 .swarm/*.db
