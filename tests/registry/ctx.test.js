@@ -71,7 +71,7 @@ const mockCtx = {
 module.exports = async function run() {
     await suite('RegistryContext struct', async () => {
         await test('RegistryContext has all expected service properties', () => {
-            const props = ['engine', 'relationships', 'capabilities', 'migrationLifecycle', 'projections', 'relationshipDiscovery', 'graph', 'traversal', 'events'];
+            const props = ['engine', 'relationships', 'capabilities', 'migrationLifecycle', 'projections', 'relationshipDiscovery', 'graph', 'traversal', 'events', 'stateVersion'];
             for (const p of props) {
                 assert(RegistryContext[p] !== undefined, `RegistryContext missing: ${p}`);
             }
