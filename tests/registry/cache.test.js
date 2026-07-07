@@ -5,66 +5,58 @@
 const assert = require('assert');
 const { test, suite } = require('./_runner');
 
-const impact                   = require('../../lib/registry/impact');
-const { invalidateGraphCache,
-        getForward, getBackward } = require('../../lib/registry/impact/graph');
-const relationships            = require('../../lib/registry/relationships');
-const projections              = require('../../lib/registry/projections');
-const engine                   = require('../../lib/registry/engine');
+const impact                  = require('../../lib/registry/impact');
+const { GraphCache }          = require('../../lib/registry/impact/graph');
+const relationships           = require('../../lib/registry/relationships');
+const projections             = require('../../lib/registry/projections');
+const engine                  = require('../../lib/registry/engine');
 
 const KNOWN_ID = 'ENT-000388';
 
 module.exports = async function run() {
     await suite('Impact graph cache', async () => {
         await test('graph is null before first analyze()', () => {
-            // Invalidate first, then check state is null
-            invalidateGraphCache();
-            assert.strictEqual(getForward(),  null, 'forward map should be null after invalidation');
-            assert.strictEqual(getBackward(), null, 'backward map should be null after invalidation');
+            GraphCache.invalidate();
+            assert.strictEqual(GraphCache.forward(),  null, 'forward map should be null after invalidation');
+            assert.strictEqual(GraphCache.backward(), null, 'backward map should be null after invalidation');
         });
 
         await test('graph is populated after analyze()', () => {
-            // analyze() triggers buildGraph() which populates the maps
             impact.analyze(KNOWN_ID, { depth: 1 });
-            assert(getForward()  instanceof Map, 'forward map should be a Map after build');
-            assert(getBackward() instanceof Map, 'backward map should be a Map after build');
+            assert(GraphCache.forward()  instanceof Map, 'forward map should be a Map after build');
+            assert(GraphCache.backward() instanceof Map, 'backward map should be a Map after build');
         });
 
-        await test('invalidateGraphCache() resets to null', () => {
+        await test('GraphCache.invalidate() resets to null', () => {
             impact.analyze(KNOWN_ID, { depth: 1 }); // ensure built
-            invalidateGraphCache();
-            assert.strictEqual(getForward(),  null);
-            assert.strictEqual(getBackward(), null);
+            GraphCache.invalidate();
+            assert.strictEqual(GraphCache.forward(),  null);
+            assert.strictEqual(GraphCache.backward(), null);
         });
 
         await test('analyze() returns same result before and after invalidation', () => {
             const r1 = impact.analyze(KNOWN_ID, { depth: 2 });
-            invalidateGraphCache();
+            GraphCache.invalidate();
             const r2 = impact.analyze(KNOWN_ID, { depth: 2 });
-            // Blast radius should be identical after rebuild
             assert.deepStrictEqual(r1.blast_radius, r2.blast_radius, 'blast radius should be stable after cache rebuild');
         });
 
         await test('relationships.add() invalidates impact graph cache', () => {
-            // Build the graph first
             impact.analyze(KNOWN_ID, { depth: 1 });
-            assert(getForward() instanceof Map, 'graph should be built');
+            assert(GraphCache.forward() instanceof Map, 'graph should be built');
 
-            // Adding a relationship should invalidate the cache
             try {
                 relationships.add('ENT-000001', 'ENT-000006', 'contains', 'test edge (dup ok)');
             } catch (_) { /* duplicate type errors are fine — invalidation still fires */ }
 
-            // Graph should be null now (invalidated by add())
-            assert.strictEqual(getForward(),  null, 'forward map should be null after relationships.add()');
-            assert.strictEqual(getBackward(), null, 'backward map should be null after relationships.add()');
+            assert.strictEqual(GraphCache.forward(),  null, 'forward map should be null after relationships.add()');
+            assert.strictEqual(GraphCache.backward(), null, 'backward map should be null after relationships.add()');
 
-            // Rebuild for subsequent tests
             impact.analyze(KNOWN_ID, { depth: 1 });
         });
 
         await test('graph rebuild after invalidation includes original edges', () => {
-            invalidateGraphCache();
+            GraphCache.invalidate();
             const r = impact.analyze(KNOWN_ID, { depth: 5 });
             assert(r !== null, 'analyze should work after rebuild');
             assert(typeof r.blast_radius.total === 'number');
@@ -73,9 +65,8 @@ module.exports = async function run() {
 
     await suite('Projection validator caches', async () => {
         await test('git_tracked result is consistent across calls', () => {
-            // Pick an entity that has a path (likely to be checked)
             const entities = engine.all().filter(e => e.path && !e.path.startsWith('UNKNOWN'));
-            if (entities.length === 0) return; // skip if no path-bearing entities
+            if (entities.length === 0) return;
             const e  = entities[0];
             const r1 = projections.checkProjection(e, 'repository');
             const r2 = projections.checkProjection(e, 'repository');
@@ -108,7 +99,6 @@ module.exports = async function run() {
             const r1 = constraints.check({ full: true });
             const r2 = constraints.check({ full: true });
             assert.strictEqual(r1.summary.total, r2.summary.total);
-            // Failure counts can differ only if filesystem changes between calls — they should not
             assert.strictEqual(r1.summary.fail,  r2.summary.fail);
         });
     });
