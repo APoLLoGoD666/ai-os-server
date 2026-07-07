@@ -1,0 +1,34 @@
+domain: Registry
+domain_id: DOM-000003
+capability: entity-graph
+runtime: lib/registry/
+criticality: CRITICAL
+owner: Registry Kernel
+
+entity_id: DOM-000003
+
+dependencies:
+  - DOM-000005   # Infrastructure — runs on Node/Render
+
+consumers:
+  - DOM-000001
+  - DOM-000002
+  - DOM-000004
+  - DOM-000006
+  - DOM-000007
+  - DOM-000008
+  - DOM-000009
+
+events_emitted:
+  - ENTITY_CREATED
+  - ENTITY_UPDATED
+  - EDGE_ADDED
+  - EDGE_REMOVED
+  - MIGRATION_ADDED
+  - SNAPSHOT_CREATED
+  - GOVERNANCE_VIOLATION
+  - FITNESS_CHECK_FAILED
+  - TEMPORAL_ANOMALY_DETECTED
+  - ARCHITECTURE_UPDATED
+
+events_consumed: []

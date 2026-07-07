@@ -14,8 +14,8 @@ module.exports = async function run() {
             assert(Object.isFrozen(Registry), 'Registry should be frozen to prevent API mutation');
         });
 
-        await test('Registry exposes all twelve public surfaces', () => {
-            const surfaces = ['query', 'impact', 'predict', 'snapshot', 'scenario', 'discover', 'validate', 'events', 'visualize', 'observatory', 'constitution', 'temporal'];
+        await test('Registry exposes all eighteen public surfaces', () => {
+            const surfaces = ['query', 'impact', 'predict', 'snapshot', 'scenario', 'discover', 'validate', 'events', 'visualize', 'observatory', 'constitution', 'temporal', 'genome', 'shadowRegistry', 'contracts', 'clock', 'domains', 'consensus'];
             for (const s of surfaces) {
                 assert(s in Registry, `Registry missing surface: ${s}`);
             }
@@ -265,6 +265,57 @@ module.exports = async function run() {
         await test('query.cache exposes stats() and invalidate()', () => {
             assert(typeof Registry.query.cache.stats      === 'function');
             assert(typeof Registry.query.cache.invalidate === 'function');
+        });
+    });
+
+    await suite('Registry.domains', async () => {
+        await test('domains.list() returns 10 entries', () => {
+            const entries = Registry.domains.list();
+            assert(Array.isArray(entries));
+            assert.strictEqual(entries.length, 10);
+        });
+
+        await test('all domains are migrated (have index.js)', () => {
+            const entries = Registry.domains.list();
+            for (const e of entries) {
+                assert(e.migrated, `domain ${e.name} is not yet migrated`);
+            }
+        });
+
+        await test('domains.load("experiments") returns frozen Experiments domain', () => {
+            const dom = Registry.domains.load('experiments');
+            assert(Object.isFrozen(dom), 'domain should be frozen');
+            assert.strictEqual(dom.id, 'DOM-000010');
+            assert.strictEqual(dom.name, 'Experiments');
+        });
+
+        await test('domains.load("DOM-000010") same as load("experiments")', () => {
+            const a = Registry.domains.load('DOM-000010');
+            const b = Registry.domains.load('experiments');
+            assert.strictEqual(a, b, 'should return same cached instance');
+        });
+
+        await test('each domain exposes status(), entities(), relationships(), health()', () => {
+            const all = Registry.domains.loadAll();
+            for (const [name, dom] of Object.entries(all)) {
+                assert(typeof dom.status        === 'function', `${name}: missing status()`);
+                assert(typeof dom.entities      === 'function', `${name}: missing entities()`);
+                assert(typeof dom.relationships === 'function', `${name}: missing relationships()`);
+                assert(typeof dom.health        === 'function', `${name}: missing health()`);
+            }
+        });
+
+        await test('domain.status() returns domain_id and name', () => {
+            const dom = Registry.domains.load('experiments');
+            const s   = dom.status();
+            assert.strictEqual(s.domain_id, 'DOM-000010');
+            assert.strictEqual(s.name,      'Experiments');
+            assert(typeof s.entity_count === 'number');
+        });
+
+        await test('domains.load("registry") has no _init (consumes no events)', () => {
+            const dom = Registry.domains.load('registry');
+            assert(!dom._init, 'registry domain should not have _init');
         });
     });
 

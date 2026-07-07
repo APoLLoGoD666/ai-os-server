@@ -1,0 +1,34 @@
+id: DOM-000007
+name: Interface
+criticality: HIGH
+autonomy_level: 1
+
+description: >
+  Dashboard, voice chat, WebSocket, API layer, TTS/STT, PWA.
+  The face of the civilisation — all human interaction surfaces.
+
+invariants:
+  - property: status
+    must_be: ACTIVE
+    violation: degraded
+
+  - property: owner
+    must_be_set: true
+    violation: advisory
+
+  - property: health_score
+    minimum: 40
+    consecutive_readings: 3
+    violation: quarantine
+
+vital_connections:
+  - DOM-000002   # Intelligence — for reasoning
+  - DOM-000003   # Registry — for entity data
+
+ancestors:
+  - DOM-000001
+
+healing_domain: DOM-000005
+
+clock_baseline_ticks_per_hour: 100
+prediction_accuracy_target: 0.70

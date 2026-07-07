@@ -119,6 +119,48 @@ Always quote figures in GBP (£). When reporting balances, show income, expenses
 Monthly budget defaults: rent £800, groceries £300, transport £100, entertainment £150, utilities £80.`,
     },
 
+    'civilisation': {
+        slug: 'civilisation',
+        name: 'Civilisation Agent',
+        category: 'governance',
+        description: 'Constitutional governance: genome validation, consensus sessions, domain health, and clock oversight.',
+        system_prompt: `You are the Civilisation Agent for Apex AI OS — the constitutional governance layer across all 10 domain bounded contexts.
+
+Your responsibilities:
+- Monitor the constitutional gate: genome validation (blocking invariants) and contract validation (3 constraints)
+- Oversee consensus sessions: propose changes, cast votes, ratify approved sessions
+- Check domain health: all 10 domains (DOM-000001 through DOM-000010) must be ACTIVE
+- Monitor the civilisation clock: tick rates and drift across domains
+- Enforce autonomy rules: DOM-000010 (experiments) has autonomy_level:0 — all ops require ratified consensus
+
+The 10 domains:
+- DOM-000001 interface   — daily briefing, calendar, voice interface
+- DOM-000002 intelligence — email, banking, health data ingestion
+- DOM-000003 knowledge   — lectures, journaling, mood tracking
+- DOM-000004 memory      — consolidation, retrieval
+- DOM-000005 civilisation — clock ticks, constitutional health
+- DOM-000006 registry    — entity integrity checks
+- DOM-000007 infrastructure — process health, uptime
+- DOM-000008 observability — fitness checks, event timeline
+- DOM-000009 development — feature flags, CRM ops
+- DOM-000010 experiments — benchmarks (requires consensus)
+
+Key endpoints you control:
+- GET /api/civilisation/status     — constitutional gate + all surfaces summary
+- GET /api/civilisation/genome     — full genome validation (blocking mode)
+- GET /api/civilisation/contracts  — contract validator results
+- GET /api/civilisation/clock      — civilisation clock status
+- GET /api/civilisation/domains    — all domain statuses
+- GET /api/civilisation/consensus  — all consensus sessions
+- POST /api/civilisation/consensus/propose — create a new vote session
+- POST /api/civilisation/consensus/vote    — cast a vote { session_id, domain_id, decision, reason }
+- POST /api/civilisation/consensus/:id/ratify — ratify an APPROVED session
+
+Quorum: 5 of 9 eligible voters. Session expiry: 48 hours. Blocking invariant violations halt the constitutional gate.
+
+Always report genome.ok and contracts.ok first. Surface any blocking violations immediately. Recommend consensus session types for changes that affect multiple domains.`,
+    },
+
     'business': {
         slug: 'business',
         name: 'Business Agent',
@@ -187,4 +229,20 @@ function getDomainAgent(slug) {
     return DOMAIN_AGENTS[slug] || null;
 }
 
-module.exports = { invokeDomainAgent, listDomainAgents, getDomainAgent, DOMAIN_AGENTS };
+const _GOV_KEYWORDS = [
+    'genome', 'constitutional gate', 'consensus', 'propose', 'ratify', 'vote',
+    'domain health', 'civilisation', 'civilization', 'clock drift',
+    'contract violation', 'blocking invariant', 'dom-0000', 'quorum',
+];
+
+// Returns { slug:'civilisation', task } if the message is governance-related, else null.
+function detectGovernanceIntent(message) {
+    if (!message) return null;
+    const low = message.toLowerCase();
+    if (_GOV_KEYWORDS.some(kw => low.includes(kw))) {
+        return { slug: 'civilisation', task: message };
+    }
+    return null;
+}
+
+module.exports = { invokeDomainAgent, listDomainAgents, getDomainAgent, detectGovernanceIntent, DOMAIN_AGENTS };

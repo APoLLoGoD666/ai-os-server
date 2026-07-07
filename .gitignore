@@ -22,6 +22,9 @@ backups/
 # Claude Code agent worktrees — ephemeral isolation dirs, never commit
 .claude/worktrees/
 
+# Graphify generated output — large AST/graph cache, regenerated on demand
+graphify-out/
+
 # Ruflo runtime databases and ephemeral state
 ruvector.db
 .swarm/*.db
@@ -81,3 +84,8 @@ U4*.md
 WAVE*.md
 WRITE_AUTHORITY_MAP.md
 IMPLEMENTATION*.md
+
+# Domain runtime state (live, generated)
+domains/*/runtime/
+domains/*/registry/
+.civilisation/

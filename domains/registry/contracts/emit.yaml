@@ -1,0 +1,96 @@
+domain: DOM-000003
+events:
+  - name: ENTITY_CREATED
+    description: A new entity was added to the registry.
+    schema:
+      entity_id: string
+      family: string
+      name: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 100
+
+  - name: ENTITY_UPDATED
+    description: An existing entity's properties changed.
+    schema:
+      entity_id: string
+      changes: object
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 100
+
+  - name: EDGE_ADDED
+    description: A relationship edge was added to the graph.
+    schema:
+      from: string
+      to: string
+      type: string
+      label: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 100
+
+  - name: EDGE_REMOVED
+    description: A relationship edge was removed from the graph.
+    schema:
+      from: string
+      to: string
+      type: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 100
+
+  - name: MIGRATION_ADDED
+    description: A new schema migration was registered.
+    schema:
+      migration_id: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 200
+
+  - name: SNAPSHOT_CREATED
+    description: A point-in-time registry snapshot was taken.
+    schema:
+      snapshot_id: string
+      entity_count: number
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 500
+
+  - name: GOVERNANCE_VIOLATION
+    description: A constitutional law was violated.
+    schema:
+      operation: string
+      violations: array
+      hash: string
+      timestamp: number
+    guaranteed_delivery: true
+    max_latency_ms: 100
+
+  - name: FITNESS_CHECK_FAILED
+    description: One or more architectural fitness checks failed.
+    schema:
+      fail: number
+      checks: array
+      timestamp: number
+    guaranteed_delivery: true
+    max_latency_ms: 100
+
+  - name: TEMPORAL_ANOMALY_DETECTED
+    description: A health score anomaly was detected for an entity.
+    schema:
+      entity_id: string
+      score: number
+      mean: number
+      sigma: number
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 200
+
+  - name: ARCHITECTURE_UPDATED
+    description: The living architecture layer regenerated its output.
+    schema:
+      domain_count: number
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 1000

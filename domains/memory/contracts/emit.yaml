@@ -1,0 +1,13 @@
+domain: DOM-000004
+events:
+  - name: MIGRATION_ADDED
+    description: A new memory schema migration was created.
+    schema:
+      migration_id: string
+      domain: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 500
+    consumers:
+      - DOM-000003   # Registry tracks migrations
+      - DOM-000009   # Development records schema history

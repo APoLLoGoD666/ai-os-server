@@ -11206,6 +11206,79 @@ p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
                 </div>
             </div>
 
+            <!-- ══ CIVILISATION PAGE ══ -->
+            <div class="page" id="page-civilisation">
+                <div style="padding:16px;display:flex;flex-direction:column;gap:12px;height:100%;box-sizing:border-box;overflow-y:auto">
+
+                    <!-- Page Header -->
+                    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                        <div>
+                            <div class="ds-page-title" style="letter-spacing:7px">CIVILISATION</div>
+                            <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">GENOME &middot; CONSENSUS &middot; CLOCK &middot; DOMAINS</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div id="civGateLabel" style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#22d3ee;background:rgba(34,211,238,0.1);padding:5px 12px;border-radius:6px;display:inline-block">LOADING</div>
+                            <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">CONSTITUTIONAL GATE</div>
+                        </div>
+                    </div>
+
+                    <!-- Constitutional Status row -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                        <div class="ds-panel" style="padding:12px">
+                            <div class="ds-label">GENOME</div>
+                            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                                <span class="ds-dot" id="civGenomeDot"></span>
+                                <span id="civGenomeStatus" style="font:600 13px/1 'JetBrains Mono',monospace;color:var(--text)">—</span>
+                            </div>
+                            <div id="civGenomeSummary" style="font-size:10px;color:var(--text-mute);margin-top:6px">—</div>
+                        </div>
+                        <div class="ds-panel" style="padding:12px">
+                            <div class="ds-label">CONTRACTS</div>
+                            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                                <span class="ds-dot" id="civContractsDot"></span>
+                                <span id="civContractsStatus" style="font:600 13px/1 'JetBrains Mono',monospace;color:var(--text)">—</span>
+                            </div>
+                            <div id="civContractsSummary" style="font-size:10px;color:var(--text-mute);margin-top:6px">—</div>
+                        </div>
+                        <div class="ds-panel" style="padding:12px">
+                            <div class="ds-label">CLOCK</div>
+                            <div id="civClockDomains" style="font:600 13px/1 'JetBrains Mono',monospace;color:var(--text);margin-top:8px">— domains</div>
+                            <div id="civClockAt" style="font-size:10px;color:var(--text-mute);margin-top:6px">—</div>
+                        </div>
+                    </div>
+
+                    <!-- Domains grid -->
+                    <div class="ds-panel" style="padding:12px">
+                        <div class="ds-label" style="margin-bottom:10px">DOMAIN STATUS</div>
+                        <div id="civDomainsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px">
+                            <div style="color:var(--text-mute);font-size:11px">Loading…</div>
+                        </div>
+                    </div>
+
+                    <!-- Consensus sessions -->
+                    <div class="ds-panel" style="padding:12px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                            <div class="ds-label">CONSENSUS SESSIONS</div>
+                            <button class="ds-btn xs" id="civProposeBtn" data-fn="civOpenPropose">+ Propose</button>
+                        </div>
+                        <div id="civConsensusStats" style="display:flex;gap:16px;margin-bottom:8px">
+                            <span style="font-size:11px;color:var(--text-mute)">Total <strong id="civCTotal" style="color:var(--text)">—</strong></span>
+                            <span style="font-size:11px;color:var(--text-mute)">Pending <strong id="civCPending" style="color:#f59e0b">—</strong></span>
+                            <span style="font-size:11px;color:var(--text-mute)">Approved <strong id="civCApproved" style="color:#22d3ee">—</strong></span>
+                        </div>
+                        <div id="civSessionsList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto">
+                            <div style="color:var(--text-mute);font-size:11px">No sessions</div>
+                        </div>
+                    </div>
+
+                    <!-- Refresh -->
+                    <div style="display:flex;justify-content:flex-end">
+                        <button class="ds-btn xs" data-fn="civRefresh">↺ Refresh</button>
+                    </div>
+
+                </div>
+            </div><!-- #page-civilisation -->
+
         </div><!-- .page-wrap -->
 
         <!-- ══ INPUT ZONE ══ -->
@@ -11268,6 +11341,10 @@ p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
             <span class="nav-icon">◈</span>
             <span class="nav-label">Research</span>
         </button>
+        <button class="nav-btn" id="nav-civilisation">
+            <span class="nav-icon">⊛</span>
+            <span class="nav-label">Civilisation</span>
+        </button>
         <button class="nav-btn" id="nav-more" style="display:none" aria-label="More pages">
             <span class="nav-icon" style="letter-spacing:-1px">•••</span>
             <span class="nav-label">More</span>
@@ -11278,7 +11355,7 @@ p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
 
 <script>
 (function() {
-    var pages = ['command', 'overview', 'operation', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research'];
+    var pages = ['command', 'overview', 'operation', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'civilisation'];
     var activePage = 'command';
 
     var pageMeta = {
@@ -11292,7 +11369,8 @@ p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
         health:        { title:'Life',        sub:'Health · Habits · Wellbeing' },
         university:    { title:'University',  sub:'Coursework · Revision · Notes' },
         occult:        { title:'Occult',      sub:'Research · Esoteric · Archive' },
-        research:      { title:'Research',    sub:'Intelligence · Sources · Data' }
+        research:      { title:'Research',    sub:'Intelligence · Sources · Data' },
+        civilisation:  { title:'Civilisation', sub:'Genome · Consensus · Clock · Domains' }
     };
     window.switchPage = function(name) {
         document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
@@ -19471,6 +19549,76 @@ window.apexFileDropHandler = function(e){
         ptt.addEventListener('touchend',    function(e) { e.preventDefault(); _pttEnd(ptt); },  { passive: false });
         ptt.addEventListener('touchcancel', function(e) { e.preventDefault(); _pttEnd(ptt); },  { passive: false });
     }
+})();
+
+/* ── Civilisation page ── */
+(function() {
+    function _dot(el, ok) {
+        if (!el) return;
+        el.className = 'ds-dot ' + (ok ? 'green' : 'red');
+    }
+    function _buildDomainCard(d) {
+        var ok  = d.ok !== false && !d.error;
+        var col = ok ? 'var(--cyan)' : '#ef4444';
+        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px">'
+            + '<div style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:0.1em;color:' + col + ';margin-bottom:4px">' + (d.name || d.id || '?').toUpperCase() + '</div>'
+            + '<div style="font-size:10px;color:var(--text-mute)">' + (d.id || '') + '</div>'
+            + '<div style="font-size:10px;color:' + col + ';margin-top:4px">' + (d.error ? 'ERROR' : (ok ? 'OK' : 'FAIL')) + '</div>'
+            + '</div>';
+    }
+    function _buildSessionRow(s) {
+        var col = s.status === 'APPROVED' ? '#22d3ee' : s.status === 'REJECTED' ? '#ef4444' : '#f59e0b';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px">'
+            + '<div>'
+            + '<div style="font-size:11px;color:var(--text)">' + (s.title || s.id) + '</div>'
+            + '<div style="font-size:10px;color:var(--text-mute)">' + s.id + ' &middot; ' + s.type + '</div>'
+            + '</div>'
+            + '<div style="font:600 10px/1 \'JetBrains Mono\',monospace;color:' + col + '">' + s.status + '</div>'
+            + '</div>';
+    }
+    window.civRefresh = function() {
+        var h = typeof buildApiHeaders === 'function' ? buildApiHeaders() : {};
+        fetch('/api/civilisation/status', { headers: h })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var gate = document.getElementById('civGateLabel');
+                if (gate) { gate.textContent = d.constitutional_gate || (d.ok ? 'PASS' : 'FAIL'); gate.style.color = d.ok ? '#22d3ee' : '#ef4444'; gate.style.background = d.ok ? 'rgba(34,211,238,0.1)' : 'rgba(239,68,68,0.1)'; }
+                _dot(document.getElementById('civGenomeDot'), d.genome && d.genome.ok);
+                var gs = document.getElementById('civGenomeStatus'); if (gs) gs.textContent = d.genome ? (d.genome.ok ? 'PASS' : 'FAIL') : '—';
+                var gsm = document.getElementById('civGenomeSummary'); if (gsm && d.genome && d.genome.summary) gsm.textContent = JSON.stringify(d.genome.summary).replace(/["{}]/g,'');
+                _dot(document.getElementById('civContractsDot'), d.contracts && d.contracts.ok);
+                var cs = document.getElementById('civContractsStatus'); if (cs) cs.textContent = d.contracts ? (d.contracts.ok ? 'PASS' : 'FAIL') : '—';
+                var csm = document.getElementById('civContractsSummary'); if (csm && d.contracts && d.contracts.summary) csm.textContent = JSON.stringify(d.contracts.summary).replace(/["{}]/g,'');
+                var cd = document.getElementById('civClockDomains'); if (cd && d.clock) cd.textContent = (d.clock.domains || 0) + ' domains';
+                var ca = document.getElementById('civClockAt'); if (ca && d.clock) ca.textContent = d.clock.generated_at ? d.clock.generated_at.slice(0,19).replace('T',' ') : '—';
+                var cc = d.consensus || {};
+                var ct = document.getElementById('civCTotal');    if (ct) ct.textContent = cc.total   != null ? cc.total   : '—';
+                var cp = document.getElementById('civCPending');  if (cp) cp.textContent = cc.pending != null ? cc.pending : '—';
+                var ca2= document.getElementById('civCApproved'); if (ca2) ca2.textContent = cc.approved != null ? cc.approved : '—';
+            }).catch(function(e) { console.warn('[civ] status error', e); });
+        fetch('/api/civilisation/domains', { headers: h })
+            .then(function(r) { return r.json(); })
+            .then(function(d) { var grid = document.getElementById('civDomainsGrid'); if (!grid || !d.domains) return; grid.innerHTML = d.domains.map(_buildDomainCard).join(''); })
+            .catch(function() {});
+        fetch('/api/civilisation/consensus', { headers: h })
+            .then(function(r) { return r.json(); })
+            .then(function(d) { var list = document.getElementById('civSessionsList'); if (!list || !Array.isArray(d.sessions)) return; list.innerHTML = d.sessions.length ? d.sessions.slice(-10).reverse().map(_buildSessionRow).join('') : '<div style="color:var(--text-mute);font-size:11px">No sessions</div>'; })
+            .catch(function() {});
+    };
+    window.civOpenPropose = function() {
+        var type = prompt('Session type (LAW_CHANGE / CONSTITUTIONAL_AMENDMENT / DOMAIN_OPERATION / AUTONOMY_GRANT):');
+        if (!type) return;
+        var title = prompt('Title:'); if (!title) return;
+        var desc  = prompt('Description:'); if (!desc) return;
+        var pid   = prompt('Proposer domain ID (e.g. DOM-000001):'); if (!pid) return;
+        var h = typeof buildApiHeaders === 'function' ? buildApiHeaders() : {};
+        fetch('/api/civilisation/consensus/propose', { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, h), body: JSON.stringify({ type: type, title: title, description: desc, proposer_id: pid }) })
+            .then(function(r) { return r.json(); })
+            .then(function(d) { alert(d.ok ? 'Proposed: ' + d.session.id : 'Error: ' + d.error); window.civRefresh(); })
+            .catch(function(e) { alert('Error: ' + e.message); });
+    };
+    var _prevCiv = window.switchPage;
+    window.switchPage = function(name) { if (typeof _prevCiv === 'function') _prevCiv(name); if (name === 'civilisation') setTimeout(window.civRefresh, 60); };
 })();
 </script>
 </body>

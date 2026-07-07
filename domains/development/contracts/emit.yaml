@@ -1,0 +1,37 @@
+domain: DOM-000009
+events:
+  - name: MIGRATION_ADDED
+    description: A new database or schema migration was committed.
+    schema:
+      migration_id: string
+      file: string
+      description: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 500
+    consumers:
+      - DOM-000003   # Registry tracks migrations
+      - DOM-000004   # Memory notes schema change
+
+  - name: SNAPSHOT_CREATED
+    description: A registry snapshot was taken (e.g. before a large migration).
+    schema:
+      snapshot_id: string
+      entity_count: number
+      trigger: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 1000
+    consumers:
+      - DOM-000003   # Registry stores snapshot
+
+  - name: ARCHITECTURE_UPDATED
+    description: The living architecture layer regenerated output files.
+    schema:
+      domain_count: number
+      files_written: number
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 2000
+    consumers:
+      - DOM-000006   # Observability records the update

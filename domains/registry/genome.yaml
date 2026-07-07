@@ -1,0 +1,38 @@
+id: DOM-000003
+name: Registry
+criticality: CRITICAL
+autonomy_level: 2
+
+description: >
+  Entity graph, capability graph, relationships, impact analysis,
+  query layer. The semantic brain — single source of truth.
+
+invariants:
+  - property: status
+    must_be: ACTIVE
+    violation: critical
+
+  - property: entity_count
+    minimum: 388
+    scope: global
+    violation: critical
+
+  - property: constitutional_gate
+    must_be: PASS
+    violation: blocking
+
+  - property: health_score
+    minimum: 70
+    consecutive_readings: 3
+    violation: critical
+
+vital_connections:
+  - DOM-000005   # Infrastructure — must run somewhere
+
+ancestors:
+  - DOM-000001
+
+healing_domain: DOM-000005
+
+clock_baseline_ticks_per_hour: 10
+prediction_accuracy_target: 0.90

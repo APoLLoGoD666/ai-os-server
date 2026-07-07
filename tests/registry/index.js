@@ -37,6 +37,12 @@ const suites = [
     { name: 'visualize',        run: require('./visualize.test')        },
     { name: 'optimizer',        run: require('./optimizer.test')        },
     { name: 'universe',         run: require('./universe.test')         },
+    { name: 'shadow-registry',    run: require('./shadow-registry.test')    },
+    { name: 'genome-validator',   run: require('./genome-validator.test')   },
+    { name: 'contract-validator', run: require('./contract-validator.test') },
+    { name: 'clock',              run: require('./clock.test')              },
+    { name: 'domain-loader',      run: require('./domain-loader.test')      },
+    { name: 'consensus',          run: require('./consensus.test')          },
 ];
 
 async function main() {

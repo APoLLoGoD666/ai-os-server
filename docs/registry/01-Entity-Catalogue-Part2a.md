@@ -231,7 +231,7 @@
 | ENT-000385 | assembler.js | RNT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/lib/runtime/assembler.js | Production | HIGH |
 | ENT-000386 | compensation-log.js | RNT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/lib/runtime/compensation-log.js | Production | HIGH |
 | ENT-000387 | concurrency-slot-manager.js | RNT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/lib/runtime/concurrency-slot-manager.js | Production | HIGH |
-| ENT-000388 | constitutional-gate.js | RNT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/lib/runtime/constitutional-gate.js | Production | HIGH |
+| ENT-000388 | constitutional-gate.js | RNT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/lib/runtime/constitutional-gate.js | ACTIVE | HIGH |
 | ENT-000389 | constitutional-preflight.js | RNT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/lib/runtime/constitutional-preflight.js | Production | HIGH |
 | ENT-000390 | counterfactual-evaluator.js | RNT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/lib/runtime/counterfactual-evaluator.js | Production | HIGH |
 | ENT-000391 | decision-benchmark.js | RNT | FILE | C:/Users/arwwo/Desktop/APEX/Scripts/lib/runtime/decision-benchmark.js | Production | HIGH |

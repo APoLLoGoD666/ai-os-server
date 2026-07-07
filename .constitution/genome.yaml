@@ -1,0 +1,38 @@
+id: CIVILISATION
+name: APEX Civilisation
+version: 1
+description: >
+  The root genome — the minimal invariants that define the civilisation's
+  existence. If these fail, the civilisation itself is in distress.
+
+invariants:
+  - property: domain_count
+    minimum: 10
+    violation: critical
+
+  - property: registry_reachable
+    must_be: true
+    violation: critical
+
+  - property: infrastructure_reachable
+    must_be: true
+    violation: critical
+
+  - property: critical_domains_active
+    must_be: true
+    violation: critical
+
+  - property: constitutional_gate
+    must_be: PASS
+    violation: blocking
+
+vital_domains:
+  - DOM-000001   # Civilisation (root)
+  - DOM-000003   # Registry (semantic brain)
+  - DOM-000005   # Infrastructure (substrate)
+
+laws_hash: a05315a123374671
+law_count: 5
+
+autonomy_ceiling: 3
+amendment_review_period_hours: 48

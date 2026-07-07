@@ -9,12 +9,19 @@ const { GraphCache }        = require('../../lib/registry/impact/graph');
 
 module.exports = async function run() {
     await suite('EVENTS constants', async () => {
-        await test('EVENTS has all six expected keys', () => {
-            const expected = ['ENTITY_CREATED', 'ENTITY_UPDATED', 'EDGE_ADDED', 'EDGE_REMOVED', 'MIGRATION_ADDED', 'SNAPSHOT_CREATED'];
+        await test('EVENTS has all fourteen expected keys', () => {
+            const expected = [
+                // Core mutation events
+                'ENTITY_CREATED', 'ENTITY_UPDATED', 'EDGE_ADDED', 'EDGE_REMOVED', 'MIGRATION_ADDED', 'SNAPSHOT_CREATED',
+                // Civilisation lifecycle events
+                'AGENT_ACTIVATED', 'AGENT_COMPLETED', 'DOMAIN_HEALTH_CHANGED', 'ARCHITECTURE_UPDATED',
+                'GOVERNANCE_VIOLATION', 'DECISION_RECORDED', 'FITNESS_CHECK_FAILED', 'TEMPORAL_ANOMALY_DETECTED',
+            ];
             for (const k of expected) {
                 assert(k in EVENTS, `EVENTS missing: ${k}`);
                 assert.strictEqual(EVENTS[k], k, `EVENTS.${k} should equal its key string`);
             }
+            assert.strictEqual(Object.keys(EVENTS).length, 14, 'EVENTS should have exactly 14 constants');
         });
 
         await test('EVENTS is frozen', () => {

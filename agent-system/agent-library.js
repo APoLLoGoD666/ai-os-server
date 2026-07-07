@@ -18,6 +18,24 @@ const AGENT_DIRS = new Set([
 const _cache = new Map();
 let   _syncedAt = 0;
 
+// Seed built-in domain agents so they're always resolvable without a GitHub sync
+function _seedDomainAgents() {
+    try {
+        const { DOMAIN_AGENTS } = require('./domain-agents');
+        for (const a of Object.values(DOMAIN_AGENTS)) {
+            _cache.set(a.slug, {
+                slug:          a.slug,
+                name:          a.name,
+                category:      a.category,
+                description:   a.description || '',
+                system_prompt: a.system_prompt,
+                github_path:   null,
+            });
+        }
+    } catch { /* domain-agents not available yet at require time — skip */ }
+}
+_seedDomainAgents();
+
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
 function _get(url) {
@@ -187,8 +205,9 @@ async function syncFromGitHub(sbAdmin, { obsidian = true } = {}) {
             console.log('[AgentLib] Agents written to Obsidian vault under 11 Agents/Specifications/');
         }
 
-        // Populate memory cache
+        // Populate memory cache (re-seed domain agents so they survive the clear)
         _cache.clear();
+        _seedDomainAgents();
         agents.forEach(a => _cache.set(a.slug, a));
         _syncedAt = Date.now();
 

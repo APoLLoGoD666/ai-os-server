@@ -91,7 +91,7 @@ const _wm             = require('./lib/memory/working-memory');
 const _sessionTracker = require('./lib/temporal/session-tracker');
 const { embedText } = require('./lib/embed');
 const { createBackup, restoreBackup, cleanOldBackups } = require('./agent-system/backup-manager');
-const { DOMAIN_AGENTS: _DOMAIN_AGENTS } = require('./agent-system/domain-agents');
+const { DOMAIN_AGENTS: _DOMAIN_AGENTS, invokeDomainAgent: _invokeDomainAgent, detectGovernanceIntent: _detectGovernanceIntent } = require('./agent-system/domain-agents');
 const { kernelChain } = require('./lib/kernel');
 
 // LangChain memory removed — gateway layer 2 + formatRecentMemory() provide equivalent context
@@ -1246,6 +1246,30 @@ app.post("/chat", requireAppAccess, ...kernelChain, async (req, res) => {
                 progress_score: _speCtx.activeObjective.progress_score,
             } : null,
         };
+
+        // ── Governance keyword routing ─────────────────────────────────────────
+        // Keywords: genome, constitutional gate, consensus, civilisation, etc.
+        const _govIntent = _detectGovernanceIntent(userMessage);
+        if (_govIntent) {
+            try {
+                const _govResult = await _invokeDomainAgent(_govIntent.slug, _govIntent.task);
+                clearTimeout(chatTimeout);
+                const _govReplyRaw = `[${_govResult.agent.name}]\n\n${_govResult.reply}`;
+                const { reply: _govReply, mode: _govMode, intent: _govIntent2 } = _cogOrch.shape(userMessage, _govReplyRaw, req.executionClass || 'EXECUTIVE', req.conversationId);
+                const _govSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
+                const _govPlan = _timingEng.buildStreamPlan(_govReply, _govIntent2, req.executionClass || 'EXECUTIVE', _govSnap);
+                _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _govIntent2, userMessage, reply: _govReply, mode: _govMode, executionClass: req.executionClass });
+                _eae.recordTransition({ sessionId: req.conversationId });
+                _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply: _govReply, intent: _govIntent2, mode: _govMode });
+                setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: _govReply }), tags: ['conversation', 'chat', 'governance'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+                setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); });
+                return res.status(200).json({ ok: true, reply: _govReply, response_mode: _govMode, stream_plan: _govPlan });
+            } catch (e) {
+                if (res.headersSent) return;
+                console.warn('[DomainAgent] governance intent invoke failed, falling through:', e.message);
+            }
+        }
+        // ── End governance routing ─────────────────────────────────────────────
 
         // ── Agent library intent detection ─────────────────────────────────────
         // Intercept messages like "ask the security engineer to review this"
@@ -4063,6 +4087,8 @@ app.post('/api/wiki/consolidate', requireAppAccess, async (req, res) => {
 
 app.use('/api', require('./routes/tts-gemini'));
 app.use('/api', require('./routes/registry'));
+app.use('/api', require('./routes/civilisation'));
+app.use('/api', require('./routes/civilization'));
 app.use('/', require('./src/routes/telemetry/index.js')({ requireAppAccess, getStatus: getMastraStatus, errBuffer: _errBuffer, gitSha: GIT_SHA }));
 
 // One-time migration runner — applies migrations/005_level9_governance.sql
@@ -4079,6 +4105,25 @@ app.post('/api/governance/apply-migration-005', requireAppAccess, async (req, re
         await pool.query(sql);
         await pool.end();
         res.json({ ok: true, message: 'Migration 005 applied successfully' });
+    } catch (e) {
+        try { await pool.end(); } catch {}
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// One-time migration runner — applies migrations/063_consensus_sessions.sql
+app.post('/api/governance/apply-migration-063', requireAppAccess, async (req, res) => {
+    const { Pool } = require('pg');
+    if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('[YOUR-PASSWORD]')) {
+        return res.status(503).json({ ok: false, error: 'DATABASE_URL not configured.' });
+    }
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 15000 });
+    try {
+        const fs = require('fs'), path = require('path');
+        const sql = fs.readFileSync(path.join(__dirname, 'migrations', '063_consensus_sessions.sql'), 'utf8');
+        await pool.query(sql);
+        await pool.end();
+        res.json({ ok: true, message: 'Migration 063 (consensus_sessions) applied successfully' });
     } catch (e) {
         try { await pool.end(); } catch {}
         res.status(500).json({ ok: false, error: e.message });
