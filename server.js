@@ -1,7 +1,7 @@
 require("./instrument.js");
 require("dotenv").config();
 
-const { GIT_SHA, _errBuffer, _sinkError, getMastraStatus, setMastraStatus, getInitMastra, setInitMastra } = require('./lib/server-state');
+const { GIT_SHA, _errBuffer, _sinkError, getMastraStatus, setMastraStatus, getInitMastra, setInitMastra, getMastraAgents, setMastraAgents } = require('./lib/server-state');
 
 const Sentry = require("@sentry/node");
 
@@ -3969,6 +3969,41 @@ app.use('/api', require('./routes/civilisation'));
 app.use('/api', require('./routes/civilization'));
 app.use('/', require('./src/routes/telemetry/index.js')({ requireAppAccess, getStatus: getMastraStatus, errBuffer: _errBuffer, gitSha: GIT_SHA }));
 
+// src/routes — all extracted route modules
+app.use(require('./src/routes/health'));
+app.use(require('./src/routes/auth'));
+app.use(require('./src/routes/ui'));
+app.use(require('./src/routes/debug'));
+app.use(require('./src/routes/documents'));
+app.use(require('./src/routes/notifications'));
+app.use(require('./src/routes/agent-tasks'));
+app.use(require('./src/routes/agent-schedules'));
+app.use(require('./src/routes/layout'));
+app.use(require('./src/routes/files'));
+app.use(require('./src/routes/cloud-autopilot'));
+app.use(require('./src/routes/email'));
+app.use(require('./src/routes/finance'));
+app.use(require('./src/routes/routines'));
+app.use(require('./src/routes/transcription'));
+app.use(require('./src/routes/mastra'));
+app.use(require('./src/routes/ruflo'));
+app.use(require('./src/routes/tasks'));
+app.use(require('./src/routes/research'));
+app.use(require('./src/routes/rag'));
+app.use(require('./src/routes/convert'));
+app.use(require('./src/routes/browser'));
+app.use(require('./src/routes/editor'));
+app.use(require('./src/routes/master'));
+app.use(require('./src/routes/voice'));
+app.use(require('./src/routes/system'));
+app.use(require('./src/routes/cognition'));
+app.use(require('./src/routes/autonomy'));
+app.use(require('./src/routes/wiki'));
+app.use(require('./src/routes/admin'));
+app.use(require('./src/routes/setup'));
+app.use(require('./src/routes/governance-inline'));
+app.use(require('./src/routes/chat'));
+
 // One-time migration runner — applies migrations/005_level9_governance.sql
 // Requires DATABASE_URL env var with real Supabase password. Idempotent (IF NOT EXISTS).
 app.post('/api/governance/apply-migration-005', requireAppAccess, async (req, res) => {
@@ -4350,6 +4385,8 @@ server.listen(PORT, () => {
             setInitMastra(_m.initMastra);
             setMastraStatus(_m.getMastraStatus);
             mastraAgents = getInitMastra()(handleCommand);
+            setMastraAgents(mastraAgents);
+            global._mastraAgents = mastraAgents;
             console.log('[Mastra] agents initialised (deferred).');
         } catch (err) { console.error('[Mastra] INIT ERROR (deferred):', err); setTimeout(_loadMastra, 600000); }
     }
@@ -4624,6 +4661,8 @@ checkPendingMasterTasks();
     // Mastra agent framework — real load deferred 5 min via _loadMastra() above.
     // getInitMastra() returns the stub (() => null) here; this call is intentionally harmless.
     mastraAgents = getInitMastra()(handleCommand);
+    setMastraAgents(mastraAgents);
+    global._mastraAgents = mastraAgents;
 
     // Ruflo daemon — auto-starts 10 min after server stabilises
     // Detached so it runs independently and doesn't hold the event loop.
