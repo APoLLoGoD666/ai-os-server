@@ -42,14 +42,26 @@ function splitStatements(sql) {
     const stmts = [];
     let buf = '';
     let inDollar = false;
+    let inSingle = false;
     for (let i = 0; i < sql.length; i++) {
-        if (sql[i] === '$' && sql[i + 1] === '$') {
+        // Dollar-quote toggle (only outside single quotes)
+        if (!inSingle && sql[i] === '$' && sql[i + 1] === '$') {
             inDollar = !inDollar;
             buf += '$$';
             i++;
             continue;
         }
-        if (sql[i] === ';' && !inDollar) {
+        // Single-quote toggle (only outside dollar quotes)
+        if (!inDollar && sql[i] === "'") {
+            // '' is an escaped single quote inside a string — skip both chars
+            if (inSingle && sql[i + 1] === "'") {
+                buf += "''";
+                i++;
+                continue;
+            }
+            inSingle = !inSingle;
+        }
+        if (sql[i] === ';' && !inDollar && !inSingle) {
             buf += ';';
             const stmt = buf.trim();
             if (stmt && stmt !== ';') stmts.push(stmt);
