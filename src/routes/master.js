@@ -339,8 +339,7 @@ async function checkPendingMasterTasks() {
     }
 }
 
-// Export for server.js to use in startup polling
-module.exports.checkPendingMasterTasks = checkPendingMasterTasks;
+// (checkPendingMasterTasks exported below after module.exports = router)
 
 router.post('/api/master/run', requireAppAccess, async (req, res) => {
     const { workstreams } = req.body || {};
@@ -472,3 +471,4 @@ router.post('/api/admin/sre/run', requireAppAccess, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.checkPendingMasterTasks = checkPendingMasterTasks;

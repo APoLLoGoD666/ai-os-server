@@ -242,6 +242,7 @@ const {
 
 const { previewCloudAutopilot, applyLatestCloudProposal } = require("./agent-system/cloud_autopilot");
 const { checkEmails, sendEmailReply, initEmailAgent } = require("./agent-system/email_agent");
+const { autoApproveStandardPermissions } = require("./agent-system/master-orchestrator");
 // mastra_agents is lazy-loaded after server stabilises to avoid startup OOM
 // initMastra/getMastraStatus are managed via lib/server-state.js setters
 const { categoriseTransaction, checkBudgetAlerts, parseCsvTransactions, FINANCE_CATEGORIES } = require("./agent-system/finance_agent");
@@ -408,6 +409,7 @@ app.use(require('./src/routes/convert'));
 app.use(require('./src/routes/browser'));
 app.use(require('./src/routes/editor'));
 app.use(require('./src/routes/master'));
+const { checkPendingMasterTasks } = require('./src/routes/master');
 app.use(require('./src/routes/voice'));
 app.use(require('./src/routes/system'));
 app.use(require('./src/routes/cognition'));
