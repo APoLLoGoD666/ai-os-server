@@ -359,6 +359,47 @@ if (!CRON_SECRET) {
    ROUTES
 ========================= */
 
+// Inline health — registered first so it always passes Render health checks
+// regardless of downstream route loading errors.
+app.get('/health', async (req, res) => {
+    let dbOk = false;
+    for (let attempt = 0; attempt < 2 && !dbOk; attempt++) {
+        try {
+            if (process.env.LOCAL_MODE === 'true') {
+                const { error } = await sbAdmin.from('notifications').select('id').limit(1);
+                dbOk = !error;
+            } else {
+                try {
+                    const pgPool = require('./lib/pg_database');
+                    await pgPool.query('SELECT 1');
+                    dbOk = true;
+                } catch {
+                    const { error } = await sbAdmin.from('notifications').select('id').limit(1);
+                    dbOk = !error;
+                }
+            }
+        } catch (e) { console.warn('[Health] db check error:', e.message); }
+        if (!dbOk && attempt === 0) await new Promise(r => setTimeout(r, 500));
+    }
+    const mem = process.memoryUsage();
+    const heapMb = Math.round(mem.heapUsed / 1024 / 1024);
+    const ttsOk = !!(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
+    const aiOk  = !!process.env.ANTHROPIC_API_KEY;
+    const allOk = dbOk && ttsOk && aiOk;
+    res.status(dbOk ? 200 : 503).json({
+        status:  allOk ? 'ok' : (dbOk ? 'degraded' : 'down'),
+        version: GIT_SHA,
+        uptime:  process.uptime(),
+        timestamp: Date.now(),
+        db: dbOk, tts: ttsOk, ai: aiOk,
+        memory: { heapMb, rssMb: Math.round(mem.rss / 1024 / 1024), warning: heapMb > 150, heapLimit: 220 },
+        mastra: getMastraStatus(),
+        ws: global._apexWsCount || 0,
+        sentry: !!process.env.SENTRY_DSN,
+        recentErrors: _errBuffer.slice(-3)
+    });
+});
+
 // ── Plugin routes (kernel chain already applied globally above) ───────────────
 
 // Auto-load agent-created route files from routes/ directory
