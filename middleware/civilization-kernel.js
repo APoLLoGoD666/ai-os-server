@@ -250,6 +250,14 @@ function _postResponseHook(ctx) {
             } finally {
                 // W4: Audit write — always, even on error
                 _audit(auditRecord);
+                try {
+                    require('../lib/viz-broadcaster').emit({
+                        type:    'request',
+                        method:  auditRecord.method,
+                        path:    auditRecord.route,
+                        verdict: auditRecord.constitutionVerdict,
+                    });
+                } catch (_) {}
             }
         });
     };

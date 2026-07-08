@@ -17,6 +17,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -10129,18 +10131,7 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
 
             <!-- ══ PAGE: OVERVIEW ══ -->
             <div class="page" id="page-overview">
-
-                <!-- Page Header -->
-                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
-                    <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">OVERVIEW</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">SYSTEM TOPOLOGY &middot; WHAT APEX IS DOING RIGHT NOW</div>
-                    </div>
-                    <div style="text-align:right">
-                        <div id="ovr-clock" style="font:600 18px/1 'JetBrains Mono',monospace;letter-spacing:3px;color:#5b9eff"></div>
-                        <div id="ovr-greeting" style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px"></div>
-                    </div>
-                </div>
+                <!-- APEX MIND — Live 3D System Visualization -->
 
                 <!-- Governance Pipeline -->
                 <div id="ovr-pipeline" style="position:relative;padding:32px 30px 36px">
@@ -10595,39 +10586,339 @@ if(pipe){
 }
 })();</script>
 
-                <script>(function(){var e=document.getElementById('ovr-clock');function t(){if(e)e.textContent=new Date().toLocaleTimeString('en-GB',{hour12:false});}t();setInterval(t,1000);})();</script>
+                <script>
+                /* ═══════════════════════════════════════════════════════════
+                   APEX MIND — Live 3D System Visualization
+                   Replaces static governance pipeline with Three.js canvas.
+                   Runs after DOM is ready; requires Three.js + D3 in head.
+                ═══════════════════════════════════════════════════════════ */
+                document.addEventListener('DOMContentLoaded', function() {
+                var page = document.getElementById('page-overview');
+                if (!page) return;
 
-                <script>(function(){
-var p=document.getElementById('ovr-pipeline');
-if(!p)return;
-// Specialist cards (L4): hide divider + role grid (children 2+)
-p.querySelectorAll('div[style*="overflow:hidden"][style*="padding:13px 14px 15px 17px"]').forEach(function(c){
-  [].slice.call(c.children,2).forEach(function(e){e.style.display='none';});
-});
-// Executive tier strips: hide entirely
-p.querySelectorAll('div[style*="background:#0d1424;border-radius:10px;padding:10px 12px"]').forEach(function(e){
-  e.style.display='none';
-});
-// L3 Domain cards: hide subtitle (child 2)
-p.querySelectorAll('div[style*="background:#0a1628"][style*="border-top:2px solid"]').forEach(function(c){
-  if(c.children[2])c.children[2].style.display='none';
-});
-// L1 Identity Core cards: hide content rows (child 1)
-p.querySelectorAll('div[style*="padding:17px 20px"][style*="border-radius:14px"]').forEach(function(c){
-  if(c.children[1])c.children[1].style.display='none';
-});
-// L2 Sentinel pills: hide description + status (children 2+)
-p.querySelectorAll('div[style*="background:#0a1628"][style*="padding:13px 11px"]').forEach(function(c){
-  [].slice.call(c.children,2).forEach(function(e){e.style.display='none';});
-});
-// L0 Sovereign: hide right status section
-var l0=p.querySelector('div[style*="width:450px"]');
-if(l0){var r=l0.querySelector('div[style*="text-align:right"]');if(r)r.style.display='none';}
-// L6 + L7 columns: hide value/description (children 2+)
-p.querySelectorAll('div[style*="padding:2px 24px"]').forEach(function(c){
-  [].slice.call(c.children,2).forEach(function(e){e.style.display='none';});
-});
-})();</script>
+                /* ── Build APEX MIND HTML ── */
+                page.innerHTML = [
+                  '<div id="apx-wrap" style="position:relative;width:100%;height:calc(100vh - 100px);min-height:560px;background:#020b18;border-radius:14px;overflow:hidden;border:1px solid rgba(91,158,255,0.08)">',
+                    '<canvas id="apx-canvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>',
+                    /* Stats bar */
+                    '<div style="position:absolute;top:0;left:0;right:0;height:38px;background:rgba(2,11,24,0.9);border-bottom:1px solid rgba(91,158,255,0.1);display:flex;align-items:center;padding:0 14px;gap:14px;z-index:5">',
+                      '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:3px;color:#5b9eff">APEX MIND</span>',
+                      '<span style="width:1px;height:12px;background:rgba(255,255,255,0.1)"></span>',
+                      '<span style="font:500 9px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151">LIVE SYSTEM TOPOLOGY</span>',
+                      '<span style="flex:1"></span>',
+                      '<span id="apx-rps" style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#3fd29a;letter-spacing:1px">0 req/s</span>',
+                      '<span style="width:1px;height:10px;background:rgba(255,255,255,0.1)"></span>',
+                      '<span id="apx-agt" style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#efb45a;letter-spacing:1px">— agents</span>',
+                      '<span style="width:1px;height:10px;background:rgba(255,255,255,0.1)"></span>',
+                      '<span style="display:flex;align-items:center;gap:5px">',
+                        '<span id="apx-dot" style="width:6px;height:6px;border-radius:50%;background:#374151;flex:0 0 6px;transition:background .4s"></span>',
+                        '<span id="apx-lbl" style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#374151;letter-spacing:1px">CONNECTING</span>',
+                      '</span>',
+                    '</div>',
+                    /* Feed panel */
+                    '<div style="position:absolute;top:38px;right:0;bottom:70px;width:205px;background:rgba(2,11,24,0.92);border-left:1px solid rgba(91,158,255,0.09);display:flex;flex-direction:column;z-index:4">',
+                      '<div style="padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.05);font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151">EVENT FEED</div>',
+                      '<div id="apx-feed" style="flex:1;overflow:hidden"></div>',
+                    '</div>',
+                    /* Label layer */
+                    '<div id="apx-labels" style="position:absolute;top:38px;left:0;right:205px;bottom:70px;pointer-events:none;overflow:hidden;z-index:3"></div>',
+                    /* Tooltip */
+                    '<div id="apx-tip" style="position:absolute;display:none;background:rgba(4,12,26,0.97);border:1px solid rgba(91,158,255,0.3);border-radius:8px;padding:8px 12px;pointer-events:none;z-index:10">',
+                      '<div id="apx-tip-name" style="font:600 11px/1 \'JetBrains Mono\',monospace;color:#5b9eff;margin-bottom:5px"></div>',
+                      '<div id="apx-tip-desc" style="font:400 9px/1.3 \'JetBrains Mono\',monospace;color:#6b7280"></div>',
+                    '</div>',
+                    /* Heartbeat */
+                    '<div style="position:absolute;bottom:0;left:0;right:205px;height:70px;background:rgba(2,11,24,0.9);border-top:1px solid rgba(91,158,255,0.09);padding:6px 12px;z-index:4">',
+                      '<div style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151;margin-bottom:4px">SYSTEM HEARTBEAT</div>',
+                      '<canvas id="apx-hb" style="width:100%;height:42px;display:block"></canvas>',
+                    '</div>',
+                  '</div>'
+                ].join('');
+
+                /* ── Guard: Three.js + D3 must be loaded ── */
+                if (typeof THREE === 'undefined' || typeof d3 === 'undefined') {
+                  document.getElementById('apx-wrap').innerHTML =
+                    '<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:12px">' +
+                    '<div style="font:600 11px/1 JetBrains Mono,monospace;letter-spacing:2px;color:#5b9eff">THREE.JS / D3 NOT LOADED</div>' +
+                    '<div style="font:400 9px/1 JetBrains Mono,monospace;color:#6b7280">Check CDN connectivity</div></div>';
+                  return;
+                }
+
+                /* ── Node + Edge definitions ── */
+                var NODES = [
+                  { id:'sovereign',            label:'SOVEREIGN',      color:0xf3f7fb, tier:0, desc:'Principal Authority · You' },
+                  { id:'constitution',         label:'CONSTITUTION',   color:0x5b9eff, tier:1, desc:'Constitutional Gate · 10 laws' },
+                  { id:'civilization_kernel',  label:'CIV KERNEL',     color:0x3fd29a, tier:1, desc:'Civilization Middleware' },
+                  { id:'attention_engine',     label:'ATTENTION',      color:0x22d3ee, tier:2, desc:'Attention Engine · scoring' },
+                  { id:'memory_gateway',       label:'MEMORY HUB',     color:0xa78bfa, tier:2, desc:'Memory Gateway' },
+                  { id:'event_bus',            label:'EVENT BUS',      color:0xfb923c, tier:2, desc:'Internal Event Bus' },
+                  { id:'agent_pipeline',       label:'AGENT QUEUE',    color:0xfbbf24, tier:3, desc:'Task Queue · agent dispatch' },
+                  { id:'episodic_memory',      label:'EPISODIC',       color:0x818cf8, tier:3, desc:'Episodic Memory · Postgres' },
+                  { id:'semantic_memory',      label:'SEMANTIC',       color:0x818cf8, tier:3, desc:'Semantic Memory · embeddings' },
+                  { id:'working_memory',       label:'WORKING MEM',    color:0x818cf8, tier:3, desc:'Working Memory' },
+                  { id:'goal_graph',           label:'GOAL GRAPH',     color:0xf472b6, tier:3, desc:'Goal Graph · active goals' },
+                  { id:'cron_scheduler',       label:'CRON',           color:0x94a3b8, tier:3, desc:'Cron Scheduler' },
+                  { id:'civilization_runtime', label:'CIV RUNTIME',    color:0xfbbf24, tier:3, desc:'Civilization Loop' },
+                  { id:'ws_handler',           label:'WEBSOCKET',      color:0x2dd4bf, tier:3, desc:'WebSocket Handler' },
+                  { id:'governance_probe',     label:'GOVERNANCE',     color:0xf87171, tier:3, desc:'Governance Probe' },
+                  { id:'agent_sys',            label:'SYS AGENT',      color:0x60a5fa, tier:4, desc:'System Agent' },
+                  { id:'agent_file',           label:'FILE AGENT',     color:0x60a5fa, tier:4, desc:'File Agent' },
+                  { id:'agent_uni',            label:'UNI AGENT',      color:0x60a5fa, tier:4, desc:'University Agent' },
+                  { id:'agent_fin',            label:'FIN AGENT',      color:0x60a5fa, tier:4, desc:'Finance Agent' },
+                  { id:'agent_biz',            label:'BIZ AGENT',      color:0x60a5fa, tier:4, desc:'Business Agent' },
+                  { id:'supabase',             label:'SUPABASE',       color:0x34d399, tier:4, desc:'Postgres · Supabase DB' },
+                  { id:'claude_api',           label:'CLAUDE API',     color:0xfcd34d, tier:4, desc:'Anthropic Claude' },
+                  { id:'gemini_live',          label:'GEMINI LIVE',    color:0xc084fc, tier:4, desc:'Voice Interface' },
+                  { id:'sentry',               label:'SENTRY',         color:0xfca5a5, tier:4, desc:'Error Tracking' },
+                ];
+                var EDGES = [
+                  ['sovereign','constitution'],['constitution','civilization_kernel'],
+                  ['civilization_kernel','attention_engine'],['civilization_kernel','memory_gateway'],
+                  ['civilization_kernel','event_bus'],['civilization_kernel','supabase'],
+                  ['memory_gateway','episodic_memory'],['memory_gateway','semantic_memory'],['memory_gateway','working_memory'],
+                  ['event_bus','agent_pipeline'],['event_bus','ws_handler'],['event_bus','cron_scheduler'],
+                  ['agent_pipeline','agent_sys'],['agent_pipeline','agent_file'],['agent_pipeline','agent_uni'],
+                  ['agent_pipeline','agent_fin'],['agent_pipeline','agent_biz'],['agent_pipeline','claude_api'],
+                  ['goal_graph','attention_engine'],['governance_probe','civilization_kernel'],
+                  ['civilization_runtime','event_bus'],['gemini_live','event_bus'],
+                  ['agent_sys','supabase'],['agent_fin','supabase'],['civilization_kernel','governance_probe'],
+                ];
+
+                /* ── Three.js Scene ── */
+                var wrap = document.getElementById('apx-wrap');
+                var cvs  = document.getElementById('apx-canvas');
+                var lWrap= document.getElementById('apx-labels');
+                var W = wrap.clientWidth, H = wrap.clientHeight;
+
+                var renderer = new THREE.WebGLRenderer({ canvas:cvs, antialias:true });
+                renderer.setSize(W,H);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+                renderer.setClearColor(0x020b18,1);
+
+                var scene  = new THREE.Scene();
+                var camera = new THREE.PerspectiveCamera(55,W/H,0.1,2000);
+                camera.position.set(0,0,290);
+
+                scene.add(new THREE.AmbientLight(0x1a2a4a,3.5));
+                var pl1=new THREE.PointLight(0x5b9eff,5,600); pl1.position.set(0,100,150); scene.add(pl1);
+                var pl2=new THREE.PointLight(0x3fd29a,3,350); pl2.position.set(-120,-60,80); scene.add(pl2);
+
+                /* Stars */
+                var sg=new THREE.BufferGeometry(),sp=new Float32Array(1800);
+                for(var i=0;i<1800;i++) sp[i]=(Math.random()-.5)*1200;
+                sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
+                scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x243858,size:0.9,transparent:true,opacity:0.5})));
+
+                /* Nodes */
+                var nodeMap={}, tierR=[10,7,5.5,4,3], geo=new THREE.IcosahedronGeometry(1,1);
+                NODES.forEach(function(n){
+                  var r=tierR[n.tier]||3;
+                  var m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({
+                    color:n.color,emissive:n.color,emissiveIntensity:0.22,
+                    roughness:0.25,metalness:0.82,transparent:true,opacity:0.93
+                  }));
+                  m.scale.set(r,r,r);
+                  m.position.set((Math.random()-.5)*200,(Math.random()-.5)*150,(Math.random()-.5)*20);
+                  m.userData={id:n.id,label:n.label,desc:n.desc,color:n.color,tier:n.tier,baseR:r,pulse:0};
+                  scene.add(m); nodeMap[n.id]=m;
+                });
+
+                /* Edges */
+                var edgeGeo=new THREE.BufferGeometry();
+                var edgeLine=new THREE.LineSegments(edgeGeo,new THREE.LineBasicMaterial({color:0x1e3a5f,opacity:0.4,transparent:true}));
+                scene.add(edgeLine);
+                function rebuildEdges(){
+                  var pts=[];
+                  EDGES.forEach(function(e){var a=nodeMap[e[0]],b=nodeMap[e[1]];if(a&&b){pts.push(a.position.x,a.position.y,a.position.z,b.position.x,b.position.y,b.position.z);}});
+                  edgeGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pts),3));
+                  edgeGeo.attributes.position.needsUpdate=true;
+                }
+
+                /* Constitutional Membrane */
+                var memMat=new THREE.MeshStandardMaterial({color:0x5b9eff,emissive:0x5b9eff,emissiveIntensity:0.25,transparent:true,opacity:0.1});
+                scene.add(new THREE.Mesh(new THREE.TorusGeometry(150,2.5,8,64),memMat));
+
+                /* D3 Force Layout */
+                var d3N=NODES.map(function(n){return{id:n.id,tier:n.tier,x:(Math.random()-.5)*180,y:(Math.random()-.5)*120};});
+                var d3L=EDGES.map(function(e){return{source:e[0],target:e[1]};});
+                d3.forceSimulation(d3N)
+                  .force('link',d3.forceLink(d3L).id(function(d){return d.id;}).distance(55).strength(0.25))
+                  .force('charge',d3.forceManyBody().strength(-340))
+                  .force('center',d3.forceCenter(0,0))
+                  .force('tier_y',d3.forceY(function(d){return(d.tier-2)*65;}).strength(0.45))
+                  .force('collide',d3.forceCollide(22))
+                  .alpha(1).alphaDecay(0.015)
+                  .on('tick',function(){
+                    d3N.forEach(function(d){var m=nodeMap[d.id];if(m){m.position.x=d.x;m.position.y=-d.y;}});
+                    rebuildEdges();
+                  });
+
+                /* Labels */
+                var lblEls={};
+                NODES.forEach(function(n){
+                  var el=document.createElement('div');
+                  el.style.cssText='position:absolute;transform:translate(-50%,0);font:600 7px/1 "JetBrains Mono",monospace;letter-spacing:0.8px;color:#4b5563;white-space:nowrap;pointer-events:none;text-shadow:0 1px 5px #020b18';
+                  el.textContent=n.label;
+                  lWrap.appendChild(el); lblEls[n.id]=el;
+                });
+
+                /* Particles */
+                var parts=[], pGeo=new THREE.SphereGeometry(1.5,6,4);
+                function spawnP(fromId,toId,hex){
+                  var a=nodeMap[fromId],b=nodeMap[toId]; if(!a||!b)return;
+                  var pm=new THREE.Mesh(pGeo,new THREE.MeshBasicMaterial({color:hex||0x5b9eff,transparent:true,opacity:1}));
+                  pm.position.copy(a.position); scene.add(pm);
+                  parts.push({mesh:pm,from:a.position.clone(),to:b.position.clone(),t:0});
+                }
+
+                /* Heartbeat */
+                var hbCvs=document.getElementById('apx-hb'),hbCtx=hbCvs.getContext('2d'),hbData=[],hbLvl=0;
+                function hbPulse(v){hbLvl=Math.min(1,hbLvl+(v||0.4));}
+                function drawHb(){
+                  var w=hbCvs.offsetWidth||500,h=42;
+                  if(hbCvs.width!==w)hbCvs.width=w; hbCvs.height=h;
+                  hbLvl*=0.87; hbData.push(hbLvl); if(hbData.length>w)hbData.shift();
+                  hbCtx.clearRect(0,0,w,h);
+                  hbCtx.beginPath(); hbCtx.strokeStyle='#5b9eff'; hbCtx.lineWidth=1.5;
+                  hbCtx.shadowBlur=8; hbCtx.shadowColor='#5b9eff66';
+                  for(var i=0;i<hbData.length;i++){var y=h/2-hbData[i]*(h*0.42);i===0?hbCtx.moveTo(i,y):hbCtx.lineTo(i,y);}
+                  hbCtx.stroke();
+                  hbCtx.beginPath(); hbCtx.strokeStyle='rgba(91,158,255,0.12)'; hbCtx.lineWidth=1; hbCtx.shadowBlur=0;
+                  hbCtx.moveTo(0,h/2); hbCtx.lineTo(w,h/2); hbCtx.stroke();
+                }
+
+                /* Event Feed */
+                var feedEl=document.getElementById('apx-feed'),feedItems=[];
+                var VCOL={ALLOW:'#3fd29a',RESTRICT:'#efb45a',DENY:'#ef4444'};
+                function addFeed(txt,col){
+                  feedItems.unshift({txt:txt,col:col||'#4b5563',ts:Date.now()});
+                  if(feedItems.length>50)feedItems.length=50;
+                  feedEl.innerHTML=feedItems.slice(0,22).map(function(it){
+                    var op=Math.max(0.2,1-(Date.now()-it.ts)/12000);
+                    return '<div style="padding:2px 8px;opacity:'+op.toFixed(2)+';border-left:2px solid '+it.col+';margin:1px 0;color:'+it.col+';font:500 8px/1.4 JetBrains Mono,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+it.txt+'</div>';
+                  }).join('');
+                }
+
+                /* WebSocket */
+                var ws,wsT,wsDot=document.getElementById('apx-dot'),wsLbl=document.getElementById('apx-lbl'),reqWin=[];
+                function wsConnect(){
+                  clearTimeout(wsT);
+                  try{
+                    var pr=location.protocol==='https:'?'wss':'ws',tok=window._apexToken||'';
+                    ws=new WebSocket(pr+'://'+location.host+'/ws/viz'+(tok?'?token='+encodeURIComponent(tok):''));
+                    ws.onopen=function(){wsDot.style.background='#3fd29a';wsLbl.style.color='#3fd29a';wsLbl.textContent='LIVE';addFeed('viz connected','#3fd29a');};
+                    ws.onclose=function(){wsDot.style.background='#374151';wsLbl.style.color='#374151';wsLbl.textContent='RECONNECTING';wsT=setTimeout(wsConnect,5000);};
+                    ws.onerror=function(){ws.close();};
+                    ws.onmessage=function(e){try{onEv(JSON.parse(e.data));}catch(_){}};
+                  }catch(_){wsT=setTimeout(wsConnect,5000);}
+                }
+                function onEv(ev){
+                  if(!ev||!ev.type)return;
+                  hbPulse(0.55);
+                  var now=Date.now(); reqWin.push(now); reqWin=reqWin.filter(function(t){return now-t<2000;});
+                  document.getElementById('apx-rps').textContent=Math.round(reqWin.length/2)+' req/s';
+                  if(ev.type==='history'){(ev.events||[]).forEach(function(he){onEv(he);});return;}
+                  if(ev.type==='request'){
+                    var c=VCOL[ev.verdict]||'#5b9eff';
+                    memMat.emissiveIntensity=1.3;
+                    memMat.color.setHex(ev.verdict==='DENY'?0xef4444:ev.verdict==='RESTRICT'?0xefb45a:0x5b9eff);
+                    if(nodeMap['constitution'])nodeMap['constitution'].userData.pulse=0.9;
+                    if(nodeMap['civilization_kernel'])nodeMap['civilization_kernel'].userData.pulse=0.7;
+                    spawnP('constitution','civilization_kernel',ev.verdict==='DENY'?0xef4444:ev.verdict==='RESTRICT'?0xefb45a:0x5b9eff);
+                    addFeed((ev.method||'REQ')+' '+(ev.path||'').slice(0,22),c);
+                  } else if(ev.type==='cron'){
+                    var cc=ev.status==='ok'?'#3fd29a':'#ef4444';
+                    if(nodeMap['cron_scheduler'])nodeMap['cron_scheduler'].userData.pulse=0.85;
+                    spawnP('cron_scheduler','event_bus',ev.status==='ok'?0x3fd29a:0xef4444);
+                    addFeed('CRON '+(ev.job||'').slice(0,18)+' '+(ev.status||''),cc);
+                  } else if(ev.type==='agent'){
+                    var ac=ev.ok?'#3fd29a':'#ef4444';
+                    if(nodeMap['agent_pipeline'])nodeMap['agent_pipeline'].userData.pulse=0.9;
+                    spawnP('event_bus','agent_pipeline',0xfbbf24);
+                    if(ev.ok)spawnP('agent_pipeline','claude_api',0xfcd34d);
+                    addFeed('AGENT '+(ev.status||'')+' '+(ev.label||'').slice(0,14),ac);
+                    document.getElementById('apx-agt').textContent=(ev.activeCount||'—')+' agents';
+                  } else if(ev.type==='memory'){
+                    if(nodeMap['memory_gateway'])nodeMap['memory_gateway'].userData.pulse=0.6;
+                    var mtgt=ev.layer==='episodic'?'episodic_memory':ev.layer==='semantic'?'semantic_memory':'working_memory';
+                    spawnP('memory_gateway',mtgt,0xa78bfa);
+                    addFeed('MEM '+(ev.op||'')+' '+(ev.layer||''),'#a78bfa');
+                  }
+                }
+
+                /* Raycaster / Tooltip */
+                var ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
+                var ttEl=document.getElementById('apx-tip'),ttName=document.getElementById('apx-tip-name'),ttDesc=document.getElementById('apx-tip-desc');
+                var meshList=NODES.map(function(n){return nodeMap[n.id];}).filter(Boolean);
+                cvs.addEventListener('mousemove',function(e){
+                  var rc=cvs.getBoundingClientRect();
+                  mouse.x=((e.clientX-rc.left)/rc.width)*2-1;
+                  mouse.y=-((e.clientY-rc.top)/rc.height)*2+1;
+                  ray.setFromCamera(mouse,camera);
+                  var hits=ray.intersectObjects(meshList);
+                  if(hits.length){
+                    var ud=hits[0].object.userData;
+                    ttName.textContent=ud.label; ttDesc.textContent=ud.desc;
+                    var wc=wrap.getBoundingClientRect();
+                    ttEl.style.left=(e.clientX-wc.left+14)+'px';
+                    ttEl.style.top=(e.clientY-wc.top-10)+'px';
+                    ttEl.style.display='block';
+                  }else{ttEl.style.display='none';}
+                });
+                cvs.addEventListener('mouseleave',function(){ttEl.style.display='none';});
+
+                /* Animation Loop */
+                var lastT=Date.now();
+                function animate(){
+                  requestAnimationFrame(animate);
+                  var now=Date.now(),dt=(now-lastT)/1000; lastT=now;
+                  /* Gentle camera orbit */
+                  var a=now*0.00005;
+                  camera.position.x=Math.sin(a)*18; camera.position.y=Math.cos(a*0.65)*10;
+                  camera.lookAt(0,0,0);
+                  /* Node pulse + rotation */
+                  NODES.forEach(function(n){
+                    var m=nodeMap[n.id]; if(!m)return;
+                    m.userData.pulse=Math.max(0,(m.userData.pulse||0)-dt*1.8);
+                    var p=m.userData.pulse,r=m.userData.baseR*(1+p*0.45);
+                    m.scale.set(r,r,r);
+                    m.material.emissiveIntensity=0.22+p*0.78;
+                    m.rotation.y+=dt*(0.15+p*0.6); m.rotation.x+=dt*(0.08+p*0.2);
+                  });
+                  /* Particles */
+                  for(var i=parts.length-1;i>=0;i--){
+                    var p=parts[i]; p.t+=dt*0.65;
+                    if(p.t>=1){scene.remove(p.mesh);parts.splice(i,1);}
+                    else{p.mesh.position.lerpVectors(p.from,p.to,p.t);p.mesh.material.opacity=1-p.t;}
+                  }
+                  /* Membrane decay */
+                  memMat.emissiveIntensity=Math.max(0.1,memMat.emissiveIntensity-dt*1.2);
+                  /* Labels */
+                  var lW=lWrap.clientWidth||W,lH=lWrap.clientHeight||H;
+                  NODES.forEach(function(n){
+                    var m=nodeMap[n.id],el=lblEls[n.id]; if(!m||!el)return;
+                    var v=m.position.clone().project(camera);
+                    if(v.z>0.99){el.style.display='none';return;}
+                    el.style.display='block';
+                    el.style.left=((v.x+1)/2*lW)+'px';
+                    el.style.top=((-v.y+1)/2*lH+m.userData.baseR*lH/300+3)+'px';
+                  });
+                  drawHb();
+                  renderer.render(scene,camera);
+                }
+
+                /* Resize */
+                if(window.ResizeObserver){
+                  new ResizeObserver(function(){
+                    W=wrap.clientWidth;H=wrap.clientHeight;
+                    camera.aspect=W/H; camera.updateProjectionMatrix(); renderer.setSize(W,H);
+                  }).observe(wrap);
+                }
+
+                wsConnect();
+                animate();
+                }); /* end DOMContentLoaded */
+                </script>
 
             </div>
 
