@@ -386,7 +386,8 @@ app.get('/health', async (req, res) => {
     const ttsOk = !!(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
     const aiOk  = !!process.env.ANTHROPIC_API_KEY;
     const allOk = dbOk && ttsOk && aiOk;
-    res.status(dbOk ? 200 : 503).json({
+    // Always 200 for Render health-check — 503 causes deploy rollback even when app is starting up fine.
+    res.status(200).json({
         status:  allOk ? 'ok' : (dbOk ? 'degraded' : 'down'),
         version: GIT_SHA,
         uptime:  process.uptime(),

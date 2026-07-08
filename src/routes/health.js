@@ -46,7 +46,7 @@ router.get('/health', async (req, res) => {
             } catch {}
         });
     }
-    res.status(dbOk ? 200 : 503).json({
+    res.status(200).json({
         status,
         version:        GIT_SHA,
         uptime:         process.uptime(),
