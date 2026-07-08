@@ -789,7 +789,7 @@ server.listen(PORT, () => {
             `);
             // DROP and CREATE must be separate queries — CREATE OR REPLACE cannot change
             // a function's return type in the same multi-statement parse round.
-            await pgPool.query(`DROP FUNCTION IF EXISTS match_vault_embeddings(vector, int);`);
+            await pgPool.query(`DROP FUNCTION IF EXISTS match_vault_embeddings;`);
             await pgPool.query(`
                 CREATE OR REPLACE FUNCTION match_vault_embeddings(
                     query_embedding vector(768), match_count int DEFAULT 5

@@ -17,6 +17,7 @@ const govStateView = require('../lib/orchestration/governance_global_state_view'
 const LOG_FILE   = path.join(__dirname, '../logs/kernel.ndjson');
 // W4: Audit ledger — append-only, one record per request
 const AUDIT_FILE = path.join(__dirname, '../logs/apex_audit.ndjson');
+fs.mkdirSync(path.join(__dirname, '../logs'), { recursive: true });
 
 function _klog(record) {
     try { fs.appendFileSync(LOG_FILE, JSON.stringify(record) + '\n'); } catch (e) { console.error('[klog-fail]', e.message); }
