@@ -455,6 +455,22 @@ router.get('/api/agent/status', requireAppAccess, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+router.get('/api/master/schedules', requireAppAccess, async (req, res) => {
+    try {
+        const { data } = await sbAdmin.from('apex_sync_checkpoints')
+            .select('key, value, updated_at')
+            .like('key', 'cron:%')
+            .order('updated_at', { ascending: false });
+        const schedules = (data || []).map(r => {
+            const name = r.key.replace(/^cron:|:last_run$/g, '');
+            let val = {};
+            try { val = JSON.parse(r.value || '{}'); } catch {}
+            return { name, enabled: true, last_run: val.ts || r.updated_at, status: val.status, duration_ms: val.duration_ms };
+        });
+        res.json({ ok: true, schedules });
+    } catch (e) { res.status(500).json({ ok: false, schedules: [], error: e.message }); }
+});
+
 router.post('/api/admin/sre/run', requireAppAccess, async (req, res) => {
     try {
         const { scenarioIds, label, setAsBaseline = false } = req.body;
