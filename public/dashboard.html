@@ -10586,113 +10586,184 @@ if(pipe){
 })();</script>
 
                 <script>
-                /* APEX MIND — SVG Hierarchy Visualization */
+                /* APEX MIND v2 — Complete 44-Node System Topology */
                 (function(){
                 var page=document.getElementById('page-overview');
                 if(!page)return;
-                var NW=138,NH=52;
-                var C={w:'#f3f7fb',b:'#5b9eff',g:'#3fd29a',gold:'#efb45a',p:'#7c6fff',pk:'#ec7fa3',s:'#8893a0'};
+                var NW=122,NH=46;
+                var C={w:'#f3f7fb',b:'#5b9eff',g:'#3fd29a',gold:'#efb45a',p:'#7c6fff',pk:'#ec7fa3',s:'#8893a0',c:'#38bdf8',v:'#a78bfa'};
                 var NODES=[
-                  {id:'you',   lb:'YOU',             sub:'Sovereign Operator',    t:0,x:600, y:72,  col:C.w,   st:'ONLINE',   desc:'Principal authority. All system decisions flow from this node.',          mx:[['Authority','Supreme'],['Escalations','0'],['Session','Active']]},
-                  {id:'const', lb:'CONSTITUTION',    sub:'Charter · 10 Laws',     t:1,x:220, y:210, col:C.b,   st:'ACTIVE',   desc:'Immutable charter enforced on every AI action in the system.',            mx:[['Laws','10 enforced'],['Audit','Immutable'],['Safety','Enforced']]},
-                  {id:'found', lb:'FOUNDER IDENTITY',sub:'Digital Twin · Trust',  t:1,x:600, y:210, col:C.p,   st:'LINKED',   desc:'Founder identity binding, device trust graph, UUID passport.',            mx:[['Operator','Sovereign'],['Trust Graph','Active'],['Passport','Issued']]},
-                  {id:'civ',   lb:'CIV. REGISTRY',   sub:'14 Registry Types',     t:1,x:980, y:210, col:C.gold,st:'BUILDING', desc:'Civilization-level registry tracking entities, goals, and assets.',       mx:[['Types','14 active'],['Entities','Humans · Agents'],['Lifecycle','Tracked']]},
-                  {id:'cexec', lb:'CHIEF EXEC',      sub:'Direction & Strategy',  t:2,x:80,  y:380, col:C.w,   st:'ACTIVE',   desc:'Top-level direction, goal prioritization, mission alignment.',            mx:[['Role','Executive'],['Focus','Strategy'],['Mandate','Mission']]},
-                  {id:'cops',  lb:'CHIEF OPS',       sub:'Execution Coord.',      t:2,x:260, y:380, col:C.b,   st:'ACTIVE',   desc:'Execution coordination, workflow oversight, delivery management.',        mx:[['Role','Operations'],['Focus','Delivery'],['Pipelines','Active']]},
-                  {id:'cintel',lb:'CHIEF INTEL',     sub:'Info & Memory',         t:2,x:440, y:380, col:C.g,   st:'ACTIVE',   desc:'Information coordination, memory oversight, research governance.',        mx:[['Role','Intelligence'],['Memory','Overseen'],['Research','Active']]},
-                  {id:'cfin',  lb:'CHIEF FIN',       sub:'Budget & Treasury',     t:2,x:620, y:380, col:C.gold,st:'ACTIVE',   desc:'Resource allocation, budgeting and investment oversight.',                mx:[['Role','Finance'],['Budget','Tracked'],['Allocations','Active']]},
-                  {id:'cgrow', lb:'CHIEF GROWTH',    sub:'Revenue & Markets',     t:2,x:800, y:380, col:C.pk,  st:'ACTIVE',   desc:'Opportunity detection, revenue strategy, market expansion.',             mx:[['Role','Growth'],['Opportunities','Monitored'],['Revenue','Tracked']]},
-                  {id:'cgov',  lb:'CHIEF GOV',       sub:'Compliance & Audit',    t:2,x:980, y:380, col:C.p,   st:'ACTIVE',   desc:'Compliance oversight, audit management, policy evolution.',              mx:[['Role','Governance'],['Audits','Managed'],['Policy','Evolving']]},
-                  {id:'sys',   lb:'SYSTEM AGENT',    sub:'Infrastructure Ops',    t:3,x:145, y:545, col:C.b,   st:'ACTIVE',   desc:'System-level infrastructure operations and monitoring.',                 mx:[['Domain','System'],['Infra','Monitored'],['Uptime','Active']]},
-                  {id:'file',  lb:'FILE AGENT',      sub:'Storage · Docs',        t:3,x:365, y:545, col:C.g,   st:'ACTIVE',   desc:'File management, document storage, Supabase Storage ops.',              mx:[['Domain','Files'],['Storage','Supabase'],['Docs','Managed']]},
-                  {id:'uni',   lb:'UNI AGENT',       sub:'Knowledge · Study',     t:3,x:585, y:545, col:C.gold,st:'ACTIVE',   desc:'University knowledge management, study sessions, flashcards.',           mx:[['Domain','Education'],['Flashcards','Active'],['Sessions','Tracked']]},
-                  {id:'finag', lb:'FINANCE AGENT',   sub:'Budget · Treasury',     t:3,x:805, y:545, col:C.pk,  st:'ACTIVE',   desc:'Personal finance tracking, budget management, treasury ops.',           mx:[['Domain','Finance'],['Budget','Tracked'],['Transactions','Logged']]},
-                  {id:'biz',   lb:'BUSINESS AGENT',  sub:'Revenue · Clients',     t:3,x:1025,y:545, col:C.p,   st:'ACTIVE',   desc:'Business ops, client management, revenue and growth tracking.',         mx:[['Domain','Business'],['Clients','Tracked'],['Revenue','Active']]},
-                  {id:'db',    lb:'SUPABASE DB',     sub:'Postgres · Storage',    t:4,x:145, y:700, col:C.b,   st:'ACTIVE',   desc:'Primary Postgres database and Supabase Storage layer.',                 mx:[['Type','Postgres'],['Storage','Supabase'],['Uptime','Active']]},
-                  {id:'cron',  lb:'CRON JOBS',       sub:'Scheduled Tasks',       t:4,x:365, y:700, col:C.g,   st:'ACTIVE',   desc:'Scheduled automation jobs and recurring cron tasks.',                   mx:[['Jobs','Running'],['Frequency','Varied'],['Log','Persisted']]},
-                  {id:'api',   lb:'API GATEWAY',     sub:'Express · Routes',      t:4,x:585, y:700, col:C.gold,st:'ACTIVE',   desc:'Express.js API gateway, route handlers, middleware stack.',             mx:[['Framework','Express'],['Routes','Mounted'],['Middleware','Active']]},
-                  {id:'kern',  lb:'CIV. KERNEL',     sub:'Constitution Engine',   t:4,x:805, y:700, col:C.pk,  st:'ACTIVE',   desc:'Civilization kernel enforcing constitutional rules per request.',       mx:[['Engine','Active'],['Rules','Enforced'],['Verdicts','Logged']]},
-                  {id:'vizb',  lb:'VIZ BROADCAST',   sub:'Live Events · WS',      t:4,x:1025,y:700, col:C.p,   st:'ACTIVE',   desc:'Real-time event broadcaster, WebSocket feed, ring buffer.',            mx:[['Buffer','300 events'],['WS','Connected'],['Feed','Live']]},
+                  {id:'you',   lb:'YOU',              sub:'Sovereign Operator',      t:0,x:1050,y:58,  col:C.w,   st:'ONLINE',   on:true, desc:'Principal authority. All system decisions and actions flow from this node.',         mx:[['Authority','Supreme'],['Escalations','0'],['Session','Active']]},
+                  {id:'const', lb:'CONSTITUTION',     sub:'Charter · 10 Laws',       t:1,x:350, y:172, col:C.b,   st:'ACTIVE',   on:true, desc:'Immutable charter enforced on every AI action in the system.',                     mx:[['Laws','10 enforced'],['Audit','Immutable'],['Safety','Enforced']]},
+                  {id:'found', lb:'FOUNDER IDENTITY', sub:'Digital Twin · Trust',    t:1,x:1050,y:172, col:C.p,   st:'LINKED',   on:true, desc:'Founder identity binding, device trust graph, UUID passport.',                     mx:[['Operator','Sovereign'],['Trust Graph','Active'],['Passport','Issued']]},
+                  {id:'civ',   lb:'CIV. REGISTRY',    sub:'14 Registry Types',       t:1,x:1750,y:172, col:C.gold,st:'BUILDING', on:true, desc:'Civilization-level registry tracking entities, goals, and assets.',               mx:[['Types','14 active'],['Entities','Humans · Agents'],['Lifecycle','Tracked']]},
+                  {id:'cexec', lb:'CHIEF EXEC',       sub:'Direction & Strategy',    t:2,x:375, y:312, col:C.w,   st:'ACTIVE',   on:true, desc:'Top-level direction, goal prioritization, mission alignment.',                     mx:[['Role','Executive'],['Focus','Strategy'],['Mandate','Mission']]},
+                  {id:'cops',  lb:'CHIEF OPS',        sub:'Execution Coord.',        t:2,x:645, y:312, col:C.b,   st:'ACTIVE',   on:true, desc:'Execution coordination, workflow oversight, delivery management.',                 mx:[['Role','Operations'],['Focus','Delivery'],['Pipelines','Active']]},
+                  {id:'cintel',lb:'CHIEF INTEL',      sub:'Info & Memory',           t:2,x:915, y:312, col:C.g,   st:'ACTIVE',   on:true, desc:'Information coordination, memory oversight, research governance.',                 mx:[['Role','Intelligence'],['Memory','Overseen'],['Research','Active']]},
+                  {id:'cfin',  lb:'CHIEF FIN',        sub:'Budget & Treasury',       t:2,x:1185,y:312, col:C.gold,st:'ACTIVE',   on:true, desc:'Resource allocation, budgeting and investment oversight.',                         mx:[['Role','Finance'],['Budget','Tracked'],['Allocations','Active']]},
+                  {id:'cgrow', lb:'CHIEF GROWTH',     sub:'Revenue & Markets',       t:2,x:1455,y:312, col:C.pk,  st:'ACTIVE',   on:true, desc:'Opportunity detection, revenue strategy, market expansion.',                      mx:[['Role','Growth'],['Opportunities','Monitored'],['Revenue','Tracked']]},
+                  {id:'cgov',  lb:'CHIEF GOV',        sub:'Compliance & Audit',      t:2,x:1725,y:312, col:C.p,   st:'ACTIVE',   on:true, desc:'Compliance oversight, audit management, policy evolution.',                       mx:[['Role','Governance'],['Audits','Managed'],['Policy','Evolving']]},
+                  {id:'sys',   lb:'SYSTEM AGENT',     sub:'Infrastructure · SYS',    t:3,x:353, y:448, col:C.b,   st:'ACTIVE',   on:true, desc:'System-level infrastructure operations, automation, and monitoring.',             mx:[['Domain','System'],['Infra','Monitored'],['Uptime','Active']]},
+                  {id:'file',  lb:'FILE AGENT',       sub:'Storage · Docs · FILE',   t:3,x:508, y:448, col:C.g,   st:'ACTIVE',   on:true, desc:'File management, document storage, Supabase Storage operations.',                mx:[['Domain','Files'],['Storage','Supabase'],['Docs','Managed']]},
+                  {id:'uni',   lb:'UNI AGENT',        sub:'Knowledge · Study · UNI', t:3,x:663, y:448, col:C.gold,st:'ACTIVE',   on:true, desc:'University knowledge management, study sessions, flashcards, coursework.',       mx:[['Domain','Education'],['Flashcards','Active'],['Sessions','Tracked']]},
+                  {id:'finag', lb:'FINANCE AGENT',    sub:'Budget · Treasury · FIN', t:3,x:818, y:448, col:C.pk,  st:'ACTIVE',   on:true, desc:'Personal finance tracking, budget management, treasury operations.',             mx:[['Domain','Finance'],['Budget','Tracked'],['Transactions','Logged']]},
+                  {id:'biz',   lb:'BUSINESS AGENT',   sub:'Revenue · Clients · BIZ', t:3,x:973, y:448, col:C.p,   st:'ACTIVE',   on:true, desc:'Business ops, client management, revenue and growth tracking.',                 mx:[['Domain','Business'],['Clients','Tracked'],['Revenue','Active']]},
+                  {id:'comms', lb:'COMMS AGENT',      sub:'Network · Email · COMM',  t:3,x:1128,y:448, col:C.c,   st:'OFFLINE',  on:false,desc:'Communications management: email (iCloud, Gmail, Outlook), messaging, contacts.',mx:[['Domain','Comms'],['Email','Multi-provider'],['Status','Pending']]},
+                  {id:'hlth',  lb:'HEALTH AGENT',     sub:'Wellbeing · HLTH',        t:3,x:1283,y:448, col:C.g,   st:'OFFLINE',  on:false,desc:'Health tracking: sleep, nutrition, exercise, mental wellness, journal.',          mx:[['Domain','Health'],['Tracking','Multi-metric'],['Status','Pending']]},
+                  {id:'occ',   lb:'OCCULT AGENT',     sub:'Spiritual · Journal',     t:3,x:1438,y:448, col:C.v,   st:'OFFLINE',  on:false,desc:'Spiritual practice logs, journal & psychology, mood tracking, weekly reflection.',mx:[['Domain','Occult'],['Journal','Active'],['Status','Pending']]},
+                  {id:'rsch',  lb:'RESEARCH AGENT',   sub:'Intel · Search · RSCH',   t:3,x:1593,y:448, col:C.c,   st:'OFFLINE',  on:false,desc:'Research engine: search, scrape, crawl, summarize, archive pipeline.',           mx:[['Domain','Research'],['Pipeline','7 stages'],['Status','Pending']]},
+                  {id:'web',   lb:'WEB AGENT',        sub:'Browser · Automation',    t:3,x:1748,y:448, col:C.b,   st:'OFFLINE',  on:false,desc:'Web access, screenshots, PDF extraction, form fill, browser automation.',        mx:[['Domain','Browser'],['Capabilities','4 types'],['Status','Pending']]},
+                  {id:'db',    lb:'SUPABASE DB',      sub:'Postgres · Storage',      t:4,x:360, y:584, col:C.b,   st:'ACTIVE',   on:true, desc:'Primary Postgres database and Supabase Storage layer.',                          mx:[['Type','Postgres'],['Storage','Supabase'],['Uptime','Active']]},
+                  {id:'cron',  lb:'CRON JOBS',        sub:'Scheduled Tasks',         t:4,x:590, y:584, col:C.g,   st:'ACTIVE',   on:true, desc:'Scheduled automation jobs and recurring cron tasks.',                             mx:[['Jobs','Running'],['Frequency','Varied'],['Log','Persisted']]},
+                  {id:'api',   lb:'API GATEWAY',      sub:'Express · Routes',        t:4,x:820, y:584, col:C.gold,st:'ACTIVE',   on:true, desc:'Express.js API gateway, route handlers, middleware stack.',                      mx:[['Framework','Express'],['Routes','Mounted'],['Middleware','Active']]},
+                  {id:'kern',  lb:'CIV. KERNEL',      sub:'Constitution Engine',     t:4,x:1050,y:584, col:C.pk,  st:'ACTIVE',   on:true, desc:'Civilization kernel enforcing constitutional rules on every request.',           mx:[['Engine','Active'],['Rules','Enforced'],['Verdicts','Logged']]},
+                  {id:'vizb',  lb:'VIZ BROADCAST',    sub:'Live Events · WS',        t:4,x:1280,y:584, col:C.p,   st:'ACTIVE',   on:true, desc:'Real-time event broadcaster, WebSocket feed, ring buffer 300 events.',          mx:[['Buffer','300 events'],['WS','Connected'],['Feed','Live']]},
+                  {id:'apgat', lb:'APPROVAL GATE',    sub:'Auth · Routing · Gate',   t:4,x:1510,y:584, col:C.gold,st:'ACTIVE',   on:true, desc:'Approval routing engine: gates all sensitive actions before execution.',        mx:[['Gates','4 domains'],['Avg Latency','2.1s'],['Safety','Enforced']]},
+                  {id:'vault', lb:'VAULT / INGEST',   sub:'Knowledge · Ingest',      t:4,x:1740,y:584, col:C.c,   st:'BUILDING', on:true, desc:'Supabase vault with structured ingest pipeline for long-term knowledge.',       mx:[['Status','Building'],['Ingest','CS249r active'],['Type','Vector+SQL']]},
+                  {id:'m1',    lb:'M1 WORKING MEM',   sub:'Active Session Context',  t:5,x:360, y:718, col:C.p,   st:'ACTIVE',   on:true, desc:'Working memory: active session state, in-flight context, current tasks.',      mx:[['Capacity','87% used'],['Scope','Session'],['Type','Volatile']]},
+                  {id:'m2',    lb:'M2 RELATIONAL',    sub:'Entities & Relations',    t:5,x:590, y:718, col:C.p,   st:'ACTIVE',   on:true, desc:'Relational memory: entity graph, relationships, trust scores, authority graph.',mx:[['Capacity','72% used'],['Entities','Active'],['Type','Graph']]},
+                  {id:'m3',    lb:'M3 LONG TERM',     sub:'Persistent Knowledge',    t:5,x:820, y:718, col:C.p,   st:'ACTIVE',   on:true, desc:'Long-term memory: persistent knowledge base, cross-session retention.',         mx:[['Capacity','94% used'],['Scope','Persistent'],['Type','Vector']]},
+                  {id:'m4',    lb:'M4 KNOW. GRAPH',   sub:'Concepts & Links',        t:5,x:1050,y:718, col:C.p,   st:'ACTIVE',   on:true, desc:'Knowledge graph: concept index, semantic links, inference pathways.',           mx:[['Capacity','61% used'],['Concepts','Indexed'],['Type','Semantic']]},
+                  {id:'m5',    lb:'M5 DECISION HIST', sub:'Choices & Outcomes',      t:5,x:1280,y:718, col:C.p,   st:'ACTIVE',   on:true, desc:'Decision history: all choices, their outcomes, and lessons learned.',           mx:[['Capacity','83% used'],['Immutable','Yes'],['Type','Append-only']]},
+                  {id:'m6',    lb:'M6 LIFE TIMELINE', sub:'Chronological Events',    t:5,x:1510,y:718, col:C.p,   st:'ACTIVE',   on:true, desc:'Life timeline: chronological life events, milestones, personal history.',      mx:[['Capacity','45% used'],['Scope','Lifetime'],['Type','Temporal']]},
+                  {id:'m7',    lb:'M7 PROJECT INTEL', sub:'Per-project Context',     t:5,x:1740,y:718, col:C.p,   st:'ACTIVE',   on:true, desc:'Project intelligence: per-project context, progress, insights, blockers.',    mx:[['Capacity','68% used'],['Projects','Tracked'],['Type','Contextual']]},
+                  {id:'refl',  lb:'REFLECTION SYS',   sub:'Quality · Accuracy',      t:6,x:510, y:848, col:C.pk,  st:'ACTIVE',   on:true, desc:'Reflection system: quality checks, accuracy review, efficiency analysis.',    mx:[['Quality','Monitored'],['Cycle','Post-exec'],['Outputs','Lessons']]},
+                  {id:'evo',   lb:'EVOLUTION ENGINE', sub:'Policy · Improvement',    t:6,x:870, y:848, col:C.pk,  st:'ACTIVE',   on:true, desc:'Evolution engine: policy updates, workflow improvements, agent expansions.',   mx:[['Updates','Policy+Workflow'],['Trigger','Reflection'],['Risk','Governed']]},
+                  {id:'audit', lb:'AUDIT SYSTEM',     sub:'Immutable · Tamper-proof',t:6,x:1230,y:848, col:C.pk,  st:'ACTIVE',   on:true, desc:'Audit system: immutable 8-field audit trail for every action (who/what/when).',mx:[['Fields','8 per record'],['Immutable','Yes'],['Scope','All actions']]},
+                  {id:'sent',  lb:'GOV. SENTINEL',    sub:'Governance Watchdog',     t:6,x:1590,y:848, col:C.pk,  st:'ACTIVE',   on:true, desc:'Governance sentinel: the final watchdog between memory fabric and sovereign.', mx:[['Role','Watchdog'],['Gates','Escalation'],['Reports to','Sovereign']]},
+                  {id:'rtime', lb:'TIME',              sub:'24h/day · 73% used',      t:7,x:450, y:976, col:C.gold,st:'ACTIVE',   on:true, desc:'Time resource: 24h daily allocation. 73% used. Forecast: steady.',            mx:[['Budget','24h/day'],['Used','73%'],['Forecast','Steady']]},
+                  {id:'rmoney',lb:'MONEY',             sub:'£2,400/mo · 41% used',    t:7,x:690, y:976, col:C.gold,st:'ACTIVE',   on:true, desc:'Money resource: £2,400/month allocation. 41% used. Forecast: growing.',      mx:[['Budget','£2,400/mo'],['Used','41%'],['Forecast','Growing']]},
+                  {id:'rcomp', lb:'COMPUTE',           sub:'Render · 58% used',       t:7,x:930, y:976, col:C.gold,st:'ACTIVE',   on:true, desc:'Compute resource: Render hosting plan. 58% used. Forecast: stable.',          mx:[['Platform','Render'],['Used','58%'],['Forecast','Stable']]},
+                  {id:'rtok',  lb:'TOKENS',            sub:'API Quota · 67% used',    t:7,x:1170,y:976, col:C.gold,st:'ACTIVE',   on:true, desc:'Token resource: Claude API quota. 67% used. Forecast: rising.',              mx:[['Provider','Anthropic'],['Used','67%'],['Forecast','Rising']]},
+                  {id:'rstor', lb:'STORAGE',           sub:'Supabase · 29% used',     t:7,x:1410,y:976, col:C.gold,st:'ACTIVE',   on:true, desc:'Storage resource: Supabase storage tier. 29% used. Forecast: steady.',       mx:[['Provider','Supabase'],['Used','29%'],['Forecast','Steady']]},
+                  {id:'ratttn',lb:'ATTENTION',         sub:'Sovereign Hrs · 84%',     t:7,x:1650,y:976, col:C.gold,st:'ACTIVE',   on:true, desc:'Attention resource: sovereign hours of focus. 84% used. Forecast: protect.', mx:[['Budget','Sovereign hrs'],['Used','84%'],['Forecast','Protect']]},
                 ];
                 var EDGES=[
                   ['you','const'],['you','found'],['you','civ'],
                   ['const','cexec'],['const','cgov'],
                   ['found','cops'],['found','cintel'],
                   ['civ','cfin'],['civ','cgrow'],
-                  ['cexec','sys'],['cops','file'],['cintel','uni'],['cfin','finag'],['cgrow','biz'],['cgov','sys'],
-                  ['sys','db'],['sys','cron'],['file','db'],['file','api'],['uni','api'],['finag','kern'],['biz','kern'],['biz','vizb'],
+                  ['cexec','sys'],['cexec','biz'],
+                  ['cops','file'],['cops','comms'],['cops','hlth'],
+                  ['cintel','uni'],['cintel','rsch'],['cintel','occ'],
+                  ['cfin','finag'],
+                  ['cgrow','biz'],['cgrow','web'],
+                  ['cgov','sys'],['cgov','occ'],
+                  ['sys','db'],['sys','cron'],['sys','vault'],
+                  ['file','db'],['file','api'],
+                  ['uni','db'],['uni','api'],
+                  ['finag','db'],['finag','apgat'],
+                  ['biz','api'],['biz','vizb'],
+                  ['comms','api'],
+                  ['hlth','db'],
+                  ['occ','db'],
+                  ['rsch','api'],['rsch','vault'],
+                  ['web','api'],
+                  ['db','m1'],['db','m2'],['db','m3'],
+                  ['api','m1'],
+                  ['vault','m3'],['vault','m4'],
+                  ['kern','m5'],['kern','apgat'],
+                  ['apgat','m5'],
+                  ['cron','m1'],
+                  ['vizb','m1'],
+                  ['m1','refl'],
+                  ['m2','audit'],
+                  ['m3','evo'],
+                  ['m4','evo'],
+                  ['m5','audit'],
+                  ['m6','refl'],
+                  ['m7','evo'],
+                  ['refl','sent'],['evo','sent'],['audit','sent'],
+                  ['refl','ratttn'],
+                  ['evo','rcomp'],['evo','rtok'],
+                  ['audit','rstor'],
+                  ['sent','rtime'],['sent','rmoney'],
                 ];
                 var TIER_LABELS=[
-                  {lb:'T0 · SOVEREIGN',      y:72,  col:'rgba(243,247,251,0.65)'},
-                  {lb:'T1 · IDENTITY CORE',  y:210, col:'rgba(91,158,255,0.65)'},
-                  {lb:'T2 · EXECUTIVE GOVT', y:380, col:'rgba(239,180,90,0.65)'},
-                  {lb:'T3 · DOMAIN AGENTS',  y:545, col:'rgba(91,158,255,0.65)'},
-                  {lb:'T4 · INFRASTRUCTURE', y:700, col:'rgba(136,147,160,0.65)'},
+                  {lb:'T0 · SOVEREIGN',        y:58,  col:'rgba(243,247,251,0.65)'},
+                  {lb:'T1 · IDENTITY CORE',    y:172, col:'rgba(91,158,255,0.65)'},
+                  {lb:'T2 · EXECUTIVE GOVT',   y:312, col:'rgba(239,180,90,0.65)'},
+                  {lb:'T3 · DOMAIN AGENTS',    y:448, col:'rgba(91,158,255,0.65)'},
+                  {lb:'T4 · INFRASTRUCTURE',   y:584, col:'rgba(63,210,154,0.65)'},
+                  {lb:'T5 · MEMORY FABRIC',    y:718, col:'rgba(124,111,255,0.65)'},
+                  {lb:'T6 · GOVERNANCE',       y:848, col:'rgba(236,127,163,0.65)'},
+                  {lb:'T7 · RESOURCE ECONOMY', y:976, col:'rgba(239,180,90,0.65)'},
                 ];
                 var nm={};
                 NODES.forEach(function(n){nm[n.id]=n;});
+                var onlineCount=NODES.filter(function(n){return n.on;}).length;
+                var offlineCount=NODES.length-onlineCount;
 
                 /* Build SVG strings */
                 var tierSVG='',edgeSVG='',nodeSVG='';
                 TIER_LABELS.forEach(function(t){
-                  tierSVG+='<text x="-14" y="'+t.y+'" text-anchor="end" dominant-baseline="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" letter-spacing="1.5" fill="'+t.col+'">'+t.lb+'</text>'
-                    +'<line x1="-14" y1="'+(t.y+30)+'" x2="1200" y2="'+(t.y+30)+'" stroke="rgba(255,255,255,0.025)" stroke-width="1"/>';
+                  tierSVG+='<text x="-14" y="'+t.y+'" text-anchor="end" dominant-baseline="middle" font-family="JetBrains Mono,monospace" font-size="7.5" font-weight="700" letter-spacing="1.5" fill="'+t.col+'">'+t.lb+'</text>'
+                    +'<line x1="-14" y1="'+(t.y+27)+'" x2="2100" y2="'+(t.y+27)+'" stroke="rgba(255,255,255,0.022)" stroke-width="1"/>';
                 });
                 EDGES.forEach(function(e){
                   var a=nm[e[0]],b=nm[e[1]];if(!a||!b)return;
                   var x1=a.x,y1=a.y+NH/2,x2=b.x,y2=b.y-NH/2,my=(y1+y2)/2;
-                  edgeSVG+='<path class="apx-edge" data-from="'+e[0]+'" data-to="'+e[1]+'" d="M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2+'" stroke="rgba(91,158,255,0.18)" stroke-width="3" fill="none" filter="url(#apx-gf)" style="transition:stroke .4s,stroke-width .4s"/>'
-                    +'<path class="apx-edge" data-from="'+e[0]+'" data-to="'+e[1]+'" d="M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2+'" stroke="rgba(140,190,255,0.45)" stroke-width="1" fill="none" style="transition:stroke .4s,stroke-width .4s"/>';
+                  var off=(!a.on||!b.on);
+                  var baseStroke=off?'rgba(91,158,255,0.06)':'rgba(91,158,255,0.16)';
+                  var lineStroke=off?'rgba(140,190,255,0.12)':'rgba(140,190,255,0.38)';
+                  edgeSVG+='<path class="apx-edge" data-from="'+e[0]+'" data-to="'+e[1]+'" d="M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2+'" stroke="'+baseStroke+'" stroke-width="3" fill="none" filter="url(#apx-gf)" style="transition:stroke .4s,stroke-width .4s"/>'
+                    +'<path class="apx-edge" data-from="'+e[0]+'" data-to="'+e[1]+'" d="M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2+'" stroke="'+lineStroke+'" stroke-width="1" fill="none" style="transition:stroke .4s,stroke-width .4s"/>';
                 });
                 NODES.forEach(function(n){
                   var rx=n.x-NW/2,ry=n.y-NH/2;
-                  var sc=(n.st==='ONLINE'||n.st==='ACTIVE'||n.st==='LINKED')?C.g:C.gold;
-                  nodeSVG+='<g class="apx-node" id="nd-'+n.id+'" data-id="'+n.id+'" style="cursor:pointer">'
-                    +'<rect x="'+rx+'" y="'+ry+'" width="'+NW+'" height="'+NH+'" rx="9" fill="#0d1424" stroke="rgba(91,158,255,0.12)" stroke-width="1" class="apx-nb"/>'
-                    +'<rect x="'+rx+'" y="'+(ry+9)+'" width="3" height="'+(NH-18)+'" rx="1.5" fill="'+n.col+'"/>'
-                    +'<text x="'+(rx+12)+'" y="'+(ry+20)+'" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" letter-spacing="1.5" fill="'+n.col+'">'+n.lb+'</text>'
-                    +'<text x="'+(rx+12)+'" y="'+(ry+34)+'" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6b7a8d">'+n.sub+'</text>'
-                    +'<circle cx="'+(rx+NW-12)+'" cy="'+(ry+13)+'" r="3" fill="'+sc+'"/>'
-                    +'<text x="'+(rx+NW-23)+'" y="'+(ry+43)+'" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="6.5" font-weight="700" fill="'+sc+'" letter-spacing="1">'+n.st+'</text>'
-                    +'<rect class="apx-glow" x="'+rx+'" y="'+ry+'" width="'+NW+'" height="'+NH+'" rx="9" fill="none" stroke="'+n.col+'" stroke-width="2.5" opacity="0" style="transition:opacity .3s"/>'
+                  var sc=n.on?(n.st==='BUILDING'?C.gold:C.g):'#374151';
+                  var dim=n.on?'':'opacity="0.45"';
+                  var dash=n.on?'':'stroke-dasharray="4 3"';
+                  nodeSVG+='<g class="apx-node" id="nd-'+n.id+'" data-id="'+n.id+'" '+dim+' style="cursor:pointer">'
+                    +'<rect x="'+rx+'" y="'+ry+'" width="'+NW+'" height="'+NH+'" rx="8" fill="#0d1424" stroke="rgba(91,158,255,0.14)" stroke-width="1" '+dash+' class="apx-nb"/>'
+                    +'<rect x="'+rx+'" y="'+(ry+8)+'" width="3" height="'+(NH-16)+'" rx="1.5" fill="'+n.col+'"/>'
+                    +'<text x="'+(rx+11)+'" y="'+(ry+18)+'" font-family="JetBrains Mono,monospace" font-size="8.5" font-weight="700" letter-spacing="1.5" fill="'+n.col+'">'+n.lb+'</text>'
+                    +'<text x="'+(rx+11)+'" y="'+(ry+31)+'" font-family="JetBrains Mono,monospace" font-size="7" fill="#5a6a7a">'+n.sub+'</text>'
+                    +'<circle cx="'+(rx+NW-11)+'" cy="'+(ry+11)+'" r="2.5" fill="'+sc+'"/>'
+                    +'<text x="'+(rx+NW-21)+'" y="'+(ry+42)+'" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="6.5" font-weight="700" fill="'+sc+'" letter-spacing="0.5">'+n.st+'</text>'
+                    +'<rect class="apx-glow" x="'+rx+'" y="'+ry+'" width="'+NW+'" height="'+NH+'" rx="8" fill="none" stroke="'+n.col+'" stroke-width="2.5" opacity="0" style="transition:opacity .3s"/>'
                     +'</g>';
                 });
 
                 /* Inject page HTML */
                 page.innerHTML='<div id="apx-wrap" style="position:relative;width:100%;height:calc(100vh - 100px);min-height:600px;background:#010f08;border-radius:14px;overflow:hidden;border:1px solid rgba(63,210,154,0.12);display:flex;flex-direction:column">'
                   +'<canvas id="apx-matrix" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none"></canvas>'
-                  +'<div style="flex:0 0 42px;background:rgba(2,11,24,0.95);border-bottom:1px solid rgba(91,158,255,0.1);display:flex;align-items:center;padding:0 16px;gap:14px;z-index:5">'
+                  +'<div style="flex:0 0 42px;background:rgba(1,15,8,0.96);border-bottom:1px solid rgba(91,158,255,0.1);display:flex;align-items:center;padding:0 16px;gap:12px;z-index:5;position:relative">'
                     +'<span style="font:700 11px/1 \'JetBrains Mono\',monospace;letter-spacing:3px;color:#5b9eff">APEX MIND</span>'
                     +'<span style="width:1px;height:12px;background:rgba(255,255,255,0.08)"></span>'
-                    +'<span style="font:500 9px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151">LIVE SYSTEM TOPOLOGY · 20 NODES</span>'
+                    +'<span style="font:500 8.5px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:#374151">44 NODES · 8 TIERS</span>'
+                    +'<span style="width:1px;height:10px;background:rgba(255,255,255,0.06)"></span>'
+                    +'<span style="font:600 8.5px/1 \'JetBrains Mono\',monospace;color:#3fd29a;letter-spacing:1px">'+onlineCount+' ONLINE</span>'
+                    +'<span style="font:600 8.5px/1 \'JetBrains Mono\',monospace;color:#374151;letter-spacing:1px">'+offlineCount+' PENDING</span>'
                     +'<span style="flex:1"></span>'
-                    +'<span id="apx-evc" style="font:600 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;letter-spacing:1px">0 events</span>'
-                    +'<span style="width:1px;height:10px;background:rgba(255,255,255,0.08)"></span>'
-                    +'<span style="display:flex;align-items:center;gap:6px">'
+                    +'<span id="apx-evc" style="font:600 8.5px/1 \'JetBrains Mono\',monospace;color:#8893a0;letter-spacing:1px">0 events</span>'
+                    +'<span style="width:1px;height:10px;background:rgba(255,255,255,0.06)"></span>'
+                    +'<span style="display:flex;align-items:center;gap:5px">'
                       +'<span id="apx-dot" style="width:6px;height:6px;border-radius:50%;background:#374151;transition:background .4s"></span>'
-                      +'<span id="apx-stat" style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#374151;letter-spacing:1px">CONNECTING</span>'
+                      +'<span id="apx-stat" style="font:500 8.5px/1 \'JetBrains Mono\',monospace;color:#374151;letter-spacing:1px">CONNECTING</span>'
                     +'</span>'
                   +'</div>'
-                  +'<div style="flex:1;display:flex;overflow:hidden">'
+                  +'<div style="flex:1;display:flex;overflow:hidden;position:relative;z-index:1">'
                     +'<div id="apx-area" style="flex:1;overflow:hidden;position:relative;cursor:grab">'
-                      +'<svg id="apx-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-180 30 1560 740" style="width:100%;height:100%;display:block;user-select:none">'
+                      +'<svg id="apx-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-120 20 2320 1020" style="width:100%;height:100%;display:block;user-select:none">'
                         +'<defs><filter id="apx-gf"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>'
                         +tierSVG+edgeSVG+nodeSVG
                       +'</svg>'
+                      +'<canvas id="apx-mm" style="position:absolute;bottom:12px;right:12px;width:180px;height:100px;border:1px solid rgba(91,158,255,0.15);border-radius:6px;background:rgba(1,15,8,0.85);pointer-events:none"></canvas>'
                     +'</div>'
-                    +'<div id="apx-panel" style="flex:0 0 0;overflow:hidden;transition:flex-basis .25s ease;background:#0a1628;border-left:1px solid rgba(91,158,255,0.1);display:flex;flex-direction:column;min-width:0">'
+                    +'<div id="apx-panel" style="flex:0 0 0;overflow:hidden;transition:flex-basis .25s ease;background:#08120a;border-left:1px solid rgba(91,158,255,0.1);display:flex;flex-direction:column;min-width:0">'
                       +'<div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);flex:0 0 auto">'
                         +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
                           +'<span id="apx-d-lbl" style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#5b9eff"></span>'
                           +'<button id="apx-d-close" style="background:none;border:none;color:#8893a0;cursor:pointer;font:16px/1 sans-serif;padding:0">×</button>'
                         +'</div>'
-                        +'<div id="apx-d-st" style="font:700 8px/1 \'JetBrains Mono\',monospace;color:#3fd29a;letter-spacing:1.5px"></div>'
+                        +'<div id="apx-d-st" style="font:700 7.5px/1 \'JetBrains Mono\',monospace;color:#3fd29a;letter-spacing:1.5px"></div>'
                       +'</div>'
                       +'<div style="flex:1;overflow-y:auto;padding:14px 16px">'
-                        +'<div id="apx-d-desc" style="font:400 9px/1.55 \'JetBrains Mono\',monospace;color:#8893a0;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.04)"></div>'
-                        +'<div style="font:700 7.5px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151;margin-bottom:9px">METRICS</div>'
+                        +'<div id="apx-d-desc" style="font:400 8.5px/1.55 \'JetBrains Mono\',monospace;color:#8893a0;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.04)"></div>'
+                        +'<div style="font:700 7px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151;margin-bottom:9px">METRICS</div>'
                         +'<div id="apx-d-mx" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.04)"></div>'
-                        +'<div style="font:700 7.5px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151;margin-bottom:9px">RECENT EVENTS</div>'
+                        +'<div style="font:700 7px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151;margin-bottom:9px">RECENT EVENTS</div>'
                         +'<div id="apx-d-ev" style="display:flex;flex-direction:column;gap:5px"></div>'
                       +'</div>'
                     +'</div>'
@@ -10702,10 +10773,10 @@ if(pipe){
                 /* Pan / zoom */
                 var svg=document.getElementById('apx-svg');
                 var area=document.getElementById('apx-area');
-                var vx=-180,vy=30,vw=1560,vh=740;
-                function setVB(){svg.setAttribute('viewBox',vx+' '+vy+' '+vw+' '+vh);}
+                var vx=-120,vy=20,vw=2320,vh=1020;
+                function setVB(){svg.setAttribute('viewBox',vx+' '+vy+' '+vw+' '+vh);drawMM();}
                 var drag=false,dx=0,dy=0;
-                area.addEventListener('mousedown',function(e){drag=true;dx=e.clientX;dy=e.clientY;area.style.cursor='grabbing';});
+                area.addEventListener('mousedown',function(e){if(e.target.closest('.apx-node'))return;drag=true;dx=e.clientX;dy=e.clientY;area.style.cursor='grabbing';});
                 window.addEventListener('mousemove',function(e){
                   if(!drag)return;
                   var r=vw/area.clientWidth;
@@ -10715,11 +10786,11 @@ if(pipe){
                 window.addEventListener('mouseup',function(){drag=false;area.style.cursor='grab';});
                 area.addEventListener('wheel',function(e){
                   e.preventDefault();
-                  var f=e.deltaY>0?1.1:0.909;
+                  var f=e.deltaY>0?1.12:0.893;
                   var mx=(e.clientX/area.clientWidth)*vw+vx;
                   var my=(e.clientY/area.clientHeight)*vh+vy;
-                  vw=Math.min(2600,Math.max(500,vw*f));
-                  vh=Math.min(1400,Math.max(360,vh*f));
+                  vw=Math.min(3200,Math.max(400,vw*f));
+                  vh=Math.min(2000,Math.max(300,vh*f));
                   vx=mx-(e.clientX/area.clientWidth)*vw;
                   vy=my-(e.clientY/area.clientHeight)*vh;
                   setVB();
@@ -10734,15 +10805,37 @@ if(pipe){
                     var r=vw/area.clientWidth;
                     vx-=(e.touches[0].clientX-tp.x)*r;vy-=(e.touches[0].clientY-tp.y)*r;
                     tp={x:e.touches[0].clientX,y:e.touches[0].clientY};setVB();
-                  } else if(e.touches.length===2&&tpd){
+                  }else if(e.touches.length===2&&tpd){
                     var nd=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
-                    var f=tpd/nd;
-                    vw=Math.min(2600,Math.max(500,vw*f));vh=Math.min(1400,Math.max(360,vh*f));
+                    vw=Math.min(3200,Math.max(400,vw*(tpd/nd)));vh=Math.min(2000,Math.max(300,vh*(tpd/nd)));
                     tpd=nd;setVB();
                   }
                   e.preventDefault();
                 },{passive:false});
                 area.addEventListener('touchend',function(){tp=null;tpd=0;});
+
+                /* Minimap */
+                var mmCanvas=document.getElementById('apx-mm');
+                var mmCtx=mmCanvas?mmCanvas.getContext('2d'):null;
+                var SVG_W=2100,SVG_H=1040;
+                function drawMM(){
+                  if(!mmCtx)return;
+                  var mw=mmCanvas.offsetWidth,mh=mmCanvas.offsetHeight;
+                  mmCanvas.width=mw*2;mmCanvas.height=mh*2;
+                  mmCtx.scale(2,2);
+                  mmCtx.clearRect(0,0,mw,mh);
+                  var scx=mw/SVG_W,scy=mh/SVG_H;
+                  NODES.forEach(function(n){
+                    mmCtx.globalAlpha=n.on?0.8:0.3;
+                    mmCtx.fillStyle=n.col;
+                    mmCtx.fillRect(n.x*scx-3,n.y*scy-2,6,4);
+                  });
+                  mmCtx.globalAlpha=1;
+                  mmCtx.strokeStyle='rgba(91,210,255,0.6)';
+                  mmCtx.lineWidth=1;
+                  mmCtx.strokeRect(vx*scx,(vy)*scy,vw*scx,vh*scy);
+                }
+                drawMM();
 
                 /* Detail panel */
                 var panel=document.getElementById('apx-panel');
@@ -10752,7 +10845,9 @@ if(pipe){
                   var n=nm[id];if(!n)return;
                   curNode=id;
                   document.getElementById('apx-d-lbl').textContent=n.lb;
-                  document.getElementById('apx-d-st').textContent=n.st;
+                  var stEl=document.getElementById('apx-d-st');
+                  stEl.textContent=n.st;
+                  stEl.style.color=n.on?(n.st==='BUILDING'?C.gold:C.g):'#374151';
                   document.getElementById('apx-d-desc').textContent=n.desc;
                   document.getElementById('apx-d-mx').innerHTML=n.mx.map(function(m){
                     return '<div style="display:flex;justify-content:space-between;align-items:baseline">'
@@ -10762,9 +10857,9 @@ if(pipe){
                   }).join('');
                   renderPanelEv(id);
                   panel.style.flexBasis='260px';
-                  document.querySelectorAll('.apx-nb').forEach(function(el){el.setAttribute('stroke','rgba(91,158,255,0.12)');});
+                  document.querySelectorAll('.apx-nb').forEach(function(el){el.setAttribute('stroke','rgba(91,158,255,0.14)');});
                   var sel=document.querySelector('#nd-'+id+' .apx-nb');
-                  if(sel)sel.setAttribute('stroke','rgba(91,158,255,0.55)');
+                  if(sel)sel.setAttribute('stroke','rgba(91,158,255,0.6)');
                 }
                 function renderPanelEv(id){
                   var el=document.getElementById('apx-d-ev');
@@ -10777,12 +10872,29 @@ if(pipe){
                 }
                 document.getElementById('apx-d-close').addEventListener('click',function(){
                   panel.style.flexBasis='0';curNode=null;
-                  document.querySelectorAll('.apx-nb').forEach(function(el){el.setAttribute('stroke','rgba(91,158,255,0.12)');});
+                  document.querySelectorAll('.apx-nb').forEach(function(el){el.setAttribute('stroke','rgba(91,158,255,0.14)');});
                 });
                 svg.addEventListener('click',function(e){
                   var g=e.target.closest('.apx-node');
                   if(g)openPanel(g.getAttribute('data-id'));
                 });
+
+                /* Event particles */
+                function emitParticle(from,to,color){
+                  var a=nm[from],b=nm[to];if(!a||!b)return;
+                  var x1=a.x,y1=a.y+NH/2,x2=b.x,y2=b.y-NH/2,my=(y1+y2)/2;
+                  var path='M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2;
+                  var ci=document.createElementNS('http://www.w3.org/2000/svg','circle');
+                  ci.setAttribute('r','3.5');ci.setAttribute('fill',color||'#5b9eff');
+                  ci.setAttribute('filter','url(#apx-gf)');
+                  var am=document.createElementNS('http://www.w3.org/2000/svg','animateMotion');
+                  am.setAttribute('dur','0.75s');am.setAttribute('fill','remove');
+                  am.setAttribute('path',path);am.setAttribute('calcMode','spline');
+                  am.setAttribute('keyTimes','0;1');am.setAttribute('keySplines','0.4,0,0.6,1');
+                  ci.appendChild(am);svg.appendChild(ci);
+                  setTimeout(function(){try{svg.removeChild(ci);}catch(_){}},800);
+                  am.beginElement();
+                }
 
                 /* Glow on live events */
                 var glowT={};
@@ -10790,16 +10902,18 @@ if(pipe){
                   var el=document.querySelector('#nd-'+id+' .apx-glow');if(!el)return;
                   el.setAttribute('stroke',color||'#5b9eff');el.setAttribute('opacity','1');
                   clearTimeout(glowT[id]);
-                  glowT[id]=setTimeout(function(){el.setAttribute('opacity','0');},1600);
+                  glowT[id]=setTimeout(function(){el.setAttribute('opacity','0');},1800);
                 }
-                function pulseEdges(from,to){
-                  document.querySelectorAll('.apx-edge[data-from="'+from+'"][data-to="'+to+'"],.apx-edge[data-from="'+to+'"][data-to="'+from+'"]').forEach(function(el){
-                    el.setAttribute('stroke','rgba(91,210,255,0.8)');el.setAttribute('stroke-width','3');
+                function pulseEdges(from,to,color){
+                  var col=color||'rgba(91,210,255,0.8)';
+                  document.querySelectorAll('.apx-edge[data-from="'+from+'"][data-to="'+to+'"],.apx-edge[data-from="'+to+'"][data-to="'+from+'"]').forEach(function(el,i){
+                    el.setAttribute('stroke',i%2===0?col:'rgba(180,220,255,0.7)');
+                    el.setAttribute('stroke-width',i%2===0?'3':'1.5');
                     setTimeout(function(){
-                      var hasFilter=el.getAttribute('filter');
-                      el.setAttribute('stroke',hasFilter?'rgba(91,158,255,0.18)':'rgba(140,190,255,0.45)');
+                      var hasFilter=!!el.getAttribute('filter');
+                      el.setAttribute('stroke',hasFilter?'rgba(91,158,255,0.16)':'rgba(140,190,255,0.38)');
                       el.setAttribute('stroke-width',hasFilter?'3':'1');
-                    },1600);
+                    },1800);
                   });
                 }
 
@@ -10825,19 +10939,24 @@ if(pipe){
                       var col=ok?C.g:C.pk;
                       var txt=(ev.method||'REQ')+' '+(ev.path||'')+(ev.verdict?' → '+ev.verdict:'');
                       pushHist('api',ts,txt);pushHist('kern',ts,'Verdict: '+(ev.verdict||'?'));
-                      glowNode('api',col);glowNode('kern',col);pulseEdges('api','kern');
-                    } else if(ev.type==='cron'){
+                      glowNode('api',col);glowNode('kern',col);
+                      pulseEdges('api','kern',col);
+                      emitParticle('kern','api',col);emitParticle('api','m1',C.b);
+                    }else if(ev.type==='cron'){
                       var col=ev.status==='ok'?C.g:C.pk;
-                      pushHist('cron',ts,ev.job+' → '+(ev.status||'?'));
+                      pushHist('cron',ts,(ev.job||'job')+' → '+(ev.status||'?'));
                       glowNode('cron',col);glowNode('db',C.b);
-                    } else if(ev.type==='agent'){
+                      emitParticle('cron','m1',col);emitParticle('db','m2',C.b);
+                    }else if(ev.type==='agent'){
                       var col=ev.ok?C.g:C.pk;
                       pushHist('sys',ts,'agent '+(ev.label||ev.status||'event'));
-                      glowNode('sys',col);pulseEdges('sys','db');
+                      glowNode('sys',col);
+                      emitParticle('sys','db',col);
                     }
                     if(curNode&&evHist[curNode])renderPanelEv(curNode);
                   };
                 }
+
                 /* Matrix rain */
                 (function(){
                   var mc=document.getElementById('apx-matrix');
@@ -10854,24 +10973,18 @@ if(pipe){
                   new ResizeObserver(resize).observe(mc);
                   function draw(ts){
                     if(ts-last<110){requestAnimationFrame(draw);return;}
-                    last=ts;
-                    pulse=Math.sin(ts/2800)*0.5+0.5;
-                    mx.fillStyle='rgba(1,15,8,0.18)';
-                    mx.fillRect(0,0,mc.width,mc.height);
+                    last=ts;pulse=Math.sin(ts/2800)*0.5+0.5;
+                    mx.fillStyle='rgba(1,15,8,0.18)';mx.fillRect(0,0,mc.width,mc.height);
                     for(var i=0;i<cols;i++){
-                      var ch=CHARS[Math.random()*CHARS.length|0];
-                      var y=drops[i]*FS;
-                      /* head — bright */
+                      var ch=CHARS[Math.random()*CHARS.length|0],y=drops[i]*FS;
                       mx.font='bold '+FS+'px "JetBrains Mono",monospace';
                       var bright=Math.round((0.55+pulse*0.3)*255).toString(16).padStart(2,'0');
                       mx.fillStyle='#'+bright+'ff'+bright;
                       mx.fillText(ch,i*FS,y);
-                      /* faded char one step above */
                       mx.font=FS+'px "JetBrains Mono",monospace';
                       mx.fillStyle='rgba(63,210,120,0.22)';
                       mx.fillText(CHARS[Math.random()*CHARS.length|0],i*FS,y-FS);
-                      if(y>mc.height&&Math.random()>0.975)drops[i]=0;
-                      else drops[i]++;
+                      if(y>mc.height&&Math.random()>0.975)drops[i]=0;else drops[i]++;
                     }
                     requestAnimationFrame(draw);
                   }
