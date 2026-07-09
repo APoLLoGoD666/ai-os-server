@@ -263,12 +263,24 @@ function _postResponseHook(ctx) {
     };
 }
 
-// Extract drift state from watchdog's last assessment (lazy, fail-open, no cost on first request)
+// Extract drift state and health state from watchdog's last assessment (lazy, fail-open, no cost on first request)
 function _watchdogGateOpts() {
     try {
         const wa = require('../lib/constitution/watchdog').getLastAssessment();
         if (!wa || wa.tickFailed) return {};
-        return { driftResult: { driftItems: wa.driftIndicators?.items || [] } };
+        // If watchdog ran and covered at least one clause, mark certification as passed so
+        // risk-monitor doesn't add the 50-point certification_never_run penalty on every request.
+        const healthState = {
+            components: {
+                certification: {
+                    lastResult: (wa.certificationState?.clausesCovered || 0) > 0,
+                },
+            },
+        };
+        return {
+            healthState,
+            driftResult: { driftItems: wa.driftIndicators?.items || [] },
+        };
     } catch { return {}; }
 }
 
