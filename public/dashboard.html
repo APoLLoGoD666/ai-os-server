@@ -8565,7 +8565,7 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["finance"]'>FINANCE</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["business"]'>BUSINESS</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["university"]'>UNI</button>
-            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["health"]'>LIFE</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["health"]'>HEALTH</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["occult"]'>OCCULT</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["research"]'>RESEARCH</button>
         </div>
@@ -10641,7 +10641,8 @@ if(pipe){
                 EDGES.forEach(function(e){
                   var a=nm[e[0]],b=nm[e[1]];if(!a||!b)return;
                   var x1=a.x,y1=a.y+NH/2,x2=b.x,y2=b.y-NH/2,my=(y1+y2)/2;
-                  edgeSVG+='<path class="apx-edge" data-from="'+e[0]+'" data-to="'+e[1]+'" d="M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2+'" stroke="rgba(91,158,255,0.14)" stroke-width="1.5" fill="none" style="transition:stroke .4s,stroke-width .4s"/>';
+                  edgeSVG+='<path class="apx-edge" data-from="'+e[0]+'" data-to="'+e[1]+'" d="M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2+'" stroke="rgba(91,158,255,0.18)" stroke-width="3" fill="none" filter="url(#apx-gf)" style="transition:stroke .4s,stroke-width .4s"/>'
+                    +'<path class="apx-edge" data-from="'+e[0]+'" data-to="'+e[1]+'" d="M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2+'" stroke="rgba(140,190,255,0.45)" stroke-width="1" fill="none" style="transition:stroke .4s,stroke-width .4s"/>';
                 });
                 NODES.forEach(function(n){
                   var rx=n.x-NW/2,ry=n.y-NH/2;
@@ -10658,7 +10659,8 @@ if(pipe){
                 });
 
                 /* Inject page HTML */
-                page.innerHTML='<div id="apx-wrap" style="position:relative;width:100%;height:calc(100vh - 100px);min-height:600px;background:#020b18;border-radius:14px;overflow:hidden;border:1px solid rgba(91,158,255,0.08);display:flex;flex-direction:column">'
+                page.innerHTML='<div id="apx-wrap" style="position:relative;width:100%;height:calc(100vh - 100px);min-height:600px;background:#010f08;border-radius:14px;overflow:hidden;border:1px solid rgba(63,210,154,0.12);display:flex;flex-direction:column">'
+                  +'<canvas id="apx-matrix" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none"></canvas>'
                   +'<div style="flex:0 0 42px;background:rgba(2,11,24,0.95);border-bottom:1px solid rgba(91,158,255,0.1);display:flex;align-items:center;padding:0 16px;gap:14px;z-index:5">'
                     +'<span style="font:700 11px/1 \'JetBrains Mono\',monospace;letter-spacing:3px;color:#5b9eff">APEX MIND</span>'
                     +'<span style="width:1px;height:12px;background:rgba(255,255,255,0.08)"></span>'
@@ -10792,8 +10794,12 @@ if(pipe){
                 }
                 function pulseEdges(from,to){
                   document.querySelectorAll('.apx-edge[data-from="'+from+'"][data-to="'+to+'"],.apx-edge[data-from="'+to+'"][data-to="'+from+'"]').forEach(function(el){
-                    el.setAttribute('stroke','rgba(91,158,255,0.55)');el.setAttribute('stroke-width','2');
-                    setTimeout(function(){el.setAttribute('stroke','rgba(91,158,255,0.14)');el.setAttribute('stroke-width','1.5');},1600);
+                    el.setAttribute('stroke','rgba(91,210,255,0.8)');el.setAttribute('stroke-width','3');
+                    setTimeout(function(){
+                      var hasFilter=el.getAttribute('filter');
+                      el.setAttribute('stroke',hasFilter?'rgba(91,158,255,0.18)':'rgba(140,190,255,0.45)');
+                      el.setAttribute('stroke-width',hasFilter?'3':'1');
+                    },1600);
                   });
                 }
 
@@ -10832,6 +10838,46 @@ if(pipe){
                     if(curNode&&evHist[curNode])renderPanelEv(curNode);
                   };
                 }
+                /* Matrix rain */
+                (function(){
+                  var mc=document.getElementById('apx-matrix');
+                  if(!mc)return;
+                  var mx=mc.getContext('2d');
+                  var CHARS='ｦｧｨｩｪｫｬｭｮｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ01ΦΨΩΛΞΠΣΘαβγδεζ∆∇∑∏∞';
+                  var FS=13,cols,drops,pulse=0,last=0;
+                  function resize(){
+                    mc.width=mc.offsetWidth;mc.height=mc.offsetHeight;
+                    cols=Math.floor(mc.width/FS);
+                    drops=Array.from({length:cols},function(){return Math.random()*-80|0;});
+                  }
+                  resize();
+                  new ResizeObserver(resize).observe(mc);
+                  function draw(ts){
+                    if(ts-last<110){requestAnimationFrame(draw);return;}
+                    last=ts;
+                    pulse=Math.sin(ts/2800)*0.5+0.5;
+                    mx.fillStyle='rgba(1,15,8,0.18)';
+                    mx.fillRect(0,0,mc.width,mc.height);
+                    for(var i=0;i<cols;i++){
+                      var ch=CHARS[Math.random()*CHARS.length|0];
+                      var y=drops[i]*FS;
+                      /* head — bright */
+                      mx.font='bold '+FS+'px "JetBrains Mono",monospace';
+                      var bright=Math.round((0.55+pulse*0.3)*255).toString(16).padStart(2,'0');
+                      mx.fillStyle='#'+bright+'ff'+bright;
+                      mx.fillText(ch,i*FS,y);
+                      /* faded char one step above */
+                      mx.font=FS+'px "JetBrains Mono",monospace';
+                      mx.fillStyle='rgba(63,210,120,0.22)';
+                      mx.fillText(CHARS[Math.random()*CHARS.length|0],i*FS,y-FS);
+                      if(y>mc.height&&Math.random()>0.975)drops[i]=0;
+                      else drops[i]++;
+                    }
+                    requestAnimationFrame(draw);
+                  }
+                  requestAnimationFrame(draw);
+                })();
+
                 wsConnect();
                 })();
                 </script>
@@ -11573,7 +11619,7 @@ if(pipe){
         finance:       { title:'Finance',     sub:'Budgets · Investing · Planning' },
         communication: { title:'Network',     sub:'Comms · Messages · Contacts' },
         business:      { title:'Business',    sub:'Ideas · Shopify · Projects' },
-        health:        { title:'Life',        sub:'Health · Habits · Wellbeing' },
+        health:        { title:'Health',      sub:'Health · Habits · Wellbeing' },
         university:    { title:'University',  sub:'Coursework · Revision · Notes' },
         occult:        { title:'Occult',      sub:'Research · Esoteric · Archive' },
         research:      { title:'Research',    sub:'Intelligence · Sources · Data' },
