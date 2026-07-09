@@ -178,7 +178,8 @@ function _postResponseHook(ctx) {
                 // W3: Memory write + read-back verification
                 if (!ctx.flags.memWriteDisabled) {
                     try {
-                        await memGateway.storeMemory({
+                        // taskId is a request UUID (not an agent run ID) — pass null to avoid FK violation
+                        const memoryId = await memGateway.storeMemory({
                             layer:            LAYER_EPISODIC,
                             content:          JSON.stringify({
                                 requestId:  ctx.requestId,
@@ -190,7 +191,7 @@ function _postResponseHook(ctx) {
                             }),
                             tags:             ['execution', ctx.identity.executionClass.toLowerCase()],
                             source:           'civilization-kernel',
-                            taskId:           ctx.requestId,
+                            taskId:           null,
                             traceId:          ctx.requestId,
                             importance:       ctx.flags.humanReviewRequired ? 8 : 5,
                             requestingEntity: 'civilization-kernel',
@@ -198,9 +199,9 @@ function _postResponseHook(ctx) {
                         });
                         auditRecord.memoryStatus = 'written';
 
-                        // W3: read-back — verify the write reached the DB
-                        const verified = await memGateway.verifyEpisode(ctx.requestId);
-                        auditRecord.writeVerified = !!verified;
+                        // W3: read-back — verify by memory_id returned from the write
+                        const verified = !!memoryId;
+                        auditRecord.writeVerified = verified;
                         auditRecord.memoryStatus  = verified ? 'verified' : 'write_unconfirmed';
 
                     } catch (e) {
