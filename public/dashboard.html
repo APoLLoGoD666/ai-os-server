@@ -11643,6 +11643,25 @@ if(pipe){
                         </div>
                     </div>
 
+                    <!-- Self-Expansion Engine -->
+                    <div class="ds-panel" style="padding:12px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                            <div class="ds-label">SELF-EXPANSION ENGINE</div>
+                            <button class="ds-btn xs" id="expScanBtn" onclick="expScan()">⚡ Scan Now</button>
+                        </div>
+                        <!-- Status counts -->
+                        <div id="expCounts" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+                            <span style="font-size:11px;color:var(--text-mute)">Loading…</span>
+                        </div>
+                        <!-- Pending approvals -->
+                        <div id="expPendingWrap">
+                            <div style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#f59e0b;margin-bottom:6px">AWAITING APPROVAL</div>
+                            <div id="expPendingList" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">
+                                <div style="color:var(--text-mute);font-size:11px">No pending approvals</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Refresh -->
                     <div style="display:flex;justify-content:flex-end">
                         <button class="ds-btn xs" data-fn="civRefresh">↺ Refresh</button>
@@ -19990,7 +20009,94 @@ window.apexFileDropHandler = function(e){
             .catch(function(e) { alert('Error: ' + e.message); });
     };
     var _prevCiv = window.switchPage;
-    window.switchPage = function(name) { if (typeof _prevCiv === 'function') _prevCiv(name); if (name === 'civilisation') setTimeout(window.civRefresh, 60); };
+    window.switchPage = function(name) { if (typeof _prevCiv === 'function') _prevCiv(name); if (name === 'civilisation') { setTimeout(window.civRefresh, 60); setTimeout(expLoad, 120); } };
+})();
+
+// ── Self-Expansion Engine UI ──────────────────────────────────────────────────
+(function() {
+    var STATUS_COLOR = { pending_approval:'#f59e0b', auto_approved:'#22d3ee', approved:'#3fd29a', rejected:'#ef4444', blocked:'#ef4444', deployed:'#818cf8', monitoring:'#818cf8', active:'#3fd29a', proposed:'#8893a0' };
+
+    function _h(h) { var d = document.createElement('div'); d.innerHTML = h; return d.firstChild; }
+
+    function expLoad() {
+        var h = typeof buildApiHeaders === 'function' ? buildApiHeaders() : {};
+        Promise.all([
+            fetch('/api/expansion/summary', { headers: h }).then(function(r) { return r.json(); }).catch(function() { return { ok: false }; }),
+            fetch('/api/expansion/pending', { headers: h }).then(function(r) { return r.json(); }).catch(function() { return { ok: false }; }),
+        ]).then(function(results) {
+            var sum = results[0], pend = results[1];
+            // Counts row
+            var counts = sum.counts || {};
+            var cEl = document.getElementById('expCounts');
+            if (cEl) {
+                if (!Object.keys(counts).length) { cEl.innerHTML = '<span style="font-size:11px;color:var(--text-mute)">No capabilities tracked yet</span>'; }
+                else {
+                    cEl.innerHTML = Object.entries(counts).map(function(e) {
+                        return '<span style="font-size:11px;background:rgba(255,255,255,0.05);border-radius:4px;padding:2px 8px;color:'+(STATUS_COLOR[e[0]]||'#8893a0')+'">'+e[0].replace(/_/g,' ')+' <strong>'+e[1]+'</strong></span>';
+                    }).join('');
+                }
+            }
+            // Pending approvals
+            var pending = pend.pending || [];
+            var listEl = document.getElementById('expPendingList');
+            if (!listEl) return;
+            if (!pending.length) { listEl.innerHTML = '<div style="color:var(--text-mute);font-size:11px">No pending approvals</div>'; return; }
+            listEl.innerHTML = '';
+            pending.forEach(function(cap) {
+                var s = cap.scores || {};
+                var row = _h('<div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.18);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px">' +
+                    '<div style="display:flex;align-items:center;justify-content:space-between">' +
+                        '<span style="font:600 12px/1 \'Space Grotesk\',sans-serif;color:var(--text)">' + cap.name + '</span>' +
+                        '<span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;letter-spacing:1px">' + (cap.gap_source || '') + '</span>' +
+                    '</div>' +
+                    '<div style="font-size:10px;color:var(--text-mute);line-height:1.4">' + (cap.description || '').slice(0, 120) + (cap.description && cap.description.length > 120 ? '…' : '') + '</div>' +
+                    '<div style="display:flex;gap:8px;font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">' +
+                        '<span>SEV <strong style="color:var(--text)">' + (s.severity||'—') + '</strong></span>' +
+                        '<span>PRI <strong style="color:var(--text)">' + (s.priority||'—') + '</strong></span>' +
+                        '<span>RISK <strong style="color:var(--text)">' + (s.risk||'—') + '</strong></span>' +
+                        '<span>ISO <strong style="color:var(--text)">' + (s.isolation||'—') + '</strong></span>' +
+                    '</div>' +
+                    '<div style="display:flex;gap:6px">' +
+                        '<button class="ds-btn xs" style="background:rgba(63,210,154,0.12);color:#3fd29a;border-color:rgba(63,210,154,0.3)" data-cap-approve="' + cap.id + '">✓ Approve</button>' +
+                        '<button class="ds-btn xs" style="background:rgba(239,68,68,0.08);color:#ef4444;border-color:rgba(239,68,68,0.2)" data-cap-reject="' + cap.id + '">✕ Reject</button>' +
+                    '</div>' +
+                '</div>');
+                listEl.appendChild(row);
+            });
+        });
+    }
+    window.expLoad = expLoad;
+
+    window.expScan = function() {
+        var btn = document.getElementById('expScanBtn');
+        if (btn) btn.disabled = true;
+        var h = typeof buildApiHeaders === 'function' ? buildApiHeaders() : {};
+        fetch('/api/expansion/scan', { method: 'POST', headers: h })
+            .then(function(r) { return r.json(); })
+            .then(function(d) { if (btn) btn.disabled = false; setTimeout(expLoad, 400); })
+            .catch(function() { if (btn) btn.disabled = false; });
+    };
+
+    document.addEventListener('click', function(e) {
+        var approveId = e.target.getAttribute('data-cap-approve');
+        var rejectId  = e.target.getAttribute('data-cap-reject');
+        var h = typeof buildApiHeaders === 'function' ? buildApiHeaders() : {};
+        if (approveId) {
+            e.target.disabled = true; e.target.textContent = '…';
+            fetch('/api/expansion/approve/' + approveId, { method: 'POST', headers: Object.assign({'Content-Type':'application/json'}, h), body: JSON.stringify({ approvedBy: 'founder' }) })
+                .then(function(r) { return r.json(); })
+                .then(function(d) { setTimeout(expLoad, 300); })
+                .catch(function() { e.target.disabled = false; e.target.textContent = '✓ Approve'; });
+        }
+        if (rejectId) {
+            var reason = prompt('Rejection reason (optional):') || '';
+            e.target.disabled = true; e.target.textContent = '…';
+            fetch('/api/expansion/reject/' + rejectId, { method: 'POST', headers: Object.assign({'Content-Type':'application/json'}, h), body: JSON.stringify({ reason: reason }) })
+                .then(function(r) { return r.json(); })
+                .then(function(d) { setTimeout(expLoad, 300); })
+                .catch(function() { e.target.disabled = false; e.target.textContent = '✕ Reject'; });
+        }
+    });
 })();
 </script>
 </body>
