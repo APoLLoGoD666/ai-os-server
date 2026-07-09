@@ -114,7 +114,7 @@ function _scoreAttention(ctx) {
             risk:                ctx.constitution.verdict === gate.VERDICT.DENY ? 0.9 :
                                  ctx.constitution.verdict === gate.VERDICT.RESTRICT ? 0.6 : 0.3,
             financialWeight:     0,
-            memoryRelevance:     0.3,
+            memoryRelevance:     0.5, // neutral — all API requests are nominally relevant to episodic memory accumulation
             urgency:             ctx.identity.executionClass === 'EXECUTIVE' ? 0.8 : 0.4,
             cognitiveConfidence: _cognitiveConfidenceCache,
         };
