@@ -17,8 +17,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -10131,6 +10129,7 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
 
             <!-- ══ PAGE: OVERVIEW ══ -->
             <div class="page" id="page-overview">
+                <style>#ovr-pipeline,#ovr-modal-bg{display:none!important}</style>
                 <!-- APEX MIND — Live 3D System Visualization -->
 
                 <!-- Governance Pipeline -->
@@ -10587,376 +10586,254 @@ if(pipe){
 })();</script>
 
                 <script>
-                /* ═══════════════════════════════════════════════════════════
-                   APEX MIND — Live 3D System Visualization
-                   Replaces static governance pipeline with Three.js canvas.
-                   Runs after DOM is ready; requires Three.js + D3 in head.
-                ═══════════════════════════════════════════════════════════ */
-                document.addEventListener('DOMContentLoaded', function() {
-                var page = document.getElementById('page-overview');
-                if (!page) return;
-
-                /* ── Build APEX MIND HTML ── */
-                page.innerHTML = [
-                  '<div id="apx-wrap" style="position:relative;width:100%;height:calc(100vh - 100px);min-height:560px;background:#020b18;border-radius:14px;overflow:hidden;border:1px solid rgba(91,158,255,0.08)">',
-                    '<canvas id="apx-canvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>',
-                    /* Stats bar */
-                    '<div style="position:absolute;top:0;left:0;right:0;height:38px;background:rgba(2,11,24,0.9);border-bottom:1px solid rgba(91,158,255,0.1);display:flex;align-items:center;padding:0 14px;gap:14px;z-index:5">',
-                      '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:3px;color:#5b9eff">APEX MIND</span>',
-                      '<span style="width:1px;height:12px;background:rgba(255,255,255,0.1)"></span>',
-                      '<span style="font:500 9px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151">LIVE SYSTEM TOPOLOGY</span>',
-                      '<span style="flex:1"></span>',
-                      '<span id="apx-rps" style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#3fd29a;letter-spacing:1px">0 req/s</span>',
-                      '<span style="width:1px;height:10px;background:rgba(255,255,255,0.1)"></span>',
-                      '<span id="apx-agt" style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#efb45a;letter-spacing:1px">— agents</span>',
-                      '<span style="width:1px;height:10px;background:rgba(255,255,255,0.1)"></span>',
-                      '<span style="display:flex;align-items:center;gap:5px">',
-                        '<span id="apx-dot" style="width:6px;height:6px;border-radius:50%;background:#374151;flex:0 0 6px;transition:background .4s"></span>',
-                        '<span id="apx-lbl" style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#374151;letter-spacing:1px">CONNECTING</span>',
-                      '</span>',
-                    '</div>',
-                    /* Feed panel */
-                    '<div style="position:absolute;top:38px;right:0;bottom:70px;width:205px;background:rgba(2,11,24,0.92);border-left:1px solid rgba(91,158,255,0.09);display:flex;flex-direction:column;z-index:4">',
-                      '<div style="padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.05);font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151">EVENT FEED</div>',
-                      '<div id="apx-feed" style="flex:1;overflow:hidden"></div>',
-                    '</div>',
-                    /* Label layer */
-                    '<div id="apx-labels" style="position:absolute;top:38px;left:0;right:205px;bottom:70px;pointer-events:none;overflow:hidden;z-index:3"></div>',
-                    /* Tooltip */
-                    '<div id="apx-tip" style="position:absolute;display:none;background:rgba(4,12,26,0.97);border:1px solid rgba(91,158,255,0.3);border-radius:8px;padding:8px 12px;pointer-events:none;z-index:10">',
-                      '<div id="apx-tip-name" style="font:600 11px/1 \'JetBrains Mono\',monospace;color:#5b9eff;margin-bottom:5px"></div>',
-                      '<div id="apx-tip-desc" style="font:400 9px/1.3 \'JetBrains Mono\',monospace;color:#6b7280"></div>',
-                    '</div>',
-                    /* Heartbeat */
-                    '<div style="position:absolute;bottom:0;left:0;right:205px;height:70px;background:rgba(2,11,24,0.9);border-top:1px solid rgba(91,158,255,0.09);padding:6px 12px;z-index:4">',
-                      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151">SYSTEM HEARTBEAT</span><span style="font:400 8px/1 \'JetBrains Mono\',monospace;color:#1f2937;letter-spacing:1px">drag:pan · scroll:zoom</span></div>',
-                      '<canvas id="apx-hb" style="width:100%;height:42px;display:block"></canvas>',
-                    '</div>',
-                  '</div>'
-                ].join('');
-
-                /* ── Guard: Three.js + D3 must be loaded ── */
-                if (typeof THREE === 'undefined' || typeof d3 === 'undefined') {
-                  document.getElementById('apx-wrap').innerHTML =
-                    '<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:12px">' +
-                    '<div style="font:600 11px/1 JetBrains Mono,monospace;letter-spacing:2px;color:#5b9eff">THREE.JS / D3 NOT LOADED</div>' +
-                    '<div style="font:400 9px/1 JetBrains Mono,monospace;color:#6b7280">Check CDN connectivity</div></div>';
-                  return;
-                }
-
-                /* ── Node + Edge definitions ── */
-                var NODES = [
-                  { id:'sovereign',            label:'SOVEREIGN',      color:0xf3f7fb, tier:0, desc:'Principal Authority · You' },
-                  { id:'constitution',         label:'CONSTITUTION',   color:0x5b9eff, tier:1, desc:'Constitutional Gate · 10 laws' },
-                  { id:'civilization_kernel',  label:'CIV KERNEL',     color:0x3fd29a, tier:1, desc:'Civilization Middleware' },
-                  { id:'attention_engine',     label:'ATTENTION',      color:0x22d3ee, tier:2, desc:'Attention Engine · scoring' },
-                  { id:'memory_gateway',       label:'MEMORY HUB',     color:0xa78bfa, tier:2, desc:'Memory Gateway' },
-                  { id:'event_bus',            label:'EVENT BUS',      color:0xfb923c, tier:2, desc:'Internal Event Bus' },
-                  { id:'agent_pipeline',       label:'AGENT QUEUE',    color:0xfbbf24, tier:3, desc:'Task Queue · agent dispatch' },
-                  { id:'episodic_memory',      label:'EPISODIC',       color:0x818cf8, tier:3, desc:'Episodic Memory · Postgres' },
-                  { id:'semantic_memory',      label:'SEMANTIC',       color:0x818cf8, tier:3, desc:'Semantic Memory · embeddings' },
-                  { id:'working_memory',       label:'WORKING MEM',    color:0x818cf8, tier:3, desc:'Working Memory' },
-                  { id:'goal_graph',           label:'GOAL GRAPH',     color:0xf472b6, tier:3, desc:'Goal Graph · active goals' },
-                  { id:'cron_scheduler',       label:'CRON',           color:0x94a3b8, tier:3, desc:'Cron Scheduler' },
-                  { id:'civilization_runtime', label:'CIV RUNTIME',    color:0xfbbf24, tier:3, desc:'Civilization Loop' },
-                  { id:'ws_handler',           label:'WEBSOCKET',      color:0x2dd4bf, tier:3, desc:'WebSocket Handler' },
-                  { id:'governance_probe',     label:'GOVERNANCE',     color:0xf87171, tier:3, desc:'Governance Probe' },
-                  { id:'agent_sys',            label:'SYS AGENT',      color:0x60a5fa, tier:4, desc:'System Agent' },
-                  { id:'agent_file',           label:'FILE AGENT',     color:0x60a5fa, tier:4, desc:'File Agent' },
-                  { id:'agent_uni',            label:'UNI AGENT',      color:0x60a5fa, tier:4, desc:'University Agent' },
-                  { id:'agent_fin',            label:'FIN AGENT',      color:0x60a5fa, tier:4, desc:'Finance Agent' },
-                  { id:'agent_biz',            label:'BIZ AGENT',      color:0x60a5fa, tier:4, desc:'Business Agent' },
-                  { id:'supabase',             label:'SUPABASE',       color:0x34d399, tier:4, desc:'Postgres · Supabase DB' },
-                  { id:'claude_api',           label:'CLAUDE API',     color:0xfcd34d, tier:4, desc:'Anthropic Claude' },
-                  { id:'gemini_live',          label:'GEMINI LIVE',    color:0xc084fc, tier:4, desc:'Voice Interface' },
-                  { id:'sentry',               label:'SENTRY',         color:0xfca5a5, tier:4, desc:'Error Tracking' },
+                /* APEX MIND — SVG Hierarchy Visualization */
+                (function(){
+                var page=document.getElementById('page-overview');
+                if(!page)return;
+                var NW=138,NH=52;
+                var C={w:'#f3f7fb',b:'#5b9eff',g:'#3fd29a',gold:'#efb45a',p:'#7c6fff',pk:'#ec7fa3',s:'#8893a0'};
+                var NODES=[
+                  {id:'you',   lb:'YOU',             sub:'Sovereign Operator',    t:0,x:600, y:72,  col:C.w,   st:'ONLINE',   desc:'Principal authority. All system decisions flow from this node.',          mx:[['Authority','Supreme'],['Escalations','0'],['Session','Active']]},
+                  {id:'const', lb:'CONSTITUTION',    sub:'Charter · 10 Laws',     t:1,x:220, y:210, col:C.b,   st:'ACTIVE',   desc:'Immutable charter enforced on every AI action in the system.',            mx:[['Laws','10 enforced'],['Audit','Immutable'],['Safety','Enforced']]},
+                  {id:'found', lb:'FOUNDER IDENTITY',sub:'Digital Twin · Trust',  t:1,x:600, y:210, col:C.p,   st:'LINKED',   desc:'Founder identity binding, device trust graph, UUID passport.',            mx:[['Operator','Sovereign'],['Trust Graph','Active'],['Passport','Issued']]},
+                  {id:'civ',   lb:'CIV. REGISTRY',   sub:'14 Registry Types',     t:1,x:980, y:210, col:C.gold,st:'BUILDING', desc:'Civilization-level registry tracking entities, goals, and assets.',       mx:[['Types','14 active'],['Entities','Humans · Agents'],['Lifecycle','Tracked']]},
+                  {id:'cexec', lb:'CHIEF EXEC',      sub:'Direction & Strategy',  t:2,x:80,  y:380, col:C.w,   st:'ACTIVE',   desc:'Top-level direction, goal prioritization, mission alignment.',            mx:[['Role','Executive'],['Focus','Strategy'],['Mandate','Mission']]},
+                  {id:'cops',  lb:'CHIEF OPS',       sub:'Execution Coord.',      t:2,x:260, y:380, col:C.b,   st:'ACTIVE',   desc:'Execution coordination, workflow oversight, delivery management.',        mx:[['Role','Operations'],['Focus','Delivery'],['Pipelines','Active']]},
+                  {id:'cintel',lb:'CHIEF INTEL',     sub:'Info & Memory',         t:2,x:440, y:380, col:C.g,   st:'ACTIVE',   desc:'Information coordination, memory oversight, research governance.',        mx:[['Role','Intelligence'],['Memory','Overseen'],['Research','Active']]},
+                  {id:'cfin',  lb:'CHIEF FIN',       sub:'Budget & Treasury',     t:2,x:620, y:380, col:C.gold,st:'ACTIVE',   desc:'Resource allocation, budgeting and investment oversight.',                mx:[['Role','Finance'],['Budget','Tracked'],['Allocations','Active']]},
+                  {id:'cgrow', lb:'CHIEF GROWTH',    sub:'Revenue & Markets',     t:2,x:800, y:380, col:C.pk,  st:'ACTIVE',   desc:'Opportunity detection, revenue strategy, market expansion.',             mx:[['Role','Growth'],['Opportunities','Monitored'],['Revenue','Tracked']]},
+                  {id:'cgov',  lb:'CHIEF GOV',       sub:'Compliance & Audit',    t:2,x:980, y:380, col:C.p,   st:'ACTIVE',   desc:'Compliance oversight, audit management, policy evolution.',              mx:[['Role','Governance'],['Audits','Managed'],['Policy','Evolving']]},
+                  {id:'sys',   lb:'SYSTEM AGENT',    sub:'Infrastructure Ops',    t:3,x:145, y:545, col:C.b,   st:'ACTIVE',   desc:'System-level infrastructure operations and monitoring.',                 mx:[['Domain','System'],['Infra','Monitored'],['Uptime','Active']]},
+                  {id:'file',  lb:'FILE AGENT',      sub:'Storage · Docs',        t:3,x:365, y:545, col:C.g,   st:'ACTIVE',   desc:'File management, document storage, Supabase Storage ops.',              mx:[['Domain','Files'],['Storage','Supabase'],['Docs','Managed']]},
+                  {id:'uni',   lb:'UNI AGENT',       sub:'Knowledge · Study',     t:3,x:585, y:545, col:C.gold,st:'ACTIVE',   desc:'University knowledge management, study sessions, flashcards.',           mx:[['Domain','Education'],['Flashcards','Active'],['Sessions','Tracked']]},
+                  {id:'finag', lb:'FINANCE AGENT',   sub:'Budget · Treasury',     t:3,x:805, y:545, col:C.pk,  st:'ACTIVE',   desc:'Personal finance tracking, budget management, treasury ops.',           mx:[['Domain','Finance'],['Budget','Tracked'],['Transactions','Logged']]},
+                  {id:'biz',   lb:'BUSINESS AGENT',  sub:'Revenue · Clients',     t:3,x:1025,y:545, col:C.p,   st:'ACTIVE',   desc:'Business ops, client management, revenue and growth tracking.',         mx:[['Domain','Business'],['Clients','Tracked'],['Revenue','Active']]},
+                  {id:'db',    lb:'SUPABASE DB',     sub:'Postgres · Storage',    t:4,x:145, y:700, col:C.b,   st:'ACTIVE',   desc:'Primary Postgres database and Supabase Storage layer.',                 mx:[['Type','Postgres'],['Storage','Supabase'],['Uptime','Active']]},
+                  {id:'cron',  lb:'CRON JOBS',       sub:'Scheduled Tasks',       t:4,x:365, y:700, col:C.g,   st:'ACTIVE',   desc:'Scheduled automation jobs and recurring cron tasks.',                   mx:[['Jobs','Running'],['Frequency','Varied'],['Log','Persisted']]},
+                  {id:'api',   lb:'API GATEWAY',     sub:'Express · Routes',      t:4,x:585, y:700, col:C.gold,st:'ACTIVE',   desc:'Express.js API gateway, route handlers, middleware stack.',             mx:[['Framework','Express'],['Routes','Mounted'],['Middleware','Active']]},
+                  {id:'kern',  lb:'CIV. KERNEL',     sub:'Constitution Engine',   t:4,x:805, y:700, col:C.pk,  st:'ACTIVE',   desc:'Civilization kernel enforcing constitutional rules per request.',       mx:[['Engine','Active'],['Rules','Enforced'],['Verdicts','Logged']]},
+                  {id:'vizb',  lb:'VIZ BROADCAST',   sub:'Live Events · WS',      t:4,x:1025,y:700, col:C.p,   st:'ACTIVE',   desc:'Real-time event broadcaster, WebSocket feed, ring buffer.',            mx:[['Buffer','300 events'],['WS','Connected'],['Feed','Live']]},
                 ];
-                var EDGES = [
-                  ['sovereign','constitution'],['constitution','civilization_kernel'],
-                  ['civilization_kernel','attention_engine'],['civilization_kernel','memory_gateway'],
-                  ['civilization_kernel','event_bus'],['civilization_kernel','supabase'],
-                  ['memory_gateway','episodic_memory'],['memory_gateway','semantic_memory'],['memory_gateway','working_memory'],
-                  ['event_bus','agent_pipeline'],['event_bus','ws_handler'],['event_bus','cron_scheduler'],
-                  ['agent_pipeline','agent_sys'],['agent_pipeline','agent_file'],['agent_pipeline','agent_uni'],
-                  ['agent_pipeline','agent_fin'],['agent_pipeline','agent_biz'],['agent_pipeline','claude_api'],
-                  ['goal_graph','attention_engine'],['governance_probe','civilization_kernel'],
-                  ['civilization_runtime','event_bus'],['gemini_live','event_bus'],
-                  ['agent_sys','supabase'],['agent_fin','supabase'],['civilization_kernel','governance_probe'],
+                var EDGES=[
+                  ['you','const'],['you','found'],['you','civ'],
+                  ['const','cexec'],['const','cgov'],
+                  ['found','cops'],['found','cintel'],
+                  ['civ','cfin'],['civ','cgrow'],
+                  ['cexec','sys'],['cops','file'],['cintel','uni'],['cfin','finag'],['cgrow','biz'],['cgov','sys'],
+                  ['sys','db'],['sys','cron'],['file','db'],['file','api'],['uni','api'],['finag','kern'],['biz','kern'],['biz','vizb'],
                 ];
+                var TIER_LABELS=[
+                  {lb:'T0 · SOVEREIGN',      y:72,  col:'rgba(243,247,251,0.65)'},
+                  {lb:'T1 · IDENTITY CORE',  y:210, col:'rgba(91,158,255,0.65)'},
+                  {lb:'T2 · EXECUTIVE GOVT', y:380, col:'rgba(239,180,90,0.65)'},
+                  {lb:'T3 · DOMAIN AGENTS',  y:545, col:'rgba(91,158,255,0.65)'},
+                  {lb:'T4 · INFRASTRUCTURE', y:700, col:'rgba(136,147,160,0.65)'},
+                ];
+                var nm={};
+                NODES.forEach(function(n){nm[n.id]=n;});
 
-                /* ── Three.js Scene ── */
-                var wrap = document.getElementById('apx-wrap');
-                var cvs  = document.getElementById('apx-canvas');
-                var lWrap= document.getElementById('apx-labels');
-                var W = wrap.clientWidth, H = wrap.clientHeight;
-
-                var renderer = new THREE.WebGLRenderer({ canvas:cvs, antialias:true });
-                renderer.setSize(W,H);
-                renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-                renderer.setClearColor(0x020b18,1);
-
-                var scene  = new THREE.Scene();
-                var camera = new THREE.PerspectiveCamera(55,W/H,0.1,2000);
-                camera.position.set(0,0,400);
-
-                scene.add(new THREE.AmbientLight(0x1a2a4a,3.5));
-                var pl1=new THREE.PointLight(0x5b9eff,5,600); pl1.position.set(0,100,150); scene.add(pl1);
-                var pl2=new THREE.PointLight(0x3fd29a,3,350); pl2.position.set(-120,-60,80); scene.add(pl2);
-
-                /* Stars */
-                var sg=new THREE.BufferGeometry(),sp=new Float32Array(1800);
-                for(var i=0;i<1800;i++) sp[i]=(Math.random()-.5)*1200;
-                sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
-                scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x243858,size:0.9,transparent:true,opacity:0.5})));
-
-                /* Nodes */
-                var nodeMap={}, tierR=[15,10,8,6,4.5], geo=new THREE.IcosahedronGeometry(1,1);
+                /* Build SVG strings */
+                var tierSVG='',edgeSVG='',nodeSVG='';
+                TIER_LABELS.forEach(function(t){
+                  tierSVG+='<text x="-14" y="'+t.y+'" text-anchor="end" dominant-baseline="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" letter-spacing="1.5" fill="'+t.col+'">'+t.lb+'</text>'
+                    +'<line x1="-14" y1="'+(t.y+30)+'" x2="1200" y2="'+(t.y+30)+'" stroke="rgba(255,255,255,0.025)" stroke-width="1"/>';
+                });
+                EDGES.forEach(function(e){
+                  var a=nm[e[0]],b=nm[e[1]];if(!a||!b)return;
+                  var x1=a.x,y1=a.y+NH/2,x2=b.x,y2=b.y-NH/2,my=(y1+y2)/2;
+                  edgeSVG+='<path class="apx-edge" data-from="'+e[0]+'" data-to="'+e[1]+'" d="M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2+'" stroke="rgba(91,158,255,0.14)" stroke-width="1.5" fill="none" style="transition:stroke .4s,stroke-width .4s"/>';
+                });
                 NODES.forEach(function(n){
-                  var r=tierR[n.tier]||3;
-                  var m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({
-                    color:n.color,emissive:n.color,emissiveIntensity:0.45,
-                    roughness:0.2,metalness:0.75,transparent:true,opacity:0.95
-                  }));
-                  m.scale.set(r,r,r);
-                  m.position.set((Math.random()-.5)*200,(Math.random()-.5)*150,(Math.random()-.5)*20);
-                  m.userData={id:n.id,label:n.label,desc:n.desc,color:n.color,tier:n.tier,baseR:r,pulse:0};
-                  scene.add(m); nodeMap[n.id]=m;
+                  var rx=n.x-NW/2,ry=n.y-NH/2;
+                  var sc=(n.st==='ONLINE'||n.st==='ACTIVE'||n.st==='LINKED')?C.g:C.gold;
+                  nodeSVG+='<g class="apx-node" id="nd-'+n.id+'" data-id="'+n.id+'" style="cursor:pointer">'
+                    +'<rect x="'+rx+'" y="'+ry+'" width="'+NW+'" height="'+NH+'" rx="9" fill="#0d1424" stroke="rgba(91,158,255,0.12)" stroke-width="1" class="apx-nb"/>'
+                    +'<rect x="'+rx+'" y="'+(ry+9)+'" width="3" height="'+(NH-18)+'" rx="1.5" fill="'+n.col+'"/>'
+                    +'<text x="'+(rx+12)+'" y="'+(ry+20)+'" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" letter-spacing="1.5" fill="'+n.col+'">'+n.lb+'</text>'
+                    +'<text x="'+(rx+12)+'" y="'+(ry+34)+'" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6b7a8d">'+n.sub+'</text>'
+                    +'<circle cx="'+(rx+NW-12)+'" cy="'+(ry+13)+'" r="3" fill="'+sc+'"/>'
+                    +'<text x="'+(rx+NW-23)+'" y="'+(ry+43)+'" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="6.5" font-weight="700" fill="'+sc+'" letter-spacing="1">'+n.st+'</text>'
+                    +'<rect class="apx-glow" x="'+rx+'" y="'+ry+'" width="'+NW+'" height="'+NH+'" rx="9" fill="none" stroke="'+n.col+'" stroke-width="2.5" opacity="0" style="transition:opacity .3s"/>'
+                    +'</g>';
                 });
 
-                /* Edges */
-                var edgeGeo=new THREE.BufferGeometry();
-                var edgeLine=new THREE.LineSegments(edgeGeo,new THREE.LineBasicMaterial({color:0x1e3a5f,opacity:0.4,transparent:true}));
-                scene.add(edgeLine);
-                function rebuildEdges(){
-                  var pts=[];
-                  EDGES.forEach(function(e){var a=nodeMap[e[0]],b=nodeMap[e[1]];if(a&&b){pts.push(a.position.x,a.position.y,a.position.z,b.position.x,b.position.y,b.position.z);}});
-                  edgeGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pts),3));
-                  edgeGeo.attributes.position.needsUpdate=true;
-                }
+                /* Inject page HTML */
+                page.innerHTML='<div id="apx-wrap" style="position:relative;width:100%;height:calc(100vh - 100px);min-height:600px;background:#020b18;border-radius:14px;overflow:hidden;border:1px solid rgba(91,158,255,0.08);display:flex;flex-direction:column">'
+                  +'<div style="flex:0 0 42px;background:rgba(2,11,24,0.95);border-bottom:1px solid rgba(91,158,255,0.1);display:flex;align-items:center;padding:0 16px;gap:14px;z-index:5">'
+                    +'<span style="font:700 11px/1 \'JetBrains Mono\',monospace;letter-spacing:3px;color:#5b9eff">APEX MIND</span>'
+                    +'<span style="width:1px;height:12px;background:rgba(255,255,255,0.08)"></span>'
+                    +'<span style="font:500 9px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151">LIVE SYSTEM TOPOLOGY · 20 NODES</span>'
+                    +'<span style="flex:1"></span>'
+                    +'<span id="apx-evc" style="font:600 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;letter-spacing:1px">0 events</span>'
+                    +'<span style="width:1px;height:10px;background:rgba(255,255,255,0.08)"></span>'
+                    +'<span style="display:flex;align-items:center;gap:6px">'
+                      +'<span id="apx-dot" style="width:6px;height:6px;border-radius:50%;background:#374151;transition:background .4s"></span>'
+                      +'<span id="apx-stat" style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#374151;letter-spacing:1px">CONNECTING</span>'
+                    +'</span>'
+                  +'</div>'
+                  +'<div style="flex:1;display:flex;overflow:hidden">'
+                    +'<div id="apx-area" style="flex:1;overflow:hidden;position:relative;cursor:grab">'
+                      +'<svg id="apx-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-180 30 1560 740" style="width:100%;height:100%;display:block;user-select:none">'
+                        +'<defs><filter id="apx-gf"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>'
+                        +tierSVG+edgeSVG+nodeSVG
+                      +'</svg>'
+                    +'</div>'
+                    +'<div id="apx-panel" style="flex:0 0 0;overflow:hidden;transition:flex-basis .25s ease;background:#0a1628;border-left:1px solid rgba(91,158,255,0.1);display:flex;flex-direction:column;min-width:0">'
+                      +'<div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);flex:0 0 auto">'
+                        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+                          +'<span id="apx-d-lbl" style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#5b9eff"></span>'
+                          +'<button id="apx-d-close" style="background:none;border:none;color:#8893a0;cursor:pointer;font:16px/1 sans-serif;padding:0">×</button>'
+                        +'</div>'
+                        +'<div id="apx-d-st" style="font:700 8px/1 \'JetBrains Mono\',monospace;color:#3fd29a;letter-spacing:1.5px"></div>'
+                      +'</div>'
+                      +'<div style="flex:1;overflow-y:auto;padding:14px 16px">'
+                        +'<div id="apx-d-desc" style="font:400 9px/1.55 \'JetBrains Mono\',monospace;color:#8893a0;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.04)"></div>'
+                        +'<div style="font:700 7.5px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151;margin-bottom:9px">METRICS</div>'
+                        +'<div id="apx-d-mx" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.04)"></div>'
+                        +'<div style="font:700 7.5px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151;margin-bottom:9px">RECENT EVENTS</div>'
+                        +'<div id="apx-d-ev" style="display:flex;flex-direction:column;gap:5px"></div>'
+                      +'</div>'
+                    +'</div>'
+                  +'</div>'
+                +'</div>';
 
-                /* Constitutional Membrane */
-                var memMat=new THREE.MeshStandardMaterial({color:0x5b9eff,emissive:0x5b9eff,emissiveIntensity:0.25,transparent:true,opacity:0.1});
-                scene.add(new THREE.Mesh(new THREE.TorusGeometry(150,2.5,8,64),memMat));
-
-                /* D3 Force Layout */
-                var d3N=NODES.map(function(n){return{id:n.id,tier:n.tier,x:(Math.random()-.5)*180,y:(Math.random()-.5)*120};});
-                var d3L=EDGES.map(function(e){return{source:e[0],target:e[1]};});
-                d3.forceSimulation(d3N)
-                  .force('link',d3.forceLink(d3L).id(function(d){return d.id;}).distance(80).strength(0.2))
-                  .force('charge',d3.forceManyBody().strength(-600))
-                  .force('center',d3.forceCenter(0,0))
-                  .force('tier_y',d3.forceY(function(d){return(d.tier-2)*100;}).strength(0.65))
-                  .force('collide',d3.forceCollide(32))
-                  .alpha(1).alphaDecay(0.015)
-                  .on('tick',function(){
-                    d3N.forEach(function(d){var m=nodeMap[d.id];if(m){m.position.x=d.x;m.position.y=-d.y;}});
-                    rebuildEdges();
-                  });
-
-                /* Labels */
-                var lblEls={};
-                NODES.forEach(function(n){
-                  var el=document.createElement('div');
-                  el.style.cssText='position:absolute;transform:translate(-50%,0);font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:1px;color:#c7d2dd;white-space:nowrap;pointer-events:none;background:rgba(2,11,24,0.82);padding:2px 6px;border-radius:3px;border:1px solid rgba(91,158,255,0.12)';
-                  el.textContent=n.label;
-                  lWrap.appendChild(el); lblEls[n.id]=el;
+                /* Pan / zoom */
+                var svg=document.getElementById('apx-svg');
+                var area=document.getElementById('apx-area');
+                var vx=-180,vy=30,vw=1560,vh=740;
+                function setVB(){svg.setAttribute('viewBox',vx+' '+vy+' '+vw+' '+vh);}
+                var drag=false,dx=0,dy=0;
+                area.addEventListener('mousedown',function(e){drag=true;dx=e.clientX;dy=e.clientY;area.style.cursor='grabbing';});
+                window.addEventListener('mousemove',function(e){
+                  if(!drag)return;
+                  var r=vw/area.clientWidth;
+                  vx-=(e.clientX-dx)*r;vy-=(e.clientY-dy)*r;
+                  dx=e.clientX;dy=e.clientY;setVB();
                 });
+                window.addEventListener('mouseup',function(){drag=false;area.style.cursor='grab';});
+                area.addEventListener('wheel',function(e){
+                  e.preventDefault();
+                  var f=e.deltaY>0?1.1:0.909;
+                  var mx=(e.clientX/area.clientWidth)*vw+vx;
+                  var my=(e.clientY/area.clientHeight)*vh+vy;
+                  vw=Math.min(2600,Math.max(500,vw*f));
+                  vh=Math.min(1400,Math.max(360,vh*f));
+                  vx=mx-(e.clientX/area.clientWidth)*vw;
+                  vy=my-(e.clientY/area.clientHeight)*vh;
+                  setVB();
+                },{passive:false});
+                var tp=null,tpd=0;
+                area.addEventListener('touchstart',function(e){
+                  if(e.touches.length===1)tp={x:e.touches[0].clientX,y:e.touches[0].clientY};
+                  else if(e.touches.length===2){tp=null;tpd=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);}
+                },{passive:true});
+                area.addEventListener('touchmove',function(e){
+                  if(e.touches.length===1&&tp){
+                    var r=vw/area.clientWidth;
+                    vx-=(e.touches[0].clientX-tp.x)*r;vy-=(e.touches[0].clientY-tp.y)*r;
+                    tp={x:e.touches[0].clientX,y:e.touches[0].clientY};setVB();
+                  } else if(e.touches.length===2&&tpd){
+                    var nd=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
+                    var f=tpd/nd;
+                    vw=Math.min(2600,Math.max(500,vw*f));vh=Math.min(1400,Math.max(360,vh*f));
+                    tpd=nd;setVB();
+                  }
+                  e.preventDefault();
+                },{passive:false});
+                area.addEventListener('touchend',function(){tp=null;tpd=0;});
 
-                /* Particles */
-                var parts=[], pGeo=new THREE.SphereGeometry(1.5,6,4);
-                function spawnP(fromId,toId,hex){
-                  var a=nodeMap[fromId],b=nodeMap[toId]; if(!a||!b)return;
-                  var pm=new THREE.Mesh(pGeo,new THREE.MeshBasicMaterial({color:hex||0x5b9eff,transparent:true,opacity:1}));
-                  pm.position.copy(a.position); scene.add(pm);
-                  parts.push({mesh:pm,from:a.position.clone(),to:b.position.clone(),t:0});
+                /* Detail panel */
+                var panel=document.getElementById('apx-panel');
+                var curNode=null;
+                var evHist={};
+                function openPanel(id){
+                  var n=nm[id];if(!n)return;
+                  curNode=id;
+                  document.getElementById('apx-d-lbl').textContent=n.lb;
+                  document.getElementById('apx-d-st').textContent=n.st;
+                  document.getElementById('apx-d-desc').textContent=n.desc;
+                  document.getElementById('apx-d-mx').innerHTML=n.mx.map(function(m){
+                    return '<div style="display:flex;justify-content:space-between;align-items:baseline">'
+                      +'<span style="font:500 9px/1 \'Space Grotesk\',sans-serif;color:#c7d2dd">'+m[0]+'</span>'
+                      +'<span style="font:500 8px/1 \'JetBrains Mono\',monospace;color:#8893a0">'+m[1]+'</span>'
+                      +'</div>';
+                  }).join('');
+                  renderPanelEv(id);
+                  panel.style.flexBasis='260px';
+                  document.querySelectorAll('.apx-nb').forEach(function(el){el.setAttribute('stroke','rgba(91,158,255,0.12)');});
+                  var sel=document.querySelector('#nd-'+id+' .apx-nb');
+                  if(sel)sel.setAttribute('stroke','rgba(91,158,255,0.55)');
                 }
-
-                /* Heartbeat */
-                var hbCvs=document.getElementById('apx-hb'),hbCtx=hbCvs.getContext('2d'),hbData=[],hbLvl=0;
-                function hbPulse(v){hbLvl=Math.min(1,hbLvl+(v||0.4));}
-                function drawHb(){
-                  var w=hbCvs.offsetWidth||500,h=42;
-                  if(hbCvs.width!==w)hbCvs.width=w; hbCvs.height=h;
-                  hbLvl*=0.87; hbData.push(hbLvl); if(hbData.length>w)hbData.shift();
-                  hbCtx.clearRect(0,0,w,h);
-                  hbCtx.beginPath(); hbCtx.strokeStyle='#5b9eff'; hbCtx.lineWidth=1.5;
-                  hbCtx.shadowBlur=8; hbCtx.shadowColor='#5b9eff66';
-                  for(var i=0;i<hbData.length;i++){var y=h/2-hbData[i]*(h*0.42);i===0?hbCtx.moveTo(i,y):hbCtx.lineTo(i,y);}
-                  hbCtx.stroke();
-                  hbCtx.beginPath(); hbCtx.strokeStyle='rgba(91,158,255,0.12)'; hbCtx.lineWidth=1; hbCtx.shadowBlur=0;
-                  hbCtx.moveTo(0,h/2); hbCtx.lineTo(w,h/2); hbCtx.stroke();
-                }
-
-                /* Event Feed */
-                var feedEl=document.getElementById('apx-feed'),feedItems=[];
-                var VCOL={ALLOW:'#3fd29a',RESTRICT:'#efb45a',DENY:'#ef4444'};
-                function addFeed(txt,col){
-                  feedItems.unshift({txt:txt,col:col||'#4b5563',ts:Date.now()});
-                  if(feedItems.length>50)feedItems.length=50;
-                  feedEl.innerHTML=feedItems.slice(0,22).map(function(it){
-                    var op=Math.max(0.2,1-(Date.now()-it.ts)/12000);
-                    return '<div style="padding:2px 8px;opacity:'+op.toFixed(2)+';border-left:2px solid '+it.col+';margin:1px 0;color:'+it.col+';font:500 8px/1.4 JetBrains Mono,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+it.txt+'</div>';
+                function renderPanelEv(id){
+                  var el=document.getElementById('apx-d-ev');
+                  var h=evHist[id]||[];
+                  if(!h.length){el.innerHTML='<span style="font:400 8px/1 \'JetBrains Mono\',monospace;color:#374151">No events yet</span>';return;}
+                  el.innerHTML=h.slice(-10).reverse().map(function(ev){
+                    return '<div style="font:400 8px/1.45 \'JetBrains Mono\',monospace;color:#8893a0;padding:5px 8px;background:rgba(91,158,255,0.04);border-radius:4px;border-left:2px solid rgba(91,158,255,0.25)">'
+                      +'<span style="color:#374151">'+ev.ts.slice(11,19)+'</span> '+ev.txt+'</div>';
                   }).join('');
                 }
+                document.getElementById('apx-d-close').addEventListener('click',function(){
+                  panel.style.flexBasis='0';curNode=null;
+                  document.querySelectorAll('.apx-nb').forEach(function(el){el.setAttribute('stroke','rgba(91,158,255,0.12)');});
+                });
+                svg.addEventListener('click',function(e){
+                  var g=e.target.closest('.apx-node');
+                  if(g)openPanel(g.getAttribute('data-id'));
+                });
 
-                /* WebSocket */
-                var ws,wsT,wsDot=document.getElementById('apx-dot'),wsLbl=document.getElementById('apx-lbl'),reqWin=[];
+                /* Glow on live events */
+                var glowT={};
+                function glowNode(id,color){
+                  var el=document.querySelector('#nd-'+id+' .apx-glow');if(!el)return;
+                  el.setAttribute('stroke',color||'#5b9eff');el.setAttribute('opacity','1');
+                  clearTimeout(glowT[id]);
+                  glowT[id]=setTimeout(function(){el.setAttribute('opacity','0');},1600);
+                }
+                function pulseEdges(from,to){
+                  document.querySelectorAll('.apx-edge[data-from="'+from+'"][data-to="'+to+'"],.apx-edge[data-from="'+to+'"][data-to="'+from+'"]').forEach(function(el){
+                    el.setAttribute('stroke','rgba(91,158,255,0.55)');el.setAttribute('stroke-width','2');
+                    setTimeout(function(){el.setAttribute('stroke','rgba(91,158,255,0.14)');el.setAttribute('stroke-width','1.5');},1600);
+                  });
+                }
+
+                /* WS */
+                var evCount=0,ws=null,wsR=0;
+                var evcEl=document.getElementById('apx-evc');
+                function pushHist(id,ts,txt){
+                  if(!evHist[id])evHist[id]=[];
+                  evHist[id].push({ts:ts,txt:txt});
+                  if(evHist[id].length>20)evHist[id].shift();
+                }
                 function wsConnect(){
-                  clearTimeout(wsT);
-                  try{
-                    var pr=location.protocol==='https:'?'wss':'ws',tok=window._apexToken||'';
-                    ws=new WebSocket(pr+'://'+location.host+'/ws/viz'+(tok?'?token='+encodeURIComponent(tok):''));
-                    ws.onopen=function(){wsDot.style.background='#3fd29a';wsLbl.style.color='#3fd29a';wsLbl.textContent='LIVE';addFeed('viz connected','#3fd29a');};
-                    ws.onclose=function(){wsDot.style.background='#374151';wsLbl.style.color='#374151';wsLbl.textContent='RECONNECTING';wsT=setTimeout(wsConnect,5000);};
-                    ws.onerror=function(){ws.close();};
-                    ws.onmessage=function(e){try{onEv(JSON.parse(e.data));}catch(_){}};
-                  }catch(_){wsT=setTimeout(wsConnect,5000);}
+                  var proto=location.protocol==='https:'?'wss':'ws';
+                  ws=new WebSocket(proto+'://'+location.host+'/ws/viz');
+                  ws.onopen=function(){wsR=0;document.getElementById('apx-dot').style.background='#3fd29a';var st=document.getElementById('apx-stat');st.style.color='#3fd29a';st.textContent='LIVE';};
+                  ws.onclose=function(){document.getElementById('apx-dot').style.background='#ef4444';var st=document.getElementById('apx-stat');st.style.color='#ef4444';st.textContent='OFFLINE';setTimeout(wsConnect,Math.min(30000,2000*Math.pow(2,wsR++)));};
+                  ws.onmessage=function(e){
+                    var ev;try{ev=JSON.parse(e.data);}catch(_){return;}
+                    evCount++;evcEl.textContent=evCount+(evCount===1?' event':' events');
+                    var ts=ev.ts||new Date().toISOString();
+                    if(ev.type==='request'){
+                      var ok=ev.verdict==='ok'||ev.verdict==='allow';
+                      var col=ok?C.g:C.pk;
+                      var txt=(ev.method||'REQ')+' '+(ev.path||'')+(ev.verdict?' → '+ev.verdict:'');
+                      pushHist('api',ts,txt);pushHist('kern',ts,'Verdict: '+(ev.verdict||'?'));
+                      glowNode('api',col);glowNode('kern',col);pulseEdges('api','kern');
+                    } else if(ev.type==='cron'){
+                      var col=ev.status==='ok'?C.g:C.pk;
+                      pushHist('cron',ts,ev.job+' → '+(ev.status||'?'));
+                      glowNode('cron',col);glowNode('db',C.b);
+                    } else if(ev.type==='agent'){
+                      var col=ev.ok?C.g:C.pk;
+                      pushHist('sys',ts,'agent '+(ev.label||ev.status||'event'));
+                      glowNode('sys',col);pulseEdges('sys','db');
+                    }
+                    if(curNode&&evHist[curNode])renderPanelEv(curNode);
+                  };
                 }
-                function onEv(ev){
-                  if(!ev||!ev.type)return;
-                  hbPulse(0.55);
-                  var now=Date.now(); reqWin.push(now); reqWin=reqWin.filter(function(t){return now-t<2000;});
-                  document.getElementById('apx-rps').textContent=Math.round(reqWin.length/2)+' req/s';
-                  if(ev.type==='history'){(ev.events||[]).forEach(function(he){onEv(he);});return;}
-                  if(ev.type==='request'){
-                    var c=VCOL[ev.verdict]||'#5b9eff';
-                    memMat.emissiveIntensity=1.3;
-                    memMat.color.setHex(ev.verdict==='DENY'?0xef4444:ev.verdict==='RESTRICT'?0xefb45a:0x5b9eff);
-                    if(nodeMap['constitution'])nodeMap['constitution'].userData.pulse=0.9;
-                    if(nodeMap['civilization_kernel'])nodeMap['civilization_kernel'].userData.pulse=0.7;
-                    spawnP('constitution','civilization_kernel',ev.verdict==='DENY'?0xef4444:ev.verdict==='RESTRICT'?0xefb45a:0x5b9eff);
-                    addFeed((ev.method||'REQ')+' '+(ev.path||'').slice(0,22),c);
-                  } else if(ev.type==='cron'){
-                    var cc=ev.status==='ok'?'#3fd29a':'#ef4444';
-                    if(nodeMap['cron_scheduler'])nodeMap['cron_scheduler'].userData.pulse=0.85;
-                    spawnP('cron_scheduler','event_bus',ev.status==='ok'?0x3fd29a:0xef4444);
-                    addFeed('CRON '+(ev.job||'').slice(0,18)+' '+(ev.status||''),cc);
-                  } else if(ev.type==='agent'){
-                    var ac=ev.ok?'#3fd29a':'#ef4444';
-                    if(nodeMap['agent_pipeline'])nodeMap['agent_pipeline'].userData.pulse=0.9;
-                    spawnP('event_bus','agent_pipeline',0xfbbf24);
-                    if(ev.ok)spawnP('agent_pipeline','claude_api',0xfcd34d);
-                    addFeed('AGENT '+(ev.status||'')+' '+(ev.label||'').slice(0,14),ac);
-                    document.getElementById('apx-agt').textContent=(ev.activeCount||'—')+' agents';
-                  } else if(ev.type==='memory'){
-                    if(nodeMap['memory_gateway'])nodeMap['memory_gateway'].userData.pulse=0.6;
-                    var mtgt=ev.layer==='episodic'?'episodic_memory':ev.layer==='semantic'?'semantic_memory':'working_memory';
-                    spawnP('memory_gateway',mtgt,0xa78bfa);
-                    addFeed('MEM '+(ev.op||'')+' '+(ev.layer||''),'#a78bfa');
-                  }
-                }
-
-                /* Pan / Zoom controls */
-                var camDist=400,panX=0,panY=0,isDrag=false,lastMX=0,lastMY=0,lastInteract=0;
-                cvs.addEventListener('mousedown',function(e){
-                  isDrag=true;lastMX=e.clientX;lastMY=e.clientY;
-                  ttEl.style.display='none';e.preventDefault();
-                });
-                window.addEventListener('mouseup',function(){isDrag=false;});
-                cvs.addEventListener('wheel',function(e){
-                  e.preventDefault();
-                  camDist*=(1+e.deltaY*0.001);
-                  camDist=Math.max(60,Math.min(1200,camDist));
-                  lastInteract=Date.now();
-                },{passive:false});
-                cvs.addEventListener('contextmenu',function(e){e.preventDefault();});
-                /* Pinch-to-zoom */
-                var tDist=0;
-                cvs.addEventListener('touchstart',function(e){
-                  if(e.touches.length===1){isDrag=true;lastMX=e.touches[0].clientX;lastMY=e.touches[0].clientY;}
-                  else if(e.touches.length===2){tDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}
-                  e.preventDefault();
-                },{passive:false});
-                cvs.addEventListener('touchmove',function(e){
-                  if(e.touches.length===1&&isDrag){
-                    var dx=e.touches[0].clientX-lastMX,dy=e.touches[0].clientY-lastMY;
-                    lastMX=e.touches[0].clientX;lastMY=e.touches[0].clientY;
-                    panX-=dx*(camDist/W)*1.6;panY+=dy*(camDist/H)*1.6;lastInteract=Date.now();
-                  }else if(e.touches.length===2){
-                    var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-                    if(tDist>0){camDist*=(tDist/d);camDist=Math.max(60,Math.min(1200,camDist));}
-                    tDist=d;lastInteract=Date.now();
-                  }
-                  e.preventDefault();
-                },{passive:false});
-                cvs.addEventListener('touchend',function(){isDrag=false;},{passive:false});
-                /* Raycaster / Tooltip */
-                var ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
-                var ttEl=document.getElementById('apx-tip'),ttName=document.getElementById('apx-tip-name'),ttDesc=document.getElementById('apx-tip-desc');
-                var meshList=NODES.map(function(n){return nodeMap[n.id];}).filter(Boolean);
-                cvs.addEventListener('mousemove',function(e){
-                  var rc=cvs.getBoundingClientRect();
-                  if(isDrag){
-                    var dx=e.clientX-lastMX,dy=e.clientY-lastMY;
-                    lastMX=e.clientX;lastMY=e.clientY;
-                    panX-=dx*(camDist/W)*1.6;panY+=dy*(camDist/H)*1.6;
-                    lastInteract=Date.now();return;
-                  }
-                  mouse.x=((e.clientX-rc.left)/rc.width)*2-1;
-                  mouse.y=-((e.clientY-rc.top)/rc.height)*2+1;
-                  ray.setFromCamera(mouse,camera);
-                  var hits=ray.intersectObjects(meshList);
-                  if(hits.length){
-                    var ud=hits[0].object.userData;
-                    ttName.textContent=ud.label;ttDesc.textContent=ud.desc;
-                    var wc=wrap.getBoundingClientRect();
-                    ttEl.style.left=(e.clientX-wc.left+14)+'px';
-                    ttEl.style.top=(e.clientY-wc.top-10)+'px';
-                    ttEl.style.display='block';
-                  }else{ttEl.style.display='none';}
-                });
-                cvs.addEventListener('mouseleave',function(){if(!isDrag)ttEl.style.display='none';});
-
-                /* Animation Loop */
-                var lastT=Date.now();
-                function animate(){
-                  requestAnimationFrame(animate);
-                  var now=Date.now(),dt=(now-lastT)/1000; lastT=now;
-                  /* Camera from pan/zoom state */
-                  camera.position.set(panX, panY, camDist);
-                  camera.lookAt(panX, panY, 0);
-                  /* Node pulse + rotation */
-                  NODES.forEach(function(n){
-                    var m=nodeMap[n.id]; if(!m)return;
-                    m.userData.pulse=Math.max(0,(m.userData.pulse||0)-dt*1.8);
-                    var p=m.userData.pulse,r=m.userData.baseR*(1+p*0.45);
-                    m.scale.set(r,r,r);
-                    m.material.emissiveIntensity=0.45+p*0.55;
-                    m.rotation.y+=dt*(0.15+p*0.6); m.rotation.x+=dt*(0.08+p*0.2);
-                  });
-                  /* Particles */
-                  for(var i=parts.length-1;i>=0;i--){
-                    var p=parts[i]; p.t+=dt*0.65;
-                    if(p.t>=1){scene.remove(p.mesh);parts.splice(i,1);}
-                    else{p.mesh.position.lerpVectors(p.from,p.to,p.t);p.mesh.material.opacity=1-p.t;}
-                  }
-                  /* Membrane decay */
-                  memMat.emissiveIntensity=Math.max(0.1,memMat.emissiveIntensity-dt*1.2);
-                  /* Labels */
-                  var lW=lWrap.clientWidth||W,lH=lWrap.clientHeight||H;
-                  NODES.forEach(function(n){
-                    var m=nodeMap[n.id],el=lblEls[n.id]; if(!m||!el)return;
-                    var v=m.position.clone().project(camera);
-                    if(v.z>0.99){el.style.display='none';return;}
-                    el.style.display='block';
-                    el.style.left=((v.x+1)/2*lW)+'px';
-                    el.style.top=((-v.y+1)/2*lH+m.userData.baseR*lH*0.9/camDist+4)+'px';
-                  });
-                  drawHb();
-                  renderer.render(scene,camera);
-                }
-
-                /* Resize */
-                if(window.ResizeObserver){
-                  new ResizeObserver(function(){
-                    W=wrap.clientWidth;H=wrap.clientHeight;
-                    camera.aspect=W/H; camera.updateProjectionMatrix(); renderer.setSize(W,H);
-                  }).observe(wrap);
-                }
-
                 wsConnect();
-                animate();
-                }); /* end DOMContentLoaded */
+                })();
                 </script>
 
             </div>
