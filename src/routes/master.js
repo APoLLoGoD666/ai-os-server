@@ -486,5 +486,33 @@ router.post('/api/admin/sre/run', requireAppAccess, async (req, res) => {
     }
 });
 
+router.get('/api/overview/vitals', requireAppAccess, async (req, res) => {
+    try {
+        const ago24h = new Date(Date.now() - 86400000).toISOString();
+        const ago1h  = new Date(Date.now() -  3600000).toISOString();
+        const [cycleRes, notifRes, runRes, memRes] = await Promise.allSettled([
+            sbAdmin.from('civilization_cycle_log').select('health_score,duration_ms,created_at').order('created_at', { ascending: false }).limit(1).single(),
+            sbAdmin.from('apex_notifications').select('id', { count: 'exact', head: true }).eq('read', false),
+            sbAdmin.from('apex_agent_runs').select('cost_usd').gte('created_at', ago24h).limit(500),
+            sbAdmin.from('apex_memories').select('id', { count: 'exact', head: true }).gte('created_at', ago1h),
+        ]);
+        const cycle = cycleRes.status === 'fulfilled' ? (cycleRes.value.data  || {}) : {};
+        const notif = notifRes.status === 'fulfilled' ? (notifRes.value)              : {};
+        const runs  = runRes.status   === 'fulfilled' ? (runRes.value.data   || [])   : [];
+        const mem   = memRes.status   === 'fulfilled' ? (memRes.value)                : {};
+        const spend = runs.reduce((s, r) => s + (Number(r.cost_usd) || 0), 0);
+        res.json({
+            ok:           true,
+            health:       cycle.health_score || 0,
+            lastCycle:    cycle.created_at   || null,
+            cycleMs:      cycle.duration_ms  || 0,
+            alerts:       notif.count        || 0,
+            agentRuns24h: runs.length,
+            burnUsd24h:   spend.toFixed(4),
+            memOps1h:     mem.count          || 0,
+        });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;
 module.exports.checkPendingMasterTasks = checkPendingMasterTasks;

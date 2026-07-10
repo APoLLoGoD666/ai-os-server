@@ -10726,9 +10726,20 @@ if(pipe){
                 });
 
                 /* Inject page HTML */
+                var _botHtml=[['TIME',73],['MONEY',41],['COMPUTE',58],['TOKENS',67],['STORAGE',29],['ATTN',84]].map(function(r){
+                  var lb=r[0],v=r[1];var col=v>=80?'#ec7fa3':v>=60?'#efb45a':'#3fd29a';
+                  return '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 8px;border-left:1px solid rgba(255,255,255,0.04)">'
+                    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+                    +'<span style="font:700 6.5px/1 \'JetBrains Mono\',monospace;letter-spacing:1px;color:#374151">'+lb+'</span>'
+                    +'<span style="font:700 7px/1 \'JetBrains Mono\',monospace;color:'+col+'">'+v+'%</span>'
+                    +'</div>'
+                    +'<div style="height:2px;background:rgba(255,255,255,0.06);border-radius:1px;overflow:hidden">'
+                    +'<div style="height:100%;width:'+v+'%;background:'+col+';border-radius:1px"></div>'
+                    +'</div></div>';
+                }).join('');
                 page.innerHTML='<div id="apx-wrap" style="position:relative;width:100%;height:calc(100vh - 100px);min-height:600px;background:#010f08;border-radius:14px;overflow:hidden;border:1px solid rgba(63,210,154,0.12);display:flex;flex-direction:column">'
                   +'<canvas id="apx-matrix" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none"></canvas>'
-                  +'<div style="flex:0 0 42px;background:rgba(1,15,8,0.96);border-bottom:1px solid rgba(91,158,255,0.1);display:flex;align-items:center;padding:0 16px;gap:12px;z-index:5;position:relative">'
+                  +'<div style="flex:0 0 42px;background:rgba(1,15,8,0.96);border-bottom:1px solid rgba(91,158,255,0.08);display:flex;align-items:center;padding:0 16px;gap:12px;z-index:5;position:relative">'
                     +'<span style="font:700 11px/1 \'JetBrains Mono\',monospace;letter-spacing:3px;color:#5b9eff">APEX MIND</span>'
                     +'<span style="width:1px;height:12px;background:rgba(255,255,255,0.08)"></span>'
                     +'<span style="font:500 8.5px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:#374151">44 NODES · 8 TIERS</span>'
@@ -10743,13 +10754,66 @@ if(pipe){
                       +'<span id="apx-stat" style="font:500 8.5px/1 \'JetBrains Mono\',monospace;color:#374151;letter-spacing:1px">CONNECTING</span>'
                     +'</span>'
                   +'</div>'
+                  +'<div style="flex:0 0 30px;background:rgba(0,8,4,0.97);border-bottom:1px solid rgba(91,158,255,0.06);display:flex;align-items:stretch;z-index:4;position:relative">'
+                    +'<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;border-right:1px solid rgba(255,255,255,0.04)">'
+                      +'<span style="font:700 6px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:#374151">HEALTH</span>'
+                      +'<span id="vv-health" style="font:700 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">—</span>'
+                    +'</div>'
+                    +'<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;border-right:1px solid rgba(255,255,255,0.04)">'
+                      +'<span style="font:700 6px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:#374151">RUNS 24H</span>'
+                      +'<span id="vv-agents" style="font:700 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">—</span>'
+                    +'</div>'
+                    +'<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;border-right:1px solid rgba(255,255,255,0.04)">'
+                      +'<span style="font:700 6px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:#374151">BURN 24H</span>'
+                      +'<span id="vv-burn" style="font:700 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">—</span>'
+                    +'</div>'
+                    +'<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;border-right:1px solid rgba(255,255,255,0.04)">'
+                      +'<span style="font:700 6px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:#374151">MEM OPS 1H</span>'
+                      +'<span id="vv-mem" style="font:700 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">—</span>'
+                    +'</div>'
+                    +'<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;border-right:1px solid rgba(255,255,255,0.04)">'
+                      +'<span style="font:700 6px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:#374151">ALERTS</span>'
+                      +'<span id="vv-alerts" style="font:700 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">—</span>'
+                    +'</div>'
+                    +'<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px">'
+                      +'<span style="font:700 6px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:#374151">LAST CYCLE</span>'
+                      +'<span id="vv-cycle" style="font:700 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">—</span>'
+                    +'</div>'
+                  +'</div>'
                   +'<div style="flex:1;display:flex;overflow:hidden;position:relative;z-index:1">'
+                    +'<div id="apx-left" style="flex:0 0 188px;background:rgba(0,8,4,0.88);border-right:1px solid rgba(91,158,255,0.07);display:flex;flex-direction:column;overflow:hidden">'
+                      +'<div style="padding:10px 12px 4px;flex:0 0 auto">'
+                        +'<div style="font:700 6.5px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151;margin-bottom:6px">CIV HEALTH</div>'
+                        +'<canvas id="apx-gauge" width="164" height="88" style="width:164px;height:88px;display:block;margin:0 auto"></canvas>'
+                        +'<div id="apx-cycle-ago" style="font:400 6.5px/1 \'JetBrains Mono\',monospace;color:#374151;text-align:center;letter-spacing:1px;margin-top:4px">awaiting cycle</div>'
+                      +'</div>'
+                      +'<div style="padding:8px 12px;flex:0 0 auto;border-top:1px solid rgba(255,255,255,0.04)">'
+                        +'<div style="font:700 6.5px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151;margin-bottom:6px">CIV PHASES</div>'
+                        +'<div id="apx-phases" style="display:grid;grid-template-columns:1fr 1fr;gap:3px"></div>'
+                      +'</div>'
+                      +'<div style="padding:8px 12px;flex:0 0 auto;border-top:1px solid rgba(255,255,255,0.04)">'
+                        +'<div style="font:700 6.5px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151;margin-bottom:4px">NODES</div>'
+                        +'<div style="display:flex;align-items:baseline;gap:6px">'
+                          +'<span style="font:700 18px/1 \'JetBrains Mono\',monospace;color:#3fd29a">'+onlineCount+'</span>'
+                          +'<span style="font:400 6.5px/1 \'JetBrains Mono\',monospace;color:#374151">ONLINE</span>'
+                          +'<span style="font:400 6.5px/1 \'JetBrains Mono\',monospace;color:#2a3a2a">'+offlineCount+' pending</span>'
+                        +'</div>'
+                      +'</div>'
+                    +'</div>'
                     +'<div id="apx-area" style="flex:1;overflow:hidden;position:relative;cursor:grab">'
                       +'<svg id="apx-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-120 20 2320 1020" style="width:100%;height:100%;display:block;user-select:none">'
                         +'<defs><filter id="apx-gf"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>'
                         +tierSVG+edgeSVG+nodeSVG
                       +'</svg>'
                       +'<canvas id="apx-mm" style="position:absolute;bottom:12px;right:12px;width:180px;height:100px;border:1px solid rgba(91,158,255,0.15);border-radius:6px;background:rgba(1,15,8,0.85);pointer-events:none"></canvas>'
+                    +'</div>'
+                    +'<div id="apx-right" style="flex:0 0 196px;background:rgba(0,8,4,0.88);border-left:1px solid rgba(91,158,255,0.07);display:flex;flex-direction:column;overflow:hidden">'
+                      +'<div style="flex:0 0 auto;padding:10px 12px 8px;border-bottom:1px solid rgba(255,255,255,0.04)">'
+                        +'<div style="font:700 6.5px/1 \'JetBrains Mono\',monospace;letter-spacing:2px;color:#374151">LIVE INTEL</div>'
+                      +'</div>'
+                      +'<div id="apx-feed" style="flex:1;overflow-y:auto;padding:4px 6px;display:flex;flex-direction:column;gap:2px;scrollbar-width:thin;scrollbar-color:#1a2a1a transparent">'
+                        +'<div style="font:400 7px/1.4 \'JetBrains Mono\',monospace;color:#374151;text-align:center;padding-top:20px">awaiting events…</div>'
+                      +'</div>'
                     +'</div>'
                     +'<div id="apx-panel" style="flex:0 0 0;overflow:hidden;transition:flex-basis .25s ease;background:#08120a;border-left:1px solid rgba(91,158,255,0.1);display:flex;flex-direction:column;min-width:0">'
                       +'<div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);flex:0 0 auto">'
@@ -10767,6 +10831,10 @@ if(pipe){
                         +'<div id="apx-d-ev" style="display:flex;flex-direction:column;gap:5px"></div>'
                       +'</div>'
                     +'</div>'
+                  +'</div>'
+                  +'<div style="flex:0 0 32px;background:rgba(0,8,4,0.97);border-top:1px solid rgba(91,158,255,0.06);display:flex;align-items:stretch;z-index:4;position:relative">'
+                    +'<div style="flex:0 0 auto;display:flex;align-items:center;padding:0 10px;font:700 6.5px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:#374151;border-right:1px solid rgba(255,255,255,0.04)">RESOURCES</div>'
+                    +_botHtml
                   +'</div>'
                 +'</div>';
 
@@ -10917,6 +10985,80 @@ if(pipe){
                   });
                 }
 
+                /* ── Global event feed ── */
+                var gFeed=[];var gFeedEl=null;
+                function _timeAgo(iso){var d=Math.floor((Date.now()-new Date(iso).getTime())/1000);if(d<60)return d+'s';if(d<3600)return Math.floor(d/60)+'m';if(d<86400)return Math.floor(d/3600)+'h';return Math.floor(d/86400)+'d';}
+                function pushGlobalFeed(type,label,col,ts){
+                  gFeed.push({type:type,label:label,col:col||C.s,ts:ts||new Date().toISOString()});
+                  if(gFeed.length>80)gFeed.shift();
+                  renderFeed();
+                }
+                function renderFeed(){
+                  if(!gFeedEl){gFeedEl=document.getElementById('apx-feed');if(!gFeedEl)return;}
+                  var items=gFeed.slice().reverse().slice(0,40);
+                  if(!items.length){gFeedEl.innerHTML='<div style="font:400 7px/1.4 \'JetBrains Mono\',monospace;color:#374151;text-align:center;padding-top:20px">awaiting events…</div>';return;}
+                  var html='';
+                  for(var i=0;i<items.length;i++){
+                    var ev=items[i];
+                    html+='<div style="display:flex;align-items:flex-start;gap:4px;padding:2px 3px;border-radius:3px">'
+                      +'<span style="flex:0 0 4px;width:4px;height:4px;border-radius:50%;background:'+ev.col+';margin-top:3px;box-shadow:0 0 4px '+ev.col+'80"></span>'
+                      +'<div style="flex:1;min-width:0">'
+                        +'<div style="font:600 6.5px/1 \'JetBrains Mono\',monospace;color:'+ev.col+';letter-spacing:0.5px;text-transform:uppercase">'+ev.type+'</div>'
+                        +'<div style="font:400 6.5px/1.3 \'JetBrains Mono\',monospace;color:#5a6a7a;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+ev.label+'</div>'
+                      +'</div>'
+                      +'<span style="font:400 6px/1 \'JetBrains Mono\',monospace;color:#2a3a2a;flex:0 0 auto;white-space:nowrap">'+_timeAgo(ev.ts)+'</span>'
+                    +'</div>';
+                  }
+                  gFeedEl.innerHTML=html;
+                }
+                /* ── Civ health gauge ── */
+                var _gaugeCtx=null;
+                function drawGauge(score){
+                  var c=document.getElementById('apx-gauge');if(!c)return;
+                  if(!_gaugeCtx)_gaugeCtx=c.getContext('2d');
+                  var ctx=_gaugeCtx,cx=82,cy=78,r=54;
+                  ctx.clearRect(0,0,164,88);
+                  ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,2*Math.PI);ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=8;ctx.lineCap='round';ctx.stroke();
+                  var col=score>=70?'#3fd29a':score>=40?'#efb45a':'#ec7fa3';
+                  var glow=score>=70?'rgba(63,210,154,0.18)':score>=40?'rgba(239,180,90,0.18)':'rgba(236,127,163,0.18)';
+                  var end=Math.PI+(Math.max(0,Math.min(100,score))/100)*Math.PI;
+                  ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,end);ctx.strokeStyle=glow;ctx.lineWidth=18;ctx.stroke();
+                  ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,end);ctx.strokeStyle=col;ctx.lineWidth=7;ctx.stroke();
+                  ctx.font='700 20px "JetBrains Mono",monospace';ctx.fillStyle=col;ctx.textAlign='center';ctx.fillText(Math.round(score),cx,cy-4);
+                  ctx.font='500 7px "JetBrains Mono",monospace';ctx.fillStyle='#374151';ctx.fillText('HEALTH',cx,cy+10);
+                }
+                /* ── Phase dots ── */
+                var _phaseNames=['Observe','Analyze','Deliberate','Plan','Execute','Learn','Housekeep','Memory'];
+                function initPhases(){
+                  var el=document.getElementById('apx-phases');if(!el)return;
+                  var html='';
+                  for(var i=0;i<_phaseNames.length;i++){
+                    html+='<div style="display:flex;align-items:center;gap:3px">'
+                      +'<span id="apx-phd-'+(i+1)+'" style="flex:0 0 5px;width:5px;height:5px;border-radius:50%;background:#1a2a1a;transition:background .4s"></span>'
+                      +'<span style="font:400 6.5px/1 \'JetBrains Mono\',monospace;color:#374151">'+_phaseNames[i]+'</span>'
+                    +'</div>';
+                  }
+                  el.innerHTML=html;
+                }
+                /* ── Vitals fetch ── */
+                function fetchVitals(){
+                  fetch('/api/overview/vitals').then(function(r){return r.json();}).then(function(d){
+                    if(!d.ok)return;
+                    var h=Math.round(d.health||0);
+                    var hcol=h>=70?C.g:h>=40?C.gold:C.pk;
+                    _setVv('health',h+'%',hcol);
+                    _setVv('agents',d.agentRuns24h||0,C.b);
+                    _setVv('burn','$'+(d.burnUsd24h||'0.0000'),Number(d.burnUsd24h)>0.5?C.pk:C.s);
+                    _setVv('mem',d.memOps1h||0,C.p);
+                    var al=d.alerts||0;_setVv('alerts',al,al>0?C.pk:C.s);
+                    if(d.lastCycle){_setVv('cycle',_timeAgo(d.lastCycle)+' ago',C.s);}
+                    drawGauge(h);
+                    var caEl=document.getElementById('apx-cycle-ago');
+                    if(caEl&&d.lastCycle)caEl.textContent='last cycle '+_timeAgo(d.lastCycle)+' ago';
+                  }).catch(function(){});
+                }
+                function _setVv(id,val,col){var el=document.getElementById('vv-'+id);if(el){el.textContent=val;el.style.color=col||C.s;}}
+
                 /* WS */
                 var evCount=0,ws=null,wsR=0;
                 var evcEl=document.getElementById('apx-evc');
@@ -10932,7 +11074,19 @@ if(pipe){
                   ws.onclose=function(){document.getElementById('apx-dot').style.background='#ef4444';var st=document.getElementById('apx-stat');st.style.color='#ef4444';st.textContent='OFFLINE';setTimeout(wsConnect,Math.min(30000,2000*Math.pow(2,wsR++)));};
                   ws.onmessage=function(e){
                     var ev;try{ev=JSON.parse(e.data);}catch(_){return;}
-                    evCount++;evcEl.textContent=evCount+(evCount===1?' event':' events');
+                    if(ev.type==='history'){
+                      var hist=ev.events||[];
+                      for(var hi=Math.max(0,hist.length-30);hi<hist.length;hi++){
+                        var hev=hist[hi];var hts=hev.ts||new Date().toISOString();
+                        if(hev.type==='request'){pushGlobalFeed('request',(hev.method||'REQ')+' '+(hev.path||''),(hev.verdict==='ok'||hev.verdict==='allow')?C.g:C.pk,hts);}
+                        else if(hev.type==='cron'){pushGlobalFeed('cron',(hev.job||'job')+' → '+(hev.status||'?'),hev.status==='ok'?C.g:C.pk,hts);}
+                        else if(hev.type==='agent'){pushGlobalFeed('agent','agent '+(hev.label||hev.status||''),hev.ok?C.g:hev.status==='started'?C.c:C.pk,hts);}
+                        else if(hev.type==='memory'){pushGlobalFeed('memory','layer '+(hev.layer||'?')+' ← '+(hev.source||'sys'),C.p,hts);}
+                        else if(hev.type==='civ'){var hh=hev.health||0;pushGlobalFeed('civ','health='+hh+(hev.tasksQueued?' q='+hev.tasksQueued:''),hh>=70?C.g:hh>=40?C.gold:C.pk,hts);}
+                      }
+                      return;
+                    }
+                    evCount++;if(evcEl)evcEl.textContent=evCount+(evCount===1?' event':' events');
                     var ts=ev.ts||new Date().toISOString();
                     if(ev.type==='request'){
                       var ok=ev.verdict==='ok'||ev.verdict==='allow';
@@ -10942,23 +11096,28 @@ if(pipe){
                       glowNode('api',col);glowNode('kern',col);
                       pulseEdges('api','kern',col);
                       emitParticle('kern','api',col);emitParticle('api','m1',C.b);
+                      pushGlobalFeed('request',txt,col,ts);
                     }else if(ev.type==='cron'){
                       var col=ev.status==='ok'?C.g:C.pk;
-                      pushHist('cron',ts,(ev.job||'job')+' → '+(ev.status||'?'));
+                      var lbl=(ev.job||'job')+' → '+(ev.status||'?');
+                      pushHist('cron',ts,lbl);
                       glowNode('cron',col);glowNode('db',C.b);
                       emitParticle('cron','m1',col);emitParticle('db','m2',C.b);
+                      pushGlobalFeed('cron',lbl,col,ts);
                     }else if(ev.type==='agent'){
                       var col=ev.ok?C.g:ev.status==='started'?C.c:C.pk;
                       var lbl='agent '+(ev.label||ev.status||'event');
                       pushHist('sys',ts,lbl);pushHist('cops',ts,lbl);
                       glowNode('sys',col);glowNode('cops',col);
                       emitParticle('sys','db',col);emitParticle('cops','sys',C.b);
+                      pushGlobalFeed('agent',lbl,col,ts);
                     }else if(ev.type==='memory'){
                       var col=C.p;
                       var lbl='layer '+(ev.layer||'?')+' ← '+(ev.source||'system');
                       pushHist('m3',ts,lbl);pushHist('m1',ts,lbl);
                       glowNode('m3',col);glowNode('db',C.b);
                       emitParticle('db','m3',col);emitParticle('m3','m4',C.b);
+                      pushGlobalFeed('memory',lbl,col,ts);
                     }else if(ev.type==='civ'){
                       var h=ev.health||0;
                       var col=h>=70?C.g:h>=40?C.gold:C.pk;
@@ -10966,6 +11125,28 @@ if(pipe){
                       pushHist('refl',ts,lbl);pushHist('evo',ts,lbl);pushHist('cintel',ts,lbl);
                       glowNode('refl',col);glowNode('evo',col);glowNode('cintel',col);glowNode('sent',col);
                       emitParticle('refl','m5',col);emitParticle('evo','m6',C.p);emitParticle('cintel','m3',C.b);
+                      pushGlobalFeed('civ',lbl,col,ts);
+                      drawGauge(h);
+                      var caEl=document.getElementById('apx-cycle-ago');if(caEl)caEl.textContent='last cycle just now';
+                    }else if(ev.type==='opportunity'){
+                      var col=C.gold;var lbl='opp: '+(ev.objective||ev.label||'detected');
+                      glowNode('cgrow',col);glowNode('cintel',C.g);
+                      emitParticle('cgrow','cintel',col);emitParticle('cintel','m4',C.b);
+                      pushGlobalFeed('opportunity',lbl,col,ts);
+                    }else if(ev.type==='lesson'){
+                      var col=C.c;var lbl='lesson: '+(ev.lesson||ev.label||'learned');
+                      pushHist('refl',ts,lbl);glowNode('refl',col);glowNode('evo',C.g);
+                      emitParticle('refl','m5',col);
+                      pushGlobalFeed('lesson',lbl,col,ts);
+                    }else if(ev.type==='anomaly'){
+                      var col=C.pk;var lbl='anomaly: '+(ev.description||ev.label||'detected');
+                      pushHist('sent',ts,lbl);glowNode('sent',col);glowNode('cgov',col);
+                      emitParticle('sent','rtime',col);
+                      pushGlobalFeed('anomaly',lbl,col,ts);
+                    }else if(ev.type==='health'){
+                      var col=(ev.score||0)>=70?C.g:(ev.score||0)>=40?C.gold:C.pk;
+                      glowNode('cintel',col);drawGauge(ev.score||0);
+                      pushGlobalFeed('health','score='+(ev.score||0),col,ts);
                     }
                     if(curNode&&evHist[curNode])renderPanelEv(curNode);
                   };
@@ -11012,6 +11193,10 @@ if(pipe){
                 })();
 
                 wsConnect();
+                initPhases();
+                gFeedEl=document.getElementById('apx-feed');
+                fetchVitals();
+                setInterval(fetchVitals,60000);
                 })();
                 </script>
 
