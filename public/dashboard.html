@@ -10948,10 +10948,24 @@ if(pipe){
                       glowNode('cron',col);glowNode('db',C.b);
                       emitParticle('cron','m1',col);emitParticle('db','m2',C.b);
                     }else if(ev.type==='agent'){
-                      var col=ev.ok?C.g:C.pk;
-                      pushHist('sys',ts,'agent '+(ev.label||ev.status||'event'));
-                      glowNode('sys',col);
-                      emitParticle('sys','db',col);
+                      var col=ev.ok?C.g:ev.status==='started'?C.c:C.pk;
+                      var lbl='agent '+(ev.label||ev.status||'event');
+                      pushHist('sys',ts,lbl);pushHist('cops',ts,lbl);
+                      glowNode('sys',col);glowNode('cops',col);
+                      emitParticle('sys','db',col);emitParticle('cops','sys',C.b);
+                    }else if(ev.type==='memory'){
+                      var col=C.p;
+                      var lbl='layer '+(ev.layer||'?')+' ← '+(ev.source||'system');
+                      pushHist('m3',ts,lbl);pushHist('m1',ts,lbl);
+                      glowNode('m3',col);glowNode('db',C.b);
+                      emitParticle('db','m3',col);emitParticle('m3','m4',C.b);
+                    }else if(ev.type==='civ'){
+                      var h=ev.health||0;
+                      var col=h>=70?C.g:h>=40?C.gold:C.pk;
+                      var lbl='cycle health='+h+(ev.tasksQueued?' · '+ev.tasksQueued+' queued':'');
+                      pushHist('refl',ts,lbl);pushHist('evo',ts,lbl);pushHist('cintel',ts,lbl);
+                      glowNode('refl',col);glowNode('evo',col);glowNode('cintel',col);glowNode('sent',col);
+                      emitParticle('refl','m5',col);emitParticle('evo','m6',C.p);emitParticle('cintel','m3',C.b);
                     }
                     if(curNode&&evHist[curNode])renderPanelEv(curNode);
                   };
