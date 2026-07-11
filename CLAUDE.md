@@ -48,6 +48,8 @@ This is a Render-hosted Node/Express AI OS.
 - Always inspect before editing.
 - Always run node --check server.js after backend changes.
 - Always preserve approval/safety for delete, rename, overwrite, code edits, GitHub pushes, and env changes.
+- Every new route file must define an internal sub-prefix matching its filename (e.g., routes/foo.js uses router.get('/foo/...')) to prevent route collision under _loadAgentRoutes flat-mount.
+- Before committing any change that adds a require() call: run node -e "require('./path/to/module')" to verify the path resolves. node --check does not catch MODULE_NOT_FOUND.
 
 ## Current priority
 Prepare the codebase for multi-agent roles:

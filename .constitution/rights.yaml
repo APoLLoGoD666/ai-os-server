@@ -1,0 +1,80 @@
+# Domain Rights and Permissions Matrix
+# Defines what cross-domain operations each domain may initiate.
+# may_read: can query entities in these domains
+# may_write: can create/update entities in these domains (requires consensus)
+# may_govern: constitutional authority over these domains
+# autonomy_level: 0=governed, 1=self-governing, 2=autonomous, 3=sovereign
+
+version: 1
+constitutional_hash: a05315a123374671
+
+domains:
+  DOM-000001:
+    name: Civilisation
+    may_read: [DOM-000002, DOM-000003, DOM-000004, DOM-000005, DOM-000006, DOM-000007, DOM-000008, DOM-000009, DOM-000010]
+    may_write: []
+    may_govern: [DOM-000001, DOM-000002, DOM-000003, DOM-000004, DOM-000005, DOM-000006, DOM-000007, DOM-000008, DOM-000009, DOM-000010]
+    autonomy_level: 1
+
+  DOM-000002:
+    name: Intelligence
+    may_read: [DOM-000003, DOM-000004]
+    may_write: [DOM-000004]
+    may_govern: []
+    autonomy_level: 1
+
+  DOM-000003:
+    name: Registry
+    may_read: [DOM-000001, DOM-000002, DOM-000004, DOM-000005, DOM-000006, DOM-000007, DOM-000008, DOM-000009, DOM-000010]
+    may_write: []
+    may_govern: []
+    autonomy_level: 2
+
+  DOM-000004:
+    name: Memory
+    may_read: [DOM-000003]
+    may_write: []
+    may_govern: []
+    autonomy_level: 1
+
+  DOM-000005:
+    name: Infrastructure
+    may_read: [DOM-000003]
+    may_write: [DOM-000003]
+    may_govern: []
+    autonomy_level: 1
+
+  DOM-000006:
+    name: Observability
+    may_read: [DOM-000001, DOM-000002, DOM-000003, DOM-000004, DOM-000005, DOM-000007, DOM-000008, DOM-000009, DOM-000010]
+    may_write: []
+    may_govern: []
+    autonomy_level: 1
+
+  DOM-000007:
+    name: Interface
+    may_read: [DOM-000002, DOM-000003, DOM-000006]
+    may_write: []
+    may_govern: []
+    autonomy_level: 1
+
+  DOM-000008:
+    name: Knowledge
+    may_read: [DOM-000003, DOM-000004]
+    may_write: [DOM-000003]
+    may_govern: []
+    autonomy_level: 1
+
+  DOM-000009:
+    name: Development
+    may_read: [DOM-000003, DOM-000005]
+    may_write: [DOM-000003, DOM-000005]
+    may_govern: [DOM-000010]
+    autonomy_level: 1
+
+  DOM-000010:
+    name: Experiments
+    may_read: [DOM-000003, DOM-000009]
+    may_write: []
+    may_govern: []
+    autonomy_level: 0

@@ -1,27 +1,87 @@
 "use strict";
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
-const Anthropic = require('@anthropic-ai/sdk');
+const { execSync, spawnSync } = require('child_process');
 const { createClient } = require('@supabase/supabase-js');
 const memory = require('./obsidian-memory');
+const constitutionGate = require('../lib/runtime/constitutional-gate');
 
-// Module-level clients — created once, reused across all calls
 const _sb = process.env.SUPABASE_URL
     ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
     : null;
-const _anthro = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const _anthro = require('../lib/clients').getAnthropicClient();
+const runtime = require('../lib/models/runtime');
 
 // In-memory plan cache — avoids re-planning the same feature on retries
 const _planCache = new Map();
 
 const ROOT = path.join(__dirname, '..');
-const MODEL = 'claude-haiku-4-5-20251001';
+const MODEL  = 'claude-haiku-4-5-20251001';
+const _SONNET = 'claude-sonnet-4-6';
 const ROADMAP_FILE = path.join(ROOT, 'ROADMAP.md');
+
+const _ghToken = process.env.GITHUB_TOKEN || '';
+const _mask = (s) => _ghToken ? String(s || '').replace(new RegExp(_ghToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[REDACTED]') : String(s || '');
 
 // Escape special regex characters in featureId strings
 function _escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Cognition-weights loader — 60-min TTL memoization
+// Primary source: Supabase adaptation_cycles.routing_table (survives Render deploys)
+// Fallback: config/cognition-weights.json (local file, empty after fresh deploy)
+let _cwCache = null;
+let _cwLoadedAt = 0;
+const _CW_TTL_MS = 60 * 60 * 1000;
+const _CW_PATH = path.join(ROOT, 'config', 'cognition-weights.json');
+
+async function _refreshCognitionWeightsFromSupabase() {
+    if (!_sb) return;
+    try {
+        const { data } = await _sb.from('adaptation_cycles')
+            .select('routing_table')
+            .not('routing_table', 'is', null)
+            .order('started_at', { ascending: false })
+            .limit(1)
+            .single();
+        if (data?.routing_table) {
+            _cwCache = data.routing_table;
+            _cwLoadedAt = Date.now();
+        }
+    } catch { /* non-fatal — local file fallback remains active */ }
+}
+
+// Populate cache from Supabase on module load (non-blocking)
+setImmediate(() => _refreshCognitionWeightsFromSupabase().catch(() => {}));
+
+function _loadCognitionWeights() {
+    if (_cwCache && Date.now() - _cwLoadedAt < _CW_TTL_MS) return _cwCache;
+    try {
+        _cwCache = JSON.parse(fs.readFileSync(_CW_PATH, 'utf8'));
+        _cwLoadedAt = Date.now();
+    } catch {
+        _cwCache = { routingOverrides: {} };
+    }
+    // Trigger background Supabase refresh on TTL expiry
+    setImmediate(() => _refreshCognitionWeightsFromSupabase().catch(() => {}));
+    return _cwCache;
+}
+
+// Pre-classify feature before planning — selects model tier for planFeature
+function _preClassifyFeature(feature) {
+    const weights = _loadCognitionWeights();
+    const id = (feature.id || '').toLowerCase();
+    if (weights.routingOverrides && weights.routingOverrides[id]) {
+        const ov = weights.routingOverrides[id];
+        if ((ov.confidence ?? 0) >= 0.7) return ov.tier;
+    }
+    const t = `${feature.id} ${feature.title}`.toLowerCase();
+    if (/\b(auth|password|secret|api.?key|jwt|oauth|stripe|payment|security|encrypt|rls|rbac|permiss|hash|session)\b/.test(t))
+        return 'critical';
+    if (/\b(refactor|architect|orchestrat|pipeline|rebuild|multi.?step|integrat|vector|embed|agent.system|workflow|migration)\b/.test(t))
+        return 'complex';
+    return 'simple';
 }
 
 // Run an array of async task functions with bounded concurrency
@@ -59,7 +119,9 @@ async function _insertNotification(row) {
 
 // ── Parse ROADMAP.md into structured workstreams ──────────────────
 function parseRoadmap() {
-    const content = fs.readFileSync(ROADMAP_FILE, 'utf8');
+    let content;
+    try { content = fs.readFileSync(ROADMAP_FILE, 'utf8'); }
+    catch { console.warn('[Master] ROADMAP.md not found — returning empty workstreams'); return {}; }
     const workstreams = {};
     let current = null;
 
@@ -98,14 +160,22 @@ function markFeatureComplete(featureId) {
     );
     fs.writeFileSync(ROADMAP_FILE, content, 'utf8');
     try {
-        const repoUrl = `https://apex-autopilot:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
+        const _repoBase = 'https://github.com/APoLLoGoD666/ai-os-server.git';
+        const _gitEnv = {
+            ...process.env,
+            GIT_CONFIG_COUNT: '1',
+            GIT_CONFIG_KEY_0: 'http.https://github.com/.extraheader',
+            GIT_CONFIG_VALUE_0: `Authorization: Basic ${Buffer.from(`oauth2:${_ghToken}`).toString('base64')}`,
+            GIT_TERMINAL_PROMPT: '0',
+        };
         execSync('git add ROADMAP.md', { cwd: ROOT, stdio: 'pipe' });
-        execSync(`git commit -m "roadmap: mark ${featureId} complete [skip ci]"`, { cwd: ROOT, stdio: 'pipe' });
-        execSync(`git pull --rebase ${repoUrl} main`, { cwd: ROOT, stdio: 'pipe' });
-        execSync(`git push ${repoUrl} main`, { cwd: ROOT, stdio: 'pipe' });
+        const _commitR = spawnSync('git', ['commit', '-m', `roadmap: mark ${featureId} complete [skip ci]`], { cwd: ROOT, stdio: 'pipe' });
+        if (_commitR.status !== 0) throw new Error(_commitR.stderr?.toString() || 'git commit failed');
+        execSync(`git pull --rebase ${_repoBase} main`, { cwd: ROOT, stdio: 'pipe', env: _gitEnv });
+        execSync(`git push ${_repoBase} main`, { cwd: ROOT, stdio: 'pipe', env: _gitEnv });
         console.log(`[Master] ROADMAP.md pushed — ${featureId} marked [x]`);
     } catch (e) {
-        console.warn(`[Master] ROADMAP.md push failed (non-fatal): ${e.message}`);
+        console.warn(`[Master] ROADMAP.md push failed (non-fatal): ${_mask(e.message)} ${_mask(e.stderr?.toString())}`);
     }
 }
 
@@ -116,14 +186,49 @@ async function planFeature(feature, workstream) {
         return _planCache.get(feature.id);
     }
 
-    const planModel = MODEL;
-    const context = memory.getFullContext();
+    // GAP-7: Constitution gate — evaluate before any model calls or planning work
+    let gateResult;
+    try {
+        gateResult = await Promise.resolve(constitutionGate.evaluate(
+            { metadata: { path: `plan/${feature.id}` }, identity: { roles: ['HUMAN_OPERATOR'] } },
+            {}
+        ));
+    } catch (gateErr) {
+        throw new Error(`Constitution gate unavailable — planFeature aborted: ${gateErr.message}`);
+    }
 
+    const verdict = gateResult && gateResult.verdict;
+
+    if (verdict === 'DENY') {
+        throw new Error(`Constitutional gate DENY for ${feature.id}: ${(gateResult.risks || []).join(', ') || 'policy violation'}`);
+    }
+
+    // RESTRICT: halve planning token budget and flag as restricted
+    if (verdict === 'RESTRICT') {
+        workstream = workstream; // no-op (workstream is a string, immutable here)
+        feature = { ...feature, _restricted: true, _maxTokens: 1500 };
+        console.log(`[Master] planFeature ${feature.id} — RESTRICTED by constitution gate (risks: ${(gateResult.risks || []).join(', ')})`);
+    }
+
+    const _featureClass = _preClassifyFeature(feature);
+    let planModel = (_featureClass === 'critical' || _featureClass === 'complex') ? _SONNET : MODEL;
+    console.log(`[Master] planFeature ${feature.id} — class: ${_featureClass}, model: ${planModel}`);
+    // Upgrade plan model if adaptation engine has a high-confidence ARCHITECT recommendation
+    try {
+        const _ae = require('./adaptation-engine');
+        const _archRec = _ae.getRecommendationsFor({ stage: 'ARCHITECT' })
+            .find(a => a.type === 'model_tier' && a.params?.recommendedModel && a.confidence >= 0.5);
+        if (_archRec && planModel !== _SONNET) {
+            planModel = _archRec.params.recommendedModel;
+            console.log(`[Master] planFeature model upgraded by adaptation: ${planModel} (conf:${_archRec.confidence})`);
+        }
+    } catch {}
+    const context = await memory.getFullContextAsync();
+
+    const _planMaxTokens = feature._restricted ? (feature._maxTokens || 1500) : 3000;
     const res = await Promise.race([
-        _anthro.messages.create({
-        model: planModel,
-        max_tokens: 3000,
-        system: [{ type: 'text', cache_control: { type: 'ephemeral' }, text: `You are a senior architect planning features for Apex AI OS.
+        runtime.execute({ client: _anthro, model: planModel, caller: 'master_planner', maxTokens: _planMaxTokens,
+            system: [{ type: 'text', cache_control: { type: 'ephemeral' }, text: `You are a senior architect planning features for Apex AI OS.
 Apex is a Node.js/Express voice-first AI OS on Render.
 Stack: Node.js, Express, Supabase, Anthropic Claude API,
 Deepgram STT/TTS, Gmail OAuth2, Ruflo agents, Playwright browser.
@@ -172,21 +277,27 @@ Output ONLY a JSON object with no markdown:
   "permissionReason": "why permission needed or empty string",
   "estimatedComplexity": "simple|moderate|complex"
 }` }],
-        messages: [{
-            role: 'user',
-            content: `WORKSTREAM: ${workstream}\nFEATURE: ${feature.id} — ${feature.title}\n\nSYSTEM CONTEXT:\n${context}\n\nPlan this feature.`
-        }]
-        }),
+            messages: [{
+                role: 'user',
+                content: `WORKSTREAM: ${workstream}\nFEATURE: ${feature.id} — ${feature.title}\n\nSYSTEM CONTEXT:\n${context}\n\nPlan this feature.`
+            }],
+        }).then(r => r.result),
         new Promise((_, reject) => setTimeout(() => reject(new Error('planFeature timeout after 60s')), 60000))
     ]);
 
     const text = res.content.map(i => i.text || '').join('').trim();
-    const first = text.indexOf('{');
-    const last = text.lastIndexOf('}');
-    if (first === -1 || last === -1) throw new Error(`No plan JSON returned for ${feature.id}`);
     let plan;
-    try { plan = JSON.parse(text.slice(first, last + 1)); }
-    catch (e) { throw new Error(`Plan JSON parse failed for ${feature.id}: ${e.message}`); }
+    try {
+        const first = text.indexOf('{');
+        if (first === -1) throw new Error('No JSON object found');
+        let depth = 0, end = -1;
+        for (let i = first; i < text.length; i++) {
+            if (text[i] === '{') depth++;
+            else if (text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+        }
+        if (end === -1) throw new Error('Unterminated JSON object');
+        plan = JSON.parse(text.slice(first, end + 1));
+    } catch (e) { throw new Error(`Plan JSON parse failed for ${feature.id}: ${e.message}`); }
     _planCache.set(feature.id, plan);
     return plan;
 }
@@ -222,6 +333,7 @@ function _updateKanban(feature, status) {
         board = board.replace(new RegExp(`^\\- \\[${feature.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\].*$`, 'gm'), '');
         // Add to correct section
         const section = status === 'complete' ? '## Complete' : status === 'in-progress' ? '## In Progress' : '## Pending';
+        if (!board.includes(section)) board += '\n' + section + '\n';
         board = board.replace(section, section + '\n' + entry);
         // Clean up extra blank lines
         board = board.replace(/\n{3,}/g, '\n\n');
@@ -577,7 +689,7 @@ async function autoApproveStandardPermissions() {
         console.log(`[AutoApprove] AUTO-APPROVING ${featureId} — reason: "${reason}"`);
         try {
             await _sb.from('apex_notifications').update({ read: true }).eq('id', row.id);
-            runFeatureWithPermission(featureId)
+            await runFeatureWithPermission(featureId)
                 .catch(e => console.error(`[AutoApprove] ${featureId} run error:`, e.message));
         } catch (e) {
             console.error(`[AutoApprove] failed to approve ${featureId}:`, e.message);
@@ -588,8 +700,9 @@ async function autoApproveStandardPermissions() {
 // ── gstack-pattern: Office Hours — product interrogation before building ──────
 // Validates feature requirements with forcing questions before dev starts.
 async function officeHours(topic) {
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 1500,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'officeHours',
+        maxTokens: 1500,
         system: `You are a senior product manager running office hours for Apex AI OS.
 Ask sharp, forcing questions that expose unstated assumptions, edge cases, and misaligned expectations.
 Format: numbered list of 5-8 questions the builder must answer before writing any code.
@@ -608,8 +721,9 @@ async function qaLead(featureId, filePaths = []) {
         catch { return `// ${fp} (not found)`; }
     }).join('\n');
 
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 2000,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'qaLead',
+        maxTokens: 2000,
         system: `You are the QA Lead for Apex AI OS. Produce a concrete test checklist for the feature.
 Include: happy path, error states, edge cases, mobile/voice, accessibility, rate limiting.
 Format: markdown checklist. No preamble.`,
@@ -626,8 +740,9 @@ async function releaseCheck(features = []) {
     const completedIds = Object.values(roadmap).flatMap(ws => ws.completed.map(f => f.id));
     const pendingCount = Object.values(roadmap).reduce((a, ws) => a + ws.pending.length, 0);
 
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 1000,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'releaseCheck',
+        maxTokens: 1000,
         system: `You are the Release Manager for Apex AI OS. Produce a go/no-go release assessment.
 Check: completed features, pending blockers, known risks, recommended action.
 Format: ## Go/No-Go\n[decision]\n\n## Blockers\n[list]\n\n## Risks\n[list]\n\n## Recommended Action\n[action]`,
@@ -648,8 +763,9 @@ async function retro(period = 'week') {
         decisions
     ]);
 
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 1500,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'retro',
+        maxTokens: 1500,
         system: `You are facilitating a ${period}ly retrospective for Apex AI OS.
 Format: ## What Worked\n## What Didn't\n## Surprises\n## Next ${period[0].toUpperCase()}${period.slice(1)} Actions (3 max)
 Be specific. Extract from lessons/decisions, not generic platitudes.`,
@@ -663,8 +779,9 @@ Be specific. Extract from lessons/decisions, not generic platitudes.`,
 
 // ── gstack-pattern: Investigate — systematic root-cause analysis ──────────────
 async function investigate(errorDescription, context = {}) {
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 2000,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'investigate',
+        maxTokens: 2000,
         system: `You are a systematic debugger for Apex AI OS (Node.js/Express/Supabase/Playwright).
 Use the 5-Whys method. Format:
 ## Symptoms\n## Root Cause Hypothesis\n## Evidence Needed\n## 5-Whys\n## Fix Strategy\n## Rollback Plan
@@ -708,8 +825,9 @@ async function codeReview(filePaths = [], context = '') {
         } catch { return `// ${fp} (not found)`; }
     }).join('\n\n');
 
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 2500,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'codeReview',
+        maxTokens: 2500,
         system: `You are a senior engineer reviewing code for Apex AI OS (Node.js/Express/Supabase).
 Review for: correctness, security (STRIDE), performance, maintainability, adherence to project style.
 Format: ## Summary\n## Critical Issues\n## Minor Issues\n## Security (STRIDE)\n## Recommendations
@@ -724,8 +842,9 @@ Be specific — include line numbers and code snippets. No preamble.`,
 
 // ── gstack-pattern: Plan Eng Review — architecture and technical review ───────
 async function planEngReview(featureId, planObj = {}) {
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 2000,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'planEngReview',
+        maxTokens: 2000,
         system: `You are the engineering lead for Apex AI OS reviewing a feature plan.
 Check: feasibility, API design, data model impact, security risks, complexity accuracy, missing steps.
 Format: ## Verdict (approve/revise/reject)\n## Technical Concerns\n## Suggested Changes\n## Risk Rating (low/medium/high)
@@ -739,8 +858,9 @@ Be blunt. If the plan has gaps, name them specifically.`,
 
 // ── gstack-pattern: Plan Design Review — UX and visual quality review ─────────
 async function planDesignReview(featureId, spec = '') {
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 2000,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'planDesignReview',
+        maxTokens: 2000,
         system: `You are the design lead for Apex AI OS reviewing a feature's UX/UI specification.
 Apply: Emil Kowalski motion restraint, OKLCH color, 44px touch targets, WCAG AA.
 Check: information architecture, empty states, error states, loading states, voice-first considerations.
@@ -754,8 +874,9 @@ Format: ## Verdict (approve/revise)\n## UX Issues\n## Visual Issues\n## Accessib
 
 // ── gstack-pattern: Design Consultation — open-ended design ideation ──────────
 async function designConsultation(brief) {
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 2000,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'designConsultation',
+        maxTokens: 2000,
         system: `You are a product designer for Apex AI OS — voice-first, calm, purposeful.
 Reference: Emil Kowalski (motion restraint), OKLCH color, minimal but warm.
 For the brief below, provide: the core design principle, 3 direction options, tradeoffs, and recommended direction.
@@ -771,8 +892,9 @@ Format: ## Core Principle\n## Direction A\n## Direction B\n## Direction C\n## Re
 // Generates N distinct design directions for the same brief in one pass.
 async function designShotgun(brief, variants = 3) {
     const n = Math.min(Math.max(variants, 2), 5);
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 3000,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'designShotgun',
+        maxTokens: 3000,
         system: `You are a product designer generating ${n} maximally distinct UI directions for Apex AI OS.
 Each direction should differ fundamentally in visual language, hierarchy, or interaction model.
 For each: name, one-sentence philosophy, key visual decisions, motion approach, risk.
@@ -791,8 +913,9 @@ async function documentRelease(features = [], version = '') {
         ws.completed.filter(f => features.length === 0 || features.includes(f.id))
     );
 
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 2000,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'documentRelease',
+        maxTokens: 2000,
         system: `You are writing release notes for Apex AI OS.
 Format: user-facing, clear, benefit-oriented. No jargon.
 Structure: ## What's New\n## Improvements\n## Bug Fixes\n## Breaking Changes (if any)\n## Upgrade Notes
@@ -856,15 +979,16 @@ async function ship(featureId, opts = {}) {
 
     // Git tag + push
     let tagResult = 'skipped';
-    if (process.env.GITHUB_TOKEN) {
+    if (_ghToken) {
         try {
-            const { execSync } = require('child_process');
-            const repoUrl = `https://apex-autopilot:${process.env.GITHUB_TOKEN}@github.com/APoLLoGoD666/ai-os-server.git`;
-            execSync(`git tag ${releaseTag}`, { cwd: ROOT, stdio: 'pipe' });
-            execSync(`git push ${repoUrl} ${releaseTag}`, { cwd: ROOT, stdio: 'pipe' });
+            const repoUrl = `https://oauth2:${_ghToken}@github.com/APoLLoGoD666/ai-os-server.git`;
+            const _tagR = spawnSync('git', ['tag', releaseTag], { cwd: ROOT, stdio: 'pipe' });
+            if (_tagR.status !== 0) throw new Error(_tagR.stderr?.toString() || 'git tag failed');
+            const _pushR = spawnSync('git', ['push', repoUrl, releaseTag], { cwd: ROOT, stdio: 'pipe' });
+            if (_pushR.status !== 0) throw new Error(_pushR.stderr?.toString() || 'git push failed');
             tagResult = releaseTag;
         } catch (e) {
-            tagResult = `tag-failed: ${e.message.slice(0, 100)}`;
+            tagResult = `tag-failed: ${_mask(e.message).slice(0, 100)}`;
         }
     }
 
@@ -889,8 +1013,9 @@ async function codex(query) {
     }));
     const corpus = pages.filter(Boolean).map(p => `## ${p.path}\n${p.content}`).join('\n\n---\n\n');
 
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 1500,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'codex',
+        maxTokens: 1500,
         system: `You are the institutional memory for Apex AI OS.
 Search the vault corpus for what's relevant to the query.
 Return: exact quotes, page references, synthesis of relevant context, and what's NOT found.
@@ -918,8 +1043,9 @@ async function autoplan(description, workstream = 'Operations') {
 // ── gstack-pattern: Pair agent — interactive pair-programming session ─────────
 // Given a task + existing code, returns next concrete step + reasoning.
 async function pairAgent(task, currentCode = '', lastError = '') {
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 2000,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'pairAgent',
+        maxTokens: 2000,
         system: `You are a pair programmer for Apex AI OS (Node.js/Express/Supabase).
 Your role: give the next SINGLE concrete step to move the task forward.
 Rules: one step only, with exact code or command; no future planning; fix errors first.
@@ -933,8 +1059,9 @@ Format: ## Next Step\n[exact action]\n\n## Why\n[one sentence]\n\n## Code\n\`\`\
 // ── gstack-pattern: Careful — pre-write review before applying file changes ───
 // Given intended changes, returns risk assessment before any code is written.
 async function careful(fileToChange, intendedChange, existingContent = '') {
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 1500,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'careful',
+        maxTokens: 1500,
         system: `You are a careful senior engineer reviewing a proposed change before it is applied.
 Check: does it break anything? does it conflict with existing code? is there a safer approach?
 Format: ## Risk (low/medium/high)\n## Conflicts\n## Side Effects\n## Recommended Approach\n## Safe to Proceed? (yes/no/revise)`,
@@ -953,8 +1080,9 @@ async function freeze(branchName = 'main') {
         gitStatus = execSync('git status --short && git log --oneline -5', { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' });
     } catch (e) { gitStatus = `git error: ${e.message}`; }
 
-    const res = await _anthro.messages.create({
-        model: MODEL, max_tokens: 800,
+    const { result: res } = await runtime.execute({
+        tier: 'fast', caller: 'freeze',
+        maxTokens: 800,
         system: `You are enforcing a branch freeze check for Apex AI OS.
 A freeze means: no new features, only critical bug fixes.
 Assess the git status and recent commits. Decide if it's safe to freeze.

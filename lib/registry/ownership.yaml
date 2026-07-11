@@ -1,0 +1,25 @@
+domain: Registry
+capability: Entity Graph and Query Layer
+runtime: core
+criticality: critical
+owner: Registry Kernel
+entity_id: DOM-000003
+dependencies:
+  - Infrastructure
+  - Memory
+consumers:
+  - Intelligence
+  - Observability
+  - Interface
+  - Development
+events_emitted:
+  - ENTITY_CREATED
+  - ENTITY_UPDATED
+  - EDGE_ADDED
+  - EDGE_REMOVED
+  - MIGRATION_ADDED
+  - SNAPSHOT_CREATED
+  - ARCHITECTURE_UPDATED
+events_consumed: []
+state_version_sensitive: true
+test_suite: tests/registry/index.js

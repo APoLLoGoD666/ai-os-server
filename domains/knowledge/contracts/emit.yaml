@@ -1,0 +1,27 @@
+domain: DOM-000008
+events:
+  - name: ENTITY_CREATED
+    description: A new knowledge entity was indexed.
+    schema:
+      entity_id: string
+      name: string
+      type: string
+      source: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 500
+    consumers:
+      - DOM-000003   # Registry registers the knowledge entity
+
+  - name: EDGE_ADDED
+    description: A new knowledge relationship was discovered.
+    schema:
+      from: string
+      to: string
+      type: string
+      label: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 500
+    consumers:
+      - DOM-000003   # Registry adds the edge
