@@ -1280,6 +1280,23 @@ async function runAgentTeam(spec, taskId) {
         setImmediate(() => _gateway.storeMemory({ layer: 1, taskId, source: 'pipeline:START',
             content: JSON.stringify({ objective: spec.objective, complexity, routeType: routeDecision.type }),
             requestingEntity: 'orchestrator' }).catch(() => {}));
+
+        // Record intent before pipeline executes (non-blocking — fire and forget)
+        let _intentId = null;
+        setImmediate(async () => {
+            try {
+                const _intent = require('../lib/intent');
+                _intentId = await _intent.recordIntent({
+                    actorId:    'agent-orchestrator',
+                    domain:     spec.domain || 'development',
+                    goal:       (spec.objective || spec.task || 'agent pipeline task').slice(0, 500),
+                    rationale:  spec.rationale || null,
+                    intentType: 'goal_pursuit',
+                    confidence: 0.8,
+                    actionRef:  taskId,
+                });
+            } catch (_) {}
+        });
         ctx.gatewayPkg = await _gateway.getContext({
             taskId,
             description:     spec.objective,
@@ -1554,6 +1571,7 @@ async function runAgentTeam(spec, taskId) {
             console.warn('[DeployGate] HELD (pre-model) — deployment_policy=hold, blocking before model calls');
             setImmediate(() => _reflector(spec, agentLogs, true, taskId, ctx.traceId, ctx).catch(() => {}));
             setImmediate(() => _auditLog(taskId, spec, true, agentLogs, '0.00000', complexity, ctx).catch(() => {}));
+            setImmediate(async () => { if (_intentId) { try { await require('../lib/intent').closeAttribution({ intentId: _intentId, outcomeRef: taskId, outcomeMatched: true }); } catch (_) {} } });
             return { success: true, commitHash: null, held: true, holdReason: 'deployment_policy=hold — blocked before model calls', agentLogs, cost: '0.00000', complexity, models: ctx.agentModels };
         }
 
@@ -1751,6 +1769,7 @@ async function runAgentTeam(spec, taskId) {
             const cost = ctx.costUsd.toFixed(5);
             setImmediate(() => _reflector(spec, agentLogs, true, taskId, ctx.traceId, ctx).catch(() => {}));
             setImmediate(() => _auditLog(taskId, spec, true, agentLogs, cost, complexity, ctx).catch(() => {}));
+            setImmediate(async () => { if (_intentId) { try { await require('../lib/intent').closeAttribution({ intentId: _intentId, outcomeRef: taskId, outcomeMatched: true }); } catch (_) {} } });
             return { success: true, commitHash: null, held: true, holdReason: `deployment_policy=hold (${ctx.runtimeControls?.autonomy?.label || 'runtime gate'})`, agentLogs, cost, complexity, models: ctx.agentModels };
         }
         if (_deployPolicy === 'staged') {

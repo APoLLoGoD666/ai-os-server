@@ -118,6 +118,60 @@ router.post('/reality-architecture/counterfactual/worlds/:id/analyze', async (re
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// GET /api/reality-architecture/counterfactual/worlds?basisDecision=
+router.get('/reality-architecture/counterfactual/worlds', async (req, res) => {
+    try {
+        const cf = require('../lib/counterfactual');
+        const worlds = await cf.getWorlds(req.query.basisDecision);
+        res.json({ ok: true, worlds, count: worlds.length });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Seed + Baseline ───────────────────────────────────────────────────────────
+router.post('/reality-architecture/seed', async (req, res) => {
+    try {
+        const obs    = require('../lib/observer-health');
+        const attn   = require('../lib/attention/attention-manager');
+        const mm     = require('../lib/meta-model');
+        const sm     = require('../lib/reality/self-model');
+        const fabric = require('../lib/reality/fabric');
+        const [sensors, profiles, assessments, selfModel, baseline] = await Promise.all([
+            obs.seedCoreSensors(),
+            attn.seedDomainAttentionProfiles(),
+            mm.seedInitialAssessment(),
+            sm.seedSelfModel(),
+            fabric.writeBaselineCheckpoint(),
+        ]);
+        res.json({ ok: true, sensors, profiles, assessments, selfModel, baseline: baseline.length });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Theory of Change ──────────────────────────────────────────────────────────
+router.post('/reality-architecture/toc/chains', async (req, res) => {
+    try {
+        const toc = require('../lib/intent/theory-of-change');
+        const id = await toc.createChain(req.body);
+        res.json({ ok: true, chainId: id });
+    } catch (e) { res.status(400).json({ ok: false, error: e.message }); }
+});
+
+router.get('/reality-architecture/toc/chains', async (req, res) => {
+    try {
+        const toc = require('../lib/intent/theory-of-change');
+        const chains = await toc.getChainsByDomain(req.query.domain || 'civilisation');
+        res.json({ ok: true, chains, count: chains.length });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Self-Model ────────────────────────────────────────────────────────────────
+router.get('/reality-architecture/self-model', async (req, res) => {
+    try {
+        const sm = require('../lib/reality/self-model');
+        const [model, confidence] = await Promise.all([sm.getSelfModel(), sm.getSelfModelConfidence()]);
+        res.json({ ok: true, model, ...confidence });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // ── Observer Health ───────────────────────────────────────────────────────────
 router.get('/reality-architecture/observers', async (req, res) => {
     try {
