@@ -11869,6 +11869,189 @@ if(pipe){
                 </div>
             </div><!-- #page-civilisation -->
 
+            <!-- ══ PAGE: REALITY ══ -->
+            <div class="page" id="page-reality">
+
+                <!-- Page Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">REALITY</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">FABRIC &middot; CLAIMS &middot; HEALTH &middot; EPISTEMIC</div>
+                    </div>
+                    <div style="text-align:right">
+                        <button class="ds-btn cyan" data-fn="realitySeed">&#9650; Seed</button>
+                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">RA &middot; REALITY ARCHITECTURE</div>
+                    </div>
+                </div>
+
+                <!-- System Reality Health (full width) -->
+                <div class="ds-panel">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot cyan"></span>
+                            <span class="t-label">System Reality Health</span>
+                        </div>
+                        <div class="ds-panel-header-right">
+                            <button class="ds-btn xs" data-fn="realityHealthRefresh">&#8634;</button>
+                        </div>
+                    </div>
+                    <div id="realityHealthGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:8px 0">
+                        <div class="skel skel-row skel-wide"></div>
+                    </div>
+                </div>
+
+                <!-- Observer Health + Belief-Reality Gap -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot green"></span>
+                                <span class="t-label">Observer Health</span>
+                            </div>
+                        </div>
+                        <div id="realityObserversPanel" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot amber"></span>
+                                <span class="t-label">Belief-Reality Gap</span>
+                            </div>
+                        </div>
+                        <div id="realityBeliefGapPanel" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Epistemic Capital + Attention Queue + Understanding -->
+                <div class="ds-grid-3">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Epistemic Capital</span>
+                            </div>
+                        </div>
+                        <div id="realityEpistemicPanel" style="display:flex;flex-direction:column;gap:8px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Attention Queue</span>
+                            </div>
+                        </div>
+                        <div id="realityAttentionPanel" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Understanding</span>
+                            </div>
+                        </div>
+                        <div id="realityUnderstandingPanel" style="display:flex;flex-direction:column;gap:8px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Intent Attribution + Claims Browser -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot green"></span>
+                                <span class="t-label">Intent Attribution</span>
+                            </div>
+                        </div>
+                        <div id="realityIntentPanel" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Reality Claims</span>
+                            </div>
+                            <div class="ds-panel-header-right">
+                                <select id="realityClaimsFilter" style="background:#111;color:#ccc;border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:2px 6px;font-size:11px">
+                                    <option value="">All stages</option>
+                                    <option value="verified">Verified</option>
+                                    <option value="observed">Observed</option>
+                                    <option value="contested">Contested</option>
+                                    <option value="potential">Potential</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="realityClaimsPanel" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Counterfactual Worlds + Meta-Model -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Counterfactual Worlds</span>
+                            </div>
+                        </div>
+                        <div id="realityCounterfactualPanel" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot amber"></span>
+                                <span class="t-label">Meta-Model Quality</span>
+                            </div>
+                        </div>
+                        <div id="realityMetaModelPanel" style="display:flex;flex-direction:column;gap:8px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mental Models + Civilization Self-Model -->
+                <div class="ds-grid-2">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot purple"></span>
+                                <span class="t-label">Mental Models</span>
+                            </div>
+                        </div>
+                        <div id="realityMentalModelsPanel" style="display:flex;flex-direction:column;gap:6px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Civilization Self-Model</span>
+                            </div>
+                        </div>
+                        <div id="realitySelfModelPanel" style="display:flex;flex-direction:column;gap:8px">
+                            <div class="skel skel-row skel-wide"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- #page-reality -->
+
         </div><!-- .page-wrap -->
 
         <!-- ══ INPUT ZONE ══ -->
@@ -11935,6 +12118,10 @@ if(pipe){
             <span class="nav-icon">⊛</span>
             <span class="nav-label">Civilisation</span>
         </button>
+        <button class="nav-btn" id="nav-reality">
+            <span class="nav-icon">◍</span>
+            <span class="nav-label">Reality</span>
+        </button>
         <button class="nav-btn" id="nav-more" style="display:none" aria-label="More pages">
             <span class="nav-icon" style="letter-spacing:-1px">•••</span>
             <span class="nav-label">More</span>
@@ -11945,7 +12132,7 @@ if(pipe){
 
 <script>
 (function() {
-    var pages = ['command', 'overview', 'operation', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'civilisation'];
+    var pages = ['command', 'overview', 'operation', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'civilisation', 'reality'];
     var activePage = 'command';
 
     var pageMeta = {
@@ -11960,7 +12147,8 @@ if(pipe){
         university:    { title:'University',  sub:'Coursework · Revision · Notes' },
         occult:        { title:'Occult',      sub:'Research · Esoteric · Archive' },
         research:      { title:'Research',    sub:'Intelligence · Sources · Data' },
-        civilisation:  { title:'Civilisation', sub:'Genome · Consensus · Clock · Domains' }
+        civilisation:  { title:'Civilisation', sub:'Genome · Consensus · Clock · Domains' },
+        reality:       { title:'Reality',       sub:'Fabric · Claims · Health · Epistemic' }
     };
     window.switchPage = function(name) {
         document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
@@ -14743,6 +14931,7 @@ async function refreshFast() {
 
 async function refreshSlow() {
     await Promise.allSettled([refreshEmailPanel(), refreshFinancePanel(), refreshRoutinesPanel()]);
+    if (typeof window.loadRealityPage === 'function') window.loadRealityPage();
 }
 
 async function refreshAll() {
@@ -20295,6 +20484,342 @@ window.apexFileDropHandler = function(e){
                 .then(function(d) { setTimeout(expLoad, 300); })
                 .catch(function() { e.target.disabled = false; e.target.textContent = '✕ Reject'; });
         }
+    });
+})();
+
+// ── Reality Architecture Dashboard ────────────────────────────────────────────
+(function() {
+    function h() { return typeof buildApiHeaders === 'function' ? buildApiHeaders() : {'x-app-key': window._appKey||''}; }
+    function stageCol(s) {
+        var m = { verified:'#00e5b4', validated:'#00e5b4', integrated:'#00e5b4', embedded:'#00e5b4',
+                  critical:'#06b6d4', evolved:'#a78bfa', observed:'#06b6d4',
+                  contested:'#f5a623', deprecated:'#ff4757', superseded:'#8893a0',
+                  potential:'#8893a0', emergent:'#8893a0', revised:'#f5a623' };
+        return m[s] || '#8893a0';
+    }
+    function bar(v, col) {
+        var pct = (Math.min(1, Math.max(0, v||0))*100).toFixed(0);
+        return '<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:3px">' +
+               '<div style="height:4px;width:'+pct+'%;background:'+col+';border-radius:2px;transition:width .4s"></div></div>';
+    }
+    function healthCol(v) { return (v||0) >= 0.8 ? '#00e5b4' : (v||0) >= 0.5 ? '#f5a623' : '#ff4757'; }
+
+    // 1. System Reality Health
+    function loadRealityHealth() {
+        var el = document.getElementById('realityHealthGrid');
+        if (!el) return;
+        fetch('/api/reality/health', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok || !d.scores || !d.scores.length) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No health data — seed first</span>'; return; }
+                var byEntity = {};
+                d.scores.forEach(function(s) {
+                    if (!byEntity[s.entity_id]) byEntity[s.entity_id] = { entity_id: s.entity_id, total: 0, count: 0 };
+                    byEntity[s.entity_id].total += (s.score || 0);
+                    byEntity[s.entity_id].count++;
+                });
+                el.innerHTML = Object.values(byEntity).map(function(e) {
+                    var avg = e.count ? e.total / e.count : 0;
+                    var col = healthCol(avg);
+                    return '<div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:10px 12px;border-left:3px solid '+col+'">' +
+                        '<div style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+';letter-spacing:1px">' + (e.entity_id||'').replace('DOM-','D') + '</div>' +
+                        '<div style="font:600 20px/1 \'JetBrains Mono\',monospace;color:#e8eaf0;margin:6px 0 2px">' + (avg*100).toFixed(0) + '%</div>' +
+                    '</div>';
+                }).join('');
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 2. Observer Health
+    function loadObservers() {
+        var el = document.getElementById('realityObserversPanel');
+        if (!el) return;
+        fetch('/api/reality-architecture/observers', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok || !d.sensors || !d.sensors.length) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No sensors seeded</span>'; return; }
+                el.innerHTML = d.sensors.slice(0,8).map(function(s) {
+                    var col = healthCol(s.health_score);
+                    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+                        '<div><div style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#e8eaf0">' + (s.sensor_name||s.sensor_id||'?') + '</div>' +
+                        '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:2px">' + (s.domain||'') + '</div></div>' +
+                        '<div style="font:700 12px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + ((s.health_score||0)*100).toFixed(0) + '%</div>' +
+                    '</div>';
+                }).join('');
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 3. Belief-Reality Gap
+    function loadBeliefGap() {
+        var el = document.getElementById('realityBeliefGapPanel');
+        if (!el) return;
+        fetch('/api/reality-architecture/beliefs/DOM-000001/gap', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No gap data</span>'; return; }
+                var gap = d.gap_score || 0;
+                var col = gap < 0.2 ? '#00e5b4' : gap < 0.5 ? '#f5a623' : '#ff4757';
+                el.innerHTML = '<div style="text-align:center;padding:12px 0">' +
+                    '<div style="font:700 30px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + (gap*100).toFixed(1) + '%</div>' +
+                    '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:6px;letter-spacing:2px">GAP SCORE</div>' +
+                '</div>' +
+                '<div style="display:flex;flex-direction:column;gap:4px">' +
+                    '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8893a0">Verified</span><span style="font-size:11px;color:#00e5b4">' + (d.verified_count||0) + '</span></div>' +
+                    '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8893a0">Contested</span><span style="font-size:11px;color:#f5a623">' + (d.contested_count||0) + '</span></div>' +
+                    '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8893a0">Residual</span><span style="font-size:11px;color:#ff4757">' + (d.residual_count||0) + '</span></div>' +
+                '</div>';
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 4. Epistemic Capital
+    function loadEpistemicCapital() {
+        var el = document.getElementById('realityEpistemicPanel');
+        if (!el) return;
+        fetch('/api/reality-architecture/epistemic-capital/DOM-000001', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No EC data</span>'; return; }
+                var dims = ['credibility','accuracy','calibration','evidence_quality'];
+                el.innerHTML = dims.map(function(k) {
+                    var v = d[k] || 0;
+                    var col = healthCol(v);
+                    return '<div><div style="display:flex;justify-content:space-between;margin-bottom:2px">' +
+                        '<span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">' + k.replace('_',' ').toUpperCase() + '</span>' +
+                        '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + ((v||0)*100).toFixed(0) + '%</span>' +
+                    '</div>' + bar(v, col) + '</div>';
+                }).join('<div style="height:7px"></div>') +
+                (d.composite !== undefined ? '<div style="margin-top:12px;text-align:center;font:700 18px/1 \'JetBrains Mono\',monospace;color:#00e5b4">' + (d.composite*100).toFixed(1) + '% <span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">COMPOSITE</span></div>' : '');
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 5. Attention Queue
+    function loadAttentionQueue() {
+        var el = document.getElementById('realityAttentionPanel');
+        if (!el) return;
+        fetch('/api/reality-architecture/attention/top?limit=8', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok || !d.items || !d.items.length) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No attention items</span>'; return; }
+                el.innerHTML = d.items.map(function(item, i) {
+                    var urgency = item.urgency_score || item.priority || 0;
+                    var col = urgency >= 0.8 ? '#ff4757' : urgency >= 0.5 ? '#f5a623' : '#8893a0';
+                    return '<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+                        '<div style="font:700 11px/1 \'JetBrains Mono\',monospace;color:'+col+';min-width:18px">' + (i+1) + '</div>' +
+                        '<div style="flex:1;overflow:hidden">' +
+                            '<div style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#e8eaf0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (item.entity_id||item.label||'?') + '</div>' +
+                            '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:2px">' + (item.domain||'') + '</div>' +
+                        '</div>' +
+                        '<div style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + ((urgency||0)*100).toFixed(0) + '</div>' +
+                    '</div>';
+                }).join('');
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 6. Understanding Scores
+    function loadUnderstanding() {
+        var el = document.getElementById('realityUnderstandingPanel');
+        if (!el) return;
+        fetch('/api/reality-architecture/understanding/DOM-000001', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No data</span>'; return; }
+                var dims = d.dimensions || {};
+                var keys = Object.keys(dims);
+                if (!keys.length) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No dimensions scored</span>'; return; }
+                el.innerHTML = keys.slice(0,6).map(function(k) {
+                    var v = dims[k] || 0;
+                    var col = healthCol(v);
+                    return '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                        '<span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">' + k.toUpperCase() + '</span>' +
+                        '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + ((v||0)*100).toFixed(0) + '%</span>' +
+                    '</div>';
+                }).join('<div style="height:4px"></div>') +
+                (d.composite !== undefined ? '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);text-align:center;font:700 16px/1 \'JetBrains Mono\',monospace;color:#00e5b4">' + (d.composite*100).toFixed(1) + '%</div>' : '');
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 7. Intent Attribution
+    function loadIntentAttribution() {
+        var el = document.getElementById('realityIntentPanel');
+        if (!el) return;
+        fetch('/api/reality-architecture/intent/agent-orchestrator/rate', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No attribution data</span>'; return; }
+                var rate = d.attribution_rate || 0;
+                var col = healthCol(rate);
+                el.innerHTML = '<div style="text-align:center;padding:10px 0">' +
+                    '<div style="font:700 26px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + (rate*100).toFixed(1) + '%</div>' +
+                    '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:5px;letter-spacing:2px">ATTRIBUTION RATE</div>' +
+                '</div>' +
+                '<div style="display:flex;flex-direction:column;gap:3px">' +
+                    '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8893a0">Total</span><span style="font-size:11px;color:#e8eaf0">' + (d.total||0) + '</span></div>' +
+                    '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8893a0">Attributed</span><span style="font-size:11px;color:#00e5b4">' + (d.attributed||0) + '</span></div>' +
+                    '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8893a0">Pending</span><span style="font-size:11px;color:#f5a623">' + (d.pending||0) + '</span></div>' +
+                '</div>';
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 8. Reality Claims Browser
+    function loadClaims() {
+        var el = document.getElementById('realityClaimsPanel');
+        var filter = document.getElementById('realityClaimsFilter');
+        if (!el) return;
+        var url = '/api/reality/claims?limit=20' + (filter && filter.value ? '&stage=' + encodeURIComponent(filter.value) : '');
+        fetch(url, { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok || !d.claims || !d.claims.length) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No claims</span>'; return; }
+                el.innerHTML = d.claims.map(function(c) {
+                    var col = stageCol(c.stage);
+                    return '<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                            '<div style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#e8eaf0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (c.claim_key||c.id||'?') + '</div>' +
+                            '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;color:'+col+';margin-left:8px;flex-shrink:0">' + (c.stage||'?').toUpperCase() + '</div>' +
+                        '</div>' +
+                        '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:2px">' + (c.domain||'') + ' &middot; ' + ((c.confidence||0)*100).toFixed(0) + '% conf</div>' +
+                    '</div>';
+                }).join('');
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 9. Counterfactual Worlds
+    function loadCounterfactual() {
+        var el = document.getElementById('realityCounterfactualPanel');
+        if (!el) return;
+        fetch('/api/reality-architecture/counterfactual/worlds', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok || !d.worlds || !d.worlds.length) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No counterfactual worlds</span>'; return; }
+                el.innerHTML = d.worlds.slice(0,6).map(function(w) {
+                    var div = w.divergence_score || 0;
+                    var col = div > 0.7 ? '#ff4757' : div > 0.4 ? '#f5a623' : '#00e5b4';
+                    return '<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+                        '<div style="display:flex;justify-content:space-between">' +
+                            '<div style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#e8eaf0">' + (w.label||w.id||'World') + '</div>' +
+                            '<div style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + (div*100).toFixed(0) + '% div</div>' +
+                        '</div>' +
+                        '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:2px">' + (w.basis_decision||'') + '</div>' +
+                    '</div>';
+                }).join('');
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 10. Meta-Model Quality
+    function loadMetaModel() {
+        var el = document.getElementById('realityMetaModelPanel');
+        if (!el) return;
+        fetch('/api/reality-architecture/meta-model', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No meta-model data</span>'; return; }
+                var layers = d.layers || [];
+                if (!layers.length) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No layers assessed</span>'; return; }
+                el.innerHTML = layers.slice(0,6).map(function(l) {
+                    var avg = ((l.completeness||0)+(l.accuracy||0)+(l.consistency||0)+(l.currency||0))/4;
+                    var col = healthCol(avg);
+                    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+                        '<span style="font:500 10px/1 \'JetBrains Mono\',monospace;color:#8893a0">' + (l.layer||'?') + '</span>' +
+                        '<span style="font:700 11px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + (avg*100).toFixed(0) + '%</span>' +
+                    '</div>';
+                }).join('');
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 11. Mental Models
+    function loadMentalModels() {
+        var el = document.getElementById('realityMentalModelsPanel');
+        if (!el) return;
+        fetch('/api/reality-architecture/mental-models/agent-orchestrator', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok || !d.models || !d.models.length) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No mental models</span>'; return; }
+                el.innerHTML = d.models.slice(0,6).map(function(m) {
+                    var col = healthCol(m.confidence);
+                    return '<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+                        '<div style="display:flex;justify-content:space-between">' +
+                            '<span style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#e8eaf0">' + (m.domain||m.model_key||'?') + '</span>' +
+                            '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + ((m.confidence||0)*100).toFixed(0) + '%</span>' +
+                        '</div>' +
+                        '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:2px">' + (m.framework||'') + '</div>' +
+                    '</div>';
+                }).join('');
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // 12. Civilization Self-Model
+    function loadSelfModel() {
+        var el = document.getElementById('realitySelfModelPanel');
+        if (!el) return;
+        fetch('/api/reality-architecture/self-model', { headers: h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok) { el.innerHTML = '<span style="color:#8893a0;font-size:11px">No self-model</span>'; return; }
+                var model = d.model || [];
+                el.innerHTML = model.slice(0,6).map(function(dim) {
+                    var v = dim.current_value || 0;
+                    var col = healthCol(v);
+                    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+                        '<div>' +
+                            '<div style="font:500 10px/1 \'JetBrains Mono\',monospace;color:#8893a0">' + (dim.dimension||'?') + '</div>' +
+                            '<div style="font:500 8px/1 \'JetBrains Mono\',monospace;color:#555;margin-top:2px">target ' + ((dim.target_value||0)*100).toFixed(0) + '%</div>' +
+                        '</div>' +
+                        '<div style="font:700 14px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + (v*100).toFixed(0) + '%</div>' +
+                    '</div>';
+                }).join('') +
+                (d.overall_confidence !== undefined ? '<div style="margin-top:10px;text-align:center;font:700 15px/1 \'JetBrains Mono\',monospace;color:#00e5b4">' + (d.overall_confidence*100).toFixed(1) + '% <span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">confidence</span></div>' : '');
+            })
+            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+    }
+
+    // Master load (called by switchPage and refreshSlow)
+    window.loadRealityPage = function() {
+        loadRealityHealth();
+        loadObservers();
+        loadBeliefGap();
+        loadEpistemicCapital();
+        loadAttentionQueue();
+        loadUnderstanding();
+        loadIntentAttribution();
+        loadClaims();
+        loadCounterfactual();
+        loadMetaModel();
+        loadMentalModels();
+        loadSelfModel();
+    };
+
+    // Wire page switch
+    var _origSwitch = window.switchPage;
+    window.switchPage = function(name) {
+        _origSwitch(name);
+        if (name === 'reality') window.loadRealityPage();
+    };
+
+    // Claims filter
+    var claimsFilter = document.getElementById('realityClaimsFilter');
+    if (claimsFilter) claimsFilter.addEventListener('change', loadClaims);
+
+    // Seed + health refresh buttons
+    document.addEventListener('click', function(e) {
+        var fn = e.target && e.target.dataset && e.target.dataset.fn;
+        if (fn === 'realitySeed') {
+            e.target.disabled = true; e.target.textContent = '…';
+            fetch('/api/reality-architecture/seed', { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, h()), body:'{}' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) { e.target.disabled=false; e.target.textContent='⬆ Seed'; if (d.ok) window.loadRealityPage(); })
+                .catch(function() { e.target.disabled=false; e.target.textContent='⬆ Seed'; });
+        }
+        if (fn === 'realityHealthRefresh') { loadRealityHealth(); }
     });
 })();
 </script>
