@@ -5,7 +5,7 @@ const multer = require('multer');
 const multerUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 const { requireAppAccess } = require('../../lib/middleware');
 const { listWorkspaceFiles, createWorkspaceFile, embedAndStoreDocument } = require('../../lib/workspace');
-const { pgSaveDocument } = require('../../lib/pg_helpers');
+const { pgSaveDocument } = require('../../lib/supabase-helpers');
 const runtime = require('../../lib/models/runtime');
 
 router.get('/files', requireAppAccess, async (req, res) => {

@@ -6,7 +6,7 @@ const {
     pgListBudgets,
     pgCreateAgentTask,
     pgCreateNotification
-} = require("../lib/pg_helpers");
+} = require("../lib/supabase-helpers");
 const runtime = require("../lib/models/runtime");
 
 const FINANCE_CATEGORIES = [

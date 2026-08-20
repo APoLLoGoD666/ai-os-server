@@ -12,7 +12,7 @@ const { formatRecentMemory, getMemorySummary, extractAndSaveFacts, buildAlexCont
 const { detectDomain }                                              = require('../lib/server-utils');
 const { obsidianAppend }                                            = require('../agent-system/obsidian-client');
 const { DOMAIN_AGENTS: _DOMAIN_AGENTS }                             = require('../agent-system/domain-agents');
-const { pgSearchDocuments }                                         = require('../lib/pg_helpers');
+const { pgSearchDocuments }                                         = require('../lib/supabase-helpers');
 const { getSupabaseClient, getAnthropicClient }                     = require('../lib/clients');
 const { HAIKU_MODEL, SONNET_MODEL }                                 = require('../config');
 const _vcRuntime = require('../lib/models/runtime');

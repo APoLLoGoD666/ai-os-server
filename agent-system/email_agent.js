@@ -19,7 +19,7 @@ const {
     pgGetGmailToken,
     pgSaveGmailToken,
     pgClearGmailToken
-} = require("../lib/pg_helpers");
+} = require("../lib/supabase-helpers");
 const runtime = require("../lib/models/runtime");
 
 async function getGmailClient() {

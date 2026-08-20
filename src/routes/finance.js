@@ -8,7 +8,7 @@ const {
     pgGetFinanceSummaryCurrentMonth,
     pgSaveBudget,
     pgListBudgets
-} = require('../../lib/pg_helpers');
+} = require('../../lib/supabase-helpers');
 const { getCached, setCache, clearCache } = require('../../lib/server-utils');
 
 router.post('/api/finance/transaction', requireAppAccess, async (req, res) => {

@@ -3,7 +3,7 @@
 const router = require('express').Router();
 const { requireAppAccess } = require('../lib/middleware');
 const { getCached, setCache, clearCache } = require('../lib/server-utils');
-const { pgListEmailQueue, pgUpdateEmailQueueStatus } = require('../lib/pg_helpers');
+const { pgListEmailQueue, pgUpdateEmailQueueStatus } = require('../lib/supabase-helpers');
 const { checkEmails, sendEmailReply } = require('../agent-system/email_agent');
 
 router.get('/emails', requireAppAccess, async (req, res) => {

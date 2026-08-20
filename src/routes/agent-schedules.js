@@ -1,7 +1,7 @@
 'use strict';
 const router = require('express').Router();
 const { requireAppAccess, requireCronAccess } = require('../../lib/middleware');
-const { pgListAgentSchedules } = require('../../lib/pg_helpers');
+const { pgListAgentSchedules } = require('../../lib/supabase-helpers');
 const { runDueSchedules, formatScheduleRunSummary } = require('../../lib/agent-task-cycle');
 const sbAdmin = require('../../lib/clients').getSupabaseClient();
 

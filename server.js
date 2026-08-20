@@ -103,7 +103,7 @@ const {
     pgListStandingApprovals,
     pgDisableStandingApproval,
     pgGetEnabledStandingApprovals
-} = require("./lib/pg_helpers");
+} = require("./lib/supabase-helpers");
 const { getWorkspaceStorageDebug } = require("./lib/storage");
 const { APEX_TOOLS, executeApexTool } = require('./lib/apex-tools');
 const {
@@ -252,7 +252,7 @@ const {
     pgSaveGmailToken,
     pgGetGmailToken,
     pgClearGmailToken
-} = require("./lib/pg_helpers");
+} = require("./lib/supabase-helpers");
 
 if (!process.env.OBSIDIAN_URL) {
     console.warn('[Obsidian] OBSIDIAN_URL not set — vault reads/writes will use local filesystem only.');

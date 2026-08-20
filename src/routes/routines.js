@@ -1,7 +1,7 @@
 'use strict';
 const router = require('express').Router();
 const { requireAppAccess } = require('../../lib/middleware');
-const { pgCreateRoutine, pgListRoutines, pgUpdateRoutine, pgDeleteRoutine } = require('../../lib/pg_helpers');
+const { pgCreateRoutine, pgListRoutines, pgUpdateRoutine, pgDeleteRoutine } = require('../../lib/supabase-helpers');
 const { getCached, setCache, clearCache } = require('../../lib/server-utils');
 
 router.get('/api/routines', requireAppAccess, async (req, res) => {

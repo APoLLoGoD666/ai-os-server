@@ -3,7 +3,7 @@ const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { requireAppAccess } = require('../../lib/middleware');
-const { pgSaveGmailToken } = require('../../lib/pg_helpers');
+const { pgSaveGmailToken } = require('../../lib/supabase-helpers');
 
 router.post('/auth/login', (req, res) => {
     const secret = process.env.JWT_SECRET;

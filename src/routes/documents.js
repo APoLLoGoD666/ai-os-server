@@ -1,7 +1,7 @@
 'use strict';
 const router = require('express').Router();
 const { requireAppAccess } = require('../../lib/middleware');
-const { pgListDocuments, pgGetRecentAgentActions } = require('../../lib/pg_helpers');
+const { pgListDocuments, pgGetRecentAgentActions } = require('../../lib/supabase-helpers');
 
 router.get('/documents', requireAppAccess, async (req, res) => {
     try {

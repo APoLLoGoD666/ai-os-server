@@ -1,7 +1,7 @@
 'use strict';
 const router = require('express').Router();
 const { requireAppAccess } = require('../../lib/middleware');
-const { pgListNotifications, pgMarkNotificationRead } = require('../../lib/pg_helpers');
+const { pgListNotifications, pgMarkNotificationRead } = require('../../lib/supabase-helpers');
 const sbAdmin = require('../../lib/clients').getSupabaseClient();
 
 router.get('/notifications', requireAppAccess, async (req, res) => {
