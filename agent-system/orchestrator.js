@@ -9,7 +9,6 @@ const { z } = require('zod');
 const _hooks        = require('./agent-pipeline-hooks');
 const _gov          = require('../lib/governance');
 const _reputation   = require('./agent-reputation');
-const _episodic     = require('./episodic-memory');
 const _indexer      = require('./memory-indexer');
 const _dynSelector  = require('./dynamic-agent-selector');
 const _execVerifier = require('./execution-verifier');
@@ -1420,10 +1419,16 @@ async function runAgentTeam(spec, taskId) {
     }
 
     // Episodic context — inject similar past experiences into ARCHITECT context (non-fatal)
+    // Routes through canonical gateway (layer 2 = PG episodic memory).
     try {
-        const similar = _episodic.getSimilarExperiences(spec.objective, { limit: 3 });
-        if (similar.length) {
-            const expCtx = _episodic.formatExperiencesAsContext(similar);
+        const similar = await _gateway.searchMemory({ query: spec.objective, layers: [2], limit: 3, requestingEntity: 'orchestrator' });
+        if (similar && similar.length) {
+            const lines = similar.map(ep => {
+                const icon = ep.success ? '✓' : '✗';
+                const fail = ep.failed_stage ? ` [failed: ${ep.failed_stage}]` : '';
+                return `${icon} ${(ep.objective || ep.content || '').slice(0, 70)}${fail}`;
+            });
+            const expCtx = `SIMILAR PAST EXPERIENCES:\n${lines.join('\n')}`;
             ctx.obsidianContext = (ctx.obsidianContext ? ctx.obsidianContext + '\n\n' : '') + expCtx.slice(0, 400);
         }
     } catch {}
