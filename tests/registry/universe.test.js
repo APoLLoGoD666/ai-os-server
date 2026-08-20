@@ -9,9 +9,9 @@ const rels   = require('../../lib/registry/relationships');
 
 module.exports = async function run() {
     await suite('Domain entities (DOM-*)', async () => {
-        await test('ten DOM-* domains are registered', () => {
+        await test('twelve DOM-* domains are registered', () => {
             const domains = engine.find({ family: 'DOMAIN' });
-            assert.strictEqual(domains.length, 10, `expected 10 domains, got ${domains.length}`);
+            assert.strictEqual(domains.length, 12, `expected 12 domains, got ${domains.length}`);
         });
 
         await test('all domains have required fields', () => {
@@ -121,11 +121,11 @@ module.exports = async function run() {
     });
 
     await suite('Universe query intents', async () => {
-        await test('domain.list returns 10 domains', () => {
+        await test('domain.list returns 12 domains', () => {
             const { query } = require('../../lib/registry/query');
             const r = query('domain.list', {});
             assert.strictEqual(r.ok, true, r.error);
-            assert.strictEqual(r.result.count, 10);
+            assert.strictEqual(r.result.count, 12);
         });
 
         await test('domain.entity returns DOM-000003 (Registry)', () => {
@@ -141,7 +141,7 @@ module.exports = async function run() {
             const r = query('domain.health', {});
             assert.strictEqual(r.ok, true, r.error);
             assert(Array.isArray(r.result.domains));
-            assert.strictEqual(r.result.domains.length, 10);
+            assert.strictEqual(r.result.domains.length, 12);
         });
 
         await test('domain.graph returns domain nodes and edges', () => {

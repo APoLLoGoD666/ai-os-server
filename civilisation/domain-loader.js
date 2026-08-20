@@ -17,6 +17,8 @@ const DOMAIN_MAP = {
     'DOM-000008': 'knowledge',
     'DOM-000009': 'development',
     'DOM-000010': 'experiments',
+    'DOM-000011': 'reality_architecture',
+    'DOM-000012': 'theory_of_change',
 };
 
 const DOMAINS_DIR = path.join(__dirname, '../domains');

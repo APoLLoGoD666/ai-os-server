@@ -376,7 +376,6 @@ app.get('/health', async (req, res) => {
 
 app.use('/api', require('./routes/tts-gemini'));
 app.use('/api', require('./routes/registry'));
-app.use('/api', require('./routes/civilisation'));
 app.use('/api', require('./routes/civilization'));
 app.use('/', require('./src/routes/telemetry/index.js')({ requireAppAccess, getStatus: getMastraStatus, errBuffer: _errBuffer, gitSha: GIT_SHA }));
 

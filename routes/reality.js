@@ -27,8 +27,8 @@ router.get('/reality/claims', async (req, res) => {
 router.post('/reality/claims', async (req, res) => {
     try {
         const { entityId, domain, content, source, claimType, confidence, evidence, projectedBy } = req.body;
-        const claimId = await fabric.claimReality({ entityId, domain, content, source, claimType, confidence, evidence, projectedBy });
-        res.json({ ok: true, claimId });
+        const { claimId, obsRecordId } = await fabric.claimReality({ entityId, domain, content, source, claimType, confidence, evidence, projectedBy });
+        res.json({ ok: true, claimId, obsRecordId });
     } catch (e) {
         res.status(400).json({ ok: false, error: e.message });
     }

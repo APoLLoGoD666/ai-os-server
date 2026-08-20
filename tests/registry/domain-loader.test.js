@@ -8,10 +8,10 @@ const loader = require('../../civilisation/domain-loader');
 
 module.exports = async function run() {
     await suite('Domain Loader — list()', async () => {
-        await test('list() returns exactly 10 domains', () => {
+        await test('list() returns exactly 12 domains', () => {
             const entries = loader.list();
             assert(Array.isArray(entries));
-            assert.strictEqual(entries.length, 10);
+            assert.strictEqual(entries.length, 12);
         });
 
         await test('each entry has id, name, migrated', () => {
@@ -22,16 +22,22 @@ module.exports = async function run() {
             }
         });
 
-        await test('all 10 domains are migrated', () => {
-            const notMigrated = loader.list().filter(e => !e.migrated);
-            assert.strictEqual(notMigrated.length, 0,
-                `unmigrated: ${notMigrated.map(e => e.name).join(', ')}`);
+        await test('original 10 domains are all migrated; DOM-000011 and DOM-000012 are stub-only', () => {
+            const entries     = loader.list();
+            const migrated    = entries.filter(e => e.migrated).map(e => e.id);
+            const notMigrated = entries.filter(e => !e.migrated).map(e => e.id);
+            // Exactly the original 10 domains have runtime implementations.
+            assert.strictEqual(migrated.length, 10, `expected 10 migrated, got ${migrated.length}`);
+            // DOM-000011 and DOM-000012 are constitutionally registered but their
+            // runtime modules are not yet implemented (T3-P3/P4 prerequisite tasks).
+            assert.deepStrictEqual(notMigrated.sort(), ['DOM-000011', 'DOM-000012'],
+                `unexpected stub domains: ${notMigrated.join(', ')}`);
         });
 
-        await test('DOMAIN_MAP has all 10 DOM- ids', () => {
+        await test('DOMAIN_MAP has all 12 DOM- ids (DOM-000001 through DOM-000012)', () => {
             const ids = Object.keys(loader.DOMAIN_MAP);
-            assert.strictEqual(ids.length, 10);
-            for (let i = 1; i <= 10; i++) {
+            assert.strictEqual(ids.length, 12);
+            for (let i = 1; i <= 12; i++) {
                 const id = `DOM-${String(i).padStart(6, '0')}`;
                 assert(id in loader.DOMAIN_MAP, `DOMAIN_MAP missing ${id}`);
             }
@@ -106,9 +112,9 @@ module.exports = async function run() {
     });
 
     await suite('Domain Loader — loadAll()', async () => {
-        await test('loadAll() returns object with 10 keys', () => {
+        await test('loadAll() returns object with 12 keys', () => {
             const all = loader.loadAll();
-            assert.strictEqual(Object.keys(all).length, 10);
+            assert.strictEqual(Object.keys(all).length, 12);
         });
 
         await test('loadAll() keys match DOMAIN_MAP values', () => {

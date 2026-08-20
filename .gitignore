@@ -98,3 +98,6 @@ IMPLEMENTATION*.md
 domains/*/runtime/
 domains/*/registry/
 .civilisation/
+
+# Runtime vault data — generated goal/state JSON, not source code
+vault/

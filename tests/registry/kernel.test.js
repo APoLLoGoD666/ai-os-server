@@ -269,17 +269,18 @@ module.exports = async function run() {
     });
 
     await suite('Registry.domains', async () => {
-        await test('domains.list() returns 10 entries', () => {
+        await test('domains.list() returns 12 entries', () => {
             const entries = Registry.domains.list();
             assert(Array.isArray(entries));
-            assert.strictEqual(entries.length, 10);
+            assert.strictEqual(entries.length, 12);
         });
 
-        await test('all domains are migrated (have index.js)', () => {
+        await test('original 10 domains are migrated; DOM-000011/DOM-000012 are stub-only', () => {
             const entries = Registry.domains.list();
-            for (const e of entries) {
-                assert(e.migrated, `domain ${e.name} is not yet migrated`);
-            }
+            const migrated = entries.filter(e => e.migrated);
+            const stub = entries.filter(e => !e.migrated).map(e => e.id).sort();
+            assert.strictEqual(migrated.length, 10, `expected 10 migrated domains, got ${migrated.length}`);
+            assert.deepStrictEqual(stub, ['DOM-000011', 'DOM-000012']);
         });
 
         await test('domains.load("experiments") returns frozen Experiments domain', () => {
