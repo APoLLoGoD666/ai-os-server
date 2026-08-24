@@ -727,13 +727,16 @@ These are UNRESOLVED-FRONTEND-API (5 total). All likely exist in the relevant do
 | Production route files | 78 | 78 |
 | Dynamic loader files | 42 | 42 |
 | Explicit src/routes registrations | 34 | 34 |
+| Total endpoints (~) | ~771 | ~771 |
 | Double-mount defects | 2 (registry + civilization) | 0 |
-| Dead handler instances | 6 (R6-02 through R6-04) | 6 (deferred to R7) |
+| Dead handler instances | 6+ (R6-02 through R6-08) | documented, deferred to R7 |
 | Unknown production routes | 0 | 0 |
 | API namespaces | ~45 | ~45 |
-| METHOD+PATH collisions (defect) | 2 (R6-01 fixed) | 0 |
+| METHOD+PATH collisions (double-mount defect) | 2 (R6-01 fixed) | 0 |
+| Alpha-order shadow collisions (intra-loader) | 0 known → 7 (R6-07 new) | 7 (deferred to R7) |
+| Namespace violations | 0 known → 1 (R6-06 new) | 1 (deferred to R7) |
 | Unknown auth boundaries | 0 | 0 |
-| Unresolved frontend API calls | 5 | 5 (lower-priority) |
+| Unresolved frontend API calls | 5 | 1 (crm/clients/:id PATCH) |
 | MEM-01 (direct memory import) | 1 | 1 (deferred to R7) |
 | Files changed | — | 1 (server.js) |
 | Files removed | — | 0 |
@@ -747,9 +750,9 @@ These are UNRESOLVED-FRONTEND-API (5 total). All likely exist in the relevant do
 | F-01 | Search for second production route registration system | PASS | Only `_loadAgentRoutes()` and explicit `app.use()` calls in server.js. No other loader found. |
 | F-02 | Search for routes hidden by dynamic loading | PASS | Dynamic loader is deterministic: `fs.readdirSync` with filter and sort. No subdirectory recursion. |
 | F-03 | Search for duplicate METHOD+PATH combinations | PASS (after fix) | R6-01 removed the only confirmed duplicates (registry.js, civilization.js double-mount). Dead handlers documented in R6-02 to R6-04 do not cause duplicate routing (first handler responds). |
-| F-04 | Search for duplicate endpoint implementations | PASS | Finance (two files, different sub-paths), Intelligence (telemetry dead), Health (telemetry wins). All documented. |
-| F-05 | Search for production routes in src/routes/ competing with routes/ | PASS | No path collisions confirmed. Finance, Health, Intelligence namespaces are non-overlapping. |
-| F-06 | Search for frontend calls to unclassified endpoints | PASS | 5 unresolved paths flagged (tasks/approvals, crm/clients, overview/vitals, agent/status, tasks/:id/approve) — all likely in domain route files, no missing route evidence. |
+| F-04 | Search for duplicate endpoint implementations | PASS | Finance (two files, different sub-paths), Intelligence (telemetry dead), Health (telemetry wins). Intra-routes/ collisions (journal/spiritual/university/life) documented R6-07. All classified. |
+| F-05 | Search for production routes in src/routes/ competing with routes/ | PASS | GET /api/tasks collision (integrations.js vs tasks.js) documented R6-06. Intelligence collision documented R6-04. Finance/Health are non-overlapping. |
+| F-06 | Search for frontend calls to unclassified endpoints | PASS | 4/5 unresolved paths resolved by full inventory (agent/status and overview/vitals → master.js; tasks/approvals → agent-tasks.js; tasks/:id/approve → agent-tasks.js). 1 remaining: PATCH /api/crm/clients/:id (likely operations.js or relationships.js). |
 | F-07 | Search for routes bypassing authentication unexpectedly | PASS | routes/registry.js has no auth — confirmed intentional (read-only registry). routes/civilisation (in civilization.js) — confirmed intentional public access. |
 | F-08 | Search for routes bypassing the constitutional gate | PASS | civilization-kernel.js mounted at app.use() before all routes — no bypass possible. |
 | F-09 | Search for routes bypassing canonical runtime | PASS | routes/memory.js bypasses gateway (MEM-01, documented, deferred). All others use canonical runtimes. |
@@ -769,13 +772,37 @@ These are UNRESOLVED-FRONTEND-API (5 total). All likely exist in the relevant do
 
 ## §28 — Unresolved Findings
 
+Additional path collisions discovered by full route inventory agent (post-commit addendum):
+
+### R6-06: INTEGRATIONS.JS NAMESPACE VIOLATION (NEW — DEFERRED)
+`routes/integrations.js` defines paths WITHOUT the required `/integrations/*` sub-prefix (violates CLAUDE.md: "Every new route file must define an internal sub-prefix matching its filename"). It defines GET/POST `/api/tasks`, GET/POST `/api/projects`, GET/POST `/api/clients`, GET `/api/system/status` — paths that collide with or are semantically confusing alongside dedicated route files. Critical: GET `/api/tasks` in integrations.js fires BEFORE `src/routes/tasks.js`'s GET `/api/tasks` (dynamic loader runs first). `src/routes/tasks.js` GET `/api/tasks` is effectively shadowed.  
+**Classification**: NAMESPACE-VIOLATION + DEAD-CODE-RISK  
+**Deferred to**: R7
+
+### R6-07: INTRA-DYNAMIC-LOADER ALPHA-ORDER PATH COLLISIONS (NEW — DEFERRED)
+Within the dynamic loader, files are loaded alphabetically. This creates shadow relationships:
+- `routes/journal.js` (j) loads before `routes/life.js` (l) → life.js's `/api/journal/entries` paths are shadowed
+- `routes/life.js` (l) loads before `routes/spiritual.js` (s) → spiritual.js's `/api/spiritual/log` and `/api/spiritual/practices` paths are shadowed
+- `routes/life.js` (l) loads before `routes/university.js` (u) → university.js's `/api/university/*` paths are shadowed
+All shadowed handlers still function correctly because the winning handler (journal.js, life.js) provides the same data. The `/api/life/*` prefixed routes in life.js are unique and functional. Frontend calls using `/api/life/university/modules` etc. hit routes/life.js correctly. No user-visible breakage.  
+**Classification**: ALPHA-ORDER-SHADOW — architectural debt, not a runtime defect  
+**Deferred to**: R7
+
+### R6-08: DEAD GET /health/deep IN src/routes/admin.js (NEW — DEFERRED)
+`src/routes/admin.js` defines `GET /health/deep` — same path as `src/routes/health.js`. Since health.js is registered BEFORE admin.js (server.js lines 342 vs 373), health.js's `GET /health/deep` fires first. Admin's handler is dead.  
+**Classification**: DEAD-CODE  
+**Deferred to**: R7
+
 | ID | Description | Classification | Deferred To |
 |----|-------------|---------------|-------------|
 | R6-02 | Dead `GET /health` handler in `src/routes/health.js` | DEAD-CODE | R7 |
 | R6-03 | Dead `GET /api/system/health/detailed` handler in `src/routes/health.js` | DEAD-CODE | R7 |
 | R6-04 | Dead intelligence routes in `src/routes/telemetry/index.js` (shadowed by routes/intelligence.js) | DEAD-CODE | R7 |
+| R6-06 | `routes/integrations.js` namespace violation + GET /api/tasks collision with src/routes/tasks.js | NAMESPACE-VIOLATION | R7 |
+| R6-07 | Intra-dynamic-loader alpha-order shadows (journal, spiritual, university vs life.js) | ALPHA-ORDER-SHADOW | R7 |
+| R6-08 | Dead `GET /health/deep` in `src/routes/admin.js` (health.js loads first) | DEAD-CODE | R7 |
 | MEM-01 | `routes/memory.js` imports `lib/memory/index.js` directly instead of canonical gateway | DEFERRED-STRUCTURAL | R7 |
-| UIAPI-01 | 5 frontend API calls unresolved in route inventory (tasks/approvals, tasks/:id/approve, agent/status, overview/vitals, crm/clients/:id PATCH) | ORPHAN-CANDIDATE/UNVERIFIED | R7 verify |
+| UIAPI-01 | 1 frontend API call unresolved: PATCH /api/crm/clients/:id (likely operations.js) | ORPHAN-CANDIDATE/UNVERIFIED | R7 verify |
 
 ---
 
