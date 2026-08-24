@@ -12,6 +12,7 @@ const attention  = require('../lib/attention/attention-engine');
 const crypto       = require('crypto');
 const memGateway   = require('../lib/memory/gateway');
 const govStateView = require('../lib/orchestration/governance_global_state_view');
+const { getSupabaseClient } = require('../lib/clients');
 
 // Kernel request log (backward compat)
 const LOG_FILE   = path.join(__dirname, '../logs/kernel.ndjson');
@@ -35,13 +36,9 @@ const AL_THRESHOLD = { 1: 0.95, 2: 0.90, 3: 0.75, 4: 0.60, 5: 0.50, 6: 0.40 };
 // Rule 4: path patterns that constitute irreversible state destruction
 const DESTRUCTIVE_PATTERNS = ['/drop', '/force-delete', '/hard-delete', '/truncate', '/purge'];
 
-let _sbClient = null;
 function _getSb() {
-    if (_sbClient) return _sbClient;
     if (!process.env.SUPABASE_URL) return null;
-    const { createClient } = require('@supabase/supabase-js');
-    _sbClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY);
-    return _sbClient;
+    return getSupabaseClient();
 }
 
 function _attentionTier(score) {

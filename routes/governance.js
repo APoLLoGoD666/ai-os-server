@@ -6,15 +6,11 @@
 // Domain 40 — Autonomous OS Certification status
 
 const express = require('express');
-const { createClient } = require('@supabase/supabase-js');
+const { getSupabaseClient } = require('../lib/clients');
 const router  = express.Router();
 router.use(require('../lib/app-auth'));
 
-let _client = null;
-function _sb() {
-    if (!_client) _client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-    return _client;
-}
+function _sb() { return getSupabaseClient(); }
 
 // GET /api/governance/forensics/:taskId
 // Returns answers to all 16 forensic questions for a task.

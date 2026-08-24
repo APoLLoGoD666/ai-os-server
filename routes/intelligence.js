@@ -1,20 +1,10 @@
 "use strict";
 const router   = require('express').Router();
-const { createClient } = require('@supabase/supabase-js');
+const { getSupabaseClient } = require('../lib/clients');
 const requireAppAccess = require('../lib/app-auth');
 const memory   = require('../agent-system/obsidian-memory');
 
-// Singleton Supabase client
-const _sbClient = (() => {
-    let c;
-    return () => {
-        if (!c) c = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-        );
-        return c;
-    };
-})();
+const _sbClient = () => getSupabaseClient();
 
 // ── Voice pipeline state (shared across all WebSocket sessions) ───────────────
 const voiceState = {
