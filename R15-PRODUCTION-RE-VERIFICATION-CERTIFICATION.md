@@ -4,7 +4,7 @@
 **Task**: R15 — Production Re-Verification  
 **Status**: CERTIFIED WITH CONDITIONS  
 **Certified**: 2026-08-25  
-**Commit**: pending  
+**Commit**: `698fbc3`  
 **Predecessor**: R14-FULL-REGRESSION-CERTIFICATION.md (commits 089f51c / c7ac573)
 
 ---
@@ -879,4 +879,4 @@ Without these, R16 cannot certify production equivalence to the canonical archit
 ---
 
 *R15 certification produced 2026-08-25.*  
-*Commit: pending*
+*Commit: `698fbc3`*

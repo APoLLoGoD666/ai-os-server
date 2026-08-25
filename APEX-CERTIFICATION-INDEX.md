@@ -360,9 +360,40 @@ For full details, read the linked certification document.
 
 ---
 
+## R15 — Production Re-Verification
+
+| Item | Value |
+|------|-------|
+| Task | Verify live production against canonical R0–R14 architecture |
+| Commit | `698fbc3` |
+| Date | 2026-08-25 |
+| Status | **CERTIFIED WITH CONDITIONS** |
+| Document | `R15-PRODUCTION-RE-VERIFICATION-CERTIFICATION.md` |
+
+**Key findings**:
+- Production URL: `https://ai-os-server-jx20.onrender.com`
+- Production commit: `d087c19` (R0 baseline) — 17 commits behind local R14 HEAD
+- Production is LIVE (uptime ~29h), not_suspended
+- Constitutional gate LIVE VERIFIED: 28,785 governance records, 10,706 constitutional records (real-time)
+- Authentication boundary enforced (401 on unauthenticated requests)
+- Production AUTONOMY_LEVEL=3 confirmed via governance_records
+- `/chat` returns 500 — AI invocation broken in production (R15-P01)
+- `/api/briefing/motivation` returns 500 — AI invocation failing (R15-P02)
+- `public.messages` table does not exist — likely cause of chat 500 (R15-P03)
+- Memory writes stalled since 2026-06-23 (R15-P04)
+- 7 new production conditions discovered (R15-P01 through R15-P07)
+
+**Open conditions (net change)**:
+- 7 new conditions discovered (R15-P01–P07)
+- 2 conditions partially resolved (R9-05 irrelevant in prod, R10-PATH-J live evidence)
+- 1 condition worsened (R10-PATH-F: previously untested, now LIVE FAILED)
+- Total: 33 open conditions (26 prior + 7 new)
+
+---
+
 ## Open Conditions Summary
 
-All conditions from R4–R14 that remain unresolved, in priority order:
+All conditions from R4–R15 that remain unresolved, in priority order:
 
 | Priority | ID | Description | From |
 |----------|----|-------------|------|
@@ -393,6 +424,13 @@ All conditions from R4–R14 that remain unresolved, in priority order:
 | LOW | R13-D5 | civilisation/civilization naming consistency | R13 |
 | LOW | R13-D6 | R6-SHADOW-7 route shadow collisions (structural) | R13 |
 | LOW | R13-D7 | R6-NAMESPACE-1 namespace violation (structural) | R13 |
+| HIGH | R15-P01 | /chat returns 500 in production — AI invocation broken | R15 |
+| HIGH | R15-P06 | 17-commit deployment gap — R1-R14 not pushed/deployed | R15 |
+| MEDIUM | R15-P02 | /api/briefing/motivation 500 — AI invocation failing | R15 |
+| MEDIUM | R15-P03 | public.messages table absent from production DB | R15 |
+| MEDIUM | R15-P04 | Memory writes stalled since 2026-06-23 | R15 |
+| MEDIUM | R15-P07 | R13 structural fixes absent from production (not deployed) | R15 |
+| LOW | R15-P05 | Mastra agents not loaded despite 29h uptime | R15 |
 
 ---
 
