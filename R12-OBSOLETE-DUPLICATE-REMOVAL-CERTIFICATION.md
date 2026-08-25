@@ -4,7 +4,7 @@
 **Task**: R12 — Obsolete / Duplicate Removal  
 **Status**: CERTIFIED WITH CONDITIONS  
 **Certified**: 2026-08-25  
-**Commit**: pending  
+**Commit**: `778b1bc`  
 **Predecessor**: R11-DOCUMENTATION-CANONICALISATION-CERTIFICATION.md (commit 1a90482)
 
 ---
@@ -486,7 +486,7 @@ All 20 conditions from R4–R11 are carried forward unchanged. R12 does not reso
 
 ## §20 — Commit Hash
 
-`pending` — to be updated after commit.
+`778b1bc`
 
 ---
 

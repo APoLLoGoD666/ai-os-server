@@ -280,7 +280,7 @@ For full details, read the linked certification document.
 | Item | Value |
 |------|-------|
 | Task | Evidence-driven removal of all proven obsolete, duplicate, superseded, or unreachable artifacts |
-| Commit | pending |
+| Commit | `778b1bc` |
 | Date | 2026-08-25 |
 | Status | **CERTIFIED WITH CONDITIONS** |
 | Document | `R12-OBSOLETE-DUPLICATE-REMOVAL-CERTIFICATION.md` |
