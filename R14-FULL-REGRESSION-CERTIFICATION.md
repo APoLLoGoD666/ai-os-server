@@ -4,7 +4,7 @@
 **Task**: R14 — Full Regression  
 **Status**: CERTIFIED WITH CONDITIONS  
 **Certified**: 2026-08-25  
-**Commit**: pending  
+**Commit**: `089f51c`  
 **Predecessor**: R13-STRUCTURAL-REFINEMENT-CERTIFICATION.md (commits 2eb3a92 / 0aaf573)
 
 ---
@@ -912,4 +912,4 @@ None of these conditions are new. No conditions were introduced by R13 or R14. A
 ---
 
 *R14 certification document produced 2026-08-25.*  
-*Commit: pending*
+*Commit: `089f51c`*

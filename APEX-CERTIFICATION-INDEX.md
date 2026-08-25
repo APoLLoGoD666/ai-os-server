@@ -326,9 +326,43 @@ For full details, read the linked certification document.
 
 ---
 
+## R14 — Full Regression
+
+| Item | Value |
+|------|-------|
+| Task | Full regression verification of canonical APEX repository post-R13 |
+| Commit | `089f51c` |
+| Date | 2026-08-25 |
+| Status | **CERTIFIED WITH CONDITIONS** |
+| Document | `R14-FULL-REGRESSION-CERTIFICATION.md` |
+
+**Key findings**:
+- 1,579 / 1,579 PASS (identical to R10 baseline — zero delta)
+- 0 regressions introduced by R13
+- 0 new defects discovered
+- All R13 structural changes verified intact
+- 17 system invariants PASS, 7 CONDITIONAL, 0 FAIL
+- 26 open conditions carried forward (0 new, 0 resolved)
+- Constitutional gate: 6 checks, fail-CLOSED confirmed
+- PETL: unwired confirmed
+- Wave 4 bootstraps: all 7 pass (178 tests)
+- R13-induced circular dep (pwa) eliminated — confirmed
+
+**Environmental limitations**:
+- No live production access (no Supabase credentials)
+- Paths F/G/H/I/J remain source-verified only (R10-PATH-* gap)
+- 0/11 background paths tested (R10-BG gap)
+
+**Open conditions (net change)**:
+- 0 conditions resolved in R14
+- 0 new conditions discovered
+- 26 total carried forward
+
+---
+
 ## Open Conditions Summary
 
-All conditions from R4–R12 that remain unresolved, in priority order:
+All conditions from R4–R14 that remain unresolved, in priority order:
 
 | Priority | ID | Description | From |
 |----------|----|-------------|------|
