@@ -299,6 +299,33 @@ For full details, read the linked certification document.
 
 ---
 
+## R13 — Structural Refinement
+
+| Item | Value |
+|------|-------|
+| Task | Audit and improve structural quality — layering, module placement, import direction |
+| Commit | `2eb3a92` |
+| Date | 2026-08-25 |
+| Status | **CERTIFIED WITH CONDITIONS** |
+| Document | `R13-STRUCTURAL-REFINEMENT-CERTIFICATION.md` |
+
+**Key findings**:
+- `sendPush` extracted from `routes/pwa.js` to `lib/pwa/push.js` (canonical location)
+- `lib/pwa/notification-scheduler.js` reversed layering (lib→routes) eliminated; circular-dep lazy-require workaround removed
+- `routes/briefing.js` route→route side-channel eliminated (now routes→lib)
+- `lib/intelligence/civilization-runtime.js` registry shim indirection fixed (lib→lib direct path)
+- 7 structural improvements deferred as R13-D1–D7 (complex / require separate R14 scope)
+- 15 structural invariants: all PASS
+- 1,579 / 1,579 PASS (no regression)
+
+**Open conditions (net change)**:
+- 0 open conditions resolved in R13
+- 7 deferred findings added (R13-D1–D7)
+- All 19 prior conditions carried forward
+- Total open: 26 (19 prior + 7 new deferred)
+
+---
+
 ## Open Conditions Summary
 
 All conditions from R4–R12 that remain unresolved, in priority order:
@@ -325,6 +352,13 @@ All conditions from R4–R12 that remain unresolved, in priority order:
 | LOW | R6-NAMESPACE-1 | Route namespace violation | R6 |
 | LOW | R6-MEM-01 | Frontend /memory/search unresolved | R6 |
 | LOW | R7-MEM-02 | Legacy direct memory writes | R7 |
+| MEDIUM | R13-D1 | syncGoogleCalendar extraction (lib→routes) | R13 |
+| MEDIUM | R13-D2 | voiceState shared state extraction (route→route) | R13 |
+| MEDIUM | R13-D3 | voiceState mutation in auth middleware (route→route) | R13 |
+| MEDIUM | R13-D4 | Full registry/ shim consolidation (20+ files) | R13 |
+| LOW | R13-D5 | civilisation/civilization naming consistency | R13 |
+| LOW | R13-D6 | R6-SHADOW-7 route shadow collisions (structural) | R13 |
+| LOW | R13-D7 | R6-NAMESPACE-1 namespace violation (structural) | R13 |
 
 ---
 

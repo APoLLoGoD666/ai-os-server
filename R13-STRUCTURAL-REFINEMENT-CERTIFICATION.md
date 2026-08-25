@@ -4,7 +4,7 @@
 **Task**: R13 — Structural Refinement  
 **Status**: CERTIFIED WITH CONDITIONS  
 **Certified**: 2026-08-25  
-**Commit**: pending  
+**Commit**: `2eb3a92`  
 **Predecessor**: R12-OBSOLETE-DUPLICATE-REMOVAL-CERTIFICATION.md (commits 778b1bc / 30013c4)
 
 ---
