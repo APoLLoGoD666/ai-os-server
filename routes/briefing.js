@@ -111,7 +111,7 @@ router.post('/briefing/wind-down', _auth, async (req, res) => {
             tasks.length ? `Open: ${tasks.slice(0,3).map(t => t.note).join(', ')}` : null,
         ].filter(Boolean).join(' · ') || 'Rest well. Tomorrow is ready.';
 
-        const { sendPush } = require('./pwa');
+        const { sendPush } = require('../lib/pwa/push');
         await sendPush({ title: 'APEX Evening Wind-Down', body, url: '/dashboard.html#briefing' });
 
         res.json({ ok: true, body, tomorrow_events: cal, open_tasks: tasks });
