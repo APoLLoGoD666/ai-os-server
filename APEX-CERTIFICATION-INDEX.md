@@ -275,9 +275,33 @@ For full details, read the linked certification document.
 
 ---
 
+## R12 — Obsolete / Duplicate Removal
+
+| Item | Value |
+|------|-------|
+| Task | Evidence-driven removal of all proven obsolete, duplicate, superseded, or unreachable artifacts |
+| Commit | pending |
+| Date | 2026-08-25 |
+| Status | **CERTIFIED WITH CONDITIONS** |
+| Document | `R12-OBSOLETE-DUPLICATE-REMOVAL-CERTIFICATION.md` |
+
+**Key findings**:
+- 2 files deleted: `agent-system/langchain-memory.js` (orphan, R9-04 resolved) + `scripts/reflection_agent.js` (binary duplicate)
+- 197 LOC removed
+- 1,579 / 1,579 PASS (no regression)
+- All other candidates explicitly retained with classification evidence
+- Root `civilisation/` and `domains/` confirmed ACTIVE (not duplicate/orphan)
+- Root `registry/` shims: `registry/kernel.js` confirmed referenced; full group retained
+
+**Open conditions (net change)**:
+- R9-04 RESOLVED (langchain-memory.js deleted)
+- All other 19 conditions carried forward
+
+---
+
 ## Open Conditions Summary
 
-All conditions from R4–R10 that remain unresolved, in priority order:
+All conditions from R4–R12 that remain unresolved, in priority order:
 
 | Priority | ID | Description | From |
 |----------|----|-------------|------|
@@ -297,7 +321,7 @@ All conditions from R4–R10 that remain unresolved, in priority order:
 | LOW | R9-01 | orchestrator direct createClient() | R9 |
 | LOW | R9-02 | master-orchestrator direct createClient() | R9 |
 | LOW | R8-01 | governance.js direct createClient() | R8 |
-| LOW | R9-04 | langchain-memory.js orphan | R9 |
+| LOW | ~~R9-04~~ | ~~langchain-memory.js orphan~~ | R9 | **RESOLVED R12** |
 | LOW | R6-NAMESPACE-1 | Route namespace violation | R6 |
 | LOW | R6-MEM-01 | Frontend /memory/search unresolved | R6 |
 | LOW | R7-MEM-02 | Legacy direct memory writes | R7 |
