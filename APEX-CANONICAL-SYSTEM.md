@@ -1,7 +1,7 @@
 # APEX — Canonical System Reference
 
-**Version**: R11 (2026-08-25)  
-**Certified by**: R-Series Refinement Programme R0–R10  
+**Version**: R16 (2026-08-25)  
+**Certified by**: R-Series Refinement Programme R0–R15  
 **Governing principle**: ONE PLATFORM. ONE SYSTEM. ONE APEX.
 
 This document is the single authoritative entry point for understanding the APEX AI OS.
@@ -39,10 +39,10 @@ APEX is a Render-hosted Node.js / Express AI Operating System. It is a single-se
 | Production HTTP server | `server.js` (sole authority — R5 verified) |
 | Production port | `process.env.PORT` (Render-assigned) |
 | Certified production commit | `d087c19` (Wave 4 architecture) |
-| Current repository HEAD | `9794171` (R10 — post-Wave 4 refinements) |
-| R-Series complete | R0 through R10 |
+| Current repository HEAD | `2658a05` (R15 — post-Wave 4 refinements) |
+| R-Series complete | R0 through R15 |
 
-> **CRITICAL DISTINCTION**: `d087c19` is the certified production baseline. Repository HEAD `9794171` includes R-series refinements (R0–R10) that are **not yet confirmed as deployed to production**. Do not treat repository state as production state unless explicitly verified.
+> **CRITICAL DISTINCTION**: `d087c19` is the certified production baseline. Repository HEAD `2658a05` includes R-series refinements (R0–R15) that are **not yet confirmed as deployed to production**. Do not treat repository state as production state unless explicitly verified.
 
 ---
 

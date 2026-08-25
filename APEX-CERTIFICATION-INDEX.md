@@ -7,7 +7,7 @@
 This is the single authoritative index of all R-Series certification records.
 For full details, read the linked certification document.
 
-> **Naming note**: The `docs/constitutional-architecture/` directory contains documents labelled R1–R16 referring to **Constitutional Runtime specifications** (RT-01 through RT-16). These are Wave 4 architectural specifications and are DISTINCT from the APEX Repository R-Series (R0–R11) documented here. Do not confuse the two numbering schemes.
+> **Naming note**: The `docs/constitutional-architecture/` directory contains documents labelled R1–R16 referring to **Constitutional Runtime specifications** (RT-01 through RT-16). These are Wave 4 architectural specifications and are DISTINCT from the APEX Repository R-Series (R0–R16) documented here. Do not confuse the two numbering schemes.
 
 ---
 
@@ -388,6 +388,33 @@ For full details, read the linked certification document.
 - 2 conditions partially resolved (R9-05 irrelevant in prod, R10-PATH-J live evidence)
 - 1 condition worsened (R10-PATH-F: previously untested, now LIVE FAILED)
 - Total: 33 open conditions (26 prior + 7 new)
+
+---
+
+## R16 — Canonical Repository Certification
+
+| Item | Value |
+|------|-------|
+| Task | Establish local repository as canonical APEX source of truth post-R0–R15 |
+| Commit | (pending hash-patch) |
+| Date | 2026-08-25 |
+| Status | **CERTIFIED WITH CONDITIONS** |
+| Document | `R16-CANONICAL-REPOSITORY-CERTIFICATION.md` |
+
+**Key findings**:
+- HEAD `2658a05` certified as canonical APEX source of truth
+- 0 unknown components, 0 duplicates, 0 orphans
+- 24/24 system invariants PASS
+- 18/18 falsification attempts PASS
+- 1,579 / 1,579 PASS (no regression)
+- APEX-CANONICAL-SYSTEM.md updated: Version R11 → R16, HEAD 9794171 → 2658a05, R-Series R0-R10 → R0-R15
+- 19-commit deployment gap confirmed (local is 19 ahead of origin/production)
+- Production NOT modified by R16
+
+**Open conditions (net change)**:
+- 0 conditions resolved in R16
+- 0 new conditions discovered in R16
+- 33 total carried forward
 
 ---
 
