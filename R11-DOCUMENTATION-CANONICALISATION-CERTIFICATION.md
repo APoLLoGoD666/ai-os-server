@@ -4,7 +4,7 @@
 **Task**: R11 — Documentation Canonicalisation  
 **Status**: CERTIFIED WITH CONDITIONS  
 **Certified**: 2026-08-25  
-**Commit**: pending  
+**Commit**: `4ed1ee5`  
 **Predecessor**: R10-TEST-CONSOLIDATION-CERTIFICATION.md (commit 9794171)
 
 ---

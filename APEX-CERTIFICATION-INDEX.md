@@ -268,9 +268,9 @@ For full details, read the linked certification document.
 | Item | Value |
 |------|-------|
 | Task | Complete documentation inventory, classification, and canonicalisation |
-| Commit | pending |
+| Commit | `4ed1ee5` |
 | Date | 2026-08-25 |
-| Status | **IN PROGRESS** |
+| Status | **CERTIFIED WITH CONDITIONS** |
 | Document | `R11-DOCUMENTATION-CANONICALISATION-CERTIFICATION.md` |
 
 ---
