@@ -174,7 +174,7 @@ Document was last updated at R11. 4 stale entries corrected. All other content v
 | R13 | `2eb3a92` | Recorded (hash-patched) |
 | R14 | `089f51c` | Recorded (hash-patched) |
 | R15 | `698fbc3` | Recorded (hash-patched) |
-| R16 | (pending this commit) | Will be hash-patched |
+| R16 | `07cb811` | Hash-patched |
 
 **Chain status**: R4–R9 cert documents contain "pending" commit references in the hash-patch field — these pre-date the hash-patch protocol (established R11). All are traceable via git log. R11–R15 are fully hash-patched. R-series chain is INTACT.
 
@@ -314,7 +314,7 @@ R16 is LOCAL ONLY. The deployment gap and all production conditions are pre-exis
 | New in R16 | 0 |
 | Remediation applied | APEX-CANONICAL-SYSTEM.md version update (4 fields) |
 | Production modified | NO |
-| Commit | (pending hash-patch) |
+| Commit | `07cb811` |
 
 ---
 

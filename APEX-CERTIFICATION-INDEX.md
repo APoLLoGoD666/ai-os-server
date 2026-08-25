@@ -396,7 +396,7 @@ For full details, read the linked certification document.
 | Item | Value |
 |------|-------|
 | Task | Establish local repository as canonical APEX source of truth post-R0–R15 |
-| Commit | (pending hash-patch) |
+| Commit | `07cb811` |
 | Date | 2026-08-25 |
 | Status | **CERTIFIED WITH CONDITIONS** |
 | Document | `R16-CANONICAL-REPOSITORY-CERTIFICATION.md` |
