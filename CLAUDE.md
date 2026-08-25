@@ -23,8 +23,9 @@ This is a Render-hosted Node/Express AI OS.
 
 ## Key files
 - server.js = main backend, routes, agent logic
-- pg_helpers.js = Postgres helpers
-- pg_database.js = Postgres connection
+- lib/clients.js = canonical Supabase client (getSupabaseClient) — use this, not direct createClient()
+- lib/supabase-helpers.js = Supabase query helpers (renamed from pg_helpers.js in R4)
+- pg_database.js = specialised pg/Postgres connection (long-running queries only)
 - storage.js = Supabase Storage helpers
 - dashboard.html = UI
 
