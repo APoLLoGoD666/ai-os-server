@@ -16,26 +16,6 @@ const _sbClient = (() => {
 })();
 function sb() { return _sbClient(); }
 
-// ── Journal ────────────────────────────────────────────────────────────────────
-router.get('/journal/entries', _auth, async (req, res) => {
-    try {
-        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-        const { data, error } = await sb().from('apex_journal_entries').select('id,entry_text,sentiment_score,mood_score,created_at').order('created_at', { ascending: false }).limit(limit);
-        if (error) return res.status(500).json({ ok: false, error: error.message });
-        res.json({ ok: true, entries: data || [] });
-    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
-});
-
-router.post('/journal/entries', _auth, async (req, res) => {
-    try {
-        const { entry_text, sentiment_score, mood_score } = req.body || {};
-        if (!entry_text || !entry_text.trim()) return res.status(400).json({ ok: false, error: 'entry_text required' });
-        const { data, error } = await sb().from('apex_journal_entries').insert({ entry_text: entry_text.trim(), sentiment_score: sentiment_score || null, mood_score: mood_score || null }).select().single();
-        if (error) return res.status(500).json({ ok: false, error: error.message });
-        res.json({ ok: true, entry: data });
-    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
-});
-
 // ── Habits ─────────────────────────────────────────────────────────────────────
 router.get('/habits', _auth, async (req, res) => {
     try {

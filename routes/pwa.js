@@ -6,6 +6,8 @@ const router = require('express').Router();
 const _auth  = require('../lib/app-auth');
 const { getIcon }    = require('../lib/pwa/icon-generator');
 const { sendPush: _sendPush } = require('../lib/pwa/push');
+const { getSupabaseClient } = require('../lib/clients');
+function _sb() { return getSupabaseClient(); }
 
 // Icon endpoints — generated PNG, cached in memory
 router.get('/icon-192.png', (req, res) => {

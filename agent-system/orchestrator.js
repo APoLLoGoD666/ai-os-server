@@ -79,11 +79,9 @@ const ArchitectSchema = z.object({
     confidence:        z.number().min(0).max(1).optional().default(0.7),
 });
 
-// Module-level Supabase client — created once, reused across all pipeline runs
-const { createClient: _sbCreate } = require('@supabase/supabase-js');
-const _sb = process.env.SUPABASE_URL
-    ? _sbCreate(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
-    : null;
+// Module-level Supabase client — canonical client, null when SUPABASE_URL absent
+const { getSupabaseClient: _getSupabase } = require('../lib/clients');
+const _sb = process.env.SUPABASE_URL ? _getSupabase() : null;
 
 // Last-run model snapshot — used by getOrchestratorStatus for visibility only
 let _lastRunModels = {};

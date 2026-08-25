@@ -6,21 +6,8 @@ const memory   = require('../agent-system/obsidian-memory');
 
 const _sbClient = () => getSupabaseClient();
 
-// ── Voice pipeline state (shared across all WebSocket sessions) ───────────────
-const voiceState = {
-    active:      false,
-    ttsPlaying:  false,
-    interrupted: false,
-    sessionId:   null,
-    listeners:   new Set()       // WebSocket clients listening for state changes
-};
-
-function broadcastVoiceState() {
-    const payload = JSON.stringify({ type: 'voice_state', ...voiceState, listeners: undefined });
-    for (const ws of voiceState.listeners) {
-        try { if (ws.readyState === 1) ws.send(payload); } catch {}
-    }
-}
+// ── Voice pipeline state — canonical location is lib/voice/state.js (R13-D2) ─
+const { voiceState, broadcastVoiceState } = require('../lib/voice/state');
 
 // POST /api/intelligence/interrupt — barge-in: stop TTS and clear queue
 router.post('/intelligence/interrupt', requireAppAccess, (req, res) => {

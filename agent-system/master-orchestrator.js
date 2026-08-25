@@ -2,13 +2,11 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync, spawnSync } = require('child_process');
-const { createClient } = require('@supabase/supabase-js');
+const { getSupabaseClient: _getSupabase } = require('../lib/clients');
 const memory = require('./obsidian-memory');
 const constitutionGate = require('../lib/runtime/constitutional-gate');
 
-const _sb = process.env.SUPABASE_URL
-    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
-    : null;
+const _sb = process.env.SUPABASE_URL ? _getSupabase() : null;
 const _anthro = require('../lib/clients').getAnthropicClient();
 const runtime = require('../lib/models/runtime');
 

@@ -11,9 +11,10 @@ const bus       = require('../lib/event-bus');
 // and on 1st chunk when a prior session's connection is still alive.
 const _tlsAgent = new https.Agent({ keepAlive: true, keepAliveMsecs: 3000, maxSockets: 6 });
 
-// Lazy-load intelligence module — updates shared voiceState on session open/close.
-// Wrapped in try/catch so gemini-live remains functional even if intelligence.js fails to load.
-const _intel = (() => { try { return require('./intelligence'); } catch { return null; } })();
+// Voice state — canonical location is lib/voice/state.js (R13-D2)
+const { voiceState: _voiceState, broadcastVoiceState: _broadcastVoiceState } = (() => {
+    try { return require('../lib/voice/state'); } catch { return { voiceState: null, broadcastVoiceState: () => {} }; }
+})();
 
 const GEMINI_MODEL     = 'gemini-2.5-flash-preview-native-audio-dialog';
 const GEMINI_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
@@ -439,7 +440,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
                 ready = true;
                 safeSend(browserWs, { type: 'ready' });
                 bus.emit(bus.E.VOICE_STARTED, { session_id: connId });
-                if (_intel) { _intel.voiceState.active = true; _intel.voiceState.sessionId = connId; _intel.broadcastVoiceState(); }
+                if (_voiceState) { _voiceState.active = true; _voiceState.sessionId = connId; _broadcastVoiceState(); }
                 console.log('[GeminiLive] session ready — tools active, Alex context injected');
                 return;
             }
@@ -644,7 +645,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
             if (_activeAbort) { _activeAbort.abort(); _activeAbort = null; }
             _suppressGeminiAudio = false;
             if (_activeTurnId) { tracker.endSession(_activeTurnId); _activeTurnId = null; }
-            if (_intel) { _intel.voiceState.active = false; _intel.voiceState.sessionId = null; _intel.voiceState.ttsPlaying = false; _intel.broadcastVoiceState(); }
+            if (_voiceState) { _voiceState.active = false; _voiceState.sessionId = null; _voiceState.ttsPlaying = false; _broadcastVoiceState(); }
             closeGemini();
         });
         browserWs.on('error', e => { console.error('[GeminiLive] browser error:', e.message); closeGemini(); });
@@ -652,7 +653,7 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
         geminiWs.on('close', code => {
             console.log(`[GeminiLive] Gemini session closed ${code}`);
             safeSend(browserWs, { type: 'disconnected', code });
-            if (_intel) { _intel.voiceState.active = false; _intel.voiceState.sessionId = null; _intel.voiceState.ttsPlaying = false; _intel.broadcastVoiceState(); }
+            if (_voiceState) { _voiceState.active = false; _voiceState.sessionId = null; _voiceState.ttsPlaying = false; _broadcastVoiceState(); }
             if (browserWs.readyState === WebSocket.OPEN) browserWs.close();
         });
         geminiWs.on('error', e => {
