@@ -634,4 +634,45 @@ For full details, read the linked certification document.
 
 ---
 
+## KG-05 — Knowledge Decision Integration
+
+| Item | Value |
+|------|-------|
+| Task | Make knowledge sufficiency an explicit, auditable input to APEX decision/execution |
+| Date | 2026-08-26 |
+| Status | **CERTIFIED** |
+| Document | `KG-05-KNOWLEDGE-DECISION-INTEGRATION-CERTIFICATION.md` |
+
+**Delivered in KG-05:**
+- `migrations/088_knowledge_decision_records.sql` — audit table for every knowledge-gated decision evaluation; idempotent; CHECK constraint on outcome values; 5 indexes
+- `lib/knowledge/knowledge-decision.js` — `evaluateKnowledgeDecision()`: maps sufficiency state to PROCEED/PROCEED_WITH_CONDITION/REQUEST_INFORMATION/BLOCKED; persists audit record; fail-closed
+- Modified `lib/knowledge/knowledge-gap-engine.js` — re-exports `evaluateKnowledgeDecision`, `DECISION_OUTCOMES`, `_mapToDecisionOutcome`, `_buildOutcomeReason`, `_decisionId` through canonical surface
+- `tests/knowledge-decision.test.js` — 77 tests: module contract, taxonomy, pure helpers, empty/DB, outcome coverage, governance boundary, fail-closed, 17 falsification attempts, KG-01/02/03/04 regression
+
+**Test results:** 2022 / 2022 PASS (0 regressions)
+
+**KG-05 Decision outcome taxonomy:**
+- `SUFFICIENT` → `PROCEED`
+- `STALE` → `PROCEED_WITH_CONDITION`
+- `UNCERTAIN` + non-blocking → `PROCEED_WITH_CONDITION`
+- `UNCERTAIN` + mandatory blocking → `REQUEST_INFORMATION`
+- `INSUFFICIENT` + non-blocking → `PROCEED_WITH_CONDITION`
+- `INSUFFICIENT` + mandatory blocking → `BLOCKED`
+- `CONTRADICTORY` → `BLOCKED` (always, regardless of blocking flags)
+- Evaluation failure → `BLOCKED` (fail-closed)
+
+**Key invariants:**
+- KNOWLEDGE ≠ GOVERNANCE: `PROCEED` reflects knowledge adequacy; does NOT grant constitutional permission
+- KNOWLEDGE ≠ MEMORY: decision records persist to `knowledge_decision_records`, not memory gateway
+- CONTRADICTORY always blocks — truth is indeterminate
+- Fail-closed: evaluator exception → BLOCKED; unknown state → BLOCKED
+- Every evaluation written to `knowledge_decision_records` for full audit trail
+- No AI model calls — deterministic logic over persisted evidence
+- No modification to constitutional gate, EA runtime, or existing routes
+- 17 falsification attempts — all blocked
+
+**Known limitations:** None beyond inherited KG-01/02/03/04 limitations.
+
+---
+
 *Maintained by R-Series Refinement Programme. Update this index after each R-series certification.*
