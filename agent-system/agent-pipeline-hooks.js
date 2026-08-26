@@ -30,12 +30,8 @@ function _spine(type, source, payload) {
     });
 }
 
-const { createClient } = require('@supabase/supabase-js');
-let _sbClient = null;
-function _sb() {
-    if (!_sbClient) _sbClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-    return _sbClient;
-}
+const { getSupabaseClient } = require('../lib/clients');
+function _sb() { return getSupabaseClient(); }
 
 // Per-run governance context — keyed by taskId
 const _govCtx = new Map();
