@@ -549,4 +549,34 @@ For full details, read the linked certification document.
 
 ---
 
+---
+
+## KG-02 — Knowledge-Gap Lifecycle
+
+| Item | Value |
+|------|-------|
+| Task | Implement canonical evidence-grounded gap lifecycle |
+| Commit | (KG-02 commits) |
+| Date | 2026-08-26 |
+| Status | **CERTIFIED** |
+| Document | `KG-02-KNOWLEDGE-GAP-LIFECYCLE-CERTIFICATION.md` |
+
+**Delivered in KG-02:**
+- Migration 086: `knowledge_evidence_assessments` (6 determinations, 3 phases, TVW freshness integration)
+- Migration 087: `gap_resolution_attempts` (PENDING→outcome lifecycle, assessment_ref link)
+- `lib/knowledge/knowledge-lifecycle.js` — canonical lifecycle (assessRequirement, attemptResolution, getLifecycleAuditTrail, assessKnowledgeRequirements)
+- `routes/knowledge.js` — HTTP integration boundary `/api/knowledge/*`
+- `tests/knowledge-lifecycle.test.js` — 66 tests including A–W mandate requirements + falsification
+
+**Test results:** 1807 / 1807 PASS (0 regressions)
+
+**Key invariants:**
+- INFERRED evidence → UNCERTAIN/INSUFFICIENT (never SATISFIED) — no fabricated knowledge
+- EXPIRED freshness → STALE_EVIDENCE (cannot satisfy)
+- RESOLUTION ATTEMPT ≠ KNOWLEDGE SATISFIED — independent reassessment mandatory
+- Knowledge ≠ Memory: lifecycle does not touch lib/memory/gateway.js
+- Next: KG-03 (to be defined)
+
+---
+
 *Maintained by R-Series Refinement Programme. Update this index after each R-series certification.*
