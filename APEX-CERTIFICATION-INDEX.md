@@ -675,4 +675,42 @@ For full details, read the linked certification document.
 
 ---
 
+## KG-06 — Knowledge Acquisition & Gap-Resolution Orchestration
+
+| Item | Value |
+|------|-------|
+| Task | Orchestrate evidence acquisition to resolve knowledge gaps and close decision loop |
+| Date | 2026-08-26 |
+| Status | **CERTIFIED** |
+| Document | `KG-06-KNOWLEDGE-ACQUISITION-RESOLUTION-CERTIFICATION.md` |
+
+**Delivered in KG-06:**
+- `migrations/089_knowledge_resolution_plans.sql` — plan tracking table; 8 status states in CHECK constraint; `evidence_provenance JSONB`; idempotent; 5 indexes
+- `lib/knowledge/knowledge-resolution-engine.js` — `resolveAndDecide()`: orchestrates acquisition → re-evaluates via KG-03/04/05; 5 acquisition strategies; bounded by `max_attempts`; full provenance chain; fail-closed
+- Modified `lib/knowledge/knowledge-gap-engine.js` — re-exports `resolveAndDecide`, `planResolution`, `executeResolutionPlan`, `RESOLUTION_STRATEGIES`, `PLAN_STATUSES`, `_planId`, `_selectStrategy` through canonical surface
+- `tests/knowledge-resolution.test.js` — 69 tests: module contract, taxonomy, ID format, pure functions, DB-graceful, KGE re-exports, architecture invariants, 20 falsification attempts
+
+**Test results:** 2091 / 2091 PASS (0 regressions); KG-06 suite: 69 / 69 PASS
+
+**KG-06 resolution strategy taxonomy:**
+- `USE_EXISTING_KNOWLEDGE` — query operational knowledge state (KG-01)
+- `QUERY_CANONICAL_MEMORY` — search memory → submit to KVQ via knowledge-validator
+- `SUBMIT_FOR_VALIDATION` — caller evidence text → knowledge-validator → KVQ pending
+- `REQUEST_USER_INFORMATION` — fire-and-forget apex_notifications; acquired=false always
+- `BLOCK_ACTION` — no acquisition; immediately BLOCKED
+
+**Key invariants:**
+- CLOSED LOOP: KG-06 never determines final sufficiency — always closes through KG-05
+- FAIL-CLOSED: strategy exception → `acquired: false` → BLOCKED
+- BOUNDED: `max_attempts` enforced; exceeded → ABANDONED
+- AUDIT: every plan written to `knowledge_resolution_plans`; provenance accumulated, never overwritten
+- NO AI CALLS: `resolveAndDecide()` is deterministic orchestration
+- CANONICAL EVIDENCE: all submissions via `knowledge-validator.submitLesson()` → KVQ
+- SINGLE PUBLIC SURFACE: callers use `kge.resolveAndDecide()`
+- 20 falsification attempts — all blocked
+
+**Known limitations:** None beyond inherited KG-01/02/03/04/05 limitations.
+
+---
+
 *Maintained by R-Series Refinement Programme. Update this index after each R-series certification.*
