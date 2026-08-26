@@ -759,4 +759,42 @@ For full details, read the linked certification document.
 
 ---
 
+## KG-08 — Final Knowledge-Gap System Certification
+
+| Item | Value |
+|------|-------|
+| Task | Final integration, falsification, and system closure for the Knowledge-Gap programme |
+| Date | 2026-08-26 |
+| Status | **CERTIFIED** |
+| Document | `KG-08-FINAL-KNOWLEDGE-GAP-SYSTEM-CERTIFICATION.md` |
+
+**Delivered in KG-08:**
+- `tests/knowledge-final-certification.test.js` — 133 tests across 13 sections: architecture integrity, authority matrix, end-to-end scenarios (A–J), governance boundary, AI authority, memory boundary, evidence trust, acquisition boundary, longitudinal integrity, migration audit, API route audit, performance/safety, final falsification campaign (18 adversarial questions)
+- `KG-08-FINAL-KNOWLEDGE-GAP-SYSTEM-CERTIFICATION.md` — complete system certification document
+
+**Test results:** 2,168 / 2,168 PASS baseline → 2,301 / 2,301 PASS final (133 new; 0 regressions)
+
+**KG-08 confirmed:**
+- ONE canonical knowledge-gap engine (knowledge-gap-engine.js, 60 exports)
+- ONE evidence evaluator (knowledge-evidence-evaluator.js)
+- ONE decision system (knowledge-decision.js)
+- ONE longitudinal integrity system (knowledge-integrity.js)
+- ZERO competing engines, stores, or authorities
+- ZERO bypass paths found in 18-question adversarial falsification campaign
+
+**Architecture invariants proven:**
+- INFERRED evidence structurally capped at 0.59 — cannot reach MIN_CONFIDENCE (0.60)
+- CONTRADICTORY → BLOCKED unconditionally, no exceptions
+- EXPIRED/STALE/SUPERSEDED evidence blocked from sustaining sufficiency
+- Acquisition bounded (max_attempts); scan bounded (limit); no unbounded loops
+- Constitutional records (KC-) immutable — cannot be superseded via KG path
+- Prior decisions immutable — `markDecisionForReview` updates trigger record only
+- Fail-closed throughout: exception → BLOCKED, never silent PROCEED
+- Knowledge adequacy ≠ constitutional execution authority (proven by source audit)
+
+**Knowledge-Gap Programme: CLOSED**  
+Next authorised programme: APEX Interface / User Experience Implementation
+
+---
+
 *Maintained by R-Series Refinement Programme. Update this index after each R-series certification.*
