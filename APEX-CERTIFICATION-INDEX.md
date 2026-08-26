@@ -418,46 +418,51 @@ For full details, read the linked certification document.
 
 ---
 
-## Open Conditions Summary
+## Phase 2 — Deferred-Condition Closure & Production Convergence
 
-All conditions from R4–R15 that remain unresolved, in priority order:
+| Item | Value |
+|------|-------|
+| Task | Close all 33 deferred conditions; push & deploy R-series chain |
+| Commits | `411ae9b` → `9601e70` (5 Phase 2 commits; 26 total since R0) |
+| Date | 2026-08-26 |
+| Status | **CERTIFIED WITH CONDITIONS** |
+| Document | `PHASE-2-DEFERRED-CONDITION-CLOSURE-CERTIFICATION.md` |
 
-| Priority | ID | Description | From |
-|----------|----|-------------|------|
-| HIGH | R10-PATH-F | chat → handleCommand UNTESTED | R10 |
-| HIGH | R10-PATH-G | task → runAgentTeam UNTESTED | R10 |
-| HIGH | R10-PATH-H | agent → memory → tool UNTESTED | R10 |
-| HIGH | R10-TOOLS | handleCommand/tools UNTESTED | R10 |
-| MEDIUM | R9-03 | Mastra bypasses EA runtime | R9 |
-| MEDIUM | R9-05 | AUTONOMY_LEVEL discrepancy | R9 |
-| MEDIUM | F-15 | autoApproveStandardPermissions startup | R9 |
-| MEDIUM | R10-PATH-I | background execution UNTESTED | R10 |
-| MEDIUM | R10-PATH-J | production startup UNTESTED | R10 |
-| MEDIUM | R10-GOV | governance_records integration gap | R10 |
-| MEDIUM | R10-BG | 0/11 background paths tested | R10 |
-| MEDIUM | R7-MEM-01 | Memory layers gateway enforcement | R7 |
-| MEDIUM | R6-SHADOW-7 | Route shadow collisions | R6 |
-| LOW | R9-01 | orchestrator direct createClient() | R9 |
-| LOW | R9-02 | master-orchestrator direct createClient() | R9 |
-| LOW | R8-01 | governance.js direct createClient() | R8 |
-| LOW | ~~R9-04~~ | ~~langchain-memory.js orphan~~ | R9 | **RESOLVED R12** |
-| LOW | R6-NAMESPACE-1 | Route namespace violation | R6 |
-| LOW | R6-MEM-01 | Frontend /memory/search unresolved | R6 |
-| LOW | R7-MEM-02 | Legacy direct memory writes | R7 |
-| MEDIUM | R13-D1 | syncGoogleCalendar extraction (lib→routes) | R13 |
-| MEDIUM | R13-D2 | voiceState shared state extraction (route→route) | R13 |
-| MEDIUM | R13-D3 | voiceState mutation in auth middleware (route→route) | R13 |
-| MEDIUM | R13-D4 | Full registry/ shim consolidation (20+ files) | R13 |
-| LOW | R13-D5 | civilisation/civilization naming consistency | R13 |
-| LOW | R13-D6 | R6-SHADOW-7 route shadow collisions (structural) | R13 |
-| LOW | R13-D7 | R6-NAMESPACE-1 namespace violation (structural) | R13 |
-| HIGH | R15-P01 | /chat returns 500 in production — AI invocation broken | R15 |
-| HIGH | R15-P06 | 17-commit deployment gap — R1-R14 not pushed/deployed | R15 |
-| MEDIUM | R15-P02 | /api/briefing/motivation 500 — AI invocation failing | R15 |
-| MEDIUM | R15-P03 | public.messages table absent from production DB | R15 |
-| MEDIUM | R15-P04 | Memory writes stalled since 2026-06-23 | R15 |
-| MEDIUM | R15-P07 | R13 structural fixes absent from production (not deployed) | R15 |
-| LOW | R15-P05 | Mastra agents not loaded despite 29h uptime | R15 |
+**Key outcomes**:
+- All 33 conditions formally closed, deferred, or accepted
+- 5 createClient violations fixed (R8-01, R9-01, R9-02, R9-06, R9-07)
+- R13-D1 (syncGoogleCalendar), R13-D2 (voiceState) extractions complete
+- 42 new regression tests — total: 1,666 / 1,666 PASS
+- Production updated: d087c19 → 9601e70 (26 commits, 2026-08-26)
+- R15-P05 Mastra heap guard root cause identified and fixed
+- R15-P06 deployment gap RESOLVED
+
+**Open conditions forwarded to R17+**:
+- 30+ createClient violations in non-hot-path files
+- R6-SHADOW-7 (4 live shadow collisions) pending frontend API verification
+- R6-NAMESPACE-1 (integrations.js sub-prefix)
+- R15-P01, R15-P02: Authenticated live test deferred
+- R15-P04: Memory write stall live verification deferred
+
+---
+
+## Open Conditions Summary (post Phase 2)
+
+| Priority | ID | Description | Status |
+|----------|----|-------------|--------|
+| MEDIUM | R6-SHADOW-7 | 4 active route shadow collisions | KNOWN OUTSTANDING |
+| LOW | R6-NAMESPACE-1 | integrations.js sub-prefix violation | KNOWN OUTSTANDING |
+| MEDIUM | R9-03 | Mastra bypasses EA runtime | ACCEPTED NON-BLOCKING |
+| MEDIUM | F-15 | autoApproveStandardPermissions startup | ACCEPTED NON-BLOCKING |
+| MEDIUM | R10-PATH-J | Production startup sequence live verification | PARTIAL |
+| MEDIUM | R7-MEM-01 | Memory gateway enforcement | ACCEPTED NON-BLOCKING |
+| LOW | R7-MEM-02 | Legacy direct memory writes | ACCEPTED NON-BLOCKING |
+| LOW | R13-D4 | registry/ shim consolidation | ACCEPTED NON-BLOCKING |
+| LOW | R13-D5 | civilisation/civilization naming | ACCEPTED NON-BLOCKING |
+| HIGH | R15-P01 | /chat authenticated live test | PARTIAL (401 not 500) |
+| MEDIUM | R15-P02 | /briefing authenticated live test | PARTIAL (401 not 500) |
+| MEDIUM | R15-P04 | Memory write stall live verification | DEFERRED |
+| — | R9-07+ | ~30 additional createClient violations | KNOWN OUTSTANDING |
 
 ---
 
