@@ -713,4 +713,50 @@ For full details, read the linked certification document.
 
 ---
 
+## KG-07 — Longitudinal Knowledge Integrity
+
+| Item | Value |
+|------|-------|
+| Task | Detect and surface when previously sufficient knowledge is no longer valid |
+| Date | 2026-08-26 |
+| Status | **CERTIFIED** |
+| Document | `KG-07-LONGITUDINAL-KNOWLEDGE-INTEGRITY-CERTIFICATION.md` |
+
+**Delivered in KG-07:**
+- `migrations/090_knowledge_reassessment_triggers.sql` — reassessment trigger audit table; 5 trigger types; 4 invalidation states in CHECK constraint; idempotent; 5 indexes
+- `lib/knowledge/knowledge-integrity.js` — `checkRequirementIntegrity()` (read-only integrity check), `triggerReassessment()` (reopen gap + PENDING requirement), `supersedEvidence()` (mark KVQ as superseded; preserve record), `markDecisionForReview()` (link trigger to prior decision), `scanForExpiredSatisfactions()` (batch scan; read-only), `resolveReassessmentTrigger()` (close trigger)
+- Modified `lib/knowledge/knowledge-gap-engine.js` — re-exports all 9 KG-07 symbols through canonical surface
+- `tests/knowledge-integrity.test.js` — 77 tests: module contract, taxonomies, ID format, input validation, DB-graceful, KGE re-exports, architecture invariants, 15 falsification attempts
+
+**Test results:** 2091 / 2091 PASS (0 regressions from KG-06 baseline); KG-07 suite: 77 / 77 PASS (2168 total)
+
+**KG-07 reassessment trigger taxonomy:**
+- `EXPIRATION` — evidence has passed its temporal validity window
+- `STALENESS` — evidence approaching expiration; should be refreshed
+- `CONTRADICTION` — new contradictory evidence detected
+- `REQUIREMENT_CHANGE` — the knowledge requirement itself changed materially
+- `EVIDENCE_SUPERSESSION` — newer authoritative evidence supersedes the prior evidence
+
+**KG-07 invalidation state machine:**
+- `REASSESSMENT_REQUIRED` → trigger recorded; reassessment not yet complete
+- `KNOWLEDGE_INVALIDATED` → knowledge has been invalidated; requirement needs re-evaluation
+- `DECISION_REQUIRES_REVIEW` → a prior decision depended on now-invalidated knowledge
+- `RESOLVED` → reassessment complete; trigger closed
+
+**Key invariants:**
+- PROVENANCE PRESERVED: superseded evidence is marked `status='superseded'` in KVQ — never deleted
+- CONSTITUTIONAL IMMUTABILITY: KC- records cannot be superseded via this path
+- DECISION IMMUTABILITY: `markDecisionForReview` updates trigger record only; `knowledge_decision_records` unchanged
+- READ-ONLY SCAN: `scanForExpiredSatisfactions` detects but does not modify state; callers trigger reassessment
+- KNOWLEDGE ≠ MEMORY: module does not import `lib/memory/gateway.js`
+- KNOWLEDGE ≠ GOVERNANCE: reassessment triggers do not grant or revoke constitutional authority
+- FAIL-SOFT PERSISTENCE: `_persistTrigger` catches and logs errors; never throws
+- NO AI CALLS: all functions are deterministic with no model calls
+- BACKWARDS-COMPATIBLE: KG-01 through KG-06 exports and signatures unchanged
+- 15 falsification attempts — all blocked
+
+**Known limitations:** None beyond inherited KG-01 through KG-06 limitations.
+
+---
+
 *Maintained by R-Series Refinement Programme. Update this index after each R-series certification.*
