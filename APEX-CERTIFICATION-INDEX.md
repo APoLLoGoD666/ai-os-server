@@ -601,7 +601,36 @@ For full details, read the linked certification document.
 - `assessment_method` recorded in metadata: `EVIDENCE_GROUNDED` or `CALLER_ASSERTED`
 - KG-02-L03 RESOLVED: confidence no longer caller-authoritative when refs present
 - All KG-01 and KG-02 invariants preserved (0 regressions)
-- Next: KG-04 (to be defined)
+---
+
+## KG-04 — Knowledge Sufficiency Integration
+
+| Item | Value |
+|------|-------|
+| Task | Wire knowledge sufficiency as operational input into APEX's cognitive/execution architecture |
+| Date | 2026-08-26 |
+| Status | **CERTIFIED** |
+| Document | `KG-04-KNOWLEDGE-SUFFICIENCY-INTEGRATION-CERTIFICATION.md` |
+
+**Delivered in KG-04:**
+- `lib/knowledge/knowledge-context.js` — `buildKnowledgeContext()`: assesses requirements, maps to sufficiency states, computes worst-case overall state, identifies blocking gaps
+- Modified `lib/memory/gateway.js` — `getContext()` accepts optional `knowledgeRequirements`; returns `knowledge_sufficiency` layer (never cached, always fresh)
+- Modified `lib/knowledge/knowledge-gap-engine.js` — re-exports `buildKnowledgeContext`, `DETERMINATION_TO_SUFFICIENCY`, `SUFFICIENCY_PRIORITY` through canonical surface
+- `tests/knowledge-context.test.js` — 67 tests including falsification, governance composition, evidence traceability, and KG-01/02/03 regression
+
+**Test results:** 1945 / 1945 PASS (0 regressions)
+
+**Key invariants:**
+- KNOWLEDGE ≠ GOVERNANCE: `can_proceed` reflects knowledge only; does not grant execution authority
+- KNOWLEDGE ≠ MEMORY: `knowledge_sufficiency` never cached; not stored in memory layers
+- Sufficiency state: CONTRADICTORY(0) < INSUFFICIENT(1) < STALE(2) < UNCERTAIN(3) < SUFFICIENT(4) — worst wins
+- Caller cannot fabricate sufficiency — all assessments go through canonical KG engine
+- UNCERTAIN does NOT auto-convert to SATISFIED
+- Empty requirements → SUFFICIENT, `can_proceed=true` (no declared requirements = no blocks)
+- Fixes KG-02 `has_blocking_gaps` bug: correct index-based zip of determinations with requirements
+- Backwards-compatible: all existing `getContext()` callers unchanged (no `knowledgeRequirements` = no knowledge layer)
+
+**Known limitations:** None beyond inherited KG-01/02/03 limitations.
 
 ---
 
