@@ -21,8 +21,8 @@ function _pipeline(mod) {
     catch (e) { console.warn(`[integrations] pipelines/${mod} load failed:`, e.message); return null; }
 }
 
-// ── POST /api/leads/inbound — process a new lead ────────────────────────────
-router.post('/leads/inbound', requireAppAccess, async (req, res) => {
+// ── POST /api/integrations/leads/inbound — process a new lead ───────────────
+router.post('/integrations/leads/inbound', requireAppAccess, async (req, res) => {
     const { name, email, company, domain, source, budget, notes } = req.body || {};
     if (!name) return res.status(400).json({ ok: false, error: 'name required' });
     const pipeline = _pipeline('lead-pipeline');
@@ -36,8 +36,8 @@ router.post('/leads/inbound', requireAppAccess, async (req, res) => {
     }
 });
 
-// ── GET /api/tasks — get today's Notion tasks ───────────────────────────────
-router.get('/tasks', requireAppAccess, async (req, res) => {
+// ── GET /api/integrations/tasks — get today's Notion tasks ─────────────────
+router.get('/integrations/tasks', requireAppAccess, async (req, res) => {
     const tasks = _notion('notion-tasks');
     if (!tasks) return res.status(503).json({ ok: false, error: 'notion unavailable' });
     try {
@@ -52,8 +52,8 @@ router.get('/tasks', requireAppAccess, async (req, res) => {
     }
 });
 
-// ── POST /api/tasks — create a Notion task ─────────────────────────────────
-router.post('/tasks', requireAppAccess, async (req, res) => {
+// ── POST /api/integrations/tasks — create a Notion task ────────────────────
+router.post('/integrations/tasks', requireAppAccess, async (req, res) => {
     const { name, status, priority, domain, dueDate, agent, project, notes } = req.body || {};
     if (!name) return res.status(400).json({ ok: false, error: 'name required' });
     const tasks = _notion('notion-tasks');
@@ -67,8 +67,8 @@ router.post('/tasks', requireAppAccess, async (req, res) => {
     }
 });
 
-// ── GET /api/projects — get active Notion projects ─────────────────────────
-router.get('/projects', requireAppAccess, async (req, res) => {
+// ── GET /api/integrations/projects — get active Notion projects ────────────
+router.get('/integrations/projects', requireAppAccess, async (req, res) => {
     const projects = _notion('notion-projects');
     if (!projects) return res.status(503).json({ ok: false, error: 'notion unavailable' });
     try {
@@ -83,8 +83,8 @@ router.get('/projects', requireAppAccess, async (req, res) => {
     }
 });
 
-// ── POST /api/projects — create a Notion project ───────────────────────────
-router.post('/projects', requireAppAccess, async (req, res) => {
+// ── POST /api/integrations/projects — create a Notion project ──────────────
+router.post('/integrations/projects', requireAppAccess, async (req, res) => {
     const { name } = req.body || {};
     if (!name) return res.status(400).json({ ok: false, error: 'name required' });
     const projects = _notion('notion-projects');
@@ -98,8 +98,8 @@ router.post('/projects', requireAppAccess, async (req, res) => {
     }
 });
 
-// ── GET /api/clients — get active Notion clients ────────────────────────────
-router.get('/clients', requireAppAccess, async (req, res) => {
+// ── GET /api/integrations/clients — get active Notion clients ───────────────
+router.get('/integrations/clients', requireAppAccess, async (req, res) => {
     const clients = _notion('notion-clients');
     if (!clients) return res.status(503).json({ ok: false, error: 'notion unavailable' });
     try {
