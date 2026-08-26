@@ -1,7 +1,7 @@
 require("./instrument.js");
 require("dotenv").config();
 
-const { GIT_SHA, _errBuffer, _sinkError, getMastraStatus, setMastraStatus, getInitMastra, setInitMastra, getMastraAgents, setMastraAgents } = require('./lib/server-state');
+const { GIT_SHA, _errBuffer, _sinkError, getMastraStatus } = require('./lib/server-state');
 
 const Sentry = require("@sentry/node");
 
@@ -406,7 +406,6 @@ server.listen(PORT, () => _startup.onListen({
     checkPendingMasterTasks, autoApproveStandardPermissions,
     agentLib, embedText, ensureSetup, runDueSchedules,
     initEmailAgent, initRoutineAgent, runReflectionCheck,
-    getInitMastra, setInitMastra, getMastraStatus, setMastraStatus, setMastraAgents,
     PORT, MODEL, WORKSPACE_DIR,
 }));
 

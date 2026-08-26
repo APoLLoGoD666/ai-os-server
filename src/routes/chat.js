@@ -2,7 +2,6 @@
 const router = require('express').Router();
 const { requireAppAccess } = require('../../lib/middleware');
 const { kernelChain } = require('../../lib/kernel');
-const { getMastraAgents } = require('../../lib/server-state');
 const runtime = require('../../lib/models/runtime');
 const { detectDomain } = require('../../lib/server-utils');
 const { loadMemory, buildPrompt, fetchSelfContext } = require('../../lib/chat-context');
@@ -204,73 +203,6 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
 
         const prompt = buildPrompt(userMessage, memoryText, docsText, selfCtx, _chatEnrichedCtx);
 
-        const mastraAgents = getMastraAgents();
-        if (mastraAgents && mastraAgents.apexAgent) {
-            const historyMessages = memory.slice(-3).map(m => ({
-                role: m.role === "user" ? "user" : "assistant",
-                content: m.message
-            }));
-            const _olderMemText = (_temporalLine || '') + memory.slice(0, -3)
-                .map(m => `[${m.role.toUpperCase()}] ${m.message}`).join('\n');
-            const mastraPrompt = [
-                _chatDomainAgent ? `SPECIALIST CONTEXT — ${_chatDomainAgent.name.toUpperCase()}:\n${_chatDomainAgent.system_prompt}` : null,
-                _chatCogDirective ? `COGNITIVE DIRECTIVE: ${_chatCogDirective}` : null,
-                buildPrompt(userMessage, _olderMemText, docsText, selfCtx, _chatEnrichedCtx),
-            ].filter(Boolean).join('\n\n---\n\n');
-
-            const _needsFullTools = /email|mail|inbox|gmail|spend|expense|budget|transaction|finance|money|web|url|http|google|scrape|browser|routine|schedule|cron/i.test(userMessage);
-            const _agent = (!_needsFullTools && mastraAgents.coreApexAgent)
-                ? mastraAgents.coreApexAgent
-                : mastraAgents.apexAgent;
-
-            const result = await _agent.generate([
-                ...historyMessages,
-                { role: "user", content: mastraPrompt }
-            ]);
-            clearTimeout(chatTimeout);
-            const _mastraRaw = result.text || "No response from AI";
-            const { reply, mode: _mastraMode, intent: _mastraIntent } = _cogOrch.shape(userMessage, _mastraRaw, req.executionClass || 'EXECUTIVE', req.conversationId);
-            const _mastraSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
-            const _mastraPlan = _timingEng.buildStreamPlan(reply, _mastraIntent, req.executionClass || 'EXECUTIVE', _mastraSnap);
-            _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _mastraIntent, userMessage, reply, mode: _mastraMode, executionClass: req.executionClass });
-            _eae.recordTransition({ sessionId: req.conversationId });
-            _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _mastraIntent, mode: _mastraMode });
-            setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'mastra'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
-            setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('../../lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); if ((reply||'').split(/\s+/).length > 20) { require('../../lib/memory/consolidation-engine').submit('episode', req.conversationId||`chat-${Date.now()}`, { objective:`Chat: ${userMessage.slice(0,120)}`, success:true, source:'chat_mastra', reply:(reply||'').slice(0,200) }, 25).catch(()=>{}); require('../../lib/intelligence/knowledge-validator').submitLesson((reply||'').slice(0,400), { taskId:req.conversationId, sourceType:'observation' }).catch(()=>{}); } });
-            setImmediate(() => {
-                _wm.set(req.conversationId, 'chat_context', {
-                    domain: _chatDomainSlug || null,
-                    executiveFocus: _execRole || null,
-                    cognitiveMode: _chatCogDirective?.match(/REASONING MODE: (\w+)/)?.[1] || null,
-                    lastIntent: userMessage.slice(0, 120),
-                }, { ttlSeconds: 3600, source: 'chat' }).catch(() => {});
-            });
-            if (!_isConversational) {
-                setImmediate(() => {
-                    require('../../lib/cognitive/meta-reasoning-engine').record(
-                        req.conversationId, null,
-                        { success: true, cost_usd: 0, duration_ms: Date.now() - _chatT0, agent_logs: [] },
-                        { reasoning_mode: _chatCogDirective ? (_chatCogDirective.match(/REASONING MODE: (\w+)/)?.[1] || 'ANALYTICAL') : 'ANALYTICAL' },
-                        null
-                    ).catch(() => {});
-                });
-                _chatCountSinceEvolution++;
-                if (_chatCountSinceEvolution >= 100) {
-                    _chatCountSinceEvolution = 0;
-                    setImmediate(() => { require('../../lib/cognitive/cognitive-evolution-engine').runEvolutionCycle().catch(() => {}); });
-                }
-            }
-            return res.status(200).json({
-                ok: true,
-                reply,
-                response_mode: _mastraMode,
-                stream_plan: _mastraPlan,
-                memoryUsed: true,
-                documentsUsed: relevantDocs.length
-            });
-        }
-
-        // Fallback: raw Anthropic SDK if Mastra not initialised
         const { result: streamMsg } = await runtime.execute({
             client, model: HAIKU_MODEL, caller: 'chat_fallback', maxTokens: 500,
             tools: TOOLS,

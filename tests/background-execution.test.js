@@ -164,13 +164,11 @@ test('inventory: startup.js registers reflection_check at 30-min interval', () =
     assert(src.includes('reflection_check'), 'reflection_check cron must be present');
 });
 
-test('inventory: Mastra deferred 5 min with heap-pressure retry (anti-OOM)', () => {
+test('inventory: Mastra retired — no deferred loader in startup (R17)', () => {
     const src = require('fs').readFileSync(require('path').join(__dirname, '../lib/startup.js'), 'utf8');
-    assert(src.includes('_loadMastra'), 'Mastra deferred loader must exist');
-    assert(src.includes('300000'), 'Mastra 5-min deferral must be present');
-    // Heap guard uses absolute MB threshold (>190MB) — more reliable than percentage
-    // on Render where heap_size_limit varies by container configuration.
-    assert(src.includes('heapUsedMb') || src.includes('heapPct') || src.includes('heap'), 'Mastra heap guard must be present');
+    // R17: Mastra retired; _loadMastra must NOT exist. Canonical EA is primary.
+    assert(!src.includes('_loadMastra'), 'Mastra deferred loader must be removed (R17 retirement)');
+    assert(!src.includes('mastra_agents'), 'startup.js must not require mastra_agents (R17 retirement)');
 });
 
 test('inventory: REALITY_LOOP_ENABLED guards reality loop path', () => {
