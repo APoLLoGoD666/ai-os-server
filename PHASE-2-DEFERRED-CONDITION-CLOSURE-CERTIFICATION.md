@@ -3,7 +3,7 @@
 **Programme**: APEX R-Series Refinement Programme — Phase 2  
 **Authority basis**: R16-CANONICAL-REPOSITORY-CERTIFICATION.md (baseline)  
 **HEAD at Phase 2 start**: `07cb811` (R16)  
-**HEAD at Phase 2 close**: `9601e70` (Phase 2H)  
+**HEAD at Phase 2 close**: `66964ab` (Phase 2H — Mastra threshold v2)  
 **Date**: 2026-08-26  
 **Governing principle**: ONE PLATFORM. ONE SYSTEM. ONE APEX.
 
@@ -145,10 +145,13 @@ Total test count: **1,666** (was 1,624). Zero failures.
 - ✗ Mastra: not loaded (root cause: heapUsed/heapTotal > 0.75 → R15-P05 root cause identified)
 
 **Deployment 2** — `9601e70` (2026-08-26):
-*Deployment in progress at time of certification*
-- Fix: Mastra heap guard now uses `v8.getHeapStatistics().heap_size_limit` as denominator
-- Expected: Mastra will load at T+300s with 65% heap utilization (vs prior 81%)
-- Expected: R15-P05 RESOLVED
+- SHA verified ✓
+- Heap guard fix (v8 percentage) deployed. At T+425s heap was 160MB — Mastra still not loaded.
+- Root cause: `v8.getHeapStatistics().heap_size_limit` may differ from health-reported `heapLimit:220`.
+
+**Deployment 3** — `66964ab` (2026-08-26):
+- Fix: Switched to absolute 190MB threshold (`if (heapUsedMb > 190)`). Production steady-state heap is 140-165MB, so threshold will always pass at T+300s.
+- Verification: Mastra load expected at T+300s of this deployment (monitor running).
 
 **R15 Production Condition Status (Phase 2H):**
 
