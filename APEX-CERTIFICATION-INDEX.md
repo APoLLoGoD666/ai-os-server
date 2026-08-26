@@ -446,13 +446,48 @@ For full details, read the linked certification document.
 
 ---
 
-## Open Conditions Summary (post Phase 2)
+---
+
+## R17 — Mastra AI Authority Certification
+
+| Item | Value |
+|---|---|
+| Task | Resolve R15-P05; establish single canonical AI execution authority |
+| Commit | `5056e0c` |
+| Date | 2026-08-26 |
+| Status | **CERTIFIED** |
+| Document | `R17-MASTRA-AI-AUTHORITY-CERTIFICATION.md` |
+
+**Key outcomes**:
+- Root cause found: `@mastra/core` v1.43.0 requires Node ≥22.13.0; Render uses Node 18/20
+- Mastra never loaded in production across its entire lifetime (7+ hours, 43+ retries, all failing)
+- Decision: OUTCOME B — Mastra retired; canonical EA (`lib/models/runtime/index.js`) is sole authority
+- Canonical EA TOOLS array covers all Mastra capabilities plus 4 extras
+- Removed: `@mastra/core`, `@mastra/memory`, `@ai-sdk/anthropic` — 21MB heap freed (165→144MB)
+- 17 new R17 tests + background-execution.test.js updated
+- **1683 / 1683 PASS — zero regressions**
+- R15-P05: **RESOLVED**
+- **Knowledge-Gap phase: AUTHORISED**
+
+**Open conditions resolved**:
+- R15-P05 (Mastra not loading) → RESOLVED
+- R9-03 (Mastra bypasses EA runtime) → RESOLVED by retirement
+
+**Open conditions forwarded**:
+- ~30 createClient violations in non-hot-path files
+- R6-SHADOW-7 (4 live shadow collisions)
+- R6-NAMESPACE-1 (integrations.js namespace)
+- R15-P01, R15-P02: Authenticated live test deferred
+- R15-P04: Memory write stall live verification deferred
+
+---
+
+## Open Conditions Summary (post R17)
 
 | Priority | ID | Description | Status |
 |----------|----|-------------|--------|
 | MEDIUM | R6-SHADOW-7 | 4 active route shadow collisions | KNOWN OUTSTANDING |
 | LOW | R6-NAMESPACE-1 | integrations.js sub-prefix violation | KNOWN OUTSTANDING |
-| MEDIUM | R9-03 | Mastra bypasses EA runtime | ACCEPTED NON-BLOCKING |
 | MEDIUM | F-15 | autoApproveStandardPermissions startup | ACCEPTED NON-BLOCKING |
 | MEDIUM | R10-PATH-J | Production startup sequence live verification | PARTIAL |
 | MEDIUM | R7-MEM-01 | Memory gateway enforcement | ACCEPTED NON-BLOCKING |

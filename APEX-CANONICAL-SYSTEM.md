@@ -38,11 +38,11 @@ APEX is a Render-hosted Node.js / Express AI Operating System. It is a single-se
 | Production storage | Supabase Storage |
 | Production HTTP server | `server.js` (sole authority — R5 verified) |
 | Production port | `process.env.PORT` (Render-assigned) |
-| Certified production commit | `d087c19` (Wave 4 architecture) |
-| Current repository HEAD | `2658a05` (R15 — post-Wave 4 refinements) |
-| R-Series complete | R0 through R15 |
+| Certified production commit | `5056e0c` (R17 — Mastra retired, canonical EA primary) |
+| Current repository HEAD | `5056e0c` (R17 complete) |
+| R-Series complete | R0 through R17 (including Phase 2) |
 
-> **CRITICAL DISTINCTION**: `d087c19` is the certified production baseline. Repository HEAD `2658a05` includes R-series refinements (R0–R15) that are **not yet confirmed as deployed to production**. Do not treat repository state as production state unless explicitly verified.
+> **Production and repository are in sync as of R17.** `5056e0c` is both the local HEAD and the verified production SHA.
 
 ---
 
@@ -63,9 +63,9 @@ Verified production startup path (R5):
         ├─ lib/integrity-crons.start()                [60s tick]
         ├─ lib/event-consumer.start()                 [10s tick]
         ├─ setTimeout(60s)  → lib/governance-probe.runProbe()
-        ├─ setTimeout(300s) → agent-system/mastra_agents.initMastra()
         └─ 5× setImmediate → deploy event, schema check, adaptation cleanup,
                               task recovery, agent lib load
+        [Mastra deferred loader REMOVED — R17 retirement]
 ```
 
 **Server authority**: `server.js` is the SOLE canonical production HTTP server. `scripts/session-bridge.js` also creates an HTTP server but is DEV-ONLY, not reached from production. (R5-verified)
@@ -228,10 +228,9 @@ ALL AI MODEL INVOCATIONS
 | OpenAI GPT-4o | STUB — NOT IMPLEMENTED | `_stub: true` in registry |
 | OpenRouter | STUB — NOT IMPLEMENTED | Reference only |
 
-**Exception — Mastra agents bypass EA runtime** (R9-03, MEDIUM, DEFERRED):
-- `agent-system/mastra_agents.js` uses `@ai-sdk/anthropic` directly.
-- This bypasses circuit breaker, governance evidence recording, EA telemetry.
-- Status: OPEN finding, not yet resolved.
+**R17 (2026-08-26): ONE CANONICAL AI EXECUTION AUTHORITY.**
+- `lib/models/runtime/index.js → execute()` is the sole AI execution path.
+- Mastra retired (R9-03 RESOLVED). `@ai-sdk/anthropic` removed. No parallel AI runtime.
 
 ---
 
@@ -243,7 +242,7 @@ Verified R9 — five distinct agent namespaces (LAYERED, not duplicates):
 |-----------|------|---------|
 | **agent-registry** | `lib/agent-registry.js` | Capability metadata store |
 | **agent-library** | `lib/agent-library.js` | 150+ external personas (GitHub-synced, stored in `apex_agents`) |
-| **mastra_agents** | `agent-system/mastra_agents.js` | 6 Mastra framework agents (deferred 300s at startup) |
+| ~~**mastra_agents**~~ | *(retired R17)* | Mastra framework agents — deleted; canonical EA is primary |
 | **domain-agents** | `agent-system/domain-agents.js` | 7 runtime-invocable agents (EA canonical path) |
 | **agents.js** | `lib/agents.js` | UI profile objects |
 
@@ -295,13 +294,13 @@ POST /chat (civilization-kernel authenticated)
                 └─ dispatches to specific tool implementation
 ```
 
-**21 native chat tools** (defined in `src/routes/chat.js` TOOLS constant):
-Invoked via Anthropic native `tool_use` mechanism.
+**20 canonical chat tools** (defined in `src/routes/chat.js` TOOLS constant):
+Invoked via Anthropic native `tool_use` mechanism through `runtime.execute()`.
+Includes browser, file, finance, email tools — all delegate to `handleCommand()`.
 
-**20 Mastra tools** (defined in `agent-system/mastra_agents.js`):
-Created via `@mastra/core/agent createTool()`. All delegate to `handleCommand()`.
+*(Mastra tools retired R17 — canonical TOOLS array covers all capabilities plus extras.)*
 
-**Total tools**: 41 (21 native + 20 Mastra).
+**Total tools**: 20 canonical (expanded from 21 after Mastra retirement de-duplicated overlap).
 
 > **Coverage gap (R10)**: `handleCommand()` has zero behavioral tests. Tool invocation path (PATH F) is untested.
 
@@ -359,7 +358,6 @@ Verified R5/R9 — 11 background execution paths:
 | `lib/integrity-crons.js` | setInterval | 60s | Always on |
 | `lib/governance-probe.js` | setTimeout one-shot | 60s delay | Always |
 | `lib/models/runtime/subscriber.js` | event listeners | on-event | Always on |
-| `agent-system/mastra_agents.js` | setTimeout init | 300s delay | Always |
 | `agent-system/email_agent.js` | setInterval | 5 min | `GMAIL_ENABLED=true` |
 | `agent-system/routine_agent.js` | setInterval | 60s + 24h | Always on |
 | `agent-system/langchain-rag.js` | setInterval | 30 min | `.unref()` (non-blocking) |
@@ -502,7 +500,7 @@ From R4–R10 certification records. Do not treat as resolved unless explicitly 
 | R8-01 | lib/governance.js direct createClient() (R4-bypass) | LOW | DEFERRED |
 | R9-01 | agent-system/orchestrator.js direct createClient() | LOW | DEFERRED |
 | R9-02 | agent-system/master-orchestrator.js direct createClient() | LOW | DEFERRED |
-| R9-03 | Mastra agents bypass EA runtime (@ai-sdk/anthropic) | MEDIUM | OPEN |
+| R9-03 | Mastra agents bypass EA runtime (@ai-sdk/anthropic) | MEDIUM | **RESOLVED (R17)** |
 | R9-04 | langchain-memory.js zero production importers (orphan) | LOW | DEFERRED |
 | R9-05 | AUTONOMY_LEVEL discrepancy: server.js="1" vs civilization-kernel.js=3 | MEDIUM | OPS VERIFICATION REQUIRED |
 | F-15 | autoApproveStandardPermissions() can trigger runAgentTeam() at startup | MEDIUM | PARTIALLY VERIFIED (R10) |
@@ -533,14 +531,14 @@ From R4–R10 certification records. Do not treat as resolved unless explicitly 
 | **runAgentTeam** | 8-stage autonomous pipeline in `agent-system/orchestrator.js` |
 | **master-orchestrator** | Outer feature planner; calls runAgentTeam for execution |
 | **cognitive-orchestrator** | Response shaper only (`lib/cognitive-orchestrator.js`); NOT an agent runner |
-| **Mastra** | `@mastra/core` framework; 6 agents using `@ai-sdk/anthropic` — bypasses EA runtime |
+| **Mastra** | *RETIRED (R17)* — `@mastra/core` framework removed; canonical EA (`lib/models/runtime`) is sole AI authority |
 | **domain agent** | One of 7 named agents in `agent-system/domain-agents.js`; uses EA runtime canonically |
 | **PETL** | Policy Execution Transaction Layer — 9 built files, INTENTIONALLY UNWIRED in production |
 | **RT-xx** | Constitutional Runtime specification (Wave 4 architecture) — e.g. RT-04, RT-11, RT-12 |
-| **R-Series** | APEX Repository Refinement Programme — R0 through R10+ |
+| **R-Series** | APEX Repository Refinement Programme — R0 through R17 (including Phase 2) |
 | **BOOTSTRAPPED** | Constitutional record written to constitutional_records; operational execution may still be deferred |
-| **production baseline** | Commit d087c19 (Wave 4 certified production deployment) |
-| **canonical repository** | Current repository HEAD (9794171 as of R10) — not yet proven deployed to production |
+| **production baseline** | Commit `5056e0c` (R17 — in sync with production) |
+| **canonical repository** | Current repository HEAD `5056e0c` — **verified deployed to production** |
 | **knowledge gap** | A capability or knowledge item identified as missing; PLANNED system not yet implemented |
 | **autoApproveStandardPermissions** | Function called at server startup that can trigger autonomous pipeline execution (F-15) |
 
