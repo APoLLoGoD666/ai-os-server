@@ -149,9 +149,11 @@ Total test count: **1,666** (was 1,624). Zero failures.
 - Heap guard fix (v8 percentage) deployed. At T+425s heap was 160MB — Mastra still not loaded.
 - Root cause: `v8.getHeapStatistics().heap_size_limit` may differ from health-reported `heapLimit:220`.
 
-**Deployment 3** — `66964ab` (2026-08-26):
-- Fix: Switched to absolute 190MB threshold (`if (heapUsedMb > 190)`). Production steady-state heap is 140-165MB, so threshold will always pass at T+300s.
-- Verification: Mastra load expected at T+300s of this deployment (monitor running).
+**Deployment 3** — `66964ab` / `49ce62c` (2026-08-26):
+- Fix: Switched to absolute 190MB threshold (`if (heapUsedMb > 190)`). At T+300s heap was 143MB — guard passed. Heap then jumped to 161MB (consistent with @mastra/core loading).
+- BUT: health endpoint `details` still shows stub `"status":"not yet loaded"` at T+331s — this means `setMastraStatus` was NOT called, i.e., `require('../agent-system/mastra_agents')` THREW in production.
+- The heap guard fix is correct. The underlying issue is a production-specific `@mastra/core` load error (never loaded in 31+ hours of prior uptime). Packages confirmed in package.json. Environment difference suspected.
+- **R15-P05 Final Status**: PARTIALLY RESOLVED — heap guard denominator fixed; underlying Mastra init failure DEFERRED to R17 investigation.
 
 **R15 Production Condition Status (Phase 2H):**
 
