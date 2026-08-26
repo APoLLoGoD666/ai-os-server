@@ -575,7 +575,33 @@ For full details, read the linked certification document.
 - EXPIRED freshness → STALE_EVIDENCE (cannot satisfy)
 - RESOLUTION ATTEMPT ≠ KNOWLEDGE SATISFIED — independent reassessment mandatory
 - Knowledge ≠ Memory: lifecycle does not touch lib/memory/gateway.js
-- Next: KG-03 (to be defined)
+
+---
+
+## KG-03 — Evidence-Grounded Knowledge Assessment
+
+| Item | Value |
+|------|-------|
+| Task | Solve KG-02-L03: derive confidence/completeness from canonical stores |
+| Date | 2026-08-26 |
+| Status | **CERTIFIED** |
+| Document | `KG-03-EVIDENCE-GROUNDED-ASSESSMENT-CERTIFICATION.md` |
+
+**Delivered in KG-03:**
+- `lib/knowledge/knowledge-evidence-evaluator.js` — derives confidence/completeness/freshness from KVQ + constitutional_records
+- Modified `lib/knowledge/knowledge-lifecycle.js` — `assessRequirement()` accepts `evidence_refs`; overrides caller values with evaluator results
+- Modified `lib/knowledge/knowledge-gap-engine.js` — re-exports evaluator through canonical surface
+- `tests/knowledge-evidence-evaluator.test.js` — 71 tests including falsification + KG-02 regression
+
+**Test results:** 1878 / 1878 PASS (0 regressions)
+
+**Key invariants:**
+- When `evidence_refs` provided, caller confidence/completeness OVERRIDDEN by canonical derivation
+- `pattern` source_type → INFERRED → confidence capped below MIN_CONFIDENCE (0.59 max)
+- `assessment_method` recorded in metadata: `EVIDENCE_GROUNDED` or `CALLER_ASSERTED`
+- KG-02-L03 RESOLVED: confidence no longer caller-authoritative when refs present
+- All KG-01 and KG-02 invariants preserved (0 regressions)
+- Next: KG-04 (to be defined)
 
 ---
 
