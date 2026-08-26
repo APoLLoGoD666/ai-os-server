@@ -521,4 +521,32 @@ For full details, read the linked certification document.
 
 ---
 
+---
+
+## KG-01 — Knowledge-Gap Foundation
+
+| Item | Value |
+|------|-------|
+| Task | Establish canonical foundation for APEX knowledge-state awareness |
+| Commit | (KG-01 commits) |
+| Date | 2026-08-26 |
+| Status | **CERTIFIED** |
+| Document | `KG-01-KNOWLEDGE-GAP-FOUNDATION-CERTIFICATION.md` |
+
+**Delivered in KG-01:**
+- Migration 083: `knowledge_gaps` table (10 gap types, lifecycle, gap_score)
+- Migration 084: `knowledge_requirements` table (decision-to-knowledge requirement declarations)
+- Migration 085: `temporal_validity_windows` table (RT09-PROC-06 freshness model, 13 seed types — resolves L-02 limitation)
+- `lib/knowledge/knowledge-gap-engine.js` — canonical gap authority (detectGap, queryGaps, resolveGap, acceptGap, declareRequirement, assessStaleness, getKnowledgeState, getGapStats)
+- `tests/knowledge-gap-engine.test.js` — 58 tests, all PASS
+
+**Test results:** 1741 / 1741 PASS (0 regressions)
+
+**Known limitations (non-blocking):**
+- KG-01-L01: ILIKE search on lesson_text — may miss non-verbatim subject matches
+- KG-01-L04: No deduplication in detectGap — caller responsibility
+- Next: KG-02 (to be defined)
+
+---
+
 *Maintained by R-Series Refinement Programme. Update this index after each R-series certification.*
