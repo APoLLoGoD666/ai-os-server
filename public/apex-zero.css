@@ -361,3 +361,296 @@ html, body {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   V-03 — VISUAL PRODUCT REFINEMENT
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── 20. V-03-02 TYPOGRAPHY SYSTEM ────────────────────────────────────── */
+:root {
+  --type-display:  700 26px/1.15 var(--font-sans);
+  --type-title:    600 16px/1.3  var(--font-sans);
+  --type-section:  600  9px/1    var(--font-sans);
+  --type-body:     400 13px/1.6  var(--font-sans);
+  --type-meta:     400 11px/1.45 var(--font-sans);
+  --type-label:    600  9px/1    var(--font-sans);
+  --type-numeric:  600 20px/1    var(--font-mono);
+  --type-numeric-sm: 500 14px/1  var(--font-mono);
+}
+
+/* Page title: apply display scale, no wide letter-spacing */
+.ds-page-title {
+  font:           var(--type-display) !important;
+  letter-spacing: 0.04em !important;
+  color:          var(--on-void) !important;
+}
+
+/* Feed tags: Inter instead of JetBrains Mono */
+.apex-tag {
+  font-family:    var(--font-sans) !important;
+  font-size:      8px !important;
+  font-weight:    600 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+  padding:        1px 5px !important;
+  border-radius:  2px !important;
+}
+
+/* Stat label / meta labels: consistent scale */
+.stat-lbl {
+  font:           500 10px/1 var(--font-sans) !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+  color:          var(--on-void-3) !important;
+}
+
+.stat-sub {
+  font:  400 10px/1.4 var(--font-sans) !important;
+  color: var(--on-void-3) !important;
+}
+
+/* Stat numeric values: keep mono for data integrity */
+.stat-num {
+  font:  var(--type-numeric) !important;
+  color: var(--on-void) !important;
+}
+
+/* Feed title / section headers */
+.apex-feed-title {
+  font:           600 9px/1 var(--font-sans) !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color:          var(--on-void-3) !important;
+}
+
+/* Panel header labels */
+.ds-panel-header,
+.ds-panel-header-left {
+  font-family: var(--font-sans) !important;
+}
+
+/* ─── 21. V-03-03 GLOBAL TOKEN APPLICATION ──────────────────────────────── */
+
+/* ds-input: replace old navy background (#141d30) */
+.ds-input,
+input.ds-input,
+textarea.ds-input,
+select.ds-input {
+  background:    var(--void-2) !important;
+  border:        1px solid rgba(244,244,245,0.10) !important;
+  color:         var(--on-void) !important;
+  font-family:   var(--font-sans) !important;
+  font-size:     13px !important;
+  border-radius: var(--radius-sm) !important;
+}
+.ds-input:focus,
+input.ds-input:focus,
+textarea.ds-input:focus {
+  border-color: var(--signal) !important;
+  box-shadow:   0 0 0 2px var(--signal-lo) !important;
+  outline:      none !important;
+}
+.ds-input::placeholder {
+  color: var(--on-void-3) !important;
+}
+
+/* ds-btn: replace navy-tinted color */
+.ds-btn {
+  color:         var(--on-void-2) !important;
+  font-family:   var(--font-sans) !important;
+  font-size:     11px !important;
+  font-weight:   500 !important;
+  letter-spacing: 0.02em !important;
+  border-radius: var(--radius-sm) !important;
+  border:        1px solid rgba(244,244,245,0.10) !important;
+  cursor:        pointer !important;
+  transition:    background 0.12s, color 0.12s, border-color 0.12s !important;
+}
+.ds-btn:hover {
+  background:   rgba(244,244,245,0.06) !important;
+  color:        var(--on-void) !important;
+  border-color: rgba(244,244,245,0.18) !important;
+}
+
+/* Cyan accent = signal (indigo) */
+.ds-btn.cyan {
+  color:        var(--signal) !important;
+  border-color: rgba(99,102,241,0.3) !important;
+}
+.ds-btn.cyan:hover {
+  background:   var(--signal-lo) !important;
+  border-color: var(--signal) !important;
+}
+
+/* Secondary/muted modifier variants — fix navy-tinted color */
+.ds-btn.grey, .ds-btn.xs, .ds-btn.btn--xs, .ds-btn.sm {
+  color: var(--on-void-2) !important;
+  font-size: 10px !important;
+}
+
+/* Filled primary */
+.ds-btn.filled-cyan,
+.ds-btn[class*="filled-cyan"] {
+  background:   var(--signal) !important;
+  color:        #fff !important;
+  border-color: transparent !important;
+}
+.ds-btn.filled-cyan:hover { background: var(--signal-hi) !important; }
+
+/* ds-panel: ensure overflow is controlled */
+.ds-panel {
+  overflow: hidden !important;
+}
+
+/* ds-badge: family fix */
+.ds-badge {
+  font-family: var(--font-sans) !important;
+  font-size:   9px !important;
+}
+
+/* Override inline navy backgrounds in constitution / overview cards */
+/* These use style="background:#0d1424" — target precisely */
+#page-command [style*="background:#0d1424"],
+#page-command [style*="background: #0d1424"],
+#page-overview [style*="background:#0d1424"],
+#page-overview [style*="background: #0d1424"] {
+  background: var(--void-1) !important;
+}
+
+/* Override inline cyan/blue accent borders */
+#page-command [style*="border-top:2px solid rgba(91,158,255"],
+#page-overview [style*="border:3px solid rgba(91,158,255"] {
+  border-color: rgba(99,102,241,0.4) !important;
+}
+
+/* ─── 22. V-03-01 ACTIVITY FEED — SEMANTIC HIERARCHY ───────────────────── */
+/* DATA GAP DOCUMENTED: backend tags perf telemetry (e.g. "Slow response — 1927ms")
+   as type:error. No distinct telemetry type is emitted. Separation is best-effort via
+   CSS tag-class hierarchy. Backend change required for full resolution (V-04+). */
+
+.apex-feed-body {
+  font-family: var(--font-sans) !important;
+}
+
+.apex-feed-entry {
+  font-family:   var(--font-sans) !important;
+  font-size:     12px !important;
+  line-height:   1.5 !important;
+  border-bottom: 1px solid rgba(244,244,245,0.03) !important;
+  padding:       3px 0 !important;
+}
+
+.apex-feed-ts {
+  font-family: var(--font-mono) !important;
+  font-size:   9px !important;
+  color:       var(--on-void-3) !important;
+}
+
+.apex-feed-msg {
+  font-family: var(--font-sans) !important;
+  font-size:   12px !important;
+  color:       var(--on-void-2) !important;
+  line-height: 1.5 !important;
+}
+
+/* USER ACTIVITY — full visibility */
+.apex-feed-entry:has(.apex-tag-agent) .apex-feed-msg,
+.apex-feed-entry:has(.apex-tag-voice) .apex-feed-msg,
+.apex-feed-entry:has(.apex-tag-research) .apex-feed-msg {
+  color: var(--on-void) !important;
+}
+
+/* SYSTEM — de-emphasised telemetry */
+.apex-feed-entry:has(.apex-tag-system) {
+  opacity: 0.45 !important;
+}
+
+/* ERROR — medium (may be perf telemetry or real error) */
+.apex-feed-entry:has(.apex-tag-error) {
+  opacity: 0.65 !important;
+}
+
+/* If explicitly typed COST/PERF/LATENCY (future-proofing) */
+.apex-tag-COST, .apex-tag-PERF, .apex-tag-LATENCY,
+.apex-tag-perf, .apex-tag-latency, .apex-tag-cost {
+  background: rgba(244,244,245,0.04) !important;
+  color:      var(--on-void-3) !important;
+}
+.apex-feed-entry:has(.apex-tag-COST),
+.apex-feed-entry:has(.apex-tag-PERF),
+.apex-feed-entry:has(.apex-tag-perf) {
+  opacity: 0.35 !important;
+}
+
+/* Tag palette: APEX Zero colours */
+.apex-tag-agent    { background: rgba(99,102,241,0.15) !important; color: var(--signal-hi) !important; }
+.apex-tag-voice    { background: rgba(99,102,241,0.10) !important; color: var(--signal) !important; }
+.apex-tag-system   { background: rgba(244,244,245,0.05) !important; color: var(--on-void-3) !important; }
+.apex-tag-error    { background: rgba(239,68,68,0.10) !important;  color: var(--err) !important; }
+.apex-tag-research { background: rgba(245,158,11,0.12) !important; color: var(--warn) !important; }
+.apex-tag-file     { background: rgba(56,189,248,0.10) !important; color: var(--data) !important; }
+
+/* ─── 23. V-03-05 COMMAND CENTRE ────────────────────────────────────────── */
+/* PlasmaOrb: RETAINED — communicates voice state (standby/listening/thinking/speaking).
+   Reduced to 200px; primary value is as voice interaction target, not data display. */
+#plasmaOrb {
+  width:     200px !important;
+  height:    200px !important;
+  max-width: 44vw !important;
+}
+
+@media (max-width: 899px) {
+  #plasmaOrb {
+    width:     140px !important;
+    height:    140px !important;
+  }
+}
+
+/* Stat cards: tighter layout */
+.cmd-stat {
+  display:        flex !important;
+  flex-direction: column !important;
+  gap:            var(--gap-xs) !important;
+}
+
+/* Chat input */
+.chat-input {
+  font: 400 14px/1.5 var(--font-sans) !important;
+}
+.chat-input::placeholder {
+  color: var(--on-void-3) !important;
+}
+
+/* ─── 24. V-03-06 EMPTY / LOADING STATES ────────────────────────────────── */
+.ds-empty,
+.apex-empty {
+  display:         flex !important;
+  flex-direction:  column !important;
+  align-items:     center !important;
+  justify-content: center !important;
+  padding:         var(--gap-xl) var(--gap-md) !important;
+  color:           var(--on-void-3) !important;
+  font:            400 12px/1.5 var(--font-sans) !important;
+  text-align:      center !important;
+  gap:             var(--gap-sm) !important;
+  min-height:      80px !important;
+}
+
+/* ─── 25. V-03-07 RESPONSIVE QUALITY ────────────────────────────────────── */
+/* Feed col: allow natural stacking at mobile, but collapse below 480px */
+@media (max-width: 479px) {
+  .cmd-feed-col {
+    display: none !important;
+  }
+  /* At very narrow: more room for stat strip */
+  .cmd-strip {
+    padding: var(--gap-sm) !important;
+  }
+}
+
+/* Desktop (≥900px): ensure nav group labels have proper spacing */
+@media (min-width: 900px) {
+  .az-nav-group:not(:first-of-type) {
+    margin-top: var(--gap-xs) !important;
+  }
+}
