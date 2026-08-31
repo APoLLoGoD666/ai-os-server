@@ -8904,6 +8904,12 @@ if(pipe){
                       glowNode('cintel',col);drawGauge(ev.score||0);
                       pushGlobalFeed('health','score='+(ev.score||0),col,ts);
                     }
+                    if(ev.type==='agent'&&(ev.ok||ev.status==='committed'||ev.status==='completed')){
+                      setTimeout(function(){
+                        if(typeof runRefresh==='function'&&typeof refreshRecentRuns==='function') runRefresh('recentRuns',refreshRecentRuns);
+                        if(typeof runRefresh==='function'&&typeof refreshMetrics==='function') runRefresh('metrics',refreshMetrics);
+                      },2000);
+                    }
                     if(curNode&&evHist[curNode])renderPanelEv(curNode);
                   };
                 }
@@ -11195,6 +11201,26 @@ async function runRefresh(key, fn) {
     return inFlightRefreshes[key];
 }
 
+// ── Client-side TTL cache (defined here so boot-time calls can use it) ──
+var _ttlCache = {};
+function cachedFetch(url, ttlMs) {
+    var now = Date.now();
+    var hit = _ttlCache[url];
+    if (hit && now < hit.expires) return Promise.resolve(hit.data);
+    if (hit && hit.inflight) return hit.inflight;
+    if (!_ttlCache[url]) _ttlCache[url] = { data: null, expires: 0, inflight: null };
+    var p = fetchJson(url).then(function(d) {
+        _ttlCache[url] = { data: d, expires: Date.now() + ttlMs, inflight: null };
+        return d;
+    }).catch(function(e) {
+        if (_ttlCache[url]) _ttlCache[url].inflight = null;
+        throw e;
+    });
+    _ttlCache[url].inflight = p;
+    return p;
+}
+function invalidateTtlCache(url) { delete _ttlCache[url]; }
+
 // ══ CLOCK ═════════════════════════════════════════════════════════════
 function tickClock() {
     const now = new Date();
@@ -12892,6 +12918,7 @@ async function viewTaskDetails(id) {
 // ══ REFRESH ALL ════════════════════════════════════════════════════════
 // ══ EMAIL PANEL ═══════════════════════════════════════════════════════
 async function refreshEmailPanel() {
+    return runRefresh('email', async () => {
     const el = document.getElementById("emailList");
     if (!el) return;
     try {
@@ -12932,6 +12959,7 @@ async function refreshEmailPanel() {
     } catch (err) {
         el.innerHTML = `<div class="empty-note">${escapeHtml(err.message)}</div>`;
     }
+    });
 }
 
 async function checkEmailNow() {
@@ -13061,6 +13089,7 @@ async function rejectEmail(id) {
 
 // ══ FINANCE PANEL ═════════════════════════════════════════════════════
 async function refreshFinancePanel() {
+    return runRefresh('finance', async () => {
     const el = document.getElementById("financePanel");
     if (!el) return;
     try {
@@ -13109,6 +13138,7 @@ async function refreshFinancePanel() {
     } catch (err) {
         el.innerHTML = `<div class="empty-note">${escapeHtml(err.message)}</div>`;
     }
+    });
 }
 
 async function logExpenseQuick() {
@@ -13132,6 +13162,7 @@ async function logExpenseQuick() {
 
 // ══ ROUTINES PANEL ════════════════════════════════════════════════════
 async function refreshRoutinesPanel() {
+    return runRefresh('routines', async () => {
     const el = document.getElementById("routinesPanel");
     if (!el) return;
     try {
@@ -13154,6 +13185,7 @@ async function refreshRoutinesPanel() {
     } catch (err) {
         el.innerHTML = `<div class="empty-note">${escapeHtml(err.message)}</div>`;
     }
+    });
 }
 
 async function toggleRoutine(id, active) {
@@ -13193,7 +13225,7 @@ async function refreshFast() {
 
 async function refreshSlow() {
     await Promise.allSettled([refreshEmailPanel(), refreshFinancePanel(), refreshRoutinesPanel()]);
-    if (typeof window.loadRealityPage === 'function') window.loadRealityPage();
+    if (typeof window.loadRealityPage === 'function' && _domainVisited && _domainVisited['reality']) window.loadRealityPage();
 }
 
 async function refreshAll() {
@@ -13513,6 +13545,7 @@ function showTaskToast(message, type) {
 }
 
 async function pollTaskNotifications() {
+    return runRefresh('taskNotifs', async () => {
     try {
         const data = await fetchJson('/api/notifications');
         if (data.ok && data.notifications.length) {
@@ -13522,11 +13555,13 @@ async function pollTaskNotifications() {
             await refreshTimelinePanel();
         }
     } catch (_) {}
+    });
 }
 
 async function pollPermissions() {
+    return runRefresh('permissions', async () => {
     try {
-        const data = await fetchJson('/api/master/permissions');
+        const data = await cachedFetch('/api/master/permissions', 30000);
         const container = document.getElementById('permissionCards');
         if (!container) return;
         if (!data.ok || !data.permissions.length) { container.innerHTML = ''; return; }
@@ -13568,6 +13603,7 @@ async function pollPermissions() {
         var navBadge = document.getElementById('navOpsBadge');
         if (navBadge) { navBadge.textContent = count; navBadge.style.display = count > 0 ? '' : 'none'; }
     } catch (_) {}
+    });
 }
 
 async function approveFeature(featureId, approved) {
@@ -13620,6 +13656,7 @@ function toggleTimelineLogs(taskId) {
 }
 
 async function refreshTimelinePanel() {
+    return runRefresh('timeline', async () => {
     const el = document.getElementById('timelinePanel');
     if (!el) return;
     try {
@@ -13648,10 +13685,12 @@ async function refreshTimelinePanel() {
         });
         el.innerHTML = frag.join('');
     } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
+    });
 }
 
 // ══ ROADMAP ═══════════════════════════════════════════════════════════
 async function refreshRoadmapPanel() {
+    return runRefresh('roadmap', async () => {
     const el = document.getElementById('roadmapPanel');
     const prog = document.getElementById('roadmapProgress');
     try {
@@ -13672,6 +13711,7 @@ async function refreshRoadmapPanel() {
         });
         el.innerHTML = rows.join('') || '<div class="empty-note">No workstreams</div>';
     } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
+    });
 }
 
 async function masterRunAll() {
@@ -13697,12 +13737,13 @@ async function setupDatabase() {
 }
 
 async function refreshMetrics() {
+    return runRefresh('metrics', async () => {
     const el = document.getElementById('metricsPanel');
     if (!el) return;
     try {
         const [data, cost] = await Promise.all([
-            fetchJson('/api/master/metrics'),
-            fetchJson('/api/intelligence/cost-summary').catch(() => null)
+            cachedFetch('/api/master/metrics', 60000),
+            cachedFetch('/api/intelligence/cost-summary', 60000).catch(() => null)
         ]);
         if (!data.ok) { el.innerHTML = '<div class="empty-note">—</div>'; return; }
         const rows = [
@@ -13716,9 +13757,11 @@ async function refreshMetrics() {
         }
         el.innerHTML = rows.join('');
     } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
+    });
 }
 
 async function refreshRecentRuns() {
+    return runRefresh('recentRuns', async () => {
     const el = document.getElementById('recentRunsPanel');
     if (!el) return;
     try {
@@ -13742,6 +13785,7 @@ async function refreshRecentRuns() {
             </div>`;
         }).join('');
     } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
+    });
 }
 
 async function refreshLessons() {
@@ -13878,13 +13922,13 @@ pollPermissions();
 setInterval(pollPermissions, 30000);
 setInterval(refreshTimelinePanel, 30000);
 refreshRoadmapPanel();
-setInterval(refreshRoadmapPanel, 60000);
+setTimeout(function(){ setInterval(refreshRoadmapPanel, 60000); }, 7000);
 refreshMetrics();
-setInterval(refreshMetrics, 60000);
+setTimeout(function(){ setInterval(refreshMetrics, 60000); }, 14000);
 refreshRecentRuns();
 setInterval(refreshRecentRuns, 45000);
 refreshLessons();
-setInterval(refreshLessons, 120000);
+setTimeout(function(){ setInterval(refreshLessons, 120000); }, 21000);
 fetch(API_BASE + "/api/ping")
     .then(r => setConnStatus(r.ok))
     .catch(() => setConnStatus(false));
@@ -14082,6 +14126,7 @@ async function refreshWorkoutGrid() {
 
 // ── CRM panel ──────────────────────────────────────────────────────────
 async function refreshCrmPanel() {
+    return runRefresh('crm', async () => {
     const tbody = document.getElementById('crmTbody');
     if (!tbody) return;
     try {
@@ -14096,10 +14141,12 @@ async function refreshCrmPanel() {
             return `<tr><td style="color:var(--text)">${escapeHtml(c.name)}</td><td><span class="ds-badge ${tone}">${escapeHtml(c.stage)}</span></td><td class="t-mono">${val}</td><td class="t-mono">${lc}</td><td><span class="ds-badge ${tone}">${fu}</span></td></tr>`;
         }).join('');
     } catch (_) {}
+    });
 }
 
 // ── Projects panel ─────────────────────────────────────────────────────
 async function refreshProjectsPanel() {
+    return runRefresh('projects', async () => {
     const panel = document.getElementById('projectsPanel');
     if (!panel) return;
     try {
@@ -14122,10 +14169,12 @@ async function refreshProjectsPanel() {
             </div>`;
         }).join('');
     } catch (_) {}
+    });
 }
 
 // ── Ops Documents panel ────────────────────────────────────────────────
 async function refreshOpsDocumentsPanel() {
+    return runRefresh('opsDocs', async () => {
     const panel = document.getElementById('opsDocumentsPanel');
     if (!panel) return;
     try {
@@ -14143,10 +14192,12 @@ async function refreshOpsDocumentsPanel() {
             </div>`;
         }).join('');
     } catch (_) {}
+    });
 }
 
 // ── Ops Proposals panel ────────────────────────────────────────────────
 async function refreshOpsProposalsPanel() {
+    return runRefresh('opsProposals', async () => {
     const panel = document.getElementById('opsProposalsPanel');
     if (!panel) return;
     try {
@@ -14161,14 +14212,16 @@ async function refreshOpsProposalsPanel() {
             </div>`;
         }).join('');
     } catch (_) {}
+    });
 }
 
 // ── Journal panel ──────────────────────────────────────────────────────
 async function refreshJournalPanel() {
+    return runRefresh('journal', async () => {
     const panel = document.getElementById('journalEntriesPanel');
     if (!panel) return;
     try {
-        const d = await fetchJson('/api/journal/entries');
+        const d = await cachedFetch('/api/journal/entries', 300000);
         if (!d.ok || !d.entries.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No entries yet</div>'; return; }
         panel.innerHTML = d.entries.slice(0, 5).map(e => {
             const dt = e.created_at ? new Date(e.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
@@ -14179,6 +14232,7 @@ async function refreshJournalPanel() {
             </div>`;
         }).join('');
     } catch (_) {}
+    });
 }
 
 async function submitJournalEntry() {
@@ -14192,16 +14246,18 @@ async function submitJournalEntry() {
             body: JSON.stringify({ entry_text: text })
         });
         ta.value = '';
+        invalidateTtlCache('/api/journal/entries');
         refreshJournalPanel();
     } catch (_) {}
 }
 
 // ── Habit tracker ──────────────────────────────────────────────────────
 async function refreshHabitTracker() {
+    return runRefresh('habits', async () => {
     const panel = document.getElementById('habitTrackerGrid');
     if (!panel) return;
     try {
-        const d = await fetchJson('/api/habits');
+        const d = await cachedFetch('/api/habits', 300000);
         if (!d.ok || !d.habits.length) { panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No habits configured</div>'; return; }
         const days = ['M','T','W','T','F','S','S'];
         let html = '<div style="display:grid;grid-template-columns:auto repeat(7,1fr);gap:4px;align-items:center">';
@@ -14219,6 +14275,7 @@ async function refreshHabitTracker() {
         html += '</div>';
         panel.innerHTML = html;
     } catch (_) {}
+    });
 }
 
 // ── Psychology / crisis check ──────────────────────────────────────────
@@ -14246,7 +14303,7 @@ async function refreshMoodChart() {
     var canvas = document.getElementById('moodChartCanvas');
     if (!canvas || typeof Chart === 'undefined') return;
     try {
-        var d = await fetchJson('/api/journal/entries');
+        var d = await cachedFetch('/api/journal/entries', 300000);
         var days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
         var scores = [5,5,5,5,5,5,5];
         var labels = days;
@@ -14278,9 +14335,9 @@ async function refreshUniversityPanel() {
     const COLORS = ['cyan','amber','green','purple','red'];
     try {
         const [mods, assigns, cards] = await Promise.all([
-            fetchJson('/api/university/modules'),
-            fetchJson('/api/university/assignments'),
-            fetchJson('/api/life/university/flashcards')
+            cachedFetch('/api/university/modules', 600000),
+            cachedFetch('/api/university/assignments', 300000),
+            cachedFetch('/api/life/university/flashcards', 600000)
         ]);
         if (modsPanel && mods.ok) {
             if (!mods.modules.length) { modsPanel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No modules yet</div>'; }
@@ -14361,39 +14418,34 @@ document.addEventListener('keydown', function(e) {
 
 // ── Contacts panel ─────────────────────────────────────────────────────
 async function refreshContactsPanel() {
+    return runRefresh('contacts', async () => {
     const tbody = document.getElementById('contactsTbody');
     if (!tbody) return;
     try {
-        const d = await fetchJson('/api/contacts');
+        const d = await cachedFetch('/api/contacts', 300000);
         if (!d.ok || !d.contacts.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-faint)">No contacts yet</td></tr>'; return; }
         tbody.innerHTML = d.contacts.map(c => {
             const lc = c.updated_at ? new Date(c.updated_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
             return `<tr><td style="color:var(--text)">${escapeHtml(c.name)}</td><td>${escapeHtml(c.company||'')}</td><td class="t-mono">${lc}</td><td>—</td></tr>`;
         }).join('');
     } catch (_) {}
+    });
 }
 
-// ── Init: new panel refreshes ──────────────────────────────────────────
-refreshCrmPanel();
-refreshProjectsPanel();
-refreshOpsDocumentsPanel();
-refreshOpsProposalsPanel();
-setInterval(refreshCrmPanel, 60000);
-setInterval(refreshProjectsPanel, 60000);
-setInterval(refreshOpsDocumentsPanel, 60000);
-setInterval(refreshOpsProposalsPanel, 60000);
+// ── Domain first-visit tracking ────────────────────────────────────────
+var _domainVisited = {};
+function _onFirstDomainVisit(domain, fn) {
+    if (_domainVisited[domain]) return;
+    _domainVisited[domain] = true;
+    fn();
+}
 
-refreshJournalPanel();
-refreshHabitTracker();
-refreshPsychologyPanel();
-refreshMoodChart();
-refreshUniversityPanel();
-refreshContactsPanel();
-setInterval(refreshJournalPanel, 90000);
-setInterval(refreshHabitTracker, 60000);
-setInterval(refreshPsychologyPanel, 120000);
-setInterval(refreshUniversityPanel, 120000);
-setInterval(refreshContactsPanel, 90000);
+// ── Domain panel polling (no eager boot calls — triggered on first navigate) ──
+setInterval(function() { if (_domainVisited['operation']) { refreshCrmPanel(); refreshProjectsPanel(); refreshOpsDocumentsPanel(); refreshOpsProposalsPanel(); } }, 60000);
+setInterval(function() { if (_domainVisited['health']) { refreshJournalPanel(); refreshHabitTracker(); } }, 60000);
+setInterval(function() { if (_domainVisited['health']) { refreshPsychologyPanel(); } }, 120000);
+setInterval(function() { if (_domainVisited['university']) { refreshUniversityPanel(); } }, 120000);
+setInterval(function() { if (_domainVisited['communication']) { refreshContactsPanel(); } }, 90000);
 
 // Interval cleanup
 window.addEventListener('unload', function() {
@@ -14491,7 +14543,7 @@ async function apexDoLogin(){
 }
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 // ══ V10 UPGRADE BLOCK ════════════════════════════════════════════════════
 
@@ -14508,6 +14560,9 @@ function fetchJsonDeduped(url, opts) {
     if (!opts) _pendingFetches[url] = p;
     return p;
 }
+
+// ── Client-side TTL cache (defined in earlier script block; retained here for reference) ──
+// cachedFetch and invalidateTtlCache are already defined above. _ttlCache is shared.
 
 // ── Safe timeout for resolving skeletons ──────────────────────────────
 function safeTimeout(fn, ms) { var id = setTimeout(fn, ms); return id; }
@@ -14832,12 +14887,7 @@ _addInterval(refreshContactsPanel, 90000);
 _addInterval(refreshExpensesPanel, 120000);
 _addInterval(refreshSubscriptionsPanel, 120000);
 
-// ── Init calls for new panels ─────────────────────────────────────────
-refreshExpensesPanel();
-refreshSubscriptionsPanel();
-refreshSleepPanel();
-refreshBirthdayPanel();
-refreshWorkoutGrid();
+// Domain panels load on first navigation via switchPage hooks — no boot calls needed
 initMoodSelector();
 renderFinanceCards();
 
@@ -14899,10 +14949,6 @@ async function refreshBizProposalsPanel() {
         }).join('');
     } catch (_) {}
 }
-refreshBizCrmPanel();
-refreshBizProjectsPanel();
-refreshBizDocumentsPanel();
-refreshBizProposalsPanel();
 _addInterval(refreshBizCrmPanel, 120000);
 _addInterval(refreshBizProjectsPanel, 120000);
 _addInterval(refreshBizDocumentsPanel, 60000);
@@ -15171,140 +15217,10 @@ function initGovernanceMap(d) {
 }
 
 async function initOverviewPage() {
-    // Greeting
     var greetEl = document.getElementById('ovr-greeting');
     var h = new Date().getHours();
     if (greetEl) greetEl.textContent = (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening')
         + ' · ' + new Date().toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
-
-    var hdrs = {'x-app-key': window._appKey || ''};
-    var [runsR, metricsR, emailsR, calR, finR, permsR] = await Promise.allSettled([
-        fetch('/api/intelligence/agent-runs', {headers:hdrs}).then(function(r){return r.json();}),
-        fetch('/api/master/metrics',          {headers:hdrs}).then(function(r){return r.json();}),
-        fetch('/api/emails',                  {headers:hdrs}).then(function(r){return r.json();}),
-        fetch('/api/calendar/events',         {headers:hdrs}).then(function(r){return r.json();}),
-        fetch('/api/finance/summary',         {headers:hdrs}).then(function(r){return r.json();}),
-        fetch('/api/master/permissions',      {headers:hdrs}).then(function(r){return r.json();})
-    ]);
-
-    var runs    = (runsR.status==='fulfilled'  && runsR.value.ok)    ? (runsR.value.runs   || []) : [];
-    var metrics = (metricsR.status==='fulfilled')                     ? (metricsR.value     || {}) : {};
-    var emails  = (emailsR.status==='fulfilled' && emailsR.value.ok) ? (emailsR.value.emails|| []) : [];
-    var calEvts = (calR.status==='fulfilled'   && calR.value.ok)     ? (calR.value.events  || []) : [];
-    var finData = (finR.status==='fulfilled'   && finR.value.ok)     ? finR.value                : {};
-    var perms   = (permsR.status==='fulfilled' && permsR.value.ok)   ? (permsR.value.permissions||[]) : [];
-
-    // Derived
-    var pendingApprovals = perms.filter(function(p){ try{ return JSON.parse(p.message).type==='permissionRequest'; }catch(e){ return false; } }).length
-                         || metrics.pendingApprovals || 0;
-    var runningAgents    = runs.filter(function(r){ return r.status==='running'; }).length;
-    var today            = new Date().toDateString();
-    var todayRuns        = runs.filter(function(r){ return new Date(r.created_at).toDateString()===today; });
-    var unreadEmails     = emails.filter(function(e){ return !e.read; }).length;
-    var urgentEmails     = emails.filter(function(e){ return e.priority==='urgent'||e.flagged; }).length;
-    var credit           = parseFloat(metrics.anthropicCredit||metrics.credit||finData.credit||0);
-    var successRate      = runs.length ? Math.round(runs.filter(function(r){return r.success||r.status==='committed';}).length/runs.length*100) : -1;
-
-    // ── SECTION 1: Executive Briefing ──────────────────────────────────────────
-    var healthEl = document.getElementById('ovrStatHealth');
-    if (healthEl) {
-        var ok = pendingApprovals < 10 && urgentEmails < 5 && (successRate < 0 || successRate >= 50);
-        healthEl.textContent = ok ? 'OK' : 'WARN';
-        healthEl.style.color = ok ? 'var(--green)' : 'var(--amber)';
-    }
-    var agentsEl = document.getElementById('ovrStatAgents');
-    if (agentsEl) { agentsEl.textContent = runningAgents || runs.filter(function(r){return (Date.now()-new Date(r.created_at))<3600000;}).length || '0'; }
-
-    var procEl = document.getElementById('ovrStatProcesses');
-    if (procEl) { procEl.textContent = todayRuns.length || '0'; }
-
-    var appEl = document.getElementById('ovrStatApprovals');
-    if (appEl) { appEl.textContent = pendingApprovals||'0'; appEl.style.color = pendingApprovals>0?'var(--red)':'var(--green)'; }
-
-    var urgEl = document.getElementById('ovrStatUrgent');
-    if (urgEl) { urgEl.textContent = urgentEmails||'0'; urgEl.style.color = urgentEmails>0?'var(--amber)':'var(--text-mute)'; }
-
-    var taskEl = document.getElementById('ovrStatTasks');
-    if (taskEl) { taskEl.textContent = todayRuns.length||'0'; }
-
-    // ── SECTION 2: Governance Map ─────────────────────────────────────────────
-    initGovernanceMap({
-        runs: runs, emails: emails, calEvts: calEvts, finData: finData,
-        pendingApprovals: pendingApprovals, runningAgents: runningAgents,
-        unreadEmails: unreadEmails, urgentEmails: urgentEmails,
-        credit: credit, successRate: successRate
-    });
-
-    // ── SECTION 3: Activity Feed ───────────────────────────────────────────────
-    var feedEl = document.getElementById('ovrFeedBody');
-    if (feedEl) {
-        var roleMap = {
-            architect:'Architect', developer:'Developer', reviewer:'Reviewer',
-            validator:'Validator', tester:'Tester', committer:'Committer',
-            reflector:'Reflector', 'master-orchestrator':'Orchestrator'
-        };
-        var _esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-        var _ts  = function(iso){
-            var d=new Date(iso);
-            return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
-        };
-        var recent = runs.slice(0,15);
-        if (recent.length) {
-            feedEl.innerHTML = recent.map(function(run) {
-                var role   = roleMap[run.role||run.agent_role||''] || (run.role||'Agent');
-                var status = run.success||run.status==='committed' ? 'completed'
-                           : run.status==='running' ? 'running' : 'processed';
-                var obj    = _esc((run.objective||run.task_id||'Task').slice(0,55));
-                var dot    = run.success||run.status==='committed' ? 'var(--green)'
-                           : run.status==='running' ? 'var(--cyan)'
-                           : run.status==='failed'  ? 'var(--red)'  : 'var(--text-mute)';
-                return '<div style=”display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)”>'
-                    + '<span style=”font-size:10px;color:var(--text-mute);font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0”>'+_ts(run.created_at)+'</span>'
-                    + '<span style=”font-size:11px;color:var(--text);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap”>'
-                    + '<span style=”color:'+dot+';margin-right:5px”>●</span>'+role+' '+status+' · '+obj+'</span></div>';
-            }).join('');
-        } else {
-            feedEl.innerHTML = '<div style=”font-size:11px;color:var(--text-mute);padding:10px 0;text-align:center”>No recent activity</div>';
-        }
-    }
-
-    // ── SECTION 4: Priority Center ─────────────────────────────────────────────
-    var prioEl = document.getElementById('ovrPriorityList');
-    if (prioEl) {
-        var priorities = [];
-        var todayEvts = calEvts.filter(function(ev){ return new Date(ev.start||ev.date).toDateString()===today; });
-
-        if (pendingApprovals>0)
-            priorities.push({level:'HIGH',   color:'var(--red)',    text:pendingApprovals+' approval'+(pendingApprovals===1?'':'s')+' awaiting review', source:'Operation'});
-        if (urgentEmails>0)
-            priorities.push({level:'HIGH',   color:'var(--amber)',  text:urgentEmails+' urgent message'+(urgentEmails===1?'':'s')+' requiring response', source:'Network'});
-        if (credit>0 && credit<5)
-            priorities.push({level:'HIGH',   color:'var(--amber)',  text:'AI credit low — $'+credit.toFixed(2)+' remaining', source:'Finance'});
-
-        var todayEv = todayEvts[0];
-        if (todayEv)
-            priorities.push({level:'NORMAL', color:'var(--cyan)',   text:(todayEv.title||todayEv.summary||'Meeting')+' — today', source:'Network'});
-        if (runningAgents>0)
-            priorities.push({level:'NORMAL', color:'var(--purple)', text:runningAgents+' agent'+(runningAgents===1?' is':' are')+' currently executing', source:'System'});
-
-        var failedRuns = runs.filter(function(r){ return r.status==='failed'; });
-        if (failedRuns.length>0)
-            priorities.push({level:'NORMAL', color:'var(--red)',    text:failedRuns.length+' agent run'+(failedRuns.length===1?'':'s')+' failed recently', source:'System'});
-        if (unreadEmails>0 && urgentEmails===0)
-            priorities.push({level:'NORMAL', color:'var(--text-mute)', text:unreadEmails+' unread emails', source:'Network'});
-
-        if (priorities.length===0)
-            priorities.push({level:'NORMAL', color:'var(--green)',  text:'All systems operating normally', source:'Overview'});
-
-        var _esc2 = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-        prioEl.innerHTML = priorities.slice(0,6).map(function(p) {
-            return '<div style=”display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)”>'
-                + '<span style=”font-size:9px;font-weight:700;letter-spacing:0.1em;color:'+p.color+';white-space:nowrap;min-width:46px”>'+p.level+'</span>'
-                + '<span style=”font-size:11px;color:var(--text);flex:1;line-height:1.4”>'+_esc2(p.text)+'</span>'
-                + '<span style=”font-size:9px;color:var(--text-mute);white-space:nowrap”>'+p.source+'</span>'
-                + '</div>';
-        }).join('');
-    }
 }
 
 // Hook initOverviewPage into switchPage without touching the original
@@ -15315,7 +15231,6 @@ async function initOverviewPage() {
         if (name === 'overview') initOverviewPage();
     };
 })();
-initOverviewPage();
 var _ovrIntId = setInterval(initOverviewPage, 120000);
 if (window._apexIntervals) window._apexIntervals.push(_ovrIntId);
 
@@ -16544,7 +16459,7 @@ function initCommunicationPage() {
     var _prevComm = window.switchPage;
     window.switchPage = function(name){
         if (typeof _prevComm==='function') _prevComm(name);
-        if (name==='communication') initCommunicationPage();
+        if (name==='communication') { initCommunicationPage(); _onFirstDomainVisit('communication', function() { refreshContactsPanel(); }); }
     };
 })();
 
@@ -16795,6 +16710,16 @@ function refreshBizPage() {
     };
 })();
 
+(function(){
+    var _prevOp = window.switchPage;
+    window.switchPage = function(name) {
+        if (typeof _prevOp === 'function') _prevOp(name);
+        if (name === 'operation') _onFirstDomainVisit('operation', function() {
+            refreshCrmPanel(); refreshProjectsPanel(); refreshOpsDocumentsPanel(); refreshOpsProposalsPanel();
+        });
+    };
+})();
+
 // ── UNIVERSITY PAGE ───────────────────────────────────────────────────────────
 var _fcCards = [], _fcIndex = 0, _fcFlipped = false;
 var _uniPomoTotal = 25 * 60, _uniPomoRingCirc = 289.03;
@@ -16966,7 +16891,7 @@ function initUniversityPage() {
     var _prevUni = window.switchPage;
     window.switchPage = function(name){
         if (typeof _prevUni==='function') _prevUni(name);
-        if (name==='university') initUniversityPage();
+        if (name==='university') { initUniversityPage(); _onFirstDomainVisit('university', function() { refreshUniversityPanel(); }); }
     };
 })();
 
@@ -17110,7 +17035,7 @@ function initHealthPage() {
     var _prevHealth = window.switchPage;
     window.switchPage = function(name){
         if (typeof _prevHealth==='function') _prevHealth(name);
-        if (name==='health') initHealthPage();
+        if (name==='health') { initHealthPage(); _onFirstDomainVisit('health', function() { refreshJournalPanel(); refreshHabitTracker(); refreshPsychologyPanel(); refreshMoodChart(); refreshSleepPanel(); refreshWorkoutGrid(); }); }
     };
 })();
 
@@ -17381,6 +17306,13 @@ function loadWidgets(){try{CMD.widgets=JSON.parse(localStorage.getItem('apex_cmd
   if(!CMD.widgets||!CMD.widgets.length)CMD.widgets=clone(DW);}
 function saveWidgets(){try{localStorage.setItem('apex_cmd_wids_v5',JSON.stringify(CMD.widgets));}catch(e){}}
 
+function _loadOrb(){
+  if(window.APEX_ORB||window._orbScriptLoaded)return;
+  window._orbScriptLoaded=true;
+  var s=document.createElement('script');
+  s.src='/src/components/orb/PlasmaOrb.js';
+  document.body.appendChild(s);
+}
 window.cmdInitPage=function(){
   if(CMD.initialized){if(!CMD.starFrame)initStars();if(!CMD.orbFrame)initOrb();return;}
   CMD.initialized=true;
@@ -17392,6 +17324,7 @@ window.cmdInitPage=function(){
   renderStrip();
   initStars();initOrb();fetchHealth();
   startWidgetClocks();startStripPoll();
+  _loadOrb();
   /* click empty canvas = deselect */
   var layer=$id('cmdWidgetLayer');
   if(layer)layer.addEventListener('mousedown',function(e){if(e.target===layer)selectWidget(null);});
@@ -17748,10 +17681,8 @@ function renderChips(svc){
 /* ── Live strip stats ── */
 var _stripTimer=null;
 function fetchStripStats(){
-  var key=window._appKey||'';
-  var hdr={'x-app-key':key};
-  // Balance from finance summary
-  fetch('/api/finance/summary',{headers:hdr}).then(function(r){return r.json();}).then(function(d){
+  // Uses cachedFetch (55s TTL) to share responses with the main polling cycle
+  cachedFetch('/api/finance/summary',55000).then(function(d){
     var inc=0,exp=0;
     (d.summary||[]).forEach(function(r){
       var a=parseFloat(r.total)||0;
@@ -17763,15 +17694,13 @@ function fetchStripStats(){
     setText('cmdStatVal0',sign+'£'+Math.abs(bal).toFixed(0));
     setText('cmdStatSub0',inc>0?'month to date':'No transactions');
   }).catch(function(){});
-  // Unread emails
-  fetch('/api/emails',{headers:hdr}).then(function(r){return r.json();}).then(function(d){
+  cachedFetch('/api/emails',55000).then(function(d){
     var n=(d.emails||[]).length;
     setText('cmdStatVal1',String(n));
     setText('cmdStatUnit1',n===1?'unread':'unread');
     setText('cmdStatSub1',n?'inbox':'Inbox clear');
   }).catch(function(){});
-  // Pending tasks
-  fetch('/api/tasks',{headers:hdr}).then(function(r){return r.json();}).then(function(d){
+  cachedFetch('/api/tasks',55000).then(function(d){
     var pending=(d.pending||[]).length+(d.inProgress||[]).length;
     var done=(d.completed||[]).length;
     var total=pending+done+(d.failed||[]).length;
@@ -18356,7 +18285,7 @@ window.apexFileDropHandler = function(e){
 })();
 </script>
 <!-- Plasma Orb Canvas Engine -->
-<script src="/src/components/orb/PlasmaOrb.js"></script>
+<!-- PlasmaOrb.js loaded dynamically from cmdInitPage — not on critical parse path -->
 <!-- apex-visual-editor removed -->
 
 <!-- ══ FLOATING PTT ══ -->
@@ -19869,6 +19798,6 @@ window.apexFileDropHandler = function(e){
 
 })();
 </script>
-<script src="/js/components/contextual-card.js"></script>
+<script defer src="/js/components/contextual-card.js"></script>
 </body>
 </html>
