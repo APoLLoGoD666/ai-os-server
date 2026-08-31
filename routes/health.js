@@ -150,6 +150,22 @@ router.post('/health/supplements', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+router.post('/health/supplements/:id/toggle', _auth, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: current } = await sb().from('apex_supplements')
+            .select('taken').eq('id', req.params.id).eq('log_date', today).single();
+        const newTaken = !(current?.taken ?? false);
+        const { data, error } = await sb().from('apex_supplements')
+            .upsert(
+                { id: req.params.id, log_date: today, taken: newTaken },
+                { onConflict: 'id,log_date' }
+            ).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, supplement: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 router.get('/health/detailed', _auth, (req, res) => {
     try {
         const mem = process.memoryUsage();

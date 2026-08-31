@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX — UX-07 Voice Experience Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cinzel:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── UX-07 Voice Experience Prototype ────────────────────────────────────────
+   Design authority: UX-05-CANONICAL-VISUAL-DESIGN-SYSTEM.md (binding)
+   Visual foundation: UX-06 apex-command-prototype.html
+   Isolation: docs/interface/prototype/ — NOT served by APEX routes          */
+
+/* ── ONE canonical :root block — UX-05 INV-VS-02 ─────────────────────────── */
+:root {
+  /* Colour */
+  --apex-color-bg:             #03060f;
+  --apex-color-surface-1:      rgba(255,255,255,0.03);
+  --apex-color-surface-2:      rgba(255,255,255,0.06);
+  --apex-color-surface-3:      rgba(255,255,255,0.09);
+  --apex-color-primary:        #00d4ff;
+  --apex-color-secondary:      #0066ff;
+  --apex-color-accent:         #7b2fff;
+  --apex-color-border:         rgba(0,212,255,0.16);
+  --apex-color-border-dim:     rgba(0,212,255,0.08);
+  --apex-color-text-primary:   #e8f4ff;
+  --apex-color-text-secondary: rgba(232,244,255,0.60);
+  --apex-color-text-muted:     rgba(232,244,255,0.35);
+  --apex-color-success:        #27ae60;
+  --apex-color-warning:        #ff9f43;
+  --apex-color-danger:         #ff4d6d;
+  --apex-color-domain-finance: #27ae60;
+
+  /* Typography */
+  --apex-font-ui:   'Inter', system-ui, sans-serif;
+  --apex-font-brand:'Cinzel', serif;
+  --apex-font-mono: 'JetBrains Mono', monospace;
+
+  /* Spacing */
+  --apex-space-1:  4px;
+  --apex-space-2:  8px;
+  --apex-space-3:  12px;
+  --apex-space-4:  16px;
+  --apex-space-5:  20px;
+  --apex-space-6:  24px;
+  --apex-space-8:  32px;
+  --apex-space-10: 40px;
+  --apex-space-12: 48px;
+
+  /* Radius */
+  --apex-radius-sm:   4px;
+  --apex-radius-md:   6px;
+  --apex-radius-lg:   8px;
+  --apex-radius-xl:   10px;
+  --apex-radius-2xl:  12px;
+  --apex-radius-3xl:  14px;
+  --apex-radius-pill: 9999px;
+
+  /* Elevation */
+  --apex-shadow-1: 0 1px 3px rgba(0,0,0,0.4);
+  --apex-shadow-2: 0 4px 12px rgba(0,0,0,0.5);
+  --apex-shadow-3: 0 8px 24px rgba(0,0,0,0.6);
+
+  /* Motion */
+  --apex-duration-micro:      120ms;
+  --apex-duration-standard:   220ms;
+  --apex-duration-deliberate: 350ms;
+
+  /* Z-index */
+  --apex-z-sticky:   10;
+  --apex-z-nav:      20;
+  --apex-z-notify:   1000;
+  --apex-z-command:  9000;
+}
+
+/* ── Reset + base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--apex-color-bg); color: var(--apex-color-text-primary); font-family: var(--apex-font-ui); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+/* ── Focus ring — NEVER suppressed. INV-VS-21, INV-VS-23. ─────────────────── */
+:focus-visible { outline: 2px solid rgba(0,212,255,0.60); outline-offset: 2px; }
+
+/* ── App shell grid ───────────────────────────────────────────────────────── */
+.app-shell { display: grid; grid-template-rows: 52px 1fr; grid-template-columns: 200px 1fr; height: 100vh; overflow: hidden; }
+.topbar    { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--apex-space-4); padding: 0 var(--apex-space-6); border-bottom: 1px solid var(--apex-color-border-dim); background: rgba(3,6,15,0.95); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: var(--apex-z-sticky); }
+.sidebar   { border-right: 1px solid var(--apex-color-border-dim); background: var(--apex-color-surface-1); display: flex; flex-direction: column; gap: var(--apex-space-1); padding: var(--apex-space-4) var(--apex-space-2); overflow-y: auto; }
+.content   { overflow-y: auto; padding: var(--apex-space-6); display: flex; flex-direction: column; gap: var(--apex-space-6); }
+
+/* ── Topbar elements ──────────────────────────────────────────────────────── */
+.brand-name { font-family: var(--apex-font-brand); font-size: 15px; font-weight: 600; color: var(--apex-color-primary); letter-spacing: 0.12em; }
+.badge { font-size: 10px; font-family: var(--apex-font-mono); background: rgba(0,212,255,0.10); color: var(--apex-color-primary); padding: 2px 8px; border-radius: var(--apex-radius-pill); border: 1px solid rgba(0,212,255,0.25); letter-spacing: 0.08em; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: var(--apex-space-4); font-size: 13px; color: var(--apex-color-text-muted); font-family: var(--apex-font-mono); }
+
+/* ── Orb ──────────────────────────────────────────────────────────────────── */
+.orb-container { display: flex; align-items: center; gap: var(--apex-space-3); }
+.orb { width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, rgba(0,212,255,0.25), rgba(0,212,255,0.06)); border: 2px solid rgba(0,212,255,0.35); transition: border-color var(--apex-duration-standard) ease, box-shadow var(--apex-duration-standard) ease; cursor: pointer; animation: orbWait 4s ease-in-out infinite; flex-shrink: 0; }
+.orb-sub { font-size: 11px; font-family: var(--apex-font-mono); color: var(--apex-color-text-muted); letter-spacing: 0.06em; }
+
+/* ── Waveform — 7 bars exactly. PROTECT. UX-05 §17. ─────────────────────── */
+.waveform { display: flex; align-items: flex-end; gap: 2px; height: 20px; }
+.wb { width: 3px; height: 5px; background: var(--apex-color-primary); border-radius: 2px; opacity: 0.5; transition: opacity var(--apex-duration-standard); }
+@keyframes wb { from { height: 5px; } to { height: 18px; } }
+.waveform.active .wb { opacity: 0.9; }
+.waveform.active .wb:nth-child(1) { animation: wb 0.48s ease-in-out 0.00s infinite alternate; }
+.waveform.active .wb:nth-child(2) { animation: wb 0.48s ease-in-out 0.07s infinite alternate; }
+.waveform.active .wb:nth-child(3) { animation: wb 0.48s ease-in-out 0.14s infinite alternate; }
+.waveform.active .wb:nth-child(4) { animation: wb 0.48s ease-in-out 0.21s infinite alternate; }
+.waveform.active .wb:nth-child(5) { animation: wb 0.48s ease-in-out 0.28s infinite alternate; }
+.waveform.active .wb:nth-child(6) { animation: wb 0.48s ease-in-out 0.35s infinite alternate; }
+.waveform.active .wb:nth-child(7) { animation: wb 0.48s ease-in-out 0.42s infinite alternate; }
+
+/* ── Orb animations — canonical. UX-05 §16.3. ────────────────────────────── */
+@keyframes orbWait      { 0%,100%{ box-shadow:0 0 8px rgba(0,212,255,0.15); opacity:0.70; } 50%{ box-shadow:0 0 16px rgba(0,212,255,0.30); opacity:0.90; } }
+@keyframes orbActivate  { 0%{ transform:scale(1); } 50%{ transform:scale(1.2); box-shadow:0 0 24px rgba(0,212,255,0.5); } 100%{ transform:scale(1); } }
+@keyframes orbListen    { from{ box-shadow:0 0 8px rgba(255,77,109,0.40); } to{ box-shadow:0 0 20px rgba(255,77,109,0.80); } }
+@keyframes orbThink     { 0%,100%{ box-shadow:0 0 10px rgba(255,159,67,0.30); border-color:rgba(255,159,67,0.40); } 50%{ box-shadow:0 0 22px rgba(255,159,67,0.60); border-color:rgba(255,159,67,0.70); } }
+@keyframes orbRespond   { from{ box-shadow:0 0 10px rgba(0,212,255,0.25); } to{ box-shadow:0 0 18px rgba(0,212,255,0.50); } }
+@keyframes orbSpeak     { from{ box-shadow:0 0 12px rgba(0,212,255,0.50); } to{ box-shadow:0 0 28px rgba(0,212,255,0.90); } }
+@keyframes orbInterrupt { 0%,100%{ box-shadow:0 0 8px rgba(255,159,67,0.30); border-color:rgba(255,159,67,0.50); } 50%{ box-shadow:0 0 24px rgba(255,159,67,0.90); border-color:rgba(255,159,67,1.00); } }
+@keyframes orbLive      { 0%,100%{ box-shadow:0 0 16px rgba(0,212,255,0.60); } 50%{ box-shadow:0 0 24px rgba(0,212,255,0.80); } }
+@keyframes orbFail      { 0%,100%{ box-shadow:0 0 8px rgba(255,77,109,0.30); border-color:rgba(255,77,109,0.50); } 50%{ box-shadow:0 0 24px rgba(255,77,109,0.90); border-color:rgba(255,77,109,1.00); } }
+@keyframes orbCancel    { from{ opacity:1; } to{ opacity:0.3; } }
+
+/* ── Orb state classes — UX-05 §16.3 ─────────────────────────────────────── */
+.orb-idle         .orb { animation: orbWait 4s ease-in-out infinite; border-color: rgba(0,212,255,0.35); }
+.orb-activating   .orb { animation: orbActivate 0.3s ease-in-out; border-color: rgba(0,212,255,0.70); }
+.orb-listening    .orb { animation: orbListen 0.55s ease-in-out infinite alternate; border-color: rgba(255,77,109,0.80) !important; }
+.orb-understanding .orb{ animation: orbThink 1.2s ease-in-out infinite; border-color: rgba(255,159,67,0.55) !important; }
+.orb-thinking     .orb { animation: orbRespond 0.8s ease-in-out infinite alternate; border-color: rgba(0,212,255,0.50); }
+.orb-speaking     .orb { animation: orbSpeak 0.6s ease-in-out infinite alternate; border-color: rgba(0,212,255,0.85); }
+.orb-interrupted  .orb { animation: orbInterrupt 0.25s ease-in-out infinite; border-color: rgba(255,159,67,1.00) !important; }
+.orb-paused       .orb { animation: none; opacity: 0.45; border-color: rgba(0,212,255,0.20); }
+.orb-live         .orb { animation: orbLive 2s ease-in-out infinite; border-color: rgba(0,212,255,0.80); }
+.orb-failed       .orb { animation: orbFail 1.5s ease-in-out infinite; border-color: rgba(255,77,109,1.00) !important; }
+.orb-cancelled    .orb { animation: orbCancel 0.5s ease-in-out forwards; }
+
+/* ── Nav sidebar ──────────────────────────────────────────────────────────── */
+.nav-item { display: flex; align-items: center; gap: var(--apex-space-3); padding: var(--apex-space-2) var(--apex-space-3); border-radius: var(--apex-radius-lg); font-size: 13px; color: var(--apex-color-text-secondary); cursor: pointer; transition: background var(--apex-duration-standard); border: 1px solid transparent; text-decoration: none; }
+.nav-item:hover { background: var(--apex-color-surface-2); }
+.nav-item.active { background: rgba(0,212,255,0.08); border-color: rgba(0,212,255,0.18); color: var(--apex-color-primary); }
+.nav-icon { width: 16px; height: 16px; opacity: 0.7; }
+
+/* ── Voice state banner ────────────────────────────────────────────────────── */
+.voice-banner { border-radius: var(--apex-radius-2xl); border: 1px solid var(--apex-color-border); background: var(--apex-color-surface-1); backdrop-filter: blur(16px); padding: var(--apex-space-5) var(--apex-space-6); display: grid; grid-template-columns: 1fr auto; gap: var(--apex-space-4); align-items: center; transition: border-color var(--apex-duration-standard); }
+.voice-banner.vs-idle         { border-color: rgba(0,212,255,0.16); }
+.voice-banner.vs-activating   { border-color: rgba(0,212,255,0.40); }
+.voice-banner.vs-listening    { border-color: rgba(255,77,109,0.50); }
+.voice-banner.vs-understanding{ border-color: rgba(255,159,67,0.50); }
+.voice-banner.vs-thinking     { border-color: rgba(0,212,255,0.35); }
+.voice-banner.vs-speaking     { border-color: rgba(0,212,255,0.65); }
+.voice-banner.vs-interrupted  { border-color: rgba(255,159,67,0.80); }
+.voice-banner.vs-paused       { border-color: rgba(0,212,255,0.20); }
+.voice-banner.vs-live         { border-color: rgba(0,212,255,0.70); }
+.voice-banner.vs-failed       { border-color: rgba(255,77,109,0.80); }
+.voice-banner.vs-cancelled    { border-color: rgba(0,212,255,0.10); }
+
+.vb-left { display: flex; align-items: center; gap: var(--apex-space-5); }
+.vb-state { font-family: var(--apex-font-mono); font-size: 13px; font-weight: 500; letter-spacing: 0.10em; }
+.vs-idle          .vb-state { color: rgba(0,212,255,0.60); }
+.vs-activating    .vb-state { color: var(--apex-color-primary); }
+.vs-listening     .vb-state { color: var(--apex-color-danger); }
+.vs-understanding .vb-state { color: var(--apex-color-warning); }
+.vs-thinking      .vb-state { color: rgba(0,212,255,0.75); }
+.vs-speaking      .vb-state { color: var(--apex-color-primary); }
+.vs-interrupted   .vb-state { color: var(--apex-color-warning); }
+.vs-paused        .vb-state { color: rgba(0,212,255,0.45); }
+.vs-live          .vb-state { color: var(--apex-color-primary); }
+.vs-failed        .vb-state { color: var(--apex-color-danger); }
+.vs-cancelled     .vb-state { color: rgba(0,212,255,0.30); }
+
+.vb-desc { font-size: 14px; color: var(--apex-color-text-secondary); }
+.vb-controls { display: flex; align-items: center; gap: var(--apex-space-2); }
+.vb-btn { height: 36px; padding: 0 var(--apex-space-4); border-radius: var(--apex-radius-pill); font-size: 13px; font-weight: 500; border: 1px solid; transition: background var(--apex-duration-micro), opacity var(--apex-duration-micro); }
+.vb-btn:disabled { opacity: 0.35; pointer-events: none; }
+.vb-btn-start    { background: rgba(0,212,255,0.10); border-color: rgba(0,212,255,0.35); color: var(--apex-color-primary); }
+.vb-btn-start:hover    { background: rgba(0,212,255,0.18); }
+.vb-btn-stop     { background: rgba(255,77,109,0.10); border-color: rgba(255,77,109,0.35); color: var(--apex-color-danger); }
+.vb-btn-stop:hover     { background: rgba(255,77,109,0.18); }
+.vb-btn-interrupt{ background: rgba(255,159,67,0.10); border-color: rgba(255,159,67,0.35); color: var(--apex-color-warning); }
+.vb-btn-interrupt:hover{ background: rgba(255,159,67,0.18); }
+
+/* ── Voice pipeline visualization ─────────────────────────────────────────── */
+.pipeline { border-radius: var(--apex-radius-2xl); border: 1px solid var(--apex-color-border-dim); background: var(--apex-color-surface-1); padding: var(--apex-space-4) var(--apex-space-5); display: flex; align-items: center; gap: var(--apex-space-2); }
+.pipe-step { display: flex; align-items: center; gap: var(--apex-space-2); flex: 1; }
+.pipe-node { display: flex; flex-direction: column; align-items: center; gap: var(--apex-space-1); flex: 1; }
+.pipe-label { font-size: 10px; font-family: var(--apex-font-mono); color: var(--apex-color-text-muted); letter-spacing: 0.06em; }
+.pipe-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15); transition: background var(--apex-duration-standard), box-shadow var(--apex-duration-standard); }
+.pipe-dot.active  { background: var(--apex-color-primary); box-shadow: 0 0 8px rgba(0,212,255,0.6); border-color: var(--apex-color-primary); }
+.pipe-dot.success { background: var(--apex-color-success); box-shadow: 0 0 8px rgba(39,174,96,0.6); border-color: var(--apex-color-success); }
+.pipe-dot.error   { background: var(--apex-color-danger); box-shadow: 0 0 8px rgba(255,77,109,0.6); border-color: var(--apex-color-danger); }
+.pipe-arrow { font-size: 10px; color: var(--apex-color-text-muted); flex-shrink: 0; }
+.pipe-sub { font-size: 10px; font-family: var(--apex-font-mono); color: var(--apex-color-text-muted); text-align: center; min-height: 14px; }
+
+/* ── Two-column layout ─────────────────────────────────────────────────────── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--apex-space-6); }
+@media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+/* ── Transcript panel ──────────────────────────────────────────────────────── */
+.panel { border-radius: var(--apex-radius-2xl); border: 1px solid var(--apex-color-border-dim); background: var(--apex-color-surface-1); backdrop-filter: blur(16px); overflow: hidden; }
+.panel-header { padding: var(--apex-space-3) var(--apex-space-4); border-bottom: 1px solid var(--apex-color-border-dim); font-size: 11px; font-family: var(--apex-font-mono); color: var(--apex-color-text-muted); letter-spacing: 0.08em; display: flex; align-items: center; gap: var(--apex-space-2); }
+.panel-body { padding: var(--apex-space-4); display: flex; flex-direction: column; gap: var(--apex-space-3); max-height: 340px; overflow-y: auto; }
+
+/* ── Message bubbles ───────────────────────────────────────────────────────── */
+.msg { max-width: 88%; display: flex; flex-direction: column; gap: 4px; }
+.msg.user { align-self: flex-end; }
+.msg.ai   { align-self: flex-start; }
+.msg-bubble { padding: var(--apex-space-3) var(--apex-space-4); border-radius: var(--apex-radius-xl); font-size: 14px; line-height: 1.5; }
+.msg.user .msg-bubble { background: rgba(0,102,255,0.15); border: 1px solid rgba(0,102,255,0.25); color: var(--apex-color-text-primary); border-bottom-right-radius: var(--apex-radius-sm); }
+.msg.ai .msg-bubble   { background: var(--apex-color-surface-2); border: 1px solid var(--apex-color-border-dim); color: var(--apex-color-text-primary); border-bottom-left-radius: var(--apex-radius-sm); }
+.msg-meta { font-size: 11px; color: var(--apex-color-text-muted); font-family: var(--apex-font-mono); display: flex; align-items: center; gap: 4px; }
+.msg.user .msg-meta { justify-content: flex-end; }
+.voice-icon { opacity: 0.55; }
+.msg.partial .msg-bubble { opacity: 0.65; border-style: dashed; }
+.typing-dots { display: flex; gap: 4px; padding: var(--apex-space-3) var(--apex-space-4); }
+.typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--apex-color-primary); opacity: 0.4; animation: dotPulse 1.2s ease-in-out infinite; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotPulse { 0%,100%{ transform:scale(0.6); opacity:0.3; } 50%{ transform:scale(1); opacity:0.9; } }
+
+/* ── Interim transcript bar ───────────────────────────────────────────────── */
+.interim-bar { padding: var(--apex-space-2) var(--apex-space-4); background: rgba(255,77,109,0.05); border-top: 1px solid rgba(255,77,109,0.12); font-size: 13px; color: rgba(255,77,109,0.80); font-style: italic; min-height: 36px; display: flex; align-items: center; gap: var(--apex-space-2); transition: opacity var(--apex-duration-standard); }
+.interim-bar:empty { opacity: 0; }
+
+/* ── State info panel ─────────────────────────────────────────────────────── */
+.state-info { display: flex; flex-direction: column; gap: var(--apex-space-3); }
+.info-row { display: flex; flex-direction: column; gap: var(--apex-space-1); }
+.info-label { font-size: 10px; font-family: var(--apex-font-mono); color: var(--apex-color-text-muted); letter-spacing: 0.08em; }
+.info-value { font-size: 13px; color: var(--apex-color-text-secondary); }
+.info-value.mono { font-family: var(--apex-font-mono); font-size: 12px; }
+
+/* ── Scenario buttons ──────────────────────────────────────────────────────── */
+.scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--apex-space-2); }
+.sc-btn { padding: var(--apex-space-2) var(--apex-space-3); border-radius: var(--apex-radius-md); font-size: 12px; font-family: var(--apex-font-mono); background: var(--apex-color-surface-2); border: 1px solid var(--apex-color-border-dim); color: var(--apex-color-text-secondary); text-align: left; transition: background var(--apex-duration-micro), border-color var(--apex-duration-micro); cursor: pointer; }
+.sc-btn:hover { background: var(--apex-color-surface-3); border-color: var(--apex-color-border); color: var(--apex-color-text-primary); }
+.sc-btn.active { background: rgba(0,212,255,0.08); border-color: rgba(0,212,255,0.30); color: var(--apex-color-primary); }
+
+/* ── Input zone — always visible. D-03 resolved. ─────────────────────────── */
+.input-zone { grid-column: 1 / -1; border-top: 1px solid var(--apex-color-border-dim); background: rgba(3,6,15,0.96); backdrop-filter: blur(12px); display: flex; align-items: center; gap: var(--apex-space-3); padding: var(--apex-space-2) var(--apex-space-4); }
+.input-field { flex: 1; height: 44px; background: var(--apex-color-surface-2); border: 1px solid var(--apex-color-border-dim); border-radius: var(--apex-radius-pill); padding: 0 var(--apex-space-5); font-size: 14px; color: var(--apex-color-text-primary); font-family: var(--apex-font-ui); outline: none; transition: border-color var(--apex-duration-standard); }
+.input-field:focus { border-color: rgba(0,212,255,0.40); }
+.input-field::placeholder { color: var(--apex-color-text-muted); }
+.input-send { height: 44px; padding: 0 var(--apex-space-5); border-radius: var(--apex-radius-pill); background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.30); color: var(--apex-color-primary); font-size: 13px; font-weight: 500; transition: background var(--apex-duration-micro); }
+.input-send:hover { background: rgba(0,212,255,0.20); }
+
+/* ── Proto label ──────────────────────────────────────────────────────────── */
+.proto-label { position: fixed; bottom: 68px; right: 16px; font-size: 10px; font-family: var(--apex-font-mono); color: var(--apex-color-text-muted); background: var(--apex-color-surface-1); border: 1px solid var(--apex-color-border-dim); border-radius: var(--apex-radius-md); padding: 4px 8px; z-index: var(--apex-z-command); pointer-events: none; letter-spacing: 0.06em; }
+
+/* ── Mobile ────────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .app-shell { grid-template-columns: 1fr; grid-template-rows: 52px 1fr 64px; }
+  .sidebar { display: none; }
+  .content { padding: var(--apex-space-4); }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- Screen reader state announcements — INV-VS-22 -->
+<div id="voiceLiveRegion" role="status" aria-live="polite" aria-atomic="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);"></div>
+
+<div class="app-shell" id="appShell">
+
+  <!-- Topbar -->
+  <header class="topbar" role="banner">
+    <div class="orb-container" id="orbContainer" aria-label="APEX voice state">
+      <button class="orb" id="orb" aria-label="Voice: IDLE. Click to activate." title="Click to toggle voice"></button>
+      <div class="waveform" id="waveform" aria-hidden="true">
+        <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+        <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+        <div class="wb"></div>
+      </div>
+    </div>
+    <span class="brand-name">APEX</span>
+    <span class="badge">UX-07 · VOICE</span>
+    <div class="topbar-right">
+      <span id="orbSubLabel">IDLE</span>
+      <span>·</span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <!-- Sidebar navigation -->
+  <nav class="sidebar" aria-label="Main navigation">
+    <a class="nav-item" href="#" aria-label="Command Centre">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3v2M8 11v2M3 8h2M11 8h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Command
+    </a>
+    <a class="nav-item active" href="#" aria-label="Voice Experience">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2a2 2 0 0 1 2 2v4a2 2 0 0 1-4 0V4a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.5"/><path d="M4 8a4 4 0 0 0 8 0M8 12v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Voice
+    </a>
+    <a class="nav-item" href="#" aria-label="World">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h12M8 2c-2 2-2 4-2 6s0 4 2 6M8 2c2 2 2 4 2 6s0 4-2 6" stroke="currentColor" stroke-width="1.2"/></svg>
+      World
+    </a>
+    <a class="nav-item" href="#" aria-label="Decisions">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v12M4 10l4 4 4-4M4 6l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Decisions
+    </a>
+    <a class="nav-item" href="#" aria-label="System">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.42 1.42M11.53 11.53l1.42 1.42M3.05 12.95l1.42-1.42M11.53 4.47l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      System
+    </a>
+
+    <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--apex-color-border-dim);">
+      <div style="font-size:10px;font-family:var(--apex-font-mono);color:var(--apex-color-text-muted);padding:4px 8px;letter-spacing:0.06em;">SCENARIOS</div>
+      <div class="scenario-grid" style="margin-top:8px;">
+        <button class="sc-btn" onclick="runScenario('V-01')" title="Activate from idle">V-01</button>
+        <button class="sc-btn" onclick="runScenario('V-02')" title="Listening">V-02</button>
+        <button class="sc-btn" onclick="runScenario('V-03')" title="Understanding">V-03</button>
+        <button class="sc-btn" onclick="runScenario('V-04')" title="Thinking">V-04</button>
+        <button class="sc-btn" onclick="runScenario('V-05')" title="Speaking">V-05</button>
+        <button class="sc-btn" onclick="runScenario('V-06')" title="Barge-in">V-06</button>
+        <button class="sc-btn" onclick="runScenario('V-07')" title="Cancel">V-07</button>
+        <button class="sc-btn" onclick="runScenario('V-08')" title="STT fail">V-08</button>
+        <button class="sc-btn" onclick="runScenario('V-09')" title="TTS fail">V-09</button>
+        <button class="sc-btn" onclick="runScenario('V-10')" title="Text fallback">V-10</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="content" role="main">
+
+    <!-- Voice state banner -->
+    <div class="voice-banner vs-idle" id="voiceBanner" role="region" aria-label="Voice state">
+      <div class="vb-left">
+        <div class="orb-container orb-idle" id="bannerOrb" style="flex-direction:column;gap:6px;">
+          <div class="orb" style="width:40px;height:40px;" aria-hidden="true"></div>
+          <div class="waveform" id="bannerWave" aria-hidden="true">
+            <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+            <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+            <div class="wb"></div>
+          </div>
+        </div>
+        <div>
+          <div class="vb-state" id="vbState">IDLE</div>
+          <div class="vb-desc" id="vbDesc">Available. Tap orb or press Space to begin.</div>
+        </div>
+      </div>
+      <div class="vb-controls" id="vbControls">
+        <button class="vb-btn vb-btn-start" id="btnStart" onclick="userStartVoice()" aria-label="Start voice">Start Voice</button>
+        <button class="vb-btn vb-btn-stop" id="btnStop" onclick="userStopVoice()" disabled aria-label="Stop voice">Stop</button>
+        <button class="vb-btn vb-btn-interrupt" id="btnInterrupt" onclick="userInterrupt()" disabled aria-label="Interrupt APEX">Barge In</button>
+      </div>
+    </div>
+
+    <!-- Pipeline visualization -->
+    <div class="pipeline" role="region" aria-label="Voice pipeline status">
+      <div class="pipe-node">
+        <div class="pipe-label">MIC</div>
+        <div class="pipe-dot" id="pipe-mic"></div>
+        <div class="pipe-sub" id="pipe-mic-sub">—</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node">
+        <div class="pipe-label">STT</div>
+        <div class="pipe-dot" id="pipe-stt"></div>
+        <div class="pipe-sub" id="pipe-stt-sub">—</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node">
+        <div class="pipe-label">INTENT</div>
+        <div class="pipe-dot" id="pipe-intent"></div>
+        <div class="pipe-sub" id="pipe-intent-sub">—</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node">
+        <div class="pipe-label">LLM</div>
+        <div class="pipe-dot" id="pipe-llm"></div>
+        <div class="pipe-sub" id="pipe-llm-sub">—</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node">
+        <div class="pipe-label">TTS</div>
+        <div class="pipe-dot" id="pipe-tts"></div>
+        <div class="pipe-sub" id="pipe-tts-sub">—</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-node">
+        <div class="pipe-label">OUTPUT</div>
+        <div class="pipe-dot" id="pipe-out"></div>
+        <div class="pipe-sub" id="pipe-out-sub">—</div>
+      </div>
+    </div>
+
+    <!-- Two-column: transcript + state info -->
+    <div class="two-col">
+
+      <!-- Transcript panel -->
+      <div class="panel" role="region" aria-label="Conversation transcript">
+        <div class="panel-header">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 3h12v8H9l-3 3v-3H2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          CONVERSE — VOICE TRANSCRIPT
+        </div>
+        <div class="panel-body" id="transcriptLog">
+          <div class="msg ai">
+            <div class="msg-bubble">Good morning, sir. I'm ready.</div>
+            <div class="msg-meta"><span class="voice-icon">◎</span> APEX · Voice ready</div>
+          </div>
+        </div>
+        <div class="interim-bar" id="interimBar" aria-live="polite" aria-label="Interim transcription"></div>
+      </div>
+
+      <!-- State info + scenario detail -->
+      <div class="panel" role="region" aria-label="Voice state information">
+        <div class="panel-header">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7v4M8 5h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          VOICE STATE DETAIL
+        </div>
+        <div class="panel-body">
+          <div class="state-info">
+            <div class="info-row">
+              <div class="info-label">CURRENT STATE</div>
+              <div class="info-value mono" id="detailState">IDLE</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">UX-05 ORB CLASS</div>
+              <div class="info-value mono" id="detailOrbClass">orbWait · 4s breathe · dim cyan</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">WAVEFORM</div>
+              <div class="info-value mono" id="detailWave">INACTIVE</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">SCENARIO</div>
+              <div class="info-value" id="detailScenario">Select a scenario from the sidebar</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">DESCRIPTION</div>
+              <div class="info-value" id="detailDesc">Voice available. No active session.</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">GAP / NOTE</div>
+              <div class="info-value" style="font-size:12px;color:var(--apex-color-text-muted);" id="detailGap">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Input zone — always visible, text fallback. D-03 resolved. -->
+  <div class="input-zone" role="complementary" aria-label="Text input">
+    <input type="text" class="input-field" id="textInput" placeholder="Or type here — voice is not required…" aria-label="Text message" onkeydown="if(event.key==='Enter')sendText()">
+    <button class="input-send" onclick="sendText()" aria-label="Send text message">Send</button>
+  </div>
+
+</div>
+
+<div class="proto-label">UX-07 VOICE PROTOTYPE · ISOLATED</div>
+
+<script>
+'use strict';
+
+// ── Voice state constants — UX-05 §16.3 ────────────────────────────────────
+const VOICE_STATES = {
+  idle:          { label: 'IDLE',          desc: 'Available. Tap orb or press Space to begin.',                    orb: 'orbWait · 4s breathe · dim cyan',   wave: false, btnStart: true,  btnStop: false, btnInt: false, pipe: [] },
+  activating:    { label: 'ACTIVATING',    desc: 'Waking. Microphone opening…',                                    orb: 'orbActivate · 0.3s scale · cyan',   wave: false, btnStart: false, btnStop: true,  btnInt: false, pipe: ['mic'] },
+  listening:     { label: 'LISTENING',     desc: 'Listening. Speak now.',                                          orb: 'orbListen · 0.55s pulse · red',     wave: true,  btnStart: false, btnStop: true,  btnInt: false, pipe: ['mic', 'stt'] },
+  understanding: { label: 'UNDERSTANDING', desc: 'Transcription received. Classifying intent…',                    orb: 'orbThink · 1.2s breathe · amber',   wave: false, btnStart: false, btnStop: true,  btnInt: false, pipe: ['mic', 'stt', 'intent'] },
+  thinking:      { label: 'THINKING',      desc: 'Processing. Claude generating response…',                        orb: 'orbRespond · 0.8s pulse · dim cyan', wave: false, btnStart: false, btnStop: true,  btnInt: false, pipe: ['mic', 'stt', 'intent', 'llm'] },
+  speaking:      { label: 'SPEAKING',      desc: 'Speaking. Audio playing. You may interrupt.',                    orb: 'orbSpeak · 0.6s alternate · strong cyan', wave: true,  btnStart: false, btnStop: true,  btnInt: true,  pipe: ['mic', 'stt', 'intent', 'llm', 'tts', 'out'] },
+  interrupted:   { label: 'INTERRUPTED',   desc: 'Barge-in detected. Stopping APEX output…',                      orb: 'orbInterrupt · 0.25s flash · orange', wave: false, btnStart: false, btnStop: true,  btnInt: false, pipe: ['mic'] },
+  paused:        { label: 'PAUSED',        desc: 'Session paused. Awaiting continuation.',                         orb: 'static · no animation · dim',       wave: false, btnStart: true,  btnStop: true,  btnInt: false, pipe: [] },
+  live:          { label: 'LIVE',          desc: 'Gemini Live active. Continuous session.',                        orb: 'orbLive · 2s steady glow · cyan',   wave: true,  btnStart: false, btnStop: true,  btnInt: true,  pipe: ['mic', 'stt', 'intent', 'llm', 'tts', 'out'] },
+  failed:        { label: 'FAILED',        desc: 'Error encountered. Returning to idle…',                         orb: 'orbFail · 1.5s flash · red',        wave: false, btnStart: false, btnStop: false, btnInt: false, pipe: [] },
+  cancelled:     { label: 'CANCELLED',     desc: 'Session cancelled by user.',                                     orb: 'orbCancel · 0.5s fade · dim',       wave: false, btnStart: false, btnStop: false, btnInt: false, pipe: [] },
+};
+
+const PIPE_NODES = ['mic', 'stt', 'intent', 'llm', 'tts', 'out'];
+const PIPE_LABELS = { mic: 'getUserMedia', stt: 'Gemini/DG', intent: 'classify', llm: 'Claude', tts: 'Gemini TTS', out: '24kHz PCM' };
+
+let _currentState = 'idle';
+let _scenarioTimer = null;
+let _activeScenario = null;
+
+// ── Set voice state ─────────────────────────────────────────────────────────
+function setVoiceState(state) {
+  if (!VOICE_STATES[state]) return;
+  _currentState = state;
+  const s = VOICE_STATES[state];
+
+  // Banner class
+  const banner = document.getElementById('voiceBanner');
+  banner.className = 'voice-banner vs-' + state;
+
+  // Orb container class
+  const bannerOrb = document.getElementById('bannerOrb');
+  Object.keys(VOICE_STATES).forEach(k => bannerOrb.classList.remove('orb-' + k));
+  bannerOrb.classList.add('orb-' + state);
+
+  const topOrb = document.getElementById('orbContainer');
+  Object.keys(VOICE_STATES).forEach(k => topOrb.classList.remove('orb-' + k));
+  topOrb.classList.add('orb-' + state);
+
+  // Labels
+  document.getElementById('vbState').textContent = s.label;
+  document.getElementById('vbDesc').textContent  = s.desc;
+  document.getElementById('orbSubLabel').textContent = s.label;
+  document.getElementById('orb').setAttribute('aria-label', 'Voice: ' + s.label);
+
+  // Waveform
+  const waveIds = ['waveform', 'bannerWave'];
+  waveIds.forEach(id => {
+    const w = document.getElementById(id);
+    if (w) w.classList.toggle('active', s.wave);
+  });
+
+  // Buttons
+  document.getElementById('btnStart').disabled     = !s.btnStart;
+  document.getElementById('btnStop').disabled      = !s.btnStop;
+  document.getElementById('btnInterrupt').disabled = !s.btnInt;
+
+  // Pipeline dots
+  PIPE_NODES.forEach((node, i) => {
+    const dot = document.getElementById('pipe-' + node);
+    const sub = document.getElementById('pipe-' + node + '-sub');
+    dot.className = 'pipe-dot';
+    sub.textContent = '—';
+    if (s.pipe.includes(node)) {
+      dot.classList.add(state === 'failed' ? 'error' : state === 'speaking' || state === 'live' ? 'success' : 'active');
+      sub.textContent = PIPE_LABELS[node];
+    }
+  });
+
+  // Detail panel
+  document.getElementById('detailState').textContent    = s.label;
+  document.getElementById('detailOrbClass').textContent = s.orb;
+  document.getElementById('detailWave').textContent     = s.wave ? 'ACTIVE (7 bars, staggered)' : 'INACTIVE';
+
+  // Screen reader announcement
+  document.getElementById('voiceLiveRegion').textContent = 'APEX voice state: ' + s.label;
+}
+
+// ── Interim bar ─────────────────────────────────────────────────────────────
+function setInterim(text) {
+  document.getElementById('interimBar').textContent = text ? '◎ ' + text : '';
+}
+
+// ── Add transcript message ───────────────────────────────────────────────────
+function addMessage(role, text, partial) {
+  const log = document.getElementById('transcriptLog');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role + (partial ? ' partial' : '');
+  const ts = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const icon = role === 'user' ? '◎' : '◎';
+  div.innerHTML = '<div class="msg-bubble">' + escapeHtml(text) + '</div>'
+    + '<div class="msg-meta"><span class="voice-icon">' + icon + '</span> '
+    + (role === 'user' ? 'You · Voice' : 'APEX · Voice') + ' · ' + ts + '</div>';
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return div;
+}
+
+function addSystem(text) {
+  const log = document.getElementById('transcriptLog');
+  const div = document.createElement('div');
+  div.style.cssText = 'font-size:12px;font-family:var(--apex-font-mono);color:var(--apex-color-text-muted);text-align:center;padding:4px;';
+  div.textContent = '— ' + text + ' —';
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setScenarioDetail(id, desc, gap) {
+  document.getElementById('detailScenario').textContent = id;
+  document.getElementById('detailDesc').textContent     = desc;
+  document.getElementById('detailGap').textContent      = gap || '—';
+  document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+  const active = document.querySelector('.sc-btn[onclick*="' + id.replace('V-VOICE-','V-0') + '"]');
+  if (active) active.classList.add('active');
+}
+
+// ── User controls ────────────────────────────────────────────────────────────
+function userStartVoice() {
+  clearScenarioTimers();
+  _playLifecycle(['activating', 'listening'], [400, 0]);
+  setScenarioDetail('Manual', 'User tapped orb to start voice.', 'PROPOSED: ACTIVATING state not in production.');
+}
+
+function userStopVoice() {
+  clearScenarioTimers();
+  setVoiceState('cancelled');
+  addSystem('User cancelled voice interaction');
+  setTimeout(() => setVoiceState('idle'), 600);
+}
+
+function userInterrupt() {
+  clearScenarioTimers();
+  setVoiceState('interrupted');
+  addSystem('Barge-in: user interrupted APEX');
+  setInterim('');
+  setTimeout(() => {
+    setVoiceState('listening');
+    setInterim('◎ re-listening…');
+    setTimeout(() => setInterim(''), 2000);
+  }, 400);
+}
+
+function sendText() {
+  const input = document.getElementById('textInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  clearScenarioTimers();
+  setVoiceState('idle');
+  addMessage('user', msg);
+  setTimeout(() => {
+    addMessage('ai', 'Received via text channel, sir. Voice and text share one conversation.');
+    addSystem('Text interaction — voice remains available');
+  }, 800);
+  setScenarioDetail('V-VOICE-10', 'V-VOICE-10: User returned to text interaction. Conversation log shared.', 'ONE APEX — voice and text in same Converse log.');
+}
+
+// ── Scenario timers ──────────────────────────────────────────────────────────
+function clearScenarioTimers() {
+  if (_scenarioTimer) { clearTimeout(_scenarioTimer); _scenarioTimer = null; }
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function _playLifecycle(states, delays) {
+  clearScenarioTimers();
+  let cum = 0;
+  states.forEach((st, i) => {
+    cum += (delays[i] || 0);
+    const d = cum;
+    setTimeout(() => setVoiceState(st), d);
+  });
+}
+
+// ── Voice scenarios ──────────────────────────────────────────────────────────
+const SCENARIOS = {
+  'V-01': async () => {
+    setScenarioDetail('V-VOICE-01', 'User activates voice from idle.', 'PROPOSED: ACTIVATING state. Production jumps IDLE→LISTENING.');
+    setVoiceState('idle');
+    await delay(400);
+    setVoiceState('activating');
+    await delay(400);
+    setVoiceState('listening');
+    setInterim('◎ listening…');
+  },
+  'V-02': async () => {
+    setScenarioDetail('V-VOICE-02', 'APEX visibly listens. Red orb, waveform active, VAD running.', 'IMPLEMENTED. Orb red pulse, waveform 7 bars active.');
+    setVoiceState('listening');
+    setInterim('◎ "What's on my calendar today?"');
+  },
+  'V-03': async () => {
+    setScenarioDetail('V-VOICE-03', 'User finishes speaking → UNDERSTANDING. Transcript received.', 'GAP in production: no UNDERSTANDING state. Jumps LISTENING→THINKING.');
+    setVoiceState('listening');
+    setInterim('◎ "What's on my calendar today?"');
+    await delay(1200);
+    setInterim('');
+    addMessage('user', 'What's on my calendar today?');
+    setVoiceState('understanding');
+    await delay(1500);
+    setVoiceState('thinking');
+    setScenarioDetail('V-VOICE-03', 'Transcript received → classifying intent → entering THINKING.', 'UNDERSTANDING (amber) is PROPOSED. In production this state does not exist.');
+  },
+  'V-04': async () => {
+    setScenarioDetail('V-VOICE-04', 'APEX thinking. Claude generating response. Route: Sonnet.', 'GAP: THINKING uses same orbActive as SPEAKING. Visually indistinguishable.');
+    setVoiceState('thinking');
+    setPipeDetail('llm', 'claude-sonnet-4-6');
+  },
+  'V-05': async () => {
+    setScenarioDetail('V-VOICE-05', 'APEX speaking. Audio + transcript streaming.', 'GAP: Waveform not activated on SPEAKING in production. Proposed fix: §20.1 item 4.');
+    setVoiceState('thinking');
+    await delay(800);
+    setVoiceState('speaking');
+    addMessage('ai', 'You have three events today, sir. A 10am standup, lunch at 1pm, and a 4pm finance review.', true);
+    await delay(3500);
+    addMessage('ai', 'You have three events today, sir. A 10am standup, lunch at 1pm, and a 4pm finance review.');
+    await delay(800);
+    setVoiceState('idle');
+    addSystem('Turn complete');
+  },
+  'V-06': async () => {
+    setScenarioDetail('V-VOICE-06', 'User interrupts APEX mid-speech (barge-in).', 'Barge-in IMPLEMENTED functionally. GAP: no INTERRUPTED visual state in production.');
+    setVoiceState('speaking');
+    addMessage('ai', 'You have three events today, sir. A 10am standup…', true);
+    setInterim('◎ "Stop, what about—"');
+    await delay(800);
+    setVoiceState('interrupted');
+    addSystem('Barge-in: audio cancelled, in-flight Claude stream aborted');
+    setInterim('');
+    await delay(400);
+    setVoiceState('listening');
+    setInterim('◎ "Stop, what about my 2pm call?"');
+    await delay(1500);
+    setInterim('');
+    addMessage('user', 'Stop, what about my 2pm call?');
+    setVoiceState('understanding');
+    await delay(1000);
+    setVoiceState('thinking');
+  },
+  'V-07': async () => {
+    setScenarioDetail('V-VOICE-07', 'User explicitly cancels voice interaction.', 'GAP: no CANCELLED state in production. Returns directly to waiting.');
+    setVoiceState('listening');
+    setInterim('◎ listening…');
+    await delay(600);
+    setInterim('');
+    setVoiceState('cancelled');
+    addSystem('User cancelled — returning to idle');
+    await delay(600);
+    setVoiceState('idle');
+  },
+  'V-08': async () => {
+    setScenarioDetail('V-VOICE-08', 'Empty transcript — silence or unrecognised input.', 'OBSERVED: empty transcript → waiting silently. Correct — silence is valid, no error shown.');
+    setVoiceState('listening');
+    setInterim('◎ [no speech detected]');
+    await delay(1500);
+    setInterim('');
+    addSystem('Empty transcript — returning to standby silently');
+    setVoiceState('idle');
+  },
+  'V-09': async () => {
+    setScenarioDetail('V-VOICE-09', 'TTS output fails. Spoken fallback + FAILED orb state.', 'GAP: in production, if TTS audio itself fails, there is no visual FAILED state — only audio fallback.');
+    setVoiceState('thinking');
+    await delay(800);
+    setPipeDetail('tts', 'ERROR');
+    document.getElementById('pipe-tts').className = 'pipe-dot error';
+    setVoiceState('failed');
+    addSystem('TTS failure — spoken fallback: "I ran into a problem, sir."');
+    await delay(1800);
+    setVoiceState('idle');
+    document.getElementById('pipe-tts').className = 'pipe-dot';
+    document.getElementById('pipe-tts-sub').textContent = '—';
+  },
+  'V-10': async () => {
+    setScenarioDetail('V-VOICE-10', 'User returns to text interaction. Voice session ends. ONE conversation log.', 'ONE APEX: text and voice share the Converse log. No separate history.');
+    setVoiceState('idle');
+    addSystem('Voice session ended — text fallback active');
+    addMessage('user', 'Show me the finance report');
+    await delay(800);
+    addMessage('ai', 'Finance summary loaded, sir. Refer to the Present surface for the full report.');
+    addSystem('Text channel active — voice available on demand');
+  },
+};
+
+function setPipeDetail(node, label) {
+  const sub = document.getElementById('pipe-' + node + '-sub');
+  if (sub) sub.textContent = label;
+}
+
+async function runScenario(id) {
+  clearScenarioTimers();
+  setInterim('');
+  const fn = SCENARIOS[id];
+  if (fn) {
+    document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+    const active = document.querySelector('.sc-btn[onclick*="' + id + '"]');
+    if (active) active.classList.add('active');
+    try { await fn(); } catch(e) { console.error('Scenario error:', e); }
+  }
+}
+
+// ── Clock ────────────────────────────────────────────────────────────────────
+function tickClock() {
+  const el = document.getElementById('clock');
+  if (el) el.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+tickClock();
+setInterval(tickClock, 10000);
+
+// ── Keyboard shortcuts ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === ' ') {
+    e.preventDefault();
+    if (_currentState === 'idle' || _currentState === 'paused') userStartVoice();
+    else if (_currentState === 'listening') userStopVoice();
+  }
+  if (e.key === 'Escape') {
+    if (_currentState !== 'idle') userStopVoice();
+  }
+  if (e.key >= '1' && e.key <= '9') {
+    const n = parseInt(e.key);
+    const id = 'V-0' + n;
+    runScenario(id);
+  }
+  if (e.key === '0') runScenario('V-10');
+});
+
+// ── Orb click ────────────────────────────────────────────────────────────────
+document.getElementById('orb').addEventListener('click', () => {
+  if (_currentState === 'idle') userStartVoice();
+  else if (_currentState === 'speaking') userInterrupt();
+  else userStopVoice();
+});
+
+// ── Init state ───────────────────────────────────────────────────────────────
+setVoiceState('idle');
+</script>
+</body>
+</html>

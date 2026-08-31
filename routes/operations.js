@@ -163,6 +163,22 @@ router.post('/operations/clients', _auth, async (req, res) => {
     }
 });
 
+// PATCH /api/operations/clients/:id
+router.patch('/operations/clients/:id', _auth, async (req, res) => {
+    try {
+        const { stage, value, contact_email, follow_up_date } = req.body || {};
+        const updates = {};
+        if (stage !== undefined) updates.stage = stage;
+        if (value !== undefined) updates.value = value;
+        if (contact_email !== undefined) updates.contact_email = contact_email;
+        if (follow_up_date !== undefined) updates.follow_up_date = follow_up_date;
+        if (!Object.keys(updates).length) return res.status(400).json({ ok: false, error: 'No fields to update' });
+        const { data, error } = await sb().from('apex_clients').update(updates).eq('id', req.params.id).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, client: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // GET /api/operations/projects
 router.get('/operations/projects', _auth, async (req, res) => {
     try {

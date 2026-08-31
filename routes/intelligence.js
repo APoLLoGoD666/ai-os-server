@@ -530,6 +530,73 @@ router.get('/intelligence/system-status', requireAppAccess, async (req, res) => 
     });
 });
 
+// ── GET /api/intelligence/briefing ───────────────────────────────────────────
+// Strategic executive briefing from the SIE (6-hour cached).
+// Uses the existing cache — does not bypass or duplicate it.
+// First call after cache expiry may take 5-15s (calls Claude API).
+// Returns: biggest_opportunity, biggest_threat, biggest_bottleneck,
+//          highest_leverage_action, strategic_focus_this_week/month,
+//          generated_at, data_inputs.
+
+router.get('/intelligence/briefing', requireAppAccess, async (req, res) => {
+    try {
+        const sie = require('../lib/intelligence/sie');
+        const briefing = await sie.generateExecutiveBriefing();
+        res.json({ ok: true, briefing: briefing || null });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message, briefing: null, degraded: true });
+    }
+});
+
+// ── GET /api/intelligence/opportunities ───────────────────────────────────────
+// Read-only query against the persisted opportunities table.
+// Does NOT call opportunity-engine.detect() which is write-oriented.
+// Query params: status (default: 'detected'), limit (max 50)
+
+router.get('/intelligence/opportunities', requireAppAccess, async (req, res) => {
+    try {
+        const limit  = Math.min(parseInt(req.query.limit) || 20, 50);
+        const status = req.query.status || 'detected';
+        const { data, error } = await _sbClient()
+            .from('opportunities')
+            .select('id,title,description,composite_score,status,evidence_refs,created_at')
+            .eq('status', status)
+            .order('composite_score', { ascending: false })
+            .limit(limit);
+        if (error) return res.status(500).json({ ok: false, error: error.message, opportunities: [] });
+        res.json({ ok: true, opportunities: data || [], count: (data || []).length });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message, opportunities: [] });
+    }
+});
+
+// ── GET /api/intelligence/health ──────────────────────────────────────────────
+// Civilization health score. Reads latest persisted snapshot first;
+// falls back to compute() (read-only) if no snapshot exists.
+// Does NOT call snapshot() which persists to DB.
+
+router.get('/intelligence/health', requireAppAccess, async (req, res) => {
+    try {
+        const healthEngine = require('../lib/intelligence/civilization-health-engine');
+        const latest = await healthEngine.getLatest();
+        if (latest) {
+            return res.json({
+                ok: true, source: 'snapshot',
+                score:          latest.score,
+                classification: latest.classification,
+                dimensions:     latest.dimensions || {},
+                alerts:         latest.alerts     || [],
+                snapshot_at:    latest.created_at || null,
+            });
+        }
+        // No snapshot yet — compute on demand (read-only)
+        const health = await healthEngine.compute();
+        res.json({ ok: true, source: 'computed', ...health, snapshot_at: null });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 module.exports = router;
 module.exports.voiceState = voiceState;
 module.exports.broadcastVoiceState = broadcastVoiceState;

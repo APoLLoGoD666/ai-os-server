@@ -468,13 +468,15 @@ router.get('/governance/dashboard', async (req, res) => {
     const sb = _sb();
     const t0 = Date.now();
     try {
-        const [certs, anomalies, incidents, changesRaw, repEvents, sloDefs] = await Promise.all([
+        const [certs, anomalies, incidents, changesRaw, repEvents, sloDefs, constRecs] = await Promise.all([
             sb.from('certifications').select('status').order('issued_at', { ascending: false }).limit(20),
             sb.from('anomalies').select('severity').order('detected_at', { ascending: false }).limit(50),
             sb.from('incidents').select('severity, status').eq('status', 'open').limit(20),
             sb.from('change_classifications').select('change_type').order('classified_at', { ascending: false }).limit(50),
             sb.from('agent_reputation_events').select('agent_role, outcome').order('occurred_at', { ascending: false }).limit(100),
             sb.from('slo_definitions').select('id, name'),
+            // GAP-18 (RX-06): constitutional_records metadata — record_data intentionally excluded (UX-16 gate)
+            sb.from('constitutional_records').select('id, record_type, runtime_id, baseline, wave, created_at, session_id, trace_id').order('created_at', { ascending: false }).limit(10),
         ]);
 
         const certsByStatus = {};
@@ -493,6 +495,9 @@ router.get('/governance/dashboard', async (req, res) => {
             if (r.outcome === 'success') repByAgent[r.agent_role].success++;
         }
 
+        const constRecsData = constRecs.data || [];
+        const latestRec     = constRecsData[0] || null;
+
         const dashboard = {
             generated_at:     new Date().toISOString(),
             certifications:   { total: certs.data?.length || 0, by_status: certsByStatus },
@@ -502,6 +507,16 @@ router.get('/governance/dashboard', async (req, res) => {
             agent_reputation: Object.entries(repByAgent).map(([r, g]) => ({
                 role: r, success_rate: g.total > 0 ? (g.success / g.total).toFixed(2) : null,
             })),
+            // GAP-18 (RX-06 UX-16): constitutional records summary — record_data excluded
+            constitution: {
+                records_present:    constRecsData.length > 0,
+                record_count:       constRecsData.length,
+                latest_record_type: latestRec ? latestRec.record_type : null,
+                latest_runtime_id:  latestRec ? latestRec.runtime_id  : null,
+                latest_wave:        latestRec ? latestRec.wave         : null,
+                latest_at:          latestRec ? latestRec.created_at   : null,
+                baseline:           latestRec ? latestRec.baseline      : null,
+            },
         };
 
         // Persist snapshot (Domain 35)
@@ -607,6 +622,23 @@ router.get('/governance/architecture-registry', (req, res) => {
     };
 
     res.json({ ok: true, ...registry });
+});
+
+// GET /api/governance/history — UX-16 constitutional record history (RX-06 GAP-19)
+// Returns metadata only — record_data intentionally excluded (constitutional chain-of-thought gate)
+router.get('/governance/history', async (req, res) => {
+    const limit       = Math.min(parseInt(req.query.limit || '20', 10), 100);
+    const record_type = req.query.record_type || null;
+    try {
+        let q = _sb().from('constitutional_records')
+            .select('id, record_type, runtime_id, baseline, wave, created_at, session_id, trace_id')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+        if (record_type) q = q.eq('record_type', record_type);
+        const { data, error } = await q;
+        if (error) throw error;
+        res.json({ ok: true, records: data || [], count: (data || []).length });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 module.exports = router;

@@ -8,7 +8,8 @@ const express = require('express');
 const router  = express.Router();
 router.use(require('../lib/app-auth'));
 
-const kge = require('../lib/knowledge/knowledge-gap-engine');
+const kge           = require('../lib/knowledge/knowledge-gap-engine');
+const semanticMemory = require('../lib/memory/semantic-memory');
 
 // ── POST /knowledge/assess ────────────────────────────────────────────────────
 // Assess one or more knowledge requirements against current knowledge state.
@@ -113,6 +114,82 @@ router.get('/knowledge/stats', async (req, res) => {
         res.json({ ok: true, ...stats });
     } catch (e) {
         res.status(500).json({ error: e.message });
+    }
+});
+
+// ── GET /knowledge/items ──────────────────────────────────────────────────────
+// Retrieve knowledge items from canonical semantic memory.
+// Query params: q (search text), domain, category, status, limit, min_confidence
+// Returns items with UX-11 fields: fact, category, domain, confidence, source,
+// status, validation_state, support_count, contradiction_count, created_at.
+// Where values are unavailable they are returned as null — never fabricated.
+
+router.get('/knowledge/items', async (req, res) => {
+    try {
+        const { q = '', domain, category, status, limit, min_confidence } = req.query;
+        const items = await semanticMemory.search(q, {
+            domain:        domain      || undefined,
+            category:      category    || undefined,
+            limit:         limit       ? Math.min(parseInt(limit, 10), 100) : 50,
+            minConfidence: min_confidence ? parseFloat(min_confidence) : 0.0,
+        });
+        // Surface knowledge_state per item where a simple per-fact state is
+        // derivable from the item's own status/validation_state fields.
+        // Full per-subject KGE state requires a subject string and a separate
+        // call; that is the /knowledge/state endpoint's role.
+        const mapped = (items || []).map(function(item) {
+            var knowledgeState;
+            if (item.status === 'deprecated' || (item.contradiction_count || 0) > 0) {
+                knowledgeState = 'CONFLICTING';
+            } else if (item.status === 'superseded') {
+                knowledgeState = 'UNKNOWN';
+            } else if (item.validation_state === 'validated' && item.status === 'validated') {
+                knowledgeState = 'FULLY_KNOWN';
+            } else if (item.status === 'candidate') {
+                knowledgeState = 'PARTIALLY_KNOWN';
+            } else {
+                knowledgeState = 'UNKNOWN';
+            }
+            // Confidence tier label (UX-11 §7.1 — not raw score)
+            var conf = typeof item.confidence === 'number' ? item.confidence : null;
+            var confidenceTier = conf === null ? 'UNKNOWN'
+                : conf >= 0.90 ? 'VERY HIGH'
+                : conf >= 0.75 ? 'HIGH'
+                : conf >= 0.60 ? 'MEDIUM'
+                : conf >= 0.40 ? 'LOW'
+                : 'UNCERTAIN';
+            return Object.assign({}, item, { knowledge_state: knowledgeState, confidence_tier: confidenceTier });
+        });
+        res.json({ ok: true, items: mapped, count: mapped.length });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message, items: [] });
+    }
+});
+
+// ── GET /knowledge/state ──────────────────────────────────────────────────────
+// Return overall knowledge coverage state: gap stats aggregated with a
+// derived coverage classification. Read-only — no engine state is mutated.
+
+router.get('/knowledge/state', async (req, res) => {
+    try {
+        const stats = await kge.getGapStats();
+        // Derive a top-level coverage classification from gap stats
+        var total   = (stats && stats.total)   || 0;
+        var open    = (stats && stats.open)     || 0;
+        var blocking = (stats && stats.blocking) || 0;
+        var classification = blocking > 0 ? 'BLOCKED'
+            : open > 10   ? 'DEGRADED'
+            : open > 3    ? 'PARTIAL'
+            : open === 0  ? 'SUFFICIENT'
+            : 'PARTIAL';
+        res.json({
+            ok: true,
+            classification,
+            stats: stats || {},
+            ts: new Date().toISOString(),
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
     }
 });
 

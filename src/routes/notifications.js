@@ -47,9 +47,14 @@ router.get('/api/notifications', requireAppAccess, async (req, res) => {
     try {
         const { data } = await sbAdmin.from('apex_notifications')
             .select('*').eq('read', false).order('created_at', { ascending: false });
-        const notifs = data || [];
+        res.json({ ok: true, notifications: data || [] });
+    } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+});
+
+router.post('/api/notifications/mark-read', requireAppAccess, async (req, res) => {
+    try {
         await sbAdmin.from('apex_notifications').update({ read: true }).eq('read', false).neq('type', 'permission');
-        res.json({ ok: true, notifications: notifs });
+        res.json({ ok: true });
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 

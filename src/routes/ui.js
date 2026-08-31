@@ -25,6 +25,7 @@ router.get('/sw.js', (req, res) => {
 router.get('/apex-v2.css',     (req, res) => res.sendFile(path.join(__dirname, '../..', 'public', 'apex-v2.css')));
 router.get('/apex-custom.css', (req, res) => res.sendFile(path.join(__dirname, '../..', 'public', 'apex-custom.css')));
 router.get('/manifest.json',   (req, res) => res.sendFile(path.join(__dirname, '../..', 'public', 'manifest.json')));
+router.get('/js/components/contextual-card.js', (req, res) => res.sendFile(path.join(__dirname, '../..', 'public', 'js', 'components', 'contextual-card.js')));
 router.use('/src/components',  express.static(path.join(__dirname, '../..', 'src', 'components')));
 
 router.get('/editor', requireAppAccess, (req, res) => {
