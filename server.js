@@ -276,8 +276,9 @@ require('./middleware/request-context')(app, sbAdmin);
 app.use(require('./middleware/civilization-kernel'));
 app.use('/api', ...kernelChain);
 
-const chatLimiter    = rateLimit({ windowMs: 60000,            max: 30,  message: { ok: false, reply: "Too many requests, slow down." } });
-const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000,  max: 300, standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Too many requests, please try again later." } });
+const _skipLocalhost = (req) => { const ip = req.ip || ''; return ip === '::1' || ip === '127.0.0.1' || ip.startsWith('::ffff:127.'); };
+const chatLimiter    = rateLimit({ windowMs: 60000,            max: 30,  skip: _skipLocalhost, message: { ok: false, reply: "Too many requests, slow down." } });
+const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000,  max: 300, skip: _skipLocalhost, standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Too many requests, please try again later." } });
 const voiceLimiter   = rateLimit({ windowMs: 60 * 1000,        max: 40,  standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Voice chat rate limit reached, slow down." } });
 const authLimiter    = rateLimit({ windowMs: 60 * 60 * 1000,   max: 10,  standardHeaders: true, legacyHeaders: false, message: { ok: false, reply: "Too many login attempts, try again later." } });
 app.use("/chat",         chatLimiter);

@@ -57,6 +57,10 @@
     --orb-sz:        100px;
 }
 
+/* V-11-A: Role-aware visibility — body class beats .nav-btn specificity (0,2,0 > 0,1,0) */
+body.apex-role-user   .apex-master-only { display: none !important; }
+body.apex-role-master .apex-user-only   { display: none !important; }
+
 /* ── Body & app shell ───────────────────────────────────────────────── */
 html, body {
     background: var(--bg);
@@ -6239,7 +6243,7 @@ select:focus {
 </style>
 <link rel="stylesheet" href="/apex-zero.css">
 </head>
-<body>
+<body class="apex-role-master">
 <a class="skip-to-main" href="#main-content">Skip to main content</a>
 
 <!-- ══ LOGIN OVERLAY ══ -->
@@ -6294,6 +6298,11 @@ select:focus {
             <div class="clock-date" id="clockDate">--</div>
         </div>
         <span id="mobilePageName" style="display:none">CMD</span>
+        <!-- V-11-A: User identity display (right side of topbar) -->
+        <div id="apex-identity-pill" style="margin-left:auto;padding-right:14px;display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <span id="apex-user-display" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;color:rgba(242,242,242,0.45);">Master</span>
+            <span id="apex-role-badge" style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.15em;color:#5e6ad2;background:rgba(94,106,210,0.1);border:1px solid rgba(94,106,210,0.25);border-radius:3px;padding:1px 5px;">MASTER</span>
+        </div>
         <!-- hidden stubs JS may reference -->
         <div style="display:none">
             <span id="topbarEmailCount"></span><span id="topbarTaskCount"></span>
@@ -6519,8 +6528,38 @@ select:focus {
 
             <!-- ══ PAGE: SYSTEM ══ -->
             <div class="page" id="page-system">
-                <!-- Page Header -->
-                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                <!-- V-11-A: User PROFILE (shown when role=user; hidden for master) -->
+                <div id="v11-user-profile" style="display:none;flex-direction:column;gap:16px">
+                    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                        <div>
+                            <div class="ds-page-title" style="letter-spacing:7px">PROFILE</div>
+                            <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">IDENTITY &middot; CONTEXT &middot; PREFERENCES &middot; PRIVACY</div>
+                        </div>
+                    </div>
+                    <!-- § 1 Identity -->
+                    <div class="ds-panel">
+                        <div class="ds-panel-header"><div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Identity</span></div></div>
+                        <div style="padding:14px;display:flex;flex-direction:column;gap:8px">
+                            <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--text-mute)">Display name</span><span id="v11-profile-name" style="font-size:12px;color:var(--text)">—</span></div>
+                            <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--text-mute)">Email</span><span id="v11-profile-email" style="font-size:12px;color:var(--text)">—</span></div>
+                            <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--text-mute)">Role</span><span style="font-size:12px;color:var(--cyan)">User</span></div>
+                        </div>
+                    </div>
+                    <!-- § 2–9 placeholder sections (content added in Phase B) -->
+                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+                        <div class="ds-panel" style="padding:12px"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Personal Context</span></div>
+                        <div class="ds-panel" style="padding:12px"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Memory</span></div>
+                        <div class="ds-panel" style="padding:12px"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Privacy</span></div>
+                        <div class="ds-panel" style="padding:12px"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Capabilities</span></div>
+                        <div class="ds-panel" style="padding:12px"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Integrations</span></div>
+                        <div class="ds-panel" style="padding:12px"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Communication</span></div>
+                        <div class="ds-panel" style="padding:12px"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Activity</span></div>
+                        <div class="ds-panel" style="padding:12px"><span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)">Security</span></div>
+                    </div>
+                </div>
+
+            <!-- Page Header (master-only) -->
+                <div id="v11-system-header" style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">SYSTEM</div>
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">INFRASTRUCTURE &middot; AUTOMATION &middot; SECURITY &middot; PLATFORM HEALTH</div>
@@ -6530,7 +6569,7 @@ select:focus {
                         <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">SYS &middot; SYSTEM AGENT</div>
                     </div>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:12px">
+                <div id="v11-system-main" style="display:flex;flex-direction:column;gap:12px">
 
                     <!-- Domain Agent Chat Modal (functional, hidden) -->
                     <div id="domainAgentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:400;align-items:center;justify-content:center">
@@ -10203,28 +10242,22 @@ if(pipe){
 
     </div><!-- .page-and-input -->
 
-    <!-- ══ SIDEBAR NAV ══ -->
-    <nav class="bottom-nav" role="tablist" aria-label="Page navigation">
-        <div class="az-nav-group">CORE</div>
-        <button class="nav-btn active" id="nav-command" role="tab" aria-selected="true">
-            <span class="nav-icon">⬡</span>
-            <span class="nav-label">Command</span>
-        </button>
+    <!-- ══ SIDEBAR NAV ══ (V-11 Six Canonical Destinations) -->
+    <nav class="bottom-nav" id="apexSideNav" role="tablist" aria-label="Page navigation">
+        <!-- ① TODAY -->
+        <div class="az-nav-group">TODAY</div>
         <button class="nav-btn" id="nav-overview">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Overview</span>
         </button>
-        <button class="nav-btn" id="nav-operation">
-            <span class="nav-icon">⊞</span>
-            <span class="nav-label">Operation</span>
-            <span class="ds-notif-badge red" id="navOpsBadge" style="display:none"></span>
+        <!-- ② COMMAND -->
+        <div class="az-nav-group">COMMAND</div>
+        <button class="nav-btn active" id="nav-command" role="tab" aria-selected="true">
+            <span class="nav-icon">⬡</span>
+            <span class="nav-label">Command</span>
         </button>
-        <button class="nav-btn" id="nav-system">
-            <span class="nav-icon">◉</span>
-            <span class="nav-label">System</span>
-            <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
-        </button>
-        <div class="az-nav-group">DOMAINS</div>
+        <!-- ③ LIFE & WORK -->
+        <div class="az-nav-group">LIFE &amp; WORK</div>
         <button class="nav-btn" id="nav-finance">
             <span class="nav-icon">◎</span>
             <span class="nav-label">Finance</span>
@@ -10246,41 +10279,24 @@ if(pipe){
             <span class="nav-icon">◫</span>
             <span class="nav-label">University</span>
         </button>
-        <button class="nav-btn" id="nav-occult">
-            <span class="nav-icon">◬</span>
-            <span class="nav-label">Occult</span>
-        </button>
         <button class="nav-btn" id="nav-research">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Research</span>
         </button>
-        <button class="nav-btn" id="nav-civilisation">
+        <button class="nav-btn apex-master-only" id="nav-occult">
+            <span class="nav-icon">◬</span>
+            <span class="nav-label">Occult</span>
+        </button>
+        <button class="nav-btn apex-master-only" id="nav-civilisation">
             <span class="nav-icon">⊛</span>
             <span class="nav-label">Civilisation</span>
         </button>
-        <button class="nav-btn" id="nav-reality">
+        <button class="nav-btn apex-master-only" id="nav-reality">
             <span class="nav-icon">◍</span>
             <span class="nav-label">Reality</span>
         </button>
-        <div class="az-nav-group">SYSTEM</div>
-        <button class="nav-btn" id="nav-activity" role="tab" aria-selected="false" aria-label="Activity">
-            <span class="nav-icon">◎</span>
-            <span class="nav-label">Activity</span>
-            <span class="ds-notif-badge cyan" id="navActivityBadge" style="display:none"></span>
-        </button>
-        <button class="nav-btn" id="nav-agents" role="tab" aria-selected="false" aria-label="Agents">
-            <span class="nav-icon">◈</span>
-            <span class="nav-label">Agents</span>
-        </button>
-        <button class="nav-btn" id="nav-approvals" role="tab" aria-selected="false" aria-label="Approvals">
-            <span class="nav-icon">◇</span>
-            <span class="nav-label">Approvals</span>
-            <span class="ds-notif-badge amber" id="navApprovalsBadge" style="display:none"></span>
-        </button>
-        <button class="nav-btn" id="nav-knowledge" aria-label="Knowledge">
-            <span class="nav-icon">◆</span>
-            <span class="nav-label">Knowledge</span>
-        </button>
+        <!-- ④ INTELLIGENCE -->
+        <div class="az-nav-group">INTELLIGENCE</div>
         <button class="nav-btn" id="nav-intelligence" aria-label="Intelligence">
             <span class="nav-icon">◇</span>
             <span class="nav-label">Intel</span>
@@ -10289,7 +10305,39 @@ if(pipe){
             <span class="nav-icon">▣</span>
             <span class="nav-label">Memory</span>
         </button>
-        <button class="nav-btn" id="nav-governance" aria-label="Governance">
+        <button class="nav-btn" id="nav-knowledge" aria-label="Knowledge">
+            <span class="nav-icon">◆</span>
+            <span class="nav-label">Knowledge</span>
+        </button>
+        <!-- ⑤ ACTIONS -->
+        <div class="az-nav-group">ACTIONS</div>
+        <button class="nav-btn" id="nav-operation">
+            <span class="nav-icon">⊞</span>
+            <span class="nav-label">Operation</span>
+            <span class="ds-notif-badge red" id="navOpsBadge" style="display:none"></span>
+        </button>
+        <button class="nav-btn apex-master-only" id="nav-agents" role="tab" aria-selected="false" aria-label="Agents">
+            <span class="nav-icon">◈</span>
+            <span class="nav-label">Agents</span>
+        </button>
+        <button class="nav-btn apex-master-only" id="nav-approvals" role="tab" aria-selected="false" aria-label="Approvals">
+            <span class="nav-icon">◇</span>
+            <span class="nav-label">Approvals</span>
+            <span class="ds-notif-badge amber" id="navApprovalsBadge" style="display:none"></span>
+        </button>
+        <!-- ⑥ SYSTEM -->
+        <div class="az-nav-group">SYSTEM</div>
+        <button class="nav-btn" id="nav-system">
+            <span class="nav-icon">◉</span>
+            <span class="nav-label">System</span>
+            <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
+        </button>
+        <button class="nav-btn apex-master-only" id="nav-activity" role="tab" aria-selected="false" aria-label="Activity">
+            <span class="nav-icon">◎</span>
+            <span class="nav-label">Activity</span>
+            <span class="ds-notif-badge cyan" id="navActivityBadge" style="display:none"></span>
+        </button>
+        <button class="nav-btn apex-master-only" id="nav-governance" aria-label="Governance">
             <span class="nav-icon">⚖</span>
             <span class="nav-label">Govern</span>
         </button>
@@ -19805,5 +19853,77 @@ window.apexFileDropHandler = function(e){
 })();
 </script>
 <!-- contextual-card.js loaded dynamically after DOMContentLoaded — not on critical parse/DCL path -->
+
+<!-- V-11-A: Identity boot + role-aware profile rendering -->
+<script>
+(function() {
+    'use strict';
+
+    // Single canonical mechanism for all role-aware UI changes.
+    window._apexUser = { id: null, role: 'master', email: null, displayName: 'Master' };
+
+    window.applyRoleProfile = function(role) {
+        var isMaster = (role !== 'user');
+
+        // Body-class toggle — CSS specificity (0,2,0) beats .nav-btn (0,1,0) even with !important.
+        document.body.classList.toggle('apex-role-master', isMaster);
+        document.body.classList.toggle('apex-role-user',   !isMaster);
+
+        // SYSTEM page: swap master infrastructure view ↔ user profile view
+        var sysHeader  = document.getElementById('v11-system-header');
+        var sysMain    = document.getElementById('v11-system-main');
+        var userProf   = document.getElementById('v11-user-profile');
+        if (sysHeader) sysHeader.style.setProperty('display', isMaster ? '' : 'none', isMaster ? '' : 'important');
+        if (sysMain)   sysMain.style.setProperty('display',   isMaster ? '' : 'none', isMaster ? '' : 'important');
+        if (userProf)  userProf.style.setProperty('display',  isMaster ? 'none' : 'flex', 'important');
+
+        // Populate profile identity fields if user
+        if (!isMaster && window._apexUser) {
+            var nameEl  = document.getElementById('v11-profile-name');
+            var emailEl = document.getElementById('v11-profile-email');
+            if (nameEl)  nameEl.textContent  = window._apexUser.displayName || '—';
+            if (emailEl) emailEl.textContent = window._apexUser.email || '—';
+        }
+
+        // Topbar identity pill
+        var userDisplay = document.getElementById('apex-user-display');
+        var roleBadge   = document.getElementById('apex-role-badge');
+        if (userDisplay) userDisplay.textContent = window._apexUser.displayName || (isMaster ? 'Master' : 'User');
+        if (roleBadge) {
+            roleBadge.textContent = isMaster ? 'MASTER' : 'USER';
+            roleBadge.style.color       = isMaster ? '#5e6ad2' : '#00d4ff';
+            roleBadge.style.background  = isMaster ? 'rgba(94,106,210,0.1)' : 'rgba(0,212,255,0.1)';
+            roleBadge.style.borderColor = isMaster ? 'rgba(94,106,210,0.25)' : 'rgba(0,212,255,0.25)';
+        }
+
+        // COMMAND page: master agent-panel (hidden for users)
+        var agentPanel = document.getElementById('v11-cmd-agent-panel');
+        if (agentPanel) agentPanel.style.display = isMaster ? '' : 'none';
+    };
+
+    // Boot: fetch identity from /api/me (goes through kernelChain → resolveIdentity)
+    function _bootIdentity() {
+        fetch('/api/me', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(d) {
+                if (!d || !d.ok) return;
+                window._apexUser = {
+                    id:          d.id   || null,
+                    role:        d.role || 'master',
+                    email:       d.email || null,
+                    displayName: d.display_name || (d.role === 'master' ? 'Master' : 'User'),
+                };
+                window.applyRoleProfile(window._apexUser.role);
+            })
+            .catch(function() { /* auth not yet set up — keep master defaults */ });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _bootIdentity);
+    } else {
+        _bootIdentity();
+    }
+})();
+</script>
 </body>
 </html>

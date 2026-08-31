@@ -5,6 +5,8 @@ const crypto = require('crypto');
 const { requireAppAccess } = require('../../lib/middleware');
 const { pgSaveGmailToken } = require('../../lib/supabase-helpers');
 
+const MASTER_UUID = process.env.APEX_HUMAN_ID || '00000000-0000-4000-8000-000000000001';
+
 router.post('/auth/login', (req, res) => {
     const secret = process.env.JWT_SECRET;
     const correctPw = process.env.DASHBOARD_PASSWORD;
@@ -19,7 +21,14 @@ router.post('/auth/login', (req, res) => {
         if (wantsJsonErr) return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
         return res.redirect(302, '/login?error=1');
     }
-    const token = jwt.sign({ apex: true, sub: 'apex-user' }, secret, { expiresIn: '7d' });
+    // V-11-A: JWT now carries UUID sub + role for multi-profile identity resolution.
+    // jti provides per-token revocation capability (token_revocations table).
+    const jti = crypto.randomBytes(16).toString('hex');
+    const token = jwt.sign(
+        { sub: MASTER_UUID, role: 'master', email: null, jti },
+        secret,
+        { expiresIn: '7d' }
+    );
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('apex_token', token, {
         httpOnly: true,
@@ -38,6 +47,30 @@ router.post('/auth/login', (req, res) => {
     if (wantsJson) return res.json({ ok: true });
     // Native form POST — browser handles cookie persistence and redirect (fixes iOS PWA WebKit bug)
     return res.redirect(302, '/');
+});
+
+// V-11-A: Identity endpoint — returns resolved identity for the current session.
+// Consumed by dashboard.html boot to apply role-aware profile rendering.
+router.get('/api/me', async (req, res) => {
+    if (!req.identity) return res.status(401).json({ ok: false });
+    try {
+        const sb = require('../../lib/clients').getSupabaseClient();
+        const { data } = await sb
+            .from('humans')
+            .select('id, display_name, email, role, status')
+            .eq('id', req.identity.humanId)
+            .maybeSingle();
+        if (data) return res.json({ ok: true, ...data });
+    } catch (_) {}
+    // Fallback if DB not yet migrated or row missing
+    return res.json({
+        ok: true,
+        id:           req.identity.humanId,
+        display_name: req.identity.role === 'master' ? 'Master' : 'User',
+        email:        req.identity.email,
+        role:         req.identity.role || 'master',
+        status:       'active',
+    });
 });
 
 router.post('/auth/logout', (req, res) => {

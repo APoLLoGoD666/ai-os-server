@@ -1,9 +1,11 @@
 'use strict';
 const rateLimit = require('express-rate-limit');
 
+const _skipLocalhost = (req) => { const ip = req.ip || ''; return ip === '::1' || ip === '127.0.0.1' || ip.startsWith('::ffff:127.'); };
 const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 120,
+    skip: _skipLocalhost,
     standardHeaders: true,
     legacyHeaders: false,
     message: { ok: false, reply: 'Rate limit exceeded — try again shortly.' }
