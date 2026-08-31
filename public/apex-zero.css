@@ -654,3 +654,233 @@ textarea.ds-input:focus {
     margin-top: var(--gap-xs) !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   V-04 — SEMANTIC PRODUCTISATION & VISUAL CONSOLIDATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── 26. V-04B — TELEMETRY TYPE TAG + CORRECTED FEED HIERARCHY ─────────── */
+/* Latency telemetry is now emitted as type:'telemetry' (patched line ~18076).
+   Real type:'error' entries are now unambiguous genuine failures. */
+
+.apex-tag-telemetry {
+  background: rgba(244,244,245,0.03) !important;
+  color:      var(--on-void-3) !important;
+}
+
+.apex-feed-entry:has(.apex-tag-telemetry) {
+  opacity: 0.22 !important;
+}
+
+/* Real errors: now clearly errors — restore full visibility */
+.apex-feed-entry:has(.apex-tag-error) {
+  opacity:     1 !important;
+  border-left: 2px solid rgba(239,68,68,0.35) !important;
+  padding-left: 6px !important;
+}
+
+/* ─── 27. V-04C — JETBRAINS MONO CLEANUP ────────────────────────────────── */
+/* Mono is reserved for numeric values, technical data, and timestamps.
+   These class-based selectors used mono for labels and meta text. */
+
+.clock-time,
+.help-key,
+.cmd-cl-meta,
+.streak,
+.cmd-sub {
+  font-family: var(--font-sans) !important;
+}
+
+/* Domain pages: inline JetBrains Mono on non-numeric labels/buttons/meta text */
+/* Selector targets any element with inline font-family: JetBrains Mono */
+#page-communication [style*="JetBrains Mono"],
+#page-finance       [style*="JetBrains Mono"],
+#page-operation     [style*="JetBrains Mono"],
+#page-health        [style*="JetBrains Mono"],
+#page-business      [style*="JetBrains Mono"],
+#page-university    [style*="JetBrains Mono"],
+#page-system        [style*="JetBrains Mono"],
+#page-agents        [style*="JetBrains Mono"],
+#page-approvals     [style*="JetBrains Mono"],
+#page-command       [style*="JetBrains Mono"],
+#page-overview      [style*="JetBrains Mono"] {
+  font-family: var(--font-sans) !important;
+}
+/* Numeric stat values in domain pages already use Inter inline — no collision */
+
+/* ─── 28. V-04D — DOMAIN PAGE TOKEN MIGRATION ───────────────────────────── */
+
+/* Legacy navy panel backgrounds → void-1 */
+#page-communication [style*="background:#0d1424"],
+#page-communication [style*="background: #0d1424"],
+#page-operation     [style*="background:#0d1424"],
+#page-operation     [style*="background: #0d1424"],
+#page-agents        [style*="background:#0d1424"],
+#page-agents        [style*="background: #0d1424"],
+#page-approvals     [style*="background:#0d1424"],
+#page-approvals     [style*="background: #0d1424"],
+#page-system        [style*="background:#0d1424"],
+#page-system        [style*="background: #0d1424"] {
+  background: var(--void-1) !important;
+}
+
+/* Finance hero: old navy gradient → void-2 surface */
+#page-finance [style*="linear-gradient(135deg,#071a2b"],
+#page-finance [style*="linear-gradient(135deg, #071a2b"] {
+  background: var(--void-2) !important;
+}
+
+/* Finance hero: old cyan border → signal indigo */
+#page-finance [style*="rgba(0,212,255"] {
+  border-color: rgba(99,102,241,0.25) !important;
+}
+
+/* Legacy muted text: unify to on-void-3 */
+#page-communication [style*="color:#8893a0"],
+#page-finance       [style*="color:#8893a0"],
+#page-operation     [style*="color:#8893a0"],
+#page-health        [style*="color:#8893a0"],
+#page-business      [style*="color:#8893a0"],
+#page-university    [style*="color:#8893a0"] {
+  color: var(--on-void-3) !important;
+}
+
+/* Very dark muted text (#4a5568) — illegible on void; lift to on-void-3 */
+#page-communication [style*="color:#4a5568"],
+#page-operation     [style*="color:#4a5568"],
+#page-finance       [style*="color:#4a5568"] {
+  color: var(--on-void-3) !important;
+}
+
+/* Page header subtitle: letter-spacing and weight normalisation */
+/* (font-family override handled by V-04C selector above) */
+
+/* ─── 29. V-04E — EMPTY STATE VISUAL ADOPTION ───────────────────────────── */
+/* Existing empty-state elements adopt the ds-empty visual system */
+
+.apex-research-empty {
+  display:         flex !important;
+  flex-direction:  column !important;
+  align-items:     center !important;
+  justify-content: center !important;
+  padding:         var(--gap-xl) var(--gap-md) !important;
+  color:           var(--on-void-3) !important;
+  font:            400 12px/1.5 var(--font-sans) !important;
+  text-align:      center !important;
+  gap:             var(--gap-sm) !important;
+  min-height:      120px !important;
+}
+
+.apex-research-empty-icon {
+  font-size: 22px !important;
+  opacity:   0.35 !important;
+}
+
+.apex-research-empty-text {
+  font:  400 12px/1.5 var(--font-sans) !important;
+  color: var(--on-void-3) !important;
+}
+
+.empty-note {
+  font:        400 12px/1.5 var(--font-sans) !important;
+  color:       var(--on-void-3) !important;
+  text-align:  center !important;
+  padding:     var(--gap-md) !important;
+}
+
+.apex-res-loading {
+  display:     flex !important;
+  align-items: center !important;
+  gap:         var(--gap-sm) !important;
+  padding:     var(--gap-md) !important;
+  color:       var(--on-void-2) !important;
+  font:        400 12px/1 var(--font-sans) !important;
+}
+
+.apex-res-error {
+  color:   var(--err) !important;
+  font:    400 12px/1.5 var(--font-sans) !important;
+  padding: var(--gap-md) !important;
+}
+
+/* Skel loading placeholders */
+.skel,
+.ds-skel {
+  color:       var(--on-void-3) !important;
+  font:        400 11px/1.5 var(--font-sans) !important;
+}
+
+/* ─── 30. V-04F — ACTIVITY FEED VISUAL REFINEMENT ───────────────────────── */
+/* With telemetry separated, refine feed entry presentation */
+
+.apex-feed-entry {
+  display:        flex !important;
+  gap:            var(--gap-xs) !important;
+  align-items:    baseline !important;
+  padding:        3px 0 !important;
+  border-bottom:  1px solid rgba(244,244,245,0.03) !important;
+  transition:     opacity 0.15s !important;
+}
+
+.apex-feed-ts {
+  font-variant-numeric: tabular-nums !important;
+  flex-shrink:          0 !important;
+  white-space:          nowrap !important;
+  min-width:            30px !important;
+}
+
+.apex-feed-msg {
+  display:   flex !important;
+  gap:       5px !important;
+  flex-wrap: wrap !important;
+  min-width: 0 !important;
+  overflow:  hidden !important;
+}
+
+/* Agent/voice/research: positive activity — slightly elevated */
+.apex-feed-entry:has(.apex-tag-agent),
+.apex-feed-entry:has(.apex-tag-voice),
+.apex-feed-entry:has(.apex-tag-research),
+.apex-feed-entry:has(.apex-tag-file) {
+  opacity: 1 !important;
+}
+
+/* ─── 31. V-04G — LEGACY VISUAL CLEANUP ─────────────────────────────────── */
+/* Remaining legacy token leakage not covered by domain page selectors */
+
+/* Global: any remaining hardcoded #00d4ff colour on decorative elements */
+[style*="color:#00d4ff"],
+[style*="color: #00d4ff"] {
+  color: var(--signal) !important;
+}
+
+/* Global: old cyan borders on non-semantic decorative wrappers */
+[style*="border:1px solid rgba(0,212,255,0.25)"],
+[style*="border: 1px solid rgba(0,212,255,0.25)"] {
+  border-color: rgba(99,102,241,0.25) !important;
+}
+
+/* Background of inline navy panels on remaining pages not caught by page-scoped selectors */
+#page-research  [style*="background:#0d1424"],
+#page-knowledge [style*="background:#0d1424"],
+#page-memory    [style*="background:#0d1424"],
+#page-govern    [style*="background:#0d1424"],
+#page-intel     [style*="background:#0d1424"] {
+  background: var(--void-1) !important;
+}
+
+/* JetBrains Mono on remaining pages not covered by V-04C */
+#page-research  [style*="JetBrains Mono"],
+#page-knowledge [style*="JetBrains Mono"],
+#page-intel     [style*="JetBrains Mono"],
+#page-govern    [style*="JetBrains Mono"],
+#page-activity  [style*="JetBrains Mono"] {
+  font-family: var(--font-sans) !important;
+}
+
+/* Page header pattern: .ds-page-title subtitle meta — standardise */
+/* All domain pages use this identical subtitle div pattern */
+.ds-page-title + [style*="color:#8893a0"],
+.ds-page-title + [style*="color: #8893a0"] {
+  color: var(--on-void-3) !important;
+}

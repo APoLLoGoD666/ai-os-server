@@ -18073,7 +18073,7 @@ function _updateTopbarAgents(){
                 var ms=Date.now()-t0;
                 window.apexTrackLatency(ms);
                 var tag=url.replace(/.*\/api\//,'').split('?')[0].split('/')[0].toUpperCase().slice(0,12);
-                if(ms>800)window.apexFeedPush(tag,'Slow response — '+ms+'ms','error');
+                if(ms>800)window.apexFeedPush(tag,'Slow response — '+ms+'ms','telemetry');
             }
             return r;
         });
