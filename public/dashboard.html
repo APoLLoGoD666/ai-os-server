@@ -61,6 +61,38 @@
 body.apex-role-user   .apex-master-only { display: none !important; }
 body.apex-role-master .apex-user-only   { display: none !important; }
 
+/* ── V-11-B: Universal State Architecture ───────────────────────────── */
+/* State dots — L0 panel status signal (colour + shape, not colour alone) */
+.apex-state-dot { display:inline-block; width:6px; height:6px; border-radius:50%; flex-shrink:0; vertical-align:middle; margin-right:3px; }
+.apex-state-dot.live      { background:var(--green); }
+.apex-state-dot.stale     { background:var(--amber); }
+.apex-state-dot.failed    { background:var(--red); }
+.apex-state-dot.offline   { background:rgba(242,242,242,0.25); }
+.apex-state-dot.empty     { background:rgba(242,242,242,0.15); }
+.apex-state-dot.loading   { background:rgba(94,106,210,0.5); animation:apex-dot-pulse 1.2s ease-in-out infinite; }
+.apex-state-dot.forbidden { background:rgba(242,242,242,0.1); }
+@keyframes apex-dot-pulse { 0%,100%{opacity:0.35}50%{opacity:1} }
+
+/* True empty — data absent, not an error */
+.apex-empty { font-size:11px; color:var(--muted2); font-style:italic; padding:4px 0; }
+.apex-empty-cta { display:inline-block; margin-top:4px; font-size:10px; color:var(--primary); font-style:normal; cursor:pointer; text-decoration:underline; background:none; border:none; padding:0; font-family:inherit; }
+
+/* Error state — visually distinct from empty */
+.apex-panel-error { font-size:11px; color:#ff4d6a; padding:4px 0; display:flex; flex-direction:column; gap:5px; }
+.apex-panel-error-msg { display:flex; align-items:flex-start; gap:5px; }
+.apex-panel-retry { background:none; border:none; padding:0; font:inherit; font-size:10px; color:var(--primary); cursor:pointer; text-decoration:underline; display:inline; }
+.apex-stale-since { font-size:9px; color:var(--text-mute); margin-top:2px; font-style:italic; }
+
+/* Global connectivity indicator (topbar) */
+#apex-conn-indicator { display:flex; align-items:center; gap:3px; font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:0.1em; color:rgba(242,242,242,0.0); transition:color 0.4s; margin-right:6px; min-width:0; }
+#apex-conn-indicator.conn-degraded     { color:rgba(245,158,11,0.75); }
+#apex-conn-indicator.conn-offline      { color:rgba(239,68,68,0.82); }
+#apex-conn-indicator.conn-reconnecting { color:rgba(245,158,11,0.6); }
+
+/* Identity pending — boot auth not yet resolved */
+body.apex-role-unknown #apex-role-badge { color:rgba(242,242,242,0.25)!important; background:rgba(242,242,242,0.04)!important; border-color:rgba(242,242,242,0.1)!important; animation:apex-dot-pulse 1.4s ease-in-out infinite; }
+body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!important; }
+
 /* ── Body & app shell ───────────────────────────────────────────────── */
 html, body {
     background: var(--bg);
@@ -6300,6 +6332,7 @@ select:focus {
         <span id="mobilePageName" style="display:none">CMD</span>
         <!-- V-11-A: User identity display (right side of topbar) -->
         <div id="apex-identity-pill" style="margin-left:auto;padding-right:14px;display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <span id="apex-conn-indicator" aria-live="polite" aria-label="Connection status"></span>
             <span id="apex-user-display" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;color:rgba(242,242,242,0.45);">Master</span>
             <span id="apex-role-badge" style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.15em;color:#5e6ad2;background:rgba(94,106,210,0.1);border:1px solid rgba(94,106,210,0.25);border-radius:3px;padding:1px 5px;">MASTER</span>
         </div>
@@ -11269,6 +11302,101 @@ function cachedFetch(url, ttlMs) {
 }
 function invalidateTtlCache(url) { delete _ttlCache[url]; }
 
+// ── V-11-B: Universal State Architecture utilities ─────────────────────
+window._timeAgo = function(ts) {
+    if (!ts) return '';
+    var s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (s < 60)  return s + 's ago';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    return Math.floor(s/86400) + 'd ago';
+};
+
+window._PANEL_TTLS = {
+    system: 30000, operation: 60000, governance: 120000,
+    finance: 300000, research: 600000, knowledge: 900000, memory: 900000,
+    _default: 300000
+};
+
+window._parseApiError = function(resp, json) {
+    var msg = (json && (json.message || (typeof json.error === 'string' ? json.error : '') || json.reply)) || (resp && resp.statusText) || 'Something went wrong.';
+    var code = (json && json.code) || (resp && resp.status) || 0;
+    var requestId = (json && (json.requestId || json.request_id)) || '';
+    return { code: code, message: msg, requestId: requestId };
+};
+
+window._panelStates = new Map();
+
+window._apexMarkStale = function(panelId) {
+    var s = window._panelStates.get(panelId);
+    if (s) { s.stale = true; window._panelStates.set(panelId, s); }
+};
+
+window._apexClearStale = function(panelId, data) {
+    window._panelStates.set(panelId, { data: data, fetchedAt: Date.now(), stale: false, error: null });
+};
+
+window.setState = function(el, state, payload) {
+    if (!el) return;
+    payload = payload || {};
+    var id = el.id || el.dataset.panelId || '';
+    el.removeAttribute('data-apex-state');
+    el.setAttribute('data-apex-state', state);
+
+    var dot = '<span class="apex-state-dot ' + ({'ready':'live','stale':'stale','failed':'failed','offline':'offline','empty':'empty','loading':'loading','forbidden':'forbidden'}[state] || 'empty') + '"></span>';
+
+    if (state === 'loading') {
+        el.innerHTML = dot + '<span style="font-size:11px;color:var(--muted2);font-style:italic;">Loading…</span>';
+        return;
+    }
+    if (state === 'empty') {
+        var cta = payload.ctaLabel ? '<button class="apex-empty-cta" onclick="' + (payload.ctaFn || '') + '">' + payload.ctaLabel + '</button>' : '';
+        el.innerHTML = '<span class="apex-empty">' + dot + (payload.message || 'Nothing here yet.') + '</span>' + cta;
+        return;
+    }
+    if (state === 'failed' || state === 'offline') {
+        var staleNote = (payload.fetchedAt) ? '<div class="apex-stale-since">Last seen ' + window._timeAgo(payload.fetchedAt) + '</div>' : '';
+        var retryFn = payload.retryFn || '';
+        var retryBtn = retryFn ? '<button class="apex-panel-retry" onclick="' + retryFn + '">Retry</button>' : '';
+        el.innerHTML = '<div class="apex-panel-error"><div class="apex-panel-error-msg">' + dot + (payload.message || 'Failed to load.') + '</div>' + retryBtn + staleNote + '</div>';
+        return;
+    }
+    if (state === 'forbidden') {
+        el.innerHTML = '<span class="apex-empty">' + dot + (payload.message || 'Not available for your role.') + '</span>';
+        return;
+    }
+    if (state === 'stale' && payload.html) {
+        var sinceLabel = payload.fetchedAt ? window._timeAgo(payload.fetchedAt) : '';
+        el.innerHTML = payload.html + (sinceLabel ? '<div class="apex-stale-since">Last updated ' + sinceLabel + '</div>' : '');
+        return;
+    }
+    if (state === 'ready' && payload.html) {
+        el.innerHTML = payload.html;
+        return;
+    }
+};
+
+window._apexSetConnState = function(state) {
+    var el = document.getElementById('apex-conn-indicator');
+    if (!el) return;
+    el.className = '';
+    var labels = { degraded: 'DEGRADED', offline: 'OFFLINE', reconnecting: 'RECONNECTING…' };
+    if (labels[state]) {
+        el.classList.add('conn-' + state);
+        el.textContent = labels[state];
+    } else {
+        el.textContent = '';
+    }
+};
+
+(function _apexWireConnectivity() {
+    function _onOnline()  { window._apexSetConnState('live'); }
+    function _onOffline() { window._apexSetConnState('offline'); }
+    window.addEventListener('online',  _onOnline);
+    window.addEventListener('offline', _onOffline);
+    if (!navigator.onLine) window._apexSetConnState('offline');
+})();
+
 // ══ CLOCK ═════════════════════════════════════════════════════════════
 function tickClock() {
     const now = new Date();
@@ -12800,7 +12928,7 @@ async function refreshMemory() {
             }).join("");
             setConnStatus(true);
         } catch (err) {
-            container.innerHTML = `<div class="empty-note">${escapeHtml(err.message)}</div>`;
+            window.setState(container, 'failed', { message: err.message });
         }
     });
 }
@@ -13005,7 +13133,7 @@ async function refreshEmailPanel() {
                 </div>`;
         }).join("");
     } catch (err) {
-        el.innerHTML = `<div class="empty-note">${escapeHtml(err.message)}</div>`;
+        window.setState(el, 'failed', { message: err.message, retryFn: 'refreshEmailPanel()' });
     }
     });
 }
@@ -13500,7 +13628,7 @@ async function refreshTaskQueuePanel() {
     if (!el) return;
     try {
         const data = await fetchJson('/api/tasks');
-        if (!data.ok) { el.innerHTML = '<div class="empty-note">Error loading tasks</div>'; return; }
+        if (!data.ok) { window.setState(el, 'failed', { message: 'Error loading tasks', retryFn: 'refreshTaskQueuePanel()' }); return; }
         const frag = [];
         (data.inProgress || []).forEach(t => {
             frag.push(`<div class="task-item task-inprogress"><span class="task-item-title">⟳ ${escapeHtml(t.id)}: ${escapeHtml(t.title)}</span></div>`);
@@ -13540,7 +13668,7 @@ async function refreshTaskQueuePanel() {
         var pending = (data.pending || []).length + (data.inProgress || []).length;
         var tq = document.querySelector('#page-operation .ds-stat-card:nth-child(3) .ds-stat-value');
         if (tq) tq.textContent = pending;
-    } catch (_) { el.innerHTML = '<div class="empty-note">—</div>'; }
+    } catch (_) { window.setState(el, 'failed', { message: 'Failed to load tasks', retryFn: 'refreshTaskQueuePanel()' }); }
 }
 
 async function runTaskById(taskId) {
@@ -14617,7 +14745,8 @@ function safeTimeout(fn, ms) { var id = setTimeout(fn, ms); return id; }
 
 // ── Panel error helper ────────────────────────────────────────────────
 function panelError(container, refetchFnName) {
-    container.innerHTML = '<div class="panel-error" data-fn="_apexRefetchProxy" data-refetch="1"><span class="ds-dot red"></span> Failed to load · <span style="text-decoration:underline;cursor:pointer">Retry</span></div>';
+    var retryFn = refetchFnName ? refetchFnName + '()' : '';
+    window.setState(container, 'failed', { message: 'Failed to load.', retryFn: retryFn });
 }
 
 // ── Chart.js defaults ─────────────────────────────────────────────────
@@ -14773,7 +14902,7 @@ window.closeAgentDrawer = function() {
 async function refreshExpensesPanel() {
     var tbody = document.getElementById('expensesTbody');
     if (!tbody) return;
-    var t = safeTimeout(function() { if (tbody.querySelector('.skel')) tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-faint);padding:16px;text-align:center">No expenses yet — scan a receipt or log via voice</td></tr>'; }, 8000);
+    var t = safeTimeout(function() { if (tbody.querySelector('.skel')) window.setState(tbody, 'failed', { message: 'Expenses took too long to load.', retryFn: 'refreshExpensesPanel()' }); }, 8000);
     try {
         var d = await fetchJsonDeduped('/api/finance/expenses');
         clearTimeout(t);
@@ -14827,7 +14956,7 @@ async function refreshSleepPanel() {
 async function refreshBirthdayPanel() {
     var panel = document.getElementById('birthdayPanel');
     if (!panel) return;
-    var t = safeTimeout(function() { if (panel.querySelector('.skel')) panel.innerHTML = '<div class="t-small" style="color:var(--text-faint)">No upcoming birthdays — add dates to contacts</div>'; }, 8000);
+    var t = safeTimeout(function() { if (panel.querySelector('.skel')) window.setState(panel, 'failed', { message: 'Birthdays took too long to load.', retryFn: 'refreshBirthdayPanel()' }); }, 8000);
     try {
         var d = await fetchJsonDeduped('/api/contacts');
         clearTimeout(t);
@@ -19901,21 +20030,65 @@ window.apexFileDropHandler = function(e){
         if (agentPanel) agentPanel.style.display = isMaster ? '' : 'none';
     };
 
-    // Boot: fetch identity from /api/me (goes through kernelChain → resolveIdentity)
+    // Boot: fetch identity from /api/me — D-Q2 compliant (never silently defaults to master)
     function _bootIdentity() {
+        document.body.classList.add('apex-role-unknown');
         fetch('/api/me', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(r) {
+                var status = r.status;
+                if (status === 401) {
+                    // Not authenticated — redirect to login
+                    document.body.classList.remove('apex-role-unknown');
+                    window.location.href = '/login';
+                    return null;
+                }
+                if (status === 429) {
+                    // Rate limited — degrade to user role, retry after 5s
+                    document.body.classList.remove('apex-role-unknown');
+                    window.applyRoleProfile('user');
+                    setTimeout(_bootIdentity, 5000);
+                    return null;
+                }
+                if (status >= 500) {
+                    // Server error — offline state, retry after 10s
+                    document.body.classList.remove('apex-role-unknown');
+                    window._apexSetConnState('degraded');
+                    window.applyRoleProfile('user');
+                    setTimeout(_bootIdentity, 10000);
+                    return null;
+                }
+                if (!r.ok) {
+                    // Other non-200 — safe degrade to user
+                    document.body.classList.remove('apex-role-unknown');
+                    window.applyRoleProfile('user');
+                    return null;
+                }
+                return r.json();
+            })
             .then(function(d) {
-                if (!d || !d.ok) return;
+                if (!d) return;
+                if (!d.ok) {
+                    document.body.classList.remove('apex-role-unknown');
+                    window.applyRoleProfile('user');
+                    return;
+                }
                 window._apexUser = {
                     id:          d.id   || null,
-                    role:        d.role || 'master',
+                    role:        d.role || 'user',
                     email:       d.email || null,
                     displayName: d.display_name || (d.role === 'master' ? 'Master' : 'User'),
                 };
+                document.body.classList.remove('apex-role-unknown');
+                window._apexSetConnState('live');
                 window.applyRoleProfile(window._apexUser.role);
             })
-            .catch(function() { /* auth not yet set up — keep master defaults */ });
+            .catch(function() {
+                // Network failure — offline, safe degrade to user, retry after 10s
+                document.body.classList.remove('apex-role-unknown');
+                window._apexSetConnState('offline');
+                window.applyRoleProfile('user');
+                setTimeout(_bootIdentity, 10000);
+            });
     }
 
     if (document.readyState === 'loading') {
