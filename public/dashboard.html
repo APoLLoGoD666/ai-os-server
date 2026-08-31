@@ -14966,8 +14966,7 @@ if (!isIOSPWA) { setTimeout(function() { var ci = document.getElementById('chatI
 // ── Command page data functions ───────────────────────────────────────────────
 async function fetchCommandProgress() {
     try {
-        const r = await fetch('/api/intelligence/cost-summary', {headers: buildApiHeaders()});
-        const d = await r.json();
+        const d = await cachedFetch('/api/intelligence/cost-summary', 60000);
         if (d.ok) {
             const el = document.getElementById('cmdStatRuns');
             const sl = document.getElementById('cmdStatSuccess');
@@ -15031,8 +15030,7 @@ async function fetchCommandUpdates() {
         }
         const metrics = document.getElementById('metricsPanel');
         if (metrics) {
-            const r2 = await fetch('/api/intelligence/cost-summary', {headers: buildApiHeaders()});
-            const d2 = await r2.json();
+            const d2 = await cachedFetch('/api/intelligence/cost-summary', 60000);
             if (d2.ok) {
                 metrics.innerHTML = '<div style="display:flex;gap:16px;flex-wrap:wrap">'
                     + '<span class="t-small"><span style="color:var(--text-mute)">Total runs</span> <span style="color:var(--cyan)">'+d2.totalRuns+'</span></span>'
@@ -17313,6 +17311,14 @@ function _loadOrb(){
   s.src='/src/components/orb/PlasmaOrb.js';
   document.body.appendChild(s);
 }
+function _loadContextualCard(){
+  if(window._ctxCardLoaded)return;
+  window._ctxCardLoaded=true;
+  var s=document.createElement('script');
+  s.src='/js/components/contextual-card.js';
+  document.body.appendChild(s);
+}
+window.addEventListener('DOMContentLoaded',_loadContextualCard);
 window.cmdInitPage=function(){
   if(CMD.initialized){if(!CMD.starFrame)initStars();if(!CMD.orbFrame)initOrb();return;}
   CMD.initialized=true;
@@ -19798,6 +19804,6 @@ window.apexFileDropHandler = function(e){
 
 })();
 </script>
-<script defer src="/js/components/contextual-card.js"></script>
+<!-- contextual-card.js loaded dynamically after DOMContentLoaded — not on critical parse/DCL path -->
 </body>
 </html>
