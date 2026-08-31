@@ -2,6 +2,7 @@
 const router   = require('express').Router();
 const { getSupabaseClient } = require('../lib/clients');
 const requireAppAccess = require('../lib/app-auth');
+const { CODES, safeMessage } = require('../lib/api-error');
 const memory   = require('../agent-system/obsidian-memory');
 
 const _sbClient = () => getSupabaseClient();
@@ -554,19 +555,32 @@ router.get('/intelligence/briefing', requireAppAccess, async (req, res) => {
 // Query params: status (default: 'detected'), limit (max 50)
 
 router.get('/intelligence/opportunities', requireAppAccess, async (req, res) => {
+    const requestId = req.requestId || '';
     try {
         const limit  = Math.min(parseInt(req.query.limit) || 20, 50);
         const status = req.query.status || 'detected';
+        // NOTE: evidence_refs is stored inside roi_forecast (jsonb), NOT as a top-level column.
+        // created_at does not exist; the column is detected_at.
         const { data, error } = await _sbClient()
             .from('opportunities')
-            .select('id,title,description,composite_score,status,evidence_refs,created_at')
+            .select('id,title,description,composite_score,status,roi_forecast,detected_at')
             .eq('status', status)
             .order('composite_score', { ascending: false })
             .limit(limit);
-        if (error) return res.status(500).json({ ok: false, error: error.message, opportunities: [] });
-        res.json({ ok: true, opportunities: data || [], count: (data || []).length });
+        if (error) return res.status(500).json({ ok: false, error: CODES.DATABASE_UNAVAILABLE, message: safeMessage(error, 'Could not read opportunities.'), requestId });
+        const opportunities = (data || []).map(o => ({
+            id:              o.id,
+            title:           o.title,
+            description:     o.description,
+            composite_score: o.composite_score,
+            status:          o.status,
+            evidence_refs:   o.roi_forecast?.evidence_refs || [],
+            created_at:      o.detected_at,
+            roi_forecast:    o.roi_forecast,
+        }));
+        res.json({ ok: true, opportunities, count: opportunities.length });
     } catch (e) {
-        res.status(500).json({ ok: false, error: e.message, opportunities: [] });
+        res.status(500).json({ ok: false, error: CODES.INTERNAL_ERROR, message: safeMessage(e, 'Failed to load opportunities.'), requestId });
     }
 });
 

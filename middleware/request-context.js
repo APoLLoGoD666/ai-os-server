@@ -1,5 +1,6 @@
 'use strict';
 const _log = require('../lib/logger');
+const { CODES } = require('../lib/api-error');
 const { _resolveConversationId } = require('../lib/server-utils');
 
 const _BACKGROUND_PATHS = /^\/api\/(tasks\/run|master\/|research\/|browser\/|cloud-autopilot|agent\/run|wiki\/ingest|rag\/)/;
@@ -43,7 +44,7 @@ module.exports = function mountRequestContext(app, sbAdmin) {
             const ct = req.headers['content-type'] || '';
             // Allow multipart (file uploads) and form data; require JSON otherwise
             if (!ct.includes('application/json') && !ct.includes('multipart/form-data') && !ct.includes('application/x-www-form-urlencoded')) {
-                return res.status(415).json({ ok: false, reply: 'Unsupported Media Type — send application/json' });
+                return res.status(415).json({ ok: false, error: CODES.VALIDATION_ERROR, message: 'Unsupported Media Type — send application/json', requestId: req.requestId || '' });
             }
         }
         next();

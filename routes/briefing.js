@@ -2,11 +2,13 @@
 const router = require('express').Router();
 const { createClient } = require('@supabase/supabase-js');
 const _auth = require('../lib/app-auth');
+const { CODES, safeMessage } = require('../lib/api-error');
 
 const _sbClient = (() => { let c; return () => { if (!c) c = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY); return c; }; })();
 function sb() { return _sbClient(); }
 
 router.get('/briefing/today', _auth, async (req, res) => {
+    const requestId = req.requestId || '';
     try {
         const today     = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -47,11 +49,12 @@ router.get('/briefing/today', _auth, async (req, res) => {
                 assignments: val(assignmentRes) || [],
             },
         });
-    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: CODES.INTERNAL_ERROR, message: safeMessage(e, 'Failed to load briefing.'), requestId }); }
 });
 
 // GET /api/briefing/priority-inbox — FEAT-C012: what needs action today
 router.get('/briefing/priority-inbox', _auth, async (req, res) => {
+    const requestId = req.requestId || '';
     try {
         const today    = new Date().toISOString().split('T')[0];
         const weekAhead = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
@@ -74,11 +77,12 @@ router.get('/briefing/priority-inbox', _auth, async (req, res) => {
                 meetings:    val(calendar),
             },
         });
-    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: CODES.INTERNAL_ERROR, message: safeMessage(e, 'Failed to load priority inbox.'), requestId }); }
 });
 
 // GET /api/briefing/motivation — FEAT-D010: daily motivational statement via Claude
 router.get('/briefing/motivation', _auth, async (req, res) => {
+    const requestId = req.requestId || '';
     try {
         const runtime = require('../lib/models/runtime');
         const { result } = await runtime.execute({
@@ -89,11 +93,12 @@ router.get('/briefing/motivation', _auth, async (req, res) => {
         });
         const statement = result.content[0]?.text?.trim() || 'Every action compounds. Make today count.';
         res.json({ ok: true, statement });
-    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: CODES.INTERNAL_ERROR, message: safeMessage(e, 'Failed to generate motivation.'), requestId }); }
 });
 
 // POST /api/briefing/wind-down — FEAT-D011: evening review + tomorrow prep push notification
 router.post('/briefing/wind-down', _auth, async (req, res) => {
+    const requestId = req.requestId || '';
     try {
         const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
@@ -115,7 +120,7 @@ router.post('/briefing/wind-down', _auth, async (req, res) => {
         await sendPush({ title: 'APEX Evening Wind-Down', body, url: '/dashboard.html#briefing' });
 
         res.json({ ok: true, body, tomorrow_events: cal, open_tasks: tasks });
-    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: CODES.INTERNAL_ERROR, message: safeMessage(e, 'Failed to process wind-down.'), requestId }); }
 });
 
 module.exports = router;
