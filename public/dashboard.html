@@ -2504,6 +2504,163 @@ nav.bottom-nav,.bottom-nav {
 #page-command { padding: 0 !important; overflow: hidden !important; }
 .cmd-stage { background: transparent !important; }
 
+/* ═══════════════════════════════════════════════════════════════════
+   V-11-E: COMMAND single-column conversation surface
+   ═══════════════════════════════════════════════════════════════════ */
+#page-command {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    position: relative !important;
+}
+#cmdThread {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 20px 20px;
+    gap: 12px;
+    scroll-behavior: smooth;
+    position: relative;
+    z-index: 1;
+}
+#chatLog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+}
+/* PlasmaOrb — ambient background layer (desktop only) */
+#page-command > #plasmaOrb {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important;
+    opacity: 0.15 !important;
+    z-index: 0 !important;
+    cursor: default !important;
+}
+@media (max-width: 767px) {
+    #page-command > #plasmaOrb { display: none !important; }
+}
+/* Input zone scoping — E-7 (visible only on COMMAND) */
+body:not(.apex-cmd-active) .input-zone { display: none !important; }
+
+/* Response cards (Archetypes) — E-9 */
+.apex-card {
+    align-self: stretch;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px 16px;
+    backdrop-filter: blur(8px);
+}
+.apex-card-l0 { display: flex; align-items: center; gap: 8px; }
+.apex-card-summary { flex: 1; font-family: Inter, sans-serif; font-size: 13px; color: rgba(255,255,255,0.92); line-height: 1.55; }
+.apex-card-expand {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 12px;
+    transition: color 0.15s;
+    line-height: 1;
+}
+.apex-card-expand:hover { color: rgba(255,255,255,0.85); }
+.apex-card-l1, .apex-card-l2 {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-family: Inter, sans-serif;
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.72);
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+.apex-card-l2-trigger {
+    display: inline-block;
+    margin-top: 8px;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: rgba(255,255,255,0.55);
+    font-size: 11px;
+    padding: 3px 10px;
+    cursor: pointer;
+}
+.apex-card-confidence {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+}
+.apex-confidence-high { background: #4ade80; }
+.apex-confidence-medium { background: #facc15; }
+.apex-confidence-low { background: #f87171; }
+.apex-confidence-unknown { background: rgba(255,255,255,0.2); }
+
+/* Thinking indicator */
+.apex-thinking {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    align-self: flex-start;
+}
+.apex-thinking-dot {
+    width: 6px; height: 6px;
+    background: #6366f1;
+    border-radius: 50%;
+    animation: apex-thinking-pulse 1.4s ease-in-out infinite;
+}
+.apex-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.apex-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes apex-thinking-pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+}
+.apex-thinking-label {
+    font-family: Inter, sans-serif;
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.45);
+    font-style: italic;
+    margin-left: 4px;
+}
+.apex-streaming-indicator {
+    font-family: Inter, sans-serif;
+    font-size: 11px;
+    color: #6366f1;
+    margin-top: 6px;
+    opacity: 0.85;
+    letter-spacing: 0.06em;
+}
+/* Toast */
+.apex-toast {
+    position: fixed;
+    bottom: 88px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20,22,32,0.96);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-family: Inter, sans-serif;
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.85);
+    z-index: 9999;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: apex-toast-in 0.2s ease, apex-toast-out 0.3s ease 2.7s forwards;
+    pointer-events: none;
+}
+@keyframes apex-toast-in { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes apex-toast-out { to { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+/* Ensure input zone / topbar sit above ambient orb */
+.input-zone, .topbar { position: relative; z-index: 2; }
+
+
 /* ── Command split layout ───────────────────────────────────────────── */
 .cmd-split {
     display: grid;
@@ -6408,154 +6565,39 @@ select:focus {
 
         <div class="page-wrap" id="pageWrap">
 
-            <!-- ══ PAGE: COMMAND ══ -->
+            <!-- ══ PAGE: COMMAND (V-11-E single-column conversation) ══ -->
             <div class="page" id="page-command">
 
-            <div class="cmd-split">
+                <!-- Ambient PlasmaOrb (E-5: non-interactive; desktop only) -->
+                <canvas id="plasmaOrb" data-guard="1"></canvas>
 
-            <!-- CENTRE: Jarvis orb -->
-            <div class="cmd-main-col">
-                <div id="cmd-main">
-                    <div class="cmd-stage" id="cmdStage">
-
-                        <!-- APEX Plasma Orb -->
-                        <canvas id="plasmaOrb" data-fn="startVoice" data-guard="1" style="cursor:pointer;"></canvas>
-                        <div style="position:absolute;top:calc(50% + 148px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;">
-                            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.22em;color:#00d4ff;">APEX</span>
-                            <span id="plasmaOrbSubLabel" style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.15em;color:#1a3050;">STANDBY · TAP TO SPEAK</span>
-                        </div>
-                        <span id="cmdOrbState" style="display:none">STANDBY</span>
-
-                        <!-- Waveform (voice active) -->
-                        <div class="waveform" id="waveform" style="display:none">
-                            <div class="wb"></div><div class="wb"></div><div class="wb"></div>
-                            <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
-                        </div>
-
-                        <!-- Hidden stubs for JS compatibility -->
-                        <canvas id="cmdStars" style="display:none"></canvas>
-                        <canvas id="cmdOrbCanvas" style="display:none"></canvas>
-                        <div id="cmdWidgetLayer" style="display:none"></div>
-                        <div id="apexTtsToggle" style="display:none" data-provider="gemini">
-                            <span id="apexTtsDot"></span><span id="apexTtsLabel"></span>
-                        </div>
-                        <div id="apexLivePill" style="display:none" data-fn="toggleGeminiLive" data-guard="1">
-                            <span id="apexLiveDot"></span><span id="apexLiveLabel">LIVE · OFF</span>
-                        </div>
-                        <!-- Gemini Live transcript overlay -->
-                        <div id="apexLiveTranscript" style="display:none;position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:8;max-width:480px;width:90%;text-align:center">
-                            <div id="apexLiveUserText" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(180,205,240,0.45);margin-bottom:4px;min-height:14px"></div>
-                            <div id="apexLiveApexText" style="font-family:inherit;font-size:13px;color:#c8d8f0;font-weight:500;min-height:18px"></div>
-                        </div>
-                        <!-- Waveform (voice) -->
-                        <div class="waveform" id="waveform" style="display:none;position:absolute;left:50%;bottom:60px;transform:translateX(-50%);z-index:5">
-                            <div class="wb"></div><div class="wb"></div><div class="wb"></div>
-                            <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
-                        </div>
-                    </div>
-
-
-                </div><!-- #cmd-main -->
-
-                <!-- Bottom stat strip -->
-                <div class="cmd-strip" id="cmdStrip">
-                    <div class="cmd-stat mint" id="cmdStat0">
-                        <div class="stat-row"><div class="stat-lbl" id="cmdStatLbl0">Balance</div><div class="stat-ico"><svg viewBox="0 0 24 24"><path d="M12 3v18M7 7h7a3 3 0 010 6H8a3 3 0 000 6h9"/></svg></div></div>
-                        <div class="stat-num"><span id="cmdStatVal0">£—</span><span class="stat-unit" id="cmdStatUnit0"></span></div>
-                        <div class="stat-sub"><span class="dot"></span><span id="cmdStatSub0">Loading…</span></div>
-                    </div>
-                    <div class="cmd-stat cyan" id="cmdStat1">
-                        <div class="stat-row"><div class="stat-lbl" id="cmdStatLbl1">Messages</div><div class="stat-ico"><svg viewBox="0 0 24 24"><path d="M3 6l9 7 9-7M3 6h18v12H3z"/></svg></div></div>
-                        <div class="stat-num"><span id="cmdStatVal1">—</span><span class="stat-unit" id="cmdStatUnit1">unread</span></div>
-                        <div class="stat-sub"><span class="dot"></span><span id="cmdStatSub1">Loading…</span></div>
-                    </div>
-                    <div class="cmd-stat amber" id="cmdStat2">
-                        <div class="stat-row"><div class="stat-lbl" id="cmdStatLbl2">Tasks</div><div class="stat-ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><path d="M2 6l1 1 2-2M2 12l1 1 2-2M2 18l1 1 2-2"/></svg></div></div>
-                        <div class="stat-num"><span id="cmdStatVal2">—</span><span class="stat-unit" id="cmdStatUnit2">/ 0 today</span></div>
-                        <div class="stat-sub"><span class="dot"></span><span id="cmdStatSub2">Loading…</span></div>
-                    </div>
-                    <div class="cmd-stat mint" id="cmdStat3">
-                        <div class="stat-row"><div class="stat-lbl" id="cmdStatLbl3">System Health</div><div class="stat-ico ico-pulse"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg></div></div>
-                        <div class="health-num" id="cmdHealthText">Checking…</div>
-                        <div class="health-row" id="cmdHealthChips"></div>
-                    </div>
+                <!-- Conversation thread — E-1 makes chatLog visible; E-2 replaces .cmd-split -->
+                <div id="cmdThread">
+                    <!-- Approval cards are inserted here before #chatLog by renderCentreApprovalCard -->
+                    <div id="chatLog" role="log" aria-live="polite" aria-relevant="additions"></div>
+                    <div id="typingIndicator" style="display:none"></div>
                 </div>
 
-                <!-- Hidden stubs for voice JS compatibility -->
-                <div id="chatLog" style="display:none"></div>
-                <div id="typingIndicator" style="display:none"></div>
-                <span id="orbStateBadge" style="display:none"></span>
-                <span id="orbStatus" style="display:none">Standby</span>
-                <span id="micBtn" style="display:none"></span>
-
-            </div><!-- .cmd-main-col -->
-
-            <!-- RIGHT: live activity feed -->
-            <div class="cmd-feed-col">
-                <div class="apex-feed">
-                    <div class="apex-feed-hdr">
-                        <div class="apex-feed-title">
-                            <div class="apex-feed-live"></div>
-                            ACTIVITY FEED
-                        </div>
-                        <button data-fn="apexFeedClear" style="background:none;border:none;color:rgba(242,242,242,0.15);font-size:8.5px;letter-spacing:0.12em;cursor:pointer;font-family:'JetBrains Mono',monospace;padding:0">CLR</button>
+                <!-- Master-only agent orchestration panel (E-9; role-gated by applyRoleProfile) -->
+                <div id="v11-cmd-agent-panel" class="apex-master-only" style="display:none;padding:12px 16px;margin:0 20px 12px;border:1px solid rgba(94,106,210,0.18);border-radius:10px;background:rgba(94,106,210,0.04)">
+                    <div style="display:flex;align-items:center;justify-content:space-between">
+                        <span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.18em;color:#5e6ad2">AGENT ORCHESTRATION</span>
+                        <span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0">MASTER VIEW</span>
                     </div>
-                    <div class="apex-feed-body" id="apexFeedBody">
-                        <div class="apex-feed-entry">
-                            <div class="apex-feed-ts" id="apexFeedInitTs">--:--</div>
-                            <div class="apex-feed-msg"><span class="apex-tag apex-tag-system">SYSTEM</span>Feed initialized</div>
-                        </div>
-                    </div>
+                    <div style="margin-top:8px;font-size:11px;color:rgba(232,244,255,0.55);line-height:1.5">Agent status, autonomy level, and manual triggers appear here. Full authoring in Phase J.</div>
                 </div>
-            </div>
 
-            </div><!-- .cmd-split -->
-
-            <!-- Constitution Charter — L0 Operating Rules -->
-            <div style="background:#0d1424;border-radius:14px;border:1px solid rgba(91,158,255,0.15);border-top:2px solid rgba(91,158,255,0.4);padding:18px 22px;margin-top:16px">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-                    <div style="display:flex;align-items:center;gap:10px">
-                        <span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2.5px;color:#5b9eff">CONSTITUTION</span>
-                        <span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:1px">&middot; APEX OPERATING CHARTER</span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:7px">
-                        <span style="width:6px;height:6px;border-radius:2px;background:#3fd29a"></span>
-                        <span style="font:600 9px/1 'JetBrains Mono',monospace;color:#3fd29a;letter-spacing:1px">6 / 6 ARTICLES ACTIVE</span>
-                    </div>
+                <!-- Hidden stubs kept for JS compatibility (state indicators referenced elsewhere) -->
+                <span id="cmdOrbState" style="display:none">STANDBY</span>
+                <div class="waveform" id="waveform" style="display:none;position:absolute;left:50%;bottom:70px;transform:translateX(-50%);z-index:5">
+                    <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+                    <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
-                        <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A1</span>
-                        <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">One Source of Truth</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">Every fact has one home. All else is a view.</div></div>
-                        <span style="width:5px;height:5px;border-radius:1px;background:#3fd29a;flex-shrink:0;margin-top:2px"></span>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
-                        <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A2</span>
-                        <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">Everything Earns Its Place</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">No component without a met admission criterion.</div></div>
-                        <span style="width:5px;height:5px;border-radius:1px;background:#3fd29a;flex-shrink:0;margin-top:2px"></span>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
-                        <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A3</span>
-                        <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">Events, Not Polling</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">All data movement through the event spine.</div></div>
-                        <span style="width:5px;height:5px;border-radius:1px;background:#efb45a;flex-shrink:0;margin-top:2px"></span>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
-                        <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A4</span>
-                        <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">Idempotent by Default</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">Every write carries an idempotency key.</div></div>
-                        <span style="width:5px;height:5px;border-radius:1px;background:#efb45a;flex-shrink:0;margin-top:2px"></span>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
-                        <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A5</span>
-                        <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">Generic Engines, Specific Configs</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">New capability = new config row, not new code.</div></div>
-                        <span style="width:5px;height:5px;border-radius:1px;background:#3fd29a;flex-shrink:0;margin-top:2px"></span>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
-                        <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A6</span>
-                        <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">Human Override Is Absolute</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">Simulation advises; it never acts.</div></div>
-                        <span style="width:5px;height:5px;border-radius:1px;background:#3fd29a;flex-shrink:0;margin-top:2px"></span>
-                    </div>
+                <canvas id="cmdStars" style="display:none"></canvas>
+                <canvas id="cmdOrbCanvas" style="display:none"></canvas>
+                <div id="apexTtsToggle" style="display:none" data-provider="gemini">
+                    <span id="apexTtsDot"></span><span id="apexTtsLabel"></span>
                 </div>
-            </div>
 
             </div><!-- #page-command -->
 
@@ -6883,6 +6925,25 @@ select:focus {
                             <div class="skel skel-row skel-wide"></div>
                         </div>
                     </div>
+
+                    <!-- V-11-E E-2 / D-E1: Activity feed relocated from COMMAND -->
+                    <section id="system-activity" style="margin-top:4px">
+                        <div class="apex-feed">
+                            <div class="apex-feed-hdr">
+                                <div class="apex-feed-title">
+                                    <div class="apex-feed-live"></div>
+                                    ACTIVITY FEED
+                                </div>
+                                <button data-fn="apexFeedClear" style="background:none;border:none;color:rgba(242,242,242,0.15);font-size:8.5px;letter-spacing:0.12em;cursor:pointer;font-family:'JetBrains Mono',monospace;padding:0">CLR</button>
+                            </div>
+                            <div class="apex-feed-body" id="apexFeedBody">
+                                <div class="apex-feed-entry">
+                                    <div class="apex-feed-ts" id="apexFeedInitTs">--:--</div>
+                                    <div class="apex-feed-msg"><span class="apex-tag apex-tag-system">SYSTEM</span>Feed initialized</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
                 </div>
             </div>
@@ -10317,18 +10378,66 @@ if(pipe){
                         <strong style="color:rgba(232,244,255,0.6)">Read-only surface:</strong> Constitutional records are displayed as metadata only. Internal constitutional chain-of-thought and deliberation payloads are not accessible from this interface.
                     </div>
 
+                    <!-- V-11-E E-3: APEX Constitution Charter — moved from COMMAND -->
+                    <div id="apex-constitution-charter" style="background:#0d1424;border-radius:14px;border:1px solid rgba(91,158,255,0.15);border-top:2px solid rgba(91,158,255,0.4);padding:18px 22px;margin-top:8px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2.5px;color:#5b9eff">CONSTITUTION</span>
+                                <span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;letter-spacing:1px">&middot; APEX OPERATING CHARTER</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:7px">
+                                <span style="width:6px;height:6px;border-radius:2px;background:#3fd29a"></span>
+                                <span style="font:600 9px/1 'JetBrains Mono',monospace;color:#3fd29a;letter-spacing:1px">6 / 6 ARTICLES ACTIVE</span>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
+                                <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A1</span>
+                                <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">One Source of Truth</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">Every fact has one home. All else is a view.</div></div>
+                                <span style="width:5px;height:5px;border-radius:1px;background:#3fd29a;flex-shrink:0;margin-top:2px"></span>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
+                                <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A2</span>
+                                <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">Everything Earns Its Place</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">No component without a met admission criterion.</div></div>
+                                <span style="width:5px;height:5px;border-radius:1px;background:#3fd29a;flex-shrink:0;margin-top:2px"></span>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
+                                <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A3</span>
+                                <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">Events, Not Polling</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">All data movement through the event spine.</div></div>
+                                <span style="width:5px;height:5px;border-radius:1px;background:#efb45a;flex-shrink:0;margin-top:2px"></span>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
+                                <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A4</span>
+                                <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">Idempotent by Default</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">Every write carries an idempotency key.</div></div>
+                                <span style="width:5px;height:5px;border-radius:1px;background:#efb45a;flex-shrink:0;margin-top:2px"></span>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
+                                <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A5</span>
+                                <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">Generic Engines, Specific Configs</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">New capability = new config row, not new code.</div></div>
+                                <span style="width:5px;height:5px;border-radius:1px;background:#3fd29a;flex-shrink:0;margin-top:2px"></span>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">
+                                <span style="font:700 8px/1 'JetBrains Mono',monospace;color:#5b9eff;flex-shrink:0;margin-top:2px">A6</span>
+                                <div style="flex:1"><div style="font:600 11px/1.2 'Inter',sans-serif;color:#c7d2dd">Human Override Is Absolute</div><div style="font:500 9px/1.4 'JetBrains Mono',monospace;color:#6c7886;margin-top:5px">Simulation advises; it never acts.</div></div>
+                                <span style="width:5px;height:5px;border-radius:1px;background:#3fd29a;flex-shrink:0;margin-top:2px"></span>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div><!-- #page-governance -->
 
         </div><!-- .page-wrap -->
 
-        <!-- ══ INPUT ZONE ══ -->
+        <!-- ══ INPUT ZONE (V-11-E: scoped to COMMAND via body.apex-cmd-active) ══ -->
         <div class="input-zone">
-            <button class="mic-btn" id="micBtn" data-fn="toggleListening" title="Voice input">🎤</button>
-            <input class="chat-input" id="chatInput" type="text" placeholder="Ask APEX anything…" autocomplete="off" />
-            <button class="clear-chat-btn" data-fn="clearChat" title="Clear chat">Clear</button>
-            <button class="auto-listen-btn on" id="autoListenBtn" data-fn="toggleAutoListen" title="Toggle auto-listen">Auto</button>
-            <button class="send-btn" data-fn="sendChatCommand" title="Send">&#10148;</button>
+            <button class="mic-btn" id="micBtn" data-fn="toggleListening" title="Voice input" aria-label="Start voice input">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+            <input class="chat-input" id="chatInput" type="text" placeholder="Type or speak to APEX…" autocomplete="off" aria-label="Message APEX" />
+            <button class="clear-chat-btn" data-fn="clearChat" title="Clear chat" aria-label="Clear conversation">Clear</button>
+            <button class="auto-listen-btn on" id="autoListenBtn" data-fn="toggleAutoListen" title="Toggle auto-listen" aria-pressed="true" aria-label="Auto-listen">Auto-listen</button>
+            <button class="send-btn" data-fn="sendChatCommand" title="Send" aria-label="Send message">&#10148;</button>
         </div>
 
     </div><!-- .page-and-input -->
@@ -12761,9 +12870,10 @@ function _cleanForDisplay(text) {
         .trim();
 }
 
-function renderChatMessage(role, message) {
+function renderChatMessage(role, message, opts) {
     const log = document.getElementById("chatLog");
     if (!log) return;
+    opts = opts || {};
     const nearBottom = (log.scrollHeight - log.scrollTop - log.clientHeight) < 120;
 
     if (role === "ai" && /\[APPROVAL REQUIRED\]/i.test(message)) {
@@ -12772,13 +12882,23 @@ function renderChatMessage(role, message) {
 
     const display = role === "ai" ? _cleanForDisplay(message) : String(message || "");
 
-    const bubble = document.createElement("div");
-    bubble.className = `chat-bubble ${role}`;
-    bubble.textContent = display || message;
-    log.appendChild(bubble);
+    // V-11-E E-9: render assistant replies as archetype cards (progressive disclosure)
+    if (role === "ai" && typeof _v11eRenderApexCard === 'function') {
+        _v11eRenderApexCard(log, display || message);
+    } else {
+        const bubble = document.createElement("div");
+        bubble.className = `chat-bubble ${role}`;
+        bubble.textContent = display || message;
+        log.appendChild(bubble);
+    }
 
     if (nearBottom || role === "user" || role === "system") {
         log.scrollTop = log.scrollHeight;
+    }
+
+    // V-11-E E-6: persist to per-identity localStorage (excluding system rows and silent restores)
+    if (!opts.skipPersist && (role === "user" || role === "ai") && typeof _v11eSaveHistoryEntry === 'function') {
+        _v11eSaveHistoryEntry(role, display || message);
     }
 }
 
@@ -12793,10 +12913,20 @@ async function renderProgressiveResponse(chunks) {
 
     const nearBottom = (log.scrollHeight - log.scrollTop - log.clientHeight) < 160;
 
+    // V-11-E D-E5: remove thinking indicator once first chunk starts
+    if (typeof _v11eHideThinking === 'function') _v11eHideThinking();
+
     // Create bubble immediately (replaces typing indicator feel)
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble ai';
     log.appendChild(bubble);
+
+    // Streaming indicator (removed when playback completes)
+    const streamHint = document.createElement('div');
+    streamHint.className = 'apex-streaming-indicator';
+    streamHint.textContent = 'Responding…';
+    log.appendChild(streamHint);
+
     if (nearBottom) log.scrollTop = log.scrollHeight;
 
     for (var i = 0; i < chunks.length; i++) {
@@ -12808,6 +12938,11 @@ async function renderProgressiveResponse(chunks) {
         bubble.textContent += sep + (chunk.content || '');
         log.scrollTop = log.scrollHeight;
     }
+
+    if (streamHint && streamHint.parentNode) streamHint.parentNode.removeChild(streamHint);
+
+    // V-11-E E-6: persist full streamed reply
+    if (typeof _v11eSaveHistoryEntry === 'function') _v11eSaveHistoryEntry('ai', bubble.textContent);
 }
 window.renderProgressiveResponse = renderProgressiveResponse;
 
@@ -12847,6 +12982,8 @@ async function sendChatCommandFromText(command, options = {}) {
     if (!silent) renderChatMessage("user", command);
     setOrbState("thinking");
     if (!silent) showTypingIndicator();
+    // V-11-E D-E5 / E-9: show pre-arrival "APEX is thinking…" indicator
+    if (!silent && typeof _v11eShowThinking === 'function') _v11eShowThinking();
     const t0 = Date.now();
 
     try {
@@ -12857,6 +12994,7 @@ async function sendChatCommandFromText(command, options = {}) {
         });
 
         hideTypingIndicator();
+        if (typeof _v11eHideThinking === 'function') _v11eHideThinking();
         const reply = data.reply || "No reply.";
         if (!silent) {
             const plan = data.stream_plan;
@@ -12878,6 +13016,7 @@ async function sendChatCommandFromText(command, options = {}) {
         return data;
     } catch (error) {
         hideTypingIndicator();
+        if (typeof _v11eHideThinking === 'function') _v11eHideThinking();
         const msg = error.message || "Server error.";
         if (!silent) {
             renderChatMessage("system", msg);
@@ -12892,12 +13031,11 @@ async function sendChatCommandFromText(command, options = {}) {
 async function sendVoiceChatCommand(msg) {
     if (!msg || !msg.trim()) return;
     document.getElementById("chatInput").value = "";
-    console.log(`[Chat] appending user: "${msg}"`);
     renderChatMessage("user", msg);
     setOrbState("thinking");
     showTypingIndicator();
+    if (typeof _v11eShowThinking === 'function') _v11eShowThinking();
     _t0Voice = Date.now();
-    console.log("[LATENCY] +0ms request sent to server");
 
     let _vcData = null;
     try {
@@ -12916,6 +13054,7 @@ async function sendVoiceChatCommand(msg) {
             });
         } catch (_chatErr) {
             hideTypingIndicator();
+            if (typeof _v11eHideThinking === 'function') _v11eHideThinking();
             console.error("[Voice] both endpoints failed:", _chatErr);
             const errMsg = "Something went wrong — please try again.";
             const detail = _chatErr?.message || "Unknown error";
@@ -12929,14 +13068,11 @@ async function sendVoiceChatCommand(msg) {
     }
 
     try {
-        console.log(`[LATENCY] +${Date.now() - _t0Voice}ms reply received from server`);
-        console.log("[Voice] server reply:", _vcData);
         hideTypingIndicator();
+        if (typeof _v11eHideThinking === 'function') _v11eHideThinking();
         const reply = _vcData.reply || "Done.";
-        console.log(`[Chat] appending AI: "${reply}"`);
         renderChatMessage("ai", reply);
         setOrbState("speaking");
-        console.log("[Voice] passing to speak queue");
         speak(reply, { useFiller: true });
 
         setConnStatus(true);
@@ -13502,6 +13638,10 @@ function clearChat() {
     log.innerHTML = "";
     if (keep) log.appendChild(keep);
     log.innerHTML += '<div class="empty-note" style="text-align:center;padding:20px 0">Chat cleared. Say something or type below.</div>';
+    // V-11-E E-6: clear persisted history for this identity
+    if (typeof _v11eClearHistory === 'function') _v11eClearHistory();
+    // V-11-E E-9: toast confirmation
+    if (typeof _v11eToast === 'function') _v11eToast('Conversation cleared');
 }
 
 // ══ KEYBOARD ══════════════════════════════════════════════════════════
@@ -17731,26 +17871,30 @@ function _loadContextualCard(){
 }
 window.addEventListener('DOMContentLoaded',_loadContextualCard);
 window.cmdInitPage=function(){
-  if(CMD.initialized){if(!CMD.starFrame)initStars();if(!CMD.orbFrame)initOrb();return;}
+  // V-11-E: single-column conversation surface. No widgets, no strip, no stars.
+  // PlasmaOrb ambient only on desktop (D2 mobile guard).
+  var isDesktop = (window.innerWidth >= 768);
+  if(CMD.initialized){
+    if(isDesktop && !CMD.orbFrame && typeof initOrb==='function') initOrb();
+    // E-6: restore chat history when re-entering COMMAND
+    if(typeof _v11eLoadHistory==='function') _v11eLoadHistory();
+    return;
+  }
   CMD.initialized=true;
-  loadCfg();loadWidgets();
-  applyColors();
-  renderAllWidgets();
-  renderSidebarLayers();
-  renderSidebarProps();
-  renderStrip();
-  initStars();initOrb();fetchHealth();
-  startWidgetClocks();startStripPoll();
-  _loadOrb();
-  /* click empty canvas = deselect */
-  var layer=$id('cmdWidgetLayer');
-  if(layer)layer.addEventListener('mousedown',function(e){if(e.target===layer)selectWidget(null);});
+  if(typeof loadCfg==='function') loadCfg();
+  if(typeof applyColors==='function') applyColors();
+  if(isDesktop){
+    if(typeof initOrb==='function') initOrb();
+    if(typeof _loadOrb==='function') _loadOrb();
+  }
+  // E-6: hydrate chat thread from per-identity localStorage
+  if(typeof _v11eLoadHistory==='function') _v11eLoadHistory();
 };
 window.cmdPausePage=function(){
   if(CMD.starFrame){cancelAnimationFrame(CMD.starFrame);CMD.starFrame=null;}
   if(CMD.orbFrame){cancelAnimationFrame(CMD.orbFrame);CMD.orbFrame=null;}
   if(CMD.wclockInt){clearInterval(CMD.wclockInt);CMD.wclockInt=null;}
-  if(_stripTimer){clearInterval(_stripTimer);_stripTimer=null;}
+  if(typeof _stripTimer!=='undefined' && _stripTimer){clearInterval(_stripTimer);_stripTimer=null;}
 };
 
 /* ── Colors ── */
@@ -18215,18 +18359,228 @@ function initOrb(){
 
 /* ── switchPage hook ── */
 var _sp=window.switchPage;
-window.switchPage=function(name){if(typeof _sp==='function')_sp(name);if(name==='command'){setTimeout(window.cmdInitPage,60);}else{window.cmdPausePage();}};
+window.switchPage=function(name){
+  if(typeof _sp==='function')_sp(name);
+  // V-11-E E-7: scope input zone to COMMAND via body class
+  document.body.classList.toggle('apex-cmd-active', name==='command');
+  if(name==='command'){setTimeout(window.cmdInitPage,60);}else{window.cmdPausePage();}
+};
 
 /* ── Auto-init ── */
 document.addEventListener('DOMContentLoaded',function(){
   setTimeout(function(){
     var p=$id('page-command');
-    if(p&&p.classList.contains('active'))window.cmdInitPage();
+    if(p&&p.classList.contains('active')){
+      document.body.classList.add('apex-cmd-active');
+      window.cmdInitPage();
+    }
     if(typeof window.setTtsProvider==='function'){
       try{localStorage.setItem('apex_tts_provider','gemini');window.setTtsProvider('gemini');}catch(_){}
     }
   },250);
 });
+
+/* ═══════════════════════════════════════════════════════════════════
+   V-11-E helpers — E-6 (localStorage history), E-9 (archetypes + toast),
+   E-11 (keyboard shortcuts)
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+  var HIST_MAX = 100;
+  var HIST_PREFIX = 'apex_chat_history_';
+  var _hydrating = false;
+
+  function _humanId(){
+    try { return (window._apexUser && window._apexUser.id) || null; } catch(_) { return null; }
+  }
+  function _key(){
+    var id = _humanId();
+    return id ? (HIST_PREFIX + id) : null;
+  }
+  function _read(){
+    var k = _key(); if(!k) return [];
+    try { var raw = localStorage.getItem(k); return raw ? (JSON.parse(raw) || []) : []; }
+    catch(_) { return []; }
+  }
+  function _write(list){
+    var k = _key(); if(!k) return;
+    if(!Array.isArray(list)) list = [];
+    if(list.length > HIST_MAX) list = list.slice(list.length - HIST_MAX);
+    try { localStorage.setItem(k, JSON.stringify(list)); } catch(_) {}
+  }
+
+  window._v11eSaveHistoryEntry = function(role, content){
+    if(_hydrating) return;
+    if(!role || !content) return;
+    var mapped = (role === 'ai') ? 'assistant' : (role === 'user' ? 'user' : null);
+    if(!mapped) return;
+    var list = _read();
+    list.push({ role: mapped, content: String(content), timestamp: new Date().toISOString() });
+    _write(list);
+  };
+  window._v11eClearHistory = function(){
+    var k = _key(); if(!k) return;
+    try { localStorage.removeItem(k); } catch(_) {}
+  };
+  window._v11eLoadHistory = function(){
+    var list = _read();
+    if(!list.length) return;
+    var log = document.getElementById('chatLog');
+    if(!log) return;
+    // Only hydrate if log is empty (avoid duplication on re-entry)
+    if(log.children.length) return;
+    _hydrating = true;
+    try {
+      list.forEach(function(entry){
+        var role = entry.role === 'assistant' ? 'ai' : 'user';
+        try { renderChatMessage(role, entry.content, { skipPersist: true }); } catch(_) {}
+      });
+    } finally { _hydrating = false; }
+  };
+
+  // Archetype detection
+  function _detectArchetype(text){
+    var t = String(text || '');
+    if (/approval required|awaiting your approval/i.test(t)) return 'approval-required';
+    if (/^(i've|i have |done[:.]|completed[:.])/i.test(t.trim())) return 'action-completed';
+    if (/\?\s*$/.test(t)) return 'question';
+    return 'information';
+  }
+  function _l0Summary(text){
+    var s = String(text || '').trim();
+    // First sentence, truncated at 120
+    var m = s.match(/^[^.!?]{1,240}[.!?]/);
+    var head = m ? m[0].trim() : s;
+    if (head.length > 120) head = head.slice(0, 117).trim() + '…';
+    return head;
+  }
+  window._v11eRenderApexCard = function(log, fullText){
+    if(!log || !fullText) return;
+    var text = String(fullText);
+    var archetype = _detectArchetype(text);
+    var summary = _l0Summary(text);
+    var hasDetail = (text.length > summary.length);
+
+    var card = document.createElement('div');
+    card.className = 'apex-card';
+    card.setAttribute('data-archetype', archetype);
+
+    var l0 = document.createElement('div');
+    l0.className = 'apex-card-l0';
+
+    var sum = document.createElement('span');
+    sum.className = 'apex-card-summary';
+    sum.textContent = summary;
+    l0.appendChild(sum);
+
+    // Confidence dot (unknown by default — the current /chat contract doesn't return confidence)
+    var conf = document.createElement('span');
+    conf.className = 'apex-card-confidence apex-confidence-unknown';
+    conf.setAttribute('aria-label', 'Confidence: unknown');
+    conf.setAttribute('role', 'img');
+    l0.appendChild(conf);
+
+    var l1El = null, l2El = null;
+    if (hasDetail) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'apex-card-expand';
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Show details');
+      btn.textContent = '▾';
+      l0.appendChild(btn);
+
+      l1El = document.createElement('div');
+      l1El.className = 'apex-card-l1';
+      l1El.hidden = true;
+      l1El.textContent = text;
+
+      var l2Btn = document.createElement('button');
+      l2Btn.type = 'button';
+      l2Btn.className = 'apex-card-l2-trigger';
+      l2Btn.setAttribute('aria-expanded', 'false');
+      l2Btn.textContent = 'Evidence';
+      l1El.appendChild(document.createElement('br'));
+      l1El.appendChild(l2Btn);
+
+      l2El = document.createElement('div');
+      l2El.className = 'apex-card-l2';
+      l2El.hidden = true;
+      l2El.textContent = 'Evidence details are not yet returned by the /chat contract. Full source layer arrives with E-8/E-10.';
+
+      btn.addEventListener('click', function(){
+        var open = l1El.hidden;
+        l1El.hidden = !open;
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.textContent = open ? '▴' : '▾';
+      });
+      l2Btn.addEventListener('click', function(){
+        var open = l2El.hidden;
+        l2El.hidden = !open;
+        l2Btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
+
+    card.appendChild(l0);
+    if (l1El) card.appendChild(l1El);
+    if (l2El) card.appendChild(l2El);
+    log.appendChild(card);
+  };
+
+  // Thinking indicator
+  window._v11eShowThinking = function(){
+    var log = document.getElementById('chatLog');
+    if(!log) return;
+    _v11eHideThinking();
+    var el = document.createElement('div');
+    el.className = 'apex-thinking';
+    el.id = 'apex-thinking-indicator';
+    el.innerHTML = '<span class="apex-thinking-dot"></span><span class="apex-thinking-dot"></span><span class="apex-thinking-dot"></span><span class="apex-thinking-label">APEX is thinking…</span>';
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+  };
+  window._v11eHideThinking = function(){
+    var el = document.getElementById('apex-thinking-indicator');
+    if(el && el.parentNode) el.parentNode.removeChild(el);
+  };
+
+  // Toast
+  window._v11eToast = function(message){
+    if(!message) return;
+    var t = document.createElement('div');
+    t.className = 'apex-toast';
+    t.setAttribute('role', 'status');
+    t.textContent = message;
+    document.body.appendChild(t);
+    setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 3200);
+  };
+
+  // E-11 keyboard shortcuts: V (voice), Escape (collapse cards / cancel voice)
+  document.addEventListener('keydown', function(e){
+    var target = e.target;
+    var tag = (target && target.tagName || '').toLowerCase();
+    var typing = (tag === 'input' || tag === 'textarea' || (target && target.isContentEditable));
+    if (!typing && (e.key === 'v' || e.key === 'V') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      var mic = document.getElementById('micBtn');
+      if (mic) { e.preventDefault(); mic.click(); }
+      return;
+    }
+    if (e.key === 'Escape') {
+      // Collapse any expanded apex-card L1/L2
+      var expanded = document.querySelectorAll('#chatLog .apex-card-expand[aria-expanded="true"]');
+      if (expanded.length) {
+        expanded.forEach(function(btn){
+          btn.setAttribute('aria-expanded', 'false');
+          btn.textContent = '▾';
+          var card = btn.closest('.apex-card');
+          if (card) {
+            var l1 = card.querySelector('.apex-card-l1'); if (l1) l1.hidden = true;
+            var l2 = card.querySelector('.apex-card-l2'); if (l2) l2.hidden = true;
+          }
+        });
+      }
+    }
+  });
+})();
 })();
 
 </script>
