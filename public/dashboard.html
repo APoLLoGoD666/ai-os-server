@@ -6409,7 +6409,7 @@ select:focus {
         <div class="page-wrap" id="pageWrap">
 
             <!-- ══ PAGE: COMMAND ══ -->
-            <div class="page active" id="page-command">
+            <div class="page" id="page-command">
 
             <div class="cmd-split">
 
@@ -7956,8 +7956,7 @@ select:focus {
             </div>
 
             <!-- ══ PAGE: OVERVIEW ══ -->
-            <div class="page" id="page-overview">
-                <style>#ovr-pipeline,#ovr-modal-bg{display:none!important}</style>
+            <div class="page active" id="page-overview">
                 <!-- APEX MIND — Live 3D System Visualization -->
 
                 <!-- Governance Pipeline -->
@@ -9033,6 +9032,65 @@ if(pipe){
                 setInterval(fetchVitals,60000);
                 })();
                 </script>
+                <style>#ovr-pipeline,#ovr-modal-bg,#apx-wrap{display:none!important}
+/* V-11-D1: TODAY surface */
+#today-surface{padding:0 0 32px}
+.td-greeting{padding:22px 24px 20px}
+.td-greeting-day{font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;text-transform:uppercase}
+.td-greeting-line{font:700 24px/1.15 'Inter',sans-serif;color:#f3f7fb;margin-top:6px}
+.td-section{padding:0 24px 22px}
+.td-section-hdr{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:12px}
+.td-section-label{font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#636d7a;text-transform:uppercase;flex:1}
+.td-item{display:flex;align-items:flex-start;gap:11px;padding:13px 15px;background:#0d1424;border-radius:10px;margin-bottom:7px;border-left:3px solid transparent}
+.td-item:last-of-type{margin-bottom:0}
+.td-item.attn-urgent{border-left-color:#ec7fa3}
+.td-item.attn-noteworthy{border-left-color:#efb45a}
+.td-item.attn-normal{border-left-color:rgba(91,158,255,0.4)}
+.td-item-body{flex:1;min-width:0}
+.td-item-title{font:600 13px/1.2 'Inter',sans-serif;color:#eaeff5}
+.td-item-sub{font:500 10px/1.4 'JetBrains Mono',monospace;color:#8893a0;margin-top:4px}
+.td-attn-dot{width:5px;height:5px;border-radius:1px;flex:0 0 5px;margin-top:6px}
+.td-attn-dot.urgent{background:#ec7fa3}
+.td-attn-dot.noteworthy{background:#efb45a}
+.td-attn-dot.normal{background:rgba(91,158,255,0.55)}
+.td-more{font:600 10px/1 'JetBrains Mono',monospace;color:#5b9eff;letter-spacing:0.5px;cursor:pointer;padding:10px 15px;display:block;text-align:right}
+.td-noticed-card{background:#0d1424;border-radius:10px;overflow:hidden}
+.td-noticed-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.td-noticed-row:last-child{border-bottom:none}
+.td-noticed-lbl{font:500 11px/1 'Inter',sans-serif;color:#c7d2dd;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-noticed-val{font:600 10px/1 'JetBrains Mono',monospace;flex:0 0 auto}
+.td-empty-today{font:500 12px/1.6 'Inter',sans-serif;color:#636d7a;padding:18px 15px;background:rgba(255,255,255,0.02);border-radius:8px;text-align:center}
+.td-legacy-sep{display:flex;align-items:center;gap:10px;padding:4px 24px 20px;opacity:0.35}
+.td-legacy-sep::before,.td-legacy-sep::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.1)}
+.td-legacy-sep-text{font:500 8px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;text-transform:uppercase;white-space:nowrap}
+@media(max-width:640px){
+  .td-greeting{padding:16px 16px 14px}
+  .td-greeting-line{font-size:19px}
+  .td-section{padding:0 16px 18px}
+  .td-legacy-sep{padding:4px 16px 16px}
+}
+                </style>
+                <!-- ── TODAY: D1 human-first surface ── -->
+                <div id="today-surface">
+                    <div class="td-greeting">
+                        <div class="td-greeting-day" id="ovr-greeting"></div>
+                        <div class="td-greeting-line">What matters now</div>
+                    </div>
+                    <div class="td-section" id="today-section-needs">
+                        <div class="td-section-hdr"><span class="td-section-label">Needs You</span></div>
+                        <div id="today-needs-panel"></div>
+                    </div>
+                    <div class="td-section" id="today-section-noticed">
+                        <div class="td-section-hdr"><span class="td-section-label">APEX Noticed</span></div>
+                        <div id="today-noticed-panel"></div>
+                    </div>
+                    <div class="td-section" id="today-section-schedule">
+                        <div class="td-section-hdr"><span class="td-section-label">Today</span></div>
+                        <div id="today-active-panel"></div>
+                    </div>
+                    <div class="td-legacy-sep"><span class="td-legacy-sep-text">System · Governance Architecture</span></div>
+                </div>
+                <div id="ovr-pipeline" style="display:none"></div>
 
             </div>
 
@@ -10281,7 +10339,7 @@ if(pipe){
         <div class="az-nav-group">TODAY</div>
         <button class="nav-btn" id="nav-overview">
             <span class="nav-icon">◈</span>
-            <span class="nav-label">Overview</span>
+            <span class="nav-label">Today</span>
         </button>
         <!-- ② COMMAND -->
         <div class="az-nav-group">COMMAND</div>
@@ -10332,7 +10390,7 @@ if(pipe){
         <div class="az-nav-group">INTELLIGENCE</div>
         <button class="nav-btn" id="nav-intelligence" aria-label="Intelligence">
             <span class="nav-icon">◇</span>
-            <span class="nav-label">Intel</span>
+            <span class="nav-label">Intelligence</span>
         </button>
         <button class="nav-btn" id="nav-memory" aria-label="Memory">
             <span class="nav-icon">▣</span>
@@ -10384,12 +10442,12 @@ if(pipe){
 
 <script>
 (function() {
-    var pages = ['command', 'overview', 'operation', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'civilisation', 'reality', 'activity', 'agents', 'approvals', 'knowledge', 'intelligence', 'memory', 'governance'];
-    var activePage = 'command';
+    var pages = ['overview', 'command', 'operation', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'civilisation', 'reality', 'activity', 'agents', 'approvals', 'knowledge', 'intelligence', 'memory', 'governance'];
+    var activePage = 'overview';
 
     var pageMeta = {
         command:       { title:'Command',     sub:'AI · Interface · Control' },
-        overview:      { title:'Overview',    sub:'Governance · Pipeline · Status' },
+        overview:      { title:'Today',        sub:'What matters now' },
         operation:     { title:'Operation',   sub:'Tasks · Agents · Schedules' },
         system:        { title:'System',      sub:'Agents · Processes · Health' },
         finance:       { title:'Finance',     sub:'Budgets · Investing · Planning' },
@@ -10422,6 +10480,7 @@ if(pipe){
         var pgSub   = document.getElementById('topbar-pg-sub');
         if (pgTitle) pgTitle.textContent = meta.title;
         if (pgSub)   pgSub.textContent   = meta.sub;
+        history.replaceState(null, '', '#' + name);
     };
 
     pages.forEach(function(name) {
@@ -15391,11 +15450,186 @@ function initGovernanceMap(d) {
     };
 }
 
+function _tdEsc(s) {
+    return String(s || '').replace(/[&<>"']/g, function(c) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+}
+
+function _tdNeedsItems(inbox) {
+    var items = [];
+    if (!inbox) return items;
+    (inbox.follow_ups || []).forEach(function(f) {
+        items.push({attn:'urgent',  title:f.note||'Follow-up required',
+            sub:f.due_date?'Overdue · '+f.due_date.slice(0,10):'Overdue',
+            dest:'operation', destLbl:'Operation'});
+    });
+    (inbox.meetings || []).slice(0,3).forEach(function(m) {
+        items.push({attn:'noteworthy', title:m.title||'Meeting',
+            sub:m.start_time?m.start_time.slice(0,5)+' today':'Today',
+            dest:'communication', destLbl:'Network'});
+    });
+    (inbox.assignments || []).forEach(function(a) {
+        var t = (a.title||a.module||'Assignment')+(a.module&&a.title?' ('+a.module+')':'');
+        items.push({attn:'noteworthy', title:t,
+            sub:a.due_date?'Due '+a.due_date.slice(0,10):'Upcoming',
+            dest:'university', destLbl:'University'});
+    });
+    (inbox.emails || []).filter(function(e){return e.priority==='urgent';}).slice(0,2).forEach(function(e) {
+        items.push({attn:'urgent',  title:e.subject||'Urgent email',
+            sub:e.sender||'', dest:'communication', destLbl:'Network'});
+    });
+    (inbox.emails || []).filter(function(e){return e.priority!=='urgent';}).slice(0,1).forEach(function(e) {
+        items.push({attn:'normal',  title:e.subject||'Email',
+            sub:e.sender||'', dest:'communication', destLbl:'Network'});
+    });
+    return items;
+}
+
+function _tdNeedsHtml(item) {
+    return '<div class="td-item attn-'+item.attn+'">'
+        +'<span class="td-attn-dot '+item.attn+'"></span>'
+        +'<div class="td-item-body">'
+        +'<div class="td-item-title">'+_tdEsc(item.title)+'</div>'
+        +(item.sub?'<div class="td-item-sub">'+_tdEsc(item.sub)+'</div>':'')
+        +'</div></div>';
+}
+
+function _tdInsights(brief) {
+    var rows = [];
+    if (!brief) return rows;
+    var fin = brief.finance;
+    if (fin && fin.weekNet !== undefined && fin.weekNet !== null && fin.weekNet !== 0) {
+        var net = parseFloat(fin.weekNet);
+        rows.push({lbl:'Week net', val:(net>=0?'+':'')+'£'+Math.abs(net).toFixed(0),
+            color:net>=0?'#3fd29a':'#ec7fa3'});
+    }
+    if (fin && fin.overdueInvoices && fin.overdueInvoices.length>0) {
+        rows.push({lbl:'Overdue invoices', val:fin.overdueInvoices.length+' unpaid', color:'#ec7fa3'});
+    }
+    var em = brief.emails;
+    if (em && em.unread && em.unread.length>0) {
+        rows.push({lbl:'Unread email', val:em.unread.length+' new', color:'#5b9eff'});
+    }
+    var hl = brief.health;
+    if (hl && hl.sleep) {
+        var hrs = parseFloat(hl.sleep.hours || 0);
+        rows.push({lbl:'Sleep', val:(hl.sleep.hours||'?')+'h'+(hl.sleep.quality_score?' · '+hl.sleep.quality_score+'/10':''),
+            color:hrs>=7?'#3fd29a':'#efb45a'});
+    }
+    if (brief.assignments && brief.assignments.length>0) {
+        rows.push({lbl:'Assignments', val:brief.assignments.length+' upcoming', color:'#efb45a'});
+    }
+    return rows;
+}
+
 async function initOverviewPage() {
     var greetEl = document.getElementById('ovr-greeting');
     var h = new Date().getHours();
-    if (greetEl) greetEl.textContent = (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening')
-        + ' · ' + new Date().toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
+    if (greetEl) greetEl.textContent =
+        (h<12?'Good morning':h<18?'Good afternoon':'Good evening')
+        +' · '+new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+
+    var pageEl = document.getElementById('page-overview');
+    if (!pageEl || !pageEl.classList.contains('active')) return;
+
+    var needsEl   = document.getElementById('today-needs-panel');
+    var noticedEl = document.getElementById('today-noticed-panel');
+    var activeEl  = document.getElementById('today-active-panel');
+
+    if (needsEl)   window.setState(needsEl,   'loading');
+    if (noticedEl) window.setState(noticedEl, 'loading');
+    if (activeEl)  window.setState(activeEl,  'loading');
+
+    var results = await Promise.allSettled([
+        fetch('/api/briefing/priority-inbox',{credentials:'same-origin'}).then(function(r){return r.json();}),
+        fetch('/api/briefing/today',          {credentials:'same-origin'}).then(function(r){return r.json();})
+    ]);
+
+    var inboxJ = results[0].status==='fulfilled' ? results[0].value : null;
+    var briefJ = results[1].status==='fulfilled' ? results[1].value : null;
+    var inbox  = inboxJ&&inboxJ.ok  ? inboxJ.inbox    : null;
+    var brief  = briefJ&&briefJ.ok  ? briefJ.briefing : null;
+
+    // ── A. NEEDS YOU ──
+    if (needsEl) {
+        if (!inboxJ) {
+            window.setState(needsEl,'failed',{message:"APEX couldn’t reach your priority inbox.",retryFn:'initOverviewPage'});
+        } else if (!inbox) {
+            window.setState(needsEl,'failed',{message:"APEX couldn’t load your priority inbox.",retryFn:'initOverviewPage'});
+        } else {
+            var items = _tdNeedsItems(inbox);
+            if (items.length===0) {
+                window.setState(needsEl,'ready',{html:'<div class="td-empty-today">Nothing needs your attention right now.'
+                    +'<span style="display:block;font-size:10px;color:#4a5261;margin-top:5px">'
+                    +'APEX is monitoring your work and information.</span></div>'});
+            } else {
+                var shown = items.slice(0,3);
+                var extra = items.length - shown.length;
+                var needsHtml = shown.map(_tdNeedsHtml).join('');
+                if (extra>0) {
+                    var ov = items[3];
+                    needsHtml += '<span class="td-more" onclick="switchPage(\''+_tdEsc(ov.dest)+'\')">'
+                        +'+'+extra+' more in '+_tdEsc(ov.destLbl)+' ›</span>';
+                }
+                window.setState(needsEl,'ready',{html:needsHtml});
+            }
+        }
+    }
+
+    // ── B. APEX NOTICED ──
+    if (noticedEl) {
+        if (!briefJ) {
+            window.setState(noticedEl,'failed',{message:"APEX couldn’t update part of your briefing.",retryFn:'initOverviewPage'});
+        } else if (!brief) {
+            window.setState(noticedEl,'failed',{message:"APEX couldn’t load briefing data.",retryFn:'initOverviewPage'});
+        } else {
+            var rows = _tdInsights(brief);
+            if (rows.length===0) {
+                window.setState(noticedEl,'empty',{message:'Nothing notable right now.'});
+            } else {
+                var noticeHtml = '<div class="td-noticed-card">'
+                    +rows.map(function(r){
+                        return '<div class="td-noticed-row"><span class="td-noticed-lbl">'+_tdEsc(r.lbl)+'</span>'
+                            +'<span class="td-noticed-val" style="color:'+r.color+'">'+_tdEsc(r.val)+'</span></div>';
+                    }).join('')
+                    +'</div>';
+                window.setState(noticedEl,'ready',{html:noticeHtml});
+            }
+        }
+    }
+
+    // ── C. TODAY'S SCHEDULE ──
+    if (activeEl) {
+        if (!briefJ) {
+            window.setState(activeEl,'failed',{message:"APEX couldn't load today's schedule.",retryFn:'initOverviewPage'});
+        } else if (!brief) {
+            window.setState(activeEl,'failed',{message:"APEX couldn't load today's schedule.",retryFn:'initOverviewPage'});
+        } else {
+            var cal     = brief.calendar && brief.calendar.events || [];
+            var assigns = brief.assignments || [];
+            if (cal.length===0 && assigns.length===0) {
+                window.setState(activeEl,'empty',{message:'Nothing scheduled today.'});
+            } else {
+                var schedHtml = '<div class="td-noticed-card">';
+                cal.slice(0,5).forEach(function(ev){
+                    var t = ev.start_time ? ev.start_time.slice(0,5) : '';
+                    schedHtml += '<div class="td-noticed-row">'
+                        +'<span class="td-noticed-lbl">'+_tdEsc(ev.title)+(ev.location?' · '+_tdEsc(ev.location):'')+'</span>'
+                        +(t?'<span class="td-noticed-val" style="color:#5b9eff">'+t+'</span>':'')
+                        +'</div>';
+                });
+                assigns.slice(0,3).forEach(function(a){
+                    schedHtml += '<div class="td-noticed-row">'
+                        +'<span class="td-noticed-lbl">Due: '+_tdEsc(a.title||'Assignment')+'</span>'
+                        +'<span class="td-noticed-val" style="color:#efb45a">'+(a.due_date?a.due_date.slice(0,10):'')+'</span>'
+                        +'</div>';
+                });
+                schedHtml += '</div>';
+                window.setState(activeEl,'ready',{html:schedHtml});
+            }
+        }
+    }
 }
 
 // Hook initOverviewPage into switchPage without touching the original
@@ -20095,6 +20329,24 @@ window.apexFileDropHandler = function(e){
         document.addEventListener('DOMContentLoaded', _bootIdentity);
     } else {
         _bootIdentity();
+    }
+})();
+</script>
+<script>
+// V-11-D2: boot-time page resolver — hash → localStorage → TODAY default
+(function() {
+    var _d2Pages = ['overview','command','operation','system','finance','communication','business','health','university','occult','research','civilisation','reality','activity','agents','approvals','knowledge','intelligence','memory','governance'];
+    function _resolveBootPage() {
+        var hash = location.hash.slice(1);
+        if (hash && _d2Pages.indexOf(hash) !== -1) { window.switchPage(hash); return; }
+        var pref = localStorage.getItem('apex_default_page');
+        if (pref && _d2Pages.indexOf(pref) !== -1) { window.switchPage(pref); return; }
+        window.switchPage('overview');
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _resolveBootPage);
+    } else {
+        _resolveBootPage();
     }
 })();
 </script>
