@@ -93,6 +93,86 @@ body.apex-role-master .apex-user-only   { display: none !important; }
 body.apex-role-unknown #apex-role-badge { color:rgba(242,242,242,0.25)!important; background:rgba(242,242,242,0.04)!important; border-color:rgba(242,242,242,0.1)!important; animation:apex-dot-pulse 1.4s ease-in-out infinite; }
 body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!important; }
 
+/* ── V-11-F: LIFE & WORK domain grammar ─────────────────────────────── */
+.lw-l0 {
+    padding: 20px 24px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.lw-l0-summary {
+    font: 500 15px/1.5 Inter, sans-serif;
+    color: rgba(232,244,255,0.85);
+    min-height: 22px;
+}
+.lw-l0-status {
+    margin-top: 4px;
+    font: 400 12px/1.4 Inter, sans-serif;
+    color: rgba(255,255,255,0.35);
+}
+.lw-page-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 20px 24px 0;
+}
+.lw-page-title {
+    font: 600 20px/1.2 Inter, sans-serif;
+    color: rgba(232,244,255,0.95);
+    letter-spacing: -0.01em;
+}
+.lw-page-subtitle {
+    font: 400 13px/1.4 Inter, sans-serif;
+    color: rgba(255,255,255,0.35);
+}
+.lw-section {
+    padding: 16px 24px;
+}
+.lw-section-title {
+    font: 600 11px/1 'JetBrains Mono', monospace;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+/* State visibility rules — supplements V-11-B */
+[data-apex-state="failed"] .apex-panel-error { display: block; }
+[data-apex-state="empty"] .apex-panel-empty { display: block; }
+
+/* V-11-F F-7: #page-operation merged into Business & Work — DOM kept for legacy JS but never rendered. */
+#page-operation { display: none !important; }
+
+/* V-11-F F-12: Responsive convergence for LIFE & WORK pages ────────────── */
+@media (max-width: 767px) {
+    /* 4-column stat grids collapse to 2 */
+    .ds-grid-stats, .ds-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+    /* 3+ column content rows stack */
+    .ds-grid-3, .ds-grid-2 { grid-template-columns: 1fr !important; }
+    .biz-cols, .email-cols, .comm-cols, .research-cols { flex-direction: column !important; }
+    /* Kanban board stacks vertically */
+    .kanban-board, .kanban-cols, #bizCrmKanban > div { flex-direction: column !important; min-width: 0 !important; }
+    /* Touch targets */
+    .lw-section button, .lw-section a[role="button"], .ds-btn { min-height: 44px; }
+    /* Tables get horizontal scroll */
+    .lw-section table, .ds-panel table.ds-table {
+        display: block;
+        overflow-x: auto;
+        max-width: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+    /* Pipeline flow header 4-col → 2-col */
+    #page-operation [style*="grid-template-columns:repeat(4"],
+    #page-business [style*="grid-template-columns:repeat(4"],
+    #page-finance [style*="grid-template-columns:repeat(4"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    /* Agent roster 5-col → 2-col */
+    #page-operation [style*="grid-template-columns:repeat(5"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    /* L0 padding tighter */
+    .lw-l0 { padding: 14px 16px 10px; }
+    .lw-l0-summary { font-size: 14px; }
+}
+
 /* ── Body & app shell ───────────────────────────────────────────────── */
 html, body {
     background: var(--bg);
@@ -6507,7 +6587,7 @@ select:focus {
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(0,212,255,0.06);">
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["command"]'>COMMAND</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["overview"]'>OVERVIEW</button>
-            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["operation"]'>OPS</button>
+            <!-- V-11-F F-7: 'OPS' bottom-nav removed -->
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["system"]'>SYSTEM</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["communication"]'>COMMS</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["finance"]'>FINANCE</button>
@@ -6945,21 +7025,73 @@ select:focus {
                         </div>
                     </section>
 
+                    <!-- V-11-F F-11 / FD-04: Emergency Access Protocol (Master-only; frontend UI scaffold — backend enforcement pending F-13 gate) -->
+                    <section id="system-emergency-access" class="lw-section apex-master-only" style="margin-top:8px">
+                        <div class="lw-section-title">Emergency Access Protocol</div>
+                        <div id="emergency-access-panel" data-apex-state="ready">
+                            <div class="apex-card" style="border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px 16px;background:rgba(239,68,68,0.02)">
+                                <div class="apex-card-l0">
+                                    <div style="flex:1">
+                                        <div style="font:600 13px/1.4 Inter,sans-serif;color:rgba(232,244,255,0.9)">Emergency Account Access</div>
+                                        <div style="font:400 12px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.45);margin-top:4px">
+                                            Temporarily access a User's private data under explicit audit conditions.
+                                            This action is logged and the User is notified.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="apex-card-l1" style="display:block;margin-top:12px">
+                                    <div style="font:400 12px/1.6 Inter,sans-serif;color:rgba(255,255,255,0.55)">
+                                        Emergency access grants Master temporary read access to a specific User's private data scope.
+                                        The access reason is recorded, the User receives a notification, and the access is audited.
+                                        This does not bypass server-side privacy boundaries.
+                                    </div>
+                                    <div style="margin-top:12px">
+                                        <label style="display:block;font:500 11px/1 'JetBrains Mono',monospace;color:rgba(255,255,255,0.35);margin-bottom:6px">USER ACCOUNT</label>
+                                        <input type="text" id="emergency-access-user" placeholder="User email or ID"
+                                            style="width:100%;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(232,244,255,0.8);font:400 13px/1 Inter,sans-serif;outline:none"
+                                            aria-label="User email or ID for emergency access">
+                                        <label style="display:block;font:500 11px/1 'JetBrains Mono',monospace;color:rgba(255,255,255,0.35);margin-top:10px;margin-bottom:6px">REASON (REQUIRED)</label>
+                                        <textarea id="emergency-access-reason" placeholder="Document the specific reason for emergency access&hellip;" rows="3"
+                                            style="width:100%;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(232,244,255,0.8);font:400 13px/1.5 Inter,sans-serif;outline:none;resize:vertical"
+                                            aria-label="Reason for emergency access"></textarea>
+                                        <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+                                            <input type="checkbox" id="emergency-access-confirm" aria-label="Confirm I understand this action is audited and the User is notified">
+                                            <label for="emergency-access-confirm" style="font:400 12px/1.4 Inter,sans-serif;color:rgba(255,255,255,0.5)">
+                                                I understand this access is audited and the User will be notified.
+                                            </label>
+                                        </div>
+                                        <button id="emergency-access-submit" data-fn="initiateEmergencyAccess"
+                                            style="margin-top:12px;padding:8px 16px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:rgba(239,100,100,0.9);font:500 13px/1 Inter,sans-serif;cursor:pointer"
+                                            aria-label="Submit emergency access request">
+                                            Request Emergency Access
+                                        </button>
+                                    </div>
+                                    <div id="emergency-access-result" style="display:none;margin-top:12px;padding:10px 12px;border-radius:6px;font:400 12px/1.5 Inter,sans-serif"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
                 </div>
             </div>
 
             <!-- ══ PAGE: COMMUNICATION ══ -->
             <div class="page" id="page-communication">
+                <!-- V-11-F F-1: LIFE & WORK L0 summary block -->
+                <div class="lw-l0" data-l0="true">
+                    <div class="lw-l0-summary" id="communication-l0-summary">Loading your messages and contacts&hellip;</div>
+                    <div class="lw-l0-status" id="communication-l0-status"></div>
+                </div>
 
                 <!-- Page Header -->
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">NETWORK</div>
+                        <div class="ds-page-title" style="letter-spacing:7px">COMMUNICATIONS</div>
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">EMAIL &middot; MESSAGING &middot; CALENDAR &middot; CONTACTS</div>
+                        <div class="lw-page-purpose" style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Messages, contacts, and conversations requiring your attention.</div>
                     </div>
                     <div style="text-align:right">
                         <button class="ds-btn cyan" data-fn="checkEmailNow">&#9658; Check inbox now</button>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">NET &middot; COMMUNICATIONS</div>
                     </div>
                 </div>
 
@@ -7334,16 +7466,21 @@ select:focus {
 
             <!-- ══ PAGE: FINANCE ══ -->
             <div class="page" id="page-finance">
+                <!-- V-11-F F-1: LIFE & WORK L0 summary block -->
+                <div class="lw-l0" data-l0="true">
+                    <div class="lw-l0-summary" id="finance-l0-summary">Loading your financial position&hellip;</div>
+                    <div class="lw-l0-status" id="finance-l0-status"></div>
+                </div>
 
                 <!-- Page Header -->
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">FINANCE</div>
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">BANKING &middot; BUDGETS &middot; FORECASTING &middot; INVESTMENTS</div>
+                        <div class="lw-page-purpose" style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Your financial position, spending, and upcoming obligations.</div>
                     </div>
                     <div style="text-align:right">
                         <button class="ds-btn cyan" data-fn="logExpenseQuick">+ Log expense</button>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">FIN &middot; FINANCE AGENT</div>
                     </div>
                 </div>
 
@@ -7415,6 +7552,8 @@ select:focus {
                         <div style="position:relative;height:160px">
                             <canvas id="fin-chart-income" style="width:100%;height:160px"></canvas>
                         </div>
+                        <!-- V-11-F F-10: chart empty state -->
+                        <div style="font:400 11px/1.4 Inter,sans-serif;color:rgba(255,255,255,0.35);text-align:center;padding:6px 0 0">No transaction data available. Connect a bank account to enable charts.</div>
                     </div>
                     <div class="ds-panel">
                         <div class="ds-panel-header">
@@ -7483,6 +7622,8 @@ select:focus {
                     <div style="position:relative;height:140px">
                         <canvas id="fin-chart-cashflow" style="width:100%;height:140px"></canvas>
                     </div>
+                    <!-- V-11-F F-10 -->
+                    <div style="font:400 11px/1.4 Inter,sans-serif;color:rgba(255,255,255,0.35);text-align:center;padding:6px 0 0">No transaction data available. Connect a bank account to enable charts.</div>
                 </div>
 
                 <!-- Budget vs actual + Subscriptions -->
@@ -7497,6 +7638,8 @@ select:focus {
                         <div style="position:relative;height:160px">
                             <canvas id="fin-chart-budget" style="width:100%;height:160px"></canvas>
                         </div>
+                        <!-- V-11-F F-10 -->
+                        <div style="font:400 11px/1.4 Inter,sans-serif;color:rgba(255,255,255,0.35);text-align:center;padding:6px 0 0">Set monthly budgets to compare against actual spend.</div>
                     </div>
                     <div class="ds-panel">
                         <div class="ds-panel-header">
@@ -7578,7 +7721,6 @@ select:focus {
                     </div>
                     <div style="text-align:right">
                         <div style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#5b9eff;background:rgba(91,158,255,0.1);padding:5px 12px;border-radius:6px;display:inline-block">OPS</div>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">EXECUTION ENGINE</div>
                     </div>
                 </div>
 
@@ -7801,15 +7943,20 @@ select:focus {
 
             <!-- ══ PAGE: HEALTH ══ -->
             <div class="page" id="page-health">
+                <!-- V-11-F F-1: LIFE & WORK L0 summary block -->
+                <div class="lw-l0" data-l0="true">
+                    <div class="lw-l0-summary" id="health-l0-summary">Loading your wellbeing summary&hellip;</div>
+                    <div class="lw-l0-status" id="health-l0-status"></div>
+                </div>
                 <!-- Page Header -->
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">HEALTH</div>
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">SLEEP &middot; NUTRITION &middot; EXERCISE &middot; MENTAL &middot; WELLNESS</div>
+                        <div class="lw-page-purpose" style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Your current wellbeing information and activity.</div>
                     </div>
                     <div style="text-align:right">
                         <button class="ds-btn cyan" data-fn="logHealthVoice">&#127897; Log via voice</button>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">HLTH &middot; HEALTH AGENT</div>
                     </div>
                 </div>
 
@@ -9157,16 +9304,21 @@ if(pipe){
 
             <!-- ══ PAGE: BUSINESS ══ -->
             <div class="page" id="page-business">
+                <!-- V-11-F F-1: LIFE & WORK L0 summary block -->
+                <div class="lw-l0" data-l0="true">
+                    <div class="lw-l0-summary" id="business-l0-summary">Loading your business activity&hellip;</div>
+                    <div class="lw-l0-status" id="business-l0-status"></div>
+                </div>
 
                 <!-- Page Header -->
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">BUSINESS</div>
+                        <div class="ds-page-title" style="letter-spacing:7px">BUSINESS &amp; WORK</div>
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">REVENUE &middot; CLIENTS &middot; SALES &middot; GROWTH &middot; MARKETING</div>
+                        <div class="lw-page-purpose" style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Active projects, tasks, clients, and approvals.</div>
                     </div>
                     <div style="text-align:right">
                         <button class="ds-btn cyan" data-fn="refreshBizPage">&#8635; Refresh</button>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">BIZ &middot; BUSINESS AGENT</div>
                     </div>
                 </div>
 
@@ -9321,16 +9473,21 @@ if(pipe){
 
             <!-- ══ PAGE: UNIVERSITY ══ -->
             <div class="page" id="page-university">
+                <!-- V-11-F F-1: LIFE & WORK L0 summary block -->
+                <div class="lw-l0" data-l0="true">
+                    <div class="lw-l0-summary" id="university-l0-summary">Loading your academic progress&hellip;</div>
+                    <div class="lw-l0-status" id="university-l0-status"></div>
+                </div>
 
                 <!-- Page Header -->
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">UNIVERSITY</div>
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">MODULES &middot; ASSIGNMENTS &middot; FLASHCARDS &middot; STUDY</div>
+                        <div class="lw-page-purpose" style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Your academic modules, assignments, and progress.</div>
                     </div>
                     <div style="text-align:right">
                         <button class="ds-btn amber" data-fn="pomodoroToggle">&#9658; Start session</button>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">UNI &middot; UNIVERSITY AGENT</div>
                     </div>
                 </div>
 
@@ -9481,16 +9638,21 @@ if(pipe){
             </div>
 
             <!-- ══ PAGE: OCCULT ══ -->
-            <div class="page" id="page-occult">
+            <div class="page apex-master-only" id="page-occult">
+                <!-- V-11-F F-1 / F-6: LIFE & WORK L0 summary block (Specialised Research) -->
+                <div class="lw-l0" data-l0="true">
+                    <div class="lw-l0-summary" id="occult-l0-summary">Loading your research domains&hellip;</div>
+                    <div class="lw-l0-status" id="occult-l0-status">Master-access knowledge domain covering esoteric research, occult traditions, and specialised historical study.</div>
+                </div>
                 <!-- Page Header -->
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">OCCULT</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">SPIRITUAL &middot; JOURNAL &middot; PSYCHOLOGY &middot; REFLECTION</div>
+                        <div class="ds-page-title" style="letter-spacing:7px">SPECIALISED RESEARCH</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">ESOTERIC &middot; TRADITIONS &middot; ARCHIVE &middot; KNOWLEDGE DOMAINS</div>
+                        <div class="lw-page-purpose" style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Your specialised research domains, entries, and session notes.</div>
                     </div>
                     <div style="text-align:right">
                         <button class="ds-btn purple" data-fn="logSpiritualSession">+ Log session</button>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">OCC &middot; MINDFULNESS</div>
                     </div>
                 </div>
 
@@ -9616,16 +9778,21 @@ if(pipe){
 
             <!-- ══ PAGE: RESEARCH ══ -->
             <div class="page" id="page-research">
+                <!-- V-11-F F-1: LIFE & WORK L0 summary block -->
+                <div class="lw-l0" data-l0="true">
+                    <div class="lw-l0-summary" id="research-l0-summary">Loading your research threads&hellip;</div>
+                    <div class="lw-l0-status" id="research-l0-status"></div>
+                </div>
 
                 <!-- Page Header -->
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">RESEARCH</div>
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">DISCOVER &middot; SYNTHESISE &middot; ANALYSE &middot; ARCHIVE</div>
+                        <div class="lw-page-purpose" style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Your active investigations and findings.</div>
                     </div>
                     <div style="text-align:right">
                         <div style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#38bdf8;background:rgba(56,189,248,0.1);padding:5px 12px;border-radius:6px;display:inline-block">RES</div>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">RESEARCH ENGINE</div>
                     </div>
                 </div>
 
@@ -9691,18 +9858,17 @@ if(pipe){
 
 
             <!-- ══ CIVILISATION PAGE ══ -->
-            <div class="page" id="page-civilisation">
+            <div class="page apex-master-only" id="page-civilisation">
                 <div style="padding:16px;display:flex;flex-direction:column;gap:12px;height:100%;box-sizing:border-box;overflow-y:auto">
 
                     <!-- Page Header -->
                     <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                         <div>
                             <div class="ds-page-title" style="letter-spacing:7px">CIVILISATION</div>
-                            <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">GENOME &middot; CONSENSUS &middot; CLOCK &middot; DOMAINS</div>
+                            <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">ADVANCED ANALYSIS &middot; SYSTEM MODEL</div>
                         </div>
                         <div style="text-align:right">
                             <div id="civGateLabel" style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#22d3ee;background:rgba(34,211,238,0.1);padding:5px 12px;border-radius:6px;display:inline-block">LOADING</div>
-                            <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">CONSTITUTIONAL GATE</div>
                         </div>
                     </div>
 
@@ -9783,17 +9949,16 @@ if(pipe){
             </div><!-- #page-civilisation -->
 
             <!-- ══ PAGE: REALITY ══ -->
-            <div class="page" id="page-reality">
+            <div class="page apex-master-only" id="page-reality">
 
                 <!-- Page Header -->
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">REALITY</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">FABRIC &middot; CLAIMS &middot; HEALTH &middot; EPISTEMIC</div>
+                        <div class="ds-page-title" style="letter-spacing:7px">REALITY MODEL</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">ADVANCED ANALYSIS &middot; SYSTEM MODEL</div>
                     </div>
                     <div style="text-align:right">
                         <button class="ds-btn cyan" data-fn="realitySeed">&#9650; Seed</button>
-                        <div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:8px">RA &middot; REALITY ARCHITECTURE</div>
                     </div>
                 </div>
 
@@ -10485,16 +10650,9 @@ if(pipe){
         </button>
         <button class="nav-btn apex-master-only" id="nav-occult">
             <span class="nav-icon">◬</span>
-            <span class="nav-label">Occult</span>
+            <span class="nav-label">Specialised</span>
         </button>
-        <button class="nav-btn apex-master-only" id="nav-civilisation">
-            <span class="nav-icon">⊛</span>
-            <span class="nav-label">Civilisation</span>
-        </button>
-        <button class="nav-btn apex-master-only" id="nav-reality">
-            <span class="nav-icon">◍</span>
-            <span class="nav-label">Reality</span>
-        </button>
+        <!-- V-11-F F-9: civilisation & reality relocated to SYSTEM → Advanced (below) -->
         <!-- ④ INTELLIGENCE -->
         <div class="az-nav-group">INTELLIGENCE</div>
         <button class="nav-btn" id="nav-intelligence" aria-label="Intelligence">
@@ -10511,11 +10669,7 @@ if(pipe){
         </button>
         <!-- ⑤ ACTIONS -->
         <div class="az-nav-group">ACTIONS</div>
-        <button class="nav-btn" id="nav-operation">
-            <span class="nav-icon">⊞</span>
-            <span class="nav-label">Operation</span>
-            <span class="ds-notif-badge red" id="navOpsBadge" style="display:none"></span>
-        </button>
+        <!-- V-11-F F-7: 'Operation' nav removed (merged into Business & Work). DOM #page-operation retained hidden for legacy JS refs. -->
         <button class="nav-btn apex-master-only" id="nav-agents" role="tab" aria-selected="false" aria-label="Agents">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Agents</span>
@@ -10541,6 +10695,16 @@ if(pipe){
             <span class="nav-icon">⚖</span>
             <span class="nav-label">Govern</span>
         </button>
+        <!-- V-11-F F-9: SYSTEM → Advanced sub-group (Master-only research surfaces relocated from LIFE & WORK) -->
+        <div class="az-nav-group apex-master-only" style="opacity:.7;font-size:9px;margin-top:6px">ADVANCED</div>
+        <button class="nav-btn apex-master-only" id="nav-civilisation" aria-label="Civilisation">
+            <span class="nav-icon">⊛</span>
+            <span class="nav-label">Civilisation</span>
+        </button>
+        <button class="nav-btn apex-master-only" id="nav-reality" aria-label="Reality Model">
+            <span class="nav-icon">◍</span>
+            <span class="nav-label">Reality</span>
+        </button>
         <button class="nav-btn" id="nav-more" role="tab" aria-selected="false" style="display:none" aria-label="More pages">
             <span class="nav-icon" style="letter-spacing:-1px">•••</span>
             <span class="nav-label">More</span>
@@ -10551,23 +10715,25 @@ if(pipe){
 
 <script>
 (function() {
-    var pages = ['overview', 'command', 'operation', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'civilisation', 'reality', 'activity', 'agents', 'approvals', 'knowledge', 'intelligence', 'memory', 'governance'];
+    // V-11-F F-7: 'operation' removed (merged into business)
+    // V-11-F F-9: civilisation/reality moved out of LIFE & WORK swipe sequence to end (SYSTEM → Advanced)
+    var pages = ['overview', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'activity', 'agents', 'approvals', 'knowledge', 'intelligence', 'memory', 'governance', 'civilisation', 'reality'];
     var activePage = 'overview';
 
     var pageMeta = {
-        command:       { title:'Command',     sub:'AI · Interface · Control' },
-        overview:      { title:'Today',        sub:'What matters now' },
-        operation:     { title:'Operation',   sub:'Tasks · Agents · Schedules' },
-        system:        { title:'System',      sub:'Agents · Processes · Health' },
-        finance:       { title:'Finance',     sub:'Budgets · Investing · Planning' },
-        communication: { title:'Network',     sub:'Comms · Messages · Contacts' },
-        business:      { title:'Business',    sub:'Ideas · Shopify · Projects' },
-        health:        { title:'Health',      sub:'Health · Habits · Wellbeing' },
-        university:    { title:'University',  sub:'Coursework · Revision · Notes' },
-        occult:        { title:'Occult',      sub:'Research · Esoteric · Archive' },
-        research:      { title:'Research',    sub:'Intelligence · Sources · Data' },
-        civilisation:  { title:'Civilisation', sub:'Genome · Consensus · Clock · Domains' },
-        reality:       { title:'Reality',       sub:'Fabric · Claims · Health · Epistemic' },
+        command:       { title:'Command',        sub:'AI · Interface · Control' },
+        overview:      { title:'Today',          sub:'What matters now' },
+        operation:     { title:'Operation',      sub:'Tasks · Agents · Schedules' },
+        system:        { title:'System',         sub:'Agents · Processes · Health' },
+        finance:       { title:'Finance',        sub:'Budgets · Investing · Planning' },
+        communication: { title:'Communications', sub:'Email · Messaging · Calendar · Contacts' },
+        business:      { title:'Business & Work', sub:'Clients · Projects · Tasks · Approvals' },
+        health:        { title:'Health',         sub:'Sleep · Nutrition · Exercise · Wellbeing' },
+        university:    { title:'University',     sub:'Coursework · Revision · Notes' },
+        occult:        { title:'Specialised Research', sub:'Esoteric · Traditions · Knowledge Domains' },
+        research:      { title:'Research',       sub:'Intelligence · Sources · Data' },
+        civilisation:  { title:'Civilisation',   sub:'Advanced Analysis · System Model' },
+        reality:       { title:'Reality Model',  sub:'Advanced Analysis · System Model' },
         activity:      { title:'Activity',      sub:'Events · Observability · Live Feed' },
         agents:        { title:'Agents',        sub:'Status · Tasks · Authority · Runs' },
         approvals:     { title:'Approvals',     sub:'Pending · Actions · Governance' },
@@ -10577,6 +10743,11 @@ if(pipe){
         governance:    { title:'Governance',    sub:'Constitutional · Authority · Records' }
     };
     window.switchPage = function(name) {
+        // V-11-F F-3: Redirect Users away from Master-only pages (silent — do not leak existence)
+        var masterOnlyPages = ['occult', 'civilisation', 'reality'];
+        if (masterOnlyPages.indexOf(name) !== -1 && document.body.classList.contains('apex-role-user')) {
+            name = 'overview';
+        }
         document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
         document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
         var page = document.getElementById('page-' + name);
@@ -10584,6 +10755,7 @@ if(pipe){
         if (page) page.classList.add('active');
         if (btn)  btn.classList.add('active');
         activePage = name;
+        window.activePage = name; // V-11-F F-15: expose active page for polling guards
         var meta = pageMeta[name] || { title: name.toUpperCase(), sub: '' };
         var pgTitle = document.getElementById('topbar-pg-title');
         var pgSub   = document.getElementById('topbar-pg-sub');
@@ -14771,11 +14943,9 @@ function pomodoroReset() {
     if (btn) btn.textContent = '▶ Start';
 }
 
-// ── Keyboard shortcuts 1–6 ─────────────────────────────────────────────
+// V-11-F FD-03: Legacy 1–9 navigation removed. V-11 six-destination model is authoritative.
 document.addEventListener('keydown', function(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    var map = { '1':'command','2':'overview','3':'operation','4':'system','5':'communication','6':'finance','7':'business','8':'university','9':'health','0':'occult' };
-    if (map[e.key] && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); switchPage(map[e.key]); }
     if (e.key === 'Escape') closeAgentDrawer();
 });
 
@@ -14816,11 +14986,12 @@ function _onFirstDomainVisit(domain, fn) {
 }
 
 // ── Domain panel polling (no eager boot calls — triggered on first navigate) ──
-setInterval(function() { if (_domainVisited['operation']) { refreshCrmPanel(); refreshProjectsPanel(); refreshOpsDocumentsPanel(); refreshOpsProposalsPanel(); } }, 60000);
-setInterval(function() { if (_domainVisited['health']) { refreshJournalPanel(); refreshHabitTracker(); } }, 60000);
-setInterval(function() { if (_domainVisited['health']) { refreshPsychologyPanel(); } }, 120000);
-setInterval(function() { if (_domainVisited['university']) { refreshUniversityPanel(); } }, 120000);
-setInterval(function() { if (_domainVisited['communication']) { refreshContactsPanel(); } }, 90000);
+// V-11-F F-15: polling guards use window.activePage so intervals never fire while another page is active
+setInterval(function() { if (window.activePage !== 'business' && window.activePage !== 'operation') return; if (_domainVisited['operation'] || _domainVisited['business_ops']) { refreshCrmPanel(); refreshProjectsPanel(); refreshOpsDocumentsPanel(); refreshOpsProposalsPanel(); } }, 60000);
+setInterval(function() { if (window.activePage !== 'health') return; if (_domainVisited['health']) { refreshJournalPanel(); refreshHabitTracker(); } }, 60000);
+setInterval(function() { if (window.activePage !== 'health') return; if (_domainVisited['health']) { refreshPsychologyPanel(); } }, 120000);
+setInterval(function() { if (window.activePage !== 'university') return; if (_domainVisited['university']) { refreshUniversityPanel(); } }, 120000);
+setInterval(function() { if (window.activePage !== 'communication') return; if (_domainVisited['communication']) { refreshContactsPanel(); } }, 90000);
 
 // Interval cleanup
 window.addEventListener('unload', function() {
@@ -15034,7 +15205,7 @@ function toggleHelpOverlay() {
         if (e.key === 'Escape') { closeAgentDrawer(); var ho = document.getElementById('helpOverlay'); if (ho) ho.classList.remove('open'); return; }
         if (e.key === 'r' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
             e.preventDefault();
-            if (pageId === 'operation') { refreshCrmPanel(); refreshProjectsPanel(); refreshOpsDocumentsPanel(); refreshOpsProposalsPanel(); refreshTaskQueuePanel(); }
+            if (pageId === 'operation' || pageId === 'business') { refreshCrmPanel(); refreshProjectsPanel(); refreshOpsDocumentsPanel(); refreshOpsProposalsPanel(); refreshTaskQueuePanel(); } // V-11-F F-7
             else if (pageId === 'health') { refreshJournalPanel(); refreshHabitTracker(); refreshPsychologyPanel(); refreshUniversityPanel(); }
             else if (pageId === 'finance') { refreshExpensesPanel(); refreshSubscriptionsPanel(); }
             else if (pageId === 'communication') { refreshContactsPanel(); }
@@ -15042,7 +15213,7 @@ function toggleHelpOverlay() {
             return;
         }
         if (e.key === 'R' && e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (confirm('Run next pipeline feature?')) masterRunNext(); return; }
-        if (e.key === 'a' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('operation'); setTimeout(function() { var el = document.getElementById('permissionCards'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200); return; }
+        if (e.key === 'a' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('business'); setTimeout(function() { var el = document.getElementById('bizApprovalList'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200); return; } // V-11-F F-7: was 'operation'
         if (e.key === 'n' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('system'); return; }
         if (e.key === '/' && !e.shiftKey) { e.preventDefault(); var ci = document.getElementById('chatInput'); if (ci) ci.focus(); return; }
     });
@@ -16878,14 +17049,25 @@ function buildWeekCalendar() {
     }
 }
 
+function _commL0Update(emails) {
+    // V-11-F F-1: populate communication L0
+    var el = document.getElementById('communication-l0-summary');
+    if (!el) return;
+    if (!emails || !emails.length) { el.textContent = 'No recent messages.'; return; }
+    var unread = emails.filter(function(e){ return !e.read && !e.draft; }).length;
+    el.textContent = emails.length + ' message' + (emails.length===1?'':'s') + ' · ' + unread + ' unread.';
+}
+
 function fetchCommsEmails() {
     var el = document.getElementById('emailList');
     if (!el) return;
     fetch('/api/emails').then(function(r){return r.json();}).then(function(d){
         if (!d.ok || !d.emails || !d.emails.length) {
             el.innerHTML = '<div style="color:var(--text-faint);padding:20px;text-align:center;font-style:italic">No emails · inbox empty or not yet configured</div>';
+            _commL0Update([]);
             return;
         }
+        _commL0Update(d.emails);
         var groups = {};
         d.emails.forEach(function(e){
             var dt = e.date ? new Date(e.date).toLocaleDateString() : 'Unknown date';
@@ -16913,8 +17095,12 @@ function fetchCommsEmails() {
             });
         });
         el.innerHTML = html;
-    }).catch(function(){
-        el.innerHTML = '<div style="color:var(--text-faint);padding:20px;text-align:center;font-style:italic">Email not configured</div>';
+    }).catch(function(err){ // V-11-F F-2/F-5
+        if (window.setState) window.setState(el, 'failed', { message: 'Could not load your messages.', retryFn: 'fetchCommsEmails()' });
+        else el.innerHTML = '<div style="color:var(--text-faint);padding:20px;text-align:center;font-style:italic">Could not load your messages.</div>';
+        var l0 = document.getElementById('communication-l0-summary');
+        if (l0) l0.textContent = 'Messages currently unavailable.';
+        console.warn('[comms] emails fetch failed', err);
     });
 }
 
@@ -17067,12 +17253,25 @@ function initFinanceCharts() {
     }
 }
 
+function _finUpdateL0(costSummary, expenseCount) {
+    // V-11-F F-1: populate finance L0 from real fetch data
+    var el = document.getElementById('finance-l0-summary');
+    if (!el) return;
+    var parts = [];
+    if (costSummary && costSummary.totalCostUsd != null) parts.push('Recent AI spend $' + costSummary.totalCostUsd + '.');
+    if (typeof expenseCount === 'number') parts.push(expenseCount + ' expense' + (expenseCount === 1 ? '' : 's') + ' recorded.');
+    el.textContent = parts.length ? parts.join(' ') : 'Financial position — no data connected yet.';
+}
+window._finL0Cache = window._finL0Cache || {};
+
 function fetchFinanceData() {
     fetch('/api/finance/expenses?limit=20').then(function(r){return r.json();}).then(function(d){
         var tb = document.getElementById('expensesTbody');
         if (!tb) return;
         if (!d.ok || !d.expenses || !d.expenses.length) {
-            tb.innerHTML = '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--text-faint);font-style:italic">No expenses logged yet</td></tr>';
+            tb.innerHTML = '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--text-faint);font-style:italic">No expenses logged yet — voice-log via "Log expense" above</td></tr>';
+            window._finL0Cache.expenses = 0;
+            _finUpdateL0(window._finL0Cache.cost, 0);
             return;
         }
         var total = 0;
@@ -17084,7 +17283,13 @@ function fetchFinanceData() {
         if (expEl) expEl.textContent = '£'+total.toFixed(0);
         var ytdEl = document.getElementById('fin-expenses-ytd');
         if (ytdEl) ytdEl.textContent = '£'+total.toFixed(2);
-    }).catch(function(){});
+        window._finL0Cache.expenses = d.expenses.length;
+        _finUpdateL0(window._finL0Cache.cost, d.expenses.length);
+    }).catch(function(err){ // V-11-F F-2/F-5
+        var tb = document.getElementById('expensesTbody');
+        if (tb) tb.innerHTML = '<tr><td colspan="4" style="padding:14px;text-align:center"><span class="apex-empty"><span class="apex-state-dot failed"></span>Could not load recent expenses.</span> <button class="ds-btn xs" onclick="fetchFinanceData()">Retry</button></td></tr>';
+        console.warn('[finance] expenses fetch failed', err);
+    });
     fetch('/api/intelligence/cost-summary', {headers: buildApiHeaders()}).then(function(r){return r.json();}).then(function(d){
         if (!d.ok) return;
         var el = document.getElementById('finStatCredit');
@@ -17093,7 +17298,15 @@ function fetchFinanceData() {
         if (sub) sub.textContent = d.totalRuns+' runs · '+d.successRate+'% success';
         var panel = document.getElementById('financePanel');
         if (panel) panel.innerHTML = '<div><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="t-h3">Anthropic · total spend</span><span class="t-mono" style="color:var(--amber)">$'+(d.totalCostUsd||'0')+'</span></div><div class="ds-bar tall amber"><div class="ds-bar-fill" style="width:100%"></div></div></div>';
-    }).catch(function(){});
+        window._finL0Cache.cost = d;
+        _finUpdateL0(d, window._finL0Cache.expenses);
+    }).catch(function(err){ // V-11-F F-2/F-5
+        var panel = document.getElementById('financePanel');
+        if (panel && window.setState) window.setState(panel, 'failed', { message: 'Could not load AI cost summary.', retryFn: 'fetchFinanceData()' });
+        var sub = document.getElementById('finStatCreditSub');
+        if (sub) sub.textContent = 'unavailable';
+        console.warn('[finance] cost-summary fetch failed', err);
+    });
 }
 
 var _finPageInited = false;
@@ -17160,6 +17373,18 @@ function bizDrop(ev, newStage) {
     } catch(e) {}
 }
 
+window._bizL0Cache = window._bizL0Cache || {};
+function _bizL0Update() {
+    // V-11-F F-1: populate business L0 from approvals + tasks
+    var el = document.getElementById('business-l0-summary');
+    if (!el) return;
+    var c = window._bizL0Cache;
+    var parts = [];
+    if (typeof c.tasks === 'number') parts.push(c.tasks + ' task' + (c.tasks===1?'':'s') + ' active.');
+    if (typeof c.approvals === 'number') parts.push(c.approvals + ' pending approval' + (c.approvals===1?'':'s') + '.');
+    el.textContent = parts.length ? parts.join(' ') : 'No active business activity yet.';
+}
+
 function fetchBizApprovals() {
     fetch('/api/tasks/standing-approvals').then(function(r){return r.json();}).then(function(d){
         var list = document.getElementById('bizApprovalList');
@@ -17169,6 +17394,7 @@ function fetchBizApprovals() {
         var items = d.approvals || d.tasks || d.data || [];
         if (badge) badge.textContent = items.length;
         if (statEl) statEl.textContent = items.length;
+        window._bizL0Cache.approvals = items.length; _bizL0Update();
         if (!items.length) {
             list.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:10px 0">No pending approvals</div>';
             return;
@@ -17181,9 +17407,11 @@ function fetchBizApprovals() {
                 + '<button class="ds-btn xs red" data-fn="denyTask" data-args=\'["'+a.id+'"]\' >Deny</button>'
                 + '</div>';
         }).join('');
-    }).catch(function(){
+    }).catch(function(err){ // V-11-F F-2/F-5
         var list = document.getElementById('bizApprovalList');
-        if (list) list.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:10px 0">Approvals unavailable</div>';
+        if (list && window.setState) window.setState(list, 'failed', { message: 'Could not load pending approvals.', retryFn: 'fetchBizApprovals()' });
+        else if (list) list.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:10px 0">Could not load pending approvals.</div>';
+        console.warn('[biz] approvals fetch failed', err);
     });
 }
 
@@ -17204,7 +17432,11 @@ function fetchBizCrm() {
             return '<tr><td style="font-weight:600">'+(c.name||c.client_name||'—')+'</td><td><span class="ds-badge '+stageBadge+'">'+(c.stage||'lead')+'</span></td><td class="t-mono">'+(c.value?'£'+c.value:'—')+'</td><td style="color:var(--text-mute)">'+(c.follow_up||'—')+'</td><td><button class="ds-btn xs" data-fn="editCrmClient" data-args=\'["'+c.id+'"]\' >Edit</button></td></tr>';
         }).join('');
         if (_bizCrmView === 'kanban') buildKanban(clients);
-    }).catch(function(){});
+    }).catch(function(err){ // V-11-F F-2/F-5
+        var tb = document.getElementById('bizCrmTbody');
+        if (tb) tb.innerHTML = '<tr><td colspan="5" style="padding:14px;text-align:center"><span class="apex-empty"><span class="apex-state-dot failed"></span>Could not load client records.</span> <button class="ds-btn xs" onclick="fetchBizCrm()">Retry</button></td></tr>';
+        console.warn('[biz] crm fetch failed', err);
+    });
 }
 
 function fetchBizProjects() {
@@ -17219,9 +17451,11 @@ function fetchBizProjects() {
             var pct = p.progress || 0;
             return '<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600;color:var(--text)">'+(p.name||'Unnamed')+'</span><span class="ds-badge cyan" style="font-size:9px">'+(p.status||'active')+'</span></div><div class="ds-bar"><div class="ds-bar-fill cyan" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+pct+'% complete</div></div>';
         }).join('');
-    }).catch(function(){
+    }).catch(function(err){ // V-11-F F-2/F-5
         var panel = document.getElementById('bizProjectsPanel');
-        if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Projects unavailable</div>';
+        if (panel && window.setState) window.setState(panel, 'failed', { message: 'Could not load projects.', retryFn: 'fetchBizProjects()' });
+        else if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Could not load projects.</div>';
+        console.warn('[biz] projects fetch failed', err);
     });
 }
 
@@ -17230,7 +17464,9 @@ function fetchBizTasks() {
         var tasks = d.tasks || d.data || [];
         var panel = document.getElementById('bizTaskQueue');
         var statEl = document.getElementById('bizStatTasks');
-        if (statEl) statEl.textContent = tasks.filter(function(t){ return t.status!=='done'; }).length;
+        var active = tasks.filter(function(t){ return t.status!=='done'; }).length;
+        if (statEl) statEl.textContent = active;
+        window._bizL0Cache.tasks = active; _bizL0Update();
         if (!panel) return;
         var sorted = tasks.slice().sort(function(a,b){ var p={high:0,normal:1,low:2}; return (p[a.priority]||1)-(p[b.priority]||1); });
         if (!sorted.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No tasks queued</div>'; return; }
@@ -17238,9 +17474,11 @@ function fetchBizTasks() {
             var dotCol = t.priority==='high'?'red':t.priority==='low'?'cyan':'amber';
             return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span class="ds-dot '+dotCol+'"></span><span style="flex:1;font-size:12px;color:var(--text)">'+(t.description||t.title||'Task')+'</span><span class="ds-badge" style="font-size:9px;background:rgba(255,255,255,0.06)">'+(t.priority||'normal')+'</span></div>';
         }).join('');
-    }).catch(function(){
+    }).catch(function(err){ // V-11-F F-2/F-5
         var panel = document.getElementById('bizTaskQueue');
-        if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Tasks unavailable</div>';
+        if (panel && window.setState) window.setState(panel, 'failed', { message: 'Could not load tasks.', retryFn: 'fetchBizTasks()' });
+        else if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Could not load tasks.</div>';
+        console.warn('[biz] tasks fetch failed', err);
     });
 }
 
@@ -17259,13 +17497,20 @@ function refreshBizPage() {
     };
 })();
 
+// V-11-F F-7: 'operation' switchPage wrapper stubbed — Business & Work now owns Documents / Proposals via bizDocumentsPanel / bizProposalsPanel.
 (function(){
     var _prevOp = window.switchPage;
     window.switchPage = function(name) {
         if (typeof _prevOp === 'function') _prevOp(name);
-        if (name === 'operation') _onFirstDomainVisit('operation', function() {
-            refreshCrmPanel(); refreshProjectsPanel(); refreshOpsDocumentsPanel(); refreshOpsProposalsPanel();
+        if (name === 'business') _onFirstDomainVisit('business_ops', function() {
+            if (typeof refreshOpsDocumentsPanel === 'function') refreshOpsDocumentsPanel();
+            if (typeof refreshOpsProposalsPanel === 'function') refreshOpsProposalsPanel();
         });
+        // V-11-F F-1 Research L0 default text on entry
+        if (name === 'research') {
+            var l0 = document.getElementById('research-l0-summary');
+            if (l0 && (!l0.textContent || /Loading/.test(l0.textContent))) l0.textContent = 'No active research threads. Use the toolbar above to search, scrape, or crawl.';
+        }
     };
 })();
 
@@ -17286,19 +17531,34 @@ function updateUniPomoRing() {
     ring.setAttribute('stroke-dashoffset', (_uniPomoRingCirc * (1 - frac)).toFixed(2));
 }
 
+function _uniL0Update(count) {
+    // V-11-F F-1
+    var el = document.getElementById('university-l0-summary');
+    if (!el) return;
+    if (typeof count === 'number' && count > 0) el.textContent = count + ' module' + (count===1?'':'s') + ' active.';
+    else if (count === 0) el.textContent = 'No academic data loaded.';
+}
+
 function fetchUniModules() {
     fetch('/api/life/university/modules').then(function(r){return r.json();}).then(function(d){
         var mods = d.modules || [];
         var panel = document.getElementById('uniModulesPanelB');
         var statEl = document.getElementById('uniStatModules');
         if (statEl) statEl.textContent = mods.length;
+        _uniL0Update(mods.length);
         if (!panel) return;
         if (!mods.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No modules yet</div>'; return; }
         panel.innerHTML = mods.map(function(m){
             var pct = m.progress || 0;
             return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:600;color:var(--text)">'+(m.name||'Module')+'</span><span class="t-mono" style="color:var(--amber)">'+(m.grade||'—')+'</span></div><div class="ds-bar amber"><div class="ds-bar-fill" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+pct+'% complete</div></div>';
         }).join('');
-    }).catch(function(){});
+    }).catch(function(err){ // V-11-F F-2/F-5
+        var panel = document.getElementById('uniModulesPanelB');
+        if (panel && window.setState) window.setState(panel, 'failed', { message: 'Could not load your modules.', retryFn: 'fetchUniModules()' });
+        var l0 = document.getElementById('university-l0-summary');
+        if (l0) l0.textContent = 'Academic data unavailable.';
+        console.warn('[uni] modules fetch failed', err);
+    });
 }
 
 function fetchUniAssignments() {
@@ -17318,7 +17578,11 @@ function fetchUniAssignments() {
             var badgeCol = st==='submitted'?'green':st==='overdue'?'red':'amber';
             return '<tr><td style="font-weight:600">'+(a.title||'Assignment')+'</td><td class="t-mono" style="font-size:10px">'+due+'</td><td><span class="ds-badge '+badgeCol+'" style="font-size:9px">'+st+'</span></td></tr>';
         }).join('');
-    }).catch(function(){});
+    }).catch(function(err){ // V-11-F F-2/F-5
+        var tb = document.getElementById('uniAssignmentsTbodyB');
+        if (tb) tb.innerHTML = '<tr><td colspan="3" style="padding:12px;text-align:center"><span class="apex-empty"><span class="apex-state-dot failed"></span>Could not load assignments.</span> <button class="ds-btn xs" onclick="fetchUniAssignments()">Retry</button></td></tr>';
+        console.warn('[uni] assignments fetch failed', err);
+    });
 }
 
 function fetchUniFlashcards() {
@@ -17337,9 +17601,11 @@ function fetchUniFlashcards() {
                 prev.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--text);padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px">'+(cards[0].front||'?')+'</div><div style="font-size:10px;color:var(--text-mute);margin-top:6px">'+cards.length+' cards due · tap "Start session" to review</div>';
             }
         }
-    }).catch(function(){
+    }).catch(function(err){ // V-11-F F-2/F-5
         var prev = document.getElementById('uni-flashcard-preview');
-        if (prev) prev.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">Flashcards unavailable</div>';
+        if (prev && window.setState) window.setState(prev, 'failed', { message: 'Could not load flashcards.', retryFn: 'fetchUniFlashcards()' });
+        else if (prev) prev.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">Could not load flashcards.</div>';
+        console.warn('[uni] flashcards fetch failed', err);
     });
 }
 
@@ -17359,9 +17625,11 @@ function fetchUniReadingList() {
             var isDone = b.status==='completed';
             return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="width:14px;height:14px;border:1.5px solid '+(isDone?'var(--green)':'var(--border-strong)')+';border-radius:3px;background:'+(isDone?'var(--green)':'transparent')+';display:grid;place-items:center;flex-shrink:0">'+(isDone?'&#10003;':'')+'</span><span style="font-size:12px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(b.title||'Book')+'</span><span class="t-mono" style="font-size:10px;color:var(--text-mute)">'+(b.author||'')+'</span></div>';
         }).join('');
-    }).catch(function(){
+    }).catch(function(err){ // V-11-F F-2/F-5
         var panel = document.getElementById('uni-reading-list');
-        if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Reading list unavailable</div>';
+        if (panel && window.setState) window.setState(panel, 'failed', { message: 'Could not load reading list.', retryFn: 'fetchUniReadingList()' });
+        else if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Could not load reading list.</div>';
+        console.warn('[uni] reading list fetch failed', err);
     });
 }
 
@@ -17461,6 +17729,14 @@ function initHealthSleepChart(data) {
     });
 }
 
+function _healthL0Update(has) {
+    // V-11-F F-1
+    var el = document.getElementById('health-l0-summary');
+    if (!el) return;
+    if (has) el.textContent = 'Health data available.';
+    else el.textContent = 'No health data connected yet.';
+}
+
 function fetchHealthSleep() {
     fetch('/api/health/sleep?limit=7').then(function(r){return r.json();}).then(function(d){
         var entries = d.entries || d.data || [];
@@ -17470,6 +17746,7 @@ function fetchHealthSleep() {
             var last = entries[0];
             if (statEl) statEl.textContent = (last.hours||'—')+'h';
             if (lastEl) lastEl.textContent = 'Last night · '+(last.hours||'—')+'h · quality '+(last.quality||'—')+'/10';
+            _healthL0Update(true);
         }
         var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
         var chartData = entries.slice(0,7).reverse().map(function(e){
@@ -17480,8 +17757,13 @@ function fetchHealthSleep() {
             for (var i = chartData.length; i < 7; i++) chartData.unshift({ label:'—', hours:0 });
         }
         initHealthSleepChart(chartData);
-    }).catch(function(){
+    }).catch(function(err){ // V-11-F F-2/F-5
         initHealthSleepChart([{label:'M',hours:0},{label:'T',hours:0},{label:'W',hours:0},{label:'T',hours:0},{label:'F',hours:0},{label:'S',hours:0},{label:'S',hours:0}]);
+        var lastEl = document.getElementById('hlthSleepLast');
+        if (lastEl) lastEl.textContent = 'Could not load sleep data. Tap to retry.';
+        if (lastEl) lastEl.setAttribute('onclick','fetchHealthSleep()');
+        _healthL0Update(false);
+        console.warn('[health] sleep fetch failed', err);
     });
 }
 
@@ -17498,9 +17780,11 @@ function fetchHealthSupplements() {
             var taken = s.taken_today || false;
             return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px" data-fn="toggleSupplement" data-args=\'["'+s.id+'"]\' style="cursor:pointer"><span style="width:16px;height:16px;border:1.5px solid '+(taken?'var(--green)':'var(--border-strong)')+';border-radius:4px;background:'+(taken?'var(--green)':'transparent')+';color:#06080c;display:grid;place-items:center;font-size:11px;font-weight:700">'+(taken?'&#10003;':'')+'</span><span class="t-small" style="color:var(--text)">'+(s.name||'Supplement')+(s.dose?' &#183; '+s.dose:'')+'</span><span class="t-mono" style="color:'+(taken?'var(--green)':'var(--text-mute)')+'">'+( taken?'taken':'pending')+'</span></div>';
         }).join('');
-    }).catch(function(){
+    }).catch(function(err){ // V-11-F F-2/F-5
         var panel = document.getElementById('hlthSupplementList');
-        if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Supplements unavailable</div>';
+        if (panel && window.setState) window.setState(panel, 'empty', { message: 'No supplements logged yet.' });
+        else if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No supplements logged yet.</div>';
+        console.warn('[health] supplements fetch failed', err);
     });
 }
 
@@ -17518,7 +17802,11 @@ function fetchSpiritualSessions() {
             var dt = s.created_at ? new Date(s.created_at).toLocaleDateString() : '—';
             return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span class="ds-dot purple"></span><span style="flex:1;font-size:12px;color:var(--text)">'+(s.practice_type||'Practice')+'</span><span class="t-mono" style="font-size:10px;color:var(--text-mute)">'+(s.duration_minutes?s.duration_minutes+'m':'')+' &#183; '+dt+'</span></div>';
         }).join('');
-    }).catch(function(){});
+    }).catch(function(err){ // V-11-F F-2/F-5
+        var panel = document.getElementById('spiritualSessionsList');
+        if (panel && window.setState) window.setState(panel, 'failed', { message: 'Could not load research sessions.', retryFn: 'fetchSpiritualSessions()' });
+        console.warn('[spiritual] sessions fetch failed', err);
+    });
 }
 
 function fetchHealthMetrics() {
@@ -17530,7 +17818,18 @@ function fetchHealthMetrics() {
         if (w) w.textContent = metrics.weight ? metrics.weight+'kg' : '—';
         if (bp) bp.textContent = metrics.bp_systolic ? metrics.bp_systolic+'mmHg' : '—';
         if (hr) hr.textContent = metrics.hr ? metrics.hr+'bpm' : '—';
-    }).catch(function(){});
+        if (metrics.weight || metrics.bp_systolic || metrics.hr) _healthL0Update(true);
+    }).catch(function(err){ // V-11-F F-2/F-5
+        var w = document.getElementById('hlthWeight');
+        if (w) w.textContent = 'n/a';
+        var bp = document.getElementById('hlthBP');
+        if (bp) bp.textContent = 'n/a';
+        var hr = document.getElementById('hlthHR');
+        if (hr) hr.textContent = 'n/a';
+        var l0 = document.getElementById('health-l0-summary');
+        if (l0) l0.textContent = 'Could not load health metrics.';
+        console.warn('[health] metrics fetch failed', err);
+    });
 }
 
 function fetchHealthStudySessions() {
@@ -17634,18 +17933,34 @@ function saveOccultJournal() {
         }).catch(function(){});
 }
 
+function _occL0Update(count) {
+    // V-11-F F-1
+    var el = document.getElementById('occult-l0-summary');
+    if (!el) return;
+    if (typeof count === 'number' && count > 0) el.textContent = count + ' research ' + (count===1?'entry':'entries') + '.';
+    else if (count === 0) el.textContent = 'No research entries yet.';
+}
+
 function fetchOccEntries() {
     fetch('/api/life/journal/entries?limit=5').then(function(r){return r.json();}).then(function(d){
         var entries = d.entries || [];
         var panel = document.getElementById('occ-entries');
+        _occL0Update(entries.length);
         if (!panel) return;
-        if (!entries.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No entries yet</div>'; return; }
+        if (!entries.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No research entries yet.</div>'; return; }
         panel.innerHTML = entries.map(function(e){
             var dt = e.created_at ? new Date(e.created_at).toLocaleDateString() : '—';
             var preview = (e.entry_text||'').slice(0,80) + ((e.entry_text||'').length>80?'…':'');
             return '<div style="padding:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px"><div style="font-size:10px;color:var(--text-mute);margin-bottom:3px">'+dt+'</div><div style="font-size:12px;color:var(--text-mid)">'+preview+'</div></div>';
         }).join('');
-    }).catch(function(){});
+    }).catch(function(err){ // V-11-F F-2/F-5
+        var panel = document.getElementById('occ-entries');
+        if (panel && window.setState) window.setState(panel, 'failed', { message: 'Could not load research entries.', retryFn: 'fetchOccEntries()' });
+        else if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Could not load research entries.</div>';
+        var l0 = document.getElementById('occult-l0-summary');
+        if (l0) l0.textContent = 'Research entries unavailable.';
+        console.warn('[occult] entries fetch failed', err);
+    });
 }
 
 function fetchOccSessions() {
@@ -17673,7 +17988,12 @@ function fetchOccSessions() {
             var dt = (s.created_at||'').split('T')[0];
             return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span class="ds-dot purple"></span><span style="flex:1;font-size:12px;color:var(--text)">'+(s.practice_type||'session')+'</span><span class="t-mono" style="font-size:10px;color:var(--text-mute)">'+(s.duration_minutes?s.duration_minutes+'m':'')+' &#183; '+dt+'</span></div>';
         }).join('');
-    }).catch(function(){});
+    }).catch(function(err){ // V-11-F F-2/F-5
+        var panel = document.getElementById('occ-sessions');
+        if (panel && window.setState) window.setState(panel, 'failed', { message: 'Could not load research sessions.', retryFn: 'fetchOccSessions()' });
+        else if (panel) panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">Could not load research sessions.</div>';
+        console.warn('[occult] sessions fetch failed', err);
+    });
 }
 
 var _occMoodChart = null;
@@ -18554,6 +18874,32 @@ document.addEventListener('DOMContentLoaded',function(){
     setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 3200);
   };
 
+  // ── V-11-F F-11 / FD-04: Emergency Access Protocol UI handler ────────
+  // NOTE: Backend enforcement is a separate authorisation gate.
+  // This function currently only validates the form and shows the state contract.
+  // Actual server execution requires F-13 backend implementation authorisation.
+  window.initiateEmergencyAccess = function() {
+    var user = (document.getElementById('emergency-access-user') || {}).value || '';
+    var reason = (document.getElementById('emergency-access-reason') || {}).value || '';
+    var confirm = document.getElementById('emergency-access-confirm');
+    if (!user.trim()) { window._v11fShowEmergencyResult('error', 'A user account is required.'); return; }
+    if (!reason.trim() || reason.trim().length < 20) { window._v11fShowEmergencyResult('error', 'A detailed reason (minimum 20 characters) is required.'); return; }
+    if (!confirm || !confirm.checked) { window._v11fShowEmergencyResult('error', 'You must acknowledge the audit and notification requirement.'); return; }
+    // UI-only: show "pending backend authorisation" state
+    window._v11fShowEmergencyResult('info', 'Emergency access protocol is pending backend implementation authorisation (V-11-F F-13 gate). Access has NOT been granted. This UI will be functional once backend enforcement is implemented.');
+  };
+  window._v11fShowEmergencyResult = function(type, msg) {
+    var el = document.getElementById('emergency-access-result');
+    if (!el) return;
+    var colours = { error: 'rgba(239,68,68,0.15)', info: 'rgba(99,102,241,0.15)', success: 'rgba(74,222,128,0.12)' };
+    var borders = { error: 'rgba(239,68,68,0.25)', info: 'rgba(99,102,241,0.25)', success: 'rgba(74,222,128,0.2)' };
+    el.style.background = colours[type] || colours.info;
+    el.style.border = '1px solid ' + (borders[type] || borders.info);
+    el.style.color = 'rgba(232,244,255,0.8)';
+    el.textContent = msg;
+    el.style.display = 'block';
+  };
+
   // E-11 keyboard shortcuts: V (voice), Escape (collapse cards / cancel voice)
   document.addEventListener('keydown', function(e){
     var target = e.target;
@@ -19069,7 +19415,7 @@ window.apexFileDropHandler = function(e){
     <div class="more-sheet-title">Pages</div>
     <div class="more-sheet-grid">
         <button class="more-sheet-btn" id="more-nav-overview"      data-fn="moreNavTo" data-args='["overview"]'      aria-label="Overview"><span class="more-sheet-icon">◈</span><span class="more-sheet-label">Overview</span></button>
-        <button class="more-sheet-btn" id="more-nav-operation"     data-fn="moreNavTo" data-args='["operation"]'     aria-label="Operation"><span class="more-sheet-icon">⊞</span><span class="more-sheet-label">Ops</span></button>
+        <!-- V-11-F F-7: 'Operation' sheet entry removed; workflows live under Business & Work -->
         <button class="more-sheet-btn" id="more-nav-system"        data-fn="moreNavTo" data-args='["system"]'        aria-label="System"><span class="more-sheet-icon">◉</span><span class="more-sheet-label">System</span></button>
         <button class="more-sheet-btn" id="more-nav-finance"       data-fn="moreNavTo" data-args='["finance"]'       aria-label="Finance"><span class="more-sheet-icon">◎</span><span class="more-sheet-label">Finance</span></button>
         <button class="more-sheet-btn" id="more-nav-communication" data-fn="moreNavTo" data-args='["communication"]' aria-label="Communication"><span class="more-sheet-icon">✉</span><span class="more-sheet-label">Comms</span></button>
@@ -19090,7 +19436,8 @@ window.apexFileDropHandler = function(e){
 <script>
 /* ── Mobile enhancements: More Sheet, PTT, orb hold, page name ── */
 (function() {
-    var _morePages = ['overview','operation','system','finance','communication','business',
+    // V-11-F F-7 / F-9: 'operation' removed; civilisation/reality remain reachable via System → Advanced
+    var _morePages = ['overview','system','finance','communication','business',
                       'health','university','occult','research','civilisation','reality',
                       'knowledge','intelligence','memory','governance'];
     var _isMobile  = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
@@ -19359,15 +19706,27 @@ window.apexFileDropHandler = function(e){
                 var ct = document.getElementById('civCTotal');    if (ct) ct.textContent = cc.total   != null ? cc.total   : '—';
                 var cp = document.getElementById('civCPending');  if (cp) cp.textContent = cc.pending != null ? cc.pending : '—';
                 var ca2= document.getElementById('civCApproved'); if (ca2) ca2.textContent = cc.approved != null ? cc.approved : '—';
-            }).catch(function(e) { console.warn('[civ] status error', e); });
+            }).catch(function(e) { // V-11-F F-2/F-5
+                console.warn('[civ] status error', e);
+                var gate = document.getElementById('civGateLabel');
+                if (gate) { gate.textContent = 'UNAVAILABLE'; gate.style.color = '#ef4444'; }
+            });
         fetch('/api/civilisation/domains', { headers: h })
             .then(function(r) { return r.json(); })
             .then(function(d) { var grid = document.getElementById('civDomainsGrid'); if (!grid || !d.domains) return; grid.innerHTML = d.domains.map(_buildDomainCard).join(''); })
-            .catch(function() {});
+            .catch(function(e) { // V-11-F F-2/F-5
+                var grid = document.getElementById('civDomainsGrid');
+                if (grid && window.setState) window.setState(grid, 'failed', { message: 'Could not load civilisation analysis.', retryFn: 'window.civRefresh()' });
+                console.warn('[civ] domains error', e);
+            });
         fetch('/api/civilisation/consensus', { headers: h })
             .then(function(r) { return r.json(); })
             .then(function(d) { var list = document.getElementById('civSessionsList'); if (!list || !Array.isArray(d.sessions)) return; list.innerHTML = d.sessions.length ? d.sessions.slice(-10).reverse().map(_buildSessionRow).join('') : '<div style="color:var(--text-mute);font-size:11px">No sessions</div>'; })
-            .catch(function() {});
+            .catch(function(e) { // V-11-F F-2/F-5
+                var list = document.getElementById('civSessionsList');
+                if (list && window.setState) window.setState(list, 'failed', { message: 'Could not load civilisation analysis.', retryFn: 'window.civRefresh()' });
+                console.warn('[civ] consensus error', e);
+            });
     };
     window.civOpenPropose = function() {
         var type = prompt('Session type (LAW_CHANGE / CONSTITUTIONAL_AMENDMENT / DOMAIN_OPERATION / AUTONOMY_GRANT):');
@@ -19512,7 +19871,7 @@ window.apexFileDropHandler = function(e){
                     '</div>';
                 }).join('');
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 2. Observer Health
@@ -19532,7 +19891,7 @@ window.apexFileDropHandler = function(e){
                     '</div>';
                 }).join('');
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 3. Belief-Reality Gap
@@ -19555,7 +19914,7 @@ window.apexFileDropHandler = function(e){
                     '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8893a0">Residual</span><span style="font-size:11px;color:#ff4757">' + (d.residual_count||0) + '</span></div>' +
                 '</div>';
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 4. Epistemic Capital
@@ -19577,7 +19936,7 @@ window.apexFileDropHandler = function(e){
                 }).join('<div style="height:7px"></div>') +
                 (d.composite !== undefined ? '<div style="margin-top:12px;text-align:center;font:700 18px/1 \'JetBrains Mono\',monospace;color:#00e5b4">' + (d.composite*100).toFixed(1) + '% <span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">COMPOSITE</span></div>' : '');
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 5. Attention Queue
@@ -19601,7 +19960,7 @@ window.apexFileDropHandler = function(e){
                     '</div>';
                 }).join('');
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 6. Understanding Scores
@@ -19625,7 +19984,7 @@ window.apexFileDropHandler = function(e){
                 }).join('<div style="height:4px"></div>') +
                 (d.composite !== undefined ? '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);text-align:center;font:700 16px/1 \'JetBrains Mono\',monospace;color:#00e5b4">' + (d.composite*100).toFixed(1) + '%</div>' : '');
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 7. Intent Attribution
@@ -19648,7 +20007,7 @@ window.apexFileDropHandler = function(e){
                     '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8893a0">Pending</span><span style="font-size:11px;color:#f5a623">' + (d.pending||0) + '</span></div>' +
                 '</div>';
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 8. Reality Claims Browser
@@ -19672,7 +20031,7 @@ window.apexFileDropHandler = function(e){
                     '</div>';
                 }).join('');
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 9. Counterfactual Worlds
@@ -19695,7 +20054,7 @@ window.apexFileDropHandler = function(e){
                     '</div>';
                 }).join('');
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 10. Meta-Model Quality
@@ -19717,7 +20076,7 @@ window.apexFileDropHandler = function(e){
                     '</div>';
                 }).join('');
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 11. Mental Models
@@ -19739,7 +20098,7 @@ window.apexFileDropHandler = function(e){
                     '</div>';
                 }).join('');
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // 12. Civilization Self-Model
@@ -19764,7 +20123,7 @@ window.apexFileDropHandler = function(e){
                 }).join('') +
                 (d.overall_confidence !== undefined ? '<div style="margin-top:10px;text-align:center;font:700 15px/1 \'JetBrains Mono\',monospace;color:#00e5b4">' + (d.overall_confidence*100).toFixed(1) + '% <span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">confidence</span></div>' : '');
             })
-            .catch(function() { el.innerHTML = '<span style="color:#ff4757;font-size:11px">Error</span>'; });
+            .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
 
     // Master load (called by switchPage and refreshSlow)
