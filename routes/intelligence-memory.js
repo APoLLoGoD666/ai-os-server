@@ -398,8 +398,12 @@ router.get('/intelligence/graph/neighborhood/:nodeId', async (req, res) => {
 
 // ── Health ────────────────────────────────────────────────────────────────────
 
-// GET  /api/intelligence/health
-router.get('/intelligence/health', async (req, res) => {
+// V-11-G P0-2: This route previously registered as GET /intelligence/health, which
+// silently shadowed the civilization-health route in routes/intelligence.js under
+// Express flat-mount order. Renamed to /intelligence/memory-health so the two
+// endpoints coexist without ambiguity.
+// GET  /api/intelligence/memory-health
+router.get('/intelligence/memory-health', async (req, res) => {
     try {
         const [lifecycle, contradictions, knowledge, skills, improvements] = await Promise.allSettled([
             intel.lifecycleEngine.getStats(),

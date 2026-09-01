@@ -173,6 +173,110 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
     .lw-l0-summary { font-size: 14px; }
 }
 
+/* ── V-11-G: Intelligence experience ─────────────────────────────────── */
+.int-lesson-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font: 400 13px/1.5 Inter, sans-serif;
+    color: rgba(232,244,255,0.8);
+}
+.int-lesson-date {
+    font: 400 11px/1 'JetBrains Mono', monospace;
+    color: rgba(255,255,255,0.3);
+    flex-shrink: 0;
+}
+.int-opp-evidence-trigger {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: 500 11px/1 Inter, sans-serif;
+    color: #6366f1;
+    margin-top: 6px;
+    padding: 2px 0;
+}
+.int-opp-evidence {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+.int-ev-row {
+    font: 400 12px/1.5 Inter, sans-serif;
+    color: rgba(255,255,255,0.5);
+    padding: 3px 0;
+}
+.kn-coverage-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font: 400 13px/1.4 Inter, sans-serif;
+}
+.kn-coverage-domain {
+    color: rgba(232,244,255,0.8);
+}
+.kn-coverage-gap {
+    color: rgba(255,255,255,0.35);
+    font-size: 12px;
+}
+.kn-coverage-gap-active {
+    color: #f97316;
+}
+.apex-confidence-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: 500 11px/1 Inter, sans-serif;
+}
+.apex-confidence-badge .dot { font-size: 10px; }
+.apex-priority-badge {
+    display: inline-flex;
+    align-items: center;
+    font: 500 11px/1 Inter, sans-serif;
+    color: rgba(232,244,255,0.65);
+}
+.int-mem-personal-note {
+    padding: 8px 12px;
+    background: rgba(94,106,210,0.05);
+    border: 1px solid rgba(94,106,210,0.15);
+    border-radius: 6px;
+    font: 400 11px/1.5 Inter, sans-serif;
+    color: rgba(232,244,255,0.55);
+    margin-bottom: 10px;
+}
+/* V-11-G G-14: Intelligence desktop layout (uses !important because HTML panels
+   carry an inline display:flex fallback; media queries must override.) */
+@media (min-width: 1280px) {
+    #page-intelligence .int-panels {
+        display: grid !important;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+    }
+}
+@media (min-width: 1024px) {
+    #page-memory .mem-panels,
+    #page-knowledge .kn-panels {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+}
+@media (max-width: 767px) {
+    #page-intelligence .int-panels,
+    #page-memory .mem-panels,
+    #page-knowledge .kn-panels {
+        display: flex !important;
+        flex-direction: column;
+        gap: 12px;
+    }
+}
+
 /* ── Body & app shell ───────────────────────────────────────────────── */
 html, body {
     background: var(--bg);
@@ -7072,6 +7176,23 @@ select:focus {
                         </div>
                     </section>
 
+                    <!-- V-11-G O-2: Civilization Health relocated from Intelligence to SYSTEM (Master-only technical view) -->
+                    <section id="system-civilization-health" class="lw-section apex-master-only" style="margin-top:8px">
+                        <div class="lw-section-title">Civilization Health</div>
+                        <div class="ds-panel" role="region" aria-label="Civilization health">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot green" id="intHealthDot"></span>
+                                    <span class="t-label">Civilization Health</span>
+                                </div>
+                                <span style="font-size:10px;color:#8893a0" id="intHealthScore">—</span>
+                            </div>
+                            <div id="intHealthPanel" data-apex-state="loading" style="display:flex;flex-direction:column;gap:6px" aria-busy="true">
+                                <div class="skel skel-row skel-wide"></div>
+                            </div>
+                        </div>
+                    </section>
+
                 </div>
             </div>
 
@@ -10329,12 +10450,12 @@ if(pipe){
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">FACTS · EVIDENCE · GAPS · COVERAGE</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:10px">
-                        <button class="ds-btn xs" data-fn="knowledgeRefresh">↻ Refresh</button>
+                        <button class="ds-btn xs" data-fn="knowledgeRefresh" aria-label="Refresh knowledge">↻ Refresh</button>
                     </div>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:16px;margin-top:18px">
+                <div class="kn-panels" style="display:flex;flex-direction:column;gap:16px;margin-top:18px">
                     <!-- Coverage state -->
-                    <div class="ds-panel">
+                    <section role="region" aria-label="Knowledge coverage state" class="ds-panel">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot cyan"></span>
@@ -10342,12 +10463,22 @@ if(pipe){
                             </div>
                             <span style="font-size:10px;color:#8893a0" id="knCoverageClassification">—</span>
                         </div>
-                        <div id="knCoverageStats" style="display:flex;gap:18px;flex-wrap:wrap;padding:10px 0">
+                        <div id="knCoverageStats" style="display:flex;gap:18px;flex-wrap:wrap;padding:10px 0" aria-busy="true">
                             <div class="skel skel-row skel-wide"></div>
                         </div>
-                    </div>
+                    </section>
+                    <!-- V-11-G G-7: Per-domain coverage -->
+                    <section role="region" aria-label="Knowledge coverage by domain" class="ds-panel" id="knCoveragePanel" data-apex-state="loading">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Knowledge Coverage</span>
+                            </div>
+                        </div>
+                        <div id="knCoverageList" aria-busy="true"></div>
+                    </section>
                     <!-- Knowledge items -->
-                    <div class="ds-panel">
+                    <section role="region" aria-label="Knowledge items" class="ds-panel">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot green"></span>
@@ -10356,17 +10487,17 @@ if(pipe){
                             <span style="font-size:10px;color:#8893a0" id="knItemCount">—</span>
                         </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-                            <input id="knSearchInput" type="text" placeholder="Search facts…" style="flex:1;min-width:120px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:5px 10px;font-size:11px;color:rgba(232,244,255,0.85);outline:none" />
-                            <button class="ds-btn xs" data-fn="knowledgeSearch">Search</button>
+                            <input id="knSearchInput" type="text" placeholder="Search facts…" aria-label="Search knowledge facts" style="flex:1;min-width:120px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:5px 10px;font-size:11px;color:rgba(232,244,255,0.85);outline:none" />
+                            <button class="ds-btn xs" data-fn="knowledgeSearch" aria-label="Search facts">Search</button>
                         </div>
-                        <div id="knItemList" style="display:flex;flex-direction:column;gap:8px">
+                        <div id="knItemList" data-apex-state="loading" style="display:flex;flex-direction:column;gap:8px" aria-busy="true">
                             <div class="skel skel-row skel-wide"></div>
                             <div class="skel skel-row skel-med"></div>
                             <div class="skel skel-row skel-wide"></div>
                         </div>
-                    </div>
+                    </section>
                     <!-- Open gaps -->
-                    <div class="ds-panel">
+                    <section role="region" aria-label="Knowledge gaps" class="ds-panel">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot amber"></span>
@@ -10374,10 +10505,10 @@ if(pipe){
                             </div>
                             <span style="font-size:10px;color:#8893a0" id="knGapCount">—</span>
                         </div>
-                        <div id="knGapList" style="display:flex;flex-direction:column;gap:6px">
+                        <div id="knGapList" data-apex-state="loading" style="display:flex;flex-direction:column;gap:6px" aria-busy="true">
                             <div class="skel skel-row skel-wide"></div>
                         </div>
-                    </div>
+                    </section>
                 </div>
             </div><!-- #page-knowledge -->
 
@@ -10386,15 +10517,15 @@ if(pipe){
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">INTELLIGENCE</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">BRIEFING · OPPORTUNITIES · HEALTH</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">BRIEFING · OPPORTUNITIES · LESSONS</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:10px">
-                        <button class="ds-btn xs" data-fn="intelligenceRefresh">↻ Refresh</button>
+                        <button class="ds-btn xs" data-fn="intelligenceRefresh" aria-label="Refresh intelligence">↻ Refresh</button>
                     </div>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:16px;margin-top:18px">
-                    <!-- Executive briefing -->
-                    <div class="ds-panel">
+                <div class="int-panels" style="display:flex;flex-direction:column;gap:16px;margin-top:18px">
+                    <!-- Executive briefing (Master-scoped content; stub shown to Users via _intLoadBriefing) -->
+                    <section role="region" aria-label="Strategic Briefing" class="ds-panel apex-master-only" id="intBriefingSection">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot purple"></span>
@@ -10402,26 +10533,24 @@ if(pipe){
                             </div>
                             <span style="font-size:9px;color:#8893a0;font-family:'JetBrains Mono',monospace" id="intBriefingAge">—</span>
                         </div>
-                        <div id="intBriefingPanel" style="display:flex;flex-direction:column;gap:10px">
+                        <div id="intBriefingPanel" data-apex-state="loading" style="display:flex;flex-direction:column;gap:10px" aria-busy="true">
                             <div class="skel skel-row skel-wide"></div>
                             <div class="skel skel-row skel-med"></div>
                         </div>
-                    </div>
-                    <!-- Civilization health -->
-                    <div class="ds-panel">
+                    </section>
+                    <!-- V-11-G G-6: Recent Lessons -->
+                    <section role="region" aria-label="Recent Lessons" class="ds-panel" id="intLessonsPanel" data-apex-state="loading">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
-                                <span class="ds-dot green" id="intHealthDot"></span>
-                                <span class="t-label">Civilization Health</span>
+                                <span class="ds-dot amber"></span>
+                                <span class="t-label">What APEX Learned</span>
                             </div>
-                            <span style="font-size:10px;color:#8893a0" id="intHealthScore">—</span>
+                            <span style="font-size:10px;color:#8893a0">Recent lessons and adjustments</span>
                         </div>
-                        <div id="intHealthPanel" style="display:flex;flex-direction:column;gap:6px">
-                            <div class="skel skel-row skel-wide"></div>
-                        </div>
-                    </div>
+                        <div id="intLessonsList" aria-busy="true"></div>
+                    </section>
                     <!-- Opportunities -->
-                    <div class="ds-panel">
+                    <section role="region" aria-label="Detected Opportunities" class="ds-panel">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot cyan"></span>
@@ -10429,14 +10558,10 @@ if(pipe){
                             </div>
                             <span style="font-size:10px;color:#8893a0" id="intOppsCount">—</span>
                         </div>
-                        <div id="intOppsList" style="display:flex;flex-direction:column;gap:8px">
+                        <div id="intOppsList" data-apex-state="loading" style="display:flex;flex-direction:column;gap:8px" aria-busy="true">
                             <div class="skel skel-row skel-wide"></div>
                         </div>
-                    </div>
-                    <!-- Boundary note (UX-12 invariant) -->
-                    <div style="padding:10px 12px;background:rgba(99,102,241,0.04);border:1px solid rgba(99,102,241,0.15);border-radius:8px;font-size:10px;color:#8893a0;line-height:1.5">
-                        <strong style="color:rgba(232,244,255,0.6)">Intelligence boundary:</strong> KNOWN → INFERRED → INTERPRETED → RECOMMENDED → PROPOSED → APPROVAL REQUIRED → ACTION. Intelligence does not grant authority. Recommendations require explicit approval.
-                    </div>
+                    </section>
                 </div>
             </div><!-- #page-intelligence -->
 
@@ -10445,13 +10570,13 @@ if(pipe){
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">MEMORY</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">EPISODIC · SEMANTIC · HEALTH</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">WHAT APEX REMEMBERS &middot; FACTS APEX KNOWS</div>
                     </div>
-                    <button class="ds-btn cyan" data-fn="memoryRefresh">↻ Refresh</button>
+                    <button class="ds-btn cyan" data-fn="memoryRefresh" aria-label="Refresh memory">↻ Refresh</button>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:10px">
+                <div class="mem-panels" style="display:flex;flex-direction:column;gap:10px">
                     <!-- Memory health overview (GET /api/memory/health) -->
-                    <div class="ds-panel">
+                    <section role="region" aria-label="Memory health" class="ds-panel">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot green" id="memHealthDot"></span>
@@ -10459,39 +10584,39 @@ if(pipe){
                             </div>
                             <span style="font-size:10px;color:#8893a0" id="memHealthTs">—</span>
                         </div>
-                        <div id="memHealthPanel" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+                        <div id="memHealthPanel" data-apex-state="loading" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px" aria-busy="true">
                             <div class="skel skel-row skel-wide"></div>
                         </div>
-                    </div>
-                    <!-- Episodic memories (GET /api/memory/episodic/recent) -->
-                    <div class="ds-panel">
+                    </section>
+                    <!-- Episodic memories (GET /api/memory/episodic/recent) — personal to the current identity -->
+                    <section role="region" aria-label="Your memory" class="ds-panel">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot cyan"></span>
-                                <span class="t-label">Recent Episodes</span>
+                                <span class="t-label">What APEX Remembers</span>
                             </div>
                             <span style="font-size:10px;color:#8893a0" id="memEpisodicCount">—</span>
                         </div>
-                        <div id="memEpisodicList" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto">
+                        <!-- V-11-G G-1: personal-memory visual note -->
+                        <div class="int-mem-personal-note">Personal to you. APEX does not share this memory with other accounts.</div>
+                        <div id="memEpisodicList" data-apex-state="loading" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto" aria-busy="true">
                             <div class="skel skel-row skel-wide"></div>
                         </div>
-                    </div>
+                    </section>
                     <!-- Semantic facts (GET /api/memory/semantic/search) -->
-                    <div class="ds-panel">
+                    <section role="region" aria-label="Facts APEX knows about you" class="ds-panel">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot amber"></span>
-                                <span class="t-label">Semantic Facts</span>
+                                <span class="t-label">Facts APEX Knows About You</span>
                             </div>
                             <div style="display:flex;gap:6px;align-items:center">
-                                <input id="memSemanticSearch" type="text" placeholder="Search facts…" style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,212,255,0.12);border-radius:6px;color:#e8f4ff;font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 8px;width:160px" oninput="if(typeof memorySearch==='function')memorySearch()" />
+                                <input id="memSemanticSearch" type="text" placeholder="Search facts APEX knows about you…" aria-label="Search facts APEX knows about you" data-input="memorySearch" style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,212,255,0.12);border-radius:6px;color:#e8f4ff;font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 8px;width:220px" />
                                 <span style="font-size:10px;color:#8893a0" id="memSemanticCount">—</span>
                             </div>
                         </div>
-                        <div id="memSemanticList" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto">
-                            <div class="skel skel-row skel-wide"></div>
-                        </div>
-                    </div>
+                        <div id="memSemanticList" data-apex-state="empty" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
+                    </section>
                     <!-- Read-only boundary note (UX-15) -->
                     <div style="padding:10px 12px;background:rgba(255,159,67,0.04);border:1px solid rgba(255,159,67,0.15);border-radius:8px;font-size:10px;color:#8893a0;line-height:1.5">
                         <strong style="color:rgba(232,244,255,0.6)">Read-only surface:</strong> Correction and deletion of memory records are not yet available in this interface. This view is inspection-only.
@@ -20497,22 +20622,106 @@ window.apexFileDropHandler = function(e){
     window.apexConfirmApproval = apexConfirmApproval;
     window.apexDeclineApproval = apexDeclineApproval;
 
+    /* ── V-11-G: shared utilities ───────────────────────────────────── */
+
+    // V-11-G G-8/G-11: escape helper alias for intelligence/memory/knowledge surfaces.
+    // Uses the existing dashboard escapeHtml() defined at ~line 11579.
+    function _escapeHtml(s) {
+        try { return (typeof escapeHtml === 'function') ? escapeHtml(s) : String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+        catch (_) { return ''; }
+    }
+
+    // V-11-G G-4: Decision 10 canonical confidence badge.
+    function _apexConfidenceBadge(value) {
+        if (value === null || value === undefined) return '<span class="apex-confidence-badge apex-confidence-unknown"><span class="dot" style="color:rgba(255,255,255,0.25)">—</span> Unknown</span>';
+        var v = typeof value === 'string' ? parseFloat(value) : value;
+        if (isNaN(v)) return '<span class="apex-confidence-badge apex-confidence-unknown"><span class="dot" style="color:rgba(255,255,255,0.25)">●</span> Unknown</span>';
+        var color, label;
+        if (v >= 0.85)      { color = '#00d4ff'; label = 'High'; }
+        else if (v >= 0.65) { color = '#0066ff'; label = 'Good'; }
+        else if (v >= 0.45) { color = '#f59e0b'; label = 'Medium'; }
+        else if (v >= 0.25) { color = '#f97316'; label = 'Low'; }
+        else                { color = '#ef4444'; label = 'Very Low'; }
+        return '<span class="apex-confidence-badge"><span class="dot" style="color:' + color + '">●</span> ' + label + '</span>';
+    }
+
+    // V-11-G: derive confidence 0–1 from tier text for legacy responses.
+    function _tierToScore(tier) {
+        if (!tier) return null;
+        var t = String(tier).toUpperCase();
+        if (t === 'VERY HIGH') return 0.95;
+        if (t === 'HIGH')      return 0.85;
+        if (t === 'GOOD')      return 0.70;
+        if (t === 'MEDIUM')    return 0.55;
+        if (t === 'LOW')       return 0.35;
+        if (t === 'VERY LOW')  return 0.15;
+        if (t === 'UNCERTAIN') return 0.15;
+        return null;
+    }
+
+    // V-11-G G-4: Priority badge for opportunity composite_score (0-100).
+    function _apexPriorityBadge(score100) {
+        if (score100 === null || score100 === undefined || isNaN(score100)) return '<span class="apex-priority-badge">Priority: Unknown</span>';
+        if (score100 >= 75) return '<span class="apex-priority-badge" style="color:#00d4ff">Priority: High</span>';
+        if (score100 >= 45) return '<span class="apex-priority-badge" style="color:#f59e0b">Priority: Medium</span>';
+        return '<span class="apex-priority-badge" style="color:rgba(232,244,255,0.5)">Priority: Low</span>';
+    }
+
+    // V-11-G G-8: enum → human vocabulary map.
+    var _APEX_KNOWLEDGE_VOCAB = {
+        FULLY_KNOWN:     'Well established',
+        PARTIALLY_KNOWN: 'Partially known',
+        CONFLICTING:     'Sources disagree',
+        UNKNOWN:         'Unknown',
+        SUFFICIENT:      'Well covered',
+        PARTIAL:         'Partial coverage',
+        DEGRADED:        'Coverage weakening',
+        BLOCKED:         'Waiting for missing information',
+        BLOCKING:        'Blocking a decision',
+        OPEN:            'Open',
+        RESOLVED:        'Resolved',
+        IN_RESOLUTION:   'Being resolved',
+    };
+    function _apexVocab(v) {
+        if (v === null || v === undefined) return '';
+        var k = String(v).toUpperCase().replace(/\s+/g, '_');
+        return _APEX_KNOWLEDGE_VOCAB[k] || String(v);
+    }
+
+    // V-11-G G-10: memory objective → human label.
+    function _apexMemoryLabel(record) {
+        if (!record) return 'Interaction recorded';
+        var obj = record.objective || record.summary || record.description || record.type || '';
+        if (typeof obj !== 'string') return 'Interaction recorded';
+        if (obj.indexOf('voice-task-')      === 0) return 'APEX handled a voice request';
+        if (obj.indexOf('agent-run-')       === 0) return 'Agent completed a task';
+        if (obj.indexOf('consolidation-')   === 0) return 'Memory consolidated';
+        if (obj === 'reflexion')                   return 'APEX reflected on recent interactions';
+        return obj || 'Interaction recorded';
+    }
+
     /* ── KNOWLEDGE PAGE (UX-11) ─────────────────────────────────────── */
 
     function _knRenderItem(item) {
         var stateColor = { FULLY_KNOWN:'#27ae60', PARTIALLY_KNOWN:'#ff9f43', CONFLICTING:'#ff4d6d', UNKNOWN:'#8893a0' };
-        var tierColor  = { 'VERY HIGH':'#27ae60', HIGH:'#3fd29a', MEDIUM:'#ff9f43', LOW:'#ff8c42', UNCERTAIN:'#ff4d6d', UNKNOWN:'#8893a0' };
         var sc = stateColor[item.knowledge_state] || '#8893a0';
-        var tc = tierColor[item.confidence_tier]  || '#8893a0';
+        var confScore = (typeof item.confidence_score === 'number')
+            ? item.confidence_score
+            : ((typeof item.confidence === 'number') ? item.confidence : _tierToScore(item.confidence_tier));
+        var stateLabel = _escapeHtml(_apexVocab(item.knowledge_state || 'Unknown'));
+        var factHtml   = _escapeHtml(item.fact || 'Unknown fact');
+        var category   = _escapeHtml(item.category || '—');
+        var sourceRaw  = item.source || 'Source not traced';
+        var sourceHtml = _escapeHtml(sourceRaw);
         return '<div style="padding:10px;background:rgba(255,255,255,0.02);border-radius:8px;border-left:3px solid ' + sc + '">' +
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">' +
-                '<span style="font-size:11px;color:rgba(232,244,255,0.85);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (item.fact || 'Unknown fact') + '</span>' +
-                '<span style="font-size:9px;font-weight:700;letter-spacing:0.06em;color:' + sc + ';flex-shrink:0">' + (item.knowledge_state || 'UNKNOWN') + '</span>' +
+                '<span style="font-size:11px;color:rgba(232,244,255,0.85);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + factHtml + '</span>' +
+                '<span style="font-size:9px;font-weight:700;letter-spacing:0.06em;color:' + sc + ';flex-shrink:0">' + stateLabel + '</span>' +
             '</div>' +
-            '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
-                '<span style="font-size:9px;color:#8893a0">' + (item.category || '—') + '</span>' +
-                '<span style="font-size:9px;color:' + tc + '">Confidence: ' + (item.confidence_tier || 'UNKNOWN') + '</span>' +
-                '<span style="font-size:9px;color:#8893a0">Source: ' + (item.source || 'Unknown — evidence not traced') + '</span>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
+                '<span style="font-size:9px;color:#8893a0">' + category + '</span>' +
+                _apexConfidenceBadge(confScore) +
+                '<span style="font-size:9px;color:#8893a0">Source: ' + sourceHtml + '</span>' +
                 (item.contradiction_count > 0 ? '<span style="font-size:9px;color:#ff4d6d">⚠ ' + item.contradiction_count + ' contradiction' + (item.contradiction_count !== 1 ? 's' : '') + '</span>' : '') +
             '</div>' +
         '</div>';
@@ -20522,16 +20731,18 @@ window.apexFileDropHandler = function(e){
         var el = document.getElementById('knItemList');
         var countEl = document.getElementById('knItemCount');
         if (!el) return;
+        window.setState(el, 'loading');
         var params = q ? '?q=' + encodeURIComponent(q) + '&limit=30' : '?limit=30';
         fetch('/api/knowledge/items' + params, { headers: _h() })
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 if (countEl) countEl.textContent = (d.count || 0) + ' item' + (d.count !== 1 ? 's' : '');
                 var items = d.items || [];
-                if (!items.length) { el.innerHTML = '<div style="color:#8893a0;font-size:11px">No knowledge items found' + (q ? ' for "' + q + '"' : '') + '</div>'; return; }
-                el.innerHTML = items.map(_knRenderItem).join('');
+                el.removeAttribute('aria-busy');
+                if (!items.length) { window.setState(el, 'empty', { message: 'No knowledge items found' + (q ? ' for "' + _escapeHtml(q) + '"' : '') }); return; }
+                window.setState(el, 'ready', { html: items.map(_knRenderItem).join('') });
             })
-            .catch(function() { el.innerHTML = '<div style="color:#ff4d6d;font-size:11px">Failed to load knowledge items</div>'; });
+            .catch(function() { window.setState(el, 'failed', { message: 'Failed to load knowledge items.', retryFn: 'knowledgeRefresh()' }); });
     }
 
     function _knLoadState() {
@@ -20543,16 +20754,17 @@ window.apexFileDropHandler = function(e){
             .then(function(d) {
                 if (classEl) {
                     var classColor = { SUFFICIENT:'#27ae60', PARTIAL:'#ff9f43', DEGRADED:'#ff8c42', BLOCKED:'#ff4d6d' };
-                    classEl.textContent = d.classification || '—';
+                    classEl.textContent = _apexVocab(d.classification || '—');
                     classEl.style.color = classColor[d.classification] || '#8893a0';
                 }
                 var s = d.stats || {};
+                el.removeAttribute('aria-busy');
                 el.innerHTML = [
-                    ['Total gaps', s.total || 0],
-                    ['Open', s.open || 0],
-                    ['Blocking', s.blocking || 0],
-                    ['In resolution', s.in_resolution || 0],
-                    ['Resolved', s.resolved || 0],
+                    ['Total gaps',        s.total || 0],
+                    ['Open',              s.open || 0],
+                    ['Blocking',          s.blocking || 0],
+                    ['Being resolved',    s.in_resolution || 0],
+                    ['Resolved',          s.resolved || 0],
                 ].map(function(pair) {
                     return '<div style="display:flex;flex-direction:column;gap:2px">' +
                         '<span style="font-size:18px;font-weight:700;color:rgba(232,244,255,0.9)">' + pair[1] + '</span>' +
@@ -20567,27 +20779,74 @@ window.apexFileDropHandler = function(e){
         var el = document.getElementById('knGapList');
         var countEl = document.getElementById('knGapCount');
         if (!el) return;
+        window.setState(el, 'loading');
         fetch('/api/knowledge/gaps?status=OPEN&limit=20', { headers: _h() })
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 var gaps = d.gaps || [];
                 if (countEl) countEl.textContent = gaps.length + ' open';
-                if (!gaps.length) { el.innerHTML = '<div style="color:#8893a0;font-size:11px">No open gaps</div>'; return; }
-                el.innerHTML = gaps.map(function(g) {
-                    var blocking = g.blocks_decision ? ' <span style="font-size:9px;color:#ff4d6d;font-weight:700">BLOCKING</span>' : '';
+                el.removeAttribute('aria-busy');
+                if (!gaps.length) { window.setState(el, 'empty', { message: 'No open gaps.' }); return; }
+                var html = gaps.map(function(g) {
+                    var blocking = g.blocks_decision ? ' <span style="font-size:9px;color:#ff4d6d;font-weight:700">' + _escapeHtml(_apexVocab('BLOCKING')) + '</span>' : '';
+                    var subject  = _escapeHtml(g.required_subject || g.id || 'Gap');
+                    var gapType  = _escapeHtml(g.gap_type || '—').toLowerCase().replace(/_/g, ' ');
+                    var domain   = g.domain_id ? ' · ' + _escapeHtml(g.domain_id) : '';
+                    var status   = _escapeHtml(_apexVocab(g.status || '—'));
                     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
                         '<div style="flex:1;min-width:0">' +
-                            '<div style="font-size:11px;color:rgba(232,244,255,0.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (g.required_subject || g.id || 'Gap') + blocking + '</div>' +
-                            '<div style="font-size:9px;color:#8893a0;margin-top:2px">' + (g.gap_type || '—') + (g.domain_id ? ' · ' + g.domain_id : '') + '</div>' +
+                            '<div style="font-size:11px;color:rgba(232,244,255,0.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+                                '<span title="Missing information">' + subject + '</span>' + blocking +
+                            '</div>' +
+                            '<div style="font-size:9px;color:#8893a0;margin-top:2px">Gap type: ' + gapType + domain + '</div>' +
                         '</div>' +
-                        '<span style="font-size:9px;font-weight:700;color:#ff9f43;flex-shrink:0;margin-left:8px">' + (g.status || '—') + '</span>' +
+                        '<span style="font-size:9px;font-weight:700;color:#ff9f43;flex-shrink:0;margin-left:8px">' + status + '</span>' +
                     '</div>';
                 }).join('');
+                window.setState(el, 'ready', { html: html });
             })
-            .catch(function() { if (el) el.innerHTML = '<div style="color:#ff4d6d;font-size:11px">Gaps unavailable</div>'; });
+            .catch(function() { window.setState(el, 'failed', { message: 'Gaps unavailable.', retryFn: 'knowledgeRefresh()' }); });
     }
 
-    function knowledgeRefresh() { _knLoadState(); _knLoadItems(''); _knLoadGaps(); }
+    // V-11-G G-7: Per-domain coverage bars via 6 parallel calls to /knowledge/gaps.
+    var _KN_DOMAINS = ['finance','communication','business','health','university','research'];
+    var _KN_DOMAIN_LABELS = { finance:'Finance', communication:'Communications', business:'Business & Work', health:'Health', university:'University', research:'Research' };
+    function _knLoadCoverage() {
+        var el   = document.getElementById('knCoveragePanel');
+        var list = document.getElementById('knCoverageList');
+        if (!el || !list) return;
+        el.setAttribute('data-apex-state', 'loading');
+        list.setAttribute('aria-busy', 'true');
+        Promise.all(_KN_DOMAINS.map(function(d) {
+            return fetch('/api/knowledge/gaps?domain=' + encodeURIComponent(d) + '&limit=1', { headers: _h() })
+                .then(function(r) { return r.json(); })
+                .then(function(body) {
+                    var gapCount = 0;
+                    if (body && body.data) gapCount = body.data.total || (Array.isArray(body.data) ? body.data.length : 0);
+                    if (body && body.gaps) gapCount = body.gaps.length;
+                    if (body && typeof body.count === 'number') gapCount = body.count;
+                    return { domain: d, gapCount: gapCount };
+                })
+                .catch(function() { return { domain: d, gapCount: null }; });
+        })).then(function(results) {
+            list.removeAttribute('aria-busy');
+            var html = results.map(function(r) {
+                var label   = _escapeHtml(_KN_DOMAIN_LABELS[r.domain] || r.domain);
+                var active  = (r.gapCount !== null && r.gapCount > 0) ? ' kn-coverage-gap-active' : '';
+                var gapText = r.gapCount === null
+                    ? 'Unavailable'
+                    : (r.gapCount === 0 ? 'No known gaps' : (r.gapCount + ' gap' + (r.gapCount !== 1 ? 's' : '')));
+                return '<div class="kn-coverage-row"><span class="kn-coverage-domain">' + label + '</span><span class="kn-coverage-gap' + active + '">' + _escapeHtml(gapText) + '</span></div>';
+            }).join('');
+            list.innerHTML = html;
+            el.setAttribute('data-apex-state', 'ready');
+        }).catch(function() {
+            el.setAttribute('data-apex-state', 'failed');
+            list.innerHTML = '<div style="color:#ff4d6d;font-size:11px">Coverage unavailable.</div>';
+        });
+    }
+
+    function knowledgeRefresh() { _knLoadState(); _knLoadItems(''); _knLoadGaps(); _knLoadCoverage(); }
     window.knowledgeRefresh = knowledgeRefresh;
 
     function knowledgeSearch() {
@@ -20602,31 +20861,40 @@ window.apexFileDropHandler = function(e){
         var el = document.getElementById('intBriefingPanel');
         var ageEl = document.getElementById('intBriefingAge');
         if (!el) return;
+        window.setState(el, 'loading');
         fetch('/api/intelligence/briefing', { headers: _h() })
             .then(function(r) { return r.json(); })
             .then(function(d) {
-                if (!d.ok || !d.briefing) {
-                    el.innerHTML = '<div style="color:#8893a0;font-size:11px">' + (d.error || 'Briefing unavailable — degraded state') + '</div>';
+                el.removeAttribute('aria-busy');
+                // V-11-G G-1: User role receives {ok:true, data:{stub:true, message}}
+                if (d && d.data && d.data.stub) {
+                    if (ageEl) ageEl.textContent = '';
+                    window.setState(el, 'ready', { html: '<div style="font-style:italic;color:rgba(232,244,255,0.55);padding:6px 0">' + _escapeHtml(d.data.message || 'APEX is preparing your personalised briefing.') + '</div>' });
+                    return;
+                }
+                if (!d || !d.ok || !d.briefing) {
+                    window.setState(el, 'empty', { message: (d && d.error) || 'Briefing unavailable — degraded state.' });
                     return;
                 }
                 var b = d.briefing;
                 if (ageEl && b.generated_at) ageEl.textContent = 'Generated ' + _timeAgo(b.generated_at) + ' · 6h cache';
                 var fields = [
-                    { label: 'Biggest Opportunity', value: b.biggest_opportunity, color: '#27ae60' },
-                    { label: 'Biggest Threat',      value: b.biggest_threat,      color: '#ff4d6d' },
-                    { label: 'Biggest Bottleneck',  value: b.biggest_bottleneck,  color: '#ff8c42' },
-                    { label: 'Highest Leverage Action', value: b.highest_leverage_action, color: '#00d4ff' },
-                    { label: 'Focus This Week',     value: b.strategic_focus_this_week,  color: 'rgba(232,244,255,0.75)' },
-                    { label: 'Focus This Month',    value: b.strategic_focus_this_month, color: 'rgba(232,244,255,0.6)' },
+                    { label: 'Biggest Opportunity',       value: b.biggest_opportunity,       color: '#27ae60' },
+                    { label: 'Biggest Threat',            value: b.biggest_threat,            color: '#ff4d6d' },
+                    { label: 'Biggest Bottleneck',        value: b.biggest_bottleneck,        color: '#ff8c42' },
+                    { label: 'Highest Leverage Action',   value: b.highest_leverage_action,   color: '#00d4ff' },
+                    { label: 'Focus This Week',           value: b.strategic_focus_this_week,  color: 'rgba(232,244,255,0.75)' },
+                    { label: 'Focus This Month',          value: b.strategic_focus_this_month, color: 'rgba(232,244,255,0.6)' },
                 ];
-                el.innerHTML = fields.map(function(f) {
+                var html = fields.map(function(f) {
                     return '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
-                        '<div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:3px">' + f.label + '</div>' +
-                        '<div style="font-size:11px;color:' + f.color + ';line-height:1.5">' + (f.value || 'Unavailable — insufficient data') + '</div>' +
+                        '<div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:3px">' + _escapeHtml(f.label) + '</div>' +
+                        '<div style="font-size:11px;color:' + f.color + ';line-height:1.5">' + _escapeHtml(f.value || 'Unavailable — insufficient data') + '</div>' +
                     '</div>';
                 }).join('');
+                window.setState(el, 'ready', { html: html });
             })
-            .catch(function() { if (el) el.innerHTML = '<div style="color:#ff4d6d;font-size:11px">Briefing unavailable</div>'; });
+            .catch(function() { window.setState(el, 'failed', { message: 'Briefing unavailable.', retryFn: 'intelligenceRefresh()' }); });
     }
 
     function _intLoadHealth() {
@@ -20634,56 +20902,129 @@ window.apexFileDropHandler = function(e){
         var scoreEl = document.getElementById('intHealthScore');
         var dotEl   = document.getElementById('intHealthDot');
         if (!el) return;
+        window.setState(el, 'loading');
         fetch('/api/intelligence/health', { headers: _h() })
             .then(function(r) { return r.json(); })
             .then(function(d) {
-                if (!d.ok) { el.innerHTML = '<div style="color:#8893a0;font-size:11px">Health data unavailable</div>'; return; }
+                el.removeAttribute('aria-busy');
+                // V-11-G G-3: guard against wrong response shape (route collision residue)
+                if (!d || !d.ok || typeof d.score === 'undefined' || (d.dimensions && typeof d.dimensions !== 'object')) {
+                    window.setState(el, 'empty', { message: 'Intelligence health temporarily unavailable.' });
+                    return;
+                }
                 var classColor = { thriving:'#27ae60', healthy:'#3fd29a', stable:'#ff9f43', degraded:'#ff8c42', critical:'#ff4d6d' };
                 var col = classColor[d.classification] || '#8893a0';
-                if (scoreEl) scoreEl.textContent = (d.score || 0) + '/100 · ' + (d.classification || '—').toUpperCase();
+                if (scoreEl) scoreEl.textContent = (d.score || 0) + '/100 · ' + _escapeHtml(String(d.classification || '—').toUpperCase());
                 if (dotEl)   dotEl.style.background = col;
                 var dims = d.dimensions || {};
-                el.innerHTML = Object.entries(dims).map(function(e) {
-                    var dim = e[1];
+                var rows = Object.entries(dims).map(function(e) {
+                    var dim = e[1] || {};
                     var pct = Math.round((dim.score || 0));
                     return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0">' +
-                        '<span style="font-size:10px;color:#8893a0;width:130px;flex-shrink:0">' + (dim.label || e[0]) + '</span>' +
+                        '<span style="font-size:10px;color:#8893a0;width:130px;flex-shrink:0">' + _escapeHtml(dim.label || e[0]) + '</span>' +
                         '<div style="flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px">' +
                             '<div style="width:' + pct + '%;height:100%;background:' + (pct >= 70 ? '#27ae60' : pct >= 50 ? '#ff9f43' : '#ff4d6d') + ';border-radius:2px;transition:width 0.4s"></div>' +
                         '</div>' +
                         '<span style="font-size:10px;color:rgba(232,244,255,0.6);width:30px;text-align:right">' + pct + '</span>' +
                     '</div>';
-                }).join('') || '<div style="color:#8893a0;font-size:11px">No dimension data</div>';
+                }).join('');
+                window.setState(el, 'ready', { html: rows || '<div style="color:#8893a0;font-size:11px">No dimension data</div>' });
             })
-            .catch(function() { if (el) el.innerHTML = '<div style="color:#ff4d6d;font-size:11px">Health unavailable</div>'; });
+            .catch(function() { window.setState(el, 'failed', { message: 'Health unavailable.', retryFn: '_intLoadHealth()' }); });
     }
 
     function _intLoadOpportunities() {
         var el = document.getElementById('intOppsList');
         var countEl = document.getElementById('intOppsCount');
         if (!el) return;
+        window.setState(el, 'loading');
         fetch('/api/intelligence/opportunities?limit=15', { headers: _h() })
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 var opps = d.opportunities || [];
                 if (countEl) countEl.textContent = opps.length + ' detected';
-                if (!opps.length) { el.innerHTML = '<div style="color:#8893a0;font-size:11px">No detected opportunities — run opportunity detection cycle to populate</div>'; return; }
-                el.innerHTML = opps.map(function(o) {
-                    var score = typeof o.composite_score === 'number' ? Math.round(o.composite_score) : '—';
+                el.removeAttribute('aria-busy');
+                if (!opps.length) {
+                    window.setState(el, 'empty', { message: 'No detected opportunities. APEX will surface them here as they are found.' });
+                    return;
+                }
+                var html = opps.map(function(o) {
+                    var titleHtml = _escapeHtml(o.title || 'Opportunity');
+                    var descHtml  = _escapeHtml((o.description || '').slice(0, 200));
+                    var priority  = _apexPriorityBadge(typeof o.composite_score === 'number' ? o.composite_score : parseFloat(o.composite_score));
+                    // V-11-G G-9: Evidence L1 disclosure.
+                    var refs = Array.isArray(o.evidence_refs) ? o.evidence_refs : [];
+                    var evidenceHtml = refs.length
+                        ? refs.map(function(ref) {
+                            var lbl = _escapeHtml(ref.label || ref.source || 'Source');
+                            var ts  = ref.ts ? ' · ' + _escapeHtml(_timeAgo(ref.ts)) + ' ago' : '';
+                            return '<div class="int-ev-row">' + lbl + ts + '</div>';
+                          }).join('')
+                        : '<div class="int-ev-row" style="color:rgba(255,255,255,0.35)">No evidence references available.</div>';
                     return '<div style="padding:10px;background:rgba(0,212,255,0.03);border-radius:8px;border-left:3px solid rgba(0,212,255,0.3)">' +
                         '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">' +
-                            '<span style="font-size:11px;color:rgba(232,244,255,0.85);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (o.title || 'Opportunity') + '</span>' +
-                            '<span style="font-size:9px;font-weight:700;color:#00d4ff;flex-shrink:0">Score: ' + score + '</span>' +
+                            '<span style="font-size:11px;color:rgba(232,244,255,0.85);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + titleHtml + '</span>' +
+                            '<span style="flex-shrink:0">' + priority + '</span>' +
                         '</div>' +
-                        (o.description ? '<div style="font-size:10px;color:#8893a0;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + o.description.slice(0, 200) + '</div>' : '') +
+                        (descHtml ? '<div style="font-size:10px;color:#8893a0;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + descHtml + '</div>' : '') +
+                        '<div class="int-opp-evidence-trigger" data-fn="_intToggleEvidence" role="button" tabindex="0" aria-expanded="false" aria-label="Show evidence"><span class="int-evidence-chevron">› Evidence</span></div>' +
+                        '<div class="int-opp-evidence" style="display:none">' + evidenceHtml + '</div>' +
                     '</div>';
                 }).join('');
+                window.setState(el, 'ready', { html: html });
             })
-            .catch(function() { if (el) el.innerHTML = '<div style="color:#ff4d6d;font-size:11px">Opportunities unavailable</div>'; });
+            .catch(function() { window.setState(el, 'failed', { message: 'Opportunities unavailable.', retryFn: 'intelligenceRefresh()' }); });
     }
 
-    function intelligenceRefresh() { _intLoadBriefing(); _intLoadHealth(); _intLoadOpportunities(); }
+    // V-11-G G-9: toggle evidence panel via data-fn dispatcher (CSP-safe).
+    window._intToggleEvidence = function(trigger) {
+        if (!trigger) return;
+        var panel = trigger.nextElementSibling;
+        if (!panel) return;
+        var open = panel.style.display !== 'none';
+        panel.style.display = open ? 'none' : 'block';
+        trigger.setAttribute('aria-expanded', open ? 'false' : 'true');
+    };
+
+    // V-11-G G-6: recent lessons.
+    function _intLoadLessons() {
+        var el = document.getElementById('intLessonsPanel');
+        var list = document.getElementById('intLessonsList');
+        if (!el || !list) return;
+        window.setState(el, 'loading');
+        fetch('/api/intelligence/lessons?n=8', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var lessons = [];
+                if (d) {
+                    if (Array.isArray(d.lessons)) lessons = d.lessons;
+                    else if (d.data) lessons = Array.isArray(d.data) ? d.data : (d.data.lessons || []);
+                }
+                list.removeAttribute('aria-busy');
+                if (!lessons.length) {
+                    window.setState(el, 'empty', { message: 'No recent lessons yet. APEX learns from interactions over time.' });
+                    return;
+                }
+                var html = lessons.slice(0, 8).map(function(l) {
+                    var text = typeof l === 'string' ? l : (l.lesson || l.summary || l.text || '');
+                    var ts   = (typeof l === 'object' && l) ? (l.created_at || l.ts) : null;
+                    var when = ts ? '<span class="int-lesson-date">' + _escapeHtml(_timeAgo(ts)) + ' ago</span>' : '';
+                    return '<div class="int-lesson-item"><span class="int-lesson-text">' + _escapeHtml(text) + '</span>' + when + '</div>';
+                }).join('');
+                list.innerHTML = html;
+                el.setAttribute('data-apex-state', 'ready');
+            })
+            .catch(function() { window.setState(el, 'failed', { message: 'Could not load recent lessons.', retryFn: '_intLoadLessons()' }); });
+    }
+    window._intLoadLessons = _intLoadLessons;
+
+    function intelligenceRefresh() {
+        _intLoadBriefing();
+        _intLoadOpportunities();
+        _intLoadLessons();
+    }
     window.intelligenceRefresh = intelligenceRefresh;
+    window._intLoadHealth = _intLoadHealth; // exposed for SYSTEM page init and testing
 
     /* ── GAP-09: Agent capability display ───────────────────────────── */
     function _loadAgentCapabilities() {
@@ -20720,25 +21061,30 @@ window.apexFileDropHandler = function(e){
         var tsEl = document.getElementById('memHealthTs');
         var dot = document.getElementById('memHealthDot');
         if (!el) return;
+        window.setState(el, 'loading');
         fetch('/api/memory/health', { headers: _h() }).then(function(r) { return r.json(); }).then(function(d) {
-            var data = d.data || {};
-            if (tsEl) tsEl.textContent = 'now';
+            var data = (d && d.data) || {};
+            if (tsEl) {
+                try { tsEl.textContent = 'Refreshed just now'; } catch(_){}
+            }
             var sections = [
-                { label: 'Episodic',     val: data.episodic     ? (data.episodic.total || data.episodic.count || '—') : '—' },
-                { label: 'Consolidation', val: data.consolidation ? (data.consolidation.pending || data.consolidation.queue || '—') + ' pending' : '—' },
-                { label: 'Reflexion',    val: data.reflexion    ? (data.reflexion.unverified || '—') + ' unverified' : '—' },
-                { label: 'Improvements', val: data.improvement  ? (data.improvement.pending || '—') + ' pending' : '—' },
+                { label: 'What APEX remembers', val: data.episodic     ? (data.episodic.total || data.episodic.count || '—') : '—' },
+                { label: 'Awaiting consolidation', val: data.consolidation ? (data.consolidation.pending || data.consolidation.queue || '0') + ' pending' : '—' },
+                { label: 'Reflections awaiting verification', val: data.reflexion    ? (data.reflexion.unverified || '0') + ' unverified' : '—' },
+                { label: 'Improvement candidates', val: data.improvement  ? (data.improvement.pending || '0') + ' pending' : '—' },
             ];
             if (dot) dot.className = 'ds-dot green';
-            el.innerHTML = sections.map(function(s) {
+            el.removeAttribute('aria-busy');
+            var html = sections.map(function(s) {
                 return '<div style="padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:6px">' +
-                    '<div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">' + s.label + '</div>' +
-                    '<div style="font-size:11px;font-weight:600;color:rgba(232,244,255,0.85)">' + s.val + '</div>' +
+                    '<div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">' + _escapeHtml(s.label) + '</div>' +
+                    '<div style="font-size:11px;font-weight:600;color:rgba(232,244,255,0.85)">' + _escapeHtml(String(s.val)) + '</div>' +
                 '</div>';
             }).join('');
+            window.setState(el, 'ready', { html: html });
         }).catch(function() {
             if (dot) dot.className = 'ds-dot red';
-            el.innerHTML = '<div style="color:#ff4d6d;font-size:11px;grid-column:1/-1">Memory health unavailable</div>';
+            window.setState(el, 'failed', { message: 'Memory health unavailable.', retryFn: 'memoryRefresh()' });
         });
     }
 
@@ -20746,26 +21092,29 @@ window.apexFileDropHandler = function(e){
         var el = document.getElementById('memEpisodicList');
         var countEl = document.getElementById('memEpisodicCount');
         if (!el) return;
+        window.setState(el, 'loading');
         fetch('/api/memory/episodic/recent', { headers: _h() }).then(function(r) { return r.json(); }).then(function(d) {
-            var items = d.data || d.episodes || d || [];
+            var items = (d && (d.data || d.episodes)) || [];
             if (!Array.isArray(items)) items = [];
-            if (countEl) countEl.textContent = items.length + ' episodes';
-            if (!items.length) { el.innerHTML = '<div style="color:#8893a0;font-size:11px">No episodic memories recorded</div>'; return; }
-            el.innerHTML = items.slice(0, 20).map(function(ep) {
-                var summary = ep.summary || ep.content || ep.objective || ep.description || '—';
+            if (countEl) countEl.textContent = items.length + (items.length === 1 ? ' entry' : ' entries');
+            el.removeAttribute('aria-busy');
+            if (!items.length) { window.setState(el, 'empty', { message: 'Nothing recorded here yet.' }); return; }
+            var html = items.slice(0, 20).map(function(ep) {
+                var summary = _apexMemoryLabel(ep);
                 var ts = ep.created_at || ep.timestamp || ep.ts || null;
                 var success = ep.success !== undefined ? ep.success : null;
                 var badge = success === null ? '' : (success ? '<span style="color:#27ae60;font-size:9px;font-weight:700">OK</span>' : '<span style="color:#ff4d6d;font-size:9px;font-weight:700">FAIL</span>');
                 return '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:8px;align-items:flex-start">' +
                     '<div style="flex:1;min-width:0">' +
-                        '<div style="font-size:11px;color:rgba(232,244,255,0.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + summary.slice(0, 120) + '</div>' +
-                        '<div style="font-size:9px;color:#8893a0;margin-top:3px">' + (ts ? _timeAgo(ts) + ' ago' : '') + '</div>' +
+                        '<div style="font-size:11px;color:rgba(232,244,255,0.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(summary.slice(0, 120)) + '</div>' +
+                        '<div style="font-size:9px;color:#8893a0;margin-top:3px">' + (ts ? _escapeHtml(_timeAgo(ts)) + ' ago' : '') + '</div>' +
                     '</div>' +
                     (badge ? '<div style="flex-shrink:0">' + badge + '</div>' : '') +
                 '</div>';
             }).join('');
+            window.setState(el, 'ready', { html: html });
         }).catch(function() {
-            el.innerHTML = '<div style="color:#ff4d6d;font-size:11px">Episodic memory unavailable</div>';
+            window.setState(el, 'failed', { message: 'Personal memory unavailable.', retryFn: 'memoryRefresh()' });
         });
     }
 
@@ -20773,32 +21122,41 @@ window.apexFileDropHandler = function(e){
         var el = document.getElementById('memSemanticList');
         var countEl = document.getElementById('memSemanticCount');
         if (!el) return;
-        var url = '/api/memory/semantic/search' + (q ? '?q=' + encodeURIComponent(q) : '?limit=20');
+        // V-11-G P0-4 / G-2: empty q shows a prompt instead of firing an invalid request.
+        if (!q) {
+            if (countEl) countEl.textContent = '—';
+            window.setState(el, 'empty', { message: 'Search facts APEX knows about you…' });
+            return;
+        }
+        window.setState(el, 'loading');
+        var url = '/api/memory/semantic/search?q=' + encodeURIComponent(q) + '&limit=20';
         fetch(url, { headers: _h() }).then(function(r) { return r.json(); }).then(function(d) {
-            var items = d.data || d.results || d.facts || d || [];
+            var items = (d && (d.data || d.results || d.facts)) || [];
             if (!Array.isArray(items)) items = [];
-            if (countEl) countEl.textContent = items.length + ' facts';
-            if (!items.length) { el.innerHTML = '<div style="color:#8893a0;font-size:11px">' + (q ? 'No matching facts' : 'No semantic facts recorded') + '</div>'; return; }
-            el.innerHTML = items.slice(0, 30).map(function(f) {
-                var fact = f.fact || f.content || f.text || f.summary || '—';
-                var conf = typeof f.confidence === 'number' ? Math.round(f.confidence * 100) + '%' : null;
-                var cat = f.category || f.domain || null;
+            if (countEl) countEl.textContent = items.length + (items.length === 1 ? ' fact' : ' facts');
+            if (!items.length) { window.setState(el, 'empty', { message: 'No matching facts.' }); return; }
+            var html = items.slice(0, 30).map(function(f) {
+                var fact  = f.fact || f.content || f.text || f.summary || '—';
+                var score = (typeof f.confidence === 'number') ? f.confidence : (typeof f.similarity_score === 'number' ? f.similarity_score : null);
+                var cat   = f.category || f.domain || null;
                 return '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
-                    '<div style="font-size:11px;color:rgba(232,244,255,0.8)">' + fact.slice(0, 160) + '</div>' +
-                    '<div style="display:flex;gap:8px;margin-top:3px">' +
-                        (cat ? '<span style="font-size:9px;color:#8893a0;text-transform:uppercase;letter-spacing:0.06em">' + cat + '</span>' : '') +
-                        (conf ? '<span style="font-size:9px;color:#00d4ff">' + conf + '</span>' : '') +
+                    '<div style="font-size:11px;color:rgba(232,244,255,0.8)">' + _escapeHtml(String(fact).slice(0, 160)) + '</div>' +
+                    '<div style="display:flex;gap:8px;margin-top:3px;align-items:center">' +
+                        (cat ? '<span style="font-size:9px;color:#8893a0;text-transform:uppercase;letter-spacing:0.06em">' + _escapeHtml(cat) + '</span>' : '') +
+                        _apexConfidenceBadge(score) +
                     '</div>' +
                 '</div>';
             }).join('');
+            window.setState(el, 'ready', { html: html });
         }).catch(function() {
-            el.innerHTML = '<div style="color:#ff4d6d;font-size:11px">Semantic memory unavailable</div>';
+            window.setState(el, 'failed', { message: 'Facts unavailable.', retryFn: 'memoryRefresh()' });
         });
     }
 
     function memoryRefresh() {
         _loadMemoryHealth();
         _loadMemoryEpisodic();
+        // V-11-G G-2: do NOT auto-load semantic search on page enter — show prompt instead.
         _loadMemorySemantic('');
     }
     function memorySearch() {
@@ -20807,6 +21165,26 @@ window.apexFileDropHandler = function(e){
     }
     window.memoryRefresh = memoryRefresh;
     window.memorySearch  = memorySearch;
+
+    // V-11-G G-12: CSP-safe replacement for the removed inline oninput handler.
+    (function _wireMemorySearchInput() {
+        function _bind() {
+            var input = document.querySelector('[data-input="memorySearch"]');
+            if (!input || input._apexBound) return;
+            input._apexBound = true;
+            var t;
+            input.addEventListener('input', function() {
+                clearTimeout(t);
+                var q = this.value.trim();
+                t = setTimeout(function() { _loadMemorySemantic(q); }, 300);
+            });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', _bind);
+        } else {
+            _bind();
+        }
+    })();
 
     /* ── GAP-17: Governance page (UX-16 — Constitutional · Authority · Records) ── */
     function _loadGovStatus() {
@@ -20884,7 +21262,60 @@ window.apexFileDropHandler = function(e){
         if (name === 'intelligence') { intelligenceRefresh(); }
         if (name === 'memory')       { memoryRefresh(); }
         if (name === 'governance')   { governanceRefresh(); }
+        // V-11-G O-2: civilization health moved to SYSTEM page.
+        if (name === 'system' && typeof _intLoadHealth === 'function') { _intLoadHealth(); }
     };
+
+    /* ── V-11-G G-15: Intelligence WebSocket subscriptions ─────────────── */
+    (function _apexIntelligenceWsBridge() {
+        var _bound = false;
+        var INT_EVENTS = ['opportunity.detected','briefing.regenerated','gap.declared','gap.resolved','fact.contradicted','memory.consolidated'];
+        function _handle(msg) {
+            if (!msg || !msg.type || INT_EVENTS.indexOf(msg.type) === -1) return;
+            var page = window.activePage || '';
+            if (page === 'intelligence') {
+                if (msg.type === 'opportunity.detected' && typeof _intLoadOpportunities === 'function') _intLoadOpportunities();
+                if (msg.type === 'briefing.regenerated' && typeof _intLoadBriefing === 'function')      _intLoadBriefing();
+                if ((msg.type === 'gap.declared' || msg.type === 'gap.resolved') && typeof _knLoadGaps === 'function') _knLoadGaps();
+                if (msg.type === 'fact.contradicted' && typeof _knLoadItems === 'function') _knLoadItems('');
+            }
+            if (page === 'knowledge') {
+                if ((msg.type === 'gap.declared' || msg.type === 'gap.resolved') && typeof _knLoadGaps === 'function') _knLoadGaps();
+                if (msg.type === 'fact.contradicted' && typeof _knLoadItems === 'function') _knLoadItems('');
+            }
+            if (page === 'memory') {
+                if (msg.type === 'memory.consolidated' && typeof _loadMemoryEpisodic === 'function') _loadMemoryEpisodic();
+            }
+        }
+        function _tryBind() {
+            if (_bound) return;
+            var candidate = window._actWs || null;
+            // Also try any exposed global; opportunistic — if none, no-op (guarded by INT_EVENTS filter).
+            var targets = [];
+            if (candidate) targets.push(candidate);
+            if (window.GL && window.GL.ws && targets.indexOf(window.GL.ws) === -1) targets.push(window.GL.ws);
+            targets.forEach(function(ws) {
+                try {
+                    ws.addEventListener('message', function(ev) {
+                        try { _handle(JSON.parse(ev.data)); } catch(_){}
+                    });
+                } catch(_) {}
+            });
+            if (targets.length) _bound = true;
+        }
+        // Retry a few times as WS init may lag; harmless if never binds.
+        setTimeout(_tryBind, 1500);
+        setTimeout(_tryBind, 5000);
+        setTimeout(_tryBind, 15000);
+        window._intRegisterWsListeners = function(ws) {
+            if (!ws) return;
+            try {
+                ws.addEventListener('message', function(ev) {
+                    try { _handle(JSON.parse(ev.data)); } catch(_){}
+                });
+            } catch(_) {}
+        };
+    })();
 
     /* ── PHASE D — HYBRID AGENT CONTEXT HIGHLIGHTING (GAP-31/FD-04) ── */
     /* Deterministic page→agent mapping. Each entry is an explicit      */

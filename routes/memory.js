@@ -54,6 +54,20 @@ router.post('/memory/working/:sessionId/extend', async (req, res) => {
 
 // ── Layer 2: Episodic Memory ─────────────────────────────────────────────────
 
+// V-11-G P0-1: Episodic memory is Layer-3 owner-only (RD-3 §8.1).
+// The episodic_memory table currently has no human_id column, so per-row scoping is
+// not yet possible. Until schema migration (documented as backend gate G-B1),
+// enforce owner scope by role: only Master receives episodic content.
+// User requests get an empty result, not Master's data.
+// This is a privacy fix (P0). Do not remove without a schema-level replacement.
+function _requireEpisodicOwner(req, res, next) {
+    var role = req.identity && req.identity.role;
+    if (role !== 'master') {
+        return res.json({ ok: true, data: [], scope: 'owner_only' });
+    }
+    return next();
+}
+
 router.post('/memory/episodic', async (req, res) => {
     const { episode, governance } = req.body;
     if (!episode?.objective) return res.status(400).json({ ok: false, error: 'episode.objective required' });
@@ -61,7 +75,7 @@ router.post('/memory/episodic', async (req, res) => {
     res.json({ ok: !!id, memoryId: id });
 });
 
-router.get('/memory/episodic/similar', async (req, res) => {
+router.get('/memory/episodic/similar', _requireEpisodicOwner, async (req, res) => {
     const { objective, limit, successOnly } = req.query;
     if (!objective) return res.status(400).json({ ok: false, error: 'objective required' });
     const results = await episodicMemory.findSimilar(objective, {
@@ -71,17 +85,17 @@ router.get('/memory/episodic/similar', async (req, res) => {
     res.json({ ok: true, data: results });
 });
 
-router.get('/memory/episodic/recent', async (req, res) => {
+router.get('/memory/episodic/recent', _requireEpisodicOwner, async (req, res) => {
     const data = await episodicMemory.getRecent(parseInt(req.query.limit) || 20);
     res.json({ ok: true, data });
 });
 
-router.get('/memory/episodic/failures', async (req, res) => {
+router.get('/memory/episodic/failures', _requireEpisodicOwner, async (req, res) => {
     const data = await episodicMemory.getFailures(parseInt(req.query.limit) || 30);
     res.json({ ok: true, data });
 });
 
-router.get('/memory/episodic/stats', async (req, res) => {
+router.get('/memory/episodic/stats', _requireEpisodicOwner, async (req, res) => {
     const data = await episodicMemory.getStats();
     res.json({ ok: true, data });
 });

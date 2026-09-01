@@ -541,6 +541,25 @@ router.get('/intelligence/system-status', requireAppAccess, async (req, res) => 
 
 router.get('/intelligence/briefing', requireAppAccess, async (req, res) => {
     try {
+        // V-11-G P0-3: SIE generateExecutiveBriefing produces Master-scoped content
+        // (founder/empire framing). Do not leak this to Users. Personal briefing for
+        // Users is deferred to backend gate G-B3; until then, return a stub.
+        const role = req.identity && req.identity.role;
+        if (role !== 'master') {
+            return res.json({
+                ok: true,
+                data: {
+                    stub: true,
+                    message: 'APEX is preparing your personalised intelligence briefing.',
+                    biggest_opportunity: null,
+                    biggest_threat: null,
+                    biggest_bottleneck: null,
+                    highest_leverage_action: null,
+                    strategic_focus_this_week: null,
+                    strategic_focus_this_month: null,
+                },
+            });
+        }
         const sie = require('../lib/intelligence/sie');
         const briefing = await sie.generateExecutiveBriefing();
         res.json({ ok: true, briefing: briefing || null });
