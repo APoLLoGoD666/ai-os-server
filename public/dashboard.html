@@ -590,6 +590,15 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
     flex-shrink: 0;
 }
 
+/* Architecture panel (COMMAND system map) */
+.arch-flow { margin: 0; }
+.arch-flow summary::-webkit-details-marker { display: none; }
+.arch-flow[open] summary span:last-child { transform: rotate(90deg); }
+.arch-steps { display: flex; flex-direction: column; gap: 0; padding: 8px 0 0 12px; }
+.arch-step { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; color: var(--text-mid); line-height: 1.45; }
+.arch-step:last-child { border-bottom: none; }
+.arch-num { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: rgba(94,106,210,0.15); border: 1px solid rgba(94,106,210,0.2); display: flex; align-items: center; justify-content: center; font: 600 9px/1 'JetBrains Mono',monospace; color: #5e6ad2; margin-top: 1px; }
+
 /* ── Body & app shell ───────────────────────────────────────────────── */
 html, body {
     background: var(--bg);
@@ -7190,6 +7199,94 @@ select:focus {
                 <!-- Ambient PlasmaOrb (E-5: non-interactive; desktop only) -->
                 <canvas id="plasmaOrb" data-guard="1"></canvas>
 
+                <!-- System architecture map trigger -->
+                <div id="cmd-arch-trigger" style="padding:8px 16px 0;display:flex;justify-content:flex-end">
+                  <button onclick="window._toggleArchPanel()" style="background:none;border:1px solid rgba(94,106,210,0.25);border-radius:6px;padding:4px 10px;font:500 10px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;color:rgba(94,106,210,0.7);cursor:pointer;transition:all 0.15s" aria-label="System architecture map">SYSTEM MAP</button>
+                </div>
+
+                <!-- Architecture panel -->
+                <div id="cmd-arch-panel" style="display:none;overflow-y:auto;flex-shrink:0;max-height:60vh;padding:0 16px 12px;border-bottom:1px solid rgba(94,106,210,0.12);margin-bottom:8px">
+                  <div style="display:flex;flex-direction:column;gap:16px;padding-top:12px">
+
+                    <!-- Flow 1: Chat -->
+                    <details class="arch-flow" open>
+                      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(94,106,210,0.06);border-radius:8px;border:1px solid rgba(94,106,210,0.14)">
+                        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#5e6ad2">COMMAND — Text</span>
+                        <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">▸</span>
+                      </summary>
+                      <div class="arch-steps">
+                        <div class="arch-step"><span class="arch-num">1</span><span>You type a message and press send</span></div>
+                        <div class="arch-step"><span class="arch-num">2</span><span>APEX checks your identity and permission level</span></div>
+                        <div class="arch-step"><span class="arch-num">3</span><span>Your message is sent to the AI model with your personal context</span></div>
+                        <div class="arch-step"><span class="arch-num">4</span><span>The AI generates a response (typically under 3 seconds)</span></div>
+                        <div class="arch-step"><span class="arch-num">5</span><span>The response appears in the conversation thread</span></div>
+                        <div class="arch-step"><span class="arch-num">6</span><span>If an action is needed, an approval card appears before it runs</span></div>
+                      </div>
+                    </details>
+
+                    <!-- Flow 2: Voice -->
+                    <details class="arch-flow">
+                      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,212,255,0.04);border-radius:8px;border:1px solid rgba(0,212,255,0.12)">
+                        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#00d4ff">COMMAND — Voice</span>
+                        <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">▸</span>
+                      </summary>
+                      <div class="arch-steps">
+                        <div class="arch-step"><span class="arch-num">1</span><span>You press the mic button (or V key on desktop)</span></div>
+                        <div class="arch-step"><span class="arch-num">2</span><span>Your browser captures audio from your microphone</span></div>
+                        <div class="arch-step"><span class="arch-num">3</span><span>Speech is converted to text in real time</span></div>
+                        <div class="arch-step"><span class="arch-num">4</span><span>The text follows the same path as a typed message</span></div>
+                        <div class="arch-step"><span class="arch-num">5</span><span>The response appears in your conversation thread</span></div>
+                      </div>
+                    </details>
+
+                    <!-- Flow 3: Agent task -->
+                    <details class="arch-flow">
+                      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(16,185,129,0.04);border-radius:8px;border:1px solid rgba(16,185,129,0.12)">
+                        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#10b981">AGENT TASK</span>
+                        <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">▸</span>
+                      </summary>
+                      <div class="arch-steps">
+                        <div class="arch-step"><span class="arch-num">1</span><span>A task is created — either by you or suggested by APEX</span></div>
+                        <div class="arch-step"><span class="arch-num">2</span><span>You approve it before anything runs</span></div>
+                        <div class="arch-step"><span class="arch-num">3</span><span>APEX works through the task one step at a time (max 10 steps)</span></div>
+                        <div class="arch-step"><span class="arch-num">4</span><span>Each step that needs the AI checks in with the model</span></div>
+                        <div class="arch-step"><span class="arch-num">5</span><span>If something goes wrong, the task stops safely and reports back</span></div>
+                        <div class="arch-step"><span class="arch-num">6</span><span>When complete, results appear in ACTIONS and the activity log</span></div>
+                      </div>
+                    </details>
+
+                    <!-- Flow 4: Intelligence -->
+                    <details class="arch-flow">
+                      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(124,111,255,0.04);border-radius:8px;border:1px solid rgba(124,111,255,0.12)">
+                        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#7c6fff">INTELLIGENCE</span>
+                        <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">▸</span>
+                      </summary>
+                      <div class="arch-steps">
+                        <div class="arch-step"><span class="arch-num">1</span><span>APEX regularly scans your data for patterns and opportunities</span></div>
+                        <div class="arch-step"><span class="arch-num">2</span><span>Each finding is scored for confidence and relevance</span></div>
+                        <div class="arch-step"><span class="arch-num">3</span><span>Supporting evidence is attached so you can verify it</span></div>
+                        <div class="arch-step"><span class="arch-num">4</span><span>Findings appear in the INTELLIGENCE page with full context</span></div>
+                        <div class="arch-step"><span class="arch-num">5</span><span>You can expand any finding to see the full reasoning chain</span></div>
+                      </div>
+                    </details>
+
+                    <!-- Flow 5: Proactive -->
+                    <details class="arch-flow">
+                      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(245,158,11,0.04);border-radius:8px;border:1px solid rgba(245,158,11,0.12)">
+                        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#f59e0b">PROACTIVE</span>
+                        <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">▸</span>
+                      </summary>
+                      <div class="arch-steps">
+                        <div class="arch-step"><span class="arch-num">1</span><span>A scheduled trigger fires (time-based or event-based)</span></div>
+                        <div class="arch-step"><span class="arch-num">2</span><span>APEX checks whether this concerns you specifically</span></div>
+                        <div class="arch-step"><span class="arch-num">3</span><span>A notification is created and linked to your account only</span></div>
+                        <div class="arch-step"><span class="arch-num">4</span><span>It appears in your ACTIONS queue ready for review</span></div>
+                      </div>
+                    </details>
+
+                  </div>
+                </div>
+
                 <!-- Conversation thread — E-1 makes chatLog visible; E-2 replaces .cmd-split -->
                 <div id="cmdThread">
                     <!-- Approval cards are inserted here before #chatLog by renderCentreApprovalCard -->
@@ -7629,6 +7726,85 @@ select:focus {
                     </section>
 
                 </div>
+            </div>
+
+            <!-- ══ PAGE: SETTINGS ══ -->
+            <div class="page" id="page-settings">
+              <div style="max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px;padding:8px 0">
+
+                <!-- ACCOUNT SECTION -->
+                <div class="ds-panel">
+                  <div class="ds-panel-header">
+                    <div class="ds-panel-header-left">
+                      <span class="t-label cyan">Account</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:14px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+                      <span class="t-body-mid">Email</span>
+                      <span class="t-body" id="settings-email" style="color:var(--text)">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+                      <span class="t-body-mid">Role</span>
+                      <span class="t-body" id="settings-role" style="color:var(--cyan)">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+                      <span class="t-body-mid">Session</span>
+                      <span class="t-mono" id="settings-session" style="color:var(--text-mid);font-size:11px">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0">
+                      <span class="t-body-mid">Status</span>
+                      <span style="display:flex;align-items:center;gap:6px"><span class="ds-dot green" id="settings-status-dot"></span><span class="t-body" id="settings-status">Connected</span></span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PREFERENCES SECTION -->
+                <div class="ds-panel">
+                  <div class="ds-panel-header">
+                    <div class="ds-panel-header-left">
+                      <span class="t-label cyan">Preferences</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0">
+                    <div>
+                      <div class="t-body">Auto-listen after response</div>
+                      <div class="t-small" style="margin-top:2px">Microphone stays ready after APEX replies</div>
+                    </div>
+                    <button id="settings-autolisten-toggle" role="switch" aria-checked="false" onclick="window._settingsToggleAutoListen()" style="width:44px;height:24px;border-radius:12px;cursor:pointer;background:var(--surface-2);border:1px solid var(--border);position:relative;transition:background 0.2s">
+                      <span id="settings-autolisten-knob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--text-mute);transition:transform 0.2s,background 0.2s"></span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- SYSTEM SECTION -->
+                <div class="ds-panel">
+                  <div class="ds-panel-header">
+                    <div class="ds-panel-header-left">
+                      <span class="t-label cyan">System</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:0">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+                      <span class="t-body-mid">Version</span>
+                      <span class="t-mono" style="font-size:11px;color:var(--text-mid)" id="settings-version">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+                      <span class="t-body-mid">Database</span>
+                      <span class="t-body" id="settings-db">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0">
+                      <span class="t-body-mid">AI</span>
+                      <span class="t-body" id="settings-ai">—</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SIGN OUT -->
+                <div style="padding-top:8px">
+                  <button class="ds-btn ds-btn-danger" onclick="window.location.href='/logout'" style="width:100%;justify-content:center;padding:12px">Sign out</button>
+                </div>
+              </div>
             </div>
 
             <!-- ══ PAGE: COMMUNICATION ══ -->
@@ -8725,16 +8901,16 @@ select:focus {
 
                 <!-- Governance Pipeline -->
                 <div id="ovr-pipeline" style="position:relative;padding:32px 30px 36px">
-                    <div style="position:absolute;top:16px;left:22px;font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:rgba(136,147,160,0.75)">GOVERNANCE MAP &middot; AUTHORITY PIPELINE</div>
+                    <div style="position:absolute;top:16px;left:22px;font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:rgba(136,147,160,0.75)">How decisions flow through APEX</div>
 
-                    <!-- L0 Sovereign -->
+                    <!-- Account owner (you) -->
                     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:8px">
-                        <div style="width:100%;display:flex;align-items:center;gap:14px;padding-bottom:4px"><div style="width:3px;height:28px;background:rgba(243,247,251,0.85);border-radius:2px;flex:0 0 3px"></div><div><div style="font:700 15px/1 'Inter',sans-serif;letter-spacing:2.5px;color:#f3f7fb">SOVEREIGN</div><div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#8893a0;margin-top:4px">PRINCIPAL AUTHORITY &middot; APEX OPERATOR</div></div></div>
+                        <div style="width:100%;display:flex;align-items:center;gap:14px;padding-bottom:4px"><div style="width:3px;height:28px;background:rgba(243,247,251,0.85);border-radius:2px;flex:0 0 3px"></div><div><div style="font:700 15px/1 'Inter',sans-serif;letter-spacing:2.5px;color:#f3f7fb">You</div><div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#8893a0;margin-top:4px">Account Owner &middot; APEX Operator</div></div></div>
                         <div style="width:450px;position:relative;overflow:hidden;background:#0d1424;border-radius:15px;padding:19px 22px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 10px 34px rgba(91,158,255,0.10),0 6px 18px rgba(0,0,0,0.26)">
                             <div style="position:absolute;left:0;top:15px;bottom:15px;width:3px;background:#5b9eff;border-radius:0 3px 3px 0"></div>
                             <div style="display:flex;align-items:center;gap:15px">
                                 <div style="width:28px;height:28px;flex:0 0 28px;border-radius:8px;background:rgba(91,158,255,0.16);display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;background:#5b9eff;border-radius:2px"></div></div>
-                                <div style="flex:1"><div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#5b9eff">PRINCIPAL AUTHORITY</div><div style="font:600 19px/1 'Inter',sans-serif;color:#f3f7fb;margin-top:6px">You &middot; Sovereign Operator</div></div>
+                                <div style="flex:1"><div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#5b9eff">Account Owner</div><div style="font:600 19px/1 'Inter',sans-serif;color:#f3f7fb;margin-top:6px">You</div></div>
                                 <div style="text-align:right"><div style="display:flex;align-items:center;gap:7px;justify-content:flex-end"><span style="width:7px;height:7px;border-radius:2px;background:#3fd29a;animation:ovr-blink 3.5s ease-in-out infinite"></span><span style="font:600 11px/1 'JetBrains Mono',monospace;color:#3fd29a;letter-spacing:1px">ONLINE</span></div><div style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0;margin-top:7px">0 ESCALATIONS</div></div>
                             </div>
                         </div>
@@ -8743,9 +8919,9 @@ select:focus {
                     <!-- Connector -->
                     <div style="height:52px;display:flex;justify-content:center;position:relative;margin:3px 0"><div style="width:1px;height:100%;background:linear-gradient(180deg,rgba(91,158,255,0.06),rgba(91,158,255,0.32),rgba(91,158,255,0.06))"></div><div style="position:absolute;left:50%;top:0;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#9cc6ff;box-shadow:0 0 7px rgba(91,158,255,0.7);animation:ovr-flowY 3s linear infinite"></div></div>
 
-                    <!-- L1 Identity Core -->
+                    <!-- Your Identity -->
                     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%">
-                        <div style="width:100%;display:flex;align-items:center;gap:14px;padding-bottom:4px"><div style="width:3px;height:28px;background:#5b9eff;border-radius:2px;flex:0 0 3px"></div><div><div style="font:700 15px/1 'Inter',sans-serif;letter-spacing:2.5px;color:#f3f7fb">IDENTITY CORE</div><div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#8893a0;margin-top:4px">CONSTITUTION &middot; FOUNDER IDENTITY &middot; CIV. REGISTRY</div></div></div>
+                        <div style="width:100%;display:flex;align-items:center;gap:14px;padding-bottom:4px"><div style="width:3px;height:28px;background:#5b9eff;border-radius:2px;flex:0 0 3px"></div><div><div style="font:700 15px/1 'Inter',sans-serif;letter-spacing:2.5px;color:#f3f7fb">Your Identity</div><div style="font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#8893a0;margin-top:4px">Rules &middot; Founder profile &middot; Registered entities</div></div></div>
                         <div style="width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
                             <div style="background:#0d1424;border-radius:14px;padding:17px 20px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04),0 6px 18px rgba(0,0,0,0.18)">
                                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px"><span style="width:5px;height:5px;border-radius:1px;background:#5b9eff"></span><span style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#5b9eff">CONSTITUTION</span></div><span style="font:600 9px/1 'JetBrains Mono',monospace;color:#3fd29a;letter-spacing:1px">ACTIVE</span></div>
@@ -9271,8 +9447,8 @@ if(pipe){
                   ['sent','rtime'],['sent','rmoney'],
                 ];
                 var TIER_LABELS=[
-                  {lb:'T0 · SOVEREIGN',        y:58,  col:'rgba(243,247,251,0.65)'},
-                  {lb:'T1 · IDENTITY CORE',    y:172, col:'rgba(91,158,255,0.65)'},
+                  {lb:'T0 · YOU',              y:58,  col:'rgba(243,247,251,0.65)'},
+                  {lb:'T1 · YOUR IDENTITY',    y:172, col:'rgba(91,158,255,0.65)'},
                   {lb:'T2 · EXECUTIVE GOVT',   y:312, col:'rgba(239,180,90,0.65)'},
                   {lb:'T3 · DOMAIN AGENTS',    y:448, col:'rgba(91,158,255,0.65)'},
                   {lb:'T4 · INFRASTRUCTURE',   y:584, col:'rgba(63,210,154,0.65)'},
@@ -11401,7 +11577,7 @@ if(pipe){
     // V-11-F F-7: 'operation' removed (merged into business)
     // V-11-F F-9: civilisation/reality moved out of LIFE & WORK swipe sequence to end (SYSTEM → Advanced)
     // V-11-H H-18: 'agents' / 'approvals' / 'activity' consolidated into 'actions' (positioned after 'intelligence' per Section 32).
-    var pages = ['overview', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'memory', 'governance', 'civilisation', 'reality'];
+    var pages = ['overview', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'memory', 'governance', 'civilisation', 'reality', 'settings'];
     var activePage = 'overview';
 
     var pageMeta = {
@@ -11425,7 +11601,8 @@ if(pipe){
         knowledge:     { title:'Knowledge',     sub:'Facts · Evidence · Gaps · Coverage' },
         intelligence:  { title:'Intelligence',  sub:'Briefing · Opportunities · Health' },
         memory:        { title:'Memory',        sub:'Episodic · Semantic · Health' },
-        governance:    { title:'Governance',    sub:'Constitutional · Authority · Records' }
+        governance:    { title:'Governance',    sub:'Constitutional · Authority · Records' },
+        settings:      { title:'Settings',      sub:'Account & preferences' }
     };
     window.switchPage = function(name) {
         // V-11-F F-3: Redirect Users away from Master-only pages (silent — do not leak existence)
@@ -11454,7 +11631,7 @@ if(pipe){
         if (btn) btn.addEventListener('click', function() { window.switchPage(name); });
     });
     var moreBtn = document.getElementById('nav-more');
-    if (moreBtn) moreBtn.addEventListener('click', function() { if (typeof toggleMobileMore === 'function') toggleMobileMore(); });
+    if (moreBtn) moreBtn.addEventListener('click', function() { window.switchPage('settings'); });
 
     var startX = 0, startY = 0;
     var pw = document.getElementById('pageWrap');
@@ -19061,6 +19238,14 @@ function renderStrip(){
   }
 }
 
+/* ── Architecture panel toggle ── */
+window._toggleArchPanel = function() {
+  var p = document.getElementById('cmd-arch-panel');
+  if (!p) return;
+  var open = p.style.display === 'none' || !p.style.display;
+  p.style.display = open ? 'block' : 'none';
+};
+
 /* ── Health ── */
 function fetchHealth(){
   fetch('/health').then(function(r){return r.json();}).then(function(d){
@@ -22631,6 +22816,92 @@ window.apexFileDropHandler = function(e){
     function governanceRefresh() { _loadGovStatus(); _loadGovHistory(); }
     window.governanceRefresh = governanceRefresh;
 
+    /* ── SETTINGS PAGE ───────────────────────────────────────────────── */
+    window.settingsInitPage = function() {
+        try {
+            var u = window._apexUser || {};
+            var emailEl   = document.getElementById('settings-email');
+            var roleEl    = document.getElementById('settings-role');
+            var sessionEl = document.getElementById('settings-session');
+            if (emailEl)   emailEl.textContent = u.email || '—';
+            if (roleEl)    roleEl.textContent  = (u.role === 'master') ? 'Master' : 'User';
+            if (sessionEl) {
+                var sid = u.sessionId || u.id || '';
+                sessionEl.textContent = sid ? (String(sid).slice(0,8) + '…') : 'Active';
+            }
+        } catch(_) {}
+
+        // Populate auto-listen toggle from per-humanId localStorage
+        try {
+            var _hid = (window._apexUser && window._apexUser.id) || null;
+            var stored = _hid ? localStorage.getItem('apex_auto_listen_' + _hid) : null;
+            var on = stored === 'true';
+            var knob = document.getElementById('settings-autolisten-knob');
+            var toggle = document.getElementById('settings-autolisten-toggle');
+            if (knob) {
+                knob.style.transform = on ? 'translateX(20px)' : 'translateX(0)';
+                knob.style.background = on ? 'var(--cyan)' : 'var(--text-mute)';
+            }
+            if (toggle) {
+                toggle.setAttribute('aria-checked', on ? 'true' : 'false');
+                toggle.style.background = on ? 'rgba(0,212,255,0.15)' : 'var(--surface-2)';
+            }
+        } catch(_) {}
+
+        // Fetch health for DB / AI / Version
+        try {
+            fetch('/health').then(function(r){ return r.json(); }).then(function(d){
+                var dbEl  = document.getElementById('settings-db');
+                var aiEl  = document.getElementById('settings-ai');
+                var verEl = document.getElementById('settings-version');
+                if (dbEl) {
+                    dbEl.textContent = d && d.db ? 'Connected' : 'Offline';
+                    dbEl.style.color = d && d.db ? 'var(--green)' : 'var(--red, #ff5d7a)';
+                }
+                if (aiEl) {
+                    var aiOk = d && (d.ai || d.status === 'ok');
+                    aiEl.textContent = aiOk ? 'Connected' : 'Offline';
+                    aiEl.style.color = aiOk ? 'var(--green)' : 'var(--red, #ff5d7a)';
+                }
+                if (verEl) verEl.textContent = (d && (d.version || d.commit)) || '—';
+            }).catch(function(){
+                var dbEl  = document.getElementById('settings-db');
+                var aiEl  = document.getElementById('settings-ai');
+                if (dbEl) { dbEl.textContent = 'Offline'; dbEl.style.color = 'var(--red, #ff5d7a)'; }
+                if (aiEl) { aiEl.textContent = 'Offline'; aiEl.style.color = 'var(--red, #ff5d7a)'; }
+            });
+        } catch(_) {}
+    };
+
+    window._settingsToggleAutoListen = function() {
+        try {
+            var _hid = (window._apexUser && window._apexUser.id) || null;
+            if (!_hid) return;
+            var key = 'apex_auto_listen_' + _hid;
+            var cur = localStorage.getItem(key) === 'true';
+            var next = !cur;
+            localStorage.setItem(key, String(next));
+            var knob = document.getElementById('settings-autolisten-knob');
+            var toggle = document.getElementById('settings-autolisten-toggle');
+            if (knob) {
+                knob.style.transform = next ? 'translateX(20px)' : 'translateX(0)';
+                knob.style.background = next ? 'var(--cyan)' : 'var(--text-mute)';
+            }
+            if (toggle) {
+                toggle.setAttribute('aria-checked', next ? 'true' : 'false');
+                toggle.style.background = next ? 'rgba(0,212,255,0.15)' : 'var(--surface-2)';
+            }
+            // Mirror into runtime autoListen if the chat module exposes it
+            try {
+                if (typeof autoListen !== 'undefined') { autoListen = next; }
+                if (typeof toggleAutoListen === 'function' && cur !== next) {
+                    // Do NOT call toggleAutoListen — it would flip state again.
+                    // The persisted value is authoritative and picked up on next runtime read.
+                }
+            } catch(__) {}
+        } catch(_) {}
+    };
+
     /* ── PAGE SWITCH HOOKS ───────────────────────────────────────────── */
     var _origSwitch2 = window.switchPage;
     window.switchPage = function(name) {
@@ -22645,6 +22916,7 @@ window.apexFileDropHandler = function(e){
         if (name === 'intelligence') { intelligenceRefresh(); }
         if (name === 'memory')       { memoryRefresh(); }
         if (name === 'governance')   { governanceRefresh(); }
+        if (name === 'settings'  && typeof window.settingsInitPage === 'function') { window.settingsInitPage(); }
         // V-11-G O-2: civilization health moved to SYSTEM page.
         if (name === 'system' && typeof _intLoadHealth === 'function') { _intLoadHealth(); }
     };
