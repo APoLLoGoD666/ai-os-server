@@ -1,10 +1,41 @@
 'use strict';
 const https     = require('https');
 const crypto    = require('crypto');
+const jwt       = require('jsonwebtoken');
 const WebSocket = require('ws');
 const tracker   = require('../lib/latency-tracker');
 const runtime   = require('../lib/models/runtime');
 const bus       = require('../lib/event-bus');
+
+// V-11-I P0-I4/I5 — parse cookies off the raw upgrade request. WebSocket upgrades
+// don't run through Express middleware, so we can't rely on req.cookies.
+function _parseCookiesRaw(req) {
+    const h = req.headers.cookie || '';
+    const out = {};
+    h.split(';').forEach(pair => {
+        const i = pair.indexOf('=');
+        if (i < 0) return;
+        const k = pair.slice(0, i).trim();
+        const v = pair.slice(i + 1).trim();
+        if (!k) return;
+        try { out[k] = decodeURIComponent(v); } catch { out[k] = v; }
+    });
+    return out;
+}
+
+// V-11-I P0-I5 — resolve caller role from the JWT cookie on the upgrade request.
+// Returns 'master' | 'user' | null. Null means no valid JWT was presented.
+function _resolveUpgradeRole(req) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return null;
+    const cookies = _parseCookiesRaw(req);
+    const token = cookies.apex_token;
+    if (!token) return null;
+    try {
+        const payload = jwt.verify(token, secret);
+        return payload?.role || 'master'; // legacy tokens default to master
+    } catch { return null; }
+}
 
 // Persistent HTTPS agent — reuses TLS connections across TTS calls.
 // Eliminates ~100-200ms TLS handshake overhead on 2nd+ chunks per session
@@ -374,6 +405,19 @@ function attach(server, { appKey, executeApexTool, buildAlexContext, obsidianApp
                 socket.destroy();
                 return;
             }
+        }
+        // V-11-I P0-I4/I5 — Master-only containment.
+        // Gemini Live constructs alexContext (Alex's private profile + Layer 9 facts)
+        // into every session's system prompt. Non-Master callers (Users) must not
+        // receive Master PII, nor invoke the unfiltered 15-tool surface. Full auth
+        // repair (JWT-native WebSocket handshake) is deferred to I-O1 resolution.
+        // Defence-in-depth: gate applies even though current dashboard has no active
+        // UI affordance to reach this endpoint (V-11-E-2 removed COMMAND UI).
+        const _role = _resolveUpgradeRole(req);
+        if (_role !== 'master') {
+            socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+            socket.destroy();
+            return;
         }
         wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
     });

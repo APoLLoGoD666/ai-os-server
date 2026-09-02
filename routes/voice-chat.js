@@ -198,9 +198,18 @@ router.post('/voice-chat', _auth, async (req, res) => {
             } catch {}
         });
 
+        // V-11-I P0-I1: stamp voice-created tasks with the authenticated caller's humanId.
+        // req.identity is populated by resolveIdentity (kernelChain on /api/*). If it
+        // is missing (should never happen under requireAppAccess), abort the insert
+        // rather than silently create an unowned task that would fall to Master.
+        const _vcCallerHumanId = req.identity?.humanId || null;
         setImmediate(async () => {
             const actionWords = /\b(remind|add|schedule|book|create|set|buy|order|call|email|text|send|check|research|find|draft|write|plan|note|do|make)\b/i;
             if (actionWords.test(userMessage)) {
+                if (!_vcCallerHumanId) {
+                    console.warn('[voice-chat] skipping task insert: req.identity.humanId missing');
+                    return;
+                }
                 try {
                     const vtId = `voice-task-${Date.now()}`;
                     await sbAdmin.from('apex_tasks').insert({
@@ -208,6 +217,7 @@ router.post('/voice-chat', _auth, async (req, res) => {
                         title: userMessage.slice(0, 200),
                         status: 'pending',
                         source: 'voice',
+                        human_id: _vcCallerHumanId,
                         created_at: new Date().toISOString()
                     });
                     _agentQueue.enqueue(vtId, () => _startAutoPipeline(vtId), { label: userMessage.slice(0, 80) });
@@ -215,13 +225,19 @@ router.post('/voice-chat', _auth, async (req, res) => {
             }
         });
 
-        const today     = new Date().toISOString().split('T')[0];
-        const noteTitle = `13 Briefings/Conversations/${today}.md`;
-        const timestamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        const noteContent = `## ${timestamp}\n\n**You:** ${userMessage}\n\n**Apex:** ${reply}\n`;
-        obsidianAppend(noteTitle, noteContent).catch(e =>
-            console.warn('[Obsidian] write failed:', e.message)
-        );
+        // V-11-I P0-I3: Obsidian transcript is a shared cross-human vault path.
+        // Only write for Master to prevent cross-user privacy leakage. User voice
+        // transcripts are still rendered client-side and stored in the per-identity
+        // apex_chat_history_{humanId} localStorage FIFO, so nothing is lost for Users.
+        if (req.identity?.role === 'master') {
+            const today     = new Date().toISOString().split('T')[0];
+            const noteTitle = `13 Briefings/Conversations/${today}.md`;
+            const timestamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            const noteContent = `## ${timestamp}\n\n**You:** ${userMessage}\n\n**Apex:** ${reply}\n`;
+            obsidianAppend(noteTitle, noteContent).catch(e =>
+                console.warn('[Obsidian] write failed:', e.message)
+            );
+        }
 
         clearTimeout(vcTimeout);
         if (res.headersSent) return;
