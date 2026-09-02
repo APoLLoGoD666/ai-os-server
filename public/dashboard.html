@@ -473,6 +473,121 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
     .actn-undo-banner { bottom: 60px; padding: 12px 14px; font-size: 12px; }
 }
 
+/* ── V-11-K: canonical progressive disclosure ────────────────────────── */
+.apex-disclosure { }
+.apex-disclosure-trigger {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: none; color: inherit;
+    cursor: pointer; font: inherit; padding: 0;
+    text-align: left; width: 100%;
+}
+.apex-disclosure-trigger:focus-visible {
+    outline: 2px solid var(--apex-cyan, #00d4ff);
+    outline-offset: 2px; border-radius: 3px;
+}
+.apex-disclosure-chevron {
+    width: 14px; height: 14px; flex-shrink: 0;
+    transition: transform 0.15s ease;
+    opacity: 0.5;
+    display: inline-block;
+    font-size: 12px;
+    line-height: 14px;
+    text-align: center;
+}
+.apex-disclosure[data-open="true"] > .apex-disclosure-trigger > .apex-disclosure-chevron,
+.apex-disclosure[data-open="true"] > * > .apex-disclosure-trigger > .apex-disclosure-chevron {
+    transform: rotate(90deg);
+}
+.apex-disclosure-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.2s ease;
+}
+.apex-disclosure[data-open="true"] > .apex-disclosure-body,
+.apex-disclosure[data-open="true"] > * > .apex-disclosure-body {
+    max-height: 1200px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .apex-disclosure-body,
+    .apex-disclosure-chevron { transition: none; }
+}
+@media (max-width: 767px) {
+    .apex-disclosure-trigger { min-height: 44px; }
+}
+.apex-disclosure-label-l1 {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    font-family: 'JetBrains Mono', monospace;
+}
+.apex-disclosure-empty {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    padding: 4px 0;
+    margin: 0;
+}
+/* V-11-K: canonical empty/gap/error state helper */
+.apex-empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    opacity: 0.7;
+    font: 400 12px/1.5 Inter, sans-serif;
+    color: rgba(232,244,255,0.7);
+}
+.apex-empty-gap {
+    border: 1px dashed rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(94,106,210,0.03);
+}
+.apex-empty-error { color: #ef4444; opacity: 1; }
+.apex-empty-forbidden { color: #f59e0b; }
+.apex-empty-degraded  { color: #f59e0b; }
+.apex-empty-icon {
+    font-size: 1.5rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+.apex-empty-msg { margin: 0; }
+/* V-11-K: confidence L1 label (dot stays at L0) */
+.apex-confidence-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(232,244,255,0.55);
+    margin-left: 6px;
+}
+/* V-11-K: evidence ref rows for intelligence + actions */
+.intel-evidence-ref {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 0;
+    font: 400 12px/1.4 Inter, sans-serif;
+    color: rgba(255,255,255,0.65);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.intel-evidence-ref:last-child { border-bottom: none; }
+.intel-ev-label {
+    font-weight: 600;
+    color: rgba(232,244,255,0.85);
+    flex-shrink: 0;
+}
+.intel-ev-source {
+    font-size: 11px;
+    color: rgba(232,244,255,0.5);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.intel-ev-ts {
+    font: 400 10px/1 'JetBrains Mono', monospace;
+    color: rgba(255,255,255,0.35);
+    flex-shrink: 0;
+}
+
 /* ── Body & app shell ───────────────────────────────────────────────── */
 html, body {
     background: var(--bg);
@@ -16245,7 +16360,11 @@ window._v11hLoadTodayActions = function() {
     var _orig = window.switchPage;
     if (_orig) window.switchPage = function(name) {
         _orig(name);
-        if (name === 'overview') initOverviewPage();
+        if (name === 'overview') {
+            initOverviewPage();
+            // V-11-K: initialise disclosures for TODAY-rendered content.
+            setTimeout(function() { if (window._disclosure) window._disclosure.initAll(); }, 300);
+        }
     };
 })();
 var _ovrIntId = setInterval(initOverviewPage, 120000);
@@ -20824,6 +20943,115 @@ window.apexFileDropHandler = function(e){
     window.apexConfirmApproval = apexConfirmApproval;
     window.apexDeclineApproval = apexDeclineApproval;
 
+    /* ══ V-11-K: canonical progressive disclosure primitive ═════════════════
+       One .apex-disclosure / _disclosure for the whole app.
+       Do NOT create parallel accordions; if a surface needs disclosure,
+       wrap it with .apex-disclosure + .apex-disclosure-trigger + .apex-disclosure-body
+       and call window._disclosure.initAll() after render. */
+    window._disclosure = (function() {
+        function _q(el, sel) { return el ? el.querySelector(sel) : null; }
+        function init(el) {
+            if (!el || el.dataset.disclosureInit) return;
+            el.dataset.disclosureInit = '1';
+            var trigger = _q(el, '.apex-disclosure-trigger');
+            var body    = _q(el, '.apex-disclosure-body');
+            if (!trigger || !body) return;
+            var bodyId = body.id || ('dc-' + Math.random().toString(36).slice(2, 8));
+            body.id = bodyId;
+            var openState = (el.dataset.open === 'true');
+            trigger.setAttribute('aria-expanded', openState ? 'true' : 'false');
+            trigger.setAttribute('aria-controls', bodyId);
+            trigger.addEventListener('click', function(e) {
+                e.stopPropagation();
+                _toggle(el);
+            });
+            trigger.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    _toggle(el);
+                }
+            });
+        }
+        function _toggle(el) {
+            var isOpen = (el.dataset.open === 'true');
+            el.dataset.open = isOpen ? 'false' : 'true';
+            var trigger = _q(el, '.apex-disclosure-trigger');
+            if (trigger) trigger.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+        }
+        function open(el) {
+            if (!el) return;
+            el.dataset.open = 'true';
+            var t = _q(el, '.apex-disclosure-trigger');
+            if (t) t.setAttribute('aria-expanded', 'true');
+        }
+        function close(el) {
+            if (!el) return;
+            el.dataset.open = 'false';
+            var t = _q(el, '.apex-disclosure-trigger');
+            if (t) t.setAttribute('aria-expanded', 'false');
+        }
+        function initAll(container) {
+            try {
+                var root = container || document;
+                var nodes = root.querySelectorAll('.apex-disclosure:not([data-disclosure-init])');
+                for (var i = 0; i < nodes.length; i++) init(nodes[i]);
+            } catch (_) {}
+        }
+        return { init: init, initAll: initAll, open: open, close: close };
+    })();
+
+    /* V-11-K: canonical empty/gap/error/forbidden/degraded/loading state helper.
+       A knowledge gap is NOT the same as an empty result. Use 'gap' when APEX
+       has not yet built a model; use 'empty' when the collection is genuinely empty. */
+    window._apexEmptyState = function(type, message) {
+        var icons = { empty:'○', gap:'◌', error:'✕', forbidden:'⊘', degraded:'⚠', loading:'◌' };
+        var t = (type && icons[type]) ? type : 'empty';
+        var esc = (typeof _escapeHtml === 'function')
+            ? _escapeHtml(String(message || ''))
+            : String(message || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return '<div class="apex-empty-state apex-empty-' + t + '" role="status">' +
+            '<span class="apex-empty-icon" aria-hidden="true">' + icons[t] + '</span>' +
+            '<p class="apex-empty-msg">' + esc + '</p>' +
+            '</div>';
+    };
+
+    /* V-11-K: canonical evidence renderer for V-11-J evidence_refs contract.
+       Consumes [{label, source, ts}]. Legacy shapes where label is missing
+       fall back to source (per V-11-J: ref.label || ref.source).
+       Empty → distinct "no references" line. */
+    window._renderEvidenceRefs = function(refs) {
+        var esc = function(s) {
+            return (typeof _escapeHtml === 'function')
+                ? _escapeHtml(String(s || ''))
+                : String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        };
+        if (!refs || !refs.length) {
+            return '<p class="apex-disclosure-empty">No evidence references available.</p>';
+        }
+        return refs.map(function(ref) {
+            var lbl    = esc(ref.label || ref.source || 'Reference');
+            var source = esc(ref.source || 'Unknown source');
+            var tsHtml = ref.ts
+                ? (function() {
+                    var tsRaw = esc(ref.ts);
+                    var tsPretty = tsRaw;
+                    try {
+                        var d = new Date(ref.ts);
+                        if (!isNaN(d)) {
+                            tsPretty = d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+                        }
+                    } catch (_) {}
+                    return '<time class="intel-ev-ts" datetime="' + tsRaw + '">' + esc(tsPretty) + '</time>';
+                })()
+                : '';
+            return '<div class="intel-evidence-ref">' +
+                '<span class="intel-ev-label">' + lbl + '</span>' +
+                '<span class="intel-ev-source">' + source + '</span>' +
+                tsHtml +
+                '</div>';
+        }).join('');
+    };
+
     /* ══ V-11-H: ACTIONS canonical surface ══════════════════════════════════
        H-1..H-20 per V-11-H-PRE-IMPLEMENTATION-RECONNAISSANCE §32.
        Uses shared helpers: _escapeHtml, _h(), _timeAgo, window.setState.
@@ -20908,6 +21136,8 @@ window.apexFileDropHandler = function(e){
         if (surface) surface.style.display = isMaster ? ''      : 'none';
         if (!isMaster) return;
         window.actionsRefresh();
+        // V-11-K: catch any disclosures rendered by refresh.
+        setTimeout(function() { if (window._disclosure) window._disclosure.initAll(); }, 250);
         // H-12: poll every 15s while active — reuses activePage guard.
         if (_actnPollTimer) clearInterval(_actnPollTimer);
         _actnPollTimer = setInterval(function() {
@@ -20964,6 +21194,8 @@ window.apexFileDropHandler = function(e){
                 list.removeAttribute('aria-busy');
                 list.innerHTML = pending.map(_actnRenderPendingCard).join('');
                 panel.setAttribute('data-apex-state', 'ready');
+                // V-11-K: wire canonical disclosure primitive on new cards.
+                if (window._disclosure) window._disclosure.initAll(list);
             })
             .catch(function() {
                 _actnSetState(list, panel, 'failed', { message: 'Could not load pending approvals.', retryFn: '_actnLoadPending()' });
@@ -20987,22 +21219,43 @@ window.apexFileDropHandler = function(e){
         var irreversibleWarn = info.reversibility === 'no'
             ? '<div class="actn-warn-irreversible">This action cannot be undone once run.</div>'
             : '';
-        return '<div class="actn-card" data-actn-task-id="' + _actnEscape(id) + '">' +
+        // V-11-K: evidence uses the canonical V-11-J contract.
+        var evidenceRefs = Array.isArray(t.evidence_refs) ? t.evidence_refs : [];
+        var evidenceHtml = (typeof window._renderEvidenceRefs === 'function')
+            ? window._renderEvidenceRefs(evidenceRefs)
+            : '<p class="apex-disclosure-empty">No evidence references available.</p>';
+        // V-11-K: L0 keeps icon/title/priority/approval buttons. L1 hides WHAT/WHY/cost/risk;
+        // L2 (nested disclosure) hides evidence. Approval buttons NEVER hide.
+        return '<div class="actn-card apex-disclosure" data-open="false" data-actn-task-id="' + _actnEscape(id) + '">' +
             '<div class="actn-card-header">' +
-                '<span class="actn-card-icon" aria-hidden="true">' + icon + '</span>' +
-                '<span class="actn-card-title">' + label + '</span>' +
+                '<button type="button" class="apex-disclosure-trigger" aria-label="Show context for ' + label + '">' +
+                    '<span class="apex-disclosure-chevron" aria-hidden="true">›</span>' +
+                    '<span class="actn-card-icon" aria-hidden="true">' + icon + '</span>' +
+                    '<span class="actn-card-title">' + label + '</span>' +
+                '</button>' +
                 '<span class="actn-priority-chip" style="background:' + priority.color + '" aria-label="Priority: ' + priority.label + '">' + priority.label + '</span>' +
             '</div>' +
-            '<div class="actn-card-what"><strong style="color:rgba(232,244,255,0.6);font-size:10px;letter-spacing:0.08em">WHAT:</strong> ' + descHtml + '</div>' +
-            '<div class="actn-card-why"><strong style="color:rgba(232,244,255,0.5);font-size:10px;letter-spacing:0.08em">WHY:</strong> ' + origin + '</div>' +
-            '<div class="actn-cost-row">' +
-                '<span><strong style="color:rgba(232,244,255,0.5)">COST:</strong> ' + _actnEscape(info.cost) + '</span>' +
-                '<span class="sep">·</span>' +
-                '<span><strong style="color:rgba(232,244,255,0.5)">RISK:</strong> ' + _actnEscape(info.risk) + '</span>' +
-                '<span class="sep">·</span>' +
-                '<span>' + revLabel + '</span>' +
-            '</div>' +
             irreversibleWarn +
+            '<div class="apex-disclosure-body">' +
+                '<div class="actn-card-what"><strong style="color:rgba(232,244,255,0.6);font-size:10px;letter-spacing:0.08em">WHAT:</strong> ' + descHtml + '</div>' +
+                '<div class="actn-card-why"><strong style="color:rgba(232,244,255,0.5);font-size:10px;letter-spacing:0.08em">WHY:</strong> ' + origin + '</div>' +
+                '<div class="actn-cost-row">' +
+                    '<span><strong style="color:rgba(232,244,255,0.5)">COST:</strong> ' + _actnEscape(info.cost) + '</span>' +
+                    '<span class="sep">·</span>' +
+                    '<span><strong style="color:rgba(232,244,255,0.5)">RISK:</strong> ' + _actnEscape(info.risk) + '</span>' +
+                    '<span class="sep">·</span>' +
+                    '<span>' + revLabel + '</span>' +
+                '</div>' +
+                '<div class="apex-disclosure" data-open="false" style="margin-top:8px">' +
+                    '<button type="button" class="apex-disclosure-trigger apex-disclosure-label-l1" aria-label="Show evidence">' +
+                        '<span class="apex-disclosure-chevron" aria-hidden="true">›</span>' +
+                        '<span>Evidence</span>' +
+                    '</button>' +
+                    '<div class="apex-disclosure-body">' +
+                        '<div class="actn-card-evidence" style="padding-top:6px">' + evidenceHtml + '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
             '<div class="actn-card-actions">' +
                 '<button class="actn-card-btn approve" data-actn-appr="' + _actnEscape(id) + '" aria-label="Approve action">Approve</button>' +
                 '<button class="actn-card-btn detail"  data-actn-detail="' + _actnEscape(id) + '" aria-label="View action detail">View detail</button>' +
@@ -21787,7 +22040,8 @@ window.apexFileDropHandler = function(e){
                 var gaps = d.gaps || [];
                 if (countEl) countEl.textContent = gaps.length + ' open';
                 el.removeAttribute('aria-busy');
-                if (!gaps.length) { window.setState(el, 'empty', { message: 'No open gaps.' }); return; }
+                // V-11-K: distinct "no gaps" empty (this is genuine emptiness — APEX has looked and found none).
+                if (!gaps.length) { window.setState(el, 'empty', { message: 'No open gaps — APEX has coverage on the domains it has modelled.' }); return; }
                 var html = gaps.map(function(g) {
                     var blocking = g.blocks_decision ? ' <span style="font-size:9px;color:#ff4d6d;font-weight:700">' + _escapeHtml(_apexVocab('BLOCKING')) + '</span>' : '';
                     var subject  = _escapeHtml(g.required_subject || g.id || 'Gap');
@@ -21951,28 +22205,44 @@ window.apexFileDropHandler = function(e){
                 }
                 var html = opps.map(function(o) {
                     var titleHtml = _escapeHtml(o.title || 'Opportunity');
-                    var descHtml  = _escapeHtml((o.description || '').slice(0, 200));
+                    var descHtml  = _escapeHtml((o.description || '').slice(0, 400));
                     var priority  = _apexPriorityBadge(typeof o.composite_score === 'number' ? o.composite_score : parseFloat(o.composite_score));
-                    // V-11-G G-9: Evidence L1 disclosure.
+                    // V-11-K: confidence dot at L0, label reserved for L1.
+                    var confScore = (typeof o.confidence_score === 'number') ? o.confidence_score
+                                  : (typeof o.confidence === 'number') ? o.confidence
+                                  : _tierToScore(o.confidence_tier);
+                    var confBadge = _apexConfidenceBadge(confScore);
+                    // V-11-K: use canonical V-11-J evidence renderer.
                     var refs = Array.isArray(o.evidence_refs) ? o.evidence_refs : [];
-                    var evidenceHtml = refs.length
-                        ? refs.map(function(ref) {
-                            var lbl = _escapeHtml(ref.label || ref.source || 'Source');
-                            var ts  = ref.ts ? ' · ' + _escapeHtml(_timeAgo(ref.ts)) + ' ago' : '';
-                            return '<div class="int-ev-row">' + lbl + ts + '</div>';
-                          }).join('')
-                        : '<div class="int-ev-row" style="color:rgba(255,255,255,0.35)">No evidence references available.</div>';
-                    return '<div style="padding:10px;background:rgba(0,212,255,0.03);border-radius:8px;border-left:3px solid rgba(0,212,255,0.3)">' +
-                        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">' +
-                            '<span style="font-size:11px;color:rgba(232,244,255,0.85);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + titleHtml + '</span>' +
+                    var evidenceHtml = window._renderEvidenceRefs
+                        ? window._renderEvidenceRefs(refs)
+                        : '<p class="apex-disclosure-empty">No evidence references available.</p>';
+                    // L0 = headline + confidence dot + priority. L1 = description. L2 = evidence.
+                    return '<div class="apex-disclosure" data-open="false" style="padding:10px;background:rgba(0,212,255,0.03);border-radius:8px;border-left:3px solid rgba(0,212,255,0.3)">' +
+                        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
+                            '<button type="button" class="apex-disclosure-trigger" aria-label="Show detail for ' + titleHtml + '" style="flex:1;min-width:0">' +
+                                '<span class="apex-disclosure-chevron" aria-hidden="true">›</span>' +
+                                '<span style="font-size:11px;color:rgba(232,244,255,0.85);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + titleHtml + '</span>' +
+                            '</button>' +
+                            '<span style="flex-shrink:0">' + confBadge + '</span>' +
                             '<span style="flex-shrink:0">' + priority + '</span>' +
                         '</div>' +
-                        (descHtml ? '<div style="font-size:10px;color:#8893a0;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + descHtml + '</div>' : '') +
-                        '<div class="int-opp-evidence-trigger" data-fn="_intToggleEvidence" role="button" tabindex="0" aria-expanded="false" aria-label="Show evidence"><span class="int-evidence-chevron">› Evidence</span></div>' +
-                        '<div class="int-opp-evidence" style="display:none">' + evidenceHtml + '</div>' +
+                        '<div class="apex-disclosure-body">' +
+                            (descHtml ? '<div style="font-size:11px;color:rgba(232,244,255,0.7);line-height:1.5;margin-top:6px">' + descHtml + '</div>' : '') +
+                            '<div class="apex-disclosure" data-open="false" style="margin-top:8px">' +
+                                '<button type="button" class="apex-disclosure-trigger apex-disclosure-label-l1" aria-label="Show evidence references">' +
+                                    '<span class="apex-disclosure-chevron" aria-hidden="true">›</span>' +
+                                    '<span>Evidence</span>' +
+                                '</button>' +
+                                '<div class="apex-disclosure-body">' +
+                                    '<div class="int-opp-evidence" style="margin-top:6px">' + evidenceHtml + '</div>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
                     '</div>';
                 }).join('');
                 window.setState(el, 'ready', { html: html });
+                if (window._disclosure) window._disclosure.initAll(el);
             })
             .catch(function() { window.setState(el, 'failed', { message: 'Opportunities unavailable.', retryFn: 'intelligenceRefresh()' }); });
     }
@@ -22023,6 +22293,8 @@ window.apexFileDropHandler = function(e){
         _intLoadBriefing();
         _intLoadOpportunities();
         _intLoadLessons();
+        // V-11-K: catch any disclosures added by fresh renders.
+        setTimeout(function() { if (window._disclosure) window._disclosure.initAll(); }, 250);
     }
     window.intelligenceRefresh = intelligenceRefresh;
     window._intLoadHealth = _intLoadHealth; // exposed for SYSTEM page init and testing
