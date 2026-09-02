@@ -7332,37 +7332,37 @@ select:focus {
                   <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:10px">Your life areas</div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
-                  <button class="hub-card" onclick="window.switchPage('finance')" aria-label="Finance">
+                  <button class="hub-card" data-goto="finance" aria-label="Finance">
                     <span class="hub-card-icon">&#9678;</span>
                     <span class="hub-card-label">Finance</span>
                     <span class="hub-card-sub">Money, budgets &amp; wealth</span>
                   </button>
-                  <button class="hub-card" onclick="window.switchPage('business')" aria-label="Business">
+                  <button class="hub-card" data-goto="business" aria-label="Business">
                     <span class="hub-card-icon">&#9703;</span>
                     <span class="hub-card-label">Business</span>
                     <span class="hub-card-sub">Projects &amp; ventures</span>
                   </button>
-                  <button class="hub-card" onclick="window.switchPage('communication')" aria-label="Network">
+                  <button class="hub-card" data-goto="communication" aria-label="Network">
                     <span class="hub-card-icon">&#9993;</span>
                     <span class="hub-card-label">Network</span>
                     <span class="hub-card-sub">People &amp; relationships</span>
                   </button>
-                  <button class="hub-card" onclick="window.switchPage('health')" aria-label="Health">
+                  <button class="hub-card" data-goto="health" aria-label="Health">
                     <span class="hub-card-icon">&#9681;</span>
                     <span class="hub-card-label">Health</span>
                     <span class="hub-card-sub">Body &amp; wellbeing</span>
                   </button>
-                  <button class="hub-card" onclick="window.switchPage('university')" aria-label="University">
+                  <button class="hub-card" data-goto="university" aria-label="University">
                     <span class="hub-card-icon">&#9711;</span>
                     <span class="hub-card-label">University</span>
                     <span class="hub-card-sub">Study &amp; learning</span>
                   </button>
-                  <button class="hub-card apex-master-only" onclick="window.switchPage('occult')" aria-label="Occult">
+                  <button class="hub-card apex-master-only" data-goto="occult" aria-label="Occult">
                     <span class="hub-card-icon">&#9700;</span>
                     <span class="hub-card-label">Occult</span>
                     <span class="hub-card-sub">Esoteric studies</span>
                   </button>
-                  <button class="hub-card" onclick="window.switchPage('research')" aria-label="Research">
+                  <button class="hub-card" data-goto="research" aria-label="Research">
                     <span class="hub-card-icon">&#9672;</span>
                     <span class="hub-card-label">Research</span>
                     <span class="hub-card-sub">Investigations &amp; sources</span>
@@ -7379,37 +7379,37 @@ select:focus {
                   <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:10px">APEX internals</div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
-                  <button class="hub-card" onclick="window.switchPage('intelligence')" aria-label="Intelligence">
+                  <button class="hub-card" data-goto="intelligence" aria-label="Intelligence">
                     <span class="hub-card-icon">&#9671;</span>
                     <span class="hub-card-label">Intelligence</span>
                     <span class="hub-card-sub">Insights &amp; opportunities</span>
                   </button>
-                  <button class="hub-card" onclick="window.switchPage('memory')" aria-label="Memory">
+                  <button class="hub-card" data-goto="memory" aria-label="Memory">
                     <span class="hub-card-icon">&#9635;</span>
                     <span class="hub-card-label">Memory</span>
                     <span class="hub-card-sub">What APEX remembers</span>
                   </button>
-                  <button class="hub-card" onclick="window.switchPage('knowledge')" aria-label="Knowledge">
+                  <button class="hub-card" data-goto="knowledge" aria-label="Knowledge">
                     <span class="hub-card-icon">&#9670;</span>
                     <span class="hub-card-label">Knowledge</span>
                     <span class="hub-card-sub">Documents &amp; sources</span>
                   </button>
-                  <button class="hub-card" onclick="window.switchPage('actions')" aria-label="Agents">
+                  <button class="hub-card" data-goto="actions" aria-label="Agents">
                     <span class="hub-card-icon">&#9881;</span>
                     <span class="hub-card-label">Agents</span>
                     <span class="hub-card-sub">Background tasks &amp; runs</span>
                   </button>
-                  <button class="hub-card apex-master-only" onclick="window.switchPage('governance')" aria-label="Governance">
+                  <button class="hub-card apex-master-only" data-goto="governance" aria-label="Governance">
                     <span class="hub-card-icon">&#9878;</span>
                     <span class="hub-card-label">Governance</span>
                     <span class="hub-card-sub">Rules &amp; authority chain</span>
                   </button>
-                  <button class="hub-card apex-master-only" onclick="window.switchPage('civilisation')" aria-label="Civilisation">
+                  <button class="hub-card apex-master-only" data-goto="civilisation" aria-label="Civilisation">
                     <span class="hub-card-icon">&#10795;</span>
                     <span class="hub-card-label">Civilisation</span>
                     <span class="hub-card-sub">Long-range model</span>
                   </button>
-                  <button class="hub-card apex-master-only" onclick="window.switchPage('reality')" aria-label="Reality">
+                  <button class="hub-card apex-master-only" data-goto="reality" aria-label="Reality">
                     <span class="hub-card-icon">&#9677;</span>
                     <span class="hub-card-label">Reality</span>
                     <span class="hub-card-sub">World model &amp; accuracy</span>
@@ -11259,6 +11259,12 @@ if(pipe){
     });
     var moreBtn = document.getElementById('nav-more');
     if (moreBtn) moreBtn.addEventListener('click', function() { window.switchPage('settings'); });
+
+    // Delegated listener for hub cards (data-goto="pageName") — CSP-safe, no onclick needed
+    document.addEventListener('click', function(e) {
+        var el = e.target.closest('[data-goto]');
+        if (el) { e.preventDefault(); window.switchPage(el.getAttribute('data-goto')); }
+    });
 
     var startX = 0, startY = 0;
     var pw = document.getElementById('pageWrap');
