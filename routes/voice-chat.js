@@ -71,6 +71,12 @@ router.post('/voice-chat', _auth, async (req, res) => {
         const _isFastPath = _isGreeting || _isConversational;
 
         // Context fetch
+        // V-11-I P0.5 — alexContext (buildAlexContext) reads Master's Obsidian identity
+        // profile + Alex-tagged Layer 9 facts. It is Master-private and must never reach
+        // a non-Master caller's LLM system prompt. Gate construction on the server-resolved
+        // role from req.identity; fail closed on missing identity (undefined !== 'master').
+        const _vcIsMaster = req.identity?.role === 'master';
+        const _vcBuildAlexContext = () => _vcIsMaster ? buildAlexContext().catch(() => '') : Promise.resolve('');
         const _wikiReader = (() => { try { return require('../agent-system/wiki-reader'); } catch { return null; } })();
         let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', gatewayCtx = null, _voiceTemporal = null;
         if (_isConversational) {
@@ -78,7 +84,7 @@ router.post('/voice-chat', _auth, async (req, res) => {
         } else if (_isGreeting) {
             [alexContext, gatewayCtx] = await Promise.race([
                 Promise.all([
-                    buildAlexContext().catch(() => ''),
+                    _vcBuildAlexContext(),
                     _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 500, layers: [0, 2, 10], taskId: req.conversationId }).catch(() => null),
                 ]),
                 new Promise(r => setTimeout(() => r(['', null]), 3000))
@@ -87,7 +93,7 @@ router.post('/voice-chat', _auth, async (req, res) => {
             [memSummary, recentMem, alexContext, relevantDocs, wikiCtx, gatewayCtx, _voiceTemporal] = await Promise.all([
                 getMemorySummary().catch(() => ''),
                 formatRecentMemory().catch(() => ''),
-                buildAlexContext().catch(() => ''),
+                _vcBuildAlexContext(),
                 pgSearchDocuments(userMessage.toLowerCase()).catch(() => []),
                 _wikiReader ? _wikiReader.getWikiContext(userMessage).catch(() => '') : Promise.resolve(''),
                 _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 2000, taskId: req.conversationId }).catch(() => null),
