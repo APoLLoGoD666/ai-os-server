@@ -10688,11 +10688,11 @@ if(pipe){
                 <!-- Page Header -->
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">REALITY MODEL</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">ADVANCED ANALYSIS &middot; SYSTEM MODEL</div>
+                        <div class="ds-page-title" style="letter-spacing:7px">REALITY</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">How APEX models and understands the world</div>
                     </div>
                     <div style="text-align:right">
-                        <button class="ds-btn cyan" data-fn="realitySeed">&#9650; Seed</button>
+                        <button class="ds-btn cyan" data-fn="realitySeed">Initialise Data</button>
                     </div>
                 </div>
 
@@ -10701,7 +10701,7 @@ if(pipe){
                     <div class="ds-panel-header">
                         <div class="ds-panel-header-left">
                             <span class="ds-dot cyan"></span>
-                            <span class="t-label">System Reality Health</span>
+                            <span class="t-label">Domain Health</span><span class="t-small" style="display:block;margin-top:3px">How well APEX understands each area of your life</span>
                         </div>
                         <div class="ds-panel-header-right">
                             <button class="ds-btn xs" data-fn="realityHealthRefresh">&#8634;</button>
@@ -10718,7 +10718,7 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot green"></span>
-                                <span class="t-label">Observer Health</span>
+                                <span class="t-label">Data Sources</span><span class="t-small" style="display:block;margin-top:3px">Status of the inputs APEX is monitoring</span>
                             </div>
                         </div>
                         <div id="realityObserversPanel" style="display:flex;flex-direction:column;gap:6px">
@@ -10729,7 +10729,7 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot amber"></span>
-                                <span class="t-label">Belief-Reality Gap</span>
+                                <span class="t-label">Accuracy Check</span><span class="t-small" style="display:block;margin-top:3px">How closely APEX's model matches what you know to be true</span>
                             </div>
                         </div>
                         <div id="realityBeliefGapPanel" style="display:flex;flex-direction:column;gap:6px">
@@ -10744,7 +10744,7 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot purple"></span>
-                                <span class="t-label">Epistemic Capital</span>
+                                <span class="t-label">Knowledge Quality</span><span class="t-small" style="display:block;margin-top:3px">How reliable and well-evidenced APEX's knowledge is</span>
                             </div>
                         </div>
                         <div id="realityEpistemicPanel" style="display:flex;flex-direction:column;gap:8px">
@@ -10755,7 +10755,7 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot cyan"></span>
-                                <span class="t-label">Attention Queue</span>
+                                <span class="t-label">What Needs Attention</span><span class="t-small" style="display:block;margin-top:3px">Areas APEX has flagged for your review</span>
                             </div>
                         </div>
                         <div id="realityAttentionPanel" style="display:flex;flex-direction:column;gap:6px">
@@ -10766,7 +10766,7 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot cyan"></span>
-                                <span class="t-label">Understanding</span>
+                                <span class="t-label">Depth of Understanding</span><span class="t-small" style="display:block;margin-top:3px">How deeply APEX has modelled each topic</span>
                             </div>
                         </div>
                         <div id="realityUnderstandingPanel" style="display:flex;flex-direction:column;gap:8px">
@@ -10781,7 +10781,7 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot green"></span>
-                                <span class="t-label">Intent Attribution</span>
+                                <span class="t-label">Action Tracking</span><span class="t-small" style="display:block;margin-top:3px">How well actions are traced back to their causes</span>
                             </div>
                         </div>
                         <div id="realityIntentPanel" style="display:flex;flex-direction:column;gap:6px">
@@ -10792,11 +10792,11 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot cyan"></span>
-                                <span class="t-label">Reality Claims</span>
+                                <span class="t-label">What APEX Believes</span><span class="t-small" style="display:block;margin-top:3px">Statements APEX has recorded, with confidence levels</span>
                             </div>
                             <div class="ds-panel-header-right">
                                 <select id="realityClaimsFilter" style="background:#111;color:#ccc;border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:2px 6px;font-size:11px">
-                                    <option value="">All stages</option>
+                                    <option value="">All confidence levels</option>
                                     <option value="verified">Verified</option>
                                     <option value="observed">Observed</option>
                                     <option value="contested">Contested</option>
@@ -10816,7 +10816,7 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot purple"></span>
-                                <span class="t-label">Counterfactual Worlds</span>
+                                <span class="t-label">Alternative Scenarios</span><span class="t-small" style="display:block;margin-top:3px">What-if situations APEX has modelled</span>
                             </div>
                         </div>
                         <div id="realityCounterfactualPanel" style="display:flex;flex-direction:column;gap:6px">
@@ -10827,7 +10827,7 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot amber"></span>
-                                <span class="t-label">Meta-Model Quality</span>
+                                <span class="t-label">Model Accuracy</span><span class="t-small" style="display:block;margin-top:3px">How well calibrated APEX's overall world model is</span>
                             </div>
                         </div>
                         <div id="realityMetaModelPanel" style="display:flex;flex-direction:column;gap:8px">
@@ -10842,7 +10842,7 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot purple"></span>
-                                <span class="t-label">Mental Models</span>
+                                <span class="t-label">Your Frameworks</span><span class="t-small" style="display:block;margin-top:3px">The mental models APEX has learned about how you think</span>
                             </div>
                         </div>
                         <div id="realityMentalModelsPanel" style="display:flex;flex-direction:column;gap:6px">
@@ -10853,7 +10853,7 @@ if(pipe){
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot cyan"></span>
-                                <span class="t-label">Civilization Self-Model</span>
+                                <span class="t-label">Big Picture View</span><span class="t-small" style="display:block;margin-top:3px">APEX's model of broader systems and civilisational patterns</span>
                             </div>
                         </div>
                         <div id="realitySelfModelPanel" style="display:flex;flex-direction:column;gap:8px">
@@ -11475,34 +11475,41 @@ if(pipe){
 
     </div><!-- .page-and-input -->
 
-    <!-- ══ SIDEBAR NAV ══ (V-11 Six Canonical Destinations) -->
+    <!-- ══ SIDEBAR NAV ══ -->
     <nav class="bottom-nav" id="apexSideNav" role="tablist" aria-label="Page navigation">
-        <!-- ① TODAY -->
+        <!-- TODAY -->
         <div class="az-nav-group">TODAY</div>
         <button class="nav-btn" id="nav-overview">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Today</span>
         </button>
-        <!-- ② COMMAND -->
+        <!-- COMMAND -->
         <div class="az-nav-group">COMMAND</div>
-        <button class="nav-btn active" id="nav-command" role="tab" aria-selected="true">
+        <button class="nav-btn" id="nav-command" role="tab" aria-selected="false">
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Command</span>
         </button>
-        <!-- ③ LIFE & WORK -->
-        <div class="az-nav-group">LIFE &amp; WORK</div>
+        <!-- ACTIONS -->
+        <div class="az-nav-group">ACTIONS</div>
+        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Actions">
+            <span class="nav-icon">◈</span>
+            <span class="nav-label">Actions</span>
+            <span class="ds-notif-badge amber" id="navActionsBadge" style="display:none"></span>
+        </button>
+        <!-- DOMAINS -->
+        <div class="az-nav-group">DOMAINS</div>
         <button class="nav-btn" id="nav-finance">
             <span class="nav-icon">◎</span>
             <span class="nav-label">Finance</span>
+        </button>
+        <button class="nav-btn" id="nav-business">
+            <span class="nav-icon">◧</span>
+            <span class="nav-label">Business</span>
         </button>
         <button class="nav-btn" id="nav-communication">
             <span class="nav-icon">✉</span>
             <span class="nav-label">Network</span>
             <span class="ds-notif-badge cyan" id="navCommsBadge" style="display:none">5</span>
-        </button>
-        <button class="nav-btn" id="nav-business">
-            <span class="nav-icon">◧</span>
-            <span class="nav-label">Business</span>
         </button>
         <button class="nav-btn" id="nav-health">
             <span class="nav-icon">◑</span>
@@ -11512,17 +11519,16 @@ if(pipe){
             <span class="nav-icon">◫</span>
             <span class="nav-label">University</span>
         </button>
+        <button class="nav-btn apex-master-only" id="nav-occult">
+            <span class="nav-icon">◬</span>
+            <span class="nav-label">Occult</span>
+        </button>
         <button class="nav-btn" id="nav-research">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Research</span>
         </button>
-        <button class="nav-btn apex-master-only" id="nav-occult">
-            <span class="nav-icon">◬</span>
-            <span class="nav-label">Specialised</span>
-        </button>
-        <!-- V-11-F F-9: civilisation & reality relocated to SYSTEM → Advanced (below) -->
-        <!-- ④ INTELLIGENCE -->
-        <div class="az-nav-group">INTELLIGENCE</div>
+        <!-- SYSTEM -->
+        <div class="az-nav-group">SYSTEM</div>
         <button class="nav-btn" id="nav-intelligence" aria-label="Intelligence">
             <span class="nav-icon">◇</span>
             <span class="nav-label">Intelligence</span>
@@ -11535,35 +11541,31 @@ if(pipe){
             <span class="nav-icon">◆</span>
             <span class="nav-label">Knowledge</span>
         </button>
-        <!-- ⑤ ACTIONS (V-11-H: consolidated nav — single #nav-actions replaces agents/approvals/activity) -->
-        <div class="az-nav-group">ACTIONS</div>
-        <!-- V-11-F F-7: 'Operation' nav removed (merged into Business & Work). DOM #page-operation retained hidden for legacy JS refs. -->
-        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Actions">
-            <span class="nav-icon">◈</span>
-            <span class="nav-label">Actions</span>
-            <span class="ds-notif-badge amber" id="navActionsBadge" style="display:none"></span>
-        </button>
-        <!-- ⑥ SYSTEM -->
-        <div class="az-nav-group">SYSTEM</div>
         <button class="nav-btn" id="nav-system">
-            <span class="nav-icon">◉</span>
-            <span class="nav-label">System</span>
+            <span class="nav-icon">⚙</span>
+            <span class="nav-label">Agents</span>
             <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
         </button>
         <button class="nav-btn apex-master-only" id="nav-governance" aria-label="Governance">
             <span class="nav-icon">⚖</span>
-            <span class="nav-label">Govern</span>
+            <span class="nav-label">Governance</span>
         </button>
-        <!-- V-11-F F-9: SYSTEM → Advanced sub-group (Master-only research surfaces relocated from LIFE & WORK) -->
         <div class="az-nav-group apex-master-only" style="opacity:.7;font-size:9px;margin-top:6px">ADVANCED</div>
         <button class="nav-btn apex-master-only" id="nav-civilisation" aria-label="Civilisation">
             <span class="nav-icon">⊛</span>
             <span class="nav-label">Civilisation</span>
         </button>
-        <button class="nav-btn apex-master-only" id="nav-reality" aria-label="Reality Model">
+        <button class="nav-btn apex-master-only" id="nav-reality" aria-label="Reality">
             <span class="nav-icon">◍</span>
             <span class="nav-label">Reality</span>
         </button>
+        <!-- SETTINGS (bottom) -->
+        <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0"></div>
+        <button class="nav-btn" id="nav-settings" aria-label="Settings">
+            <span class="nav-icon">◉</span>
+            <span class="nav-label">Settings</span>
+        </button>
+        <!-- mobile overflow (kept for JS compatibility) -->
         <button class="nav-btn" id="nav-more" role="tab" aria-selected="false" style="display:none" aria-label="More pages">
             <span class="nav-icon" style="letter-spacing:-1px">•••</span>
             <span class="nav-label">More</span>
@@ -20579,12 +20581,13 @@ window.apexFileDropHandler = function(e){
                   potential:'#8893a0', emergent:'#8893a0', revised:'#f5a623' };
         return m[s] || '#8893a0';
     }
+    function safePct(v) { var n = v || 0; return Math.min(100, n > 1 ? n : n * 100); }
     function bar(v, col) {
-        var pct = (Math.min(1, Math.max(0, v||0))*100).toFixed(0);
+        var pct = safePct(v||0).toFixed(0);
         return '<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:3px">' +
                '<div style="height:4px;width:'+pct+'%;background:'+col+';border-radius:2px;transition:width .4s"></div></div>';
     }
-    function healthCol(v) { return (v||0) >= 0.8 ? '#00e5b4' : (v||0) >= 0.5 ? '#f5a623' : '#ff4757'; }
+    function healthCol(v) { var n = safePct(v||0); return n >= 80 ? '#00e5b4' : n >= 50 ? '#f5a623' : '#ff4757'; }
 
     // 1. System Reality Health
     function loadRealityHealth() {
@@ -20605,7 +20608,7 @@ window.apexFileDropHandler = function(e){
                     var col = healthCol(avg);
                     return '<div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:10px 12px;border-left:3px solid '+col+'">' +
                         '<div style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+';letter-spacing:1px">' + (e.entity_id||'').replace('DOM-','D') + '</div>' +
-                        '<div style="font:600 20px/1 \'JetBrains Mono\',monospace;color:#e8eaf0;margin:6px 0 2px">' + (avg*100).toFixed(0) + '%</div>' +
+                        '<div style="font:600 20px/1 \'JetBrains Mono\',monospace;color:#e8eaf0;margin:6px 0 2px">' + safePct(avg).toFixed(0) + '%</div>' +
                     '</div>';
                 }).join('');
             })
@@ -20625,7 +20628,7 @@ window.apexFileDropHandler = function(e){
                     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
                         '<div><div style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#e8eaf0">' + (s.sensor_name||s.sensor_id||'?') + '</div>' +
                         '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:2px">' + (s.domain||'') + '</div></div>' +
-                        '<div style="font:700 12px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + ((s.health_score||0)*100).toFixed(0) + '%</div>' +
+                        '<div style="font:700 12px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + safePct(s.health_score||0).toFixed(0) + '%</div>' +
                     '</div>';
                 }).join('');
             })
@@ -20643,8 +20646,8 @@ window.apexFileDropHandler = function(e){
                 var gap = d.gap_score || 0;
                 var col = gap < 0.2 ? '#00e5b4' : gap < 0.5 ? '#f5a623' : '#ff4757';
                 el.innerHTML = '<div style="text-align:center;padding:12px 0">' +
-                    '<div style="font:700 30px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + (gap*100).toFixed(1) + '%</div>' +
-                    '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:6px;letter-spacing:2px">GAP SCORE</div>' +
+                    '<div style="font:700 30px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + safePct(gap).toFixed(1) + '%</div>' +
+                    '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:6px;letter-spacing:2px">GAP</div>' +
                 '</div>' +
                 '<div style="display:flex;flex-direction:column;gap:4px">' +
                     '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8893a0">Verified</span><span style="font-size:11px;color:#00e5b4">' + (d.verified_count||0) + '</span></div>' +
@@ -20669,10 +20672,10 @@ window.apexFileDropHandler = function(e){
                     var col = healthCol(v);
                     return '<div><div style="display:flex;justify-content:space-between;margin-bottom:2px">' +
                         '<span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">' + k.replace('_',' ').toUpperCase() + '</span>' +
-                        '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + ((v||0)*100).toFixed(0) + '%</span>' +
+                        '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + safePct(v||0).toFixed(0) + '%</span>' +
                     '</div>' + bar(v, col) + '</div>';
                 }).join('<div style="height:7px"></div>') +
-                (d.composite !== undefined ? '<div style="margin-top:12px;text-align:center;font:700 18px/1 \'JetBrains Mono\',monospace;color:#00e5b4">' + (d.composite*100).toFixed(1) + '% <span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">COMPOSITE</span></div>' : '');
+                (d.composite !== undefined ? '<div style="margin-top:12px;text-align:center;font:700 18px/1 \'JetBrains Mono\',monospace;color:#00e5b4">' + safePct(d.composite).toFixed(1) + '% <span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">OVERALL</span></div>' : '');
             })
             .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
@@ -20694,7 +20697,7 @@ window.apexFileDropHandler = function(e){
                             '<div style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#e8eaf0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (item.entity_id||item.label||'?') + '</div>' +
                             '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:2px">' + (item.domain||'') + '</div>' +
                         '</div>' +
-                        '<div style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + ((urgency||0)*100).toFixed(0) + '</div>' +
+                        '<div style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + safePct(urgency||0).toFixed(0) + '</div>' +
                     '</div>';
                 }).join('');
             })
@@ -20717,10 +20720,10 @@ window.apexFileDropHandler = function(e){
                     var col = healthCol(v);
                     return '<div style="display:flex;justify-content:space-between;align-items:center">' +
                         '<span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0">' + k.toUpperCase() + '</span>' +
-                        '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + ((v||0)*100).toFixed(0) + '%</span>' +
+                        '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + safePct(v||0).toFixed(0) + '%</span>' +
                     '</div>';
                 }).join('<div style="height:4px"></div>') +
-                (d.composite !== undefined ? '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);text-align:center;font:700 16px/1 \'JetBrains Mono\',monospace;color:#00e5b4">' + (d.composite*100).toFixed(1) + '%</div>' : '');
+                (d.composite !== undefined ? '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);text-align:center;font:700 16px/1 \'JetBrains Mono\',monospace;color:#00e5b4">' + safePct(d.composite).toFixed(1) + '%</div>' : '');
             })
             .catch(function() { /* V-11-F F-2/F-5 */ el.innerHTML = '<span style="color:#ff4757;font-size:11px">Could not load reality model data. <button class="ds-btn xs" onclick="window.loadRealityPage()">Retry</button></span>'; });
     }
@@ -20736,8 +20739,8 @@ window.apexFileDropHandler = function(e){
                 var rate = d.attribution_rate || 0;
                 var col = healthCol(rate);
                 el.innerHTML = '<div style="text-align:center;padding:10px 0">' +
-                    '<div style="font:700 26px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + (rate*100).toFixed(1) + '%</div>' +
-                    '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:5px;letter-spacing:2px">ATTRIBUTION RATE</div>' +
+                    '<div style="font:700 26px/1 \'JetBrains Mono\',monospace;color:'+col+'">' + safePct(rate).toFixed(1) + '%</div>' +
+                    '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:5px;letter-spacing:2px">TRACKED</div>' +
                 '</div>' +
                 '<div style="display:flex;flex-direction:column;gap:3px">' +
                     '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8893a0">Total</span><span style="font-size:11px;color:#e8eaf0">' + (d.total||0) + '</span></div>' +
@@ -20765,7 +20768,7 @@ window.apexFileDropHandler = function(e){
                             '<div style="font:600 10px/1 \'JetBrains Mono\',monospace;color:#e8eaf0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (c.claim_key||c.id||'?') + '</div>' +
                             '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;color:'+col+';margin-left:8px;flex-shrink:0">' + (c.stage||'?').toUpperCase() + '</div>' +
                         '</div>' +
-                        '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:2px">' + (c.domain||'') + ' &middot; ' + ((c.confidence||0)*100).toFixed(0) + '% conf</div>' +
+                        '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#8893a0;margin-top:2px">' + (c.domain||'') + ' &middot; ' + safePct(c.confidence||0).toFixed(0) + '% confidence</div>' +
                     '</div>';
                 }).join('');
             })
