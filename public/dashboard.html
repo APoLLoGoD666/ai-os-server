@@ -482,7 +482,7 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
     text-align: left; width: 100%;
 }
 .apex-disclosure-trigger:focus-visible {
-    outline: 2px solid var(--apex-cyan, #00d4ff);
+    outline: 2px solid var(--apex-focus, var(--apex-cyan, #00d4ff));
     outline-offset: 2px; border-radius: 3px;
 }
 .apex-disclosure-chevron {
@@ -538,9 +538,11 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
     border-radius: 8px;
     background: rgba(94,106,210,0.03);
 }
-.apex-empty-error { color: #ef4444; opacity: 1; }
-.apex-empty-forbidden { color: #f59e0b; }
-.apex-empty-degraded  { color: #f59e0b; }
+.apex-empty-error { color: var(--apex-danger, #ef4444); opacity: 1; }
+.apex-empty-forbidden { color: var(--apex-warning, #f59e0b); }
+.apex-empty-degraded  { color: var(--apex-warning, #f59e0b); }
+.apex-empty-success   { color: var(--apex-success, #22c55e); opacity: 1; }
+.apex-empty-info      { color: var(--apex-info, #3b82f6); opacity: 1; }
 .apex-empty-icon {
     font-size: 1.5rem;
     display: block;
@@ -3092,10 +3094,10 @@ body:not(.apex-cmd-active) .input-zone { display: none !important; }
     flex-shrink: 0;
     display: inline-block;
 }
-.apex-confidence-high { background: #4ade80; }
-.apex-confidence-medium { background: #facc15; }
-.apex-confidence-low { background: #f87171; }
-.apex-confidence-unknown { background: rgba(255,255,255,0.2); }
+.apex-confidence-high { background: var(--apex-conf-high, #22c55e); }
+.apex-confidence-medium { background: var(--apex-conf-medium, #f59e0b); }
+.apex-confidence-low { background: var(--apex-conf-low, #ef4444); }
+.apex-confidence-unknown { background: var(--apex-conf-unknown, rgba(255,255,255,0.2)); }
 
 /* Thinking indicator */
 .apex-thinking {
@@ -6664,6 +6666,59 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   V-11-L PALETTE CONVERGENCE — Canonical --apex-* semantic tokens
+   ONE PLATFORM · ONE SYSTEM · ONE APEX
+   APEX ZERO: pure black foundation, cyan signal, restrained.
+   Additive block — legacy --ax-*, --v12-*, --apex-color-* namespaces
+   remain untouched to preserve visual regression safety. This block
+   canonicalises the semantic tokens referenced by V-11-I/J/K systems
+   (--apex-cyan, --apex-indigo, --apex-focus, --apex-conf-*) which were
+   previously ghost-referenced with fallbacks only.
+═══════════════════════════════════════════════════════════════════ */
+:root {
+    /* APEX ZERO Foundation */
+    --apex-bg:               #000000;
+    --apex-surface:          #0a0a0a;
+    --apex-surface-2:        #111111;
+    --apex-surface-3:        #1a1a1a;
+    --apex-border:           rgba(255, 255, 255, 0.08);
+    --apex-border-strong:    rgba(255, 255, 255, 0.15);
+
+    /* Text */
+    --apex-text:             #f0f0f0;
+    --apex-text-secondary:   rgba(240, 240, 240, 0.6);
+    --apex-text-muted:       rgba(240, 240, 240, 0.35);
+    --apex-text-disabled:    rgba(240, 240, 240, 0.25);
+
+    /* Signal / Accent */
+    --apex-cyan:             #00d4ff;
+    --apex-cyan-subtle:      rgba(0, 212, 255, 0.12);
+    --apex-cyan-border:      rgba(0, 212, 255, 0.25);
+    --apex-indigo:           #6366f1;
+    --apex-indigo-subtle:    rgba(99, 102, 241, 0.12);
+
+    /* Semantic States */
+    --apex-success:          #22c55e;
+    --apex-success-subtle:   rgba(34, 197, 94, 0.12);
+    --apex-warning:          #f59e0b;
+    --apex-warning-subtle:   rgba(245, 158, 11, 0.12);
+    --apex-danger:           #ef4444;
+    --apex-danger-subtle:    rgba(239, 68, 68, 0.12);
+    --apex-info:             #3b82f6;
+    --apex-info-subtle:      rgba(59, 130, 246, 0.12);
+
+    /* Focus */
+    --apex-focus:            var(--apex-cyan);
+    --apex-focus-ring:       0 0 0 2px rgba(0, 212, 255, 0.4);
+
+    /* Confidence */
+    --apex-conf-high:        #22c55e;
+    --apex-conf-medium:      #f59e0b;
+    --apex-conf-low:         #ef4444;
+    --apex-conf-unknown:     rgba(240, 240, 240, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    UX-10 DOMAIN TOKEN APPLICATION — RX-04 GAP-05 2026-08-28
    Applies canonical --apex-color-* namespace to domain page elements.
    Additive only — no existing domain CSS removed.
@@ -6898,7 +6953,7 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 #micBtn[data-voice-state="listening"] { color: var(--apex-cyan, #00d4ff); }
 #micBtn[data-voice-state="processing"] { color: var(--apex-indigo, #6366f1); opacity: 0.7; }
-#micBtn[data-voice-state="error"] { color: #ef4444; border-color: rgba(239,68,68,0.45) !important; }
+#micBtn[data-voice-state="error"] { color: var(--apex-danger, #ef4444); border-color: var(--apex-danger-subtle, rgba(239,68,68,0.45)) !important; }
 @media (prefers-reduced-motion: no-preference) {
     #micBtn[data-voice-state="listening"] { animation: vc-pulse 1.2s ease-in-out infinite; }
 }
