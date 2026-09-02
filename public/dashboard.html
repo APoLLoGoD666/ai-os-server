@@ -2968,7 +2968,7 @@ html,body { background: #000 !important; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(94,106,210,0.22); border-radius: 0; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(94,106,210,0.4); }
-*:focus-visible { outline: 2px solid rgba(94,106,210,0.55) !important; outline-offset: 2px !important; }
+*:focus-visible { outline: 2px solid var(--apex-focus, #00d4ff) !important; outline-offset: 2px !important; }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; } }
 
 /* ── Navigation v11 ────────────────────────────────────────────────── */
@@ -6716,6 +6716,58 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
     --apex-conf-medium:      #f59e0b;
     --apex-conf-low:         #ef4444;
     --apex-conf-unknown:     rgba(240, 240, 240, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   V-11-M — CANONICAL VISUAL CONVERGENCE (final layer)
+   Baseline: 6558afd (V-11-L palette)
+   Purpose: alias legacy namespaces (--ax-*, --v12-*, --cmd-*, --bg,
+   --primary, etc.) to the canonical --apex-* semantic tokens so a
+   single change to --apex-cyan / --apex-danger / --apex-success
+   propagates system-wide. Alias-only: no legacy tokens removed, no
+   consumers rewritten. Uses !important to sit above the --ax-*
+   remap block (which itself uses !important) without disturbing
+   the token graph established in earlier phases.
+
+   PRESERVED (intentional exceptions):
+   - _apexConfidenceBadge 5-tier hex ladder (V-11-G dependency)
+   - Agent identity accents (--agent-*, --ax-sys/file/uni) —
+     these are semantic identity tokens, not surface tokens.
+   - Decorative brand hues (#efb45a, #ec7fa3) — non-semantic.
+═══════════════════════════════════════════════════════════════════ */
+:root {
+    /* Legacy short namespace → canonical apex */
+    --bg:            var(--apex-bg) !important;
+    --bg2:           var(--apex-surface) !important;
+    --bg3:           var(--apex-surface-2) !important;
+    --primary:       var(--apex-cyan) !important;
+    --primary-dim:   var(--apex-cyan-subtle) !important;
+    --primary-glow:  var(--apex-cyan-border) !important;
+
+    /* --cmd-* COMMAND runtime accents (visual only; runtime untouched) */
+    --cmd-cyan:      var(--apex-cyan) !important;
+    --cmd-cyan-hot:  var(--apex-cyan) !important;
+    --cmd-cyan-glow: var(--apex-cyan-subtle) !important;
+    --cmd-rose:      var(--apex-danger) !important;
+    --cmd-amber:     var(--apex-warning) !important;
+    --cmd-mint:      var(--apex-success) !important;
+
+    /* --v12-* dark shell semantic accents */
+    --v12-a:         var(--apex-indigo) !important;
+    --v12-a-dim:     var(--apex-indigo-subtle) !important;
+    --v12-ok:        var(--apex-success) !important;
+    --v12-warn:      var(--apex-warning) !important;
+    --v12-err:       var(--apex-danger) !important;
+    --v12-info:      var(--apex-info) !important;
+
+    /* --ax-* B7 dark theme semantic accents */
+    --ax-acc:        var(--apex-cyan) !important;
+    --ax-acc2:       var(--apex-cyan) !important;
+    --ax-cyn:        var(--apex-cyan) !important;
+    --ax-red:        var(--apex-danger) !important;
+    --ax-grn:        var(--apex-success) !important;
+    --ax-amb:        var(--apex-warning) !important;
+    --ax-pur:        var(--apex-indigo) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
