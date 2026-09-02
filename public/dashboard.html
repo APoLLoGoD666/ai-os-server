@@ -6924,10 +6924,10 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
         backdrop-filter: blur(20px) !important;
         -webkit-backdrop-filter: blur(20px) !important;
     }
-    /* Hide the overflow nav-btns; show only 4 tab pages + nav-more.
-       V-11-H: nav-agents/nav-approvals/nav-activity removed from sidebar entirely;
-       nav-actions is the canonical bottom-tab entry, hidden here so bottom-tab layout below shows it. */
-    #nav-overview, #nav-operation, #nav-system, #nav-finance,
+    /* Hide sub-domain nav items on mobile (accessed via Domains/System hub pages).
+       nav-overview, nav-command, nav-actions, nav-domains, nav-system, nav-settings
+       are the 6 canonical tabs — all others hidden. */
+    #nav-operation, #nav-finance,
     #nav-communication, #nav-business, #nav-health, #nav-university,
     #nav-occult, #nav-research, #nav-civilisation, #nav-reality,
     #nav-knowledge, #nav-intelligence, #nav-memory, #nav-governance {
