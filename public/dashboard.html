@@ -6190,7 +6190,7 @@ p { text-wrap:pretty; }
 #page-business::before,#page-health::before {
   content:''; position:absolute; inset:0; pointer-events:none; z-index:0; border-radius:inherit;
 }
-#page-system::before     { background:var(--ax-grad-sys); }
+#page-system::before     { background:transparent; }
 #page-finance::before    { background:var(--ax-grad-fin); }
 #page-university::before { background:var(--ax-grad-uni); }
 #page-business::before   { background:var(--ax-grad-biz); }
@@ -11166,31 +11166,31 @@ if(pipe){
 
     <!-- ══ SIDEBAR NAV ══ -->
     <nav class="bottom-nav" id="apexSideNav" role="tablist" aria-label="Page navigation">
-        <button class="nav-btn" id="nav-overview" onclick="window.switchPage('overview')">
+        <button class="nav-btn" id="nav-overview">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Today</span>
         </button>
-        <button class="nav-btn" id="nav-command" role="tab" aria-selected="false" onclick="window.switchPage('command')">
+        <button class="nav-btn" id="nav-command" role="tab" aria-selected="false">
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Command</span>
         </button>
-        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Actions" onclick="window.switchPage('actions')">
+        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Actions">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Actions</span>
             <span class="ds-notif-badge amber" id="navActionsBadge" style="display:none"></span>
         </button>
-        <button class="nav-btn" id="nav-domains" aria-label="Domains" onclick="window.switchPage('domains')">
+        <button class="nav-btn" id="nav-domains" aria-label="Domains">
             <span class="nav-icon">&#9643;</span>
             <span class="nav-label">Domains</span>
         </button>
-        <button class="nav-btn" id="nav-system" onclick="window.switchPage('system')">
+        <button class="nav-btn" id="nav-system">
             <span class="nav-icon">◉</span>
             <span class="nav-label">System</span>
             <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
         </button>
         <!-- SETTINGS (bottom) -->
         <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0"></div>
-        <button class="nav-btn" id="nav-settings" aria-label="Settings" onclick="window.switchPage('settings')">
+        <button class="nav-btn" id="nav-settings" aria-label="Settings">
             <span class="nav-icon">◉</span>
             <span class="nav-label">Settings</span>
         </button>
