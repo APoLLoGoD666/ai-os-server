@@ -103,6 +103,9 @@ function init(app, sbAdmin) {
             if (!p.task_id) return;
             const sb = _getEventsSb();
             if (!sb) return;
+            // V-11-H-B-C: propagate human_id from the AGENT_COMPLETED payload
+            // (auto-pipeline emits it) so background queue rows carry their
+            // originating owner rather than landing with NULL.
             const { error } = await sb.from('apex_agent_runs').insert({
                 task_id:       p.task_id,
                 objective:     (p.label || p.task_id || '').slice(0, 255),
@@ -111,6 +114,7 @@ function init(app, sbAdmin) {
                 complexity:    'moderate',
                 agent_summary: JSON.stringify({ queue_task: true, elapsed_ms: p.elapsed_ms, error: p.error || null }),
                 created_at:    new Date().toISOString(),
+                human_id:      p.human_id || null,
             });
             // Article 4: assert on every write — silent failure is corruption
             if (error) {

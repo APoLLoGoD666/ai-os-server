@@ -910,6 +910,16 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity, ctx
         note: l.result?.note ?? null
     }));
     const durationMs = ctx?.startTime ? Date.now() - ctx.startTime : null;
+    // V-11-H-B-C: look up parent-task owner so the apex_agent_runs audit row
+    // inherits human_id from the originating apex_tasks record. NULL is
+    // acceptable only when the task pre-dates ownership tagging or when the
+    // lookup fails (network hiccup — audit remains best-effort, non-fatal).
+    let humanId = null;
+    try {
+        const { data: taskRow } = await _sb.from('apex_tasks')
+            .select('human_id').eq('id', taskId).single();
+        humanId = taskRow?.human_id || null;
+    } catch (_) { humanId = null; }
     const baseRow = {
         task_id:       taskId,
         objective:     (spec.objective || '').slice(0, 255),
@@ -917,7 +927,8 @@ async function _auditLog(taskId, spec, success, agentLogs, cost, complexity, ctx
         cost_usd:      parseFloat(cost) || 0,
         complexity:    complexity || 'moderate',
         agent_summary: JSON.stringify(agentSummary),
-        created_at:    new Date().toISOString()
+        created_at:    new Date().toISOString(),
+        human_id:      humanId,
     };
     const { error: e1 } = await _sb.from('apex_agent_runs').upsert({
         ...baseRow,
