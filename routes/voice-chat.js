@@ -77,6 +77,21 @@ router.post('/voice-chat', _auth, async (req, res) => {
         // role from req.identity; fail closed on missing identity (undefined !== 'master').
         const _vcIsMaster = req.identity?.role === 'master';
         const _vcBuildAlexContext = () => _vcIsMaster ? buildAlexContext().catch(() => '') : Promise.resolve('');
+        // V-11-I P0.6 — Master-private persona strings (given name, location, honorific,
+        // assertions about Master's personal data surface) MUST NOT reach a non-Master
+        // caller's LLM system prompt. Users get a neutral persona bound to their own
+        // identity. Missing identity fails closed to the neutral (non-PII) branch.
+        const _vcTodayStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const _vcPersonaLines = _vcIsMaster
+            ? [
+                `You are Apex — Alex's personal AI operating system and intelligence engine. Address Alex as "sir". Today is ${_vcTodayStr}. Alex is based in Leamington Spa, Warwickshire, England.`,
+                `You have full access to Alex's world: calendar, emails, tasks, files, finances, health data, notifications, the web, and persistent memory. Use tools without hesitation. When greeted, call get_notifications and get_calendar_events simultaneously. Never say you cannot access something without trying first.`,
+              ]
+            : [
+                `You are Apex — a personal AI operating system and intelligence engine serving the authenticated user. Today is ${_vcTodayStr}.`,
+                `You have access to the user's own calendar, emails, tasks, files, notifications, the web, and persistent memory scoped to this user. Use tools without hesitation. When greeted, call get_notifications and get_calendar_events simultaneously. Never say you cannot access something without trying first. Do not reference any other user's personal details.`,
+              ];
+        const _vcFallbackReply = _vcIsMaster ? 'I was unable to complete that request, sir.' : 'I was unable to complete that request.';
         const _wikiReader = (() => { try { return require('../agent-system/wiki-reader'); } catch { return null; } })();
         let memSummary = '', recentMem = '', alexContext = '', relevantDocs = [], wikiCtx = '', gatewayCtx = null, _voiceTemporal = null;
         if (_isConversational) {
@@ -151,9 +166,9 @@ router.post('/voice-chat', _auth, async (req, res) => {
                         gatewayCtx?.historical_context?.length ? `RELEVANT PAST CONTEXT:\n${gatewayCtx.historical_context.slice(0, 2).map(h => `• ${(typeof h.content === 'string' ? h.content : JSON.stringify(h.content)).slice(0, 120)}`).join('\n')}` : '',
                         // Phase 16/WS1 — Founder context: abstracted alignment only; raw PII never sent externally
                         (() => { try { const fc = gatewayCtx?.founder_context; if (!fc) return ''; const { abstractForExternalPrompt } = require('../lib/founder/privacy-guard'); const abs = abstractForExternalPrompt(fc); if (!abs) return ''; const parts = [abs.alignment_guidance, abs.peak_state_prompt, abs.abstracted_behavioral_guidance?.length ? `Behavioral guidance:\n${abs.abstracted_behavioral_guidance.map(g => `• ${g}`).join('\n')}` : null, abs.relevant_values?.length ? `Values: ${abs.relevant_values.slice(0,3).join(', ')}` : null, abs.applicable_principles?.length ? `Principles: ${abs.applicable_principles.slice(0,2).join(' | ')}` : null].filter(Boolean); return parts.length ? `FOUNDER ALIGNMENT:\n${parts.join('\n')}` : ''; } catch { return ''; } })(),
-                        `You are Apex — Alex's personal AI operating system and intelligence engine. Address Alex as "sir". Today is ${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Alex is based in Leamington Spa, Warwickshire, England.`,
+                        _vcPersonaLines[0],
                         `VOICE RULES — mandatory: Responses are spoken aloud. Speak naturally — like a composed, intelligent aide, not a clipped command-line tool. For simple facts: 1-2 natural sentences. For complex topics: 3-4 sentences, flowing and connected. Never trail off mid-thought. No preamble, no hollow affirmations ("Certainly!", "Great question!"). No markdown, no lists, no asterisks. End cleanly — no dangling questions unless essential.`,
-                        `You have full access to Alex's world: calendar, emails, tasks, files, finances, health data, notifications, the web, and persistent memory. Use tools without hesitation. When greeted, call get_notifications and get_calendar_events simultaneously. Never say you cannot access something without trying first.`,
+                        _vcPersonaLines[1],
                         `You are direct, confident, and loyal. You remember everything. You grow sharper with every conversation.`,
                         _domainAgent ? `SPECIALIST CONTEXT — ${_domainAgent.name.toUpperCase()}:\n${_domainAgent.system_prompt}` : '',
                     ].filter(Boolean).join('\n\n'),
@@ -186,7 +201,7 @@ router.post('/voice-chat', _auth, async (req, res) => {
             }
         }
 
-        if (!finalReply) finalReply = 'I was unable to complete that request, sir.';
+        if (!finalReply) finalReply = _vcFallbackReply;
         const reply = finalReply;
 
         setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'voice', 'exchange'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
