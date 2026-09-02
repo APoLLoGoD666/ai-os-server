@@ -277,6 +277,202 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
     }
 }
 
+/* ── V-11-H: ACTIONS canonical surface ─────────────────────────────── */
+/* Ghost-keep legacy DOMs (H-1): #page-approvals / #page-agents / #page-activity remain in DOM for JS refs. */
+#page-approvals, #page-agents, #page-activity { display: none !important; }
+
+.actn-card {
+    padding: 16px;
+    border: 1px solid rgba(99,102,241,0.15);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.actn-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.actn-card-icon {
+    font-size: 15px;
+    color: rgba(232,244,255,0.7);
+    flex-shrink: 0;
+}
+.actn-card-title {
+    flex: 1;
+    font: 600 12px/1.3 Inter, sans-serif;
+    color: rgba(232,244,255,0.92);
+}
+.actn-card-what {
+    font: 400 12px/1.5 Inter, sans-serif;
+    color: rgba(232,244,255,0.72);
+}
+.actn-card-why {
+    font: 400 11px/1.5 Inter, sans-serif;
+    color: rgba(232,244,255,0.5);
+}
+.actn-card-evidence {
+    font: 500 11px/1.4 'JetBrains Mono', monospace;
+    color: rgba(232,244,255,0.55);
+    letter-spacing: 0.02em;
+}
+.actn-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+.actn-card-btn {
+    flex: 1;
+    min-height: 40px;
+    border-radius: 6px;
+    border: 1px solid;
+    font: 600 11px/1 Inter, sans-serif;
+    cursor: pointer;
+    background: transparent;
+    padding: 8px 12px;
+}
+.actn-card-btn.approve {
+    background: rgba(39,174,96,0.12);
+    color: #27ae60;
+    border-color: rgba(39,174,96,0.3);
+}
+.actn-card-btn.reject {
+    background: rgba(255,77,109,0.08);
+    color: #ff4d6d;
+    border-color: rgba(255,77,109,0.2);
+}
+.actn-card-btn.detail {
+    background: rgba(99,102,241,0.1);
+    color: #6366f1;
+    border-color: rgba(99,102,241,0.25);
+    flex: 0 0 auto;
+    padding: 8px 14px;
+}
+.actn-priority-chip {
+    display: inline-block;
+    font: 700 10px/1 Inter, sans-serif;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #fff;
+    flex-shrink: 0;
+}
+.actn-status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #06b6d4;
+    animation: actn-pulse 1.5s ease-in-out infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+@keyframes actn-pulse { 0%,100%{opacity:0.4}50%{opacity:1} }
+
+.actn-undo-banner {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 80px;
+    z-index: 1001;
+    background: rgba(15,20,40,0.98);
+    border-top: 1px solid rgba(99,102,241,0.4);
+    color: #f2f2f2;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 -6px 24px rgba(0,0,0,0.4);
+    font: 500 13px/1.4 Inter, sans-serif;
+}
+.actn-undo-msg { flex: 1; min-width: 0; }
+.actn-undo-btn {
+    background: rgba(99,102,241,0.18);
+    border: 1px solid rgba(99,102,241,0.4);
+    color: #a5b4fc;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font: 600 12px/1 Inter, sans-serif;
+    cursor: pointer;
+    min-height: 40px;
+    flex-shrink: 0;
+}
+.actn-undo-countdown { font: 500 12px/1 'JetBrains Mono', monospace; color: rgba(232,244,255,0.6); }
+.actn-undo-countdown.urgent { color: #ff4d6d; font-weight: 700; }
+
+.actn-reject-reason {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(255,77,109,0.05);
+    border: 1px solid rgba(255,77,109,0.15);
+    border-radius: 6px;
+}
+.actn-reject-reason textarea {
+    width: 100%;
+    min-height: 60px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    color: #f2f2f2;
+    font: 400 12px/1.4 Inter, sans-serif;
+    padding: 8px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+.actn-reject-actions { display: flex; gap: 8px; }
+
+.actn-stub {
+    padding: 40px 20px;
+    text-align: center;
+    color: rgba(232,244,255,0.6);
+    font: 400 13px/1.5 Inter, sans-serif;
+}
+
+.actn-cost-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: rgba(232,244,255,0.5);
+}
+.actn-cost-row .sep { color: rgba(232,244,255,0.2); }
+.actn-warn-irreversible {
+    color: #ff4d6d;
+    font: 600 11px/1.4 Inter, sans-serif;
+    margin-top: 4px;
+}
+
+/* V-11-H desktop multi-column layout */
+@media (min-width: 1024px) {
+    #page-actions .actn-panels {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+}
+@media (min-width: 1280px) {
+    #page-actions .actn-panels {
+        grid-template-columns: 1.4fr 1fr 0.8fr !important;
+    }
+}
+@media (max-width: 767px) {
+    #page-actions .actn-panels {
+        display: flex !important;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .actn-undo-banner { bottom: 60px; padding: 12px 14px; font-size: 12px; }
+}
+
 /* ── Body & app shell ───────────────────────────────────────────────── */
 html, body {
     background: var(--bg);
@@ -6490,7 +6686,9 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
         backdrop-filter: blur(20px) !important;
         -webkit-backdrop-filter: blur(20px) !important;
     }
-    /* Hide the 16 overflow nav-btns; show only 4 tab pages + nav-more */
+    /* Hide the overflow nav-btns; show only 4 tab pages + nav-more.
+       V-11-H: nav-agents/nav-approvals/nav-activity removed from sidebar entirely;
+       nav-actions is the canonical bottom-tab entry, hidden here so bottom-tab layout below shows it. */
     #nav-overview, #nav-operation, #nav-system, #nav-finance,
     #nav-communication, #nav-business, #nav-health, #nav-university,
     #nav-occult, #nav-research, #nav-civilisation, #nav-reality,
@@ -9408,6 +9606,8 @@ if(pipe){
                     <div class="td-section" id="today-section-needs">
                         <div class="td-section-hdr"><span class="td-section-label">Needs You</span></div>
                         <div id="today-needs-panel"></div>
+                        <!-- V-11-H H-15: TODAY ACTIONS integration. Pending approvals section, hidden until populated. -->
+                        <div id="today-actions-pending" data-apex-state="empty" style="margin-top:12px"></div>
                     </div>
                     <div class="td-section" id="today-section-noticed">
                         <div class="td-section-hdr"><span class="td-section-label">APEX Noticed</span></div>
@@ -10435,12 +10635,140 @@ if(pipe){
                             <div class="skel skel-row skel-wide"></div>
                         </div>
                     </div>
-                    <!-- State model note (INV-ACTION-01/02) -->
+                    <!-- V-11-H H-9: replaced pipeline vocabulary with plain-language boundary sentence. -->
                     <div style="padding:10px 12px;background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.1);border-radius:8px;font-size:10px;color:#8893a0;line-height:1.5">
-                        <strong style="color:rgba(232,244,255,0.6)">State model:</strong> PROPOSED → APPROVAL_REQUIRED → APPROVED → EXECUTING → EXECUTED/FAILED. Approval ≠ execution. Proposal ≠ approval.
+                        Every action APEX takes waits for your approval, unless a standing rule allows it, and every action can be inspected after it runs.
                     </div>
                 </div>
             </div><!-- #page-approvals -->
+
+            <!-- ══ PAGE: ACTIONS (V-11-H canonical surface) ══ -->
+            <div class="page" id="page-actions">
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <div>
+                        <div class="ds-page-title" style="letter-spacing:7px">ACTIONS</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">DECISIONS · IN-FLIGHT · HISTORY · NOTIFICATIONS</div>
+                    </div>
+                    <button class="ds-btn cyan" data-fn="actionsRefresh" aria-label="Refresh actions">↻ Refresh</button>
+                </div>
+                <!-- V-11-H stub — shown to non-Master users until backend gate H-B1 lands. -->
+                <div id="actnStubPanel" class="apex-user-only actn-stub" style="display:none">
+                    APEX is preparing your Actions view — available once your account is fully activated.
+                </div>
+                <div id="actnMasterSurface" class="apex-master-only">
+                    <div class="actn-panels" style="display:flex;flex-direction:column;gap:16px;margin-top:18px">
+                        <!-- H-2: Pending approvals -->
+                        <section role="region" aria-label="Pending Approvals" class="ds-panel" id="actnPendingPanel" data-apex-state="loading">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot amber pulse"></span>
+                                    <span class="t-label">Pending Approvals</span>
+                                </div>
+                                <span id="actnPendingCount" style="font-size:10px;color:#8893a0">—</span>
+                            </div>
+                            <div id="actnPendingList" style="display:flex;flex-direction:column;gap:8px;padding:10px" aria-busy="true"></div>
+                        </section>
+                        <!-- H-12: In-flight tasks -->
+                        <section role="region" aria-label="In-flight tasks" class="ds-panel" id="actnInFlightPanel" data-apex-state="loading">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="actn-status-dot"></span>
+                                    <span class="t-label">What APEX Is Doing</span>
+                                </div>
+                                <span id="actnInFlightCount" style="font-size:10px;color:#8893a0">—</span>
+                            </div>
+                            <div id="actnInFlightList" style="display:flex;flex-direction:column;gap:8px;padding:10px" aria-busy="true"></div>
+                        </section>
+                        <!-- Recent Actions -->
+                        <section role="region" aria-label="Recent Actions" class="ds-panel" id="actnRecentPanel" data-apex-state="loading">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot cyan"></span>
+                                    <span class="t-label">Recent Actions</span>
+                                </div>
+                            </div>
+                            <div id="actnRecentList" style="display:flex;flex-direction:column;gap:6px;padding:10px;max-height:280px;overflow-y:auto" aria-busy="true"></div>
+                        </section>
+                        <!-- H-10: Notifications -->
+                        <section role="region" aria-label="Notifications" class="ds-panel" id="actnNotifPanel" data-apex-state="loading">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot amber"></span>
+                                    <span class="t-label">Notifications</span>
+                                </div>
+                                <span id="actnNotifCount" style="font-size:10px;color:#8893a0">—</span>
+                            </div>
+                            <div id="actnNotifList" style="display:flex;flex-direction:column;gap:6px;padding:10px;max-height:280px;overflow-y:auto" aria-busy="true"></div>
+                        </section>
+                        <!-- Agent runs (mini log) -->
+                        <section role="region" aria-label="Agent Runs" class="ds-panel" id="actnRunsPanel" data-apex-state="loading">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot cyan"></span>
+                                    <span class="t-label">Recent Agent Runs</span>
+                                </div>
+                                <span style="font-size:10px;color:#8893a0">Pipeline execution audit</span>
+                            </div>
+                            <div id="actnRunsList" style="display:flex;flex-direction:column;gap:6px;padding:10px;max-height:280px;overflow-y:auto" aria-busy="true"></div>
+                        </section>
+                        <!-- H-11: Standing approvals -->
+                        <section role="region" aria-label="Standing Approvals" class="ds-panel apex-master-only" id="actnStandingPanel" data-apex-state="loading">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot amber"></span>
+                                    <span class="t-label">Standing Approvals</span>
+                                </div>
+                            </div>
+                            <div id="actnStandingList" style="display:flex;flex-direction:column;gap:6px;padding:10px" aria-busy="true"></div>
+                        </section>
+                        <!-- H-11: Master feature-approvals -->
+                        <section role="region" aria-label="Feature Approvals" class="ds-panel apex-master-only" id="actnPermPanel" data-apex-state="loading">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot amber"></span>
+                                    <span class="t-label">Feature Approvals</span>
+                                </div>
+                            </div>
+                            <div id="actnPermList" style="display:flex;flex-direction:column;gap:8px;padding:10px" aria-busy="true"></div>
+                        </section>
+                        <!-- Self-check (Master only) -->
+                        <section role="region" aria-label="System Self-Check" class="ds-panel apex-master-only" id="actnSelfCheckPanel" data-apex-state="loading">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot cyan"></span>
+                                    <span class="t-label">System Self-Check</span>
+                                </div>
+                            </div>
+                            <div id="actnSelfCheckList" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px" aria-busy="true"></div>
+                        </section>
+                        <!-- Live feed (view-only, migrated from activity) -->
+                        <section role="region" aria-label="Live Feed" class="ds-panel apex-master-only" id="actnLiveFeedPanel" data-apex-state="loading">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot green"></span>
+                                    <span class="t-label">Live Feed</span>
+                                </div>
+                                <span id="actnLiveFeedCount" style="font-size:10px;color:#8893a0">—</span>
+                            </div>
+                            <div id="actnLiveFeedList" style="display:flex;flex-direction:column;gap:6px;padding:10px;max-height:240px;overflow-y:auto" aria-busy="true"></div>
+                        </section>
+                        <!-- Agent capabilities (Master only) -->
+                        <section role="region" aria-label="Agent Capabilities" class="ds-panel apex-master-only" id="actnCapPanel" data-apex-state="loading">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot cyan"></span>
+                                    <span class="t-label">Agent Capabilities</span>
+                                </div>
+                            </div>
+                            <div id="actnCapList" style="display:flex;flex-direction:column;gap:6px;padding:10px" aria-busy="true"></div>
+                        </section>
+                    </div>
+                    <!-- Plain-language lifecycle note (V-11-H H-9). -->
+                    <div style="padding:10px 12px;margin-top:16px;background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.1);border-radius:8px;font-size:10px;color:#8893a0;line-height:1.5">
+                        Every action APEX takes waits for your approval, unless a standing rule allows it, and every action can be inspected after it runs.
+                    </div>
+                </div>
+            </div><!-- #page-actions -->
 
             <!-- ══ PAGE: KNOWLEDGE (UX-11 — Knowledge surface) ══ -->
             <div class="page" id="page-knowledge">
@@ -10792,17 +11120,13 @@ if(pipe){
             <span class="nav-icon">◆</span>
             <span class="nav-label">Knowledge</span>
         </button>
-        <!-- ⑤ ACTIONS -->
+        <!-- ⑤ ACTIONS (V-11-H: consolidated nav — single #nav-actions replaces agents/approvals/activity) -->
         <div class="az-nav-group">ACTIONS</div>
         <!-- V-11-F F-7: 'Operation' nav removed (merged into Business & Work). DOM #page-operation retained hidden for legacy JS refs. -->
-        <button class="nav-btn apex-master-only" id="nav-agents" role="tab" aria-selected="false" aria-label="Agents">
+        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Actions">
             <span class="nav-icon">◈</span>
-            <span class="nav-label">Agents</span>
-        </button>
-        <button class="nav-btn apex-master-only" id="nav-approvals" role="tab" aria-selected="false" aria-label="Approvals">
-            <span class="nav-icon">◇</span>
-            <span class="nav-label">Approvals</span>
-            <span class="ds-notif-badge amber" id="navApprovalsBadge" style="display:none"></span>
+            <span class="nav-label">Actions</span>
+            <span class="ds-notif-badge amber" id="navActionsBadge" style="display:none"></span>
         </button>
         <!-- ⑥ SYSTEM -->
         <div class="az-nav-group">SYSTEM</div>
@@ -10810,11 +11134,6 @@ if(pipe){
             <span class="nav-icon">◉</span>
             <span class="nav-label">System</span>
             <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
-        </button>
-        <button class="nav-btn apex-master-only" id="nav-activity" role="tab" aria-selected="false" aria-label="Activity">
-            <span class="nav-icon">◎</span>
-            <span class="nav-label">Activity</span>
-            <span class="ds-notif-badge cyan" id="navActivityBadge" style="display:none"></span>
         </button>
         <button class="nav-btn apex-master-only" id="nav-governance" aria-label="Governance">
             <span class="nav-icon">⚖</span>
@@ -10842,7 +11161,8 @@ if(pipe){
 (function() {
     // V-11-F F-7: 'operation' removed (merged into business)
     // V-11-F F-9: civilisation/reality moved out of LIFE & WORK swipe sequence to end (SYSTEM → Advanced)
-    var pages = ['overview', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'activity', 'agents', 'approvals', 'knowledge', 'intelligence', 'memory', 'governance', 'civilisation', 'reality'];
+    // V-11-H H-18: 'agents' / 'approvals' / 'activity' consolidated into 'actions' (positioned after 'intelligence' per Section 32).
+    var pages = ['overview', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'memory', 'governance', 'civilisation', 'reality'];
     var activePage = 'overview';
 
     var pageMeta = {
@@ -10862,6 +11182,7 @@ if(pipe){
         activity:      { title:'Activity',      sub:'Events · Observability · Live Feed' },
         agents:        { title:'Agents',        sub:'Status · Tasks · Authority · Runs' },
         approvals:     { title:'Approvals',     sub:'Pending · Actions · Governance' },
+        actions:       { title:'Actions',       sub:'Decisions · In-flight · History · Notifications' },
         knowledge:     { title:'Knowledge',     sub:'Facts · Evidence · Gaps · Coverage' },
         intelligence:  { title:'Intelligence',  sub:'Briefing · Opportunities · Health' },
         memory:        { title:'Memory',        sub:'Episodic · Semantic · Health' },
@@ -15338,7 +15659,7 @@ function toggleHelpOverlay() {
             return;
         }
         if (e.key === 'R' && e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (confirm('Run next pipeline feature?')) masterRunNext(); return; }
-        if (e.key === 'a' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('business'); setTimeout(function() { var el = document.getElementById('bizApprovalList'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200); return; } // V-11-F F-7: was 'operation'
+        if (e.key === 'a' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('actions'); return; } // V-11-H H-14: reverted to canonical ACTIONS destination.
         if (e.key === 'n' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('system'); return; }
         if (e.key === '/' && !e.shiftKey) { e.preventDefault(); var ci = document.getElementById('chatInput'); if (ci) ci.focus(); return; }
     });
@@ -16066,7 +16387,51 @@ async function initOverviewPage() {
             }
         }
     }
+
+    // ── V-11-H H-15: TODAY ACTIONS integration ──
+    if (typeof window._v11hLoadTodayActions === 'function') window._v11hLoadTodayActions();
 }
+
+// V-11-H H-15: Load pending approvals into TODAY.
+window._v11hLoadTodayActions = function() {
+    var el = document.getElementById('today-actions-pending');
+    if (!el) return;
+    fetch('/api/tasks', { credentials:'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var tasks = (d && (d.tasks || d)) || [];
+            var pending = (Array.isArray(tasks) ? tasks : []).filter(function(t) {
+                return t.status === 'awaiting_approval' || t.status === 'pending_approval' || t.status === 'approval_required';
+            });
+            var esc = function(s) { try { return (typeof escapeHtml === 'function') ? escapeHtml(s) : String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); } catch(_) { return ''; } };
+            if (!pending.length) {
+                el.setAttribute('data-apex-state', 'empty');
+                el.innerHTML = '<div class="td-empty-today" style="font-size:11px;color:rgba(232,244,255,0.5);padding:8px 12px">No pending approvals — you\'re caught up.</div>';
+                return;
+            }
+            var top = pending.slice(0, 3);
+            var extra = pending.length - top.length;
+            var html = top.map(function(t) {
+                var icon  = (typeof window._apexActionIcon === 'function') ? window._apexActionIcon(t.task_type) : '⊛';
+                var label = esc(t.task_type || 'Task');
+                return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:6px;margin-bottom:6px">' +
+                    '<span aria-hidden="true">' + icon + '</span>' +
+                    '<span style="flex:1;font-size:12px;color:rgba(232,244,255,0.85)">' + label + '</span>' +
+                    '<button type="button" class="actn-card-btn approve" style="min-height:32px;padding:4px 10px" data-actn-appr="' + esc(String(t.id)) + '">Approve</button>' +
+                    '<button type="button" class="actn-card-btn reject"  style="min-height:32px;padding:4px 10px" data-actn-reject-init="' + esc(String(t.id)) + '">Reject</button>' +
+                '</div>';
+            }).join('');
+            if (extra > 0) {
+                html += '<button type="button" class="td-more" style="background:none;border:none;color:#6366f1;font-size:11px;padding:6px 4px;cursor:pointer" onclick="switchPage(\'actions\')">+' + extra + ' more in Actions ›</button>';
+            }
+            el.setAttribute('data-apex-state', 'ready');
+            el.innerHTML = html;
+        })
+        .catch(function() {
+            el.setAttribute('data-apex-state', 'empty');
+            el.innerHTML = '';
+        });
+};
 
 // Hook initOverviewPage into switchPage without touching the original
 (function() {
@@ -19553,6 +19918,7 @@ window.apexFileDropHandler = function(e){
         <button class="more-sheet-btn" id="more-nav-reality"       data-fn="moreNavTo" data-args='["reality"]'       aria-label="Reality"><span class="more-sheet-icon">◍</span><span class="more-sheet-label">Reality</span></button>
         <button class="more-sheet-btn" id="more-nav-knowledge"     data-fn="moreNavTo" data-args='["knowledge"]'     aria-label="Knowledge"><span class="more-sheet-icon">◆</span><span class="more-sheet-label">Knowledge</span></button>
         <button class="more-sheet-btn" id="more-nav-intelligence"  data-fn="moreNavTo" data-args='["intelligence"]'  aria-label="Intelligence"><span class="more-sheet-icon">◇</span><span class="more-sheet-label">Intel</span></button>
+        <button class="more-sheet-btn" id="more-nav-actions"       data-fn="moreNavTo" data-args='["actions"]'       aria-label="Actions"><span class="more-sheet-icon">◈</span><span class="more-sheet-label">ACTIONS</span></button>
         <button class="more-sheet-btn" id="more-nav-memory"        data-fn="moreNavTo" data-args='["memory"]'        aria-label="Memory"><span class="more-sheet-icon">▣</span><span class="more-sheet-label">Memory</span></button>
         <button class="more-sheet-btn" id="more-nav-governance"    data-fn="moreNavTo" data-args='["governance"]'    aria-label="Governance"><span class="more-sheet-icon">⚖</span><span class="more-sheet-label">Govern</span></button>
     </div>
@@ -19562,9 +19928,10 @@ window.apexFileDropHandler = function(e){
 /* ── Mobile enhancements: More Sheet, PTT, orb hold, page name ── */
 (function() {
     // V-11-F F-7 / F-9: 'operation' removed; civilisation/reality remain reachable via System → Advanced
+    // V-11-H H-1/H-18: 'actions' consolidates prior agents/approvals/activity destinations.
     var _morePages = ['overview','system','finance','communication','business',
                       'health','university','occult','research','civilisation','reality',
-                      'knowledge','intelligence','memory','governance'];
+                      'knowledge','intelligence','actions','memory','governance'];
     var _isMobile  = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
     /* ── More sheet helpers ── */
@@ -19627,7 +19994,8 @@ window.apexFileDropHandler = function(e){
     };
 
     /* Wrapper 15 — ARIA aria-selected sync (Phase E GAP-25) */
-    var _eTabIds = ['nav-command','nav-activity','nav-agents','nav-approvals','nav-more'];
+    // V-11-H H-1: 'nav-activity/agents/approvals' collapsed into 'nav-actions'.
+    var _eTabIds = ['nav-command','nav-actions','nav-more'];
     var _origSwitch2 = window.switchPage;
     window.switchPage = function(name) {
         _origSwitch2(name);
@@ -20622,6 +20990,805 @@ window.apexFileDropHandler = function(e){
     window.apexConfirmApproval = apexConfirmApproval;
     window.apexDeclineApproval = apexDeclineApproval;
 
+    /* ══ V-11-H: ACTIONS canonical surface ══════════════════════════════════
+       H-1..H-20 per V-11-H-PRE-IMPLEMENTATION-RECONNAISSANCE §32.
+       Uses shared helpers: _escapeHtml, _h(), _timeAgo, window.setState.
+       Ghost-keeps #page-approvals/#page-agents/#page-activity JS handlers untouched. */
+
+    var _actnEscape = function(s) {
+        try { return (typeof escapeHtml === 'function') ? escapeHtml(s) : String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+        catch (_) { return ''; }
+    };
+
+    // H-9: Vocabulary sweep — raw status → plain language.
+    window._apexActionStatus = function(status) {
+        var s = String(status || '').toLowerCase();
+        if (s === 'awaiting_approval' || s === 'pending_approval' || s === 'approval_required') return 'Waiting for your approval';
+        if (s === 'in_progress') return 'APEX is working on this';
+        if (s === 'completed')   return 'Done';
+        if (s === 'failed')      return "Couldn't complete";
+        if (s === 'cancelled')   return 'Stopped';
+        if (s === 'rejected')    return 'You said no';
+        if (s === 'undone')      return 'Reversed';
+        if (s === 'pending')     return 'Queued';
+        return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Unknown';
+    };
+
+    // H-2: Icon mapping per task_type.
+    window._apexActionIcon = function(taskType) {
+        var t = String(taskType || '').toLowerCase();
+        if (/(read|search|list|inspect|view)/.test(t))          return '◈';
+        if (/(write|create|add|generate)/.test(t))              return '▶';
+        if (/(delete|remove|drop)/.test(t))                     return '⊗';
+        if (/(send|email|message|notify)/.test(t))              return '◉';
+        if (/(schedule|calendar)/.test(t))                      return '◷';
+        if (/(analyze|check|diagnose|report)/.test(t))          return '◍';
+        return '⊛';
+    };
+
+    // H-2: Client-side cost/risk/reversibility heuristic (interim, per O-4/H-B4).
+    window._apexActionInfo = function(task) {
+        var t = String((task && task.task_type) || '').toLowerCase();
+        var desc = String((task && task.description) || '');
+        var cost, risk, reversibility;
+        if (/(file|write|create|generate)/.test(t))     cost = '$0.01–$0.05 estimated';
+        else if (/(search|read|list|inspect|view)/.test(t)) cost = 'No cost';
+        else                                             cost = '$0.01 estimated';
+        if (/(delete|remove|drop)/.test(t))              risk = 'High';
+        else if (/(write|create|send)/.test(t))          risk = 'Medium';
+        else                                             risk = 'Low';
+        if (/(delete|remove|drop)/.test(t))              reversibility = 'no';
+        else if (/(write|create|send)/.test(t))          reversibility = 'partial';
+        else                                             reversibility = 'yes';
+        var origin = (desc ? desc.slice(0, 80) : 'Originated from your instruction');
+        return { cost: cost, risk: risk, reversibility: reversibility, origin: origin };
+    };
+
+    // H-8: Priority chip.
+    window._apexActionPriority = function(task) {
+        var info = window._apexActionInfo(task || {});
+        var t = String((task && task.task_type) || '').toLowerCase();
+        var desc = String((task && task.description) || '').toLowerCase();
+        if (/(error|critical|urgent)/.test(desc) || info.reversibility === 'no') return { tier:0, label:'Critical', color:'#ff4444' };
+        if (/(delete|remove|drop)/.test(t))                                       return { tier:1, label:'Urgent',   color:'#ff8c00' };
+        if (info.risk === 'Medium' || info.risk === 'High')                       return { tier:2, label:'Important',color:'#ffd700' };
+        return { tier:3, label:'Standard', color:'#888888' };
+    };
+
+    var _actnPollTimer = null;
+    var _actnRejectExpanded = {};  // taskId → true (reject textarea visible)
+
+    // V-11-H helper: setState() targets the inner list (whose innerHTML is safe to replace),
+    // and mirrors the state attribute onto the panel/section for the H-5 contract.
+    function _actnSetState(list, panel, state, payload) {
+        if (list && typeof window.setState === 'function') window.setState(list, state, payload);
+        if (panel) panel.setAttribute('data-apex-state', state);
+    }
+
+    // H-1: init / pause.
+    window.actionsInitPage = function() {
+        var stub    = document.getElementById('actnStubPanel');
+        var surface = document.getElementById('actnMasterSurface');
+        var isMaster = document.body.classList.contains('apex-role-master');
+        if (stub)    stub.style.display    = isMaster ? 'none'  : 'block';
+        if (surface) surface.style.display = isMaster ? ''      : 'none';
+        if (!isMaster) return;
+        window.actionsRefresh();
+        // H-12: poll every 15s while active — reuses activePage guard.
+        if (_actnPollTimer) clearInterval(_actnPollTimer);
+        _actnPollTimer = setInterval(function() {
+            if (window.activePage !== 'actions') return;
+            _actnLoadPending();
+            _actnLoadInFlight();
+        }, 15000);
+    };
+    window.actionsPausePage = function() {
+        if (_actnPollTimer) { clearInterval(_actnPollTimer); _actnPollTimer = null; }
+    };
+
+    window.actionsRefresh = function() {
+        _actnLoadPending();
+        _actnLoadInFlight();
+        _actnLoadRecent();
+        _actnLoadNotifications();
+        _actnLoadRuns();
+        _actnLoadStanding();
+        _actnLoadPermissions();
+        _actnLoadSelfCheck();
+        _actnLoadLiveFeed();
+        _actnLoadCapabilities();
+    };
+
+    // H-5: setState + H-2 canonical card render.
+    function _actnLoadPending() {
+        var panel = document.getElementById('actnPendingPanel');
+        var list  = document.getElementById('actnPendingList');
+        var count = document.getElementById('actnPendingCount');
+        if (!panel || !list) return;
+        _actnSetState(list, panel, 'loading');
+        fetch('/api/tasks', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var tasks = d.tasks || d || [];
+                var pending = (Array.isArray(tasks) ? tasks : []).filter(function(t) {
+                    return t.status === 'awaiting_approval' || t.status === 'pending_approval' || t.status === 'approval_required';
+                });
+                // H-8: sort by priority tier, then created_at desc.
+                pending.sort(function(a, b) {
+                    var pa = window._apexActionPriority(a).tier;
+                    var pb = window._apexActionPriority(b).tier;
+                    if (pa !== pb) return pa - pb;
+                    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                });
+                var badge = document.getElementById('navActionsBadge');
+                if (badge) { badge.textContent = pending.length || ''; badge.style.display = pending.length ? '' : 'none'; }
+                if (count) count.textContent = pending.length + ' pending';
+                if (!pending.length) {
+                    _actnSetState(list, panel, 'empty', { message: 'No pending approvals — you’re caught up.' });
+                    return;
+                }
+                list.removeAttribute('aria-busy');
+                list.innerHTML = pending.map(_actnRenderPendingCard).join('');
+                panel.setAttribute('data-apex-state', 'ready');
+            })
+            .catch(function() {
+                _actnSetState(list, panel, 'failed', { message: 'Could not load pending approvals.', retryFn: '_actnLoadPending()' });
+            });
+    }
+    window._actnLoadPending = _actnLoadPending;
+
+    function _actnRenderPendingCard(t) {
+        var id       = String(t.id);
+        var icon     = window._apexActionIcon(t.task_type);
+        var label    = _actnEscape(t.task_type || t.type || 'Task');
+        var priority = window._apexActionPriority(t);
+        var info     = window._apexActionInfo(t);
+        var descFull = String(t.description || '');
+        var truncated = descFull.length > 160 ? descFull.slice(0, 160) + '…' : descFull;
+        var descHtml = _actnEscape(truncated || 'No description provided.');
+        var origin   = _actnEscape(info.origin);
+        var revLabel = info.reversibility === 'yes'     ? 'Reversible'
+                       : info.reversibility === 'partial' ? 'Partially reversible'
+                       :                                    'Not reversible';
+        var irreversibleWarn = info.reversibility === 'no'
+            ? '<div class="actn-warn-irreversible">This action cannot be undone once run.</div>'
+            : '';
+        return '<div class="actn-card" data-actn-task-id="' + _actnEscape(id) + '">' +
+            '<div class="actn-card-header">' +
+                '<span class="actn-card-icon" aria-hidden="true">' + icon + '</span>' +
+                '<span class="actn-card-title">' + label + '</span>' +
+                '<span class="actn-priority-chip" style="background:' + priority.color + '" aria-label="Priority: ' + priority.label + '">' + priority.label + '</span>' +
+            '</div>' +
+            '<div class="actn-card-what"><strong style="color:rgba(232,244,255,0.6);font-size:10px;letter-spacing:0.08em">WHAT:</strong> ' + descHtml + '</div>' +
+            '<div class="actn-card-why"><strong style="color:rgba(232,244,255,0.5);font-size:10px;letter-spacing:0.08em">WHY:</strong> ' + origin + '</div>' +
+            '<div class="actn-cost-row">' +
+                '<span><strong style="color:rgba(232,244,255,0.5)">COST:</strong> ' + _actnEscape(info.cost) + '</span>' +
+                '<span class="sep">·</span>' +
+                '<span><strong style="color:rgba(232,244,255,0.5)">RISK:</strong> ' + _actnEscape(info.risk) + '</span>' +
+                '<span class="sep">·</span>' +
+                '<span>' + revLabel + '</span>' +
+            '</div>' +
+            irreversibleWarn +
+            '<div class="actn-card-actions">' +
+                '<button class="actn-card-btn approve" data-actn-appr="' + _actnEscape(id) + '" aria-label="Approve action">Approve</button>' +
+                '<button class="actn-card-btn detail"  data-actn-detail="' + _actnEscape(id) + '" aria-label="View action detail">View detail</button>' +
+                '<button class="actn-card-btn reject"  data-actn-reject-init="' + _actnEscape(id) + '" aria-label="Reject action">Reject</button>' +
+            '</div>' +
+            '<div class="actn-reject-reason" data-actn-reject-panel="' + _actnEscape(id) + '" style="display:none">' +
+                '<label style="font-size:11px;color:rgba(232,244,255,0.6)">Tell APEX why (optional — helps it improve)</label>' +
+                '<textarea maxlength="280" placeholder="e.g. Wrong priority, too expensive, not needed now"></textarea>' +
+                '<div class="actn-reject-actions">' +
+                    '<button class="actn-card-btn reject" data-actn-reject-confirm="' + _actnEscape(id) + '">Confirm Rejection</button>' +
+                    '<button class="actn-card-btn" style="background:rgba(255,255,255,0.05);color:rgba(232,244,255,0.7);border-color:rgba(255,255,255,0.1)" data-actn-reject-cancel="' + _actnEscape(id) + '">Cancel</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }
+
+    // H-12: in-flight tasks.
+    function _actnLoadInFlight() {
+        var panel = document.getElementById('actnInFlightPanel');
+        var list  = document.getElementById('actnInFlightList');
+        var count = document.getElementById('actnInFlightCount');
+        if (!panel || !list) return;
+        _actnSetState(list, panel, 'loading');
+        fetch('/api/tasks', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var tasks = d.tasks || d || [];
+                var inFlight = (Array.isArray(tasks) ? tasks : []).filter(function(t) { return t.status === 'in_progress'; });
+                if (count) count.textContent = inFlight.length + ' running';
+                if (!inFlight.length) {
+                    _actnSetState(list, panel, 'empty', { message: 'Nothing running right now.' });
+                    return;
+                }
+                list.removeAttribute('aria-busy');
+                list.innerHTML = inFlight.slice(0, 10).map(function(t) {
+                    var icon = window._apexActionIcon(t.task_type);
+                    var label = _actnEscape(t.task_type || t.type || 'Task');
+                    var desc  = _actnEscape(String(t.description || '').slice(0, 120));
+                    return '<div class="actn-card">' +
+                        '<div class="actn-card-header">' +
+                            '<span class="actn-card-icon" aria-hidden="true">' + icon + '</span>' +
+                            '<span class="actn-card-title">' + label + '</span>' +
+                            '<span class="actn-status-dot" aria-hidden="true"></span>' +
+                            '<span style="font-size:11px;color:#06b6d4">' + _actnEscape(window._apexActionStatus('in_progress')) + '</span>' +
+                        '</div>' +
+                        (desc ? '<div class="actn-card-what">' + desc + '</div>' : '') +
+                    '</div>';
+                }).join('');
+                panel.setAttribute('data-apex-state', 'ready');
+            })
+            .catch(function() {
+                _actnSetState(list, panel, 'failed', { message: 'Could not load in-flight tasks.', retryFn: '_actnLoadInFlight()' });
+            });
+    }
+    window._actnLoadInFlight = _actnLoadInFlight;
+
+    // Recent Actions.
+    function _actnLoadRecent() {
+        var panel = document.getElementById('actnRecentPanel');
+        var list  = document.getElementById('actnRecentList');
+        if (!panel || !list) return;
+        _actnSetState(list, panel, 'loading');
+        fetch('/api/tasks?limit=20', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var tasks = d.tasks || d || [];
+                var done = (Array.isArray(tasks) ? tasks : []).filter(function(t) {
+                    return t.status === 'completed' || t.status === 'failed' || t.status === 'cancelled' || t.status === 'rejected' || t.status === 'undone';
+                });
+                if (!done.length) {
+                    _actnSetState(list, panel, 'empty', { message: 'No recent actions to show yet.' });
+                    return;
+                }
+                list.removeAttribute('aria-busy');
+                list.innerHTML = done.slice(0, 15).map(function(t) {
+                    var cols = { completed:'#27ae60', failed:'#ff4d6d', cancelled:'#8893a0', rejected:'#ff8c42', undone:'#a78bfa' };
+                    var col = cols[t.status] || '#8893a0';
+                    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+                        '<span style="font-size:11px;color:rgba(232,244,255,0.75)">' + _actnEscape(t.task_type || t.type || 'Task') + '</span>' +
+                        '<div style="display:flex;align-items:center;gap:8px">' +
+                            '<span style="font-size:11px;color:' + col + '">' + _actnEscape(window._apexActionStatus(t.status)) + '</span>' +
+                            '<span style="font-size:10px;color:#8893a0">' + (t.updated_at || t.created_at ? _actnEscape(_timeAgo(t.updated_at || t.created_at)) : '') + '</span>' +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+                panel.setAttribute('data-apex-state', 'ready');
+            })
+            .catch(function() {
+                _actnSetState(list, panel, 'failed', { message: 'Could not load recent actions.', retryFn: '_actnLoadRecent()' });
+            });
+    }
+    window._actnLoadRecent = _actnLoadRecent;
+
+    // H-10: notifications migrated to ACTIONS.
+    function _actnLoadNotifications() {
+        var panel = document.getElementById('actnNotifPanel');
+        var list  = document.getElementById('actnNotifList');
+        var count = document.getElementById('actnNotifCount');
+        if (!panel || !list) return;
+        _actnSetState(list, panel, 'loading');
+        fetch('/notifications', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var items = d.notifications || d || [];
+                if (count) count.textContent = items.length + ' notification' + (items.length !== 1 ? 's' : '');
+                if (!items.length) {
+                    _actnSetState(list, panel, 'empty', { message: 'No notifications right now.' });
+                    return;
+                }
+                list.removeAttribute('aria-busy');
+                var unread = 0;
+                var html = items.slice(0, 30).map(function(n) {
+                    var read = n.read_at || n.read;
+                    if (!read) unread++;
+                    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);opacity:' + (read ? '0.6' : '1') + '">' +
+                        '<span style="width:6px;height:6px;border-radius:50%;background:' + (read ? 'transparent' : '#00d4ff') + ';border:1px solid rgba(0,212,255,0.4);flex-shrink:0;margin-top:3px"></span>' +
+                        '<div style="flex:1;min-width:0">' +
+                            '<div style="font-size:11px;color:rgba(232,244,255,0.85)">' + _actnEscape(n.message || n.title || 'Notification') + '</div>' +
+                            '<div style="font-size:10px;color:#8893a0;margin-top:2px">' + (n.type ? _actnEscape(n.type) + ' · ' : '') + (n.created_at ? _actnEscape(_timeAgo(n.created_at)) : '') + '</div>' +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+                list.innerHTML = html;
+                panel.setAttribute('data-apex-state', 'ready');
+                // H-10: unread count feeds badge (additive to pending approvals).
+                var badge = document.getElementById('navActionsBadge');
+                var pendingCountEl = document.getElementById('actnPendingCount');
+                var pendingCount = pendingCountEl ? parseInt(pendingCountEl.textContent || '0', 10) || 0 : 0;
+                var total = pendingCount + unread;
+                if (badge) { badge.textContent = total || ''; badge.style.display = total ? '' : 'none'; }
+            })
+            .catch(function() {
+                _actnSetState(list, panel, 'failed', { message: 'Could not load notifications.', retryFn: '_actnLoadNotifications()' });
+            });
+    }
+    window._actnLoadNotifications = _actnLoadNotifications;
+
+    function _actnLoadRuns() {
+        var panel = document.getElementById('actnRunsPanel');
+        var list  = document.getElementById('actnRunsList');
+        if (!panel || !list) return;
+        _actnSetState(list, panel, 'loading');
+        fetch('/api/intelligence/agent-runs', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var runs = d.runs || d.agent_runs || d || [];
+                if (!Array.isArray(runs) || !runs.length) {
+                    _actnSetState(list, panel, 'empty', { message: 'No agent runs recorded.' });
+                    return;
+                }
+                list.removeAttribute('aria-busy');
+                list.innerHTML = runs.slice(0, 15).map(function(r) {
+                    var ok = r.success !== false;
+                    var col = ok ? '#27ae60' : '#ff4d6d';
+                    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+                        '<div style="min-width:0;flex:1">' +
+                            '<div style="font-size:11px;color:rgba(232,244,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _actnEscape(r.objective || r.task_type || r.type || 'Agent Run') + '</div>' +
+                            '<div style="font-size:10px;color:#8893a0">' + (r.duration_ms ? Math.round(r.duration_ms/1000) + 's' : '') + (r.cost_usd ? ' · $' + Number(r.cost_usd).toFixed(4) : '') + '</div>' +
+                        '</div>' +
+                        '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
+                            '<span style="font-size:10px;color:' + col + '">' + (ok ? 'Done' : 'Failed') + '</span>' +
+                            '<span style="font-size:10px;color:#8893a0">' + (r.created_at ? _actnEscape(_timeAgo(r.created_at)) : '') + '</span>' +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+                panel.setAttribute('data-apex-state', 'ready');
+            })
+            .catch(function() {
+                _actnSetState(list, panel, 'failed', { message: 'Could not load agent runs.', retryFn: '_actnLoadRuns()' });
+            });
+    }
+    window._actnLoadRuns = _actnLoadRuns;
+
+    // H-11: standing approvals (view-only).
+    function _actnLoadStanding() {
+        var panel = document.getElementById('actnStandingPanel');
+        var list  = document.getElementById('actnStandingList');
+        if (!panel || !list) return;
+        _actnSetState(list, panel, 'loading');
+        fetch('/api/tasks/standing-approvals', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var items = d.approvals || d || [];
+                if (!Array.isArray(items) || !items.length) {
+                    _actnSetState(list, panel, 'empty', { message: 'No standing approvals configured.' });
+                    return;
+                }
+                list.removeAttribute('aria-busy');
+                list.innerHTML = items.map(function(a) {
+                    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+                        '<div>' +
+                            '<div style="font-size:11px;color:rgba(232,244,255,0.85)">' + _actnEscape(a.action_type || a.pattern || '—') + '</div>' +
+                            '<div style="font-size:10px;color:#8893a0">Pattern: ' + _actnEscape(a.pattern || '*') + '</div>' +
+                        '</div>' +
+                        '<span style="font-size:9px;color:#27ae60;font-weight:700">ACTIVE</span>' +
+                    '</div>';
+                }).join('');
+                panel.setAttribute('data-apex-state', 'ready');
+            })
+            .catch(function() {
+                _actnSetState(list, panel, 'failed', { message: 'Could not load standing approvals.', retryFn: '_actnLoadStanding()' });
+            });
+    }
+    window._actnLoadStanding = _actnLoadStanding;
+
+    // H-11: Master-only feature approvals (delegates to /api/master/permissions + POST /api/master/approve).
+    function _actnLoadPermissions() {
+        var panel = document.getElementById('actnPermPanel');
+        var list  = document.getElementById('actnPermList');
+        if (!panel || !list) return;
+        _actnSetState(list, panel, 'loading');
+        fetch('/api/master/permissions', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var perms = (d && d.permissions) || [];
+                var cards = perms.map(function(n) {
+                    var info; try { info = JSON.parse(n.message); } catch (_) { return ''; }
+                    if (!info || info.type !== 'permissionRequest') return '';
+                    var fid    = _actnEscape(info.featureId || '');
+                    var ftitle = _actnEscape(info.featureTitle || info.name || '');
+                    var reason = _actnEscape(info.reason || info.description || '');
+                    var stage  = _actnEscape((info.plan && info.plan.estimatedComplexity) || info.stage || '');
+                    return '<div class="actn-card">' +
+                        '<div class="actn-card-header">' +
+                            '<span class="actn-card-icon" aria-hidden="true">⚡</span>' +
+                            '<span class="actn-card-title">' + ftitle + '</span>' +
+                            (stage ? '<span class="actn-priority-chip" style="background:#5b9eff">' + stage + '</span>' : '') +
+                        '</div>' +
+                        (reason ? '<div class="actn-card-what">' + reason + '</div>' : '') +
+                        '<div class="actn-card-actions">' +
+                            '<button class="actn-card-btn approve" data-actn-perm-approve="' + fid + '">Approve feature</button>' +
+                            '<button class="actn-card-btn reject"  data-actn-perm-deny="'    + fid + '">Deny</button>' +
+                        '</div>' +
+                    '</div>';
+                }).filter(Boolean);
+                if (!cards.length) {
+                    _actnSetState(list, panel, 'empty', { message: 'No feature approvals pending.' });
+                    return;
+                }
+                list.removeAttribute('aria-busy');
+                list.innerHTML = cards.join('');
+                panel.setAttribute('data-apex-state', 'ready');
+            })
+            .catch(function() {
+                _actnSetState(list, panel, 'failed', { message: 'Could not load feature approvals.', retryFn: '_actnLoadPermissions()' });
+            });
+    }
+    window._actnLoadPermissions = _actnLoadPermissions;
+
+    function _actnLoadSelfCheck() {
+        var panel = document.getElementById('actnSelfCheckPanel');
+        var list  = document.getElementById('actnSelfCheckList');
+        if (!panel || !list) return;
+        _actnSetState(list, panel, 'loading');
+        fetch('/api/intelligence/self-check', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var checks = d.checks || d.subsystems || [];
+                if (!checks.length) {
+                    _actnSetState(list, panel, 'empty', { message: 'No self-check data.' });
+                    return;
+                }
+                list.removeAttribute('aria-busy');
+                list.innerHTML = checks.map(function(c) {
+                    var ok = c.status === 'ok' || c.ok === true || c.healthy === true;
+                    var col = ok ? '#27ae60' : '#ff4d6d';
+                    return '<div style="padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:6px;text-align:center">' +
+                        '<div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">' + _actnEscape(c.name || c.subsystem || '—') + '</div>' +
+                        '<div style="font-size:10px;font-weight:700;color:' + col + '">' + (ok ? 'OK' : 'FAIL') + '</div>' +
+                    '</div>';
+                }).join('');
+                panel.setAttribute('data-apex-state', 'ready');
+            })
+            .catch(function() {
+                _actnSetState(list, panel, 'failed', { message: 'Self-check unavailable.', retryFn: '_actnLoadSelfCheck()' });
+            });
+    }
+    window._actnLoadSelfCheck = _actnLoadSelfCheck;
+
+    function _actnLoadLiveFeed() {
+        var panel = document.getElementById('actnLiveFeedPanel');
+        var list  = document.getElementById('actnLiveFeedList');
+        var count = document.getElementById('actnLiveFeedCount');
+        if (!panel || !list) return;
+        _actnSetState(list, panel, 'loading');
+        fetch('/api/timeline', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var tasks = d.tasks || d.items || d || [];
+                if (!Array.isArray(tasks) || !tasks.length) {
+                    _actnSetState(list, panel, 'empty', { message: 'No recent live events.' });
+                    return;
+                }
+                if (count) count.textContent = tasks.length + ' event' + (tasks.length !== 1 ? 's' : '');
+                list.removeAttribute('aria-busy');
+                list.innerHTML = tasks.slice(0, 20).map(function(t) {
+                    var col = t.status === 'completed' ? '#27ae60' : t.status === 'failed' ? '#ff4d6d' : '#8893a0';
+                    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+                        '<span style="font-size:11px;color:rgba(232,244,255,0.85)">' + _actnEscape(t.task_type || t.type || 'Task') + '</span>' +
+                        '<div style="display:flex;align-items:center;gap:8px">' +
+                            '<span style="font-size:11px;color:' + col + '">' + _actnEscape(window._apexActionStatus(t.status)) + '</span>' +
+                            '<span style="font-size:10px;color:#8893a0">' + (t.created_at ? _actnEscape(_timeAgo(t.created_at)) : '') + '</span>' +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+                panel.setAttribute('data-apex-state', 'ready');
+            })
+            .catch(function() {
+                _actnSetState(list, panel, 'failed', { message: 'Live feed unavailable.', retryFn: '_actnLoadLiveFeed()' });
+            });
+    }
+    window._actnLoadLiveFeed = _actnLoadLiveFeed;
+
+    function _actnLoadCapabilities() {
+        var panel = document.getElementById('actnCapPanel');
+        var list  = document.getElementById('actnCapList');
+        if (!panel || !list) return;
+        _actnSetState(list, panel, 'loading');
+        fetch('/api/agents/domain', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var agents = (d && (d.agents || d.data)) || [];
+                if (!Array.isArray(agents) || !agents.length) {
+                    _actnSetState(list, panel, 'empty', { message: 'No agent capabilities exposed.' });
+                    return;
+                }
+                list.removeAttribute('aria-busy');
+                list.innerHTML = agents.slice(0, 20).map(function(f) {
+                    return '<div style="display:flex;flex-direction:column;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+                        '<span style="font-size:11px;color:rgba(232,244,255,0.85)">' + _actnEscape(f.name || f.slug || 'Agent') + '</span>' +
+                        (f.description ? '<span style="font-size:10px;color:#8893a0">' + _actnEscape(String(f.description).slice(0, 140)) + '</span>' : '') +
+                    '</div>';
+                }).join('');
+                panel.setAttribute('data-apex-state', 'ready');
+            })
+            .catch(function() {
+                _actnSetState(list, panel, 'failed', { message: 'Agent capabilities unavailable.', retryFn: '_actnLoadCapabilities()' });
+            });
+    }
+    window._actnLoadCapabilities = _actnLoadCapabilities;
+
+    // H-2/H-3: two-step approval modal with action detail + focus-trap.
+    var _actnPendingModalId = null;
+    var _actnLastPendingTask = null;
+    var _actnLastFocusEl = null;
+    function _actnOpenModal(taskId) {
+        _actnPendingModalId = taskId;
+        var modal = document.getElementById('apexApprModal');
+        var desc  = document.getElementById('apexApprModalDesc');
+        if (!modal) return;
+        // Locate the source task from the pending list DOM.
+        var card = document.querySelector('[data-actn-task-id="' + taskId.replace(/"/g,'') + '"]');
+        // Refetch tasks to get authoritative payload — but be resilient if not available.
+        fetch('/api/tasks', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var tasks = d.tasks || d || [];
+                var task = (Array.isArray(tasks) ? tasks : []).filter(function(t) { return String(t.id) === String(taskId); })[0] || {};
+                _actnLastPendingTask = task;
+                var info = window._apexActionInfo(task);
+                var icon = window._apexActionIcon(task.task_type);
+                var label = _actnEscape(task.task_type || 'Task');
+                var full  = _actnEscape(String(task.description || ''));
+                var irr = info.reversibility === 'no'
+                    ? '<div style="color:#ff4d6d;font-weight:600;margin-top:8px">⚠ This action cannot be undone.</div>'
+                    : '';
+                if (desc) {
+                    desc.innerHTML =
+                        '<div style="font-size:13px;font-weight:600;color:rgba(232,244,255,0.9);margin-bottom:8px">' + icon + ' ' + label + '</div>' +
+                        '<div style="font-size:12px;color:rgba(232,244,255,0.65);margin-bottom:10px">' + (full || 'No description.') + '</div>' +
+                        '<div style="font-size:11px;color:rgba(232,244,255,0.55);line-height:1.6">' +
+                            '<strong>Cost:</strong> ' + _actnEscape(info.cost) + '<br>' +
+                            '<strong>Risk:</strong> ' + _actnEscape(info.risk) + '<br>' +
+                            '<strong>Reversibility:</strong> ' + _actnEscape(info.reversibility) +
+                        '</div>' + irr;
+                }
+                _actnShowModal(modal);
+            })
+            .catch(function() {
+                _actnLastPendingTask = null;
+                if (desc) desc.textContent = 'Approving task ' + _actnEscape(taskId) + ' — this action will run once you confirm.';
+                _actnShowModal(modal);
+            });
+    }
+    function _actnShowModal(modal) {
+        if (!modal) return;
+        modal.setAttribute('aria-live', 'assertive');
+        _actnLastFocusEl = document.activeElement;
+        modal.style.display = 'flex';
+        // H-3 focus trap loop.
+        var focusables = modal.querySelectorAll('button, [href], input, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusables.length) { setTimeout(function() { focusables[0].focus(); }, 40); }
+        modal._actnKeyHandler = function(e) {
+            if (modal.style.display === 'none') return;
+            if (e.key === 'Escape') { e.preventDefault(); window.apexDeclineApproval(); return; }
+            if (e.key !== 'Tab') return;
+            var list = modal.querySelectorAll('button, [href], input, textarea, [tabindex]:not([tabindex="-1"])');
+            if (!list.length) return;
+            var first = list[0], last = list[list.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        };
+        // Attach to document so Escape works regardless of focus location.
+        document.addEventListener('keydown', modal._actnKeyHandler, true);
+    }
+    function _actnCloseModal() {
+        var modal = document.getElementById('apexApprModal');
+        if (!modal) return;
+        modal.style.display = 'none';
+        if (modal._actnKeyHandler) document.removeEventListener('keydown', modal._actnKeyHandler, true);
+        if (_actnLastFocusEl && typeof _actnLastFocusEl.focus === 'function') { try { _actnLastFocusEl.focus(); } catch(_){} }
+    }
+
+    // H-4: 30-second undo banner (action-level, per O-3 / H-B3 deferred).
+    var _actnUndoTimer = null;
+    var _actnUndoBanner = null;
+    window._v11hHideUndoBanner = function() {
+        if (_actnUndoTimer) { clearInterval(_actnUndoTimer); _actnUndoTimer = null; }
+        if (_actnUndoBanner && _actnUndoBanner.parentNode) _actnUndoBanner.parentNode.removeChild(_actnUndoBanner);
+        _actnUndoBanner = null;
+    };
+    window._v11hShowUndoBanner = function(taskId, taskLabel) {
+        window._v11hHideUndoBanner();
+        var banner = document.createElement('div');
+        banner.className = 'actn-undo-banner';
+        banner.setAttribute('role', 'status');
+        banner.setAttribute('aria-live', 'polite');
+        var msg = document.createElement('div');
+        msg.className = 'actn-undo-msg';
+        msg.innerHTML = 'Approved · ' + _actnEscape(String(taskLabel || 'Task')) + ' — Undo last change made by APEX';
+        var cd = document.createElement('span');
+        cd.className = 'actn-undo-countdown';
+        cd.textContent = '30s';
+        var btn = document.createElement('button');
+        btn.className = 'actn-undo-btn';
+        btn.type = 'button';
+        btn.textContent = 'Undo';
+        btn.setAttribute('aria-label', 'Undo last change');
+        banner.appendChild(msg);
+        banner.appendChild(cd);
+        banner.appendChild(btn);
+        document.body.appendChild(banner);
+        _actnUndoBanner = banner;
+        var remaining = 30;
+        _actnUndoTimer = setInterval(function() {
+            remaining--;
+            if (remaining <= 0) { window._v11hHideUndoBanner(); return; }
+            if (remaining <= 5) { cd.classList.add('urgent'); cd.textContent = 'Undo — ' + remaining + 's remaining'; }
+            else                { cd.classList.remove('urgent'); cd.textContent = remaining + 's'; }
+        }, 1000);
+        btn.addEventListener('click', function() {
+            fetch('/api/tasks/undo', { method:'POST', headers: Object.assign({ 'Content-Type':'application/json' }, _h()), body: JSON.stringify({ taskId: taskId }) })
+                .then(function() {
+                    if (typeof window._v11eToast === 'function') window._v11eToast('Last change reversed');
+                    else if (typeof window._apexToast === 'function') window._apexToast('Last change reversed', 'info');
+                    window._v11hHideUndoBanner();
+                    _actnLoadRecent();
+                    _actnLoadPending();
+                })
+                .catch(function() {
+                    if (typeof window._v11eToast === 'function') window._v11eToast('Undo failed');
+                });
+        });
+    };
+
+    // Delegated click handler for all ACTIONS card buttons.
+    document.addEventListener('click', function(e) {
+        var t = e.target;
+        if (!t || !t.dataset) return;
+        var apprId          = t.dataset.actnAppr;
+        var rejectInitId    = t.dataset.actnRejectInit;
+        var rejectConfirmId = t.dataset.actnRejectConfirm;
+        var rejectCancelId  = t.dataset.actnRejectCancel;
+        var detailId        = t.dataset.actnDetail;
+        var permApprove     = t.dataset.actnPermApprove;
+        var permDeny        = t.dataset.actnPermDeny;
+
+        if (apprId)       { _actnOpenModal(apprId); }
+        if (detailId)     { _actnOpenModal(detailId); }
+        if (rejectInitId) {
+            var panel = document.querySelector('[data-actn-reject-panel="' + rejectInitId.replace(/"/g,'') + '"]');
+            if (panel) panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+        }
+        if (rejectCancelId) {
+            var panelC = document.querySelector('[data-actn-reject-panel="' + rejectCancelId.replace(/"/g,'') + '"]');
+            if (panelC) panelC.style.display = 'none';
+        }
+        if (rejectConfirmId) {
+            var panelR = document.querySelector('[data-actn-reject-panel="' + rejectConfirmId.replace(/"/g,'') + '"]');
+            var reason = panelR ? (panelR.querySelector('textarea') || {}).value || '' : '';
+            var body = { taskId: rejectConfirmId };
+            if (reason && reason.trim()) body.reason = reason.trim();
+            fetch('/api/tasks/reject', { method:'POST', headers: Object.assign({ 'Content-Type':'application/json' }, _h()), body: JSON.stringify(body) })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (typeof window._v11eToast === 'function') {
+                        window._v11eToast(d && d.ok ? 'Rejected' : 'Reject failed');
+                    }
+                    setTimeout(function() { _actnLoadPending(); _actnLoadRecent(); }, 350);
+                })
+                .catch(function() {
+                    if (typeof window._v11eToast === 'function') window._v11eToast('Reject request failed');
+                });
+        }
+        if (permApprove) {
+            fetch('/api/master/approve', { method:'POST', headers: Object.assign({ 'Content-Type':'application/json' }, _h()), body: JSON.stringify({ featureId: permApprove, approved: true }) })
+                .then(function() {
+                    if (typeof window._v11eToast === 'function') window._v11eToast(permApprove + ' approved');
+                    _actnLoadPermissions();
+                })
+                .catch(function(){ if (typeof window._v11eToast === 'function') window._v11eToast('Approval failed'); });
+        }
+        if (permDeny) {
+            fetch('/api/master/approve', { method:'POST', headers: Object.assign({ 'Content-Type':'application/json' }, _h()), body: JSON.stringify({ featureId: permDeny, approved: false }) })
+                .then(function() {
+                    if (typeof window._v11eToast === 'function') window._v11eToast(permDeny + ' denied');
+                    _actnLoadPermissions();
+                })
+                .catch(function(){ if (typeof window._v11eToast === 'function') window._v11eToast('Deny failed'); });
+        }
+    });
+
+    // Wrap apexConfirmApproval / apexDeclineApproval to add undo banner + close semantics.
+    var _origConfirmAppr = window.apexConfirmApproval;
+    var _origDeclineAppr = window.apexDeclineApproval;
+    window.apexConfirmApproval = function() {
+        var id = _actnPendingModalId;
+        var task = _actnLastPendingTask;
+        // Reuse the legacy modal state variable for backward compat.
+        if (id) {
+            _actnCloseModal();
+            _actnPendingModalId = null;
+            fetch('/api/tasks/approve', { method:'POST', headers: Object.assign({ 'Content-Type':'application/json' }, _h()), body: JSON.stringify({ taskId: parseInt(id, 10) || id }) })
+                .then(function(r) { return r.json(); })
+                .then(function() {
+                    // H-4: undo banner for reversible actions.
+                    if (task) {
+                        var info = window._apexActionInfo(task);
+                        if (info.reversibility !== 'no') {
+                            window._v11hShowUndoBanner(id, task.task_type || 'action');
+                        }
+                    }
+                    setTimeout(function() { _actnLoadPending(); _actnLoadRecent(); _actnLoadInFlight(); }, 400);
+                })
+                .catch(function(){});
+            return;
+        }
+        // Fallback to the pre-H-2 handler for legacy #page-approvals cards.
+        if (typeof _origConfirmAppr === 'function') _origConfirmAppr();
+    };
+    window.apexDeclineApproval = function() {
+        _actnPendingModalId = null;
+        _actnLastPendingTask = null;
+        _actnCloseModal();
+        if (typeof _origDeclineAppr === 'function') _origDeclineAppr();
+    };
+
+    // H-16: WebSocket subscription bridge (dormant until backend H-B5 emits events).
+    (function _apexActionsWsBridge() {
+        var _bound = false;
+        var ACTN_EVENTS = ['task.created','task.approved','task.rejected','task.executing','task.completed','task.failed','task.undone','notification.new','standing_approval.matched'];
+        function _handle(msg) {
+            if (!msg || !msg.type || ACTN_EVENTS.indexOf(msg.type) === -1) return;
+            if (window.activePage !== 'actions') return;
+            try {
+                if (msg.type === 'task.created' || msg.type === 'task.approved' || msg.type === 'task.rejected') _actnLoadPending();
+                if (msg.type === 'task.executing' || msg.type === 'task.completed' || msg.type === 'task.failed' || msg.type === 'task.undone') {
+                    _actnLoadPending(); _actnLoadRecent(); _actnLoadInFlight();
+                }
+                if (msg.type === 'notification.new') _actnLoadNotifications();
+                if (msg.type === 'standing_approval.matched') _actnLoadStanding();
+            } catch (_) {}
+        }
+        function _tryBind() {
+            if (_bound) return;
+            var targets = [];
+            if (window._actWs) targets.push(window._actWs);
+            if (window.GL && window.GL.ws && targets.indexOf(window.GL.ws) === -1) targets.push(window.GL.ws);
+            targets.forEach(function(ws) {
+                try { ws.addEventListener('message', function(ev) { try { _handle(JSON.parse(ev.data)); } catch(_){} }); } catch(_) {}
+            });
+            if (targets.length) _bound = true;
+        }
+        setTimeout(_tryBind, 1500);
+        setTimeout(_tryBind, 5000);
+        setTimeout(_tryBind, 15000);
+        window._apexActionsWsBridge = { _tryBind: _tryBind };
+    })();
+
+    // V-11-H F-15 pattern: guard the legacy pollPermissions so it only fires when ACTIONS is visible.
+    (function _wrapPollPermissions() {
+        if (typeof window.pollPermissions !== 'function') return;
+        var orig = window.pollPermissions;
+        window.pollPermissions = function() {
+            if (window.activePage && window.activePage !== 'actions') return Promise.resolve();
+            return orig.apply(this, arguments);
+        };
+    })();
+
+    // V-11-H: hook applyRoleProfile so that when identity resolves mid-boot on #actions,
+    // the surface re-initialises with the correct Master/User branch.
+    (function _wrapApplyRoleProfileForActions() {
+        var attempts = 0;
+        function _install() {
+            attempts++;
+            if (typeof window.applyRoleProfile !== 'function') {
+                if (attempts < 40) setTimeout(_install, 100);
+                return;
+            }
+            var orig = window.applyRoleProfile;
+            window.applyRoleProfile = function(role) {
+                orig(role);
+                if (window.activePage === 'actions' && typeof window.actionsInitPage === 'function') {
+                    window.actionsInitPage();
+                }
+            };
+        }
+        _install();
+    })();
+
     /* ── V-11-G: shared utilities ───────────────────────────────────── */
 
     // V-11-G G-8/G-11: escape helper alias for intelligence/memory/knowledge surfaces.
@@ -21258,6 +22425,9 @@ window.apexFileDropHandler = function(e){
         if (name === 'activity')     { actRefresh(); }
         if (name === 'agents')       { agentsRefresh(); }
         if (name === 'approvals')    { approvalsRefresh(); }
+        // V-11-H H-1: 'actions' initialises the canonical surface (role-adapted).
+        if (name === 'actions'  && typeof window.actionsInitPage === 'function')  { window.actionsInitPage(); }
+        if (name !== 'actions'  && typeof window.actionsPausePage === 'function') { window.actionsPausePage(); }
         if (name === 'knowledge')    { knowledgeRefresh(); }
         if (name === 'intelligence') { intelligenceRefresh(); }
         if (name === 'memory')       { memoryRefresh(); }
@@ -21478,10 +22648,27 @@ window.apexFileDropHandler = function(e){
 </script>
 <script>
 // V-11-D2: boot-time page resolver — hash → localStorage → TODAY default
+// V-11-H H-18: hash-alias resolver — #approvals/#agents/#activity → #actions with subpanel scroll.
 (function() {
-    var _d2Pages = ['overview','command','operation','system','finance','communication','business','health','university','occult','research','civilisation','reality','activity','agents','approvals','knowledge','intelligence','memory','governance'];
+    var _d2Pages = ['overview','command','operation','system','finance','communication','business','health','university','occult','research','civilisation','reality','activity','agents','approvals','actions','knowledge','intelligence','memory','governance'];
+    var _hashAliases = Object.create(null);
+    _hashAliases.approvals = 'actnPendingPanel';
+    _hashAliases.agents    = 'actnRunsPanel';
+    _hashAliases.activity  = 'actnNotifPanel';
+    function _scrollTo(id) {
+        setTimeout(function() {
+            var el = document.getElementById(id);
+            if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior:'smooth', block:'start' });
+        }, 350);
+    }
     function _resolveBootPage() {
         var hash = location.hash.slice(1);
+        // Hash alias — collapse legacy destinations into 'actions'.
+        if (hash && _hashAliases[hash]) {
+            window.switchPage('actions');
+            _scrollTo(_hashAliases[hash]);
+            return;
+        }
         if (hash && _d2Pages.indexOf(hash) !== -1) { window.switchPage(hash); return; }
         var pref = localStorage.getItem('apex_default_page');
         if (pref && _d2Pages.indexOf(pref) !== -1) { window.switchPage(pref); return; }
@@ -21492,6 +22679,14 @@ window.apexFileDropHandler = function(e){
     } else {
         _resolveBootPage();
     }
+    // Live hash changes (e.g. deep-link clicks) also resolve to ACTIONS aliases.
+    window.addEventListener('hashchange', function() {
+        var h = location.hash.slice(1);
+        if (h && _hashAliases[h]) {
+            window.switchPage('actions');
+            _scrollTo(_hashAliases[h]);
+        }
+    });
 })();
 </script>
 </body>

@@ -328,11 +328,11 @@ async function runTests() {
     {
         const { page, ctx } = await loadDash(browser, MASTER_JWT, {});
         const occultVis   = await page.locator('#nav-occult').isVisible().catch(()=>false);
-        const agentsVis   = await page.locator('#nav-agents').isVisible().catch(()=>false);
-        const activityVis = await page.locator('#nav-activity').isVisible().catch(()=>false);
+        // V-11-H H-1: nav consolidated — #nav-agents/#nav-approvals/#nav-activity replaced by #nav-actions
+        const actionsVis  = await page.locator('#nav-actions').isVisible().catch(()=>false);
         record('L-1', 'Master: nav-occult visible',   occultVis);
-        record('L-2', 'Master: nav-agents visible',   agentsVis);
-        record('L-3', 'Master: nav-activity visible', activityVis);
+        record('L-2', 'Master: nav-actions visible (V-11-H consolidated)', actionsVis);
+        record('L-3', 'Master: nav-actions visible (V-11-H consolidated)', actionsVis);
         await ctx.close();
     }
 

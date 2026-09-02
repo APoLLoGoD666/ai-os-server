@@ -127,10 +127,11 @@ async function run() {
         await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30000 });
         // Wait for identity boot
         await page.waitForTimeout(1500);
-        const agentsBtn = await page.$('#nav-agents');
+        // V-11-H H-1: nav consolidated — #nav-agents/#nav-approvals/#nav-activity replaced by #nav-actions
+        const agentsBtn = await page.$('#nav-actions');
         const visible = agentsBtn ? await agentsBtn.isVisible() : false;
-        if (visible) pass('T-4: #nav-agents visible for master');
-        else fail('T-4: #nav-agents not visible for master');
+        if (visible) pass('T-4: #nav-actions visible for master');
+        else fail('T-4: #nav-actions not visible for master');
         await ctx.close();
     } catch (e) { fail('T-4: master nav visibility', e.message); }
 
