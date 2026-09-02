@@ -6775,6 +6775,21 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
     .chat-input { height: 44px !important; }
     .send-btn, .mic-btn { width: 44px !important; height: 44px !important; }
 }
+
+/* ══ V-11-I VOICE UX — canonical state indicators & a11y ══════════════════════════
+   Voice state machine surfaces via #micBtn[data-voice-state="..."]. Non-destructive
+   (does not override .listening class). Screen-reader live region is .sr-only.
+═══════════════════════════════════════════════════════════════════════════════════ */
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+#micBtn[data-voice-state="listening"] { color: var(--apex-cyan, #00d4ff); }
+#micBtn[data-voice-state="processing"] { color: var(--apex-indigo, #6366f1); opacity: 0.7; }
+#micBtn[data-voice-state="error"] { color: #ef4444; border-color: rgba(239,68,68,0.45) !important; }
+@media (prefers-reduced-motion: no-preference) {
+    #micBtn[data-voice-state="listening"] { animation: vc-pulse 1.2s ease-in-out infinite; }
+}
+@keyframes vc-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+/* Mobile touch target (redundant with WP-H-05 but explicit for V-11-I audit) */
+@media (max-width: 767px) { #micBtn { min-width: 44px; min-height: 44px; } }
 /* ══ Phase H — WP-H-03: cmd-feed-col hidden at 900–1099px ═══════════════════════════
    At these widths cmd-split collapses to 1fr (one column). cmd-feed-col stacks
    below cmd-main at 59–91px — too shallow to be usable. Hide it cleanly.
@@ -11049,7 +11064,9 @@ if(pipe){
 
         <!-- ══ INPUT ZONE (V-11-E: scoped to COMMAND via body.apex-cmd-active) ══ -->
         <div class="input-zone">
-            <button class="mic-btn" id="micBtn" data-fn="toggleListening" title="Voice input" aria-label="Start voice input">
+            <!-- V-11-I: ARIA live region for voice state announcements -->
+            <div id="voice-status-live" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+            <button class="mic-btn" id="micBtn" data-fn="toggleListening" title="Voice input" aria-label="Start voice input" data-voice-state="idle">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
             </button>
             <input class="chat-input" id="chatInput" type="text" placeholder="Type or speak to APEX…" autocomplete="off" aria-label="Message APEX" />
@@ -11410,6 +11427,28 @@ const REFRESH_INTERVAL_MS = 30000;
 
 // ══ STATE ═════════════════════════════════════════════════════════════
 let isListening         = false;
+// V-11-I: Canonical voice state machine (IDLE→LISTENING→PROCESSING→SUCCESS|ERROR→IDLE)
+// Runs alongside legacy isListening flag; drives #micBtn[data-voice-state] + ARIA.
+const VoiceState = Object.freeze({ IDLE: 'idle', LISTENING: 'listening', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' });
+let _voiceState = VoiceState.IDLE;
+function _vcGetState() { return _voiceState; }
+function _vcSetState(s, msg) {
+    _voiceState = s;
+    const btn = document.getElementById('micBtn');
+    if (btn) {
+        btn.dataset.voiceState = s;
+        if (s === VoiceState.IDLE)             { btn.setAttribute('aria-label', 'Start voice input'); btn.classList.remove('vc-listening','vc-processing','vc-error'); }
+        else if (s === VoiceState.LISTENING)   { btn.setAttribute('aria-label', 'Listening — press to stop'); btn.classList.add('vc-listening'); btn.classList.remove('vc-processing','vc-error'); }
+        else if (s === VoiceState.PROCESSING)  { btn.setAttribute('aria-label', 'Processing voice input'); btn.classList.add('vc-processing'); btn.classList.remove('vc-listening','vc-error'); }
+        else if (s === VoiceState.SUCCESS)     { btn.setAttribute('aria-label', 'Voice complete'); btn.classList.remove('vc-listening','vc-processing','vc-error'); }
+        else if (s === VoiceState.ERROR)       { btn.setAttribute('aria-label', 'Voice error — press to retry'); btn.classList.add('vc-error'); btn.classList.remove('vc-listening','vc-processing'); }
+    }
+    const live = document.getElementById('voice-status-live');
+    if (live) { live.textContent = msg || (btn ? btn.getAttribute('aria-label') : ''); }
+}
+window._vcSetState = _vcSetState;
+window._vcGetState = _vcGetState;
+window.VoiceState = VoiceState;
 let _manualStart        = false;
 const _isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 let autoListen          = _isTouchDevice;
@@ -13175,7 +13214,10 @@ function unmuteDeepgram() {
 }
 
 function startListening() {
+    // V-11-I: duplicate-session guard via voice state machine
+    if (_voiceState !== VoiceState.IDLE && _voiceState !== VoiceState.ERROR) return;
     _manualStart = true;
+    _vcSetState(VoiceState.LISTENING);
     startVoicePipeline();
 }
 
@@ -13185,6 +13227,8 @@ function stopListening() {
     stopVoicePipeline();
     try { if (dgStream) { dgStream.getTracks().forEach(t => t.stop()); dgStream = null; } } catch (_) {}
     setOrbState("ready");
+    // V-11-I: return to IDLE unless a downstream call already set PROCESSING/SUCCESS/ERROR
+    if (_voiceState === VoiceState.LISTENING) _vcSetState(VoiceState.IDLE);
 }
 
 function toggleListening() {
@@ -13391,7 +13435,13 @@ async function sendChatCommandFromText(command, options = {}) {
 }
 
 async function sendVoiceChatCommand(msg) {
-    if (!msg || !msg.trim()) return;
+    // V-11-I: empty transcript guard — announce, don't render duplicate, return to IDLE
+    if (!msg || !msg.trim()) {
+        _vcSetState(VoiceState.IDLE, 'No speech detected');
+        return;
+    }
+    // V-11-I: enter PROCESSING (LISTENING→PROCESSING is the canonical transition)
+    _vcSetState(VoiceState.PROCESSING);
     document.getElementById("chatInput").value = "";
     renderChatMessage("user", msg);
     setOrbState("thinking");
@@ -13425,6 +13475,8 @@ async function sendVoiceChatCommand(msg) {
             unmuteDeepgram();
             setOrbState(autoListen ? "waiting" : "ready");
             setConnStatus(false);
+            // V-11-I: enter ERROR state (network/endpoint failure)
+            _vcSetState(VoiceState.ERROR, errMsg);
             return;
         }
     }
@@ -13439,6 +13491,9 @@ async function sendVoiceChatCommand(msg) {
 
         setConnStatus(true);
         _smartRefresh(msg);
+        // V-11-I: SUCCESS then return to IDLE (auto-listen may re-enter LISTENING via pipeline)
+        _vcSetState(VoiceState.SUCCESS);
+        setTimeout(() => { if (_voiceState === VoiceState.SUCCESS) _vcSetState(VoiceState.IDLE); }, 800);
     } catch (error) {
         hideTypingIndicator();
         console.error("[Voice] processing reply failed:", error);
@@ -13447,6 +13502,8 @@ async function sendVoiceChatCommand(msg) {
         unmuteDeepgram();
         setOrbState(autoListen ? "waiting" : "ready");
         setConnStatus(false);
+        // V-11-I: enter ERROR state (reply processing failure)
+        _vcSetState(VoiceState.ERROR, errMsg);
     }
 }
 
@@ -14686,6 +14743,12 @@ if (_isTouchDevice) {
             _s.getTracks().forEach(t => t.stop());
         } catch (e) {
             console.warn('[Tap] mic permission denied:', e.message);
+            // V-11-I: surface permission failure via state machine + COMMAND thread
+            if (e && (e.name === 'NotAllowedError' || /permission/i.test(e.message || ''))) {
+                try { _vcSetState(VoiceState.ERROR, 'Microphone permission denied — enable mic access in your browser settings'); } catch(_) {}
+                try { renderChatMessage('system', '⚠ Microphone permission denied. Enable mic access in your browser settings and reload.'); } catch(_) {}
+                return; // do not start pipeline without mic
+            }
         }
         _manualStart = true;
         startVoicePipeline();
@@ -19808,7 +19871,10 @@ window.apexFileDropHandler = function(e){
 
     async function _pttBegin(indicator) {
         if (_mActive) return;
+        // V-11-I: duplicate-session guard shared with desktop path
+        if (typeof _vcGetState === 'function' && _vcGetState() !== 'idle' && _vcGetState() !== 'error') return;
         _mActive = true;
+        if (typeof _vcSetState === 'function') _vcSetState(VoiceState.LISTENING);
 
         // Acquire mic; reuse if still active, otherwise open fresh (permission already granted)
         if (!_mStream || !_mStream.active) {
@@ -19817,6 +19883,13 @@ window.apexFileDropHandler = function(e){
             } catch(e) {
                 console.error('[PTT] mic denied:', e);
                 _mActive = false;
+                // V-11-I: NotAllowedError → surface via state machine + COMMAND thread
+                if (e && (e.name === 'NotAllowedError' || /permission/i.test(e.message || ''))) {
+                    try { _vcSetState(VoiceState.ERROR, 'Microphone permission denied'); } catch(_) {}
+                    try { renderChatMessage('system', '⚠ Microphone permission denied. Enable mic access to use voice.'); } catch(_) {}
+                } else {
+                    try { _vcSetState(VoiceState.ERROR, 'Microphone unavailable'); } catch(_) {}
+                }
                 return;
             }
         }
@@ -19837,12 +19910,16 @@ window.apexFileDropHandler = function(e){
     async function _pttEnd(indicator) {
         if (!_mActive) return;
         _mActive = false;
+        // V-11-I: LISTENING→PROCESSING transition on button release
+        if (typeof _vcSetState === 'function') _vcSetState(VoiceState.PROCESSING);
 
         if (indicator) { indicator.classList.remove('orb-recording'); indicator.classList.remove('ptt-active'); }
         if (_orbLbl) _orbLbl.textContent = 'PROCESSING…';
 
         if (!_mRecorder || _mRecorder.state === 'inactive') {
             if (_orbLbl) _orbLbl.textContent = 'HOLD TO SPEAK';
+            // V-11-I: recorder never started → return to IDLE
+            if (typeof _vcSetState === 'function') _vcSetState(VoiceState.IDLE);
             return;
         }
 
@@ -19859,7 +19936,12 @@ window.apexFileDropHandler = function(e){
             _mStream = null;
         }
 
-        if (!blob || blob.size < 800) { if (_orbLbl) _orbLbl.textContent = 'HOLD TO SPEAK'; return; }
+        if (!blob || blob.size < 800) {
+            if (_orbLbl) _orbLbl.textContent = 'HOLD TO SPEAK';
+            // V-11-I: empty capture → back to IDLE (no duplicate COMMAND entry)
+            if (typeof _vcSetState === 'function') _vcSetState(VoiceState.IDLE, 'No speech detected');
+            return;
+        }
 
         var fd = new FormData();
         var ext = (blob.type || '').includes('mp4') ? 'mp4' : 'webm';
@@ -19872,12 +19954,20 @@ window.apexFileDropHandler = function(e){
             var r = await fetch('/api/transcribe', { method: 'POST', body: fd, headers: hdrs });
             var d = await r.json();
             var tx = (d.transcript || d.text || '').trim();
-            if (!tx) { if (_orbLbl) _orbLbl.textContent = 'HOLD TO SPEAK'; return; }
+            if (!tx) {
+                if (_orbLbl) _orbLbl.textContent = 'HOLD TO SPEAK';
+                // V-11-I: empty transcript → IDLE, no COMMAND thread entry
+                if (typeof _vcSetState === 'function') _vcSetState(VoiceState.IDLE, 'No speech detected');
+                return;
+            }
 
             if (typeof renderChatMessage === 'function') renderChatMessage('user', tx);
             if (typeof sendVoiceChatCommand === 'function') sendVoiceChatCommand(tx);
         } catch(e) {
             console.error('[PTT] transcribe error:', e);
+            // V-11-I: transcribe failure → ERROR + COMMAND thread notice
+            if (typeof _vcSetState === 'function') _vcSetState(VoiceState.ERROR, 'Transcription failed');
+            try { renderChatMessage('system', '⚠ Voice transcription failed — please try again.'); } catch(_) {}
         }
         if (_orbLbl) _orbLbl.textContent = 'HOLD TO SPEAK';
     }
