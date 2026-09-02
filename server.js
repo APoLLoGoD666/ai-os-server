@@ -406,13 +406,17 @@ server.headersTimeout   = 70000; // must be > keepAliveTimeout
 const _wsHandler = require('./lib/ws-handler');
 _wsHandler.init(server);
 
-require('./routes/gemini-live').attach(server, {
-    appKey:           APP_ACCESS_KEY,
-    executeApexTool,
-    buildAlexContext,
-    obsidianAppend,
-    anthropicClient:  client,
-});
+// V-11-I I-O1 (2026-09-02): Gemini Live retired — no active UI entry point.
+// The routes/gemini-live.js file is preserved on disk (P0-I4/I5 security work
+// remains in git history) but is no longer mounted, making /ws/gemini-live
+// unreachable. Canonical voice path is voice-chat.js + dashboard.html micBtn.
+// require('./routes/gemini-live').attach(server, {
+//     appKey:           APP_ACCESS_KEY,
+//     executeApexTool,
+//     buildAlexContext,
+//     obsidianAppend,
+//     anthropicClient:  client,
+// });
 
 const _startup = require('./lib/startup');
 
