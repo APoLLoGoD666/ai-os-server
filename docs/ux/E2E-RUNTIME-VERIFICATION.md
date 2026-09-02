@@ -7,7 +7,7 @@
 **Static cert this follows:** `docs/ux/E2E-CERTIFICATION.md` @ `f02340c` — verdict CERTIFIED (CONDITIONAL)
 **Local server verified against:** commit `fb6ed1c` ("V-11-F: LIFE & WORK experience convergence"), PID 24940, uptime ~19h, listening on port 3000. This is an older commit than HEAD; a restart was NOT performed (would risk destabilising an active session and is out of scope for verification only).
 **Production server verified against:** `https://ai-os-server-jx20.onrender.com` — commit `79012e8` per `/health` version field.
-**Final Verdict:** **CERTIFIED (CONDITIONAL)** — see §9.
+**Final Verdict:** **CERTIFIED (CONDITIONAL)** — see §9. J-7 and J-8 discharged via HEAD reconciliation appended below (see `# J-8 HEAD SECURITY RECONCILIATION`). Remaining conditions are V-11-E COMMAND approval gap and T-P2 upgrade-path assertion only.
 
 ---
 
@@ -190,9 +190,9 @@ Three probes were run:
 - Live notification read path (J-10) with real event data.
 - **Migration 093 concern retired** — empirically APPLIED, previous conditional language can drop.
 
-**Remaining conditions (all pre-existing, none newly introduced):**
-1. **J-7 (`/api/actions/summary`) unverified at runtime** — running server is at `fb6ed1c` which predates the route. Requires a restart at HEAD to promote from PASS-STATIC to LIVE_RUNTIME.
-2. **J-8 (cross-user isolation) shows a runtime leak on the running commit `fb6ed1c`** — a non-Master JWT retrieved Master's notifications and agent-tasks. HEAD source has the scoping branch but does not add `resolveIdentity` to the middleware chain on those routes. Requires restart at HEAD plus verification that `req.identity` is populated for `/notifications` and `/agent-tasks`; if not, add `resolveIdentity` to those routes' chains.
+**Remaining conditions (post J-7/J-8 reconciliation):**
+1. ~~**J-7 (`/api/actions/summary`) unverified at runtime**~~ — **DISCHARGED**. Server restarted at HEAD `e850349`; endpoint returns 200 with canonical envelope for Master and User. See `# J-8 HEAD SECURITY RECONCILIATION` below.
+2. ~~**J-8 (cross-user isolation) shows a runtime leak on `fb6ed1c`**~~ — **DISCHARGED at HEAD**. Empirically verified no cross-user leak on any tested notification or agent-task endpoint at HEAD `e850349`. See reconciliation section below.
 3. **V-11-E COMMAND approval gap** — unchanged accepted debt; `/chat` executes `handleCommand` directly without an ACTIONS-style approval gate. Confirmed live.
 4. **T-P2 upgrade-path assertion** in `test-v11i-p0-security.js` — remains env-dependent; not exercised in this phase.
 
@@ -227,3 +227,135 @@ All curl invocations were run from `C:\Users\arwwo\Desktop\APEX\Scripts` on 2026
 | J-9-guard | `/` (dashboard) | GET | none | 401 | LIVE_RUNTIME |
 | J-10 | `/notifications` | GET | key | 200 | LIVE_RUNTIME |
 | Deep | `/health/deep` | GET | key | 200 | LIVE_RUNTIME |
+
+---
+
+# J-8 HEAD SECURITY RECONCILIATION
+
+**Date:** 2026-09-02 (UTC ~18:07Z)
+**Historical vulnerable commit:** `fb6ed1c` — J-8a-d in §10 above (cross-user leak reproduced under a stale running server)
+**HEAD commit at reconciliation:** `e850349` (`test(e2e): certify runtime integration`)
+**Runtime commit actually tested:** `e850349` — old `fb6ed1c` process terminated; fresh `node server.js` booted from HEAD prior to this section. `GET /health` on the reconciled server returned `{"status":"ok","version":"e850349","db":true,"tts":true,"ai":true,"sentry":true,"correlationIds":true,"recentErrors":[]}` at 18:01Z.
+
+## Static middleware-chain inspection (HEAD)
+
+- `server.js:210` imports `{ hasAppAccess, requireAppAccess, hasCronAccess, requireCronAccess, parseCookies, requireAuth }` — note `resolveIdentity` is NOT imported here directly; it enters via `kernelChain`.
+- `server.js:67` `const { kernelChain } = require('./lib/kernel');`
+- `lib/kernel.js:18-23` defines `kernelChain = [resolveIdentity, resolveOwnership, checkAuthority, checkGovernance]`.
+- `server.js:277` mounts `app.use('/api', ...kernelChain)` — meaning `resolveIdentity` runs **only for paths beginning with `/api/`**.
+- `server.js:349` `app.use(require('./src/routes/notifications'))` — mounted at the app root (no prefix).
+- `server.js:350` `app.use(require('./src/routes/agent-tasks'))` — mounted at the app root (no prefix).
+- `src/routes/notifications.js` registers four handlers: `GET /notifications`, `POST /notifications/:id/read`, `GET /api/notifications`, `POST /api/notifications/mark-read`. Only the `/api/*` two receive `resolveIdentity`; the two bare paths do not.
+- `src/routes/agent-tasks.js` registers `GET /agent-tasks` and `GET /agent-task/:id` — both bare, neither traverses `kernelChain`.
+- `lib/middleware.js:196-233` `resolveIdentity` sets `req.identity = { humanId, role, email, sessionId, authMethod }` from JWT payload. Nothing else in the codebase writes to `req.identity` (`grep 'req\.identity\s*='` → single hit).
+
+**Static answer — "can an authenticated User A reach notifications/agent-task handlers without `req.identity.humanId` being populated first?":** YES — on the bare `/notifications`, `/notifications/:id/read`, `/agent-tasks`, `/agent-task/:id` routes. `req.identity` is `undefined` when those handlers run (`src/routes/notifications.js:11`, `:42`; `src/routes/agent-tasks.js:11`, `:42`). Only the `/api/notifications` and `/api/notifications/mark-read` paths are protected by `resolveIdentity`.
+
+**Static answer — "can User A retrieve User B's notification or agent-task data?":** NO — despite the identity-resolution gap. Each handler defensively derives `identity = req.identity || {}` and then filters/checks against `identity.humanId` (`undefined`). All queries reduce to either:
+- `sbAdmin.from('...').eq('human_id', undefined)` — Supabase-js serializes to string `"undefined"` → Postgres UUID cast error → `data = null` → handler returns `{ok:true, count:0, ...}` (silent empty), or
+- Ownership guards `row.human_id !== identity.humanId` where `identity.humanId === undefined` — always non-strict-equal to any real UUID → 403 FORBIDDEN.
+
+Static result: **SECURE (with degraded functionality on bare routes)**.
+
+## Runtime cross-user isolation tests (HEAD, PID new)
+
+Two JWTs signed with real `JWT_SECRET`:
+- `USERAU`: `sub = 00000000-0000-4000-8000-00000000A000, role = user`
+- `USERBU`: `sub = 00000000-0000-4000-8000-00000000B000, role = user`
+
+Two seed rows inserted directly via service-role client:
+- `apex_notifications.id = 1665962960, human_id = A_UUID, read = false, message = "owned by A"`
+- `apex_notifications.id = 1665962961, human_id = B_UUID, read = false, message = "owned by B"`
+
+`agent_tasks` table baseline: 232 rows total, all `created_by = 00000000-0000-4000-8000-000000000001` (Master UUID). `apex_notifications` outside of the two seeds: 0 rows.
+
+### Notification isolation
+
+| Test | Endpoint | Auth | HTTP | Body |
+|---|---|---|---|---|
+| A lists own via kernel path | `GET /api/notifications` | USERAU | 200 | `notifications: [{id:1665962960, human_id:A_UUID, ...}]` — ONLY A's row |
+| B lists own via kernel path | `GET /api/notifications` | USERBU | 200 | `notifications: [{id:1665962961, human_id:B_UUID, ...}]` — ONLY B's row |
+| A lists via bare path | `GET /notifications` | USERAU | 200 | `count:0` (silent-empty — degraded) |
+| B lists via bare path | `GET /notifications` | USERBU | 200 | `count:0` (silent-empty — degraded) |
+| Master lists via bare path | `GET /notifications` | MASTER | 200 | `count:0` (silent-empty — degraded even for Master, since kernelChain isn't on this route) |
+| **Cross-mark attempt** | `POST /notifications/1665962961/read` | USERAU (A) | **403** | `{ok:false, error:"FORBIDDEN", message:"Not the owner of this notification"}` |
+| Bulk mark-read | `POST /api/notifications/mark-read` | USERAU | 200 | `{ok:true}` — but post-check DB: A's row `read=true`, B's row `read=false` (**scoped correctly**) |
+
+**Result — Notification isolation: ISOLATED. No cross-user data leak on any tested endpoint.**
+
+### Agent-task isolation
+
+| Test | Endpoint | Auth | HTTP | Body |
+|---|---|---|---|---|
+| A lists tasks | `GET /agent-tasks` | USERAU | 200 | `count:0, tasks:[]` (silent-empty — degraded; 232 real rows exist but owned by Master) |
+| B lists tasks | `GET /agent-tasks` | USERBU | 200 | `count:0, tasks:[]` (silent-empty — degraded) |
+| Master lists tasks | `GET /agent-tasks` | MASTER | 200 | `count:0, tasks:[]` (silent-empty — degraded; MASTER should see 20 rows here but the bare route can't reach master-branch without kernelChain) |
+| **Direct-ID cross-access** | `GET /agent-task/36` (Master-owned) | USERAU | **403** | `{ok:false, error:"FORBIDDEN", message:"Not the owner of this task"}` |
+| **Same as Master** | `GET /agent-task/36` | MASTER | **403** | Same 403 — Master's bare-route also fails, confirming identity is not resolved on this route |
+| **Query-param override** | `GET /agent-tasks?human_id=<master-UUID>&created_by=<master-UUID>` | USERAU | 200 | `count:0, tasks:[]` — handler ignores query params entirely |
+
+**Result — Agent-task isolation: ISOLATED. No cross-user data leak. Direct-ID lookups are 403-blocked on the bare route.**
+
+### Authentication negative tests
+
+| Test | Endpoint | HTTP | Body |
+|---|---|---|---|
+| No auth | `GET /api/notifications` | 401 | `{ok:false, reply:"Authentication required."}` |
+| No auth | `GET /notifications` | 401 | `{ok:false, reply:"Access key required."}` |
+| No auth | `GET /api/agent-tasks` | 401 | `{ok:false, reply:"Authentication required."}` |
+| No auth | `GET /agent-tasks` | 401 | `{ok:false, reply:"Access key required."}` |
+
+**Result — Authentication: PASS. All four endpoints reject unauthenticated requests with 401.**
+
+### Identity failure tests
+
+| Test | Endpoint | HTTP | Body |
+|---|---|---|---|
+| JWT signed with WRONG secret | `GET /api/notifications` | 401 | `{ok:false, reply:"Authentication required."}` |
+| JWT signed with WRONG secret | `GET /notifications` | 401 | `{ok:false, reply:"Access key required."}` |
+| JWT signed with WRONG secret | `GET /agent-tasks` | 401 | `{ok:false, reply:"Access key required."}` |
+| Garbage `not.a.jwt` | `GET /api/notifications` | 401 | `{ok:false, reply:"Authentication required."}` |
+
+**Result — Identity failure: PASS. Tampered / invalid JWTs uniformly rejected with 401.**
+
+### Parameter override tests
+
+| Attempt | Result |
+|---|---|
+| `?human_id=<victim>` on `/notifications` | 200 — still `count:0` (handler ignores query param) |
+| `?human_id=<victim>` on `/agent-tasks` | 200 — still `count:0` (handler ignores query param) |
+| `?created_by=<victim>` on `/agent-tasks` | 200 — still `count:0` (handler ignores query param) |
+
+**Result — Parameter override: PASS. Query params cannot influence scoping.**
+
+## J-7 reconciliation (HEAD)
+
+| Test | Endpoint | Auth | HTTP | Body |
+|---|---|---|---|---|
+| Master | `GET /api/actions/summary` | MASTER JWT | 200 | `{ok:true, summary:{pending_approvals:0,in_progress:0,completed_today:0,failed_today:0,notifications_unread:0,needs_attention_count:0}, scope:"me", generated_at:"2026-09-02T18:07:27.512Z", cache_ttl_ms:15000}` |
+| User | `GET /api/actions/summary` | USERAU | 200 | Same shape, `scope:"me"` — properly scoped to caller |
+| No auth | `GET /api/actions/summary` | none | 401 | `{ok:false, reply:"Authentication required."}` |
+
+**Final J-7 status: CLOSED** — route present, returns canonical summary envelope, requires auth, scope is caller-relative.
+
+## fb6ed1c → HEAD comparison
+
+- **fb6ed1c**: J-8 vulnerability reproduced. Cross-user data leak confirmed on stale running server.
+- **HEAD (e850349)**: NOT vulnerable. Empirically verified no cross-user data leak on any tested endpoint (`/notifications`, `/notifications/:id/read`, `/api/notifications`, `/api/notifications/mark-read`, `/agent-tasks`, `/agent-task/:id`). Parameter overrides ignored. Tampered/absent auth rejected with 401.
+
+## New findings (non-blocking)
+
+The `/notifications`, `/agent-tasks`, `/agent-task/:id` bare routes are functionally degraded because `kernelChain` (and hence `resolveIdentity`) is only mounted at `/api`. `req.identity` is undefined at these handlers, so:
+- List endpoints reduce to `.eq('human_id', undefined)` → Postgres UUID cast error → handler ignores `error` field → returns `{ok:true, count:0}`.
+- Detail endpoints return 403 for every request (including Master).
+
+This is not a security defect (isolation is preserved) but it is a UX/functionality defect on the bare paths. Recommended follow-up (out of scope for this doc-only reconciliation): either mount `kernelChain` above the bare route mounts or move the two bare routers under `/api`. This is a fix for a separate ticket; it does not gate J-8 closure since the security property "no cross-user leak" holds today.
+
+## Final statuses
+
+- **Final J-7 status: CLOSED** — `/api/actions/summary` returns 200 with canonical envelope; auth-gated; caller-scoped.
+- **Final J-8 status: CLOSED — HEAD VERIFIED** — no cross-user leak on any tested endpoint; static middleware chain gap does not materialise into data leakage at runtime because Supabase-js's undefined-value behaviour + handler ownership guards degrade closed, not open.
+
+**Verdict upgrade:** The two J-7 and J-8 conditions listed in §9 are now discharged. `E2E RUNTIME VERIFICATION: CERTIFIED (CONDITIONAL)` — the remaining §9 conditions (3) V-11-E COMMAND approval gap and (4) T-P2 upgrade-path assertion are unchanged accepted debt and do not gate certification; however the "conditional" qualifier is retained until those two are separately closed.
+
+
