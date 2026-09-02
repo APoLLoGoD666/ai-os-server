@@ -7394,7 +7394,7 @@ select:focus {
                     <span class="hub-card-label">Knowledge</span>
                     <span class="hub-card-sub">Documents &amp; sources</span>
                   </button>
-                  <button class="hub-card" onclick="window.switchPage('agents')" aria-label="Agents">
+                  <button class="hub-card" onclick="window.switchPage('actions')" aria-label="Agents">
                     <span class="hub-card-icon">&#9881;</span>
                     <span class="hub-card-label">Agents</span>
                     <span class="hub-card-sub">Background tasks &amp; runs</span>
@@ -11166,31 +11166,31 @@ if(pipe){
 
     <!-- ══ SIDEBAR NAV ══ -->
     <nav class="bottom-nav" id="apexSideNav" role="tablist" aria-label="Page navigation">
-        <button class="nav-btn" id="nav-overview">
+        <button class="nav-btn" id="nav-overview" onclick="window.switchPage('overview')">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Today</span>
         </button>
-        <button class="nav-btn" id="nav-command" role="tab" aria-selected="false">
+        <button class="nav-btn" id="nav-command" role="tab" aria-selected="false" onclick="window.switchPage('command')">
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Command</span>
         </button>
-        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Actions">
+        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Actions" onclick="window.switchPage('actions')">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Actions</span>
             <span class="ds-notif-badge amber" id="navActionsBadge" style="display:none"></span>
         </button>
-        <button class="nav-btn" id="nav-domains" aria-label="Domains">
+        <button class="nav-btn" id="nav-domains" aria-label="Domains" onclick="window.switchPage('domains')">
             <span class="nav-icon">&#9643;</span>
             <span class="nav-label">Domains</span>
         </button>
-        <button class="nav-btn" id="nav-system">
+        <button class="nav-btn" id="nav-system" onclick="window.switchPage('system')">
             <span class="nav-icon">◉</span>
             <span class="nav-label">System</span>
             <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
         </button>
         <!-- SETTINGS (bottom) -->
         <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0"></div>
-        <button class="nav-btn" id="nav-settings" aria-label="Settings">
+        <button class="nav-btn" id="nav-settings" aria-label="Settings" onclick="window.switchPage('settings')">
             <span class="nav-icon">◉</span>
             <span class="nav-label">Settings</span>
         </button>
@@ -11228,7 +11228,8 @@ if(pipe){
         intelligence:  { title:'Intelligence',  sub:'Briefing · Opportunities · Health' },
         memory:        { title:'Memory',        sub:'Episodic · Semantic · Health' },
         governance:    { title:'Governance',    sub:'Constitutional · Authority · Records' },
-        settings:      { title:'Settings',      sub:'Account & preferences' }
+        domains:       { title:'Domains',        sub:'Your life areas' },
+        settings:      { title:'Settings',       sub:'Account & preferences' }
     };
     window.switchPage = function(name) {
         // V-11-F F-3: Redirect Users away from Master-only pages (silent — do not leak existence)
