@@ -587,14 +587,32 @@ router.get('/intelligence/opportunities', requireAppAccess, async (req, res) => 
     try {
         const limit  = Math.min(parseInt(req.query.limit) || 20, 50);
         const status = req.query.status || 'detected';
-        // NOTE: evidence_refs is stored inside roi_forecast (jsonb), NOT as a top-level column.
-        // created_at does not exist; the column is detected_at.
-        const { data, error } = await _sbClient()
+        // V-11-J: `evidence_refs` is a top-level jsonb column post-migration 093.
+        // Pre-migration data lives in `roi_forecast.evidence_refs`; we read both
+        // and always return the canonical Array<{label,source,ts}> contract.
+        // `created_at` does not exist; the column is `detected_at`.
+        let { data, error } = await _sbClient()
             .from('opportunities')
-            .select('id,title,description,composite_score,status,roi_forecast,detected_at')
+            .select('id,title,description,composite_score,status,evidence_refs,roi_forecast,detected_at')
             .eq('status', status)
             .order('composite_score', { ascending: false })
             .limit(limit);
+        if (error) {
+            // Graceful fallback for environments where migration 093 has not
+            // yet run (column does not exist). Re-query without the new column.
+            const msg = String(error.message || '');
+            const missingCol = /column .*evidence_refs.* does not exist/i.test(msg) || error.code === '42703';
+            if (missingCol) {
+                const retry = await _sbClient()
+                    .from('opportunities')
+                    .select('id,title,description,composite_score,status,roi_forecast,detected_at')
+                    .eq('status', status)
+                    .order('composite_score', { ascending: false })
+                    .limit(limit);
+                data = retry.data;
+                error = retry.error;
+            }
+        }
         if (error) return res.status(500).json({ ok: false, error: CODES.DATABASE_UNAVAILABLE, message: safeMessage(error, 'Could not read opportunities.'), requestId });
         const opportunities = (data || []).map(o => ({
             id:              o.id,
@@ -602,7 +620,7 @@ router.get('/intelligence/opportunities', requireAppAccess, async (req, res) => 
             description:     o.description,
             composite_score: o.composite_score,
             status:          o.status,
-            evidence_refs:   o.roi_forecast?.evidence_refs || [],
+            evidence_refs:   _normalizeEvidenceRefs(o),
             created_at:      o.detected_at,
             roi_forecast:    o.roi_forecast,
         }));
@@ -611,6 +629,31 @@ router.get('/intelligence/opportunities', requireAppAccess, async (req, res) => 
         res.status(500).json({ ok: false, error: CODES.INTERNAL_ERROR, message: safeMessage(e, 'Failed to load opportunities.'), requestId });
     }
 });
+
+// V-11-J: canonicalise evidence_refs into Array<{label,source,ts}>.
+// Prefers the top-level `evidence_refs` column (post-migration 093);
+// falls back to the legacy `roi_forecast.evidence_refs` location; and
+// projects raw string refs ("EVT-0" / "MEM-2" / "SIG-1") into the
+// structured shape the frontend consumes at dashboard.html:21957-21964.
+function _normalizeEvidenceRefs(o) {
+    let refs = [];
+    if (Array.isArray(o.evidence_refs) && o.evidence_refs.length) refs = o.evidence_refs;
+    else if (Array.isArray(o.roi_forecast?.evidence_refs)) refs = o.roi_forecast.evidence_refs;
+    return refs.map(r => {
+        if (r && typeof r === 'object' && (r.label || r.source)) {
+            return {
+                label:  String(r.label  || r.source || 'Source'),
+                source: String(r.source || r.label  || 'source'),
+                ts:     r.ts || null,
+            };
+        }
+        const s = String(r || '');
+        if (s.startsWith('EVT-')) return { label: s, source: 'event',         ts: null };
+        if (s.startsWith('MEM-')) return { label: s, source: 'memory',        ts: null };
+        if (s.startsWith('SIG-')) return { label: s, source: 'market_signal', ts: null };
+        return { label: s || 'Source', source: 'unknown', ts: null };
+    });
+}
 
 // ── GET /api/intelligence/health ──────────────────────────────────────────────
 // Civilization health score. Reads latest persisted snapshot first;
