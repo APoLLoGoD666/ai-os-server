@@ -129,14 +129,11 @@ module.exports = function makeTelemetryRouter({ requireAppAccess, getStatus, err
 
     router.get('/api/deploy-probe', (req, res) => res.json({ v: '8a352e0-probe', ts: Date.now() }));
 
-    router.get('/api/intelligence/agent-runs', requireAppAccess, async (req, res) => {
-        try {
-            const limit = parseInt(req.query.limit) || 20;
-            const { data } = await sbAdmin.from('apex_agent_runs')
-                .select('*').order('created_at', { ascending: false }).limit(limit);
-            res.json({ ok: true, runs: data || [] });
-        } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
-    });
+    // V-11-H-B1: route collision resolved. `GET /api/intelligence/agent-runs`
+    // was registered here AND in routes/intelligence.js. routes/intelligence.js
+    // is now the canonical owner (richer query, INTELLIGENCE surface, owner-scoped).
+    // Registration removed here — see docs/ux/V-11-H-B-IMPLEMENTATION-READINESS.md §8.
+    // router.get('/api/intelligence/agent-runs', requireAppAccess, async (req, res) => { ... });
 
     router.get('/api/intelligence/cost-summary', requireAppAccess, async (req, res) => {
         try {
@@ -243,10 +240,18 @@ module.exports = function makeTelemetryRouter({ requireAppAccess, getStatus, err
         res.json({ ok: true, sessions: t.getSessions(50), active: t.getActive() });
     });
 
+    // V-11-H-B1: owner-scoped for Users; Master sees all by default.
     router.get('/api/timeline', requireAppAccess, async (req, res) => {
         try {
-            const { data } = await sbAdmin.from('apex_timeline')
+            const identity = req.identity || {};
+            const isMaster = identity.role === 'master';
+            if (req.query?.scope === 'all' && !isMaster) {
+                return res.status(403).json({ ok: false, error: 'FORBIDDEN', message: 'scope=all requires master role' });
+            }
+            let query = sbAdmin.from('apex_timeline')
                 .select('*').order('completed_at', { ascending: false }).limit(20);
+            if (!isMaster) query = query.eq('human_id', identity.humanId);
+            const { data } = await query;
             res.json({ ok: true, timeline: (data || []).map(r => ({
                 taskId:       r.task_id,
                 objective:    r.objective,

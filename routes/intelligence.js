@@ -50,15 +50,24 @@ router.get('/intelligence/lessons', requireAppAccess, (req, res) => {
     }
 });
 
-// GET /api/intelligence/agent-runs — recent pipeline runs from audit log
+// GET /api/intelligence/agent-runs — recent pipeline runs from audit log.
+// V-11-H-B1: canonical registration (collision with telemetry/index.js resolved).
+// Users see their own runs; Master sees all. scope=all requires role='master'.
 router.get('/intelligence/agent-runs', requireAppAccess, async (req, res) => {
     try {
+        const identity = req.identity || {};
+        const isMaster = identity.role === 'master';
+        if (req.query?.scope === 'all' && !isMaster) {
+            return res.status(403).json({ ok: false, error: 'FORBIDDEN', message: 'scope=all requires master role' });
+        }
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-        const { data, error } = await _sbClient()
+        let query = _sbClient()
             .from('apex_agent_runs')
             .select('task_id,objective,success,cost_usd,complexity,created_at')
             .order('created_at', { ascending: false })
             .limit(limit);
+        if (!isMaster) query = query.eq('human_id', identity.humanId);
+        const { data, error } = await query;
         if (error) return res.json({ ok: false, error: error.message, runs: [] });
         res.json({ ok: true, runs: data || [] });
     } catch (e) {
