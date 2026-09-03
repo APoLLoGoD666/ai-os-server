@@ -11236,7 +11236,7 @@ if(pipe){
     };
     window.switchPage = function(name) {
         // V-11-F F-3: Redirect Users away from Master-only pages (silent — do not leak existence)
-        var masterOnlyPages = ['occult', 'civilisation', 'reality', 'university'];
+        var masterOnlyPages = ['occult', 'civilisation', 'reality', 'university', 'governance'];
         if (masterOnlyPages.indexOf(name) !== -1 && document.body.classList.contains('apex-role-user')) {
             name = 'overview';
         }
