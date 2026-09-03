@@ -2,6 +2,7 @@
 const router = require('express').Router();
 const { createClient } = require('@supabase/supabase-js');
 const _auth = require('../lib/app-auth');
+const { isMasterRequest } = require('../lib/middleware');
 const { CODES, safeMessage } = require('../lib/api-error');
 
 const _sbClient = (() => { let c; return () => { if (!c) c = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY); return c; }; })();
@@ -10,6 +11,7 @@ function sb() { return _sbClient(); }
 router.get('/briefing/today', _auth, async (req, res) => {
     const requestId = req.requestId || '';
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, generatedAt: new Date().toISOString(), briefing: { calendar: { events: [] }, emails: { unread: [] }, finance: { weekNet: 0, weekIncome: 0, weekExpenses: 0, overdueInvoices: [] }, health: { nutrition: [], sleep: null, workouts: [] }, journal: { latest: null }, assignments: [] } });
         const today     = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         const weekAgo   = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
@@ -56,6 +58,7 @@ router.get('/briefing/today', _auth, async (req, res) => {
 router.get('/briefing/priority-inbox', _auth, async (req, res) => {
     const requestId = req.requestId || '';
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, inbox: { emails: [], assignments: [], follow_ups: [], meetings: [] } });
         const today    = new Date().toISOString().split('T')[0];
         const weekAhead = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 

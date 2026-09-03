@@ -2,11 +2,13 @@
 const router = require('express').Router();
 const { getSupabaseClient } = require('../lib/clients');
 const _auth = require('../lib/app-auth');
+const { isMasterRequest } = require('../lib/middleware');
 
 const sb = getSupabaseClient;
 
 router.get('/university/assignments', _auth, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, assignments: [] });
         const done = req.query.completed === 'true';
         const { data, error } = await sb().from('apex_university_assignments').select('*').eq('completed', done).order('due_date', { ascending: true });
         if (error) return res.status(500).json({ ok: false, error: error.message });
@@ -39,6 +41,7 @@ router.patch('/university/assignments/:id', _auth, async (req, res) => {
 
 router.get('/university/modules', _auth, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, modules: [] });
         const current = req.query.current !== 'false';
         let q = sb().from('apex_university_modules').select('*').order('code');
         if (current) q = q.eq('current', true);
@@ -68,6 +71,7 @@ router.post('/university/study-sessions', _auth, async (req, res) => {
 
 router.get('/university/study-sessions', _auth, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, sessions: [] });
         const days = parseInt(req.query.days) || 7;
         const since = new Date(Date.now() - days * 86400000).toISOString();
         const { data, error } = await sb().from('apex_university_sessions').select('*').gte('started_at', since).order('started_at', { ascending: false });
@@ -78,6 +82,7 @@ router.get('/university/study-sessions', _auth, async (req, res) => {
 
 router.get('/university/deadlines', _auth, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, deadlines: [] });
         const now = new Date().toISOString().split('T')[0];
         const cutoff = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
         const { data, error } = await sb().from('apex_university_assignments').select('*').gte('due_date', now).lte('due_date', cutoff).eq('completed', false).order('due_date', { ascending: true });
