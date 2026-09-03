@@ -1,6 +1,6 @@
 'use strict';
 const router = require('express').Router();
-const { requireAppAccess } = require('../../lib/middleware');
+const { requireAppAccess, isMasterRequest } = require('../../lib/middleware');
 const sbAdmin = require('../../lib/clients').getSupabaseClient();
 const _mo = require('../../agent-system/master-orchestrator');
 const { runMasterOrchestrator, runFeature, parseRoadmap, runFeatureWithPermission, autoApproveStandardPermissions } =
@@ -230,6 +230,7 @@ router.post('/api/master/qa-run', requireAppAccess, async (req, res) => {
 });
 
 router.get('/api/master/roadmap', requireAppAccess, async (req, res) => {
+    if (!isMasterRequest(req)) return res.json({ ok: true, roadmap: {}, total: 0, completed: 0, remaining: 0 });
     try {
         const roadmap = parseRoadmap();
         const total = Object.values(roadmap)
@@ -244,6 +245,7 @@ router.get('/api/master/roadmap', requireAppAccess, async (req, res) => {
 });
 
 router.get('/api/master/metrics', requireAppAccess, async (req, res) => {
+    if (!isMasterRequest(req)) return res.json({ ok: true, roadmap: { total: 0, completed: 0, pending: 0, pct: 0 }, tasks: 0, pipelineRuns: 0, agentRuns: 0, successRate: null, totalCostUsd: '0.0000', costByWorkstream: {} });
     try {
         let roadmap = {};
         try { roadmap = parseRoadmap(); } catch {}
@@ -378,6 +380,7 @@ router.post('/api/master/feature', requireAppAccess, async (req, res) => {
 });
 
 router.get('/api/master/permissions', requireAppAccess, async (req, res) => {
+    if (!isMasterRequest(req)) return res.json({ ok: true, permissions: [] });
     try {
         const { data, error } = await sbAdmin
             .from('apex_notifications')
@@ -449,6 +452,7 @@ router.post('/api/capture', requireAppAccess, async (req, res) => {
 });
 
 router.get('/api/agent/status', requireAppAccess, async (req, res) => {
+    if (!isMasterRequest(req)) return res.json({ ok: true, agents: [] });
     try {
         const { data } = await sbAdmin.from('apex_agents').select('slug,name,status');
         res.json({ ok: true, agents: data || [] });
@@ -456,6 +460,7 @@ router.get('/api/agent/status', requireAppAccess, async (req, res) => {
 });
 
 router.get('/api/master/schedules', requireAppAccess, async (req, res) => {
+    if (!isMasterRequest(req)) return res.json({ ok: true, schedules: [] });
     try {
         const { data } = await sbAdmin.from('apex_sync_checkpoints')
             .select('key, value, updated_at')
@@ -487,6 +492,7 @@ router.post('/api/admin/sre/run', requireAppAccess, async (req, res) => {
 });
 
 router.get('/api/overview/vitals', requireAppAccess, async (req, res) => {
+    if (!isMasterRequest(req)) return res.json({ ok: true, health: 0, lastCycle: null, cycleMs: 0, alerts: 0, agentRuns24h: 0, burnUsd24h: '0.0000', memOps1h: 0 });
     try {
         const ago24h = new Date(Date.now() - 86400000).toISOString();
         const ago1h  = new Date(Date.now() -  3600000).toISOString();

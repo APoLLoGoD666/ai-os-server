@@ -229,7 +229,7 @@ module.exports = function makeTelemetryRouter({ requireAppAccess, getStatus, err
             if (req.identity?.role === 'user') q = q.eq('human_id', req.identity.humanId);
             const { data } = await q;
             const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
-            res.json({ ok: true, cost_usd: total.toFixed(4), date: today });
+            res.json({ ok: true, cost_usd: total.toFixed(4), cost: total.toFixed(4), date: today });
         } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
     });
 
