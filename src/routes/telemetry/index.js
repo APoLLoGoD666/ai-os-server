@@ -224,8 +224,10 @@ module.exports = function makeTelemetryRouter({ requireAppAccess, getStatus, err
     router.get('/api/cost/today', requireAppAccess, async (req, res) => {
         try {
             const today = new Date().toISOString().split('T')[0];
-            const { data } = await sbAdmin.from('apex_agent_runs')
-                .select('cost_usd').gte('created_at', today);
+            const humanId = req.identity?.humanId;
+            let q = sbAdmin.from('apex_agent_runs').select('cost_usd').gte('created_at', today);
+            if (humanId) q = q.eq('human_id', humanId);
+            const { data } = await q;
             const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
             res.json({ ok: true, cost_usd: total.toFixed(4), date: today });
         } catch (e) { res.status(500).json({ ok: false, error: e.message }); }

@@ -60,6 +60,8 @@
 /* V-11-A: Role-aware visibility — body class beats .nav-btn specificity (0,2,0 > 0,1,0) */
 body.apex-role-user   .apex-master-only { display: none !important; }
 body.apex-role-master .apex-user-only   { display: none !important; }
+body.apex-role-user [data-goto="university"],
+body.apex-role-user ._mnav-btn[data-args*='"university"'] { display: none !important; }
 
 /* ── V-11-B: Universal State Architecture ───────────────────────────── */
 /* State dots — L0 panel status signal (colour + shape, not colour alone) */
@@ -11233,7 +11235,7 @@ if(pipe){
     };
     window.switchPage = function(name) {
         // V-11-F F-3: Redirect Users away from Master-only pages (silent — do not leak existence)
-        var masterOnlyPages = ['occult', 'civilisation', 'reality'];
+        var masterOnlyPages = ['occult', 'civilisation', 'reality', 'university'];
         if (masterOnlyPages.indexOf(name) !== -1 && document.body.classList.contains('apex-role-user')) {
             name = 'overview';
         }
