@@ -5,27 +5,41 @@ const crypto = require('crypto');
 const { requireAppAccess } = require('../../lib/middleware');
 const { pgSaveGmailToken } = require('../../lib/supabase-helpers');
 
-const MASTER_UUID = process.env.APEX_HUMAN_ID || '00000000-0000-4000-8000-000000000001';
+const MASTER_UUID   = process.env.APEX_HUMAN_ID || '00000000-0000-4000-8000-000000000001';
+const BETA_USER_UUID = '00000000-0000-4000-8000-000000000002';
 
 router.post('/auth/login', (req, res) => {
     const secret = process.env.JWT_SECRET;
     const correctPw = process.env.DASHBOARD_PASSWORD;
+    const betaPw    = process.env.BETA_USER_PASSWORD || '';
     if (!secret || !correctPw) {
         return res.status(500).json({ ok: false, reply: 'Auth not configured.' });
     }
     const { password } = req.body || {};
     const pwBuf = Buffer.from(password || '');
+
+    // Check master password
     const correctBuf = Buffer.from(correctPw);
-    if (!password || pwBuf.length !== correctBuf.length || !crypto.timingSafeEqual(pwBuf, correctBuf)) {
+    const isMaster = password && pwBuf.length === correctBuf.length && crypto.timingSafeEqual(pwBuf, correctBuf);
+
+    // Check beta user password (only if set)
+    const betaBuf  = Buffer.from(betaPw);
+    const isBeta   = betaPw && password && pwBuf.length === betaBuf.length && crypto.timingSafeEqual(pwBuf, betaBuf);
+
+    if (!isMaster && !isBeta) {
         const wantsJsonErr = (req.headers['content-type'] || '').includes('application/json');
         if (wantsJsonErr) return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
         return res.redirect(302, '/login?error=1');
     }
+
+    const role = isMaster ? 'master' : 'user';
+    const sub  = isMaster ? MASTER_UUID : BETA_USER_UUID;
+
     // V-11-A: JWT now carries UUID sub + role for multi-profile identity resolution.
     // jti provides per-token revocation capability (token_revocations table).
     const jti = crypto.randomBytes(16).toString('hex');
     const token = jwt.sign(
-        { sub: MASTER_UUID, role: 'master', email: null, jti },
+        { sub, role, email: null, jti },
         secret,
         { expiresIn: '7d' }
     );
