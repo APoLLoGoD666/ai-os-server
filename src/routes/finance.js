@@ -1,6 +1,6 @@
 'use strict';
 const router = require('express').Router();
-const { requireAppAccess } = require('../../lib/middleware');
+const { requireAppAccess, isMasterRequest } = require('../../lib/middleware');
 const { categoriseTransaction, checkBudgetAlerts, parseCsvTransactions, FINANCE_CATEGORIES } = require('../../agent-system/finance_agent');
 const {
     pgSaveTransaction,
@@ -30,6 +30,7 @@ router.post('/api/finance/transaction', requireAppAccess, async (req, res) => {
 
 router.get('/api/finance/transactions', requireAppAccess, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, transactions: [] });
         const transactions = await pgListTransactions(30);
         return res.json({ ok: true, transactions });
     } catch (error) {
@@ -39,6 +40,7 @@ router.get('/api/finance/transactions', requireAppAccess, async (req, res) => {
 
 router.get('/api/finance/summary', requireAppAccess, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, summary: null, budgets: [] });
         const cached = getCached("finance_summary");
         if (cached) return res.json(cached);
         const now   = new Date();

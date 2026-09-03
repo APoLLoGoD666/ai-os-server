@@ -1,10 +1,11 @@
 'use strict';
 const router = require('express').Router();
-const { requireAppAccess } = require('../../lib/middleware');
+const { requireAppAccess, isMasterRequest } = require('../../lib/middleware');
 const { pgListDocuments, pgGetRecentAgentActions } = require('../../lib/supabase-helpers');
 
 router.get('/documents', requireAppAccess, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, count: 0, documents: [] });
         const docs = await pgListDocuments();
         res.status(200).json({
             ok: true,
@@ -22,6 +23,7 @@ router.get('/documents', requireAppAccess, async (req, res) => {
 
 router.get('/agent-history', requireAppAccess, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, count: 0, actions: [] });
         const actions = await pgGetRecentAgentActions(20);
         res.status(200).json({
             ok: true,

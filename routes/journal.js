@@ -2,12 +2,14 @@
 const router = require('express').Router();
 const { getSupabaseClient } = require('../lib/clients');
 const _auth = require('../lib/app-auth');
+const { isMasterRequest } = require('../lib/middleware');
 const runtime = require('../lib/models/runtime');
 
 const sb = getSupabaseClient;
 
 router.get('/journal/entries', _auth, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, entries: [] });
         const days = parseInt(req.query.days) || 30;
         const since = new Date(Date.now() - days * 86400000).toISOString();
         const { data, error } = await sb().from('apex_journal_entries').select('*').gte('created_at', since).order('created_at', { ascending: false });
@@ -32,6 +34,7 @@ router.post('/journal/entries', _auth, async (req, res) => {
 
 router.get('/journal/habits', _auth, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, habits: [] });
         const { data, error } = await sb().from('apex_habits').select('*').eq('active', true).order('habit_name');
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, habits: data || [] });
@@ -78,6 +81,7 @@ router.get('/journal/habits/:id/streak', _auth, async (req, res) => {
 
 router.get('/journal/gratitude', _auth, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, entries: [] });
         const days = parseInt(req.query.days) || 7;
         const since = new Date(Date.now() - days * 86400000).toISOString();
         const { data, error } = await sb().from('apex_gratitude_log').select('*').gte('created_at', since).order('created_at', { ascending: false });

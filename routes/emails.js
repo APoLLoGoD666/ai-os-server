@@ -1,13 +1,14 @@
 'use strict';
 
 const router = require('express').Router();
-const { requireAppAccess } = require('../lib/middleware');
+const { requireAppAccess, isMasterRequest } = require('../lib/middleware');
 const { getCached, setCache, clearCache } = require('../lib/server-utils');
 const { pgListEmailQueue, pgUpdateEmailQueueStatus } = require('../lib/supabase-helpers');
 const { checkEmails, sendEmailReply } = require('../agent-system/email_agent');
 
 router.get('/emails', requireAppAccess, async (req, res) => {
     try {
+        if (!isMasterRequest(req)) return res.json({ ok: true, emails: [] });
         const cached = getCached("emails");
         if (cached) return res.json(cached);
         const emails = await pgListEmailQueue(20);
