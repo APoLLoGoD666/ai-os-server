@@ -45,7 +45,12 @@ async function waitPageSettle(page, ms = 2500) {
     // ── 1. Load dashboard ────────────────────────────────────────────────────
     console.log('\n── [1] DASHBOARD LOAD ──────────────────────────────────────');
     await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await waitPageSettle(page, 3000);
+    // Wait until _bootIdentity resolves /api/me and applies apex-role-user (up to 10s for cold Render)
+    await page.waitForFunction(
+        () => document.body.classList.contains('apex-role-user'),
+        { timeout: 10000 }
+    ).catch(() => {});
+    await page.waitForTimeout(500);
 
     const roleClass = await page.evaluate(() => document.body.classList.contains('apex-role-user'));
     check('Body has apex-role-user class', roleClass);
