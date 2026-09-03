@@ -93,6 +93,13 @@ router.post('/auth/logout', (req, res) => {
     return res.json({ ok: true });
 });
 
+// GET /logout — browser navigation from settings sign-out button
+router.get('/logout', (req, res) => {
+    res.clearCookie('apex_token',  { path: '/' });
+    res.clearCookie('apex_session', { path: '/' });
+    return res.redirect(302, '/login');
+});
+
 router.get('/auth/gmail/reauthorise', requireAppAccess, (req, res) => {
     const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET } = process.env;
     if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET) {

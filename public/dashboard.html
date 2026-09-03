@@ -7494,7 +7494,7 @@ select:focus {
 
                 <!-- SIGN OUT -->
                 <div style="padding-top:8px">
-                  <button class="ds-btn ds-btn-danger" onclick="window.location.href='/logout'" style="width:100%;justify-content:center;padding:12px">Sign out</button>
+                  <button class="ds-btn ds-btn-danger" onclick="window.location.href='/logout?profile='+(window._apexUser&&window._apexUser.role||'')" style="width:100%;justify-content:center;padding:12px">Sign out</button>
                 </div>
               </div>
             </div>
