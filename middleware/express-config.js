@@ -18,6 +18,7 @@ module.exports = function mountExpressConfig(app) {
                 fontSrc:     ["'self'", 'data:', 'https://fonts.gstatic.com'],
                 objectSrc:      ["'none'"],
                 frameSrc:       ["'none'"],
+                scriptSrcAttr:  ["'unsafe-inline'"],
             }
         },
         crossOriginEmbedderPolicy: false
