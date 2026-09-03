@@ -1,0 +1,17 @@
+domain: Memory
+capability: Persistent Knowledge Storage and Retrieval
+runtime: core
+criticality: high
+owner: Memory Subsystem
+entity_id: DOM-000004
+dependencies:
+  - Infrastructure
+consumers:
+  - Intelligence
+  - Registry
+  - Knowledge
+events_emitted: []
+events_consumed:
+  - DECISION_RECORDED
+state_version_sensitive: false
+test_suite: null

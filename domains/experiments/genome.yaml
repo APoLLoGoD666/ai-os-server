@@ -1,0 +1,36 @@
+id: DOM-000010
+name: Experiments
+criticality: LOW
+autonomy_level: 0
+
+description: >
+  Prototype features, research, benchmarks, speculative capabilities.
+  A safe space for the civilisation to experiment without risk.
+
+invariants:
+  - property: status
+    must_be: ACTIVE
+    violation: advisory
+
+  - property: owner
+    must_be_set: true
+    violation: advisory
+
+  - property: health_score
+    minimum: 0
+    violation: advisory
+
+vital_connections:
+  - DOM-000009   # Must graduate through Development
+
+ancestors:
+  - DOM-000001
+
+healing_domain: DOM-000009
+
+autonomy_notes: >
+  Fully governed (level 0). All operations require constitutional approval.
+  Earning autonomy requires 30 days of healthy readings and zero violations.
+
+clock_baseline_ticks_per_hour: 4
+prediction_accuracy_target: 0.60

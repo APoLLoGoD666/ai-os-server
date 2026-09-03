@@ -1,0 +1,35 @@
+domain: Civilisation
+domain_id: DOM-000001
+capability: civilisation-root
+runtime: server.js
+criticality: CRITICAL
+owner: Registry Kernel
+
+entity_id: DOM-000001
+
+dependencies:
+  - DOM-000003   # Registry
+  - DOM-000005   # Infrastructure
+
+consumers:
+  - DOM-000002
+  - DOM-000004
+  - DOM-000006
+  - DOM-000007
+  - DOM-000008
+  - DOM-000009
+  - DOM-000010
+
+events_emitted:
+  - DECISION_RECORDED
+
+events_consumed:
+  - ENTITY_CREATED
+  - ENTITY_UPDATED
+  - EDGE_ADDED
+  - EDGE_REMOVED
+  - AGENT_ACTIVATED
+  - AGENT_COMPLETED
+  - DOMAIN_HEALTH_CHANGED
+  - GOVERNANCE_VIOLATION
+  - FITNESS_CHECK_FAILED

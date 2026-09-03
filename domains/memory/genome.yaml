@@ -1,0 +1,38 @@
+id: DOM-000004
+name: Memory
+criticality: HIGH
+autonomy_level: 1
+
+description: >
+  Persistent memory, Supabase storage, Obsidian vault, LangChain RAG,
+  episodic memory. Persists and retrieves all knowledge across sessions.
+
+invariants:
+  - property: status
+    must_be: ACTIVE
+    violation: degraded
+
+  - property: entity_count
+    minimum: 1
+    violation: critical
+
+  - property: owner
+    must_be_set: true
+    violation: advisory
+
+  - property: health_score
+    minimum: 40
+    consecutive_readings: 3
+    violation: quarantine
+
+vital_connections:
+  - DOM-000003   # Registry
+  - DOM-000005   # Infrastructure (Supabase, Storage)
+
+ancestors:
+  - DOM-000001
+
+healing_domain: DOM-000005
+
+clock_baseline_ticks_per_hour: 15
+prediction_accuracy_target: 0.75

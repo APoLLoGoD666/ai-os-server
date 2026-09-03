@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX — UX-08 Contextual Presentation Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cinzel:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── UX-08 Contextual Presentation Prototype ─────────────────────────────────
+   Design authority: UX-05-CANONICAL-VISUAL-DESIGN-SYSTEM.md (binding)
+   Visual foundation: UX-06 apex-command-prototype.html
+   Isolation: docs/interface/prototype/ — NOT served by APEX routes          */
+
+/* ── ONE canonical :root block — UX-05 INV-VS-02 ─────────────────────────── */
+:root {
+  --apex-color-bg:             #03060f;
+  --apex-color-surface-1:      rgba(255,255,255,0.03);
+  --apex-color-surface-2:      rgba(255,255,255,0.06);
+  --apex-color-surface-3:      rgba(255,255,255,0.09);
+  --apex-color-primary:        #00d4ff;
+  --apex-color-secondary:      #0066ff;
+  --apex-color-accent:         #7b2fff;
+  --apex-color-border:         rgba(0,212,255,0.16);
+  --apex-color-border-dim:     rgba(0,212,255,0.08);
+  --apex-color-text-primary:   #e8f4ff;
+  --apex-color-text-secondary: rgba(232,244,255,0.60);
+  --apex-color-text-muted:     rgba(232,244,255,0.35);
+  --apex-color-success:        #27ae60;
+  --apex-color-warning:        #ff9f43;
+  --apex-color-danger:         #ff4d6d;
+  --apex-font-ui:   'Inter', system-ui, sans-serif;
+  --apex-font-brand:'Cinzel', serif;
+  --apex-font-mono: 'JetBrains Mono', monospace;
+  --apex-space-1:  4px;  --apex-space-2:  8px;  --apex-space-3: 12px;
+  --apex-space-4: 16px;  --apex-space-5: 20px;  --apex-space-6: 24px;
+  --apex-space-8: 32px;
+  --apex-radius-sm:  4px; --apex-radius-md:  6px; --apex-radius-lg:   8px;
+  --apex-radius-xl: 10px; --apex-radius-2xl:12px; --apex-radius-3xl: 14px;
+  --apex-radius-pill: 9999px;
+  --apex-shadow-2: 0 4px 12px rgba(0,0,0,0.5);
+  --apex-shadow-3: 0 8px 24px rgba(0,0,0,0.6);
+  --apex-duration-micro:      120ms;
+  --apex-duration-standard:   220ms;
+  --apex-duration-deliberate: 350ms;
+  --apex-z-sticky:  10; --apex-z-nav: 20; --apex-z-notify: 1000; --apex-z-command: 9000;
+}
+
+/* ── Reset + base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--apex-color-bg); color: var(--apex-color-text-primary); font-family: var(--apex-font-ui); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; overflow: hidden; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+:focus-visible { outline: 2px solid rgba(0,212,255,0.60); outline-offset: 2px; }
+
+/* ── App shell ────────────────────────────────────────────────────────────── */
+.app-shell { display: grid; grid-template-rows: 52px 1fr 54px; grid-template-columns: 200px 1fr; height: 100vh; }
+.topbar  { grid-column: 1/-1; display:flex; align-items:center; gap:var(--apex-space-4); padding:0 var(--apex-space-6); border-bottom:1px solid var(--apex-color-border-dim); background:rgba(3,6,15,0.96); backdrop-filter:blur(12px); z-index:var(--apex-z-sticky); }
+.sidebar { border-right:1px solid var(--apex-color-border-dim); background:var(--apex-color-surface-1); display:flex; flex-direction:column; gap:2px; padding:var(--apex-space-3) var(--apex-space-2); overflow-y:auto; }
+.content { overflow-y:auto; padding:var(--apex-space-5); display:flex; flex-direction:column; gap:var(--apex-space-4); position:relative; }
+.input-zone { grid-column:1/-1; border-top:1px solid var(--apex-color-border-dim); background:rgba(3,6,15,0.97); display:flex; align-items:center; gap:var(--apex-space-3); padding:0 var(--apex-space-4); }
+
+/* ── Topbar ───────────────────────────────────────────────────────────────── */
+.brand-name { font-family:var(--apex-font-brand); font-size:15px; font-weight:600; color:var(--apex-color-primary); letter-spacing:0.12em; }
+.badge { font-size:10px; font-family:var(--apex-font-mono); background:rgba(0,212,255,0.10); color:var(--apex-color-primary); padding:2px 8px; border-radius:var(--apex-radius-pill); border:1px solid rgba(0,212,255,0.25); letter-spacing:0.08em; }
+.topbar-right { margin-left:auto; display:flex; align-items:center; gap:var(--apex-space-4); font-size:13px; color:var(--apex-color-text-muted); font-family:var(--apex-font-mono); }
+
+/* ── Orb ──────────────────────────────────────────────────────────────────── */
+.orb-wrap { display:flex; align-items:center; gap:var(--apex-space-3); }
+.orb { width:28px; height:28px; border-radius:50%; border:2px solid rgba(0,212,255,0.35); background:radial-gradient(circle at 35% 35%,rgba(0,212,255,0.20),rgba(0,212,255,0.05)); animation:orbWait 4s ease-in-out infinite; flex-shrink:0; }
+@keyframes orbWait { 0%,100%{box-shadow:0 0 8px rgba(0,212,255,0.12);} 50%{box-shadow:0 0 16px rgba(0,212,255,0.28);} }
+
+/* ── Waveform — 7 bars protected. UX-05 §17. ─────────────────────────────── */
+.waveform { display:flex; align-items:flex-end; gap:2px; height:18px; }
+.wb { width:3px; height:5px; background:var(--apex-color-primary); border-radius:2px; opacity:0.45; }
+@keyframes wb { from{height:5px;} to{height:18px;} }
+.waveform.active .wb { opacity:0.85; }
+.waveform.active .wb:nth-child(1){animation:wb 0.48s ease-in-out 0.00s infinite alternate;}
+.waveform.active .wb:nth-child(2){animation:wb 0.48s ease-in-out 0.07s infinite alternate;}
+.waveform.active .wb:nth-child(3){animation:wb 0.48s ease-in-out 0.14s infinite alternate;}
+.waveform.active .wb:nth-child(4){animation:wb 0.48s ease-in-out 0.21s infinite alternate;}
+.waveform.active .wb:nth-child(5){animation:wb 0.48s ease-in-out 0.28s infinite alternate;}
+.waveform.active .wb:nth-child(6){animation:wb 0.48s ease-in-out 0.35s infinite alternate;}
+.waveform.active .wb:nth-child(7){animation:wb 0.48s ease-in-out 0.42s infinite alternate;}
+
+/* ── Sidebar nav ──────────────────────────────────────────────────────────── */
+.nav-item { display:flex; align-items:center; gap:var(--apex-space-3); padding:var(--apex-space-2) var(--apex-space-3); border-radius:var(--apex-radius-lg); font-size:13px; color:var(--apex-color-text-secondary); cursor:pointer; border:1px solid transparent; transition:background var(--apex-duration-standard); }
+.nav-item:hover { background:var(--apex-color-surface-2); }
+.nav-item.active { background:rgba(0,212,255,0.08); border-color:rgba(0,212,255,0.18); color:var(--apex-color-primary); }
+.nav-icon { width:14px; height:14px; opacity:0.7; }
+.nav-divider { height:1px; background:var(--apex-color-border-dim); margin:var(--apex-space-2) 0; }
+.nav-label { font-size:10px; font-family:var(--apex-font-mono); color:var(--apex-color-text-muted); padding:4px var(--apex-space-3); letter-spacing:0.08em; }
+.sc-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+.sc-btn { padding:4px 6px; border-radius:var(--apex-radius-md); font-size:11px; font-family:var(--apex-font-mono); background:var(--apex-color-surface-2); border:1px solid var(--apex-color-border-dim); color:var(--apex-color-text-muted); text-align:left; transition:all var(--apex-duration-micro); cursor:pointer; }
+.sc-btn:hover { background:var(--apex-color-surface-3); color:var(--apex-color-text-primary); }
+.sc-btn.active { background:rgba(0,212,255,0.10); border-color:rgba(0,212,255,0.30); color:var(--apex-color-primary); }
+
+/* ── Notification banner — L2/L3/L4/L5. UX-05 §24. ─────────────────────── */
+.notify-banner { display:none; position:sticky; top:0; z-index:var(--apex-z-notify); border-radius:var(--apex-radius-xl); margin-bottom:var(--apex-space-3); padding:var(--apex-space-3) var(--apex-space-4); border:1px solid; font-size:13px; animation:slideIn var(--apex-duration-standard) ease-out; justify-content:space-between; align-items:center; gap:var(--apex-space-3); }
+.notify-banner.visible { display:flex; }
+@keyframes slideIn { from{transform:translateY(-8px);opacity:0;} to{transform:none;opacity:1;} }
+.notify-banner.l2 { background:rgba(0,102,255,0.08); border-color:rgba(0,102,255,0.30); color:#7eb3ff; }
+.notify-banner.l3 { background:rgba(0,212,255,0.08); border-color:rgba(0,212,255,0.40); color:var(--apex-color-primary); box-shadow:0 0 16px rgba(0,212,255,0.12); }
+.notify-banner.l4 { background:rgba(255,159,67,0.08); border-color:rgba(255,159,67,0.45); color:var(--apex-color-warning); }
+.notify-banner.l5 { background:rgba(255,77,109,0.12); border-color:rgba(255,77,109,0.55); color:var(--apex-color-danger); animation:slideIn var(--apex-duration-standard) ease-out, notifyPulse 1.8s ease-in-out infinite; }
+@keyframes notifyPulse { 0%,100%{box-shadow:0 0 12px rgba(255,77,109,0.15);} 50%{box-shadow:0 0 24px rgba(255,77,109,0.35);} }
+.notify-level { font-family:var(--apex-font-mono); font-size:10px; letter-spacing:0.10em; opacity:0.75; }
+.notify-body { flex:1; }
+.notify-title { font-weight:500; }
+.notify-sub { font-size:12px; opacity:0.75; margin-top:2px; }
+.notify-actions { display:flex; gap:var(--apex-space-2); align-items:center; flex-shrink:0; }
+.notify-btn { height:28px; padding:0 var(--apex-space-3); border-radius:var(--apex-radius-pill); font-size:12px; font-weight:500; border:1px solid currentColor; opacity:0.80; transition:opacity var(--apex-duration-micro); }
+.notify-btn:hover { opacity:1; }
+.notify-close { width:20px; height:20px; border-radius:50%; font-size:12px; color:inherit; opacity:0.55; transition:opacity var(--apex-duration-micro); }
+.notify-close:hover { opacity:0.90; }
+
+/* ── Contextual card — Present surface. UX-05 §23. ─────────────────────── */
+.ctx-card { border-radius:var(--apex-radius-2xl); border:1px solid var(--apex-color-border-dim); background:var(--apex-color-surface-1); backdrop-filter:blur(20px); overflow:hidden; transition:border-color var(--apex-duration-standard), box-shadow var(--apex-duration-standard); }
+.ctx-card.appearing { animation:cardAppear var(--apex-duration-deliberate) ease-out; }
+.ctx-card.dismissing { animation:cardDismiss var(--apex-duration-standard) ease-in forwards; }
+@keyframes cardAppear { from{transform:translateY(10px);opacity:0;} to{transform:none;opacity:1;} }
+@keyframes cardDismiss { to{transform:translateY(-6px);opacity:0;height:0;padding:0;margin:0;} }
+
+/* Category border accents */
+.ctx-card.cat-info        { border-left:3px solid rgba(0,212,255,0.40); }
+.ctx-card.cat-insight     { border-left:3px solid rgba(123,47,255,0.50); }
+.ctx-card.cat-status      { border-left:3px solid rgba(0,102,255,0.40); }
+.ctx-card.cat-decision    { border-left:3px solid rgba(255,159,67,0.65); }
+.ctx-card.cat-action      { border-left:3px solid rgba(0,212,255,0.55); }
+.ctx-card.cat-warning     { border-left:3px solid rgba(255,77,109,0.65); }
+.ctx-card.cat-confirmation{ border-left:3px solid rgba(39,174,96,0.55); }
+
+.ctx-header { padding:var(--apex-space-3) var(--apex-space-4); border-bottom:1px solid var(--apex-color-border-dim); display:flex; align-items:center; gap:var(--apex-space-3); }
+.ctx-badge { font-size:10px; font-family:var(--apex-font-mono); padding:2px 7px; border-radius:var(--apex-radius-pill); border:1px solid; letter-spacing:0.08em; flex-shrink:0; }
+.cat-info     .ctx-badge { background:rgba(0,212,255,0.10); border-color:rgba(0,212,255,0.30); color:var(--apex-color-primary); }
+.cat-insight  .ctx-badge { background:rgba(123,47,255,0.10); border-color:rgba(123,47,255,0.35); color:#c084ff; }
+.cat-status   .ctx-badge { background:rgba(0,102,255,0.10); border-color:rgba(0,102,255,0.30); color:#7eb3ff; }
+.cat-decision .ctx-badge { background:rgba(255,159,67,0.10); border-color:rgba(255,159,67,0.40); color:var(--apex-color-warning); }
+.cat-action   .ctx-badge { background:rgba(0,212,255,0.10); border-color:rgba(0,212,255,0.35); color:var(--apex-color-primary); }
+.cat-warning  .ctx-badge { background:rgba(255,77,109,0.10); border-color:rgba(255,77,109,0.35); color:var(--apex-color-danger); }
+.cat-confirmation .ctx-badge { background:rgba(39,174,96,0.10); border-color:rgba(39,174,96,0.35); color:#5fca85; }
+
+.ctx-title { font-size:13px; font-weight:500; color:var(--apex-color-text-primary); flex:1; }
+.ctx-controls { display:flex; gap:var(--apex-space-1); align-items:center; }
+.ctx-ctrl { height:24px; padding:0 var(--apex-space-2); border-radius:var(--apex-radius-md); font-size:11px; color:var(--apex-color-text-muted); border:1px solid var(--apex-color-border-dim); background:var(--apex-color-surface-2); transition:all var(--apex-duration-micro); }
+.ctx-ctrl:hover { color:var(--apex-color-text-primary); border-color:var(--apex-color-border); }
+
+/* Disclosure levels */
+.ctx-body { padding:var(--apex-space-3) var(--apex-space-4); }
+.ctx-summary { font-size:14px; color:var(--apex-color-text-secondary); line-height:1.55; }
+.ctx-expanded { display:none; margin-top:var(--apex-space-3); padding-top:var(--apex-space-3); border-top:1px solid var(--apex-color-border-dim); }
+.ctx-card.expanded .ctx-expanded { display:block; }
+.ctx-detail { font-size:13px; color:var(--apex-color-text-secondary); margin-bottom:var(--apex-space-3); }
+.ctx-evidence { font-size:12px; font-family:var(--apex-font-mono); color:var(--apex-color-text-muted); background:rgba(0,0,0,0.20); border:1px solid var(--apex-color-border-dim); border-radius:var(--apex-radius-md); padding:var(--apex-space-3); display:none; }
+.ctx-card.evidence .ctx-evidence { display:block; }
+
+/* Attention score bar */
+.ctx-score-row { display:flex; align-items:center; gap:var(--apex-space-3); margin-top:var(--apex-space-3); }
+.ctx-score-label { font-size:10px; font-family:var(--apex-font-mono); color:var(--apex-color-text-muted); }
+.ctx-score-bar { flex:1; height:3px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; }
+.ctx-score-fill { height:100%; border-radius:2px; transition:width var(--apex-duration-deliberate); }
+
+/* Decision actions */
+.ctx-actions { display:flex; gap:var(--apex-space-2); margin-top:var(--apex-space-3); flex-wrap:wrap; }
+.ctx-action-btn { height:36px; padding:0 var(--apex-space-4); border-radius:var(--apex-radius-pill); font-size:13px; font-weight:500; border:1px solid; transition:background var(--apex-duration-micro); }
+.ctx-action-approve { background:rgba(39,174,96,0.12); border-color:rgba(39,174,96,0.40); color:#5fca85; }
+.ctx-action-approve:hover { background:rgba(39,174,96,0.22); }
+.ctx-action-reject  { background:rgba(255,77,109,0.10); border-color:rgba(255,77,109,0.35); color:var(--apex-color-danger); }
+.ctx-action-reject:hover { background:rgba(255,77,109,0.20); }
+.ctx-action-defer   { background:var(--apex-color-surface-2); border-color:var(--apex-color-border-dim); color:var(--apex-color-text-secondary); }
+.ctx-action-defer:hover { background:var(--apex-color-surface-3); }
+
+/* ── Stat chips ───────────────────────────────────────────────────────────── */
+.stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--apex-space-3); }
+.stat-chip { background:var(--apex-color-surface-1); border:1px solid var(--apex-color-border-dim); border-radius:var(--apex-radius-xl); padding:var(--apex-space-3) var(--apex-space-4); }
+.stat-value { font-family:var(--apex-font-mono); font-size:20px; font-weight:500; color:var(--apex-color-primary); }
+.stat-label { font-size:11px; color:var(--apex-color-text-muted); margin-top:2px; font-family:var(--apex-font-mono); letter-spacing:0.05em; }
+.stat-chip.highlight { border-color:rgba(255,159,67,0.40); }
+.stat-chip.highlight .stat-value { color:var(--apex-color-warning); }
+
+/* ── Context stack header ─────────────────────────────────────────────────── */
+.section-label { font-size:11px; font-family:var(--apex-font-mono); color:var(--apex-color-text-muted); letter-spacing:0.10em; display:flex; align-items:center; gap:var(--apex-space-2); }
+.section-label .dot { width:5px; height:5px; border-radius:50%; background:var(--apex-color-primary); animation:orbWait 3s ease-in-out infinite; }
+
+/* ── Converse area ────────────────────────────────────────────────────────── */
+.converse-log { background:var(--apex-color-surface-1); border:1px solid var(--apex-color-border-dim); border-radius:var(--apex-radius-2xl); padding:var(--apex-space-4); display:flex; flex-direction:column; gap:var(--apex-space-3); max-height:220px; overflow-y:auto; }
+.msg { max-width:85%; display:flex; flex-direction:column; gap:3px; }
+.msg.user { align-self:flex-end; }
+.msg.ai   { align-self:flex-start; }
+.msg-bubble { padding:var(--apex-space-2) var(--apex-space-4); border-radius:var(--apex-radius-xl); font-size:14px; line-height:1.5; }
+.msg.user .msg-bubble { background:rgba(0,102,255,0.14); border:1px solid rgba(0,102,255,0.22); border-bottom-right-radius:var(--apex-radius-sm); }
+.msg.ai   .msg-bubble { background:var(--apex-color-surface-2); border:1px solid var(--apex-color-border-dim); border-bottom-left-radius:var(--apex-radius-sm); }
+.msg-meta { font-size:11px; color:var(--apex-color-text-muted); font-family:var(--apex-font-mono); }
+.msg.user .msg-meta { text-align:right; }
+
+/* ── Input zone ───────────────────────────────────────────────────────────── */
+.input-field { flex:1; height:40px; background:var(--apex-color-surface-2); border:1px solid var(--apex-color-border-dim); border-radius:var(--apex-radius-pill); padding:0 var(--apex-space-4); font-size:14px; color:var(--apex-color-text-primary); font-family:var(--apex-font-ui); outline:none; transition:border-color var(--apex-duration-standard); }
+.input-field:focus { border-color:rgba(0,212,255,0.40); }
+.input-field::placeholder { color:var(--apex-color-text-muted); }
+.input-btn { height:40px; padding:0 var(--apex-space-4); border-radius:var(--apex-radius-pill); background:rgba(0,212,255,0.10); border:1px solid rgba(0,212,255,0.28); color:var(--apex-color-primary); font-size:13px; font-weight:500; transition:background var(--apex-duration-micro); }
+.input-btn:hover { background:rgba(0,212,255,0.18); }
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.empty-state { display:flex; flex-direction:column; align-items:center; gap:var(--apex-space-3); padding:var(--apex-space-8); opacity:0.45; text-align:center; border:1px dashed var(--apex-color-border-dim); border-radius:var(--apex-radius-2xl); }
+.empty-state-icon { width:40px; height:40px; border-radius:50%; border:1px solid var(--apex-color-border); display:flex; align-items:center; justify-content:center; }
+.empty-state-title { font-size:14px; font-weight:500; color:var(--apex-color-text-secondary); }
+.empty-state-desc  { font-size:13px; color:var(--apex-color-text-muted); }
+
+/* ── Multi-item priority queue ────────────────────────────────────────────── */
+.priority-queue { display:flex; flex-direction:column; gap:var(--apex-space-3); }
+.priority-header { display:flex; align-items:center; justify-content:space-between; }
+
+/* ── Voice overlay indicator ──────────────────────────────────────────────── */
+.voice-overlay { display:none; position:fixed; inset:0; background:rgba(3,6,15,0.60); backdrop-filter:blur(4px); z-index:var(--apex-z-command - 1); align-items:center; justify-content:center; }
+.voice-overlay.active { display:flex; }
+.voice-modal { background:rgba(5,10,26,0.97); border:1px solid rgba(0,212,255,0.25); border-radius:var(--apex-radius-3xl); padding:var(--apex-space-8); text-align:center; display:flex; flex-direction:column; align-items:center; gap:var(--apex-space-4); }
+.voice-modal .orb { width:64px; height:64px; animation:orbListen 0.55s ease-in-out infinite alternate; border-color:rgba(255,77,109,0.80); }
+@keyframes orbListen { from{box-shadow:0 0 8px rgba(255,77,109,0.30);} to{box-shadow:0 0 24px rgba(255,77,109,0.80);} }
+.voice-modal-label { font-family:var(--apex-font-mono); font-size:13px; color:var(--apex-color-primary); letter-spacing:0.10em; }
+.voice-modal-sub { font-size:13px; color:var(--apex-color-text-muted); }
+.voice-modal-sup { font-size:12px; color:var(--apex-color-text-muted); border:1px solid var(--apex-color-border-dim); border-radius:var(--apex-radius-md); padding:2px var(--apex-space-3); font-family:var(--apex-font-mono); }
+
+/* ── Proto label ──────────────────────────────────────────────────────────── */
+.proto-label { position:fixed; bottom:66px; right:14px; font-size:10px; font-family:var(--apex-font-mono); color:var(--apex-color-text-muted); background:var(--apex-color-surface-1); border:1px solid var(--apex-color-border-dim); border-radius:var(--apex-radius-md); padding:3px 8px; pointer-events:none; letter-spacing:0.06em; z-index:var(--apex-z-command); }
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width:900px) {
+  .app-shell { grid-template-columns:1fr; }
+  .sidebar { display:none; }
+  .stat-row { grid-template-columns:1fr 1fr; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:0.01ms!important; animation-iteration-count:1!important; transition-duration:0.01ms!important; }
+}
+</style>
+</head>
+<body>
+
+<div id="voiceAria" role="status" aria-live="polite" aria-atomic="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);"></div>
+
+<!-- Voice active overlay (V-CONTEXT-08) -->
+<div class="voice-overlay" id="voiceOverlay" role="dialog" aria-modal="true" aria-label="Voice interaction active">
+  <div class="voice-modal">
+    <div class="orb"></div>
+    <div class="waveform active" aria-hidden="true">
+      <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+      <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
+    </div>
+    <div class="voice-modal-label">APEX SPEAKING</div>
+    <div class="voice-modal-sub" id="voiceOverlayText">Finance summary: Q3 revenue is £284k, up 18%.</div>
+    <div class="voice-modal-sup">Presentation visible below · speak to interrupt</div>
+    <button class="input-btn" style="margin-top:8px;" onclick="hideVoice()">Dismiss Voice</button>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="orb-wrap">
+      <div class="orb" id="topOrb" aria-label="APEX" title="APEX orb — voice state indicator"></div>
+      <div class="waveform" id="topWave" aria-hidden="true">
+        <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+        <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
+      </div>
+    </div>
+    <span class="brand-name">APEX</span>
+    <span class="badge">UX-08 · CONTEXT</span>
+    <div class="topbar-right">
+      <span id="ctxLabel" style="color:var(--apex-color-text-muted);">No active context</span>
+      <span>·</span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar" aria-label="Scenarios">
+    <!-- Nav items -->
+    <div class="nav-item active" aria-current="page">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 3v2M8 11v2M3 8h2M11 8h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Command
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h12M8 2c-2 2-2 4-2 6s0 4 2 6M8 2c2 2 2 4 2 6s0 4-2 6" stroke="currentColor" stroke-width="1.2"/></svg>
+      World
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M4 6l4-4 4 4M4 10l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Decisions
+    </div>
+
+    <div class="nav-divider"></div>
+    <div class="nav-label">SCENARIOS</div>
+    <div class="sc-grid">
+      <button class="sc-btn" onclick="runScenario(1)" title="No relevant context">V-01</button>
+      <button class="sc-btn" onclick="runScenario(2)" title="Low-priority info">V-02</button>
+      <button class="sc-btn" onclick="runScenario(3)" title="Attention-worthy">V-03</button>
+      <button class="sc-btn" onclick="runScenario(4)" title="Actionable item">V-04</button>
+      <button class="sc-btn" onclick="runScenario(5)" title="User expands">V-05</button>
+      <button class="sc-btn" onclick="runScenario(6)" title="Context obsolete">V-06</button>
+      <button class="sc-btn" onclick="runScenario(7)" title="Multiple compete">V-07</button>
+      <button class="sc-btn" onclick="runScenario(8)" title="Voice + present">V-08</button>
+      <button class="sc-btn" onclick="runScenario(9)" title="Dismiss/defer">V-09</button>
+      <button class="sc-btn" onclick="runScenario(10)" title="Context resolves">V-10</button>
+    </div>
+
+    <div class="nav-divider"></div>
+    <div class="nav-label">CATEGORIES</div>
+    <div style="display:flex;flex-direction:column;gap:3px;padding:0 4px;">
+      <button class="sc-btn" onclick="addCard('info')"        >＋ Info</button>
+      <button class="sc-btn" onclick="addCard('insight')"     >＋ Insight</button>
+      <button class="sc-btn" onclick="addCard('status')"      >＋ Status</button>
+      <button class="sc-btn" onclick="addCard('decision')"    >＋ Decision</button>
+      <button class="sc-btn" onclick="addCard('warning')"     >＋ Warning</button>
+      <button class="sc-btn" onclick="addCard('confirmation')">＋ Confirm</button>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="content" id="mainContent" role="main">
+
+    <!-- Notification banner slot -->
+    <div class="notify-banner" id="notifyBanner" role="alert" aria-live="assertive">
+      <span class="notify-level" id="notifyLevel">L3</span>
+      <div class="notify-body">
+        <div class="notify-title" id="notifyTitle">Attention required</div>
+        <div class="notify-sub" id="notifySub">—</div>
+      </div>
+      <div class="notify-actions" id="notifyActions">
+        <button class="notify-btn" onclick="dismissNotify()">Dismiss</button>
+      </div>
+      <button class="notify-close" onclick="dismissNotify()" aria-label="Close notification">✕</button>
+    </div>
+
+    <!-- Stat chips -->
+    <div class="stat-row" role="region" aria-label="Key metrics">
+      <div class="stat-chip" id="chip1"><div class="stat-value">£284k</div><div class="stat-label">Q3 REVENUE</div></div>
+      <div class="stat-chip" id="chip2"><div class="stat-value">3</div><div class="stat-label">OPEN DECISIONS</div></div>
+      <div class="stat-chip" id="chip3"><div class="stat-value">2</div><div class="stat-label">PENDING TASKS</div></div>
+      <div class="stat-chip" id="chip4"><div class="stat-value">97%</div><div class="stat-label">SYSTEM HEALTH</div></div>
+    </div>
+
+    <!-- Contextual presentation stack -->
+    <div class="priority-header">
+      <div class="section-label"><div class="dot"></div> CONTEXTUAL PRESENTATION</div>
+      <div id="stackCount" style="font-size:11px;font-family:var(--apex-font-mono);color:var(--apex-color-text-muted);"></div>
+    </div>
+
+    <!-- Empty state (shown when stack is empty) -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-state-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5" opacity="0.5"/><path d="M10 6v4M10 14h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/></svg>
+      </div>
+      <div class="empty-state-title">No relevant context</div>
+      <div class="empty-state-desc">APEX has nothing to surface right now.<br>Run a scenario from the sidebar to see contextual presentation.</div>
+    </div>
+
+    <!-- Contextual card stack -->
+    <div class="priority-queue" id="cardStack" role="region" aria-label="Contextual presentation" aria-live="polite"></div>
+
+    <!-- Converse area -->
+    <div class="section-label" style="margin-top:4px;"><div class="dot" style="background:rgba(0,212,255,0.45);"></div> CONVERSE</div>
+    <div class="converse-log" id="converseLog" role="log" aria-label="Conversation">
+      <div class="msg ai">
+        <div class="msg-bubble">Good morning, sir. Run a scenario to see contextual presentation in action.</div>
+        <div class="msg-meta">APEX · now</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Input zone -->
+  <div class="input-zone">
+    <input class="input-field" type="text" id="textInput" placeholder="Ask APEX something, or run a scenario…" aria-label="Message input" onkeydown="if(event.key==='Enter')sendMsg()">
+    <button class="input-btn" onclick="sendMsg()" aria-label="Send">Send</button>
+    <button class="input-btn" onclick="toggleVoice()" id="voiceBtn" aria-label="Toggle voice" style="background:rgba(255,77,109,0.08);border-color:rgba(255,77,109,0.25);color:var(--apex-color-danger);">⊙ Voice</button>
+  </div>
+
+</div>
+
+<div class="proto-label">UX-08 CONTEXT PROTOTYPE · ISOLATED</div>
+
+<script>
+'use strict';
+
+// ── Card data catalogue ──────────────────────────────────────────────────────
+const CARD_TEMPLATES = {
+  info: {
+    cat: 'info', badge: 'INFORMATION', title: 'Market update available',
+    summary: 'FTSE 100 up 0.8% this session. Energy sector leading gains.',
+    detail: 'Relevant to your equity holdings in VHYL and HMWO. Net portfolio exposure: +£340 estimated P&L today.',
+    evidence: 'Source: BBC News RSS · Parsed 09:47 · Confidence: OBSERVED',
+    score: 0.35, level: 'L2',
+    controls: ['expand', 'dismiss'],
+  },
+  insight: {
+    cat: 'insight', badge: 'INSIGHT', title: 'Spending pattern anomaly detected',
+    summary: 'Subscriptions this month are 34% above your 6-month average.',
+    detail: 'Four new recurring charges identified: Notion AI (£16), Perplexity Pro (£20), Anthropic Teams (£30), Linear (£19). Combined: £85/mo additional.',
+    evidence: 'Source: Transaction feed · Analysed by finance agent · Confidence: HIGH (OBSERVED data)',
+    score: 0.58, level: 'L3',
+    controls: ['expand', 'defer', 'dismiss'],
+  },
+  status: {
+    cat: 'status', badge: 'STATUS', title: 'Agent pipeline: University research complete',
+    summary: 'The dissertation research agent completed 3 sources.',
+    detail: 'Sources identified: Kahneman (2011), Thaler & Sunstein (2008), Ariely (2008). All saved to Knowledge surface.',
+    evidence: 'Agent: uni-research-v1 · Duration: 4m 12s · Task ID: task_0x8f2a · OBSERVED',
+    score: 0.42, level: 'L2',
+    controls: ['expand', 'dismiss'],
+  },
+  decision: {
+    cat: 'decision', badge: 'DECISION', title: 'Invoice payment — action required',
+    summary: 'Invoice #INV-2024-089 for £1,200 is due in 2 days.',
+    detail: 'Supplier: Creative Agency Ltd. Due: 29 Aug 2026. Your balance: sufficient. Auto-pay is disabled — approval needed.',
+    evidence: 'Source: Finance module · Invoice ID: INV-2024-089 · Governance: DECISION_PENDING requires human approval',
+    score: 0.78, level: 'L4',
+    controls: ['expand', 'approve', 'reject', 'defer'],
+  },
+  warning: {
+    cat: 'warning', badge: 'WARNING', title: 'Medication reminder — 2 days missed',
+    summary: 'No supplement log entries for Wed and Thu this week.',
+    detail: 'Health module shows no record of evening supplements on 2026-08-25 and 2026-08-26. Pattern: third consecutive week with mid-week gaps.',
+    evidence: 'Source: Health module · Confidence: HIGH (OBSERVED absence) · Not inferred',
+    score: 0.72, level: 'L4',
+    controls: ['expand', 'acknowledge', 'defer'],
+  },
+  confirmation: {
+    cat: 'confirmation', badge: 'CONFIRMATION', title: 'Task completed — Email draft sent',
+    summary: 'APEX drafted and queued the follow-up email to Creative Agency.',
+    detail: 'Email: "Re: Project Scope — Follow Up" · Recipient: studio@creativeagency.co.uk · Status: queued, not sent. Requires approval.',
+    evidence: 'Source: Email agent · Task ID: task_0x7c1b · Auto-pipeline run · OBSERVED output',
+    score: 0.50, level: 'L3',
+    controls: ['expand', 'dismiss'],
+  },
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let _cards = [];
+let _cardId = 0;
+let _notifyVisible = false;
+let _voiceActive = false;
+let _activeScenario = 0;
+
+// ── DOM helpers ──────────────────────────────────────────────────────────────
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Notify banner — UX-05 §24 ───────────────────────────────────────────────
+function showNotify(level, title, sub, actions) {
+  const b = $('notifyBanner');
+  b.className = 'notify-banner visible ' + level.toLowerCase();
+  $('notifyLevel').textContent = level;
+  $('notifyTitle').textContent = title;
+  $('notifySub').textContent = sub || '';
+  const acts = $('notifyActions');
+  acts.innerHTML = (actions || []).map(a =>
+    `<button class="notify-btn" onclick="${esc(a.fn)}">${esc(a.label)}</button>`
+  ).join('') + '<button class="notify-close" onclick="dismissNotify()" aria-label="Close">✕</button>';
+  $('voiceAria').textContent = level + ' notification: ' + title;
+  _notifyVisible = true;
+  updateCtxLabel();
+}
+
+function dismissNotify() {
+  $('notifyBanner').classList.remove('visible');
+  _notifyVisible = false;
+  updateCtxLabel();
+}
+
+// ── Contextual cards ─────────────────────────────────────────────────────────
+function addCard(type, opts) {
+  const tpl = CARD_TEMPLATES[type];
+  if (!tpl) return;
+  const id = 'card-' + (++_cardId);
+  const data = Object.assign({}, tpl, opts || {}, { id });
+  _cards.push(data);
+  renderCard(data);
+  updateEmptyState();
+  updateCtxLabel();
+}
+
+function renderCard(data) {
+  const stack = $('cardStack');
+  const el = document.createElement('div');
+  el.id = data.id;
+  el.className = 'ctx-card cat-' + data.cat + ' appearing';
+
+  // Score bar colour
+  const scoreColor = data.score >= 0.7 ? 'var(--apex-color-warning)' :
+                     data.score >= 0.4 ? 'var(--apex-color-primary)' :
+                     'rgba(0,212,255,0.45)';
+
+  // Controls HTML
+  const ctrlHtml = (data.controls || []).filter(c => !['approve','reject','defer','acknowledge'].includes(c)).map(c => {
+    if (c === 'expand') return `<button class="ctx-ctrl" onclick="toggleExpand('${data.id}')" aria-label="Expand for detail">Expand</button>`;
+    if (c === 'dismiss') return `<button class="ctx-ctrl" onclick="dismissCard('${data.id}')" aria-label="Dismiss">Dismiss</button>`;
+    return '';
+  }).join('');
+
+  // Action buttons
+  const hasApprove = data.controls.includes('approve');
+  const hasReject  = data.controls.includes('reject');
+  const hasDefer   = data.controls.includes('defer');
+  const hasAck     = data.controls.includes('acknowledge');
+  const actionHtml = (hasApprove || hasReject || hasDefer || hasAck) ? `
+    <div class="ctx-actions">
+      ${hasApprove ? `<button class="ctx-action-btn ctx-action-approve" onclick="resolveCard('${data.id}','approved')">Approve</button>` : ''}
+      ${hasReject  ? `<button class="ctx-action-btn ctx-action-reject"  onclick="resolveCard('${data.id}','rejected')">Reject</button>`  : ''}
+      ${hasDefer   ? `<button class="ctx-action-btn ctx-action-defer"   onclick="resolveCard('${data.id}','deferred')">Defer</button>`   : ''}
+      ${hasAck     ? `<button class="ctx-action-btn ctx-action-defer"   onclick="resolveCard('${data.id}','acknowledged')">Acknowledge</button>` : ''}
+    </div>` : '';
+
+  el.innerHTML = `
+    <div class="ctx-header">
+      <span class="ctx-badge">${esc(data.badge)}</span>
+      <span class="ctx-title">${esc(data.title)}</span>
+      <div class="ctx-controls">${ctrlHtml}</div>
+    </div>
+    <div class="ctx-body">
+      <div class="ctx-summary">${esc(data.summary)}</div>
+      <div class="ctx-expanded">
+        <div class="ctx-detail">${esc(data.detail)}</div>
+        <div class="ctx-evidence">${esc(data.evidence)}</div>
+        ${actionHtml}
+      </div>
+      <div class="ctx-score-row">
+        <span class="ctx-score-label">ATTENTION SCORE ${Math.round(data.score * 1000)}/1000 · ${data.level}</span>
+        <div class="ctx-score-bar"><div class="ctx-score-fill" style="width:${Math.round(data.score*100)}%;background:${scoreColor};"></div></div>
+      </div>
+    </div>`;
+
+  stack.appendChild(el);
+  $('voiceAria').textContent = data.badge + ': ' + data.title;
+}
+
+function toggleExpand(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const expanded = el.classList.contains('expanded');
+  if (expanded) {
+    el.classList.remove('expanded', 'evidence');
+    el.querySelectorAll('.ctx-ctrl').forEach(b => { if (b.textContent.includes('Collapse') || b.textContent.includes('Evidence')) b.textContent = b.textContent.includes('Evidence') ? 'Evidence' : 'Expand'; });
+    const btn = el.querySelector('.ctx-ctrl:first-child');
+    if (btn) btn.textContent = 'Expand';
+  } else {
+    el.classList.add('expanded');
+    const btn = el.querySelector('.ctx-ctrl:first-child');
+    if (btn) btn.textContent = 'Collapse';
+  }
+}
+
+function showEvidence(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('expanded', 'evidence');
+}
+
+function dismissCard(id, reason) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('dismissing');
+  setTimeout(() => {
+    el.remove();
+    _cards = _cards.filter(c => c.id !== id);
+    updateEmptyState();
+    updateCtxLabel();
+    if (reason) addConverse('system', 'Card ' + reason + ': "' + (CARD_TEMPLATES[_cards[0]?.cat]?.title || id) + '"');
+  }, 230);
+}
+
+function resolveCard(id, outcome) {
+  const data = _cards.find(c => c.id === id);
+  const title = data ? data.title : id;
+  addConverse('system', `Decision "${esc(title)}" → ${outcome.toUpperCase()}`);
+  dismissCard(id, outcome);
+  if (outcome === 'approved') {
+    setTimeout(() => addCard('confirmation', { title: 'Action confirmed', summary: `"${title}" approved and queued for execution.`, score: 0.35, level: 'L2', controls: ['dismiss'] }), 400);
+  }
+}
+
+function updateEmptyState() {
+  const empty = $('emptyState');
+  const stack = $('cardStack');
+  const hasCards = stack.children.length > 0;
+  empty.style.display = hasCards ? 'none' : 'flex';
+}
+
+function updateCtxLabel() {
+  const count = $('cardStack').children.length;
+  $('ctxLabel').textContent = count > 0
+    ? count + ' contextual item' + (count > 1 ? 's' : '') + (_notifyVisible ? ' · 1 notification' : '')
+    : _notifyVisible ? '1 notification' : 'No active context';
+  $('stackCount').textContent = count > 0 ? count + ' item' + (count > 1 ? 's' : '') : '';
+}
+
+// ── Converse ─────────────────────────────────────────────────────────────────
+function addConverse(role, text) {
+  const log = $('converseLog');
+  const ts = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'user' ? 'user' : role === 'ai' ? 'ai' : '');
+  if (role === 'system') {
+    div.style.cssText = 'font-size:11px;font-family:var(--apex-font-mono);color:var(--apex-color-text-muted);text-align:center;padding:4px;';
+    div.textContent = '— ' + text + ' —';
+  } else {
+    div.innerHTML = `<div class="msg-bubble">${esc(text)}</div><div class="msg-meta">${role === 'user' ? 'You' : 'APEX'} · ${ts}</div>`;
+  }
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function sendMsg() {
+  const f = $('textInput');
+  const msg = f.value.trim();
+  if (!msg) return;
+  f.value = '';
+  addConverse('user', msg);
+  setTimeout(() => {
+    addConverse('ai', 'Understood, sir. ' + (msg.toLowerCase().includes('finance') ? 'Loading finance context…' : 'Processing your request.'));
+    if (msg.toLowerCase().includes('finance')) {
+      setTimeout(() => addCard('insight', { title: 'Finance context loaded', summary: 'Q3 summary and subscription anomaly surfaced based on your query.', score: 0.55, level: 'L3', controls: ['expand','dismiss'] }), 600);
+    }
+  }, 700);
+}
+
+// ── Voice overlay ─────────────────────────────────────────────────────────────
+function toggleVoice() {
+  _voiceActive = !_voiceActive;
+  $('voiceOverlay').classList.toggle('active', _voiceActive);
+  $('topWave').classList.toggle('active', _voiceActive);
+  $('voiceBtn').textContent = _voiceActive ? '⊙ Stop' : '⊙ Voice';
+  $('voiceAria').textContent = _voiceActive ? 'Voice active — APEX speaking' : 'Voice stopped';
+}
+function hideVoice() { _voiceActive = false; $('voiceOverlay').classList.remove('active'); $('topWave').classList.remove('active'); $('voiceBtn').textContent = '⊙ Voice'; }
+
+// ── Clock ────────────────────────────────────────────────────────────────────
+function tickClock() { const el = $('clock'); if (el) el.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+tickClock(); setInterval(tickClock, 10000);
+
+// ── Scenario runner ───────────────────────────────────────────────────────────
+async function clearAll() {
+  dismissNotify();
+  hideVoice();
+  const stack = $('cardStack');
+  stack.innerHTML = '';
+  _cards = [];
+  updateEmptyState();
+  updateCtxLabel();
+  document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+  // Reset stat chips
+  $('chip1').className = 'stat-chip'; $('chip2').className = 'stat-chip';
+  $('chip3').className = 'stat-chip'; $('chip4').className = 'stat-chip';
+}
+
+function markScenario(n) {
+  document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sc-btn')[n - 1]?.classList.add('active');
+}
+
+async function runScenario(n) {
+  await clearAll();
+  markScenario(n);
+  _activeScenario = n;
+
+  switch (n) {
+
+    case 1: // V-CONTEXT-01 — No relevant context
+      addConverse('ai', 'No relevant context to surface right now, sir. The Command Centre is clear.');
+      break;
+
+    case 2: // V-CONTEXT-02 — Low-priority info appears
+      await delay(400);
+      addConverse('ai', 'Market data updated. Surfacing a low-priority information item.');
+      await delay(600);
+      addCard('info');
+      await delay(300);
+      showNotify('L2', 'Market update', 'FTSE 100 +0.8% · Low priority · No action required', []);
+      break;
+
+    case 3: // V-CONTEXT-03 — Attention-worthy
+      addConverse('ai', 'Subscription anomaly detected. This warrants your attention, sir.');
+      await delay(500);
+      addCard('insight');
+      await delay(300);
+      showNotify('L3', 'Attention: Spending pattern anomaly', 'Subscriptions 34% above 6-month average', [
+        { label: 'View', fn: "toggleExpand('" + 'card-' + (_cardId) + "')" }
+      ]);
+      $('chip2').className = 'stat-chip highlight';
+      break;
+
+    case 4: // V-CONTEXT-04 — Actionable item
+      addConverse('ai', 'Invoice due in 2 days, sir. Human approval required — no auto-payment.');
+      await delay(500);
+      addCard('decision');
+      await delay(300);
+      showNotify('L4', 'Action required: Invoice #INV-2024-089', '£1,200 due 29 Aug · Approve or defer', [
+        { label: 'Review', fn: "toggleExpand('card-" + _cardId + "')" }
+      ]);
+      $('chip2').className = 'stat-chip highlight';
+      break;
+
+    case 5: // V-CONTEXT-05 — User expands for detail
+      addConverse('ai', 'Finance insight ready. Click Expand to see full detail and evidence.');
+      await delay(500);
+      addCard('insight');
+      addConverse('system', 'Click Expand on the card, then again to see Evidence level');
+      await delay(800);
+      // Auto-expand to demonstrate
+      const expandId = 'card-' + _cardId;
+      await delay(1200);
+      toggleExpand(expandId);
+      addConverse('ai', 'Expanded to Detail level. Evidence is available one level deeper.');
+      break;
+
+    case 6: // V-CONTEXT-06 — Context becomes obsolete
+      addConverse('ai', 'Agent task running. Status card appeared.');
+      addCard('status');
+      const obsCard = 'card-' + _cardId;
+      showNotify('L2', 'Agent running: university research', 'Collecting sources…', []);
+      await delay(2500);
+      addConverse('ai', 'Task complete. Previous status is now obsolete — withdrawing.');
+      dismissCard(obsCard, 'resolved');
+      dismissNotify();
+      await delay(300);
+      addCard('confirmation');
+      showNotify('L3', 'Research complete', '3 sources saved to Knowledge', []);
+      break;
+
+    case 7: // V-CONTEXT-07 — Multiple items competing
+      addConverse('ai', 'Multiple items require your attention, sir. Ranked by attention score.');
+      await delay(400);
+      addCard('decision');     // score 0.78 — highest
+      await delay(250);
+      addCard('warning');      // score 0.72
+      await delay(250);
+      addCard('insight');      // score 0.58
+      await delay(250);
+      addCard('info');         // score 0.35 — lowest
+      showNotify('L4', '4 contextual items — ranked by priority', 'Highest: Invoice approval (0.78) · Warning: Health (0.72)', []);
+      addConverse('system', 'Cards are ordered by attention score. Decision and Warning rank highest.');
+      break;
+
+    case 8: // V-CONTEXT-08 — Voice active + present coexist
+      addConverse('ai', 'Finance summary ready. Speaking the headline now. Detailed view available below.');
+      await delay(400);
+      addCard('info', {
+        cat: 'info', badge: 'INFORMATION', title: 'Finance Summary — Q3 2026',
+        summary: 'Revenue £284k (+18%). Gross margin 62%. Three invoices outstanding.',
+        detail: 'APEX is currently speaking this summary. The visual provides supporting detail. Voice and Present coexist — they do not compete.',
+        evidence: 'Source: Finance module · Confidence: HIGH · OBSERVED data',
+        score: 0.60, level: 'L3', controls: ['expand', 'dismiss'],
+      });
+      await delay(400);
+      toggleVoice();
+      addConverse('system', 'Voice SPEAKING while Present surface visible. L4/L5 Notify may still appear. New L2+ cards suppressed during SPEAKING.');
+      break;
+
+    case 9: // V-CONTEXT-09 — Dismiss / defer / acknowledge
+      addConverse('ai', 'Three items surfaced. Demonstrate dismiss, defer, and acknowledge controls.');
+      await delay(400);
+      addCard('info');         // dismiss
+      await delay(250);
+      addCard('warning');      // acknowledge
+      await delay(250);
+      addCard('decision');     // approve/reject/defer
+      addConverse('system', 'Try: Dismiss on Info · Acknowledge on Warning · Defer/Approve on Decision');
+      break;
+
+    case 10: // V-CONTEXT-10 — Resolution + withdrawal
+      addConverse('ai', 'Decision surfaced. Approving will resolve the presentation and confirm action.');
+      await delay(400);
+      addCard('decision');
+      const resolveId = 'card-' + _cardId;
+      showNotify('L4', 'Decision pending', 'Invoice approval required', [
+        { label: 'Approve', fn: "resolveCard('" + resolveId + "','approved')" }
+      ]);
+      addConverse('system', 'Click Approve — card resolves, confirmation replaces it, notification withdraws.');
+      break;
+  }
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key >= '1' && e.key <= '9') runScenario(parseInt(e.key));
+  if (e.key === '0') runScenario(10);
+  if (e.key === 'Escape') clearAll();
+  if (e.key === 'v' || e.key === 'V') toggleVoice();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+updateEmptyState();
+updateCtxLabel();
+</script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+{
+  "runs": [
+    {
+      "scheduleId": "SRE-SCHED-1781689707363",
+      "label": "isolation_test",
+      "scenarioIds": [
+        "SRE-L1-001",
+        "SRE-L3-002",
+        "SRE-L5-001"
+      ],
+      "scheduledAt": "2026-06-17T09:48:27.363Z",
+      "runAt": "immediate",
+      "status": "completed",
+      "startedAt": "2026-06-17T09:48:27.371Z",
+      "completedAt": "2026-06-17T09:48:27.413Z",
+      "results": [
+        {
+          "scenarioId": "SRE-L1-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-002",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        }
+      ]
+    },
+    {
+      "scheduleId": "SRE-SCHED-1781689728526",
+      "label": "regression_test",
+      "scenarioIds": [
+        "SRE-L1-001",
+        "SRE-L3-002",
+        "SRE-L5-001"
+      ],
+      "scheduledAt": "2026-06-17T09:48:48.526Z",
+      "runAt": "immediate",
+      "status": "completed",
+      "startedAt": "2026-06-17T09:48:48.536Z",
+      "completedAt": "2026-06-17T09:48:48.560Z",
+      "results": [
+        {
+          "scenarioId": "SRE-L1-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-002",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        }
+      ]
+    },
+    {
+      "scheduleId": "SRE-SCHED-1781689754036",
+      "label": "full_catalog_phase48",
+      "scenarioIds": [
+        "SRE-L1-001",
+        "SRE-L1-002",
+        "SRE-L1-003",
+        "SRE-L1-004",
+        "SRE-L1-005",
+        "SRE-L2-001",
+        "SRE-L2-002",
+        "SRE-L2-003",
+        "SRE-L2-004",
+        "SRE-L2-005",
+        "SRE-L2-006",
+        "SRE-L3-001",
+        "SRE-L3-002",
+        "SRE-L3-003",
+        "SRE-L3-004",
+        "SRE-L3-005",
+        "SRE-L3-006",
+        "SRE-L4-001",
+        "SRE-L4-002",
+        "SRE-L4-003",
+        "SRE-L4-004",
+        "SRE-L5-001",
+        "SRE-L5-002",
+        "SRE-L5-003",
+        "SRE-L5-004",
+        "SRE-L5-005"
+      ],
+      "scheduledAt": "2026-06-17T09:49:14.036Z",
+      "runAt": "immediate",
+      "status": "completed",
+      "startedAt": "2026-06-17T09:49:14.047Z",
+      "completedAt": "2026-06-17T09:49:14.339Z",
+      "results": [
+        {
+          "scenarioId": "SRE-L1-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L1-002",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L1-003",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L1-004",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L1-005",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-002",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-003",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-004",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-005",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-006",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-002",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-003",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-004",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-005",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "FAIL"
+        },
+        {
+          "scenarioId": "SRE-L3-006",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L4-001",
+          "outcome": "STAGED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L4-002",
+          "outcome": "STAGED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L4-003",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L4-004",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-002",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-003",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-004",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-005",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        }
+      ]
+    },
+    {
+      "scheduleId": "SRE-SCHED-1781689827835",
+      "label": "full_catalog_v2",
+      "scenarioIds": [
+        "SRE-L1-001",
+        "SRE-L1-002",
+        "SRE-L1-003",
+        "SRE-L1-004",
+        "SRE-L1-005",
+        "SRE-L2-001",
+        "SRE-L2-002",
+        "SRE-L2-003",
+        "SRE-L2-004",
+        "SRE-L2-005",
+        "SRE-L2-006",
+        "SRE-L3-001",
+        "SRE-L3-002",
+        "SRE-L3-003",
+        "SRE-L3-004",
+        "SRE-L3-005",
+        "SRE-L3-006",
+        "SRE-L4-001",
+        "SRE-L4-002",
+        "SRE-L4-003",
+        "SRE-L4-004",
+        "SRE-L5-001",
+        "SRE-L5-002",
+        "SRE-L5-003",
+        "SRE-L5-004",
+        "SRE-L5-005"
+      ],
+      "scheduledAt": "2026-06-17T09:50:27.835Z",
+      "runAt": "immediate",
+      "status": "completed",
+      "startedAt": "2026-06-17T09:50:27.853Z",
+      "completedAt": "2026-06-17T09:50:28.133Z",
+      "results": [
+        {
+          "scenarioId": "SRE-L1-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L1-002",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L1-003",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L1-004",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L1-005",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-002",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-003",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-004",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-005",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L2-006",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-001",
+          "outcome": "STAGED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-002",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-003",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-004",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-005",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L3-006",
+          "outcome": "BLOCKED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L4-001",
+          "outcome": "STAGED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L4-002",
+          "outcome": "STAGED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L4-003",
+          "outcome": "STAGED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L4-004",
+          "outcome": "STAGED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-001",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-002",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-003",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-004",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        },
+        {
+          "scenarioId": "SRE-L5-005",
+          "outcome": "ALLOWED",
+          "behaviorMatch": "PASS"
+        }
+      ]
+    }
+  ],
+  "lastUpdated": "2026-06-17T09:50:28.133Z"
+}

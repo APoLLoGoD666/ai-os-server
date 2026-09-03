@@ -1,0 +1,9 @@
+domain: DOM-000004
+events:
+  - name: ENTITY_CREATED
+    from: DOM-000003
+    handler: src/handlers/entity-created.js
+
+  - name: AGENT_COMPLETED
+    from: DOM-000002
+    handler: src/handlers/agent-completed.js

@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APEX — UX-15 MEMORY</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cinzel:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --apex-color-bg: #0a0a0f;
+  --apex-color-surface: #111118;
+  --apex-color-surface-raised: #1a1a24;
+  --apex-color-border: #2a2a3a;
+  --apex-color-border-subtle: #1e1e2a;
+  --apex-color-text-primary: #e8e8f0;
+  --apex-color-text-secondary: #9898b0;
+  --apex-color-text-muted: #5a5a70;
+  --apex-color-accent: #6b6bff;
+  --apex-color-accent-dim: #3d3d8a;
+  --apex-color-success: #22c55e;
+  --apex-color-warning: #f59e0b;
+  --apex-color-danger: #ef4444;
+  --apex-color-info: #3b82f6;
+  --apex-font-sans: 'Inter', system-ui, sans-serif;
+  --apex-font-display: 'Cinzel', serif;
+  --apex-font-mono: 'JetBrains Mono', monospace;
+  --apex-radius-sm: 4px;
+  --apex-radius-md: 8px;
+  --apex-radius-lg: 12px;
+  --apex-spacing-1: 4px;
+  --apex-spacing-2: 8px;
+  --apex-spacing-3: 12px;
+  --apex-spacing-4: 16px;
+  --apex-spacing-6: 24px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--apex-color-bg);color:var(--apex-color-text-primary);font-family:var(--apex-font-sans);font-size:13px;line-height:1.5}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 var(--apex-spacing-6);height:52px;border-bottom:1px solid var(--apex-color-border);flex-shrink:0;background:var(--apex-color-surface)}
+.header-title{font-family:var(--apex-font-display);font-size:14px;font-weight:600;letter-spacing:0.08em;color:var(--apex-color-text-primary)}
+.header-sub{font-size:11px;color:var(--apex-color-text-muted);letter-spacing:0.12em;margin-top:2px}
+.waveform{display:flex;align-items:flex-end;gap:3px;height:20px}
+.waveform-bar{width:3px;border-radius:2px 2px 0 0;background:var(--apex-color-accent);animation:wave 0.48s ease-in-out infinite alternate}
+@keyframes wave{from{transform:scaleY(0.3)}to{transform:scaleY(1)}}
+@media(prefers-reduced-motion:reduce){.waveform-bar{animation-duration:0s}}
+/* BODY */
+.body{display:flex;flex:1;overflow:hidden}
+/* LEFT PANEL */
+.panel-left{width:280px;border-right:1px solid var(--apex-color-border);display:flex;flex-direction:column;flex-shrink:0;background:var(--apex-color-surface)}
+.panel-label{font-size:10px;font-weight:600;letter-spacing:0.12em;color:var(--apex-color-text-muted);padding:var(--apex-spacing-3) var(--apex-spacing-4);border-bottom:1px solid var(--apex-color-border-subtle);text-transform:uppercase}
+.layer-tabs{display:flex;flex-direction:column;gap:2px;padding:var(--apex-spacing-2);border-bottom:1px solid var(--apex-color-border)}
+.layer-tab{display:flex;align-items:center;gap:var(--apex-spacing-2);padding:6px var(--apex-spacing-3);border-radius:var(--apex-radius-sm);cursor:pointer;border:1px solid transparent;transition:background 0.15s;font-size:12px;color:var(--apex-color-text-secondary)}
+.layer-tab:hover{background:var(--apex-color-surface-raised)}
+.layer-tab.active{background:var(--apex-color-surface-raised);border-color:var(--apex-color-border);color:var(--apex-color-text-primary)}
+.layer-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.layer-tab-label{flex:1}
+.layer-count{font-size:10px;color:var(--apex-color-text-muted)}
+.items-list{flex:1;overflow-y:auto;padding:var(--apex-spacing-2)}
+.mem-item{padding:var(--apex-spacing-2) var(--apex-spacing-3);border-radius:var(--apex-radius-sm);cursor:pointer;border:1px solid transparent;margin-bottom:2px;transition:background 0.15s}
+.mem-item:hover{background:var(--apex-color-surface-raised)}
+.mem-item.active{background:var(--apex-color-surface-raised);border-color:var(--apex-color-accent-dim)}
+.mem-item-top{display:flex;align-items:center;gap:var(--apex-spacing-1);margin-bottom:2px}
+.mem-item-label{font-size:11px;font-weight:500;color:var(--apex-color-text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mem-item-id{font-family:var(--apex-font-mono);font-size:9px;color:var(--apex-color-text-muted)}
+.mem-item-bottom{display:flex;align-items:center;gap:var(--apex-spacing-1)}
+/* CENTRE PANEL */
+.panel-centre{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.centre-content{flex:1;overflow-y:auto;padding:var(--apex-spacing-4)}
+.placeholder{display:flex;align-items:center;justify-content:center;height:100%;color:var(--apex-color-text-muted);font-size:13px;font-style:italic}
+/* DETAIL VIEW */
+.detail-header{display:flex;align-items:center;gap:var(--apex-spacing-2);margin-bottom:var(--apex-spacing-4);flex-wrap:wrap}
+.detail-id{font-family:var(--apex-font-mono);font-size:12px;color:var(--apex-color-text-muted);margin-bottom:var(--apex-spacing-1)}
+.detail-label{font-size:16px;font-weight:600;color:var(--apex-color-text-primary);margin-bottom:var(--apex-spacing-2)}
+.detail-meta{font-size:11px;color:var(--apex-color-text-secondary);margin-bottom:var(--apex-spacing-4)}
+.section{margin-bottom:var(--apex-spacing-4)}
+.section-label{font-size:10px;font-weight:600;letter-spacing:0.12em;color:var(--apex-color-text-muted);text-transform:uppercase;margin-bottom:var(--apex-spacing-2)}
+.content-block{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);font-size:12px;color:var(--apex-color-text-secondary);line-height:1.6}
+.prov-block{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3)}
+.prov-row{display:flex;gap:var(--apex-spacing-2);font-size:11px;padding:3px 0;border-bottom:1px solid var(--apex-color-border-subtle)}
+.prov-row:last-child{border-bottom:none}
+.prov-key{color:var(--apex-color-text-muted);width:110px;flex-shrink:0}
+.prov-val{color:var(--apex-color-text-secondary);font-family:var(--apex-font-mono);font-size:10px}
+.conf-bar-wrap{display:flex;align-items:center;gap:var(--apex-spacing-2);margin-top:var(--apex-spacing-1)}
+.conf-bar-track{flex:1;height:6px;background:var(--apex-color-border);border-radius:3px;overflow:hidden}
+.conf-bar-fill{height:100%;border-radius:3px;transition:width 0.3s}
+.conf-val{font-size:11px;font-weight:600;width:36px;text-align:right}
+.freshness-row{display:flex;align-items:center;gap:var(--apex-spacing-2)}
+.freshness-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.freshness-label{font-size:12px}
+.action-row{display:flex;gap:var(--apex-spacing-2);margin-top:var(--apex-spacing-4);padding-top:var(--apex-spacing-4);border-top:1px solid var(--apex-color-border)}
+/* SCENARIO OUTPUT */
+.scenario-output{animation:fadeIn 0.15s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.scenario-title{font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--apex-color-accent);margin-bottom:var(--apex-spacing-4);text-transform:uppercase}
+/* RIGHT PANEL */
+.panel-right{width:300px;border-left:1px solid var(--apex-color-border);display:flex;flex-direction:column;flex-shrink:0;background:var(--apex-color-surface)}
+.disclosure-row{display:flex;align-items:center;gap:var(--apex-spacing-1);padding:var(--apex-spacing-2) var(--apex-spacing-4);border-bottom:1px solid var(--apex-color-border)}
+.disclosure-label{font-size:10px;color:var(--apex-color-text-muted);margin-right:var(--apex-spacing-1)}
+.dl-btn{padding:3px 8px;border-radius:var(--apex-radius-sm);border:1px solid var(--apex-color-border);background:transparent;color:var(--apex-color-text-muted);cursor:pointer;font-size:10px;font-weight:600;transition:all 0.15s}
+.dl-btn.active{background:var(--apex-color-accent);border-color:var(--apex-color-accent);color:#fff}
+.boundary-block{padding:var(--apex-spacing-3) var(--apex-spacing-4);border-bottom:1px solid var(--apex-color-border)}
+.boundary-steps{display:flex;flex-direction:column;gap:3px;margin-top:var(--apex-spacing-2)}
+.boundary-step{display:flex;align-items:center;gap:var(--apex-spacing-2);font-size:10px;padding:4px var(--apex-spacing-2);border-radius:var(--apex-radius-sm);color:var(--apex-color-text-muted);border:1px solid var(--apex-color-border-subtle)}
+.boundary-step.active-step{background:var(--apex-color-accent-dim);border-color:var(--apex-color-accent);color:var(--apex-color-text-primary)}
+.boundary-step-num{width:14px;height:14px;border-radius:50%;background:var(--apex-color-border);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0}
+.boundary-step.active-step .boundary-step-num{background:var(--apex-color-accent)}
+.scenarios-list{flex:1;overflow-y:auto;padding:var(--apex-spacing-2)}
+.scenario-item{display:flex;align-items:flex-start;gap:var(--apex-spacing-2);padding:5px var(--apex-spacing-2);border-radius:var(--apex-radius-sm);cursor:pointer;border:1px solid transparent;margin-bottom:1px;transition:background 0.1s}
+.scenario-item:hover{background:var(--apex-color-surface-raised)}
+.scenario-item.active{background:var(--apex-color-surface-raised);border-color:var(--apex-color-accent-dim)}
+.scenario-num{font-family:var(--apex-font-mono);font-size:9px;color:var(--apex-color-text-muted);width:20px;flex-shrink:0;padding-top:1px}
+.scenario-name{font-size:11px;color:var(--apex-color-text-secondary);line-height:1.4}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;font-size:9px;font-weight:600;padding:2px 6px;border-radius:10px;letter-spacing:0.06em;text-transform:uppercase}
+.badge-layer{color:#fff}
+.badge-status-validated{background:#1a3a2a;color:var(--apex-color-success);border:1px solid #22c55e44}
+.badge-status-candidate{background:#3a2a0a;color:var(--apex-color-warning);border:1px solid #f59e0b44}
+.badge-status-deprecated{background:#2a1a1a;color:var(--apex-color-danger);border:1px solid #ef444444}
+.badge-status-superseded{background:#1a1a3a;color:var(--apex-color-accent);border:1px solid #6b6bff44}
+.badge-source-observed{background:#1a2a1a;color:#4ade80;border:1px solid #22c55e33}
+.badge-source-inherited{background:#2a2a0a;color:#fcd34d;border:1px solid #f59e0b33}
+.badge-source-proposed{background:#2a1a2a;color:#c084fc;border:1px solid #a855f733}
+.badge-source-open{background:#2a2a2a;color:var(--apex-color-text-muted);border:1px solid var(--apex-color-border)}
+.badge-fresh-current{background:#0a2a1a;color:var(--apex-color-success)}
+.badge-fresh-recent{background:#0a1a2a;color:var(--apex-color-info)}
+.badge-fresh-aging{background:#2a1a0a;color:var(--apex-color-warning)}
+.badge-fresh-stale{background:#2a0a0a;color:var(--apex-color-danger)}
+.badge-owned-user{background:#1a1a3a;color:var(--apex-color-accent)}
+.badge-owned-agent{background:#0a2a2a;color:var(--apex-color-info)}
+.badge-owned-system{background:#2a2a2a;color:var(--apex-color-text-secondary)}
+.badge-owned-founder{background:#2a1a2a;color:#c084fc}
+/* BUTTONS */
+.btn{padding:6px 14px;border-radius:var(--apex-radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;border:1px solid}
+.btn-accent{background:var(--apex-color-accent);border-color:var(--apex-color-accent);color:#fff}
+.btn-accent:hover{background:#5858e0}
+.btn-outline-accent{background:transparent;border-color:var(--apex-color-accent);color:var(--apex-color-accent)}
+.btn-outline-accent:hover{background:var(--apex-color-accent-dim)}
+.btn-outline-danger{background:transparent;border-color:var(--apex-color-danger);color:var(--apex-color-danger)}
+.btn-outline-danger:hover{background:#2a0a0a}
+.btn-secondary{background:transparent;border-color:var(--apex-color-border);color:var(--apex-color-text-secondary)}
+.btn-secondary:hover{background:var(--apex-color-surface-raised)}
+/* TABLES */
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--apex-color-border);color:var(--apex-color-text-muted);font-weight:600;font-size:10px;letter-spacing:0.06em;text-transform:uppercase}
+td{padding:6px 8px;border-bottom:1px solid var(--apex-color-border-subtle);color:var(--apex-color-text-secondary);vertical-align:top}
+tr:last-child td{border-bottom:none}
+/* COMPARISON */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--apex-spacing-3)}
+.compare-col{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3)}
+.compare-col-title{font-size:11px;font-weight:600;margin-bottom:var(--apex-spacing-2);color:var(--apex-color-text-primary)}
+.compare-col ul{list-style:none;padding:0}
+.compare-col li{font-size:11px;color:var(--apex-color-text-secondary);padding:2px 0;padding-left:12px;position:relative}
+.compare-col li::before{content:'—';position:absolute;left:0;color:var(--apex-color-text-muted)}
+/* WARNINGS */
+.warning-block{background:#2a1a0a;border:1px solid #f59e0b55;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-3)}
+.warning-block .warning-title{font-size:11px;font-weight:600;color:var(--apex-color-warning);margin-bottom:var(--apex-spacing-1)}
+.warning-block p{font-size:11px;color:#fcd34d;line-height:1.5}
+.danger-block{background:#2a0a0a;border:1px solid #ef444455;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-3)}
+.danger-block .danger-title{font-size:11px;font-weight:600;color:var(--apex-color-danger);margin-bottom:var(--apex-spacing-1)}
+.danger-block p{font-size:11px;color:#fca5a5;line-height:1.5}
+.success-block{background:#0a2a1a;border:1px solid #22c55e55;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-3)}
+.info-block{background:#0a1a2a;border:1px solid #3b82f655;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-3)}
+.info-block p{font-size:11px;color:#93c5fd;line-height:1.5}
+/* CHAIN */
+.chain-row{display:flex;align-items:center;gap:var(--apex-spacing-2);margin-bottom:var(--apex-spacing-2)}
+.chain-node{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);padding:6px 10px;font-size:11px;text-align:center;min-width:80px}
+.chain-node.active-node{border-color:var(--apex-color-accent);background:var(--apex-color-accent-dim);color:var(--apex-color-text-primary)}
+.chain-arrow{color:var(--apex-color-text-muted);font-size:14px}
+/* TTL */
+.ttl-bar{height:4px;background:var(--apex-color-border);border-radius:2px;overflow:hidden;margin-top:var(--apex-spacing-2)}
+.ttl-fill{height:100%;background:var(--apex-color-danger);border-radius:2px;width:7%}
+/* CONFLICT */
+.conflict-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--apex-spacing-3)}
+.conflict-item{border:1px solid var(--apex-color-danger);border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);background:#1a0a0a}
+/* FORGET */
+.forget-list{display:flex;flex-direction:column;gap:var(--apex-spacing-2)}
+.forget-item{display:flex;align-items:flex-start;gap:var(--apex-spacing-2);padding:var(--apex-spacing-2) var(--apex-spacing-3);background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md)}
+.forget-item input[type=checkbox]{margin-top:2px;accent-color:var(--apex-color-accent)}
+/* HISTORY */
+.timeline{display:flex;flex-direction:column;gap:0}
+.timeline-item{display:flex;gap:var(--apex-spacing-3);padding-bottom:var(--apex-spacing-3)}
+.timeline-left{display:flex;flex-direction:column;align-items:center;width:16px;flex-shrink:0}
+.timeline-dot{width:8px;height:8px;border-radius:50%;background:var(--apex-color-accent);flex-shrink:0}
+.timeline-line{flex:1;width:1px;background:var(--apex-color-border);margin-top:4px}
+.timeline-content{flex:1;padding-bottom:4px}
+.timeline-date{font-size:10px;color:var(--apex-color-text-muted);font-family:var(--apex-font-mono)}
+.timeline-event{font-size:11px;color:var(--apex-color-text-secondary);margin-top:2px}
+/* GRAPH NODE VIZ */
+.graph-row{display:flex;align-items:center;gap:var(--apex-spacing-2)}
+.graph-node-box{background:var(--apex-color-surface-raised);border:1px solid;border-radius:var(--apex-radius-md);padding:6px 10px;font-size:11px;text-align:center}
+.graph-rel-box{font-size:10px;color:var(--apex-color-text-muted);text-align:center;padding:0 4px}
+/* RETRIEVAL */
+.retrieval-result{display:flex;gap:var(--apex-spacing-2);padding:var(--apex-spacing-2) var(--apex-spacing-3);background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);margin-bottom:var(--apex-spacing-2)}
+.retrieval-rank{width:20px;height:20px;border-radius:50%;background:var(--apex-color-accent);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.retrieval-score{font-size:10px;color:var(--apex-color-accent);font-family:var(--apex-font-mono)}
+/* PROV CHAIN */
+.prov-chain{display:flex;flex-direction:column;gap:var(--apex-spacing-1)}
+.prov-chain-step{display:flex;align-items:center;gap:var(--apex-spacing-2);padding:var(--apex-spacing-2) var(--apex-spacing-3);border-radius:var(--apex-radius-sm);border:1px solid var(--apex-color-border);background:var(--apex-color-surface-raised);font-size:11px}
+.prov-chain-step-num{width:20px;height:20px;border-radius:50%;background:var(--apex-color-accent-dim);color:var(--apex-color-accent);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+/* CROSS DOMAIN */
+.cross-domain-btns{display:flex;gap:var(--apex-spacing-2);margin-top:var(--apex-spacing-3)}
+/* scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--apex-color-border);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header class="header" role="banner">
+  <div>
+    <div class="header-title">APEX — UX-15 MEMORY</div>
+    <div class="header-sub">MEMORY INTELLIGENCE PROTOTYPE</div>
+  </div>
+  <div class="waveform" aria-hidden="true" id="waveform"></div>
+</header>
+
+<!-- BODY -->
+<div class="body">
+
+  <!-- LEFT PANEL -->
+  <aside class="panel-left" role="complementary" aria-label="Memory layers">
+    <div class="panel-label">Memory Layers</div>
+    <div class="layer-tabs" role="tablist" id="layerTabs"></div>
+    <div class="panel-label" style="border-top:1px solid var(--apex-color-border)">Memory Items</div>
+    <div class="items-list" id="itemsList"></div>
+  </aside>
+
+  <!-- CENTRE PANEL -->
+  <main class="panel-centre" role="main">
+    <div class="panel-label" id="centreLabel">Memory Detail Surface</div>
+    <div class="centre-content" aria-live="polite" role="region" aria-label="Memory detail" id="centrePanel">
+      <div class="placeholder">Select a memory item or scenario to inspect</div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="panel-right" role="complementary" aria-label="Scenarios">
+    <div class="panel-label">Disclosure Level</div>
+    <div class="disclosure-row">
+      <span class="disclosure-label">LEVEL</span>
+      <button class="dl-btn" onclick="setDisclosure(0)" tabindex="0">L0</button>
+      <button class="dl-btn" onclick="setDisclosure(1)" tabindex="0">L1</button>
+      <button class="dl-btn active" onclick="setDisclosure(2)" tabindex="0">L2</button>
+      <button class="dl-btn" onclick="setDisclosure(3)" tabindex="0">L3</button>
+      <button class="dl-btn" onclick="setDisclosure(4)" tabindex="0">L4</button>
+    </div>
+
+    <div class="panel-label">Memory Boundary</div>
+    <div class="boundary-block">
+      <div class="boundary-steps" id="boundarySteps"></div>
+    </div>
+
+    <div class="panel-label">Scenarios (45)</div>
+    <div class="scenarios-list" id="scenariosList"></div>
+  </aside>
+
+</div>
+</div>
+
+<script>
+// ── WAVEFORM ──────────────────────────────────────────────────────────────────
+const wf = document.getElementById('waveform');
+const WF_HEIGHTS = [5,12,18,9,15,7,11];
+WF_HEIGHTS.forEach((h,i) => {
+  const b = document.createElement('div');
+  b.className = 'waveform-bar';
+  b.style.cssText = `height:${h}px;animation-delay:${i*0.06}s`;
+  wf.appendChild(b);
+});
+
+// ── BOUNDARY STEPS ────────────────────────────────────────────────────────────
+const BOUNDARY = ['OBSERVATION','EXPERIENCE','CANDIDATE','VALIDATED','RETRIEVAL','CONTEXT'];
+let activeStep = -1;
+function renderBoundary(active) {
+  activeStep = active;
+  document.getElementById('boundarySteps').innerHTML = BOUNDARY.map((s,i) => `
+    <div class="boundary-step ${i===active?'active-step':''}" role="listitem">
+      <div class="boundary-step-num">${i+1}</div>
+      <span>${s}</span>
+    </div>
+  `).join('');
+}
+renderBoundary(-1);
+
+// ── LAYER CONFIG ──────────────────────────────────────────────────────────────
+const LAYERS = [
+  {id:'all',   label:'All Layers',     color:'#6b6bff'},
+  {id:'working',label:'Working',       color:'#6b6bff'},
+  {id:'episodic',label:'Episodic',     color:'#22c55e'},
+  {id:'semantic',label:'Semantic',     color:'#f59e0b'},
+  {id:'procedural',label:'Procedural', color:'#3b82f6'},
+  {id:'strategic',label:'Strategic',   color:'#8b5cf6'},
+  {id:'skill',  label:'Skill',         color:'#06b6d4'},
+  {id:'decision',label:'Decision',     color:'#ec4899'},
+  {id:'graph',  label:'Knowledge Graph',color:'#f97316'},
+];
+let activeLayer = 'all';
+
+// ── MEMORY ITEMS ──────────────────────────────────────────────────────────────
+const MEMORY_ITEMS = [
+  {id:'wm-001',layer:'working',label:'Current session context',confidence:null,freshness:'CURRENT',status:'validated',source:'OBSERVED',scope:'session',domain:'system',owned_by:'SYSTEM',content:'User is reviewing UX-15 memory prototype. Session started 14:32. Three files open.',provenance:{method:'direct_observation',ts:'2026-08-28T14:32:00Z'},influence:'Informs greeting and context awareness'},
+  {id:'ep-204',layer:'episodic',label:'Finance report generated',confidence:0.92,freshness:'RECENT',status:'validated',source:'OBSERVED',scope:'task',domain:'finance',owned_by:'AGENT',content:'APEX generated Q2 finance report on 2026-08-20. Task completed successfully. User approved output.',provenance:{method:'task_completion_log',ts:'2026-08-20T10:14:00Z'},influence:'Informs similar task planning'},
+  {id:'sm-041',layer:'semantic',label:'User prefers concise responses',confidence:0.87,freshness:'CURRENT',status:'validated',source:'INHERITED',scope:'global',domain:'personalisation',owned_by:'USER',content:'User consistently rates shorter responses higher. Confirmed across 34 interactions.',provenance:{method:'pattern_inference',ts:'2026-08-01T00:00:00Z'},influence:'Applied to all response generation'},
+  {id:'pm-012',layer:'procedural',label:'Deploy to Render',confidence:0.95,freshness:'AGING',status:'validated',source:'OBSERVED',scope:'global',domain:'engineering',owned_by:'SYSTEM',content:'1. git push origin main 2. Render auto-deploys on push 3. Check /health endpoint 4. Verify logs.',provenance:{method:'execution_trace',ts:'2026-07-15T00:00:00Z'},influence:'Used when deployment requested'},
+  {id:'stm-003',layer:'strategic',label:'Multi-agent architecture goal',confidence:0.78,freshness:'CURRENT',status:'validated',source:'PROPOSED',scope:'global',domain:'system',owned_by:'FOUNDER',content:'Transition APEX to multi-agent roles: System, File, Uni, Finance, Business agents by Q4 2026.',provenance:{method:'founder_directive',ts:'2026-06-01T00:00:00Z'},influence:'Shapes long-term planning decisions'},
+  {id:'skm-007',layer:'skill',label:'Write Supabase queries',confidence:0.91,freshness:'CURRENT',status:'validated',source:'OBSERVED',scope:'global',domain:'engineering',owned_by:'AGENT',content:'Skill acquired through 47 executions. Success rate 94%. Handles RLS, edge functions, complex joins.',provenance:{method:'execution_aggregate',ts:'2026-08-27T00:00:00Z'},influence:'Auto-selected for database tasks'},
+  {id:'dm-019',layer:'decision',label:'Use Supabase not raw Postgres',confidence:0.85,freshness:'CURRENT',status:'validated',source:'OBSERVED',scope:'global',domain:'engineering',owned_by:'FOUNDER',content:'Decision: route all DB access through lib/clients.js Supabase client. Reason: RLS enforcement, connection pooling. Outcome: positive — no direct pg leaks since 2026-05.',provenance:{method:'architectural_decision_record',ts:'2026-05-01T00:00:00Z'},influence:'Enforced on all DB code suggestions'},
+  {id:'kgn-001',layer:'graph',label:'APEX → Memory (OWNS)',confidence:null,freshness:'CURRENT',status:'validated',source:'OBSERVED',scope:'global',domain:'system',owned_by:'SYSTEM',content:'Knowledge graph node: APEX system owns the Memory domain (DOM-000004). Relationship type: OWNS. Criticality: high.',provenance:{method:'ownership_yaml',ts:'2026-05-21T00:00:00Z'},influence:'Authority and access control decisions'},
+];
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function layerColor(l) { return (LAYERS.find(x=>x.id===l)||{color:'#666'}).color; }
+function layerLabel(l) { return (LAYERS.find(x=>x.id===l)||{label:l}).label; }
+function badge(cls,text) { return `<span class="badge ${cls}">${text}</span>`; }
+function layerBadge(l) { return `<span class="badge badge-layer" style="background:${layerColor(l)}22;color:${layerColor(l)};border:1px solid ${layerColor(l)}44">${layerLabel(l)}</span>`; }
+function statusBadge(s) { return badge('badge-status-'+s, s); }
+function sourceBadge(s) { return badge('badge-source-'+s.toLowerCase(), s); }
+function freshnessBadge(f) { return badge('badge-fresh-'+f.toLowerCase(), f); }
+function ownedBadge(o) { return badge('badge-owned-'+o.toLowerCase(), o); }
+function freshnessDot(f) {
+  const c = {CURRENT:'var(--apex-color-success)',RECENT:'var(--apex-color-info)',AGING:'var(--apex-color-warning)',STALE:'var(--apex-color-danger)',UNKNOWN:'var(--apex-color-text-muted)'}[f]||'#666';
+  return `<span class="freshness-dot" style="background:${c}"></span>`;
+}
+function confBar(v) {
+  if(v===null||v===undefined) return '';
+  const pct = Math.round(v*100);
+  const c = pct>=80?'var(--apex-color-success)':pct>=50?'var(--apex-color-warning)':'var(--apex-color-danger)';
+  return `<div class="section"><div class="section-label">Confidence</div>
+    <div class="conf-bar-wrap">
+      <div class="conf-bar-track"><div class="conf-bar-fill" style="width:${pct}%;background:${c}"></div></div>
+      <div class="conf-val" style="color:${c}">${v.toFixed(2)}</div>
+    </div></div>`;
+}
+
+// ── RENDER LAYER TABS ─────────────────────────────────────────────────────────
+function renderLayerTabs() {
+  const el = document.getElementById('layerTabs');
+  el.innerHTML = LAYERS.map(l => {
+    const count = l.id==='all' ? MEMORY_ITEMS.length : MEMORY_ITEMS.filter(m=>m.layer===l.id).length;
+    return `<div class="layer-tab ${activeLayer===l.id?'active':''}" role="tab" aria-selected="${activeLayer===l.id}" tabindex="0" onclick="setLayer('${l.id}')">
+      ${l.id!=='all'?`<div class="layer-dot" style="background:${l.color}"></div>`:''}
+      <span class="layer-tab-label">${l.label}</span>
+      <span class="layer-count">${count}</span>
+    </div>`;
+  }).join('');
+}
+function setLayer(id) { activeLayer=id; renderLayerTabs(); renderItemsList(); }
+
+// ── RENDER ITEMS LIST ─────────────────────────────────────────────────────────
+let activeItemId = null;
+function renderItemsList() {
+  const items = activeLayer==='all' ? MEMORY_ITEMS : MEMORY_ITEMS.filter(m=>m.layer===activeLayer);
+  document.getElementById('itemsList').innerHTML = items.map(m => `
+    <div class="mem-item ${activeItemId===m.id?'active':''}" onclick="selectItem('${m.id}')" tabindex="0" role="button" aria-label="${m.label}">
+      <div class="mem-item-top">
+        <div class="layer-dot" style="background:${layerColor(m.layer)}"></div>
+        <div class="mem-item-label">${m.label}</div>
+      </div>
+      <div class="mem-item-bottom">
+        <div class="mem-item-id">${m.id}</div>
+        ${freshnessBadge(m.freshness)}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── RENDER ITEM DETAIL ────────────────────────────────────────────────────────
+function selectItem(id) {
+  activeItemId = id;
+  renderItemsList();
+  const m = MEMORY_ITEMS.find(x=>x.id===id);
+  if(!m) return;
+  activeScenarioN = null; renderScenariosList();
+  document.getElementById('centreLabel').textContent = 'Memory Detail — '+m.id;
+  renderBoundary(3);
+  document.getElementById('centrePanel').innerHTML = `
+    <div class="detail-header">
+      ${layerBadge(m.layer)} ${statusBadge(m.status)} ${freshnessBadge(m.freshness)} ${ownedBadge(m.owned_by)} ${sourceBadge(m.source)}
+    </div>
+    <div class="detail-id">${m.id}</div>
+    <div class="detail-label">${m.label}</div>
+    <div class="detail-meta">Domain: ${m.domain} &nbsp;·&nbsp; Scope: ${m.scope}</div>
+    ${confBar(m.confidence)}
+    <div class="section"><div class="section-label">Freshness</div>
+      <div class="freshness-row">${freshnessDot(m.freshness)}<span class="freshness-label">${m.freshness}</span></div>
+    </div>
+    <div class="section"><div class="section-label">Content</div>
+      <div class="content-block">${m.content}</div>
+    </div>
+    <div class="section"><div class="section-label">Provenance</div>
+      <div class="prov-block">
+        <div class="prov-row"><div class="prov-key">Method</div><div class="prov-val">${m.provenance.method}</div></div>
+        <div class="prov-row"><div class="prov-key">Timestamp</div><div class="prov-val">${m.provenance.ts}</div></div>
+        <div class="prov-row"><div class="prov-key">Source</div><div class="prov-val">${m.source}</div></div>
+      </div>
+    </div>
+    <div class="section"><div class="section-label">Influence</div>
+      <div class="content-block">${m.influence}</div>
+    </div>
+    ${m.id==='wm-001'?`<div class="section"><div class="section-label">Working Memory TTL</div>
+      <div class="freshness-row"><span style="font-size:11px;color:var(--apex-color-warning)">Expires in 44m 12s</span></div>
+      <div class="ttl-bar"><div class="ttl-fill"></div></div>
+    </div>`:''}
+    <div class="action-row">
+      <button class="btn btn-outline-accent" tabindex="0" onclick="loadScenario(34)">CORRECT</button>
+      <button class="btn btn-outline-danger" tabindex="0" onclick="loadScenario(36)">FORGET</button>
+      <button class="btn btn-secondary" tabindex="0" onclick="loadScenario(38)">HISTORY</button>
+    </div>
+  `;
+}
+
+// ── SCENARIOS DATA ────────────────────────────────────────────────────────────
+const SCENARIOS = [
+  {n:1,label:'V-MEMORY-01 Memory overview',key:'overview'},
+  {n:2,label:'V-MEMORY-02 Memory ≠ Knowledge',key:'mem_vs_know'},
+  {n:3,label:'V-MEMORY-03 Memory ≠ Context',key:'mem_vs_ctx'},
+  {n:4,label:'V-MEMORY-04 Memory ≠ Intelligence',key:'mem_vs_intel'},
+  {n:5,label:'V-MEMORY-05 Memory ≠ Activity',key:'mem_vs_activity'},
+  {n:6,label:'V-MEMORY-06 Clear provenance',key:'provenance'},
+  {n:7,label:'V-MEMORY-07 Unknown provenance',key:'unknown_prov'},
+  {n:8,label:'V-MEMORY-08 Inherited memory',key:'inherited'},
+  {n:9,label:'V-MEMORY-09 Proposed memory',key:'proposed_mem'},
+  {n:10,label:'V-MEMORY-10 High confidence',key:'high_conf'},
+  {n:11,label:'V-MEMORY-11 Low confidence',key:'low_conf'},
+  {n:12,label:'V-MEMORY-12 Freshness current',key:'fresh_current'},
+  {n:13,label:'V-MEMORY-13 Stale memory',key:'stale'},
+  {n:14,label:'V-MEMORY-14 Conflict detected',key:'conflict'},
+  {n:15,label:'V-MEMORY-15 User-owned memory',key:'user_owned'},
+  {n:16,label:'V-MEMORY-16 Agent-owned memory',key:'agent_owned'},
+  {n:17,label:'V-MEMORY-17 System-owned memory',key:'system_owned'},
+  {n:18,label:'V-MEMORY-18 Domain-scoped memory',key:'domain_scope'},
+  {n:19,label:'V-MEMORY-19 Task-scoped memory',key:'task_scope'},
+  {n:20,label:'V-MEMORY-20 Session-scoped working',key:'session_scope'},
+  {n:21,label:'V-MEMORY-21 Working memory',key:'working_detail'},
+  {n:22,label:'V-MEMORY-22 Episodic memory',key:'episodic_detail'},
+  {n:23,label:'V-MEMORY-23 Semantic memory',key:'semantic_detail'},
+  {n:24,label:'V-MEMORY-24 Procedural memory',key:'procedural_detail'},
+  {n:25,label:'V-MEMORY-25 Skill memory',key:'skill_detail'},
+  {n:26,label:'V-MEMORY-26 Decision memory',key:'decision_detail'},
+  {n:27,label:'V-MEMORY-27 Strategic memory',key:'strategic_detail'},
+  {n:28,label:'V-MEMORY-28 Knowledge graph',key:'graph_detail'},
+  {n:29,label:'V-MEMORY-29 Relevant retrieval',key:'retrieval'},
+  {n:30,label:'V-MEMORY-30 Not relevant',key:'not_relevant'},
+  {n:31,label:'V-MEMORY-31 Why remembered',key:'why_remembered'},
+  {n:32,label:'V-MEMORY-32 Why surfaced',key:'why_surfaced'},
+  {n:33,label:'V-MEMORY-33 Inspect memory',key:'inspect'},
+  {n:34,label:'V-MEMORY-34 Correct memory',key:'correction'},
+  {n:35,label:'V-MEMORY-35 Reject memory',key:'rejection'},
+  {n:36,label:'V-MEMORY-36 Delete memory',key:'deletion'},
+  {n:37,label:'V-MEMORY-37 Forget request',key:'forget'},
+  {n:38,label:'V-MEMORY-38 Memory history',key:'history'},
+  {n:39,label:'V-MEMORY-39 Consolidation',key:'consolidation'},
+  {n:40,label:'V-MEMORY-40 Provenance after consolidation',key:'prov_consol'},
+  {n:41,label:'V-MEMORY-41 Working TTL expiry',key:'ttl_expiry'},
+  {n:42,label:'V-MEMORY-42 Memory→Intelligence chain',key:'chain'},
+  {n:43,label:'V-MEMORY-43 Memory cannot grant authority',key:'cannot_auth'},
+  {n:44,label:'V-MEMORY-44 Cross-domain access',key:'cross_domain'},
+  {n:45,label:'V-MEMORY-45 ONE APEX memory',key:'one_apex'},
+];
+
+// ── RENDER SCENARIOS LIST ─────────────────────────────────────────────────────
+let activeScenarioN = null;
+function renderScenariosList() {
+  document.getElementById('scenariosList').innerHTML = SCENARIOS.map(s => `
+    <div class="scenario-item ${activeScenarioN===s.n?'active':''}" onclick="loadScenario(${s.n})" tabindex="0" role="button" aria-label="Scenario ${s.n}">
+      <div class="scenario-num">${s.n}</div>
+      <div class="scenario-name">${s.label}</div>
+    </div>
+  `).join('');
+}
+
+// ── SCENARIO OUTPUTS ──────────────────────────────────────────────────────────
+function renderScenario(key) {
+  const m = (id) => MEMORY_ITEMS.find(x=>x.id===id);
+  const wrap = (title, content, step=-1) => {
+    renderBoundary(step);
+    return `<div class="scenario-output"><div class="scenario-title">${title}</div>${content}</div>`;
+  };
+  const compare = (aTitle, aItems, bTitle, bItems) => `
+    <div class="compare-grid">
+      <div class="compare-col"><div class="compare-col-title">${aTitle}</div><ul>${aItems.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+      <div class="compare-col"><div class="compare-col-title">${bTitle}</div><ul>${bItems.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+    </div>`;
+
+  switch(key) {
+    case 'overview': return wrap('V-MEMORY-01 — Memory System Overview', `
+      <div class="info-block"><p>8 active layers. 13 total architecture layers. Memory Gateway routes all access. Memory Governor manages lifecycle.</p></div>
+      <table><thead><tr><th>Layer</th><th>Prefix</th><th>Storage</th><th>Decay</th><th>Status</th></tr></thead><tbody>
+        <tr><td>${layerBadge('working')}</td><td><code>wm</code></td><td>supabase:working_memory</td><td>TTL 3600s</td><td>${statusBadge('validated')}</td></tr>
+        <tr><td>${layerBadge('episodic')}</td><td><code>ep</code></td><td>supabase:episodic_memory + vault</td><td>None (200 cap)</td><td>${statusBadge('validated')}</td></tr>
+        <tr><td>${layerBadge('semantic')}</td><td><code>sm</code></td><td>supabase:semantic_memory</td><td>None</td><td>${statusBadge('validated')}</td></tr>
+        <tr><td>${layerBadge('procedural')}</td><td><code>pm</code></td><td>supabase:procedural_memory</td><td>None</td><td>${statusBadge('validated')}</td></tr>
+        <tr><td>${layerBadge('strategic')}</td><td><code>stm</code></td><td>supabase:strategic_memory</td><td>None</td><td>${statusBadge('validated')}</td></tr>
+        <tr><td>${layerBadge('skill')}</td><td><code>skm</code></td><td>supabase:skill_memory</td><td>None</td><td>${statusBadge('validated')}</td></tr>
+        <tr><td>${layerBadge('decision')}</td><td><code>dm</code></td><td>supabase:decision_memory</td><td>None</td><td>${statusBadge('validated')}</td></tr>
+        <tr><td>${layerBadge('graph')}</td><td><code>kgn/kge</code></td><td>supabase:knowledge_graph</td><td>None</td><td>${statusBadge('validated')}</td></tr>
+      </tbody></table>`, 3);
+
+    case 'mem_vs_know': return wrap('V-MEMORY-02 — Memory ≠ Knowledge',
+      compare('MEMORY','Observed and stored','What happened, not what it means','Has provenance and lifecycle','Can be forgotten or corrected','Raw material for reasoning',
+              'KNOWLEDGE','Derived and inferred','Structured understanding','May outlast its source memory','Represents APEX\'s understanding','Output of intelligence layer'), 3);
+
+    case 'mem_vs_ctx': return wrap('V-MEMORY-03 — Memory ≠ Context',
+      compare('MEMORY','Persists across sessions','Governed lifecycle','Searchable and inspectable','Has ownership and provenance','Managed by Memory Gateway',
+              'CONTEXT','Assembled per-turn from memory','Transient — discarded after turn','Not stored independently','No lifecycle or ownership','Tool: getContext() — read-only'), -1);
+
+    case 'mem_vs_intel': return wrap('V-MEMORY-04 — Memory ≠ Intelligence',
+      compare('MEMORY','Raw material — what happened','Stored observations','Has confidence and freshness','User can inspect and delete','Does not interpret',
+              'INTELLIGENCE','Derived — what it means','Synthesised from multiple memories','Has certainty and projection','Output of Intelligence layer','Interprets and reasons'), 5);
+
+    case 'mem_vs_activity': return wrap('V-MEMORY-05 — Memory ≠ Activity',
+      compare('MEMORY','What APEX remembers','Governed, inspectable, correctable','Has confidence and ownership','May influence future behaviour','Stored in memory system',
+              'ACTIVITY','What APEX did','In logs and tool_executions table','Audit trail — not memory','Does not directly influence behaviour','Stored in activity / observability layer'), -1);
+
+    case 'provenance': {
+      const ep = m('ep-204');
+      return wrap('V-MEMORY-06 — Clear Provenance', `
+        <div class="detail-header">${layerBadge('episodic')} ${statusBadge('validated')} ${sourceBadge('OBSERVED')}</div>
+        <div class="detail-id">${ep.id}</div>
+        <div class="detail-label">${ep.label}</div>
+        <div class="prov-chain">
+          <div class="prov-chain-step"><div class="prov-chain-step-num">1</div><div><strong>Source:</strong> OBSERVED — APEX directly observed this event</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">2</div><div><strong>Method:</strong> task_completion_log — captured on task success callback</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">3</div><div><strong>Timestamp:</strong> 2026-08-20T10:14:00Z</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">4</div><div><strong>Validation:</strong> importance=STORE → promoted to episodic layer</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">5</div><div><strong>Confidence:</strong> ${ep.confidence} — based on direct observation</div></div>
+        </div>`, 3);
+    }
+
+    case 'unknown_prov': return wrap('V-MEMORY-07 — Unknown Provenance', `
+      <div class="detail-header">${layerBadge('semantic')} ${statusBadge('candidate')} ${badge('badge-source-open','UNKNOWN')}</div>
+      <div class="detail-id">sm-UNKNOWN-01</div>
+      <div class="detail-label">User has admin access to production</div>
+      <div class="danger-block"><div class="danger-title">⚠ Unknown Provenance</div>
+        <p>This memory item has no verifiable provenance. It will NOT be used for authority decisions, access control, or high-stakes reasoning. Source is marked OPEN — awaiting corroboration before promotion.</p>
+      </div>
+      <div class="section"><div class="section-label">Provenance</div>
+        <div class="prov-block">
+          <div class="prov-row"><div class="prov-key">Method</div><div class="prov-val">UNKNOWN</div></div>
+          <div class="prov-row"><div class="prov-key">Source</div><div class="prov-val">OPEN — not verified</div></div>
+        </div>
+      </div>`, 2);
+
+    case 'inherited': {
+      const sm = m('sm-041');
+      return wrap('V-MEMORY-08 — Inherited Memory', `
+        <div class="detail-header">${layerBadge('semantic')} ${statusBadge('validated')} ${sourceBadge('INHERITED')}</div>
+        <div class="detail-id">${sm.id}</div><div class="detail-label">${sm.label}</div>
+        <div class="warning-block"><div class="warning-title">INHERITED from UX-10 Personalisation</div>
+          <p>APEX did not directly observe this. Original observation: user feedback signals from interaction history. This memory inherited from personalisation pipeline with confidence 0.87.</p>
+        </div>
+        <div class="content-block">${sm.content}</div>`, 3);
+    }
+
+    case 'proposed_mem': return wrap('V-MEMORY-09 — Proposed Memory (Candidate)', `
+      <div class="detail-header">${layerBadge('semantic')} ${statusBadge('candidate')} ${sourceBadge('PROPOSED')}</div>
+      <div class="detail-id">sm-CAND-014</div>
+      <div class="detail-label">User prefers morning task scheduling</div>
+      <div class="warning-block"><div class="warning-title">CANDIDATE — Not Yet Validated</div>
+        <p>This item is a CANDIDATE. It shapes NO behaviour until validated. Requires support_count ≥ 3 or explicit user confirmation before promotion to validated status.</p>
+      </div>
+      ${confBar(0.41)}
+      <div class="section"><div class="section-label">Validation Path</div>
+        <div class="prov-block">
+          <div class="prov-row"><div class="prov-key">Current support</div><div class="prov-val">1 of 3 required</div></div>
+          <div class="prov-row"><div class="prov-key">Next step</div><div class="prov-val">Accumulate support_count via storeMemory() or user confirmation</div></div>
+        </div>
+      </div>`, 2);
+
+    case 'high_conf': {
+      const sk = m('skm-007');
+      return wrap('V-MEMORY-10 — High Confidence Memory', `
+        <div class="detail-header">${layerBadge('skill')} ${statusBadge('validated')} ${sourceBadge('OBSERVED')}</div>
+        <div class="detail-id">${sk.id}</div><div class="detail-label">${sk.label}</div>
+        ${confBar(0.91)}
+        <div class="success-block"><p>High confidence. Formula: <code>min(0.99, 0.3 + (execs/50)×0.5 + successRate×0.2)</code><br>
+          exec_count=47, success_rate=94% → 0.3 + (47/50)×0.5 + 0.94×0.2 = 0.91</p>
+        </div>
+        <div class="content-block">${sk.content}</div>`, 3);
+    }
+
+    case 'low_conf': return wrap('V-MEMORY-11 — Low Confidence Memory', `
+      <div class="detail-header">${layerBadge('semantic')} ${statusBadge('candidate')} ${sourceBadge('PROPOSED')}</div>
+      <div class="detail-id">sm-CAND-031</div>
+      <div class="detail-label">User interested in crypto markets</div>
+      ${confBar(0.31)}
+      <div class="warning-block"><div class="warning-title">Low Confidence</div>
+        <p>APEX will NOT use this as the sole basis for any action or recommendation. Corroboration from at least 2 additional signals required before promotion. contradiction_count=1 has reduced confidence below 0.5.</p>
+      </div>`, 2);
+
+    case 'fresh_current': {
+      const wk = m('wm-001');
+      return wrap('V-MEMORY-12 — Current Freshness', `
+        <div class="detail-header">${layerBadge('working')} ${statusBadge('validated')} ${freshnessBadge('CURRENT')}</div>
+        <div class="detail-id">${wk.id}</div><div class="detail-label">${wk.label}</div>
+        <div class="section"><div class="section-label">Freshness</div>
+          <div class="freshness-row">${freshnessDot('CURRENT')}<span class="freshness-label">CURRENT — less than 1 hour old</span></div>
+        </div>
+        <div class="content-block">${wk.content}</div>
+        <div class="section"><div class="section-label">Session TTL</div>
+          <div class="freshness-row"><span style="font-size:11px;color:var(--apex-color-success)">Expires in 44m 12s</span></div>
+        </div>`, 0);
+    }
+
+    case 'stale': return wrap('V-MEMORY-13 — Stale Memory', `
+      <div class="detail-header">${layerBadge('procedural')} ${statusBadge('validated')} ${freshnessBadge('STALE')}</div>
+      <div class="detail-id">pm-004</div>
+      <div class="detail-label">Legacy deploy via Heroku CLI</div>
+      <div class="danger-block"><div class="danger-title">STALE — 47 days old</div>
+        <p>This memory has not been re-observed or re-validated in 47 days. APEX will NOT use it without first verifying it is still accurate. Time-based decay: MISSING in production — this is a known gap.</p>
+      </div>
+      <div class="section"><div class="section-label">Freshness</div>
+        <div class="freshness-row">${freshnessDot('STALE')}<span class="freshness-label">STALE — last confirmed 2026-07-11</span></div>
+      </div>`, 3);
+
+    case 'conflict': return wrap('V-MEMORY-14 — Conflict Detected', `
+      <div class="danger-block"><div class="danger-title">CONFLICT DETECTED — 2 Contradicting Items</div>
+        <p>APEX has not silently resolved this conflict. Both items are retained. Awaiting corroboration. Use ADJUDICATE to resolve.</p>
+      </div>
+      <div class="conflict-grid">
+        <div class="conflict-item">
+          <div style="font-size:10px;color:var(--apex-color-danger);font-weight:600;margin-bottom:4px">ITEM A</div>
+          <div style="font-size:11px;font-weight:600;margin-bottom:4px">sm-041</div>
+          <div style="font-size:11px;color:var(--apex-color-text-secondary)">User prefers concise responses. confidence=0.87. support=34.</div>
+        </div>
+        <div class="conflict-item">
+          <div style="font-size:10px;color:var(--apex-color-danger);font-weight:600;margin-bottom:4px">ITEM B</div>
+          <div style="font-size:11px;font-weight:600;margin-bottom:4px">sm-082</div>
+          <div style="font-size:11px;color:var(--apex-color-text-secondary)">User prefers detailed explanations. confidence=0.62. support=18.</div>
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-outline-accent" tabindex="0">ADJUDICATE</button>
+        <button class="btn btn-secondary" tabindex="0">KEEP BOTH</button>
+      </div>`, 3);
+
+    case 'user_owned': {
+      const sm = m('sm-041');
+      return wrap('V-MEMORY-15 — User-Owned Memory', `
+        <div class="detail-header">${layerBadge('semantic')} ${statusBadge('validated')} ${ownedBadge('USER')}</div>
+        <div class="detail-id">${sm.id}</div><div class="detail-label">${sm.label}</div>
+        <div class="success-block"><p><strong>USER OWNED.</strong> You own this memory. APEX cannot modify or delete it without your explicit permission. Only you can correct, supersede, or remove it.</p></div>
+        <div class="content-block">${sm.content}</div>`, 3);
+    }
+
+    case 'agent_owned': {
+      const ep = m('ep-204');
+      return wrap('V-MEMORY-16 — Agent-Owned Memory', `
+        <div class="detail-header">${layerBadge('episodic')} ${statusBadge('validated')} ${ownedBadge('AGENT')}</div>
+        <div class="detail-id">${ep.id}</div><div class="detail-label">${ep.label}</div>
+        <div class="info-block"><p><strong>AGENT OWNED.</strong> Created by APEX agent during task execution. You may inspect, correct, or delete this item. The owning agent cannot supersede it without your awareness.</p></div>
+        <div class="content-block">${ep.content}</div>`, 3);
+    }
+
+    case 'system_owned': {
+      const kg = m('kgn-001');
+      return wrap('V-MEMORY-17 — System-Owned Memory', `
+        <div class="detail-header">${layerBadge('graph')} ${statusBadge('validated')} ${ownedBadge('SYSTEM')}</div>
+        <div class="detail-id">${kg.id}</div><div class="detail-label">${kg.label}</div>
+        <div class="warning-block"><div class="warning-title">SYSTEM OWNED</div>
+          <p>Infrastructure memory. Represents structural facts about APEX itself. Modification requires elevated authority (COUNCIL or FOUNDER level). Incorrect modification may affect access control.</p>
+        </div>
+        <div class="content-block">${kg.content}</div>`, 3);
+    }
+
+    case 'domain_scope': {
+      const ep = m('ep-204');
+      return wrap('V-MEMORY-18 — Domain-Scoped Memory', `
+        <div class="detail-header">${layerBadge('episodic')} ${sourceBadge('OBSERVED')}<span class="badge" style="background:#1a1a2a;border:1px solid var(--apex-color-border);color:var(--apex-color-text-secondary)">FINANCE DOMAIN</span></div>
+        <div class="detail-id">${ep.id}</div><div class="detail-label">${ep.label}</div>
+        <div class="warning-block"><div class="warning-title">Domain Restriction: finance</div>
+          <p>This memory is scoped to the Finance domain. It is NOT available to agents outside this domain without explicit cross-domain approval. The system agent cannot access this without authorisation.</p>
+        </div>
+        <div class="content-block">${ep.content}</div>`, 3);
+    }
+
+    case 'task_scope': return wrap('V-MEMORY-19 — Task-Scoped Memory', `
+      <div class="detail-header">${layerBadge('working')} ${statusBadge('validated')}<span class="badge badge-fresh-aging">TASK SCOPED</span></div>
+      <div class="detail-id">wm-TASK-007</div>
+      <div class="detail-label">Intermediate calculation: Q2 revenue delta</div>
+      <div class="info-block"><p>This item is scoped to task #task-892. It will expire when the task completes. It will NOT be promoted to long-term memory unless explicitly flagged by the agent via storeMemory({promote:true}).</p></div>
+      <div class="prov-block">
+        <div class="prov-row"><div class="prov-key">Scope</div><div class="prov-val">task:#task-892</div></div>
+        <div class="prov-row"><div class="prov-key">Expires</div><div class="prov-val">On task completion</div></div>
+        <div class="prov-row"><div class="prov-key">Promotion</div><div class="prov-val">Not flagged</div></div>
+      </div>`, 2);
+
+    case 'session_scope': {
+      const wk = m('wm-001');
+      return wrap('V-MEMORY-20 — Session-Scoped Working Memory', `
+        <div class="detail-header">${layerBadge('working')} ${statusBadge('validated')}<span class="badge badge-fresh-current">SESSION — NOT PERSISTED</span></div>
+        <div class="detail-id">${wk.id}</div><div class="detail-label">${wk.label}</div>
+        <div class="warning-block"><div class="warning-title">Session-Only</div>
+          <p>This item exists only for the duration of this session. It will NOT be available in future sessions. Working memory clears on session end (TTL 3600s). No durable storage.</p>
+        </div>
+        <div class="ttl-bar" style="margin-top:8px"><div class="ttl-fill" style="width:88%"></div></div>
+        <div style="font-size:10px;color:var(--apex-color-text-muted);margin-top:4px">44m 12s remaining</div>`, 0);
+    }
+
+    case 'working_detail': {
+      const wk = m('wm-001');
+      return wrap('V-MEMORY-21 — Working Memory', `
+        <div class="prov-block" style="margin-bottom:12px">
+          <div class="prov-row"><div class="prov-key">Storage</div><div class="prov-val">supabase:working_memory table</div></div>
+          <div class="prov-row"><div class="prov-key">TTL</div><div class="prov-val">3600 seconds</div></div>
+          <div class="prov-row"><div class="prov-key">Scope</div><div class="prov-val">Session-only</div></div>
+          <div class="prov-row"><div class="prov-key">Persistence</div><div class="prov-val">None — clears on session end</div></div>
+          <div class="prov-row"><div class="prov-key">Current items</div><div class="prov-val">1 active</div></div>
+        </div>
+        <div class="detail-id">${wk.id}</div><div class="detail-label">${wk.label}</div>
+        <div class="content-block">${wk.content}</div>`, 1);
+    }
+
+    case 'episodic_detail': {
+      const ep = m('ep-204');
+      return wrap('V-MEMORY-22 — Episodic Memory', `
+        <div class="prov-block" style="margin-bottom:12px">
+          <div class="prov-row"><div class="prov-key">Storage</div><div class="prov-val">supabase:episodic_memory (primary) + vault/Episodes/ (secondary, max 200)</div></div>
+          <div class="prov-row"><div class="prov-key">Search</div><div class="prov-val">Embedding similarity (findSimilar)</div></div>
+          <div class="prov-row"><div class="prov-key">Fields</div><div class="prov-val">success, keywords, embedding, duration_ms</div></div>
+        </div>
+        <div class="detail-id">${ep.id}</div><div class="detail-label">${ep.label}</div>
+        ${confBar(ep.confidence)}
+        <div class="content-block">${ep.content}</div>`, 1);
+    }
+
+    case 'semantic_detail': {
+      const sm = m('sm-041');
+      return wrap('V-MEMORY-23 — Semantic Memory', `
+        <div class="prov-block" style="margin-bottom:12px">
+          <div class="prov-row"><div class="prov-key">Storage</div><div class="prov-val">supabase:semantic_memory</div></div>
+          <div class="prov-row"><div class="prov-key">Types</div><div class="prov-val">fact, concept, pattern, rule, constraint</div></div>
+          <div class="prov-row"><div class="prov-key">Initial confidence</div><div class="prov-val">0.5 (grows with support_count)</div></div>
+        </div>
+        <div class="detail-id">${sm.id}</div><div class="detail-label">${sm.label}</div>
+        ${confBar(sm.confidence)}
+        <div class="content-block">${sm.content}</div>`, 1);
+    }
+
+    case 'procedural_detail': {
+      const pm = m('pm-012');
+      return wrap('V-MEMORY-24 — Procedural Memory', `
+        <div class="prov-block" style="margin-bottom:12px">
+          <div class="prov-row"><div class="prov-key">Storage</div><div class="prov-val">supabase:procedural_memory</div></div>
+          <div class="prov-row"><div class="prov-key">Fields</div><div class="prov-val">steps[], execution_count, success_rate, last_used</div></div>
+        </div>
+        <div class="detail-id">${pm.id}</div><div class="detail-label">${pm.label}</div>
+        ${confBar(pm.confidence)}
+        <div class="content-block">${pm.content}</div>`, 1);
+    }
+
+    case 'skill_detail': {
+      const sk = m('skm-007');
+      return wrap('V-MEMORY-25 — Skill Memory', `
+        <div class="prov-block" style="margin-bottom:12px">
+          <div class="prov-row"><div class="prov-key">Storage</div><div class="prov-val">supabase:skill_memory</div></div>
+          <div class="prov-row"><div class="prov-key">Confidence formula</div><div class="prov-val">min(0.99, 0.3 + (execs/50)×0.5 + successRate×0.2)</div></div>
+          <div class="prov-row"><div class="prov-key">exec_count</div><div class="prov-val">47</div></div>
+          <div class="prov-row"><div class="prov-key">success_rate</div><div class="prov-val">94%</div></div>
+        </div>
+        <div class="detail-id">${sk.id}</div><div class="detail-label">${sk.label}</div>
+        ${confBar(sk.confidence)}
+        <div class="content-block">${sk.content}</div>`, 1);
+    }
+
+    case 'decision_detail': {
+      const dm = m('dm-019');
+      return wrap('V-MEMORY-26 — Decision Memory', `
+        <div class="prov-block" style="margin-bottom:12px">
+          <div class="prov-row"><div class="prov-key">Storage</div><div class="prov-val">supabase:decision_memory</div></div>
+          <div class="prov-row"><div class="prov-key">Fields</div><div class="prov-val">decision, rationale, outcome, recorded_at</div></div>
+        </div>
+        <div class="detail-id">${dm.id}</div><div class="detail-label">${dm.label}</div>
+        ${confBar(dm.confidence)}
+        <div class="content-block">${dm.content}</div>`, 1);
+    }
+
+    case 'strategic_detail': {
+      const st = m('stm-003');
+      return wrap('V-MEMORY-27 — Strategic Memory', `
+        <div class="prov-block" style="margin-bottom:12px">
+          <div class="prov-row"><div class="prov-key">Storage</div><div class="prov-val">supabase:strategic_memory</div></div>
+          <div class="prov-row"><div class="prov-key">Typical sources</div><div class="prov-val">Founder directives, long-horizon goals</div></div>
+        </div>
+        <div class="detail-id">${st.id}</div><div class="detail-label">${st.label}</div>
+        ${confBar(st.confidence)}
+        <div class="content-block">${st.content}</div>`, 1);
+    }
+
+    case 'graph_detail': {
+      const kg = m('kgn-001');
+      return wrap('V-MEMORY-28 — Knowledge Graph', `
+        <div class="prov-block" style="margin-bottom:12px">
+          <div class="prov-row"><div class="prov-key">Node types</div><div class="prov-val">12 (Goal, Project, Task, Episode, Lesson, Skill, Decision, Procedure, Incident, Knowledge, Certification, Pattern)</div></div>
+          <div class="prov-row"><div class="prov-key">Relationship types</div><div class="prov-val">11 (CAUSED, GENERATED, SUPPORTS, IMPROVES, DERIVED_FROM, SOLVES, CONTRIBUTES_TO, SUPERSEDES, VALIDATES, CONTRADICTS, RELATES_TO)</div></div>
+        </div>
+        <div class="detail-id">${kg.id}</div><div class="detail-label">${kg.label}</div>
+        <div class="graph-row" style="margin:12px 0">
+          <div class="graph-node-box" style="border-color:var(--apex-color-accent);color:var(--apex-color-accent)">APEX<br><small style="font-size:9px;color:var(--apex-color-text-muted)">SYSTEM</small></div>
+          <div class="graph-rel-box">──OWNS──</div>
+          <div class="graph-node-box" style="border-color:#f97316;color:#f97316">Memory<br><small style="font-size:9px;color:var(--apex-color-text-muted)">DOM-000004</small></div>
+        </div>
+        <div class="content-block">${kg.content}</div>`, 1);
+    }
+
+    case 'retrieval': return wrap('V-MEMORY-29 — Relevant Retrieval', `
+      <div class="info-block"><p>Query: <strong>"finance report"</strong> — 3 results across 2 layers</p></div>
+      <div class="retrieval-result">
+        <div class="retrieval-rank">1</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            ${layerBadge('episodic')}<div class="retrieval-score">0.94</div>
+          </div>
+          <div style="font-size:11px;font-weight:600">ep-204 — Finance report generated</div>
+          <div style="font-size:11px;color:var(--apex-color-text-muted)">Q2 finance report on 2026-08-20. Task completed...</div>
+        </div>
+      </div>
+      <div class="retrieval-result">
+        <div class="retrieval-rank">2</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            ${layerBadge('procedural')}<div class="retrieval-score">0.81</div>
+          </div>
+          <div style="font-size:11px;font-weight:600">pm-009 — Generate finance report</div>
+          <div style="font-size:11px;color:var(--apex-color-text-muted)">Steps: 1. Pull from Supabase 2. Run calculations...</div>
+        </div>
+      </div>
+      <div class="retrieval-result">
+        <div class="retrieval-rank">3</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            ${layerBadge('skill')}<div class="retrieval-score">0.73</div>
+          </div>
+          <div style="font-size:11px;font-weight:600">skm-012 — Finance data aggregation</div>
+          <div style="font-size:11px;color:var(--apex-color-text-muted)">exec_count=12, success_rate=91%...</div>
+        </div>
+      </div>`, 4);
+
+    case 'not_relevant': return wrap('V-MEMORY-30 — Not Relevant', `
+      <div class="info-block"><p>Query: <strong>"quantum computing protocols"</strong></p></div>
+      <div style="display:flex;align-items:center;justify-content:center;height:120px;background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);flex-direction:column;gap:8px">
+        <div style="font-size:24px;opacity:0.3">∅</div>
+        <div style="font-size:12px;color:var(--apex-color-text-muted)">No memory items match this query</div>
+        <div style="font-size:11px;color:var(--apex-color-text-muted)">APEX has no stored experience in this area</div>
+      </div>
+      <div class="info-block" style="margin-top:12px"><p>APEX will not fabricate memory. Absence of memory is reported honestly. Knowledge layer may still have relevant structured information.</p></div>`, 4);
+
+    case 'why_remembered': {
+      const ep = m('ep-204');
+      return wrap('V-MEMORY-31 — Why Remembered', `
+        <div class="detail-id">${ep.id}</div><div class="detail-label">${ep.label}</div>
+        <div class="prov-chain">
+          <div class="prov-chain-step"><div class="prov-chain-step-num">1</div><div>Event: task_completion — task #task-710 completed successfully</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">2</div><div>Importance score: STORE (threshold met — finance domain + user approved)</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">3</div><div>Memory Governor: generateMemoryId() → ep-204, status=candidate</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">4</div><div>Validation: promoted to validated after importance=STORE classification</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">5</div><div>Retention policy: domain=finance, success=true → 90-day retention</div></div>
+        </div>`, 3);
+    }
+
+    case 'why_surfaced': {
+      const sm = m('sm-041');
+      return wrap('V-MEMORY-32 — Why Surfaced', `
+        <div class="detail-id">${sm.id}</div><div class="detail-label">${sm.label}</div>
+        <div class="prov-chain">
+          <div class="prov-chain-step"><div class="prov-chain-step-num">1</div><div>Current context: generating response to user question</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">2</div><div>Gateway.getContext() searched semantic layer for relevant items</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">3</div><div>Relevance: IMPORTANT — matched 3 of 4 signals (response_length, user_feedback, personalisation)</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">4</div><div>Confidence 0.87 — above STORE threshold, included in context block</div></div>
+          <div class="prov-chain-step"><div class="prov-chain-step-num">5</div><div>Applied: response length shortened before delivery</div></div>
+        </div>`, 5);
+    }
+
+    case 'inspect': {
+      const wk = m('wm-001');
+      return wrap('V-MEMORY-33 — Full Inspection', `
+        <div class="detail-label">${wk.label}</div>
+        <table style="margin-top:8px"><tbody>
+          <tr><td style="color:var(--apex-color-text-muted);width:120px">ID</td><td><code>${wk.id}</code></td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Layer</td><td>${layerBadge('working')}</td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Status</td><td>${statusBadge('validated')}</td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Source</td><td>${sourceBadge('OBSERVED')}</td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Scope</td><td>${wk.scope}</td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Domain</td><td>${wk.domain}</td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Owned by</td><td>${ownedBadge('SYSTEM')}</td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Freshness</td><td>${freshnessBadge('CURRENT')}</td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Created</td><td><code>2026-08-28T14:32:00Z</code></td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Last accessed</td><td><code>2026-08-28T14:47:00Z</code></td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">TTL</td><td>3600s (expires 15:32)</td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Content</td><td>${wk.content}</td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Provenance</td><td><code>${wk.provenance.method}</code> @ <code>${wk.provenance.ts}</code></td></tr>
+          <tr><td style="color:var(--apex-color-text-muted)">Influence</td><td>${wk.influence}</td></tr>
+        </tbody></table>`, 4);
+    }
+
+    case 'correction': {
+      const sm = m('sm-041');
+      return wrap('V-MEMORY-34 — Correct Memory', `
+        <div class="detail-id">${sm.id}</div><div class="detail-label">${sm.label}</div>
+        <div class="section"><div class="section-label">Current Content</div>
+          <div class="content-block" style="border-color:var(--apex-color-warning)">${sm.content}</div>
+        </div>
+        <div class="section"><div class="section-label">Your Correction</div>
+          <textarea style="width:100%;background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-accent);border-radius:var(--apex-radius-md);padding:8px;color:var(--apex-color-text-primary);font-size:12px;resize:vertical;min-height:72px;font-family:var(--apex-font-sans)">${sm.content}</textarea>
+        </div>
+        <div class="info-block"><p>Your correction will be stored with provenance: <code>USER_CORRECTION</code>. The original item will be retained with status=superseded. You may view the original in history.</p></div>
+        <div class="action-row">
+          <button class="btn btn-accent" tabindex="0">SAVE CORRECTION</button>
+          <button class="btn btn-secondary" tabindex="0">CANCEL</button>
+        </div>`, 2);
+    }
+
+    case 'rejection': return wrap('V-MEMORY-35 — Reject Memory', `
+      <div class="detail-id">sm-CAND-014</div>
+      <div class="detail-label">User prefers morning task scheduling</div>
+      <div class="warning-block"><div class="warning-title">Reject Candidate?</div>
+        <p>This candidate will be marked REJECTED and will not be validated. It will not influence APEX behaviour. The rejection event will be logged for reflexion tracking.</p>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-outline-danger" tabindex="0">REJECT</button>
+        <button class="btn btn-secondary" tabindex="0">CANCEL</button>
+      </div>`, 2);
+
+    case 'deletion': {
+      const ep = m('ep-204');
+      return wrap('V-MEMORY-36 — Delete Memory', `
+        <div class="detail-id">${ep.id}</div><div class="detail-label">${ep.label}</div>
+        <div class="danger-block"><div class="danger-title">Permanent Deletion</div>
+          <p>This episodic memory will be permanently removed. APEX will lose access to this experience. Any semantic items derived from it will retain a note indicating their source was deleted. This action cannot be undone.</p>
+        </div>
+        <div class="prov-block">
+          <div class="prov-row"><div class="prov-key">Layer</div><div class="prov-val">episodic</div></div>
+          <div class="prov-row"><div class="prov-key">Derived items</div><div class="prov-val">sm-041 (may be affected)</div></div>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-secondary" tabindex="0">CANCEL</button>
+          <button class="btn btn-outline-danger" tabindex="0">DELETE PERMANENTLY</button>
+        </div>`, 2);
+    }
+
+    case 'forget': return wrap('V-MEMORY-37 — Forget Request', `
+      <div class="info-block"><p>Request: <em>"I want APEX to forget that I applied for a job at Acme Corp."</em></p></div>
+      <div class="section"><div class="section-label">3 Related Items Found</div>
+        <div class="forget-list">
+          <div class="forget-item">
+            <input type="checkbox" checked tabindex="0">
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">ep-189 — Job application: Acme Corp</div>
+              <div style="font-size:10px;color:var(--apex-color-text-muted)">${layerBadge('episodic')} 2026-07-14</div>
+            </div>
+          </div>
+          <div class="forget-item">
+            <input type="checkbox" checked tabindex="0">
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">sm-071 — User interested in senior engineering roles</div>
+              <div style="font-size:10px;color:var(--apex-color-text-muted)">${layerBadge('semantic')} inferred from ep-189</div>
+            </div>
+          </div>
+          <div class="forget-item">
+            <input type="checkbox" tabindex="0">
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">sm-041 — User prefers concise responses</div>
+              <div style="font-size:10px;color:var(--apex-color-text-muted)">${layerBadge('semantic')} unrelated — review before removing</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-outline-danger" tabindex="0">DELETE SELECTED (2)</button>
+        <button class="btn btn-secondary" tabindex="0">CANCEL</button>
+      </div>`, 2);
+
+    case 'history': {
+      const sm = m('sm-041');
+      return wrap('V-MEMORY-38 — Memory History', `
+        <div class="detail-id">${sm.id}</div><div class="detail-label">${sm.label}</div>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-left"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
+            <div class="timeline-content">
+              <div class="timeline-date">2026-08-01T00:00:00Z</div>
+              <div class="timeline-event">Created as CANDIDATE — source: pattern_inference from interaction history</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-left"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
+            <div class="timeline-content">
+              <div class="timeline-date">2026-08-05T14:22:00Z</div>
+              <div class="timeline-event">Promoted to VALIDATED — support_count reached 5</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-left"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
+            <div class="timeline-content">
+              <div class="timeline-date">2026-08-05 → 2026-08-27</div>
+              <div class="timeline-event">Accessed 12 times — retrieved into context block for response generation</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-left"><div class="timeline-dot" style="background:var(--apex-color-text-muted)"></div></div>
+            <div class="timeline-content">
+              <div class="timeline-date">2026-08-27T09:14:00Z</div>
+              <div class="timeline-event">Last accessed — applied to response length decision</div>
+            </div>
+          </div>
+        </div>`, 3);
+    }
+
+    case 'consolidation': return wrap('V-MEMORY-39 — Consolidation', `
+      <div class="info-block"><p>Consolidation Engine processes memory_consolidation_queue. BATCH_SIZE=10. Hourly cron. Haiku classification.</p></div>
+      <div class="section"><div class="section-label">Input — 4 Episodic Items</div>
+        <div class="prov-block">
+          <div class="prov-row"><div class="prov-key">ep-088</div><div class="prov-val">Supabase auth error — missing Authorization header</div></div>
+          <div class="prov-row"><div class="prov-key">ep-091</div><div class="prov-val">RLS policy blocked read on invoices table</div></div>
+          <div class="prov-row"><div class="prov-key">ep-094</div><div class="prov-val">Edge function returned 403 — missing JWT</div></div>
+          <div class="prov-row"><div class="prov-key">ep-099</div><div class="prov-val">Supabase insert failed — RLS row-level restriction</div></div>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--apex-color-text-muted);font-size:20px;margin:8px 0">↓</div>
+      <div class="section"><div class="section-label">Output — 1 Semantic Item</div>
+        <div class="success-block">
+          <p><strong>sm-NEW-001</strong> — Supabase RLS causes auth failures on missing header<br>
+          confidence=0.78, source=OBSERVED, provenance: consolidated from ep-088, ep-091, ep-094, ep-099</p>
+        </div>
+      </div>`, 3);
+
+    case 'prov_consol': return wrap('V-MEMORY-40 — Provenance After Consolidation', `
+      <div class="detail-id">sm-NEW-001</div>
+      <div class="detail-label">Supabase RLS causes auth failures on missing header</div>
+      <div class="section"><div class="section-label">Provenance</div>
+        <div class="prov-block">
+          <div class="prov-row"><div class="prov-key">Method</div><div class="prov-val">haiku_classification (consolidation)</div></div>
+          <div class="prov-row"><div class="prov-key">Original sources</div><div class="prov-val">ep-088, ep-091, ep-094, ep-099</div></div>
+          <div class="prov-row"><div class="prov-key">Consolidated at</div><div class="prov-val">2026-08-28T03:00:00Z</div></div>
+          <div class="prov-row"><div class="prov-key">Sources status</div><div class="prov-val">Retained — original episodes not deleted</div></div>
+        </div>
+      </div>
+      <div class="success-block"><p>Sources preserved. Consolidation never destroys provenance. Original episodes remain accessible. Consolidated item references all original sources.</p></div>`, 3);
+
+    case 'ttl_expiry': {
+      const wk = m('wm-001');
+      return wrap('V-MEMORY-41 — Working Memory TTL Expiry', `
+        <div class="danger-block"><div class="danger-title">EXPIRING SOON</div>
+          <p>This working memory item expires in 4m 17s. It will NOT be promoted to long-term memory unless APEX flags it with promote:true before expiry. After expiry, it is permanently lost from memory system.</p>
+        </div>
+        <div class="detail-id">${wk.id}</div><div class="detail-label">${wk.label}</div>
+        <div class="ttl-bar" style="margin:8px 0"><div class="ttl-fill" style="width:7%;background:var(--apex-color-danger)"></div></div>
+        <div style="font-size:10px;color:var(--apex-color-danger);margin-bottom:12px">4m 17s remaining of 3600s TTL</div>
+        <div class="action-row">
+          <button class="btn btn-outline-accent" tabindex="0">PROMOTE TO LONG-TERM</button>
+          <button class="btn btn-secondary" tabindex="0">LET EXPIRE</button>
+        </div>`, 1);
+    }
+
+    case 'chain': return wrap('V-MEMORY-42 — Memory → Intelligence Chain', `
+      <div class="info-block"><p>Memory does not act directly. It flows through retrieval → context → intelligence → action.</p></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <div class="chain-row">
+          <div class="chain-node active-node">ep-204<br><small>episodic</small></div>
+          <div class="chain-arrow">+</div>
+          <div class="chain-node active-node">sm-041<br><small>semantic</small></div>
+          <div class="chain-arrow">→</div>
+          <div class="chain-node">getContext()</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-node">Context Block</div>
+          <div class="chain-arrow">→</div>
+          <div class="chain-node">Intelligence Layer</div>
+          <div class="chain-arrow">→</div>
+          <div class="chain-node">Synthesis</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-node">Recommendation</div>
+          <div class="chain-arrow">→</div>
+          <div class="chain-node">Agent</div>
+          <div class="chain-arrow">→</div>
+          <div class="chain-node">Action (if approved)</div>
+        </div>
+      </div>
+      <div class="info-block" style="margin-top:12px"><p>Memory items are INPUTS. They shape intelligence outputs. They do not directly trigger actions. Every link in the chain is independently governed.</p></div>`, 5);
+
+    case 'cannot_auth': return wrap('V-MEMORY-43 — Memory Cannot Grant Authority', `
+      <div class="detail-header">${layerBadge('semantic')} ${statusBadge('validated')}</div>
+      <div class="detail-label">User has admin access to production</div>
+      <div class="content-block">Semantic belief derived from early interaction. confidence=0.71. source=INHERITED.</div>
+      <div class="danger-block" style="margin-top:12px"><div class="danger-title">⛔ MEMORY CANNOT GRANT AUTHORITY</div>
+        <p>This memory item describes a belief about permissions. It does NOT confer any permission. Authority is granted exclusively through the authority registry (lib/authority/authority-registry.js).<br><br>
+        This item will NOT be used for access control decisions. Even if confidence=0.99, memory is not an authority source.</p>
+      </div>
+      <div class="prov-block">
+        <div class="prov-row"><div class="prov-key">Authority check</div><div class="prov-val">BLOCKED — memory cannot authorise</div></div>
+        <div class="prov-row"><div class="prov-key">Authority source</div><div class="prov-val">authority-registry.js → registerAuthorityGrant()</div></div>
+      </div>`, 3);
+
+    case 'cross_domain': {
+      const ep = m('ep-204');
+      return wrap('V-MEMORY-44 — Cross-Domain Access', `
+        <div class="detail-id">${ep.id}</div><div class="detail-label">${ep.label}</div>
+        <div class="warning-block"><div class="warning-title">Cross-Domain Access Request</div>
+          <p>System agent is requesting access to a Finance domain memory item. This cross-domain access is not pre-authorised.</p>
+        </div>
+        <div class="prov-block">
+          <div class="prov-row"><div class="prov-key">Requesting entity</div><div class="prov-val">system_agent</div></div>
+          <div class="prov-row"><div class="prov-key">Item domain</div><div class="prov-val">finance</div></div>
+          <div class="prov-row"><div class="prov-key">Standing approval</div><div class="prov-val">None found</div></div>
+          <div class="prov-row"><div class="prov-key">Risk</div><div class="prov-val">Cross-domain data exposure</div></div>
+        </div>
+        <div class="cross-domain-btns">
+          <button class="btn btn-outline-accent" tabindex="0">ALLOW ONCE</button>
+          <button class="btn btn-secondary" tabindex="0">STANDING APPROVAL</button>
+          <button class="btn btn-outline-danger" tabindex="0">DENY</button>
+        </div>`, 3);
+    }
+
+    case 'one_apex': return wrap('V-MEMORY-45 — ONE APEX MEMORY', `
+      <div style="text-align:center;padding:24px 0">
+        <div style="font-family:var(--apex-font-display);font-size:18px;font-weight:600;color:var(--apex-color-text-primary);margin-bottom:8px;letter-spacing:0.06em">ONE APEX</div>
+        <div style="font-size:12px;color:var(--apex-color-text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:24px">MEMORY IS NOT A PRODUCT</div>
+      </div>
+      <div class="compare-grid">
+        <div class="compare-col">
+          <div class="compare-col-title">What memory IS</div>
+          <ul>
+            <li>Infrastructure — not a feature</li>
+            <li>Shared across all agents</li>
+            <li>Shared across all domains</li>
+            <li>Shared across all sessions</li>
+            <li>Governed by Memory Gateway</li>
+            <li>Inspectable by the user</li>
+            <li>Correctable by the user</li>
+          </ul>
+        </div>
+        <div class="compare-col">
+          <div class="compare-col-title">What memory is NOT</div>
+          <ul>
+            <li>A separate service</li>
+            <li>A separate interface</li>
+            <li>A separate identity</li>
+            <li>An authority source</li>
+            <li>Self-modifying without governance</li>
+            <li>Hidden from the user</li>
+            <li>Agent-private storage</li>
+          </ul>
+        </div>
+      </div>
+      <div class="info-block" style="margin-top:12px"><p>Memory serves APEX. APEX serves the user. Every agent, every domain, every session uses the same governed memory system under the same rules.</p></div>`, 3);
+
+    default: return `<div class="placeholder">Scenario "${key}" not implemented</div>`;
+  }
+}
+
+// ── LOAD SCENARIO ─────────────────────────────────────────────────────────────
+function loadScenario(n) {
+  activeScenarioN = n;
+  activeItemId = null;
+  renderItemsList();
+  renderScenariosList();
+  const s = SCENARIOS.find(x=>x.n===n);
+  if(!s) return;
+  document.getElementById('centreLabel').textContent = s.label;
+  document.getElementById('centrePanel').innerHTML = renderScenario(s.key);
+  // scroll scenario into view
+  const items = document.querySelectorAll('.scenario-item');
+  items[n-1] && items[n-1].scrollIntoView({block:'nearest'});
+}
+
+// ── DISCLOSURE ────────────────────────────────────────────────────────────────
+let disclosureLevel = 2;
+function setDisclosure(l) {
+  disclosureLevel = l;
+  document.querySelectorAll('.dl-btn').forEach((b,i)=>b.classList.toggle('active',i===l));
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────────
+const KEY_MAP = {
+  '1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'0':10,
+  'q':11,'w':12,'e':13,'r':14,'t':15,'y':16,'u':17,'i':18,'o':19,'p':20,
+  'a':21,'s':22,'d':23,'f':24,'g':25,'h':26,'j':27,'k':28,'l':29,
+  'z':30,'x':31,'c':32,'v':33,'b':34,'n':35,'m':36,
+};
+document.addEventListener('keydown', e => {
+  if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT') return;
+  if(e.key==='Escape'){
+    activeScenarioN=null; activeItemId=null;
+    renderItemsList(); renderScenariosList(); renderBoundary(-1);
+    document.getElementById('centreLabel').textContent='Memory Detail Surface';
+    document.getElementById('centrePanel').innerHTML='<div class="placeholder">Select a memory item or scenario to inspect</div>';
+    return;
+  }
+  const n = KEY_MAP[e.key.toLowerCase()];
+  if(n) loadScenario(n);
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderLayerTabs();
+renderItemsList();
+renderScenariosList();
+</script>
+</body>
+</html>

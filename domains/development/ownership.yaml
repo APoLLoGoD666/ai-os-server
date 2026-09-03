@@ -1,0 +1,25 @@
+domain: Development
+domain_id: DOM-000009
+capability: codebase-governance
+runtime: scripts/
+criticality: HIGH
+owner: System Agent
+
+entity_id: DOM-000009
+
+dependencies:
+  - DOM-000003   # Registry — governed by registry constraints
+  - DOM-000005   # Infrastructure — deploys to infra
+
+consumers:
+  - DOM-000010   # Experiments graduate through development
+
+events_emitted:
+  - MIGRATION_ADDED
+  - SNAPSHOT_CREATED
+  - ARCHITECTURE_UPDATED
+
+events_consumed:
+  - GOVERNANCE_VIOLATION
+  - FITNESS_CHECK_FAILED
+  - TEMPORAL_ANOMALY_DETECTED

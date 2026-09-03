@@ -1,0 +1,17 @@
+reviews:
+  auto_review:
+    enabled: true
+    base_branches:
+      - ".*"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+path_filters:
+  - "!node_modules/**"
+  - "!*.lock"
+  - "!*.bak*"
+  - "!.swarm/**"
+  - "!.claude-flow/**"
+  - "!backups/**"

@@ -1,0 +1,34 @@
+id: DOM-000008
+name: Knowledge
+criticality: MEDIUM
+autonomy_level: 1
+
+description: >
+  Knowledge graph, documents, wiki, Obsidian vault, architecture docs.
+  Accumulates and organises the civilisation's understanding of itself.
+
+invariants:
+  - property: status
+    must_be: ACTIVE
+    violation: degraded
+
+  - property: owner
+    must_be_set: true
+    violation: advisory
+
+  - property: health_score
+    minimum: 30
+    consecutive_readings: 5
+    violation: quarantine
+
+vital_connections:
+  - DOM-000003   # Registry
+  - DOM-000004   # Memory (knowledge is stored in memory)
+
+ancestors:
+  - DOM-000001
+
+healing_domain: DOM-000005
+
+clock_baseline_ticks_per_hour: 8
+prediction_accuracy_target: 0.70

@@ -1,0 +1,32 @@
+domain: Observability
+domain_id: DOM-000006
+capability: observatory
+runtime: lib/registry/observatory/
+criticality: HIGH
+owner: Observatory
+
+entity_id: DOM-000006
+
+dependencies:
+  - DOM-000003   # Registry — reads all health and events
+
+consumers:
+  - DOM-000001   # Civilisation monitors via observatory
+
+events_emitted:
+  - DOMAIN_HEALTH_CHANGED
+  - FITNESS_CHECK_FAILED
+  - TEMPORAL_ANOMALY_DETECTED
+
+events_consumed:
+  - ENTITY_CREATED
+  - ENTITY_UPDATED
+  - EDGE_ADDED
+  - EDGE_REMOVED
+  - MIGRATION_ADDED
+  - SNAPSHOT_CREATED
+  - AGENT_ACTIVATED
+  - AGENT_COMPLETED
+  - GOVERNANCE_VIOLATION
+  - DECISION_RECORDED
+  - ARCHITECTURE_UPDATED

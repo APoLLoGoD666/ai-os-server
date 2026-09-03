@@ -1,0 +1,35 @@
+domain: DOM-000002
+events:
+  - name: AGENT_ACTIVATED
+    description: An agent has been activated and is beginning its task.
+    schema:
+      agent_id: string
+      agent_key: string
+      task: string
+      triggered_by: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 200
+    consumers:
+      - DOM-000001   # Civilisation
+      - DOM-000006   # Observability
+      - DOM-000007   # Interface (shows activation in UI)
+
+  - name: AGENT_COMPLETED
+    description: An agent has completed its task.
+    schema:
+      agent_id: string
+      agent_key: string
+      task: string
+      result: string
+      success: boolean
+      duration_ms: number
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 200
+    consumers:
+      - DOM-000001   # Civilisation
+      - DOM-000004   # Memory (store result)
+      - DOM-000006   # Observability
+      - DOM-000007   # Interface (show result)
+      - DOM-000008   # Knowledge (index result)

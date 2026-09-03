@@ -1,0 +1,20 @@
+domain: Experiments
+domain_id: DOM-000010
+capability: research-sandbox
+runtime: benchmarks/
+criticality: LOW
+owner: System Agent
+
+entity_id: DOM-000010
+
+dependencies:
+  - DOM-000009   # Experiments graduate through Development
+
+consumers: []
+
+events_emitted:
+  - ENTITY_CREATED
+
+events_consumed:
+  - ENTITY_CREATED
+  - ENTITY_UPDATED
