@@ -323,12 +323,17 @@ if (!CRON_SECRET)     console.warn('[Startup] CRON_SECRET not set — cron endpo
 (function _loadAgentRoutes() {
     const _rdir = path.join(__dirname, 'routes');
     if (!fs.existsSync(_rdir)) return;
+    const { isMasterRequest } = require('./lib/middleware');
+    function _personalDataGate(req, res, next) {
+        if (req.method === 'GET' && !isMasterRequest(req)) return res.json({ ok: true });
+        next();
+    }
     fs.readdirSync(_rdir)
         .filter(f => f.endsWith('.js') && f !== 'gemini-live.js' && f !== 'tts-gemini.js')
         .sort()
         .forEach(f => {
             try {
-                app.use('/api', require(path.join(_rdir, f)));
+                app.use('/api', _personalDataGate, require(path.join(_rdir, f)));
                 console.log('[Routes] loaded:', f);
             } catch (e) {
                 console.warn('[Routes] load failed:', f, e.message);

@@ -224,9 +224,9 @@ module.exports = function makeTelemetryRouter({ requireAppAccess, getStatus, err
     router.get('/api/cost/today', requireAppAccess, async (req, res) => {
         try {
             const today = new Date().toISOString().split('T')[0];
-            const humanId = req.identity?.humanId;
             let q = sbAdmin.from('apex_agent_runs').select('cost_usd').gte('created_at', today);
-            if (humanId) q = q.eq('human_id', humanId);
+            // Non-master: scope to their own runs. Master sees all (historical runs have NULL human_id).
+            if (req.identity?.role === 'user') q = q.eq('human_id', req.identity.humanId);
             const { data } = await q;
             const total = (data || []).reduce((s, r) => s + (r.cost_usd || 0), 0);
             res.json({ ok: true, cost_usd: total.toFixed(4), date: today });
