@@ -61,7 +61,7 @@ async function waitPageSettle(page, ms = 2500) {
     await waitPageSettle(page);
     await page.screenshot({ path: path.join(SHOTS_DIR, '2-today.png') });
 
-    const todayText = await page.textContent('#page-overview').catch(() => '');
+    const todayText = await page.innerText('#page-overview').catch(() => '');
     const hasEmailLeak    = todayText.includes('@gmail') || todayText.includes('gmail.com');
     // Exclude $0.xxxx (beta cost display showing zero) — only flag non-zero amounts
     const hasFinanceLeak  = /£[1-9]/.test(todayText) || /\$[1-9][0-9,]*(?:\.[0-9]+)?(?:\/|\s|$)/.test(todayText);
