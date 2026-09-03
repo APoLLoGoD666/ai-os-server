@@ -97,7 +97,9 @@ router.post('/auth/logout', (req, res) => {
 router.get('/logout', (req, res) => {
     res.clearCookie('apex_token',  { path: '/' });
     res.clearCookie('apex_session', { path: '/' });
-    return res.redirect(302, '/login');
+    const p = req.query.profile;
+    const dest = (p === 'master' || p === 'user') ? `/login?profile=${p}` : '/login';
+    return res.redirect(302, dest);
 });
 
 router.get('/auth/gmail/reauthorise', requireAppAccess, (req, res) => {
