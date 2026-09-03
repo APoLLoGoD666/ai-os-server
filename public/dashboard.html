@@ -11453,7 +11453,7 @@ function _showKeyModal() {
     document.getElementById('apexKeyInput').addEventListener('keydown',function(e){if(e.key==='Enter')tryKey();});
     setTimeout(function(){var i=document.getElementById('apexKeyInput');if(i)i.focus();},100);
 }
-if (!APP_KEY) { _showKeyModal(); }
+// App key overlay removed — JWT login cookie handles API auth for all logged-in users.
 const MAX_ITEMS           = 5;
 const REFRESH_INTERVAL_MS = 30000;
 
