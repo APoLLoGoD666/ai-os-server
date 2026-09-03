@@ -125,8 +125,12 @@ async function waitPageSettle(page, ms = 2500) {
 
     // ── 8. API cost — separate from master ────────────────────────────────────
     console.log('\n── [8] API COST DISPLAY ────────────────────────────────────');
+    const costApiResp = await page.request.get(`${BASE}/api/cost/today`);
+    const costApiBody = await costApiResp.json().catch(() => null);
+    console.log(`   /api/cost/today for beta: status=${costApiResp.status()} body=${JSON.stringify(costApiBody)}`);
+    await waitPageSettle(page, 2000);
     const betaCost = await page.textContent('#tmCost').catch(() => null);
-    console.log(`   Beta cost display: ${betaCost}`);
+    console.log(`   Beta cost display: '${betaCost}'`);
     check('Cost display present', betaCost !== null && betaCost !== '');
 
     await browser.close();

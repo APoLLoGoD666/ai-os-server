@@ -324,21 +324,28 @@ if (!CRON_SECRET)     console.warn('[Startup] CRON_SECRET not set — cron endpo
     const _rdir = path.join(__dirname, 'routes');
     if (!fs.existsSync(_rdir)) return;
     const { isMasterRequest } = require('./lib/middleware');
+    const _files = fs.readdirSync(_rdir)
+        .filter(f => f.endsWith('.js') && f !== 'gemini-live.js' && f !== 'tts-gemini.js')
+        .sort();
+    // Derive path prefixes from filenames (e.g. routes/intelligence.js → /api/intelligence)
+    const _gatedPrefixes = _files.map(f => '/api/' + path.basename(f, '.js'));
     function _personalDataGate(req, res, next) {
-        if (req.method === 'GET' && !isMasterRequest(req)) return res.json({ ok: true });
+        if (req.method === 'GET' && !isMasterRequest(req)) {
+            const url = (req.originalUrl || req.url).split('?')[0];
+            if (_gatedPrefixes.some(p => url === p || url.startsWith(p + '/'))) {
+                return res.json({ ok: true });
+            }
+        }
         next();
     }
-    fs.readdirSync(_rdir)
-        .filter(f => f.endsWith('.js') && f !== 'gemini-live.js' && f !== 'tts-gemini.js')
-        .sort()
-        .forEach(f => {
-            try {
-                app.use('/api', _personalDataGate, require(path.join(_rdir, f)));
-                console.log('[Routes] loaded:', f);
-            } catch (e) {
-                console.warn('[Routes] load failed:', f, e.message);
-            }
-        });
+    _files.forEach(f => {
+        try {
+            app.use('/api', _personalDataGate, require(path.join(_rdir, f)));
+            console.log('[Routes] loaded:', f);
+        } catch (e) {
+            console.warn('[Routes] load failed:', f, e.message);
+        }
+    });
 })();
 
 app.use('/api', require('./routes/tts-gemini'));
