@@ -95,4 +95,40 @@ router.post('/agents/sync', _auth, async (req, res) => {
     });
 });
 
+// POST /api/agents/seed-office  — persist all 33 office agents to Supabase
+router.post('/agents/seed-office', _auth, async (req, res) => {
+    try {
+        const { OFFICE_AGENTS } = require('../agent-system/office-agents');
+        const sb = _sbSync();
+        const rows = OFFICE_AGENTS.map(a => ({
+            slug:          a.slug,
+            name:          a.name,
+            category:      a.category,
+            description:   a.description || null,
+            system_prompt: a.system_prompt,
+            vault_path:    null,
+            github_path:   null,
+            synced_at:     new Date().toISOString()
+        }));
+        const { error } = await sb.from('apex_agents').upsert(rows, { onConflict: 'slug' });
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, seeded: rows.length, agents: rows.map(r => r.slug) });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// POST /api/agents  — upsert a single agent { slug, name, category, description, system_prompt }
+router.post('/agents', _auth, async (req, res) => {
+    const { slug, name, category, description, system_prompt } = req.body || {};
+    if (!slug || !name || !system_prompt)
+        return res.status(400).json({ ok: false, error: 'slug, name, and system_prompt are required' });
+    const slugClean = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 100);
+    try {
+        const sb = _sbSync();
+        const row = { slug: slugClean, name, category: category || 'general', description: description || null, system_prompt, github_path: null, synced_at: new Date().toISOString() };
+        const { error } = await sb.from('apex_agents').upsert([row], { onConflict: 'slug' });
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, agent: { slug: slugClean, name, category: row.category } });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;

@@ -23127,50 +23127,50 @@ window.apexFileDropHandler = function(e){
     // ── Agents Office V3 data ────────────────────────────────────────────────
 
     var DEPTS = [
-        { id:'marketing',  name:'MARKETING',  color:'#a78bfa', agents:6, roster:[
-            {n:'Research Agent',      desc:'Firecrawl + web scraping for market signals and content angles'},
-            {n:'Graphics Designer',   desc:'Not yet built — visual asset generation planned'},
-            {n:'Instagram Organic',   desc:'Not yet built — organic post scheduling pipeline planned'},
-            {n:'Meta Ads',            desc:'Not yet built — ad variant pipeline planned'},
-            {n:'Newsletter Agent',    desc:'Not yet built — email broadcast pipeline planned'},
-            {n:'Video Editor Agent',  desc:'Not yet built — short-form video pipeline planned'}
+        { id:'marketing',  name:'MARKETING',  color:'#a78bfa', agents:6, category:'marketing', roster:[
+            {n:'Research Agent',      slug:'marketing-research-agent',     desc:'Gathers market intelligence and surfaces content angles using web research.'},
+            {n:'Graphics Designer',   slug:'marketing-graphics-designer',  desc:'Plans and briefs visual assets for campaigns and brand collateral.'},
+            {n:'Instagram Organic',   slug:'marketing-instagram-organic',  desc:'Plans and schedules organic Instagram content.'},
+            {n:'Meta Ads',            slug:'marketing-meta-ads',           desc:'Creates and tests Meta paid ad variants, manages budgets and reporting.'},
+            {n:'Newsletter Agent',    slug:'marketing-newsletter-agent',   desc:'Writes, segments, and schedules email newsletters.'},
+            {n:'Video Editor Agent',  slug:'marketing-video-editor',       desc:'Plans short-form video content and writes scripts and editing briefs.'}
         ]},
-        { id:'comms',      name:'EMAILS',     color:'#2dd4bf', agents:5, roster:[
-            {n:'Triage Agent',        desc:'Not yet built — Gmail integration pending'},
-            {n:'Client Emails',       desc:'Not yet built — reads and drafts client-facing replies'},
-            {n:'Vendor Emails',       desc:'Not yet built — handles supplier correspondence'},
-            {n:'Contractor Emails',   desc:'Not yet built — routes contractor comms and invoices'},
-            {n:'Internal Emails',     desc:'Not yet built — internal team communication routing'}
+        { id:'comms',      name:'EMAILS',     color:'#2dd4bf', agents:5, category:'communications', roster:[
+            {n:'Triage Agent',        slug:'comms-triage-agent',           desc:'Reads every inbox, categorises emails, and routes them to the correct agent.'},
+            {n:'Client Emails',       slug:'comms-client-emails',          desc:'Reads client emails and drafts professional replies.'},
+            {n:'Vendor Emails',       slug:'comms-vendor-emails',          desc:'Manages supplier and vendor correspondence.'},
+            {n:'Contractor Emails',   slug:'comms-contractor-emails',      desc:'Routes and drafts correspondence with contractors including invoices.'},
+            {n:'Internal Emails',     slug:'comms-internal-emails',        desc:'Handles internal team communications and cross-department routing.'}
         ]},
-        { id:'operations', name:'OPERATIONS', color:'#fbbf24', agents:5, roster:[
-            {n:'Compliance Checker',  desc:'Not yet built — monitors rule adherence across agents'},
-            {n:'Legal Review',        desc:'Not yet built — flags contract and legal risk'},
-            {n:'Intel Agent',         desc:'Not yet built — aggregates internal intelligence reports'},
-            {n:'Internal Dashboards', desc:'Not yet built — generates internal KPI views'},
-            {n:'Internal Reporting',  desc:'Not yet built — weekly operations summary pipeline'}
+        { id:'operations', name:'OPERATIONS', color:'#fbbf24', agents:5, category:'operations', roster:[
+            {n:'Compliance Checker',  slug:'ops-compliance-checker',       desc:'Monitors agent actions against defined rules and maintains an audit log.'},
+            {n:'Legal Review',        slug:'ops-legal-review',             desc:'Reviews contracts and agreements for risk flags before human sign-off.'},
+            {n:'Intel Agent',         slug:'ops-intel-agent',              desc:'Aggregates intelligence from all departments into operational briefings.'},
+            {n:'Internal Dashboards', slug:'ops-internal-dashboards',      desc:'Generates and maintains internal KPI dashboards from live data.'},
+            {n:'Internal Reporting',  slug:'ops-internal-reporting',       desc:'Produces weekly and monthly operations reports across all departments.'}
         ]},
-        { id:'sales',      name:'SALES',      color:'#34d399', agents:6, roster:[
-            {n:'Lead Enricher',       desc:'Not yet built — enriches inbound leads with context'},
-            {n:'Prospector',          desc:'Not yet built — outbound prospect research and contact'},
-            {n:'Inbound Leads',       desc:'Not yet built — routes and qualifies inbound enquiries'},
-            {n:'Follow-up Agent',     desc:'Not yet built — automated follow-up sequence'},
-            {n:'Proposal Agent',      desc:'Not yet built — drafts proposals from brief templates'},
-            {n:'Pipeline Agent',      desc:'Not yet built — tracks deal stages and updates CRM'}
+        { id:'sales',      name:'SALES',      color:'#34d399', agents:6, category:'sales', roster:[
+            {n:'Lead Enricher',       slug:'sales-lead-enricher',          desc:'Enriches inbound leads with company data and qualification signals.'},
+            {n:'Prospector',          slug:'sales-prospector',             desc:'Identifies and researches outbound prospects matching the ICP.'},
+            {n:'Inbound Leads',       slug:'sales-inbound-leads',          desc:'Receives, qualifies, and routes inbound enquiries from all channels.'},
+            {n:'Follow-up Agent',     slug:'sales-followup-agent',         desc:'Manages follow-up sequences for prospects and deals.'},
+            {n:'Proposal Agent',      slug:'sales-proposal-agent',         desc:'Drafts customised proposals from brief templates and client context.'},
+            {n:'Pipeline Agent',      slug:'sales-pipeline-agent',         desc:'Tracks deal stages, flags at-risk deals, and produces pipeline reports.'}
         ]},
-        { id:'delivery',   name:'DELIVERY',   color:'#38bdf8', agents:7, roster:[
-            {n:'Project Co-ordinator',desc:'Not yet built — manages project timelines and handoffs'},
-            {n:'Onboarder',           desc:'Not yet built — onboards new clients into the workflow'},
-            {n:'Designer Assistant',  desc:'Not yet built — prepares and formats design assets'},
-            {n:'QA Checker',          desc:'Not yet built — quality-assurance pass before delivery'},
-            {n:'Client Reports',      desc:'Not yet built — automated client-facing progress reports'},
-            {n:'Client Assets',       desc:'Not yet built — packages and delivers final assets'},
-            {n:'Quality Assurance',   desc:'Not yet built — final sign-off and compliance check'}
+        { id:'delivery',   name:'DELIVERY',   color:'#38bdf8', agents:7, category:'delivery', roster:[
+            {n:'Project Co-ordinator',slug:'delivery-project-coordinator', desc:'Manages project timelines and co-ordinates handoffs between delivery agents.'},
+            {n:'Onboarder',           slug:'delivery-onboarder',           desc:'Onboards new clients — collects assets, sets up workspaces, briefs the team.'},
+            {n:'Designer Assistant',  slug:'delivery-designer-assistant',  desc:'Prepares, formats, and organises design assets for client delivery.'},
+            {n:'QA Checker',          slug:'delivery-qa-checker',          desc:'Reviews all deliverables against briefs and quality standards.'},
+            {n:'Client Reports',      slug:'delivery-client-reports',      desc:'Generates client-facing progress reports and post-project summaries.'},
+            {n:'Client Assets',       slug:'delivery-client-assets',       desc:'Packages approved deliverables and co-ordinates final handoff to the client.'},
+            {n:'Quality Assurance',   slug:'delivery-quality-assurance',   desc:'Final compliance and completeness check before project close.'}
         ]},
-        { id:'finance',    name:'FINANCE',    color:'#6366f1', agents:4, roster:[
-            {n:'Finance Agent',       desc:'Budget checks, transaction categorisation, CSV import — live'},
-            {n:'Invoicing Agent',     desc:'Not yet built — invoice generation routes planned'},
-            {n:'Accounts Payable',    desc:'Not yet built — bill tracking and payment scheduling'},
-            {n:'Reconciliation Agent',desc:'Not yet built — monthly reconciliation pipeline planned'}
+        { id:'finance',    name:'FINANCE',    color:'#6366f1', agents:4, category:'finance', roster:[
+            {n:'Finance Agent',       slug:'finance-agent',                desc:'Manages budgets, categorises transactions, and produces financial summaries. Live.', live:true},
+            {n:'Invoicing Agent',     slug:'finance-invoicing-agent',      desc:'Generates, tracks, and chases invoices for completed client work.'},
+            {n:'Accounts Payable',    slug:'finance-accounts-payable',     desc:'Tracks bills and supplier invoices, schedules payments, maintains the payables ledger.'},
+            {n:'Reconciliation Agent',slug:'finance-reconciliation-agent', desc:'Reconciles bank statements against the ledger monthly and flags discrepancies.'}
         ]}
     ];
 
@@ -23317,7 +23317,7 @@ window.apexFileDropHandler = function(e){
             if (rosterEl) {
                 d.roster.forEach(function(agent, i) {
                     var agentKey = d.id + '_' + i;
-                    var isLive = agent.desc && agent.desc.indexOf('live') !== -1;
+                    var isLive = !!agent.live;
                     var statusLabel = isLive ? 'live' : 'dormant';
                     var statusColor = isLive ? '#34d399' : '#27272a';
 
@@ -23326,14 +23326,16 @@ window.apexFileDropHandler = function(e){
                     var row = document.createElement('div');
                     row.className = 'ao-roster-row';
                     row.innerHTML =
-                        '<span class="ao-roster-dot" style="background:' + d.color + '44"></span>' +
+                        '<span class="ao-roster-dot" style="background:' + (isLive ? d.color : d.color + '44') + '"></span>' +
                         '<span class="ao-roster-name">' + agent.n + '</span>' +
                         '<span style="font:700 8px/1 \'JetBrains Mono\',monospace;color:' + statusColor + ';letter-spacing:.04em;margin-left:auto;flex-shrink:0;margin-right:6px">' + statusLabel + '</span>' +
                         '<span class="ao-roster-chev">▶</span>';
 
                     var detail = document.createElement('div');
                     detail.className = 'ao-agent-detail' + (window._aoExpandedAgents[agentKey] ? ' ao-agent-detail--open' : '');
-                    detail.innerHTML = '<div class="ao-agent-detail-body">' + agent.desc + '</div>';
+                    // Start with the local desc; fetch full profile from API on first open
+                    detail.innerHTML = '<div class="ao-agent-detail-body" id="aoAgentBody-' + agentKey + '">' + agent.desc + '</div>';
+                    detail._loaded = false;
 
                     if (window._aoExpandedAgents[agentKey]) {
                         row.querySelector('.ao-roster-chev').textContent = '▼';
@@ -23344,6 +23346,22 @@ window.apexFileDropHandler = function(e){
                         var isOpen = detail.classList.toggle('ao-agent-detail--open');
                         row.querySelector('.ao-roster-chev').textContent = isOpen ? '▼' : '▶';
                         window._aoExpandedAgents[agentKey] = isOpen;
+                        // Fetch full agent profile from API on first expand
+                        if (isOpen && !detail._loaded && agent.slug) {
+                            detail._loaded = true;
+                            var bodyEl = document.getElementById('aoAgentBody-' + agentKey);
+                            fetch('/api/agents/' + agent.slug, { headers: {'x-app-key': window._appKey||''} })
+                                .then(function(r){ return r.json(); })
+                                .then(function(data){
+                                    if (!data.ok || !data.agent) return;
+                                    var a = data.agent;
+                                    var promptSnippet = (a.system_prompt || '').split('\n').slice(0,4).join('\n').trim();
+                                    if (bodyEl) bodyEl.innerHTML =
+                                        '<strong style="color:#a1a1aa;font-size:10px">' + (a.name || agent.n) + '</strong><br>' +
+                                        '<span style="color:#52525b">' + (a.description || agent.desc) + '</span>' +
+                                        (promptSnippet ? '<pre style="margin-top:6px;font:9px/1.4 \'JetBrains Mono\',monospace;color:#3f3f46;white-space:pre-wrap;overflow-wrap:break-word">' + promptSnippet + '</pre>' : '');
+                                }).catch(function(){});
+                        }
                     });
 
                     rowWrap.appendChild(row);

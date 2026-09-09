@@ -34,7 +34,26 @@ function _seedDomainAgents() {
         }
     } catch { /* domain-agents not available yet at require time — skip */ }
 }
+
+// Seed APEX office agents (33 department roster agents)
+function _seedOfficeAgents() {
+    try {
+        const { OFFICE_AGENTS } = require('./office-agents');
+        for (const a of OFFICE_AGENTS) {
+            _cache.set(a.slug, {
+                slug:          a.slug,
+                name:          a.name,
+                category:      a.category,
+                description:   a.description || '',
+                system_prompt: a.system_prompt,
+                github_path:   null,
+            });
+        }
+    } catch (e) { console.warn('[AgentLib] office-agents seed failed:', e.message); }
+}
+
 _seedDomainAgents();
+_seedOfficeAgents();
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -205,9 +224,10 @@ async function syncFromGitHub(sbAdmin, { obsidian = true } = {}) {
             console.log('[AgentLib] Agents written to Obsidian vault under 11 Agents/Specifications/');
         }
 
-        // Populate memory cache (re-seed domain agents so they survive the clear)
+        // Populate memory cache (re-seed domain + office agents so they survive the clear)
         _cache.clear();
         _seedDomainAgents();
+        _seedOfficeAgents();
         agents.forEach(a => _cache.set(a.slug, a));
         _syncedAt = Date.now();
 
