@@ -23225,17 +23225,33 @@ window.apexFileDropHandler = function(e){
         var bx = cw * AO_BRAIN_CX;
         var by = ch * AO_BRAIN_CY;
 
-        // SVG dashed lines from brain to each dept floor center
-        var paths = AO_LAYOUT.map(function(lay) {
+        // SVG: brain→floor dashed curves + floor→card solid connectors
+        var CARD_W = 185, CARD_H = 115;
+        var svgParts = AO_LAYOUT.map(function(lay) {
             var d = DEPTS.find(function(x){ return x.id === lay.id; });
             if (!d) return '';
-            var x1 = lay.cx * cw, y1 = lay.cy * ch;
-            var mx = (x1 + bx) / 2, my = (y1 + by) / 2 - 18;
-            return '<path d="M' + x1 + ' ' + y1 + ' Q' + mx + ' ' + my + ' ' + bx + ' ' + by + '"' +
-                   ' stroke="' + d.color + '" stroke-opacity="0.18" stroke-width="1.5"' +
-                   ' stroke-dasharray="5 8" fill="none"/>';
+            var fx = lay.cx * cw, fy = lay.cy * ch;               // floor center
+            var cardCx = lay.cardL * cw + CARD_W / 2;             // card center x
+            var cardCy = lay.cardT * ch + CARD_H / 2;             // card center y
+            var mx = (fx + bx) / 2, my = (fy + by) / 2 - 18;     // brain curve midpoint
+
+            // Brain → floor (long dashed curve)
+            var brainLine = '<path d="M' + fx + ' ' + fy + ' Q' + mx + ' ' + my + ' ' + bx + ' ' + by + '"' +
+                ' stroke="' + d.color + '" stroke-opacity="0.18" stroke-width="1.5"' +
+                ' stroke-dasharray="5 8" fill="none"/>';
+
+            // Floor → card (short solid line, dept color, slightly thicker)
+            var connLine = '<line x1="' + fx + '" y1="' + fy + '" x2="' + cardCx + '" y2="' + cardCy + '"' +
+                ' stroke="' + d.color + '" stroke-opacity="0.35" stroke-width="1"' +
+                ' stroke-dasharray="3 4"/>';
+
+            // Small dot at floor center to anchor both lines
+            var dot = '<circle cx="' + fx + '" cy="' + fy + '" r="3"' +
+                ' fill="' + d.color + '" fill-opacity="0.5"/>';
+
+            return brainLine + connLine + dot;
         }).join('');
-        svgEl.innerHTML = paths;
+        svgEl.innerHTML = svgParts;
 
         // Remove old islands + brain
         canvas.querySelectorAll('.ao-island, .ao-card, .ao-brain').forEach(function(el){ el.remove(); });
