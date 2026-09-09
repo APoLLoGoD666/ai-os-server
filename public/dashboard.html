@@ -7421,10 +7421,10 @@ select:focus {
                     <span class="hub-card-label">Knowledge</span>
                     <span class="hub-card-sub">Documents &amp; sources</span>
                   </button>
-                  <button class="hub-card" data-goto="actions" aria-label="Actions">
-                    <span class="hub-card-icon">&#9881;</span>
-                    <span class="hub-card-label">Actions</span>
-                    <span class="hub-card-sub">Decisions &amp; agent runs</span>
+                  <button class="hub-card" data-goto="agents" aria-label="Agents">
+                    <span class="hub-card-icon">&#9672;</span>
+                    <span class="hub-card-label">Agents</span>
+                    <span class="hub-card-sub">The Office · Departments · Pipeline</span>
                   </button>
                   <button class="hub-card apex-master-only" data-goto="governance" aria-label="Governance">
                     <span class="hub-card-icon">&#9878;</span>
@@ -10649,70 +10649,66 @@ if(pipe){
                 </div>
             </div><!-- #page-activity -->
 
-            <!-- ══ PAGE: AGENTS (UX-13 — Agents) ══ -->
+            <!-- ══ PAGE: AGENTS (Agents Office — THE OFFICE · DEPARTMENTS · PIPELINE) ══ -->
             <div class="page" id="page-agents">
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">AGENTS</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">STATUS · TASKS · AUTHORITY · RUNS</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">THE OFFICE · DEPARTMENTS · PIPELINE</div>
                     </div>
-                    <button class="ds-btn cyan" data-fn="agentsRefresh">↻ Refresh</button>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:10px">
-                    <!-- Self-check (GET /api/intelligence/self-check) -->
-                    <div class="ds-panel">
+                <!-- Sub-nav tabs -->
+                <div class="office-tab-nav apex-master-only" id="officeSubNav">
+                    <button class="office-tab-btn" data-tab="office">THE OFFICE</button>
+                    <button class="office-tab-btn" data-tab="departments">DEPARTMENTS</button>
+                    <button class="office-tab-btn" data-tab="pipeline">PIPELINE</button>
+                </div>
+                <!-- ── THE OFFICE tab ───────────────────────────────────────── -->
+                <div id="officeTab-office" class="apex-master-only" style="display:none">
+                    <div style="margin-top:18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                        <div style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#52525b">6 DEPARTMENTS · 32 AGENTS DEFINED</div>
+                        <div style="display:flex;gap:14px;font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">
+                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block"></span>CONNECTED</span>
+                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span>PARTIAL</span>
+                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#52525b;display:inline-block"></span>DORMANT</span>
+                        </div>
+                    </div>
+                    <div class="office-dept-grid" id="officeDeptGrid"></div>
+                    <div class="ds-panel" style="margin-top:14px">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot cyan"></span>
-                                <span class="t-label">System Self-Check</span>
+                                <span class="t-label">Handoff Timeline</span>
                             </div>
-                            <span style="font-size:10px;color:#8893a0" id="agentSelfCheckAge">—</span>
+                            <span style="font-size:10px;color:#52525b">Cross-agent flows — connected agents show live data</span>
                         </div>
-                        <div id="agentSelfCheck" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px">
-                            <div class="skel skel-row skel-wide"></div>
-                        </div>
+                        <div id="officeHandoffList" style="padding:8px 10px;max-height:220px;overflow-y:auto"></div>
                     </div>
-                    <!-- Agent runs (GET /api/intelligence/agent-runs) -->
-                    <div class="ds-panel">
+                </div>
+                <!-- ── DEPARTMENTS tab ─────────────────────────────────────── -->
+                <div id="officeTab-departments" class="apex-master-only" style="display:none">
+                    <div style="margin-top:18px;display:flex;flex-direction:column;gap:14px" id="officeDeptCards"></div>
+                </div>
+                <!-- ── PIPELINE tab ────────────────────────────────────────── -->
+                <div id="officeTab-pipeline" class="apex-master-only" style="display:none">
+                    <div class="ds-panel" style="margin-top:18px">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot cyan"></span>
-                                <span class="t-label">Recent Agent Runs</span>
+                                <span class="t-label">Autonomous Pipeline · 8 Stages</span>
                             </div>
-                            <span style="font-size:10px;color:#8893a0">Pipeline execution audit</span>
+                            <span style="font-size:10px;color:#52525b">Researcher → Reflector</span>
                         </div>
-                        <div id="agentRunsList" style="display:flex;flex-direction:column;gap:6px;padding:10px;max-height:340px;overflow-y:auto">
-                            <div class="skel skel-row skel-wide"></div>
-                        </div>
+                        <div id="officePipelineList" style="padding:4px 10px 10px"></div>
                     </div>
-                    <!-- Standing approvals -->
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot amber"></span>
-                                <span class="t-label">Standing Approvals</span>
-                            </div>
-                        </div>
-                        <div id="agentStandingList" style="display:flex;flex-direction:column;gap:6px;padding:10px">
-                            <div class="skel skel-row skel-wide"></div>
-                        </div>
-                    </div>
-                    <!-- Agent Capability Display (UX-13 §4 — GAP-09) -->
-                    <div class="ds-panel">
+                    <div class="ds-panel" style="margin-top:14px">
                         <div class="ds-panel-header">
                             <div class="ds-panel-header-left">
                                 <span class="ds-dot cyan"></span>
-                                <span class="t-label">Domain Agent Capabilities</span>
+                                <span class="t-label">Constitutional Gates</span>
                             </div>
-                            <span style="font-size:10px;color:#8893a0" id="agentCapCount">—</span>
                         </div>
-                        <div id="agentCapList" style="display:flex;flex-direction:column;gap:6px">
-                            <div class="skel skel-row skel-wide"></div>
-                        </div>
-                    </div>
-                    <!-- Authority note (INV-13-01: capability ≠ authority) -->
-                    <div style="padding:10px 12px;background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.1);border-radius:8px;font-size:10px;color:#8893a0;line-height:1.5">
-                        <strong style="color:rgba(232,244,255,0.6)">Authority boundary:</strong> Agent capability ≠ authority. Agents propose; you approve. Constitutional gate applies to all execution.
+                        <div id="officeGatesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;padding:10px"></div>
                     </div>
                 </div>
             </div><!-- #page-agents -->
@@ -10775,17 +10771,10 @@ if(pipe){
             <div class="page" id="page-actions">
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">AGENTS</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">THE OFFICE · DEPARTMENTS · PIPELINE · DECISIONS</div>
+                        <div class="ds-page-title" style="letter-spacing:7px">ACTIONS</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">DECISIONS · IN-FLIGHT · HISTORY · NOTIFICATIONS</div>
                     </div>
                     <button class="ds-btn cyan" data-fn="actionsRefresh" aria-label="Refresh actions">↻ Refresh</button>
-                </div>
-                <!-- Agents Office sub-nav -->
-                <div class="office-tab-nav apex-master-only" id="officeSubNav">
-                    <button class="office-tab-btn" data-tab="office">THE OFFICE</button>
-                    <button class="office-tab-btn" data-tab="departments">DEPARTMENTS</button>
-                    <button class="office-tab-btn" data-tab="pipeline">PIPELINE</button>
-                    <button class="office-tab-btn" data-tab="decisions">DECISIONS</button>
                 </div>
                 <!-- V-11-H stub — shown to non-Master users until backend gate H-B1 lands. -->
                 <div id="actnStubPanel" class="apex-user-only actn-stub" style="display:none">
@@ -10902,57 +10891,6 @@ if(pipe){
                     <!-- Plain-language lifecycle note (V-11-H H-9). -->
                     <div style="padding:10px 12px;margin-top:16px;background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.1);border-radius:8px;font-size:10px;color:#8893a0;line-height:1.5">
                         Every action APEX takes waits for your approval, unless a standing rule allows it, and every action can be inspected after it runs.
-                    </div>
-                </div>
-
-                <!-- ── Agents Office: THE OFFICE tab ───────────────────────── -->
-                <div id="officeTab-office" class="apex-master-only" style="display:none">
-                    <div style="margin-top:18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-                        <div style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#52525b">6 DEPARTMENTS · 32 AGENTS DEFINED</div>
-                        <div style="display:flex;gap:14px;font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">
-                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block"></span>CONNECTED</span>
-                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span>PARTIAL</span>
-                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#52525b;display:inline-block"></span>DORMANT</span>
-                        </div>
-                    </div>
-                    <div class="office-dept-grid" id="officeDeptGrid"></div>
-                    <div class="ds-panel" style="margin-top:14px">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Handoff Timeline</span>
-                            </div>
-                            <span style="font-size:10px;color:#52525b">Cross-agent flows — connected agents show live data</span>
-                        </div>
-                        <div id="officeHandoffList" style="padding:8px 10px;max-height:220px;overflow-y:auto"></div>
-                    </div>
-                </div>
-
-                <!-- ── Agents Office: DEPARTMENTS tab ──────────────────────── -->
-                <div id="officeTab-departments" class="apex-master-only" style="display:none">
-                    <div style="margin-top:18px;display:flex;flex-direction:column;gap:14px" id="officeDeptCards"></div>
-                </div>
-
-                <!-- ── Agents Office: PIPELINE tab ─────────────────────────── -->
-                <div id="officeTab-pipeline" class="apex-master-only" style="display:none">
-                    <div class="ds-panel" style="margin-top:18px">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Autonomous Pipeline · 8 Stages</span>
-                            </div>
-                            <span style="font-size:10px;color:#52525b">Researcher → Reflector</span>
-                        </div>
-                        <div id="officePipelineList" style="padding:4px 10px 10px"></div>
-                    </div>
-                    <div class="ds-panel" style="margin-top:14px">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Constitutional Gates</span>
-                            </div>
-                        </div>
-                        <div id="officeGatesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;padding:10px"></div>
                     </div>
                 </div>
 
@@ -11260,9 +11198,9 @@ if(pipe){
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Command</span>
         </button>
-        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Agents">
+        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Actions">
             <span class="nav-icon">◈</span>
-            <span class="nav-label">Agents</span>
+            <span class="nav-label">Actions</span>
             <span class="ds-notif-badge amber" id="navActionsBadge" style="display:none"></span>
         </button>
         <button class="nav-btn" id="nav-domains" aria-label="Domains">
@@ -11289,7 +11227,7 @@ if(pipe){
     // V-11-F F-7: 'operation' removed (merged into business)
     // V-11-F F-9: civilisation/reality moved out of LIFE & WORK swipe sequence to end (SYSTEM → Advanced)
     // V-11-H H-18: 'agents' / 'approvals' / 'activity' consolidated into 'actions' (positioned after 'intelligence' per Section 32).
-    var pages = ['overview','domains', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'memory', 'governance', 'civilisation', 'reality', 'settings'];
+    var pages = ['overview','domains', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'memory', 'governance', 'civilisation', 'reality', 'settings'];
     var activePage = 'overview';
 
     var pageMeta = {
@@ -11307,9 +11245,9 @@ if(pipe){
         civilisation:  { title:'Civilisation',   sub:'Advanced Analysis · System Model' },
         reality:       { title:'Reality Model',  sub:'Advanced Analysis · System Model' },
         activity:      { title:'Activity',      sub:'Events · Observability · Live Feed' },
-        agents:        { title:'Agents',        sub:'Status · Tasks · Authority · Runs' },
         approvals:     { title:'Approvals',     sub:'Pending · Actions · Governance' },
-        actions:       { title:'Agents',        sub:'The Office · Departments · Pipeline · Decisions' },
+        actions:       { title:'Actions',       sub:'Decisions · In-flight · History · Notifications' },
+        agents:        { title:'Agents',        sub:'The Office · Departments · Pipeline' },
         knowledge:     { title:'Knowledge',     sub:'Facts · Evidence · Gaps · Coverage' },
         intelligence:  { title:'Intelligence',  sub:'Briefing · Opportunities · Health' },
         memory:        { title:'Memory',        sub:'Episodic · Semantic · Health' },
@@ -23310,18 +23248,12 @@ window.apexFileDropHandler = function(e){
     };
 
     window.officeSetTab = function(tab) {
-        ['actnStubPanel', 'actnMasterSurface'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.style.display = tab === 'decisions' ? '' : 'none';
-        });
         ['officeTab-office', 'officeTab-departments', 'officeTab-pipeline'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
-        if (tab !== 'decisions') {
-            var panel = document.getElementById('officeTab-' + tab);
-            if (panel) panel.style.display = 'block';
-        }
+        var panel = document.getElementById('officeTab-' + tab);
+        if (panel) panel.style.display = 'block';
         document.querySelectorAll('.office-tab-btn').forEach(function(b) {
             b.classList.toggle('active', b.dataset.tab === tab);
         });
@@ -23330,33 +23262,22 @@ window.apexFileDropHandler = function(e){
         if (tab === 'pipeline'     && !window._officePipeRendered) { renderPipeline();    window._officePipeRendered = true; }
     };
 
-    function initAgentsPage() {
-        // Hide decisions panels, show THE OFFICE by default
-        ['actnStubPanel', 'actnMasterSurface'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
-        officeSetTab('office');
-    }
-
     document.addEventListener('DOMContentLoaded', function() {
-        // Wire sub-tab buttons
         document.querySelectorAll('.office-tab-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() { officeSetTab(btn.dataset.tab); });
+            btn.addEventListener('click', function() { window.officeSetTab(btn.dataset.tab); });
         });
 
-        // Hook switchPage so navigating to 'actions' always opens THE OFFICE
+        // Open THE OFFICE tab whenever the agents page is navigated to
         var _origSwitch = window.switchPage;
         if (_origSwitch) {
             window.switchPage = function(name) {
                 _origSwitch(name);
-                if (name === 'actions') { initAgentsPage(); }
+                if (name === 'agents') { window.officeSetTab('office'); }
             };
         }
 
-        // If already on the agents/actions page on load, show THE OFFICE
         var hash = location.hash.slice(1);
-        if (hash === 'actions' || hash === 'agents') { initAgentsPage(); }
+        if (hash === 'agents') { window.officeSetTab('office'); }
     });
 })();
 </script>
