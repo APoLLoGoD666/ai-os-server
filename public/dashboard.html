@@ -561,6 +561,18 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 .ao-tt { font:600 11px/1.3 'Inter',system-ui,sans-serif; color:#e4e4e7; }
 .ao-tg { font:500 9px/1 'JetBrains Mono',monospace; color:#3f3f46; margin-top:3px; letter-spacing:.03em; word-break:break-word; }
 .ao-ta { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:2px; }
+.ao-card { cursor:pointer; transition:box-shadow .15s,border-color .15s; }
+.ao-card:hover { box-shadow:0 0 0 1px rgba(255,255,255,0.14),0 8px 28px rgba(0,0,0,0.5) !important; }
+.ao-card--open { z-index:10 !important; border-color:rgba(255,255,255,0.18) !important; }
+.ao-card-toggle { display:flex; align-items:center; justify-content:space-between; margin-top:9px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.07em; color:#3f3f46; user-select:none; transition:color .12s; }
+.ao-card--open .ao-card-toggle { color:#71717a; }
+.ao-card-roster { overflow:hidden; max-height:0; transition:max-height .28s cubic-bezier(0.4,0,0.2,1); margin-top:0; }
+.ao-card--open .ao-card-roster { max-height:360px; }
+.ao-roster-row { display:flex; align-items:center; gap:7px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.ao-roster-row:last-child { border-bottom:none; }
+.ao-roster-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.ao-roster-name { font:500 11px/1 'Inter',system-ui,sans-serif; color:#71717a; }
+.ao-connecting { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; letter-spacing:.04em; }
 
 /* ── V-11-K: canonical progressive disclosure ────────────────────────── */
 .apex-disclosure { }
@@ -23108,30 +23120,18 @@ window.apexFileDropHandler = function(e){
     // ── Agents Office V3 data ────────────────────────────────────────────────
 
     var DEPTS = [
-        { id:'marketing', name:'MARKETING', color:'#a78bfa',
-          agents:6, doing:3, next:11, done:90, waitApproval:1,
-          stats:[{k:'NEW INSIGHTS',v:'23'},{k:'COST PER USER',v:'$40'}],
-          roster:['Research','Graphics Designer','Instagram Organic','Meta Ads','Newsletter','Video Editor'] },
-        { id:'comms', name:'EMAILS', color:'#2dd4bf',
-          agents:5, doing:1, next:0, done:96, waitApproval:0,
-          stats:[{k:'EMAILS SENT',v:'184'},{k:'REPLIES DRAFTED',v:'73'}],
+        { id:'marketing',  name:'MARKETING',  color:'#a78bfa', agents:6,
+          roster:['Research Agent','Graphics Designer','Instagram Organic','Meta Ads','Newsletter Agent','Video Editor Agent'] },
+        { id:'comms',      name:'EMAILS',     color:'#2dd4bf', agents:5,
           roster:['Triage Agent','Client Emails','Vendor Emails','Contractor Emails','Internal Emails'] },
-        { id:'operations', name:'OPERATIONS', color:'#fbbf24',
-          agents:5, doing:1, next:2, done:93, waitApproval:0,
-          stats:[{k:'PROPOSALS MADE',v:'10'},{k:'NEW INSIGHTS',v:'25'}],
-          roster:['Compliance Checker','Legal Review','Intel','Internal Dashboards','Internal Reporting'] },
-        { id:'sales', name:'SALES', color:'#34d399',
-          agents:6, doing:3, next:1, done:95, waitApproval:1,
-          stats:[{k:'CALLS S-A-J',v:'27·43·28'},{k:'NEW MANAGERS',v:'16'},{k:'AUTO-ONBOARDED',v:'29'}],
-          roster:['Lead Enricher','Prospector','Inbound Leads','Follow Ups','Proposals','Sales Lead'] },
-        { id:'delivery', name:'DELIVERY', color:'#38bdf8',
-          agents:7, doing:2, next:1, done:137, waitApproval:1,
-          stats:[{k:'REPORTS SENT',v:'28'},{k:'ON TRACK',v:'11 / 12'}],
+        { id:'operations', name:'OPERATIONS', color:'#fbbf24', agents:5,
+          roster:['Compliance Checker','Legal Review','Intel Agent','Internal Dashboards','Internal Reporting'] },
+        { id:'sales',      name:'SALES',      color:'#34d399', agents:6,
+          roster:['Lead Enricher','Prospector','Inbound Leads','Follow-up Agent','Proposal Agent','Pipeline Agent'] },
+        { id:'delivery',   name:'DELIVERY',   color:'#38bdf8', agents:7,
           roster:['Project Co-ordinator','Onboarder','Designer Assistant','QA Checker','Client Reports','Client Assets','Quality Assurance'] },
-        { id:'finance', name:'FINANCE', color:'#6366f1',
-          agents:4, doing:1, next:1, done:80, waitApproval:0,
-          stats:[{k:'INVOICES ISSUED',v:'34'},{k:'BILLS PAID',v:'37'}],
-          roster:['Accounting Lead','Invoicing','Accounts Payable','Reconciliation'] }
+        { id:'finance',    name:'FINANCE',    color:'#6366f1', agents:4,
+          roster:['Finance Agent','Invoicing Agent','Accounts Payable','Reconciliation Agent'] }
     ];
 
     var GATES = [
@@ -23154,26 +23154,12 @@ window.apexFileDropHandler = function(e){
 
     var AO_BRAIN_CX = 0.40; // fraction of canvas width
     var AO_BRAIN_CY = 0.48; // fraction of canvas height
-    var AO_BRAIN_NOTES = 287;
+    var AO_BRAIN_NOTES = 0;
 
-    // Task feed sample data (replaced by live data when available)
-    var AO_SAMPLE_TASKS = [
-        {status:'backlog',    title:'Audit the contractor invoice vs contract',   tags:'ACCOUNTS PAYABLE · FINANCE · JUST ADDED · FROM CONTRACTOR EMAILS', age:'just now'},
-        {status:'backlog',    title:'Write the reel script from the research',    tags:'INSTAGRAM ORGANIC · MARKETING · JUST ADDED · FROM RESEARCH', age:'just now'},
-        {status:'backlog',    title:'Refresh the KPI dashboard',                  tags:'INTERNAL DASHBOARDS · OPERATIONS · JUST ADDED · FROM INTERNAL REPORTING', age:'just now'},
-        {status:'backlog',    title:'QA the Crestline Finance asset set',         tags:'QUALITY ASSURANCE CHECKER · DELIVERY · JUST ADDED · FROM DESIGNER ASSISTANT', age:'just now'},
-        {status:'backlog',    title:'Refresh the Q3 dashboard',                   tags:'INTERNAL DASHBOARDS · OPERATIONS · WAITING 42 MIN · FROM INTERNAL EMAILS', age:'42 min'},
-        {status:'backlog',    title:'Write the reel script from the research',    tags:'INSTAGRAM ORGANIC · MARKETING · WAITING 42 MIN · FROM RESEARCH', age:'42 min'},
-        {status:'inprogress', title:'Process contractor invoice batch',           tags:'FINANCE · ACCOUNTS PAYABLE · RUNNING', age:'5 min'},
-        {status:'inprogress', title:'Enrich inbound lead list — Crestline',       tags:'SALES · LEAD ENRICHER · RUNNING', age:'12 min'},
-        {status:'waiting',    title:'Approve campaign brief before publish',      tags:'MARKETING · CONTENT · AWAITING YOU', age:'1 hr'},
-        {status:'done',       title:'Sent weekly operations report',              tags:'OPERATIONS · INTERNAL REPORTING · DELIVERED', age:'2 hr'},
-        {status:'done',       title:'Reconciled July transactions',               tags:'FINANCE · RECONCILIATION · COMPLETE', age:'3 hr'}
-    ];
-
-    window._aoFilter = 'all';
-    window._aoTasks  = AO_SAMPLE_TASKS;
-    window._aoDeptIdx = 0;
+    window._aoFilter      = 'all';
+    window._aoTasks       = [];
+    window._aoDeptIdx     = 0;
+    window._aoExpandedIds = {};
 
     // ── Clock ────────────────────────────────────────────────────────────────
     function aoStartClock() {
@@ -23249,34 +23235,42 @@ window.apexFileDropHandler = function(e){
 
             canvas.appendChild(island);
 
-            // Stats card
+            // Stat card
             var cardL = lay.cardL * cw, cardT = lay.cardT * ch;
             var card = document.createElement('div');
-            card.className = 'ao-card';
+            card.className = 'ao-card' + (window._aoExpandedIds[d.id] ? ' ao-card--open' : '');
+            card.dataset.deptId = d.id;
             card.style.cssText = 'left:' + cardL + 'px;top:' + cardT + 'px;';
 
-            var statsHtml = d.stats.map(function(s){
-                return '<div class="ao-stat-line"><span>' + s.k + '</span><span class="ao-stat-val">' + s.v + '</span></div>';
+            var rosterHtml = d.roster.map(function(name){
+                return '<div class="ao-roster-row">' +
+                    '<span class="ao-roster-dot" style="background:' + d.color + '44"></span>' +
+                    '<span class="ao-roster-name">' + name + '</span>' +
+                    '<span class="ao-connecting">dormant</span>' +
+                '</div>';
             }).join('');
 
-            var approvalHtml = d.waitApproval > 0
-                ? '<button class="ao-approval-btn" data-fn="aoOpenApprovals">&#9651; ' + d.waitApproval + ' WAITING APPROVAL</button>'
-                : '';
+            var chevron = window._aoExpandedIds[d.id] ? '▲' : '▼';
 
             card.innerHTML =
                 '<div class="ao-card-name" style="color:' + d.color + '">' +
-                    '<span style="width:6px;height:6px;border-radius:50%;background:' + d.color + ';flex-shrink:0"></span>' +
+                    '<span style="width:6px;height:6px;border-radius:50%;background:' + d.color + ';flex-shrink:0;box-shadow:0 0 6px ' + d.color + '66"></span>' +
                     d.name +
                 '</div>' +
                 '<div class="ao-card-count">' + d.agents + '</div>' +
                 '<div class="ao-card-agents">AGENTS</div>' +
-                (statsHtml ? '<div class="ao-card-stats">' + statsHtml + '</div>' : '') +
-                '<div class="ao-doing-row">' +
-                    'DOING <span class="ao-doing-num">' + d.doing + '</span>' +
-                    '&nbsp; NEXT <span class="ao-next-num">' + d.next + '</span>' +
-                    '&nbsp; DONE <span class="ao-done-num">' + d.done + '</span>' +
+                '<div class="ao-doing-row" style="margin-top:8px">' +
+                    'DOING <span class="ao-doing-num">—</span>' +
+                    '&nbsp; NEXT <span class="ao-next-num">—</span>' +
+                    '&nbsp; DONE <span class="ao-done-num">—</span>' +
                 '</div>' +
-                approvalHtml;
+                '<div class="ao-card-toggle"><span>' + d.agents + ' AGENTS</span><span class="ao-card-chevron">' + chevron + '</span></div>' +
+                '<div class="ao-card-roster"><div style="padding-top:6px">' + rosterHtml + '</div></div>';
+
+            card.addEventListener('click', function(e){
+                if (e.target.closest('[data-fn]')) return;
+                window.aoToggleCard(d.id, card);
+            });
 
             canvas.appendChild(card);
         });
@@ -23285,12 +23279,20 @@ window.apexFileDropHandler = function(e){
         var brain = document.createElement('div');
         brain.className = 'ao-brain';
         brain.style.cssText = 'left:' + bx + 'px;top:' + (by - 52) + 'px;';
+        var notesLabel = AO_BRAIN_NOTES > 0 ? AO_BRAIN_NOTES + ' NOTES' : 'CONNECTING...';
         brain.innerHTML =
             '<div class="ao-brain-orb"><div class="ao-brain-inner"></div></div>' +
-            '<div class="ao-brain-tag">&#9679; THE BRAIN</div>' +
-            '<div class="ao-brain-notes" id="aoBrainNotes">' + AO_BRAIN_NOTES + ' NOTES</div>';
+            '<div class="ao-brain-tag">THE BRAIN</div>' +
+            '<div class="ao-brain-notes" id="aoBrainNotes">' + notesLabel + '</div>';
         canvas.appendChild(brain);
     }
+
+    window.aoToggleCard = function(id, cardEl) {
+        window._aoExpandedIds[id] = !window._aoExpandedIds[id];
+        cardEl.classList.toggle('ao-card--open', !!window._aoExpandedIds[id]);
+        var chev = cardEl.querySelector('.ao-card-chevron');
+        if (chev) chev.textContent = window._aoExpandedIds[id] ? '▲' : '▼';
+    };
 
     // ── Task feed ────────────────────────────────────────────────────────────
     var AO_STATUS_MAP = {backlog:'bl', inprogress:'ip', waiting:'wa', done:'dn'};
@@ -23306,7 +23308,8 @@ window.apexFileDropHandler = function(e){
         });
 
         if (!tasks.length) {
-            list.innerHTML = '<div style="font:11px/1.5 \'Inter\',system-ui,sans-serif;color:#3f3f46;padding:16px 0">No tasks</div>';
+            list.innerHTML = '<div style="font:500 10px/1.6 \'JetBrains Mono\',monospace;color:#27272a;padding:20px 0;letter-spacing:.04em">' +
+                (window._aoTasksLoaded ? 'No tasks for this filter.' : 'Connecting to task feed...') + '</div>';
             return;
         }
 
@@ -23373,6 +23376,7 @@ window.apexFileDropHandler = function(e){
             var r = await fetch('/api/tasks?limit=80&sort=created_at:desc', { headers: {'x-app-key': window._appKey||''} });
             var data = await r.json();
             var raw = Array.isArray(data) ? data : (data.tasks || data.data || []);
+            window._aoTasksLoaded = true;
             if (raw.length) {
                 window._aoTasks = raw.map(function(t){
                     var st = (t.status || '').toLowerCase();
@@ -23382,10 +23386,10 @@ window.apexFileDropHandler = function(e){
                     else                                                  st = 'backlog';
                     return { status:st, title:t.description || t.title || '—', tags:(t.tags||[]).join(' · '), age:'' };
                 });
-                aoUpdateCounts();
-                aoRenderTasks();
             }
-        } catch(e) {}
+            aoUpdateCounts();
+            aoRenderTasks();
+        } catch(e) { window._aoTasksLoaded = true; aoRenderTasks(); }
 
         try {
             var r2 = await fetch('/api/intelligence/self-check', { headers: {'x-app-key': window._appKey||''} });
@@ -23414,10 +23418,12 @@ window.apexFileDropHandler = function(e){
         try {
             var r3 = await fetch('/api/memory?limit=1&count=true', { headers: {'x-app-key': window._appKey||''} });
             var md  = await r3.json();
-            var cnt = md.count || md.total || AO_BRAIN_NOTES;
-            AO_BRAIN_NOTES = cnt;
-            var el = document.getElementById('aoBrainNotes');
-            if (el) el.textContent = cnt + ' NOTES';
+            var cnt = md.count || md.total || 0;
+            if (cnt > 0) {
+                AO_BRAIN_NOTES = cnt;
+                var el = document.getElementById('aoBrainNotes');
+                if (el) el.textContent = cnt + ' NOTES';
+            }
         } catch(e) {}
     }
 
