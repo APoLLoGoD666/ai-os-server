@@ -476,6 +476,30 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
     .actn-undo-banner { bottom: 60px; padding: 12px 14px; font-size: 12px; }
 }
 
+/* ── Agents Office sub-tabs ────────────────────────────────────────────── */
+.office-tab-nav { display:flex; gap:0; margin-top:18px; border-bottom:1px solid rgba(255,255,255,0.07); overflow-x:auto; scrollbar-width:none; }
+.office-tab-btn { background:transparent; border:none; border-bottom:2px solid transparent; padding:9px 16px; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; cursor:pointer; white-space:nowrap; transition:color .15s,border-color .15s; flex-shrink:0; }
+.office-tab-btn.active { border-bottom-color:#38bdf8; color:#f4f4f5; }
+.office-tab-btn:hover:not(.active) { color:#a1a1aa; }
+.office-dept-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px; }
+@media (max-width:700px) { .office-dept-grid { grid-template-columns:1fr; } }
+.office-dept-card { position:relative; border:1px solid rgba(255,255,255,0.085); border-radius:8px; background:#0c0c0c; overflow:hidden; padding:14px; cursor:pointer; transition:border-color .15s; }
+.office-dept-card:hover { border-color:rgba(255,255,255,0.18); }
+.office-dept-accent { position:absolute; top:0; left:0; right:0; height:2px; }
+.office-dept-badge { display:inline-flex; align-items:center; gap:5px; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.08em; padding:2px 7px; border-radius:999px; border:1px solid rgba(255,255,255,0.085); color:#52525b; flex-shrink:0; }
+.office-dept-badge.dormant { color:#71717a; }
+.office-dept-badge.active-badge { border-color:rgba(52,211,153,0.3); color:#34d399; background:rgba(52,211,153,0.08); }
+.office-dept-badge.partial-badge { border-color:rgba(251,191,36,0.3); color:#fbbf24; background:rgba(251,191,36,0.07); }
+.office-agent-row { display:flex; align-items:baseline; gap:8px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); flex-wrap:wrap; }
+.office-agent-row:last-child { border-bottom:none; }
+.office-agent-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.office-stage-row { display:grid; grid-template-columns:120px 56px 1fr 140px 46px; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+@media (max-width:700px) { .office-stage-row { grid-template-columns:1fr auto; } }
+.office-stage-bar { height:3px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
+.office-stage-fill { height:100%; border-radius:2px; }
+.office-handoff-row { display:flex; gap:10px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); align-items:baseline; flex-wrap:wrap; }
+.office-handoff-row:last-child { border-bottom:none; }
+
 /* ── V-11-K: canonical progressive disclosure ────────────────────────── */
 .apex-disclosure { }
 .apex-disclosure-trigger {
@@ -10756,6 +10780,13 @@ if(pipe){
                     </div>
                     <button class="ds-btn cyan" data-fn="actionsRefresh" aria-label="Refresh actions">↻ Refresh</button>
                 </div>
+                <!-- Agents Office sub-nav -->
+                <div class="office-tab-nav apex-master-only" id="officeSubNav">
+                    <button class="office-tab-btn active" data-tab="decisions">DECISIONS</button>
+                    <button class="office-tab-btn" data-tab="office">THE OFFICE</button>
+                    <button class="office-tab-btn" data-tab="departments">DEPARTMENTS</button>
+                    <button class="office-tab-btn" data-tab="pipeline">PIPELINE</button>
+                </div>
                 <!-- V-11-H stub — shown to non-Master users until backend gate H-B1 lands. -->
                 <div id="actnStubPanel" class="apex-user-only actn-stub" style="display:none">
                     APEX is preparing your Actions view — available once your account is fully activated.
@@ -10873,6 +10904,58 @@ if(pipe){
                         Every action APEX takes waits for your approval, unless a standing rule allows it, and every action can be inspected after it runs.
                     </div>
                 </div>
+
+                <!-- ── Agents Office: THE OFFICE tab ───────────────────────── -->
+                <div id="officeTab-office" class="apex-master-only" style="display:none">
+                    <div style="margin-top:18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                        <div style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#52525b">6 DEPARTMENTS · 32 AGENTS DEFINED</div>
+                        <div style="display:flex;gap:14px;font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">
+                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block"></span>CONNECTED</span>
+                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span>PARTIAL</span>
+                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#52525b;display:inline-block"></span>DORMANT</span>
+                        </div>
+                    </div>
+                    <div class="office-dept-grid" id="officeDeptGrid"></div>
+                    <div class="ds-panel" style="margin-top:14px">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Handoff Timeline</span>
+                            </div>
+                            <span style="font-size:10px;color:#52525b">Cross-agent flows — connected agents show live data</span>
+                        </div>
+                        <div id="officeHandoffList" style="padding:8px 10px;max-height:220px;overflow-y:auto"></div>
+                    </div>
+                </div>
+
+                <!-- ── Agents Office: DEPARTMENTS tab ──────────────────────── -->
+                <div id="officeTab-departments" class="apex-master-only" style="display:none">
+                    <div style="margin-top:18px;display:flex;flex-direction:column;gap:14px" id="officeDeptCards"></div>
+                </div>
+
+                <!-- ── Agents Office: PIPELINE tab ─────────────────────────── -->
+                <div id="officeTab-pipeline" class="apex-master-only" style="display:none">
+                    <div class="ds-panel" style="margin-top:18px">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Autonomous Pipeline · 8 Stages</span>
+                            </div>
+                            <span style="font-size:10px;color:#52525b">Researcher → Reflector</span>
+                        </div>
+                        <div id="officePipelineList" style="padding:4px 10px 10px"></div>
+                    </div>
+                    <div class="ds-panel" style="margin-top:14px">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot cyan"></span>
+                                <span class="t-label">Constitutional Gates</span>
+                            </div>
+                        </div>
+                        <div id="officeGatesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;padding:10px"></div>
+                    </div>
+                </div>
+
             </div><!-- #page-actions -->
 
             <!-- ══ PAGE: KNOWLEDGE (UX-11 — Knowledge surface) ══ -->
@@ -23010,6 +23093,247 @@ window.apexFileDropHandler = function(e){
             window.switchPage('actions');
             _scrollTo(_hashAliases[h]);
         }
+    });
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════
+   AGENTS OFFICE — department map, rosters, pipeline health
+   ═══════════════════════════════════════════════════════════════════════ */
+(function() {
+    var RC = { architect:'#a78bfa', developer:'#38bdf8', reviewer:'#fbbf24', validator:'#34d399', tester:'#2dd4bf', committer:'#4ade80', orchestrator:'#6366f1', reflector:'#f87171' };
+
+    var DEPTS = [
+        { id:'marketing', name:'MARKETING', color:'#a78bfa', lead:'CONTENT LEAD',
+          brief:'Turns research into ads, posts and campaigns. Never publishes without your word.',
+          status:'dormant', agents:6, doing:0, next:0, done:0,
+          roster:[
+            {n:'Advertising Agent',r:'developer',s:'dormant',a:'Not yet built — ad variant pipeline planned'},
+            {n:'Content Agent',r:'developer',s:'dormant',a:'Not yet built'},
+            {n:'Research Agent',r:'architect',s:'dormant',a:'Not yet built'},
+            {n:'Brand Guard',r:'reviewer',s:'dormant',a:'Not yet built'},
+            {n:'Newsletter Agent',r:'committer',s:'dormant',a:'Not yet built'},
+            {n:'Video Editor Agent',r:'tester',s:'dormant',a:'Not yet built'}
+          ]},
+        { id:'comms', name:'COMMS', color:'#2dd4bf', lead:'INBOX LEAD',
+          brief:'Reads every inbox, answers what it can, routes what it cannot.',
+          status:'dormant', agents:5, doing:0, next:0, done:0,
+          roster:[
+            {n:'Triage Agent',r:'orchestrator',s:'dormant',a:'Not yet built — Gmail integration pending'},
+            {n:'Client Emails',r:'developer',s:'dormant',a:'Not yet built'},
+            {n:'Vendor Emails',r:'developer',s:'dormant',a:'Not yet built'},
+            {n:'Contractor Emails',r:'reviewer',s:'dormant',a:'Not yet built'},
+            {n:'Internal Emails',r:'tester',s:'dormant',a:'Not yet built'}
+          ]},
+        { id:'operations', name:'OPERATIONS', color:'#fbbf24', lead:'OPS LEAD',
+          brief:'Keeps the office honest — compliance, legal, dashboards, internal reporting.',
+          status:'dormant', agents:5, doing:0, next:0, done:0,
+          roster:[
+            {n:'Compliance Checker',r:'reviewer',s:'dormant',a:'Not yet built'},
+            {n:'Legal Review',r:'reviewer',s:'dormant',a:'Not yet built'},
+            {n:'Internal Dashboards',r:'tester',s:'dormant',a:'Not yet built'},
+            {n:'Internal Reporting',r:'architect',s:'dormant',a:'Not yet built'},
+            {n:'Intel Agent',r:'architect',s:'dormant',a:'Not yet built'}
+          ]},
+        { id:'sales', name:'SALES', color:'#34d399', lead:'SALES LEAD',
+          brief:'Works the pipeline — finds them, qualifies them, proposes, follows up.',
+          status:'dormant', agents:6, doing:0, next:0, done:0,
+          roster:[
+            {n:'Prospector',r:'architect',s:'dormant',a:'Not yet built'},
+            {n:'Lead Enricher',r:'developer',s:'dormant',a:'Not yet built'},
+            {n:'Proposal Agent',r:'validator',s:'dormant',a:'Not yet built'},
+            {n:'Follow-up Agent',r:'committer',s:'dormant',a:'Not yet built'},
+            {n:'Call Notes Agent',r:'tester',s:'dormant',a:'Not yet built'},
+            {n:'Pipeline Agent',r:'orchestrator',s:'dormant',a:'Not yet built'}
+          ]},
+        { id:'delivery', name:'DELIVERY', color:'#38bdf8', lead:'DELIVERY LEAD',
+          brief:'Onboards the win and does the work — projects, assets, QA, client reporting.',
+          status:'dormant', agents:6, doing:0, next:0, done:0,
+          roster:[
+            {n:'Project Co-ordinator',r:'orchestrator',s:'dormant',a:'Not yet built'},
+            {n:'Onboarder',r:'developer',s:'dormant',a:'Not yet built'},
+            {n:'Designer Assistant',r:'developer',s:'dormant',a:'Not yet built'},
+            {n:'QA Checker',r:'validator',s:'dormant',a:'Not yet built'},
+            {n:'Client Reports',r:'tester',s:'dormant',a:'Not yet built'},
+            {n:'Client Assets',r:'committer',s:'dormant',a:'Not yet built'}
+          ]},
+        { id:'finance', name:'FINANCE', color:'#6366f1', lead:'ACCOUNTS LEAD',
+          brief:'Bills the work, pays the bills, and tells you what it all means.',
+          status:'partial', agents:4, doing:1, next:1, done:80,
+          roster:[
+            {n:'Finance Agent',r:'validator',s:'active',a:'Budget checks, transaction categorisation, CSV import — live'},
+            {n:'Invoicing Agent',r:'committer',s:'dormant',a:'Not yet built — invoice routes planned'},
+            {n:'Accounts Payable',r:'reviewer',s:'dormant',a:'Not yet built'},
+            {n:'Reconciliation Agent',r:'validator',s:'dormant',a:'Not yet built'}
+          ]}
+    ];
+
+    var STAGES = [
+        {n:'RESEARCHER', r:'architect', m:'sonnet', note:'Firecrawl context + Playwright fallback', pct:96},
+        {n:'ARCHITECT',  r:'architect', m:'sonnet', note:'Zod-validated implementation plan', pct:100},
+        {n:'DEVELOPER',  r:'developer', m:'sonnet', note:'8 096 tokens per file · 3-retry backoff', pct:98},
+        {n:'REVIEWER',   r:'reviewer',  m:'haiku',  note:'Structured JSON review pass', pct:85},
+        {n:'VALIDATOR',  r:'validator', m:'haiku',  note:'Acceptance criteria + static analysis', pct:82},
+        {n:'TESTER',     r:'tester',    m:'haiku',  note:'node --check per modified file', pct:100},
+        {n:'COMMITTER',  r:'committer', m:'haiku',  note:'Irreversible — human approval required', pct:86},
+        {n:'REFLECTOR',  r:'reflector', m:'haiku',  note:'Lesson stored to memory layer', pct:99}
+    ];
+
+    var GATES = [
+        {n:'CONSTITUTIONAL', note:'No active anti-goal alerts', status:'PASS', color:'#34d399'},
+        {n:'AUTONOMY',       note:'AUTONOMY_LEVEL read at dispatch', status:'PASS', color:'#34d399'},
+        {n:'TWIN',           note:'Latest twin simulation ≠ do_not_deploy', status:'PASS', color:'#34d399'},
+        {n:'DEPLOY',         note:'deployment_policy setting enforced', status:'CHECK', color:'#fbbf24'},
+        {n:'BEHAVIOR',       note:'0 active blocking constraints', status:'PASS', color:'#34d399'}
+    ];
+
+    var HANDOFFS = [
+        {time:'—', from:'Research Agent', fromC:'#a78bfa', to:'Advertising Agent', toC:'#a78bfa', what:'Angles worth testing — dormant, agents not built yet'},
+        {time:'—', from:'Triage Agent', fromC:'#2dd4bf', to:'Prospector', toC:'#34d399', what:'Inbound leads from inbox — dormant'},
+        {time:'—', from:'Proposal Agent', fromC:'#34d399', to:'Client Emails', toC:'#2dd4bf', what:'Proposal ready to follow up — dormant'},
+        {time:'live', from:'Finance Agent', fromC:'#6366f1', to:'You', toC:'#38bdf8', what:'Budget check + transactions — connected'},
+        {time:'—', from:'Onboarder', fromC:'#38bdf8', to:'Project Co-ordinator', toC:'#38bdf8', what:'Signed clients ready to plan — dormant'}
+    ];
+
+    function badge(status) {
+        if (status === 'active')  return '<span class="office-dept-badge active-badge"><span style="width:5px;height:5px;border-radius:50%;background:#34d399;display:inline-block"></span>ACTIVE</span>';
+        if (status === 'partial') return '<span class="office-dept-badge partial-badge"><span style="width:5px;height:5px;border-radius:50%;background:#fbbf24;display:inline-block"></span>PARTIAL</span>';
+        return '<span class="office-dept-badge dormant"><span style="width:5px;height:5px;border-radius:50%;background:#52525b;display:inline-block"></span>DORMANT</span>';
+    }
+
+    function renderOfficeMap() {
+        var grid = document.getElementById('officeDeptGrid');
+        if (!grid) return;
+        grid.innerHTML = DEPTS.map(function(d) {
+            return '<div class="office-dept-card" onclick="officeGoToDept(\'' + d.id + '\')">' +
+                '<span class="office-dept-accent" style="background:' + d.color + '"></span>' +
+                '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-top:4px">' +
+                    '<div>' +
+                        '<div style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.09em;color:' + d.color + '">' + d.name + '</div>' +
+                        '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#52525b;margin-top:4px">' + d.lead + '</div>' +
+                    '</div>' +
+                    badge(d.status) +
+                '</div>' +
+                '<div style="font:12px/1.45 \'Inter\',system-ui,sans-serif;color:#71717a;margin-top:10px;margin-bottom:10px">' + d.brief + '</div>' +
+                '<div style="display:flex;gap:14px;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#52525b">' +
+                    '<span>AGENTS <span style="color:#f4f4f5">' + d.agents + '</span></span>' +
+                    '<span>DOING <span style="color:#38bdf8">' + d.doing + '</span></span>' +
+                    '<span>DONE <span style="color:#f4f4f5">' + d.done + '</span></span>' +
+                '</div>' +
+                '<div style="margin-top:10px;font:10px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em;color:#52525b">SEE AGENTS →</div>' +
+            '</div>';
+        }).join('');
+
+        var hEl = document.getElementById('officeHandoffList');
+        if (hEl) {
+            hEl.innerHTML = HANDOFFS.map(function(h) {
+                var timeStyle = h.time === 'live' ? 'color:#34d399' : 'color:#3f3f46';
+                return '<div class="office-handoff-row">' +
+                    '<span style="font:10px/1 \'JetBrains Mono\',monospace;' + timeStyle + ';width:34px;flex-shrink:0">' + h.time + '</span>' +
+                    '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.05em;color:' + h.fromC + ';width:130px;flex-shrink:0">' + h.from + '</span>' +
+                    '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.05em;color:' + h.toC + ';width:130px;flex-shrink:0">→ ' + h.to + '</span>' +
+                    '<span style="font:12px/1.4 \'Inter\',system-ui,sans-serif;color:#71717a;min-width:0">' + h.what + '</span>' +
+                '</div>';
+            }).join('');
+        }
+    }
+
+    function renderDeptCards() {
+        var el = document.getElementById('officeDeptCards');
+        if (!el) return;
+        el.innerHTML = DEPTS.map(function(d) {
+            var rows = d.roster.map(function(a) {
+                var dotC = a.s === 'active' ? '#34d399' : (a.s === 'partial' ? '#fbbf24' : '#3f3f46');
+                var nameC = a.s === 'active' ? '#f4f4f5' : '#71717a';
+                return '<div class="office-agent-row">' +
+                    '<span class="office-agent-dot" style="background:' + (RC[a.r] || '#52525b') + '"></span>' +
+                    '<span style="font:600 12px/1 \'Inter\',system-ui,sans-serif;color:' + nameC + ';width:160px;flex-shrink:0">' + a.n + '</span>' +
+                    '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em;color:' + (RC[a.r] || '#52525b') + ';width:96px;flex-shrink:0">' + a.r.toUpperCase() + '</span>' +
+                    '<span style="font:11px/1.4 \'Inter\',system-ui,sans-serif;color:#71717a;flex:1;min-width:0">' + a.a + '</span>' +
+                    '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:' + dotC + ';width:60px;text-align:right;flex-shrink:0">' + a.s.toUpperCase() + '</span>' +
+                '</div>';
+            }).join('');
+            return '<div id="officeDept-' + d.id + '" style="position:relative;border:1px solid rgba(255,255,255,0.085);border-radius:8px;background:#0c0c0c;overflow:hidden;padding:16px 14px 12px">' +
+                '<span style="position:absolute;top:0;left:0;right:0;height:2px;background:' + d.color + '"></span>' +
+                '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
+                    '<div>' +
+                        '<div style="display:flex;align-items:center;gap:7px">' +
+                            '<span style="width:6px;height:6px;border-radius:50%;background:' + d.color + '"></span>' +
+                            '<span style="font:600 13px/1 \'Inter\',system-ui,sans-serif;letter-spacing:.06em;color:#f4f4f5">' + d.name + '</span>' +
+                        '</div>' +
+                        '<div style="font:11px/1.45 \'Inter\',system-ui,sans-serif;color:#71717a;margin-top:5px;max-width:420px">' + d.brief + '</div>' +
+                    '</div>' +
+                    badge(d.status) +
+                '</div>' +
+                '<div style="border-top:1px solid rgba(255,255,255,0.04)">' + rows + '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function renderPipeline() {
+        var el = document.getElementById('officePipelineList');
+        if (el) {
+            el.innerHTML = STAGES.map(function(s) {
+                var c = RC[s.r] || '#52525b';
+                return '<div class="office-stage-row">' +
+                    '<div style="display:flex;align-items:center;gap:6px">' +
+                        '<span style="width:5px;height:5px;border-radius:50%;background:' + c + ';flex-shrink:0"></span>' +
+                        '<span style="font:600 11px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em;color:#f4f4f5">' + s.n + '</span>' +
+                    '</div>' +
+                    '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;padding:3px 7px;border:1px solid rgba(255,255,255,0.085);border-radius:4px;color:#52525b">' + s.m + '</span>' +
+                    '<span style="font:11px/1.45 \'Inter\',system-ui,sans-serif;color:#71717a">' + s.note + '</span>' +
+                    '<div class="office-stage-bar"><div class="office-stage-fill" style="width:' + s.pct + '%;background:' + c + '"></div></div>' +
+                    '<span style="font:12px/1 \'JetBrains Mono\',monospace;color:' + c + ';text-align:right">' + s.pct + '%</span>' +
+                '</div>';
+            }).join('');
+        }
+        var gEl = document.getElementById('officeGatesGrid');
+        if (gEl) {
+            gEl.innerHTML = GATES.map(function(g) {
+                return '<div style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid rgba(255,255,255,0.085);border-radius:6px;background:#131313">' +
+                    '<div style="display:flex;align-items:center;gap:7px">' +
+                        '<span style="width:6px;height:6px;border-radius:50%;background:' + g.color + '"></span>' +
+                        '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.09em;color:#f4f4f5">' + g.n + '</span>' +
+                        '<span style="margin-left:auto;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:' + g.color + '">' + g.status + '</span>' +
+                    '</div>' +
+                    '<span style="font:11px/1.45 \'Inter\',system-ui,sans-serif;color:#71717a">' + g.note + '</span>' +
+                '</div>';
+            }).join('');
+        }
+    }
+
+    window.officeGoToDept = function(id) {
+        officeSetTab('departments');
+        setTimeout(function() {
+            var el = document.getElementById('officeDept-' + id);
+            if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        }, 60);
+    };
+
+    window.officeSetTab = function(tab) {
+        ['actnStubPanel', 'actnMasterSurface'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = tab === 'decisions' ? '' : 'none';
+        });
+        ['officeTab-office', 'officeTab-departments', 'officeTab-pipeline'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        if (tab !== 'decisions') {
+            var panel = document.getElementById('officeTab-' + tab);
+            if (panel) panel.style.display = 'block';
+        }
+        document.querySelectorAll('.office-tab-btn').forEach(function(b) {
+            b.classList.toggle('active', b.dataset.tab === tab);
+        });
+        if (tab === 'office'       && !window._officeMapRendered)  { renderOfficeMap();   window._officeMapRendered  = true; }
+        if (tab === 'departments'  && !window._officeDeptRendered) { renderDeptCards();   window._officeDeptRendered = true; }
+        if (tab === 'pipeline'     && !window._officePipeRendered) { renderPipeline();    window._officePipeRendered = true; }
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.office-tab-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() { officeSetTab(btn.dataset.tab); });
+        });
     });
 })();
 </script>
