@@ -477,7 +477,7 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 }
 
 /* ── Agents Office sub-tabs ────────────────────────────────────────────── */
-.office-tab-nav { display:flex; gap:0; margin-top:18px; border-bottom:1px solid rgba(255,255,255,0.07); overflow-x:auto; scrollbar-width:none; }
+.office-tab-nav { display:flex; gap:0; margin-top:18px; border-bottom:1px solid rgba(255,255,255,0.07); overflow-x:auto; scrollbar-width:none; position:sticky; top:0; z-index:10; background:#000; padding-top:4px; }
 .office-tab-btn { background:transparent; border:none; border-bottom:2px solid transparent; padding:9px 16px; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; cursor:pointer; white-space:nowrap; transition:color .15s,border-color .15s; flex-shrink:0; }
 .office-tab-btn.active { border-bottom-color:#38bdf8; color:#f4f4f5; }
 .office-tab-btn:hover:not(.active) { color:#a1a1aa; }
