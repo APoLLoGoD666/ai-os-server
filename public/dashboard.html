@@ -500,6 +500,68 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 .office-handoff-row { display:flex; gap:10px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); align-items:baseline; flex-wrap:wrap; }
 .office-handoff-row:last-child { border-bottom:none; }
 
+/* ── Agents Office V3 ───────────────────────────────────────────────────── */
+#page-agents { padding:0 !important; gap:0 !important; overflow:hidden !important; }
+.ao-topbar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; height:42px; background:#080808; border-bottom:1px solid rgba(255,255,255,0.06); z-index:5; }
+.ao-title { font:700 13px/1 'JetBrains Mono',monospace; letter-spacing:.06em; color:#f4f4f5; }
+.ao-conn-dot { width:6px; height:6px; border-radius:50%; background:#34d399; flex-shrink:0; box-shadow:0 0 6px #34d399; }
+.ao-icon-pill { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:5px; background:rgba(255,255,255,0.06); font-size:11px; line-height:1; }
+.ao-warn-badge { background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.28); border-radius:14px; padding:3px 9px; font:700 10px/1 'JetBrains Mono',monospace; color:#fbbf24; display:inline-flex; align-items:center; gap:5px; }
+.ao-clock { font:600 14px/1 'JetBrains Mono',monospace; color:#52525b; letter-spacing:.04em; }
+.ao-main { flex:1; min-height:0; display:flex; overflow:hidden; }
+.ao-canvas { flex:1; min-width:0; position:relative; overflow:hidden; background:radial-gradient(ellipse at 42% 52%, rgba(22,22,32,1) 0%, #070707 80%); }
+.ao-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+.ao-island { position:absolute; }
+.ao-floor { transform-origin:center; border-radius:4px; }
+.ao-card { position:absolute; background:rgba(10,10,14,0.97); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:14px 16px 12px; min-width:175px; z-index:2; }
+.ao-card-name { font:700 11px/1 'JetBrains Mono',monospace; letter-spacing:.09em; margin-bottom:6px; display:flex; align-items:center; gap:7px; }
+.ao-card-count { font:700 40px/1 'JetBrains Mono',monospace; color:#f4f4f5; line-height:1; }
+.ao-card-agents { font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.09em; color:#52525b; margin-top:3px; }
+.ao-card-stats { margin-top:10px; display:flex; flex-direction:column; gap:4px; }
+.ao-stat-line { display:flex; justify-content:space-between; gap:16px; font:500 10px/1 'JetBrains Mono',monospace; color:#52525b; }
+.ao-stat-val { color:#f4f4f5; }
+.ao-doing-row { display:flex; gap:12px; margin-top:9px; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.07em; color:#52525b; flex-wrap:wrap; }
+.ao-doing-num { color:#38bdf8; }
+.ao-next-num { color:#a78bfa; }
+.ao-done-num { color:#f4f4f5; }
+.ao-approval-btn { margin-top:9px; width:100%; padding:7px 0; background:rgba(251,191,36,0.07); border:1px solid rgba(251,191,36,0.22); border-radius:5px; color:#fbbf24; font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.07em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:background .15s; }
+.ao-approval-btn:hover { background:rgba(251,191,36,0.14); }
+.ao-agent-label { position:absolute; font:600 8px/1.2 'JetBrains Mono',monospace; letter-spacing:.03em; color:#3f3f46; white-space:nowrap; pointer-events:none; }
+.ao-brain { position:absolute; display:flex; flex-direction:column; align-items:center; gap:4px; z-index:3; transform:translateX(-50%); }
+.ao-brain-orb { width:68px; height:68px; border-radius:50%; background:radial-gradient(circle, rgba(99,102,241,0.22) 0%, rgba(99,102,241,0.06) 55%, transparent 100%); border:1px solid rgba(99,102,241,0.25); display:flex; align-items:center; justify-content:center; box-shadow:0 0 28px rgba(99,102,241,0.12); }
+.ao-brain-inner { width:26px; height:26px; background:radial-gradient(circle, #a78bfa, #6366f1); border-radius:50%; box-shadow:0 0 14px rgba(99,102,241,0.5); }
+.ao-brain-tag { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; }
+.ao-brain-notes { font:700 10px/1 'JetBrains Mono',monospace; color:#a78bfa; }
+.ao-task-panel { width:375px; flex-shrink:0; background:#080808; border-left:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; overflow:hidden; }
+.ao-task-top { padding:14px 16px 0; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; padding-bottom:12px; }
+.ao-dept-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.ao-dept-sel { display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:6px 10px; cursor:pointer; font:700 11px/1 'JetBrains Mono',monospace; letter-spacing:.06em; color:#f4f4f5; }
+.ao-dept-sel-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.ao-task-row { display:flex; gap:7px; align-items:center; }
+.ao-task-inp { flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:8px 10px; font:12px/1 'Inter',system-ui,sans-serif; color:#f4f4f5; outline:none; min-width:0; }
+.ao-task-inp::placeholder { color:#3f3f46; }
+.ao-add-btn { padding:8px 14px; background:rgba(0,212,255,0.07); border:1px solid rgba(0,212,255,0.2); border-radius:7px; color:#00d4ff; font:700 10px/1 'JetBrains Mono',monospace; cursor:pointer; flex-shrink:0; letter-spacing:.06em; transition:background .15s; }
+.ao-add-btn:hover { background:rgba(0,212,255,0.13); }
+.ao-status-hdr { display:flex; align-items:center; justify-content:space-between; margin-top:13px; }
+.ao-status-title { font:700 15px/1 'JetBrains Mono',monospace; letter-spacing:.04em; color:#f4f4f5; }
+.ao-whole-lnk { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.07em; color:#3f3f46; cursor:pointer; transition:color .12s; }
+.ao-whole-lnk:hover { color:#71717a; }
+.ao-filters { display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
+.ao-fc { padding:3px 10px; border-radius:20px; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.05em; cursor:pointer; border:1px solid rgba(255,255,255,0.07); color:#52525b; background:transparent; transition:all .12s; }
+.ao-fc:hover { color:#a1a1aa; }
+.ao-fc.active { background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.14); color:#f4f4f5; }
+.ao-task-list { flex:1; overflow-y:auto; padding:10px 16px 16px; display:flex; flex-direction:column; gap:8px; scrollbar-width:thin; scrollbar-color:rgba(99,102,241,0.2) transparent; }
+.ao-ti { display:flex; gap:8px; align-items:flex-start; }
+.ao-tbadge { flex-shrink:0; padding:2px 6px; border-radius:4px; font:700 8px/1.2 'JetBrains Mono',monospace; letter-spacing:.05em; margin-top:1px; }
+.ao-tbadge.bl { background:rgba(40,40,45,0.9); color:#71717a; }
+.ao-tbadge.ip { background:rgba(56,189,248,0.07); color:#38bdf8; border:1px solid rgba(56,189,248,0.16); }
+.ao-tbadge.wa { background:rgba(251,191,36,0.07); color:#fbbf24; border:1px solid rgba(251,191,36,0.16); }
+.ao-tbadge.dn { background:rgba(52,211,153,0.07); color:#34d399; border:1px solid rgba(52,211,153,0.16); }
+.ao-tb { flex:1; min-width:0; }
+.ao-tt { font:600 11px/1.3 'Inter',system-ui,sans-serif; color:#e4e4e7; }
+.ao-tg { font:500 9px/1 'JetBrains Mono',monospace; color:#3f3f46; margin-top:3px; letter-spacing:.03em; word-break:break-word; }
+.ao-ta { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:2px; }
+
 /* ── V-11-K: canonical progressive disclosure ────────────────────────── */
 .apex-disclosure { }
 .apex-disclosure-trigger {
@@ -10652,66 +10714,66 @@ if(pipe){
                 </div>
             </div><!-- #page-activity -->
 
-            <!-- ══ PAGE: AGENTS (Agents Office — THE OFFICE · DEPARTMENTS · PIPELINE) ══ -->
+            <!-- ══ PAGE: AGENTS (Agents Office V3) ══ -->
             <div class="page" id="page-agents">
-                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
-                    <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">AGENTS</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">THE OFFICE · DEPARTMENTS · PIPELINE</div>
-                    </div>
-                </div>
-                <!-- Sub-nav tabs -->
-                <div class="office-tab-nav apex-master-only" id="officeSubNav">
-                    <button class="office-tab-btn" data-tab="office">THE OFFICE</button>
-                    <button class="office-tab-btn" data-tab="departments">DEPARTMENTS</button>
-                    <button class="office-tab-btn" data-tab="pipeline">PIPELINE</button>
-                </div>
-                <!-- ── THE OFFICE tab ───────────────────────────────────────── -->
-                <div id="officeTab-office" class="apex-master-only" style="display:none">
-                    <div style="margin-top:18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-                        <div style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#52525b">6 DEPARTMENTS · 32 AGENTS DEFINED</div>
-                        <div style="display:flex;gap:14px;font:500 10px/1 'JetBrains Mono',monospace;color:#8893a0">
-                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block"></span>CONNECTED</span>
-                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span>PARTIAL</span>
-                            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#52525b;display:inline-block"></span>DORMANT</span>
+                <!-- Topbar -->
+                <div class="ao-topbar">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span class="ao-title">AGENTS OFFICE <span style="font-size:9px;color:#52525b;letter-spacing:.08em">V3</span></span>
+                        <span class="ao-conn-dot"></span>
+                        <span style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#3f3f46">CONNECTED TO</span>
+                        <div style="display:flex;gap:4px">
+                            <span class="ao-icon-pill">&#128220;</span>
+                            <span class="ao-icon-pill">&#9881;</span>
+                            <span class="ao-icon-pill">&#128269;</span>
+                            <span class="ao-icon-pill">&#128295;</span>
+                            <span class="ao-icon-pill">&#9993;</span>
                         </div>
                     </div>
-                    <div class="office-dept-grid" id="officeDeptGrid"></div>
-                    <div class="ds-panel" style="margin-top:14px">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Handoff Timeline</span>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#3f3f46">RUNS HEADLESS ON</span>
+                        <span class="ao-icon-pill">&#9733;</span>
+                        <span class="ao-icon-pill">&#9881;</span>
+                        <span class="ao-warn-badge" id="aoWarnBadge"><span>&#9651;</span><span id="aoWarnCount">2</span></span>
+                        <span class="ao-clock" id="aoClock">--:--:-- --</span>
+                    </div>
+                </div>
+                <!-- Main layout: canvas + task panel -->
+                <div class="ao-main apex-master-only">
+                    <div class="ao-canvas" id="aoCanvas">
+                        <svg class="ao-svg" id="aoSvg"></svg>
+                        <!-- Department islands and brain rendered by JS -->
+                    </div>
+                    <div class="ao-task-panel">
+                        <div class="ao-task-top">
+                            <div class="ao-dept-row">
+                                <div class="ao-dept-sel" id="aoDeptSel">
+                                    <span class="ao-dept-sel-dot" id="aoDeptSelDot" style="background:#a78bfa"></span>
+                                    <span id="aoDeptSelName">MARKETING</span>
+                                    <span style="color:#52525b;margin-left:3px;font-size:9px">▾</span>
+                                </div>
                             </div>
-                            <span style="font-size:10px;color:#52525b">Cross-agent flows — connected agents show live data</span>
-                        </div>
-                        <div id="officeHandoffList" style="padding:8px 10px;max-height:220px;overflow-y:auto"></div>
-                    </div>
-                </div>
-                <!-- ── DEPARTMENTS tab ─────────────────────────────────────── -->
-                <div id="officeTab-departments" class="apex-master-only" style="display:none">
-                    <div style="margin-top:18px;display:flex;flex-direction:column;gap:14px" id="officeDeptCards"></div>
-                </div>
-                <!-- ── PIPELINE tab ────────────────────────────────────────── -->
-                <div id="officeTab-pipeline" class="apex-master-only" style="display:none">
-                    <div class="ds-panel" style="margin-top:18px">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Autonomous Pipeline · 8 Stages</span>
+                            <div class="ao-task-row">
+                                <input class="ao-task-inp" id="aoTaskInp" placeholder="Type a task for marketing..." />
+                                <button class="ao-add-btn" data-fn="aoAddTask">ADD</button>
                             </div>
-                            <span style="font-size:10px;color:#52525b">Researcher → Reflector</span>
-                        </div>
-                        <div id="officePipelineList" style="padding:4px 10px 10px"></div>
-                    </div>
-                    <div class="ds-panel" style="margin-top:14px">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Constitutional Gates</span>
+                            <div class="ao-status-hdr">
+                                <span class="ao-status-title">TASK STATUS</span>
+                                <span class="ao-whole-lnk">WHOLE OFFICE</span>
+                            </div>
+                            <div class="ao-filters" id="aoFilters">
+                                <button class="ao-fc active" data-aofilter="all">ALL <span id="aoFcAll">—</span></button>
+                                <button class="ao-fc" data-aofilter="backlog">BACKLOG <span id="aoFcBacklog">—</span></button>
+                                <button class="ao-fc" data-aofilter="inprogress">IN PROGRESS <span id="aoFcInProgress">—</span></button>
+                                <button class="ao-fc" data-aofilter="waiting">WAITING <span id="aoFcWaiting">—</span></button>
+                                <button class="ao-fc" data-aofilter="done">DONE <span id="aoFcDone">—</span></button>
                             </div>
                         </div>
-                        <div id="officeGatesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;padding:10px"></div>
+                        <div class="ao-task-list" id="aoTaskList">
+                            <div class="skel skel-row skel-wide"></div>
+                            <div class="skel skel-row skel-wide"></div>
+                            <div class="skel skel-row"></div>
+                        </div>
                     </div>
                 </div>
             </div><!-- #page-agents -->
@@ -23043,82 +23105,33 @@ window.apexFileDropHandler = function(e){
    AGENTS OFFICE — department map, rosters, pipeline health
    ═══════════════════════════════════════════════════════════════════════ */
 (function() {
-    var RC = { architect:'#a78bfa', developer:'#38bdf8', reviewer:'#fbbf24', validator:'#34d399', tester:'#2dd4bf', committer:'#4ade80', orchestrator:'#6366f1', reflector:'#f87171' };
+    // ── Agents Office V3 data ────────────────────────────────────────────────
 
     var DEPTS = [
-        { id:'marketing', name:'MARKETING', color:'#a78bfa', lead:'CONTENT LEAD',
-          brief:'Turns research into ads, posts and campaigns. Never publishes without your word.',
-          status:'dormant', agents:6, doing:0, next:0, done:0,
-          roster:[
-            {n:'Advertising Agent',r:'developer',s:'dormant',a:'Not yet built — ad variant pipeline planned'},
-            {n:'Content Agent',r:'developer',s:'dormant',a:'Not yet built'},
-            {n:'Research Agent',r:'architect',s:'dormant',a:'Not yet built'},
-            {n:'Brand Guard',r:'reviewer',s:'dormant',a:'Not yet built'},
-            {n:'Newsletter Agent',r:'committer',s:'dormant',a:'Not yet built'},
-            {n:'Video Editor Agent',r:'tester',s:'dormant',a:'Not yet built'}
-          ]},
-        { id:'comms', name:'COMMS', color:'#2dd4bf', lead:'INBOX LEAD',
-          brief:'Reads every inbox, answers what it can, routes what it cannot.',
-          status:'dormant', agents:5, doing:0, next:0, done:0,
-          roster:[
-            {n:'Triage Agent',r:'orchestrator',s:'dormant',a:'Not yet built — Gmail integration pending'},
-            {n:'Client Emails',r:'developer',s:'dormant',a:'Not yet built'},
-            {n:'Vendor Emails',r:'developer',s:'dormant',a:'Not yet built'},
-            {n:'Contractor Emails',r:'reviewer',s:'dormant',a:'Not yet built'},
-            {n:'Internal Emails',r:'tester',s:'dormant',a:'Not yet built'}
-          ]},
-        { id:'operations', name:'OPERATIONS', color:'#fbbf24', lead:'OPS LEAD',
-          brief:'Keeps the office honest — compliance, legal, dashboards, internal reporting.',
-          status:'dormant', agents:5, doing:0, next:0, done:0,
-          roster:[
-            {n:'Compliance Checker',r:'reviewer',s:'dormant',a:'Not yet built'},
-            {n:'Legal Review',r:'reviewer',s:'dormant',a:'Not yet built'},
-            {n:'Internal Dashboards',r:'tester',s:'dormant',a:'Not yet built'},
-            {n:'Internal Reporting',r:'architect',s:'dormant',a:'Not yet built'},
-            {n:'Intel Agent',r:'architect',s:'dormant',a:'Not yet built'}
-          ]},
-        { id:'sales', name:'SALES', color:'#34d399', lead:'SALES LEAD',
-          brief:'Works the pipeline — finds them, qualifies them, proposes, follows up.',
-          status:'dormant', agents:6, doing:0, next:0, done:0,
-          roster:[
-            {n:'Prospector',r:'architect',s:'dormant',a:'Not yet built'},
-            {n:'Lead Enricher',r:'developer',s:'dormant',a:'Not yet built'},
-            {n:'Proposal Agent',r:'validator',s:'dormant',a:'Not yet built'},
-            {n:'Follow-up Agent',r:'committer',s:'dormant',a:'Not yet built'},
-            {n:'Call Notes Agent',r:'tester',s:'dormant',a:'Not yet built'},
-            {n:'Pipeline Agent',r:'orchestrator',s:'dormant',a:'Not yet built'}
-          ]},
-        { id:'delivery', name:'DELIVERY', color:'#38bdf8', lead:'DELIVERY LEAD',
-          brief:'Onboards the win and does the work — projects, assets, QA, client reporting.',
-          status:'dormant', agents:6, doing:0, next:0, done:0,
-          roster:[
-            {n:'Project Co-ordinator',r:'orchestrator',s:'dormant',a:'Not yet built'},
-            {n:'Onboarder',r:'developer',s:'dormant',a:'Not yet built'},
-            {n:'Designer Assistant',r:'developer',s:'dormant',a:'Not yet built'},
-            {n:'QA Checker',r:'validator',s:'dormant',a:'Not yet built'},
-            {n:'Client Reports',r:'tester',s:'dormant',a:'Not yet built'},
-            {n:'Client Assets',r:'committer',s:'dormant',a:'Not yet built'}
-          ]},
-        { id:'finance', name:'FINANCE', color:'#6366f1', lead:'ACCOUNTS LEAD',
-          brief:'Bills the work, pays the bills, and tells you what it all means.',
-          status:'partial', agents:4, doing:1, next:1, done:80,
-          roster:[
-            {n:'Finance Agent',r:'validator',s:'active',a:'Budget checks, transaction categorisation, CSV import — live'},
-            {n:'Invoicing Agent',r:'committer',s:'dormant',a:'Not yet built — invoice routes planned'},
-            {n:'Accounts Payable',r:'reviewer',s:'dormant',a:'Not yet built'},
-            {n:'Reconciliation Agent',r:'validator',s:'dormant',a:'Not yet built'}
-          ]}
-    ];
-
-    var STAGES = [
-        {n:'RESEARCHER', r:'architect', m:'sonnet', note:'Firecrawl context + Playwright fallback', pct:96},
-        {n:'ARCHITECT',  r:'architect', m:'sonnet', note:'Zod-validated implementation plan', pct:100},
-        {n:'DEVELOPER',  r:'developer', m:'sonnet', note:'8 096 tokens per file · 3-retry backoff', pct:98},
-        {n:'REVIEWER',   r:'reviewer',  m:'haiku',  note:'Structured JSON review pass', pct:85},
-        {n:'VALIDATOR',  r:'validator', m:'haiku',  note:'Acceptance criteria + static analysis', pct:82},
-        {n:'TESTER',     r:'tester',    m:'haiku',  note:'node --check per modified file', pct:100},
-        {n:'COMMITTER',  r:'committer', m:'haiku',  note:'Irreversible — human approval required', pct:86},
-        {n:'REFLECTOR',  r:'reflector', m:'haiku',  note:'Lesson stored to memory layer', pct:99}
+        { id:'marketing', name:'MARKETING', color:'#a78bfa',
+          agents:6, doing:3, next:11, done:90, waitApproval:1,
+          stats:[{k:'NEW INSIGHTS',v:'23'},{k:'COST PER USER',v:'$40'}],
+          roster:['Research','Graphics Designer','Instagram Organic','Meta Ads','Newsletter','Video Editor'] },
+        { id:'comms', name:'EMAILS', color:'#2dd4bf',
+          agents:5, doing:1, next:0, done:96, waitApproval:0,
+          stats:[{k:'EMAILS SENT',v:'184'},{k:'REPLIES DRAFTED',v:'73'}],
+          roster:['Triage Agent','Client Emails','Vendor Emails','Contractor Emails','Internal Emails'] },
+        { id:'operations', name:'OPERATIONS', color:'#fbbf24',
+          agents:5, doing:1, next:2, done:93, waitApproval:0,
+          stats:[{k:'PROPOSALS MADE',v:'10'},{k:'NEW INSIGHTS',v:'25'}],
+          roster:['Compliance Checker','Legal Review','Intel','Internal Dashboards','Internal Reporting'] },
+        { id:'sales', name:'SALES', color:'#34d399',
+          agents:6, doing:3, next:1, done:95, waitApproval:1,
+          stats:[{k:'CALLS S-A-J',v:'27·43·28'},{k:'NEW MANAGERS',v:'16'},{k:'AUTO-ONBOARDED',v:'29'}],
+          roster:['Lead Enricher','Prospector','Inbound Leads','Follow Ups','Proposals','Sales Lead'] },
+        { id:'delivery', name:'DELIVERY', color:'#38bdf8',
+          agents:7, doing:2, next:1, done:137, waitApproval:1,
+          stats:[{k:'REPORTS SENT',v:'28'},{k:'ON TRACK',v:'11 / 12'}],
+          roster:['Project Co-ordinator','Onboarder','Designer Assistant','QA Checker','Client Reports','Client Assets','Quality Assurance'] },
+        { id:'finance', name:'FINANCE', color:'#6366f1',
+          agents:4, doing:1, next:1, done:80, waitApproval:0,
+          stats:[{k:'INVOICES ISSUED',v:'34'},{k:'BILLS PAID',v:'37'}],
+          roster:['Accounting Lead','Invoicing','Accounts Payable','Reconciliation'] }
     ];
 
     var GATES = [
@@ -23129,197 +23142,297 @@ window.apexFileDropHandler = function(e){
         {n:'BEHAVIOR',       note:'0 active blocking constraints', status:'PASS', color:'#34d399'}
     ];
 
-    var HANDOFFS = [
-        {time:'—', from:'Research Agent', fromC:'#a78bfa', to:'Advertising Agent', toC:'#a78bfa', what:'Angles worth testing — dormant, agents not built yet'},
-        {time:'—', from:'Triage Agent', fromC:'#2dd4bf', to:'Prospector', toC:'#34d399', what:'Inbound leads from inbox — dormant'},
-        {time:'—', from:'Proposal Agent', fromC:'#34d399', to:'Client Emails', toC:'#2dd4bf', what:'Proposal ready to follow up — dormant'},
-        {time:'live', from:'Finance Agent', fromC:'#6366f1', to:'You', toC:'#38bdf8', what:'Budget check + transactions — connected'},
-        {time:'—', from:'Onboarder', fromC:'#38bdf8', to:'Project Co-ordinator', toC:'#38bdf8', what:'Signed clients ready to plan — dormant'}
+    // Layout: each dept's floor center (fraction of canvas) + stats card anchor
+    var AO_LAYOUT = [
+        { id:'marketing',  cx:0.21, cy:0.38, cardL:0.03, cardT:0.09 },
+        { id:'comms',      cx:0.44, cy:0.14, cardL:0.38, cardT:0.01 },
+        { id:'operations', cx:0.12, cy:0.70, cardL:0.02, cardT:0.57 },
+        { id:'sales',      cx:0.66, cy:0.53, cardL:0.59, cardT:0.42 },
+        { id:'delivery',   cx:0.64, cy:0.14, cardL:0.58, cardT:0.01 },
+        { id:'finance',    cx:0.47, cy:0.70, cardL:0.42, cardT:0.60 }
     ];
 
-    function badge(status) {
-        if (status === 'active')  return '<span class="office-dept-badge active-badge"><span style="width:5px;height:5px;border-radius:50%;background:#34d399;display:inline-block"></span>ACTIVE</span>';
-        if (status === 'partial') return '<span class="office-dept-badge partial-badge"><span style="width:5px;height:5px;border-radius:50%;background:#fbbf24;display:inline-block"></span>PARTIAL</span>';
-        return '<span class="office-dept-badge dormant"><span style="width:5px;height:5px;border-radius:50%;background:#52525b;display:inline-block"></span>DORMANT</span>';
+    var AO_BRAIN_CX = 0.40; // fraction of canvas width
+    var AO_BRAIN_CY = 0.48; // fraction of canvas height
+    var AO_BRAIN_NOTES = 287;
+
+    // Task feed sample data (replaced by live data when available)
+    var AO_SAMPLE_TASKS = [
+        {status:'backlog',    title:'Audit the contractor invoice vs contract',   tags:'ACCOUNTS PAYABLE · FINANCE · JUST ADDED · FROM CONTRACTOR EMAILS', age:'just now'},
+        {status:'backlog',    title:'Write the reel script from the research',    tags:'INSTAGRAM ORGANIC · MARKETING · JUST ADDED · FROM RESEARCH', age:'just now'},
+        {status:'backlog',    title:'Refresh the KPI dashboard',                  tags:'INTERNAL DASHBOARDS · OPERATIONS · JUST ADDED · FROM INTERNAL REPORTING', age:'just now'},
+        {status:'backlog',    title:'QA the Crestline Finance asset set',         tags:'QUALITY ASSURANCE CHECKER · DELIVERY · JUST ADDED · FROM DESIGNER ASSISTANT', age:'just now'},
+        {status:'backlog',    title:'Refresh the Q3 dashboard',                   tags:'INTERNAL DASHBOARDS · OPERATIONS · WAITING 42 MIN · FROM INTERNAL EMAILS', age:'42 min'},
+        {status:'backlog',    title:'Write the reel script from the research',    tags:'INSTAGRAM ORGANIC · MARKETING · WAITING 42 MIN · FROM RESEARCH', age:'42 min'},
+        {status:'inprogress', title:'Process contractor invoice batch',           tags:'FINANCE · ACCOUNTS PAYABLE · RUNNING', age:'5 min'},
+        {status:'inprogress', title:'Enrich inbound lead list — Crestline',       tags:'SALES · LEAD ENRICHER · RUNNING', age:'12 min'},
+        {status:'waiting',    title:'Approve campaign brief before publish',      tags:'MARKETING · CONTENT · AWAITING YOU', age:'1 hr'},
+        {status:'done',       title:'Sent weekly operations report',              tags:'OPERATIONS · INTERNAL REPORTING · DELIVERED', age:'2 hr'},
+        {status:'done',       title:'Reconciled July transactions',               tags:'FINANCE · RECONCILIATION · COMPLETE', age:'3 hr'}
+    ];
+
+    window._aoFilter = 'all';
+    window._aoTasks  = AO_SAMPLE_TASKS;
+    window._aoDeptIdx = 0;
+
+    // ── Clock ────────────────────────────────────────────────────────────────
+    function aoStartClock() {
+        function tick() {
+            var now = new Date();
+            var h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+            var ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12;
+            var el = document.getElementById('aoClock');
+            if (el) el.textContent = h + ':' + ('0'+m).slice(-2) + ':' + ('0'+s).slice(-2) + ' ' + ap;
+        }
+        tick(); setInterval(tick, 1000);
     }
 
-    function renderOfficeMap() {
-        var grid = document.getElementById('officeDeptGrid');
-        if (!grid) return;
-        grid.innerHTML = DEPTS.map(function(d) {
-            return '<div class="office-dept-card" onclick="officeGoToDept(\'' + d.id + '\')">' +
-                '<span class="office-dept-accent" style="background:' + d.color + '"></span>' +
-                '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-top:4px">' +
-                    '<div>' +
-                        '<div style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.09em;color:' + d.color + '">' + d.name + '</div>' +
-                        '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#52525b;margin-top:4px">' + d.lead + '</div>' +
-                    '</div>' +
-                    badge(d.status) +
+    // ── Canvas render ────────────────────────────────────────────────────────
+    function aoRenderCanvas() {
+        var canvas = document.getElementById('aoCanvas');
+        var svgEl  = document.getElementById('aoSvg');
+        if (!canvas || !svgEl) return;
+
+        var cw = canvas.offsetWidth || 800;
+        var ch = canvas.offsetHeight || 700;
+        var bx = cw * AO_BRAIN_CX;
+        var by = ch * AO_BRAIN_CY;
+
+        // SVG dashed lines from brain to each dept floor center
+        var paths = AO_LAYOUT.map(function(lay) {
+            var d = DEPTS.find(function(x){ return x.id === lay.id; });
+            if (!d) return '';
+            var x1 = lay.cx * cw, y1 = lay.cy * ch;
+            var mx = (x1 + bx) / 2, my = (y1 + by) / 2 - 18;
+            return '<path d="M' + x1 + ' ' + y1 + ' Q' + mx + ' ' + my + ' ' + bx + ' ' + by + '"' +
+                   ' stroke="' + d.color + '" stroke-opacity="0.18" stroke-width="1.5"' +
+                   ' stroke-dasharray="5 8" fill="none"/>';
+        }).join('');
+        svgEl.innerHTML = paths;
+
+        // Remove old islands + brain
+        canvas.querySelectorAll('.ao-island, .ao-card, .ao-brain').forEach(function(el){ el.remove(); });
+
+        // Render each dept
+        AO_LAYOUT.forEach(function(lay) {
+            var d = DEPTS.find(function(x){ return x.id === lay.id; });
+            if (!d) return;
+
+            var cx = lay.cx * cw, cy = lay.cy * ch;
+            var fw = 60 + d.agents * 22; // floor width scales with agent count
+            var fh = 56;
+
+            // Floor island
+            var island = document.createElement('div');
+            island.className = 'ao-island';
+            island.style.cssText = 'left:' + (cx - fw/2) + 'px;top:' + (cy - fh/2) + 'px;width:' + fw + 'px;height:' + fh + 'px;';
+
+            var floorDiv = document.createElement('div');
+            floorDiv.className = 'ao-floor';
+            floorDiv.style.cssText = 'width:100%;height:100%;' +
+                'background:linear-gradient(145deg,rgba(20,20,28,0.98),rgba(14,14,20,0.95));' +
+                'border:1px solid ' + d.color + '28;' +
+                'box-shadow:0 8px 24px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.02) inset;' +
+                'transform:rotate(-11deg) skewX(-17deg) scaleY(0.68);';
+            island.appendChild(floorDiv);
+
+            // Agent labels on floor (not inside skewed div — siblings)
+            d.roster.forEach(function(name, i) {
+                var col = (i % 2 === 0) ? 0.18 : 0.56;
+                var row = Math.floor(i / 2) / Math.ceil(d.roster.length / 2);
+                var lbl = document.createElement('div');
+                lbl.className = 'ao-agent-label';
+                lbl.textContent = name.split(' ')[0];
+                lbl.style.cssText = 'left:' + Math.round(col * fw) + 'px;top:' + Math.round((row * 0.68 + 0.12) * fh) + 'px;';
+                island.appendChild(lbl);
+            });
+
+            canvas.appendChild(island);
+
+            // Stats card
+            var cardL = lay.cardL * cw, cardT = lay.cardT * ch;
+            var card = document.createElement('div');
+            card.className = 'ao-card';
+            card.style.cssText = 'left:' + cardL + 'px;top:' + cardT + 'px;';
+
+            var statsHtml = d.stats.map(function(s){
+                return '<div class="ao-stat-line"><span>' + s.k + '</span><span class="ao-stat-val">' + s.v + '</span></div>';
+            }).join('');
+
+            var approvalHtml = d.waitApproval > 0
+                ? '<button class="ao-approval-btn" data-fn="aoOpenApprovals">&#9651; ' + d.waitApproval + ' WAITING APPROVAL</button>'
+                : '';
+
+            card.innerHTML =
+                '<div class="ao-card-name" style="color:' + d.color + '">' +
+                    '<span style="width:6px;height:6px;border-radius:50%;background:' + d.color + ';flex-shrink:0"></span>' +
+                    d.name +
                 '</div>' +
-                '<div style="font:12px/1.45 \'Inter\',system-ui,sans-serif;color:#71717a;margin-top:10px;margin-bottom:10px">' + d.brief + '</div>' +
-                '<div style="display:flex;gap:14px;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#52525b">' +
-                    '<span>AGENTS <span style="color:#f4f4f5">' + d.agents + '</span></span>' +
-                    '<span>DOING <span style="color:#38bdf8">' + d.doing + '</span></span>' +
-                    '<span>DONE <span style="color:#f4f4f5">' + d.done + '</span></span>' +
+                '<div class="ao-card-count">' + d.agents + '</div>' +
+                '<div class="ao-card-agents">AGENTS</div>' +
+                (statsHtml ? '<div class="ao-card-stats">' + statsHtml + '</div>' : '') +
+                '<div class="ao-doing-row">' +
+                    'DOING <span class="ao-doing-num">' + d.doing + '</span>' +
+                    '&nbsp; NEXT <span class="ao-next-num">' + d.next + '</span>' +
+                    '&nbsp; DONE <span class="ao-done-num">' + d.done + '</span>' +
                 '</div>' +
-                '<div style="margin-top:10px;font:10px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em;color:#52525b">SEE AGENTS →</div>' +
+                approvalHtml;
+
+            canvas.appendChild(card);
+        });
+
+        // THE BRAIN
+        var brain = document.createElement('div');
+        brain.className = 'ao-brain';
+        brain.style.cssText = 'left:' + bx + 'px;top:' + (by - 52) + 'px;';
+        brain.innerHTML =
+            '<div class="ao-brain-orb"><div class="ao-brain-inner"></div></div>' +
+            '<div class="ao-brain-tag">&#9679; THE BRAIN</div>' +
+            '<div class="ao-brain-notes" id="aoBrainNotes">' + AO_BRAIN_NOTES + ' NOTES</div>';
+        canvas.appendChild(brain);
+    }
+
+    // ── Task feed ────────────────────────────────────────────────────────────
+    var AO_STATUS_MAP = {backlog:'bl', inprogress:'ip', waiting:'wa', done:'dn'};
+    var AO_BADGE_LABELS = {bl:'BACKLOG', ip:'IN PROGRESS', wa:'WAITING', dn:'DONE'};
+
+    function aoRenderTasks() {
+        var list = document.getElementById('aoTaskList');
+        if (!list) return;
+        var f = window._aoFilter || 'all';
+        var tasks = (window._aoTasks || []).filter(function(t){
+            if (f === 'all') return true;
+            return t.status === f;
+        });
+
+        if (!tasks.length) {
+            list.innerHTML = '<div style="font:11px/1.5 \'Inter\',system-ui,sans-serif;color:#3f3f46;padding:16px 0">No tasks</div>';
+            return;
+        }
+
+        list.innerHTML = tasks.map(function(t){
+            var cls = AO_STATUS_MAP[t.status] || 'bl';
+            var lbl = AO_BADGE_LABELS[cls] || t.status.toUpperCase();
+            return '<div class="ao-ti">' +
+                '<span class="ao-tbadge ' + cls + '">' + lbl + '</span>' +
+                '<div class="ao-tb">' +
+                    '<div class="ao-tt">' + t.title + '</div>' +
+                    (t.tags ? '<div class="ao-tg">' + t.tags + '</div>' : '') +
+                    (t.age  ? '<div class="ao-ta">' + t.age + '</div>' : '') +
+                '</div>' +
             '</div>';
         }).join('');
-
-        var hEl = document.getElementById('officeHandoffList');
-        if (hEl) {
-            hEl.innerHTML = HANDOFFS.map(function(h) {
-                var timeStyle = h.time === 'live' ? 'color:#34d399' : 'color:#3f3f46';
-                return '<div class="office-handoff-row">' +
-                    '<span style="font:10px/1 \'JetBrains Mono\',monospace;' + timeStyle + ';width:34px;flex-shrink:0">' + h.time + '</span>' +
-                    '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.05em;color:' + h.fromC + ';width:130px;flex-shrink:0">' + h.from + '</span>' +
-                    '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.05em;color:' + h.toC + ';width:130px;flex-shrink:0">→ ' + h.to + '</span>' +
-                    '<span style="font:12px/1.4 \'Inter\',system-ui,sans-serif;color:#71717a;min-width:0">' + h.what + '</span>' +
-                '</div>';
-            }).join('');
-        }
     }
 
-    function renderDeptCards() {
-        var el = document.getElementById('officeDeptCards');
-        if (!el) return;
-        el.innerHTML = DEPTS.map(function(d) {
-            var rows = d.roster.map(function(a) {
-                var dotC = a.s === 'active' ? '#34d399' : (a.s === 'partial' ? '#fbbf24' : '#3f3f46');
-                var nameC = a.s === 'active' ? '#f4f4f5' : '#71717a';
-                return '<div class="office-agent-row">' +
-                    '<span class="office-agent-dot" style="background:' + (RC[a.r] || '#52525b') + '"></span>' +
-                    '<span style="font:600 12px/1 \'Inter\',system-ui,sans-serif;color:' + nameC + ';width:180px;flex-shrink:0">' + a.n + '</span>' +
-                    '<span style="font:11px/1.4 \'Inter\',system-ui,sans-serif;color:#71717a;flex:1;min-width:0">' + a.a + '</span>' +
-                    '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:' + dotC + ';width:60px;text-align:right;flex-shrink:0">' + a.s.toUpperCase() + '</span>' +
-                '</div>';
-            }).join('');
-            return '<div id="officeDept-' + d.id + '" style="position:relative;border:1px solid rgba(255,255,255,0.085);border-radius:8px;background:#0c0c0c;overflow:hidden;padding:16px 14px 12px">' +
-                '<span style="position:absolute;top:0;left:0;right:0;height:2px;background:' + d.color + '"></span>' +
-                '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
-                    '<div>' +
-                        '<div style="display:flex;align-items:center;gap:7px">' +
-                            '<span style="width:6px;height:6px;border-radius:50%;background:' + d.color + '"></span>' +
-                            '<span style="font:600 13px/1 \'Inter\',system-ui,sans-serif;letter-spacing:.06em;color:#f4f4f5">' + d.name + '</span>' +
-                        '</div>' +
-                        '<div style="font:11px/1.45 \'Inter\',system-ui,sans-serif;color:#71717a;margin-top:5px;max-width:420px">' + d.brief + '</div>' +
-                    '</div>' +
-                    badge(d.status) +
-                '</div>' +
-                '<div style="border-top:1px solid rgba(255,255,255,0.04)">' + rows + '</div>' +
-            '</div>';
-        }).join('');
+    function aoUpdateCounts() {
+        var tasks = window._aoTasks || [];
+        var counts = {all:tasks.length, backlog:0, inprogress:0, waiting:0, done:0};
+        tasks.forEach(function(t){ if (counts[t.status] !== undefined) counts[t.status]++; });
+        var ids = {all:'aoFcAll', backlog:'aoFcBacklog', inprogress:'aoFcInProgress', waiting:'aoFcWaiting', done:'aoFcDone'};
+        Object.keys(ids).forEach(function(k){
+            var el = document.getElementById(ids[k]);
+            if (el) el.textContent = counts[k];
+        });
     }
 
-    function renderPipeline() {
-        var el = document.getElementById('officePipelineList');
-        if (el) {
-            el.innerHTML = STAGES.map(function(s) {
-                var c = RC[s.r] || '#52525b';
-                return '<div class="office-stage-row">' +
-                    '<div style="display:flex;align-items:center;gap:6px">' +
-                        '<span style="width:5px;height:5px;border-radius:50%;background:' + c + ';flex-shrink:0"></span>' +
-                        '<span style="font:600 11px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em;color:#f4f4f5">' + s.n + '</span>' +
-                    '</div>' +
-                    '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;padding:3px 7px;border:1px solid rgba(255,255,255,0.085);border-radius:4px;color:#52525b">' + s.m + '</span>' +
-                    '<span style="font:11px/1.45 \'Inter\',system-ui,sans-serif;color:#71717a">' + s.note + '</span>' +
-                    '<div class="office-stage-bar"><div class="office-stage-fill" style="width:' + s.pct + '%;background:' + c + '"></div></div>' +
-                    '<span style="font:12px/1 \'JetBrains Mono\',monospace;color:' + c + ';text-align:right">' + s.pct + '%</span>' +
-                '</div>';
-            }).join('');
-        }
-        var gEl = document.getElementById('officeGatesGrid');
-        if (gEl) {
-            gEl.innerHTML = GATES.map(function(g) {
-                return '<div style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid rgba(255,255,255,0.085);border-radius:6px;background:#131313">' +
-                    '<div style="display:flex;align-items:center;gap:7px">' +
-                        '<span style="width:6px;height:6px;border-radius:50%;background:' + g.color + '"></span>' +
-                        '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.09em;color:#f4f4f5">' + g.n + '</span>' +
-                        '<span style="margin-left:auto;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:' + g.color + '">' + g.status + '</span>' +
-                    '</div>' +
-                    '<span style="font:11px/1.45 \'Inter\',system-ui,sans-serif;color:#71717a">' + g.note + '</span>' +
-                '</div>';
-            }).join('');
-        }
+    function aoSetFilter(f) {
+        window._aoFilter = f;
+        document.querySelectorAll('.ao-fc').forEach(function(b){
+            b.classList.toggle('active', b.dataset.aofilter === f);
+        });
+        aoRenderTasks();
     }
 
-    window.officeGoToDept = function(id) {
-        officeSetTab('departments');
-        setTimeout(function() {
-            var el = document.getElementById('officeDept-' + id);
-            if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        }, 60);
+    // ── Dept selector ─────────────────────────────────────────────────────────
+    function aoUpdateDeptSel() {
+        var d = DEPTS[window._aoDeptIdx || 0];
+        var dot = document.getElementById('aoDeptSelDot');
+        var name = document.getElementById('aoDeptSelName');
+        var inp = document.getElementById('aoTaskInp');
+        if (dot)  dot.style.background = d.color;
+        if (name) name.textContent = d.name;
+        if (inp)  inp.placeholder = 'Type a task for ' + d.name.toLowerCase() + '...';
+    }
+
+    window.aoAddTask = function() {
+        var inp = document.getElementById('aoTaskInp');
+        if (!inp || !inp.value.trim()) return;
+        var d = DEPTS[window._aoDeptIdx || 0];
+        var t = { status:'backlog', title:inp.value.trim(), tags:d.name + ' · JUST ADDED', age:'just now' };
+        window._aoTasks = [t].concat(window._aoTasks || []);
+        inp.value = '';
+        aoUpdateCounts();
+        aoRenderTasks();
     };
 
-    window.officeSetTab = function(tab) {
-        ['officeTab-office', 'officeTab-departments', 'officeTab-pipeline'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
-        var panel = document.getElementById('officeTab-' + tab);
-        if (panel) panel.style.display = 'block';
-        document.querySelectorAll('.office-tab-btn').forEach(function(b) {
-            b.classList.toggle('active', b.dataset.tab === tab);
-        });
-        var pg = document.getElementById('page-agents');
-        if (pg) pg.scrollTop = 0;
-        if (tab === 'office'       && !window._officeMapRendered)  { renderOfficeMap();   window._officeMapRendered  = true; }
-        if (tab === 'departments'  && !window._officeDeptRendered) { renderDeptCards();   window._officeDeptRendered = true; }
-        if (tab === 'pipeline'     && !window._officePipeRendered) { renderPipeline();    window._officePipeRendered = true; }
-    };
+    window.aoOpenApprovals = function() { if (window.switchPage) window.switchPage('actions'); };
 
-    async function fetchAgentsOfficeData() {
-        var pipeUpdated = false;
-
-        // Constitutional gates ← self-check (TWIN=obsidian, BEHAVIOR=agent_queue, DEPLOY=supabase)
+    // ── Live data ─────────────────────────────────────────────────────────────
+    async function aoFetchLiveData() {
         try {
-            var r1 = await fetch('/api/intelligence/self-check', { headers: {'x-app-key': window._appKey||''} });
-            var sc = await r1.json();
+            var r = await fetch('/api/tasks?limit=80&sort=created_at:desc', { headers: {'x-app-key': window._appKey||''} });
+            var data = await r.json();
+            var raw = Array.isArray(data) ? data : (data.tasks || data.data || []);
+            if (raw.length) {
+                window._aoTasks = raw.map(function(t){
+                    var st = (t.status || '').toLowerCase();
+                    if (st === 'awaiting_approval' || st === 'pending') st = 'waiting';
+                    else if (st === 'in_progress' || st === 'running')  st = 'inprogress';
+                    else if (st === 'completed' || st === 'done')       st = 'done';
+                    else                                                  st = 'backlog';
+                    return { status:st, title:t.description || t.title || '—', tags:(t.tags||[]).join(' · '), age:'' };
+                });
+                aoUpdateCounts();
+                aoRenderTasks();
+            }
+        } catch(e) {}
+
+        try {
+            var r2 = await fetch('/api/intelligence/self-check', { headers: {'x-app-key': window._appKey||''} });
+            var sc  = await r2.json();
             var chk = sc.checks || {};
-            GATES.forEach(function(g) {
+            var warns = 0;
+            GATES.forEach(function(g){
                 if (g.n === 'TWIN') {
                     var ok = chk.obsidian && chk.obsidian.ok;
-                    g.status = ok ? 'PASS' : 'WARN';
-                    g.color  = ok ? '#34d399' : '#fbbf24';
-                    g.note   = ok ? 'Vault connected · twin simulation active' : 'Vault tunnel offline · twin data stale';
+                    g.status = ok ? 'PASS' : 'WARN'; g.color = ok ? '#34d399' : '#fbbf24';
+                    if (!ok) warns++;
                 } else if (g.n === 'BEHAVIOR') {
                     var qOk = !chk.agent_queue || chk.agent_queue.ok;
-                    var q   = (chk.agent_queue && chk.agent_queue.queued) || 0;
-                    g.status = qOk ? 'PASS' : 'WARN';
-                    g.color  = qOk ? '#34d399' : '#fbbf24';
-                    g.note   = q + ' queued · ' + (qOk ? 'within constraints' : 'near capacity');
+                    g.status = qOk ? 'PASS' : 'WARN'; g.color = qOk ? '#34d399' : '#fbbf24';
+                    if (!qOk) warns++;
                 } else if (g.n === 'DEPLOY') {
                     var dbOk = (chk.supabase && chk.supabase.ok) || (chk.postgres && chk.postgres.ok);
-                    g.status = dbOk ? 'PASS' : 'FAIL';
-                    g.color  = dbOk ? '#34d399' : '#f87171';
-                    g.note   = dbOk ? 'Database connected · deploy policy enforced' : 'DB error · check connection';
+                    g.status = dbOk ? 'PASS' : 'FAIL'; g.color = dbOk ? '#34d399' : '#f87171';
+                    if (!dbOk) warns++;
                 }
             });
-            pipeUpdated = true;
+            var wc = document.getElementById('aoWarnCount');
+            if (wc) wc.textContent = warns;
         } catch(e) {}
 
-        // Pipeline stage health ← agent-performance (per-role success rates from apex_agent_stages)
         try {
-            var r2 = await fetch('/api/intelligence/agent-performance?days=30', { headers: {'x-app-key': window._appKey||''} });
-            var ap = await r2.json();
-            var byRole = ap.byRole || {};
-            STAGES.forEach(function(s) {
-                var rd = byRole[s.r];
-                if (rd && rd.runs >= 3) { s.pct = rd.successRate; pipeUpdated = true; }
-            });
+            var r3 = await fetch('/api/memory?limit=1&count=true', { headers: {'x-app-key': window._appKey||''} });
+            var md  = await r3.json();
+            var cnt = md.count || md.total || AO_BRAIN_NOTES;
+            AO_BRAIN_NOTES = cnt;
+            var el = document.getElementById('aoBrainNotes');
+            if (el) el.textContent = cnt + ' NOTES';
         } catch(e) {}
-
-        // Re-render pipeline tab if already open, otherwise flag for re-render on next open
-        if (pipeUpdated) {
-            window._officePipeRendered = false;
-            var ab = document.querySelector('#page-agents .office-tab-btn.active');
-            if (ab && ab.dataset.tab === 'pipeline') { window.officeSetTab('pipeline'); }
-        }
     }
 
+    // ── Bootstrap ─────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.office-tab-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() { window.officeSetTab(btn.dataset.tab); });
+        aoStartClock();
+
+        document.getElementById('aoFilters') && document.getElementById('aoFilters').addEventListener('click', function(e){
+            var btn = e.target.closest('[data-aofilter]');
+            if (btn) aoSetFilter(btn.dataset.aofilter);
+        });
+
+        document.getElementById('aoDeptSel') && document.getElementById('aoDeptSel').addEventListener('click', function(){
+            window._aoDeptIdx = ((window._aoDeptIdx || 0) + 1) % DEPTS.length;
+            aoUpdateDeptSel();
         });
 
         var _origSwitch = window.switchPage;
@@ -23327,17 +23440,30 @@ window.apexFileDropHandler = function(e){
             window.switchPage = function(name) {
                 _origSwitch(name);
                 if (name === 'agents') {
-                    window.officeSetTab('office');
-                    fetchAgentsOfficeData();
+                    setTimeout(function(){ aoRenderCanvas(); }, 50);
+                    aoFetchLiveData();
                 }
             };
         }
 
-        var hash = location.hash.slice(1);
-        if (hash === 'agents') {
-            window.officeSetTab('office');
-            fetchAgentsOfficeData();
+        if (location.hash.slice(1) === 'agents') {
+            setTimeout(function(){ aoRenderCanvas(); }, 50);
+            aoFetchLiveData();
         }
+
+        aoUpdateDeptSel();
+        aoUpdateCounts();
+        aoRenderTasks();
+
+        // Re-render canvas on resize
+        var resizeTimer;
+        window.addEventListener('resize', function(){
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function(){
+                var pg = document.getElementById('page-agents');
+                if (pg && pg.classList.contains('active')) aoRenderCanvas();
+            }, 120);
+        });
     });
 })();
 </script>
