@@ -23262,22 +23262,76 @@ window.apexFileDropHandler = function(e){
         if (tab === 'pipeline'     && !window._officePipeRendered) { renderPipeline();    window._officePipeRendered = true; }
     };
 
+    async function fetchAgentsOfficeData() {
+        var pipeUpdated = false;
+
+        // Constitutional gates ← self-check (TWIN=obsidian, BEHAVIOR=agent_queue, DEPLOY=supabase)
+        try {
+            var r1 = await fetch('/api/intelligence/self-check', { headers: {'x-app-key': window._appKey||''} });
+            var sc = await r1.json();
+            var chk = sc.checks || {};
+            GATES.forEach(function(g) {
+                if (g.n === 'TWIN') {
+                    var ok = chk.obsidian && chk.obsidian.ok;
+                    g.status = ok ? 'PASS' : 'WARN';
+                    g.color  = ok ? '#34d399' : '#fbbf24';
+                    g.note   = ok ? 'Vault connected · twin simulation active' : 'Vault tunnel offline · twin data stale';
+                } else if (g.n === 'BEHAVIOR') {
+                    var qOk = !chk.agent_queue || chk.agent_queue.ok;
+                    var q   = (chk.agent_queue && chk.agent_queue.queued) || 0;
+                    g.status = qOk ? 'PASS' : 'WARN';
+                    g.color  = qOk ? '#34d399' : '#fbbf24';
+                    g.note   = q + ' queued · ' + (qOk ? 'within constraints' : 'near capacity');
+                } else if (g.n === 'DEPLOY') {
+                    var dbOk = (chk.supabase && chk.supabase.ok) || (chk.postgres && chk.postgres.ok);
+                    g.status = dbOk ? 'PASS' : 'FAIL';
+                    g.color  = dbOk ? '#34d399' : '#f87171';
+                    g.note   = dbOk ? 'Database connected · deploy policy enforced' : 'DB error · check connection';
+                }
+            });
+            pipeUpdated = true;
+        } catch(e) {}
+
+        // Pipeline stage health ← agent-performance (per-role success rates from apex_agent_stages)
+        try {
+            var r2 = await fetch('/api/intelligence/agent-performance?days=30', { headers: {'x-app-key': window._appKey||''} });
+            var ap = await r2.json();
+            var byRole = ap.byRole || {};
+            STAGES.forEach(function(s) {
+                var rd = byRole[s.r];
+                if (rd && rd.runs >= 3) { s.pct = rd.successRate; pipeUpdated = true; }
+            });
+        } catch(e) {}
+
+        // Re-render pipeline tab if already open, otherwise flag for re-render on next open
+        if (pipeUpdated) {
+            window._officePipeRendered = false;
+            var ab = document.querySelector('#page-agents .office-tab-btn.active');
+            if (ab && ab.dataset.tab === 'pipeline') { window.officeSetTab('pipeline'); }
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.office-tab-btn').forEach(function(btn) {
             btn.addEventListener('click', function() { window.officeSetTab(btn.dataset.tab); });
         });
 
-        // Open THE OFFICE tab whenever the agents page is navigated to
         var _origSwitch = window.switchPage;
         if (_origSwitch) {
             window.switchPage = function(name) {
                 _origSwitch(name);
-                if (name === 'agents') { window.officeSetTab('office'); }
+                if (name === 'agents') {
+                    window.officeSetTab('office');
+                    fetchAgentsOfficeData();
+                }
             };
         }
 
         var hash = location.hash.slice(1);
-        if (hash === 'agents') { window.officeSetTab('office'); }
+        if (hash === 'agents') {
+            window.officeSetTab('office');
+            fetchAgentsOfficeData();
+        }
     });
 })();
 </script>
