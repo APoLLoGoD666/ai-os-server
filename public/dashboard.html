@@ -573,6 +573,13 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 .ao-roster-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
 .ao-roster-name { font:500 11px/1 'Inter',system-ui,sans-serif; color:#71717a; }
 .ao-connecting { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; letter-spacing:.04em; }
+.ao-roster-row { cursor:pointer; }
+.ao-roster-row:hover .ao-roster-name { color:#a1a1aa; }
+.ao-roster-chev { font-size:8px; color:#3f3f46; margin-left:auto; flex-shrink:0; transition:color .12s; }
+.ao-roster-row:hover .ao-roster-chev { color:#71717a; }
+.ao-agent-detail { overflow:hidden; max-height:0; transition:max-height .22s cubic-bezier(0.4,0,0.2,1); }
+.ao-agent-detail--open { max-height:120px; }
+.ao-agent-detail-body { margin:2px 0 8px 12px; padding:7px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(255,255,255,0.06); border-radius:0 4px 4px 0; font:500 10px/1.5 'Inter',system-ui,sans-serif; color:#52525b; }
 
 /* ── V-11-K: canonical progressive disclosure ────────────────────────── */
 .apex-disclosure { }
@@ -23120,18 +23127,51 @@ window.apexFileDropHandler = function(e){
     // ── Agents Office V3 data ────────────────────────────────────────────────
 
     var DEPTS = [
-        { id:'marketing',  name:'MARKETING',  color:'#a78bfa', agents:6,
-          roster:['Research Agent','Graphics Designer','Instagram Organic','Meta Ads','Newsletter Agent','Video Editor Agent'] },
-        { id:'comms',      name:'EMAILS',     color:'#2dd4bf', agents:5,
-          roster:['Triage Agent','Client Emails','Vendor Emails','Contractor Emails','Internal Emails'] },
-        { id:'operations', name:'OPERATIONS', color:'#fbbf24', agents:5,
-          roster:['Compliance Checker','Legal Review','Intel Agent','Internal Dashboards','Internal Reporting'] },
-        { id:'sales',      name:'SALES',      color:'#34d399', agents:6,
-          roster:['Lead Enricher','Prospector','Inbound Leads','Follow-up Agent','Proposal Agent','Pipeline Agent'] },
-        { id:'delivery',   name:'DELIVERY',   color:'#38bdf8', agents:7,
-          roster:['Project Co-ordinator','Onboarder','Designer Assistant','QA Checker','Client Reports','Client Assets','Quality Assurance'] },
-        { id:'finance',    name:'FINANCE',    color:'#6366f1', agents:4,
-          roster:['Finance Agent','Invoicing Agent','Accounts Payable','Reconciliation Agent'] }
+        { id:'marketing',  name:'MARKETING',  color:'#a78bfa', agents:6, roster:[
+            {n:'Research Agent',      desc:'Firecrawl + web scraping for market signals and content angles'},
+            {n:'Graphics Designer',   desc:'Not yet built — visual asset generation planned'},
+            {n:'Instagram Organic',   desc:'Not yet built — organic post scheduling pipeline planned'},
+            {n:'Meta Ads',            desc:'Not yet built — ad variant pipeline planned'},
+            {n:'Newsletter Agent',    desc:'Not yet built — email broadcast pipeline planned'},
+            {n:'Video Editor Agent',  desc:'Not yet built — short-form video pipeline planned'}
+        ]},
+        { id:'comms',      name:'EMAILS',     color:'#2dd4bf', agents:5, roster:[
+            {n:'Triage Agent',        desc:'Not yet built — Gmail integration pending'},
+            {n:'Client Emails',       desc:'Not yet built — reads and drafts client-facing replies'},
+            {n:'Vendor Emails',       desc:'Not yet built — handles supplier correspondence'},
+            {n:'Contractor Emails',   desc:'Not yet built — routes contractor comms and invoices'},
+            {n:'Internal Emails',     desc:'Not yet built — internal team communication routing'}
+        ]},
+        { id:'operations', name:'OPERATIONS', color:'#fbbf24', agents:5, roster:[
+            {n:'Compliance Checker',  desc:'Not yet built — monitors rule adherence across agents'},
+            {n:'Legal Review',        desc:'Not yet built — flags contract and legal risk'},
+            {n:'Intel Agent',         desc:'Not yet built — aggregates internal intelligence reports'},
+            {n:'Internal Dashboards', desc:'Not yet built — generates internal KPI views'},
+            {n:'Internal Reporting',  desc:'Not yet built — weekly operations summary pipeline'}
+        ]},
+        { id:'sales',      name:'SALES',      color:'#34d399', agents:6, roster:[
+            {n:'Lead Enricher',       desc:'Not yet built — enriches inbound leads with context'},
+            {n:'Prospector',          desc:'Not yet built — outbound prospect research and contact'},
+            {n:'Inbound Leads',       desc:'Not yet built — routes and qualifies inbound enquiries'},
+            {n:'Follow-up Agent',     desc:'Not yet built — automated follow-up sequence'},
+            {n:'Proposal Agent',      desc:'Not yet built — drafts proposals from brief templates'},
+            {n:'Pipeline Agent',      desc:'Not yet built — tracks deal stages and updates CRM'}
+        ]},
+        { id:'delivery',   name:'DELIVERY',   color:'#38bdf8', agents:7, roster:[
+            {n:'Project Co-ordinator',desc:'Not yet built — manages project timelines and handoffs'},
+            {n:'Onboarder',           desc:'Not yet built — onboards new clients into the workflow'},
+            {n:'Designer Assistant',  desc:'Not yet built — prepares and formats design assets'},
+            {n:'QA Checker',          desc:'Not yet built — quality-assurance pass before delivery'},
+            {n:'Client Reports',      desc:'Not yet built — automated client-facing progress reports'},
+            {n:'Client Assets',       desc:'Not yet built — packages and delivers final assets'},
+            {n:'Quality Assurance',   desc:'Not yet built — final sign-off and compliance check'}
+        ]},
+        { id:'finance',    name:'FINANCE',    color:'#6366f1', agents:4, roster:[
+            {n:'Finance Agent',       desc:'Budget checks, transaction categorisation, CSV import — live'},
+            {n:'Invoicing Agent',     desc:'Not yet built — invoice generation routes planned'},
+            {n:'Accounts Payable',    desc:'Not yet built — bill tracking and payment scheduling'},
+            {n:'Reconciliation Agent',desc:'Not yet built — monthly reconciliation pipeline planned'}
+        ]}
     ];
 
     var GATES = [
@@ -23156,10 +23196,11 @@ window.apexFileDropHandler = function(e){
     var AO_BRAIN_CY = 0.48; // fraction of canvas height
     var AO_BRAIN_NOTES = 0;
 
-    window._aoFilter      = 'all';
-    window._aoTasks       = [];
-    window._aoDeptIdx     = 0;
-    window._aoExpandedIds = {};
+    window._aoFilter        = 'all';
+    window._aoTasks         = [];
+    window._aoDeptIdx       = 0;
+    window._aoExpandedIds   = {};
+    window._aoExpandedAgents = {};
 
     // ── Clock ────────────────────────────────────────────────────────────────
     function aoStartClock() {
@@ -23221,18 +23262,6 @@ window.apexFileDropHandler = function(e){
                 'box-shadow:0 8px 24px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.02) inset;' +
                 'transform:rotate(-11deg) skewX(-17deg) scaleY(0.68);';
             island.appendChild(floorDiv);
-
-            // Agent labels on floor (not inside skewed div — siblings)
-            d.roster.forEach(function(name, i) {
-                var col = (i % 2 === 0) ? 0.18 : 0.56;
-                var row = Math.floor(i / 2) / Math.ceil(d.roster.length / 2);
-                var lbl = document.createElement('div');
-                lbl.className = 'ao-agent-label';
-                lbl.textContent = name.split(' ')[0];
-                lbl.style.cssText = 'left:' + Math.round(col * fw) + 'px;top:' + Math.round((row * 0.68 + 0.12) * fh) + 'px;';
-                island.appendChild(lbl);
-            });
-
             canvas.appendChild(island);
 
             // Stat card
@@ -23241,14 +23270,6 @@ window.apexFileDropHandler = function(e){
             card.className = 'ao-card' + (window._aoExpandedIds[d.id] ? ' ao-card--open' : '');
             card.dataset.deptId = d.id;
             card.style.cssText = 'left:' + cardL + 'px;top:' + cardT + 'px;';
-
-            var rosterHtml = d.roster.map(function(name){
-                return '<div class="ao-roster-row">' +
-                    '<span class="ao-roster-dot" style="background:' + d.color + '44"></span>' +
-                    '<span class="ao-roster-name">' + name + '</span>' +
-                    '<span class="ao-connecting">dormant</span>' +
-                '</div>';
-            }).join('');
 
             var chevron = window._aoExpandedIds[d.id] ? '▲' : '▼';
 
@@ -23265,14 +23286,55 @@ window.apexFileDropHandler = function(e){
                     '&nbsp; DONE <span class="ao-done-num">—</span>' +
                 '</div>' +
                 '<div class="ao-card-toggle"><span>' + d.agents + ' AGENTS</span><span class="ao-card-chevron">' + chevron + '</span></div>' +
-                '<div class="ao-card-roster"><div style="padding-top:6px">' + rosterHtml + '</div></div>';
+                '<div class="ao-card-roster"><div style="padding-top:4px" id="aoRoster-' + d.id + '"></div></div>';
 
+            // Card header click → toggle dept expand
             card.addEventListener('click', function(e){
-                if (e.target.closest('[data-fn]')) return;
+                if (e.target.closest('[data-fn]') || e.target.closest('.ao-roster-row')) return;
                 window.aoToggleCard(d.id, card);
             });
 
             canvas.appendChild(card);
+
+            // Build agent rows with per-agent expand (must be after card is in DOM)
+            var rosterEl = document.getElementById('aoRoster-' + d.id);
+            if (rosterEl) {
+                d.roster.forEach(function(agent, i) {
+                    var agentKey = d.id + '_' + i;
+                    var isLive = agent.desc && agent.desc.indexOf('live') !== -1;
+                    var statusLabel = isLive ? 'live' : 'dormant';
+                    var statusColor = isLive ? '#34d399' : '#27272a';
+
+                    var rowWrap = document.createElement('div');
+
+                    var row = document.createElement('div');
+                    row.className = 'ao-roster-row';
+                    row.innerHTML =
+                        '<span class="ao-roster-dot" style="background:' + d.color + '44"></span>' +
+                        '<span class="ao-roster-name">' + agent.n + '</span>' +
+                        '<span style="font:700 8px/1 \'JetBrains Mono\',monospace;color:' + statusColor + ';letter-spacing:.04em;margin-left:auto;flex-shrink:0;margin-right:6px">' + statusLabel + '</span>' +
+                        '<span class="ao-roster-chev">▶</span>';
+
+                    var detail = document.createElement('div');
+                    detail.className = 'ao-agent-detail' + (window._aoExpandedAgents[agentKey] ? ' ao-agent-detail--open' : '');
+                    detail.innerHTML = '<div class="ao-agent-detail-body">' + agent.desc + '</div>';
+
+                    if (window._aoExpandedAgents[agentKey]) {
+                        row.querySelector('.ao-roster-chev').textContent = '▼';
+                    }
+
+                    row.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        var isOpen = detail.classList.toggle('ao-agent-detail--open');
+                        row.querySelector('.ao-roster-chev').textContent = isOpen ? '▼' : '▶';
+                        window._aoExpandedAgents[agentKey] = isOpen;
+                    });
+
+                    rowWrap.appendChild(row);
+                    rowWrap.appendChild(detail);
+                    rosterEl.appendChild(rowWrap);
+                });
+            }
         });
 
         // THE BRAIN
