@@ -10775,17 +10775,17 @@ if(pipe){
             <div class="page" id="page-actions">
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">ACTIONS</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">DECISIONS · IN-FLIGHT · HISTORY · NOTIFICATIONS</div>
+                        <div class="ds-page-title" style="letter-spacing:7px">AGENTS</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">THE OFFICE · DEPARTMENTS · PIPELINE · DECISIONS</div>
                     </div>
                     <button class="ds-btn cyan" data-fn="actionsRefresh" aria-label="Refresh actions">↻ Refresh</button>
                 </div>
                 <!-- Agents Office sub-nav -->
                 <div class="office-tab-nav apex-master-only" id="officeSubNav">
-                    <button class="office-tab-btn active" data-tab="decisions">DECISIONS</button>
                     <button class="office-tab-btn" data-tab="office">THE OFFICE</button>
                     <button class="office-tab-btn" data-tab="departments">DEPARTMENTS</button>
                     <button class="office-tab-btn" data-tab="pipeline">PIPELINE</button>
+                    <button class="office-tab-btn" data-tab="decisions">DECISIONS</button>
                 </div>
                 <!-- V-11-H stub — shown to non-Master users until backend gate H-B1 lands. -->
                 <div id="actnStubPanel" class="apex-user-only actn-stub" style="display:none">
@@ -11260,9 +11260,9 @@ if(pipe){
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Command</span>
         </button>
-        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Actions">
+        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Agents">
             <span class="nav-icon">◈</span>
-            <span class="nav-label">Actions</span>
+            <span class="nav-label">Agents</span>
             <span class="ds-notif-badge amber" id="navActionsBadge" style="display:none"></span>
         </button>
         <button class="nav-btn" id="nav-domains" aria-label="Domains">
@@ -11309,7 +11309,7 @@ if(pipe){
         activity:      { title:'Activity',      sub:'Events · Observability · Live Feed' },
         agents:        { title:'Agents',        sub:'Status · Tasks · Authority · Runs' },
         approvals:     { title:'Approvals',     sub:'Pending · Actions · Governance' },
-        actions:       { title:'Actions',       sub:'Decisions · In-flight · History · Notifications' },
+        actions:       { title:'Agents',        sub:'The Office · Departments · Pipeline · Decisions' },
         knowledge:     { title:'Knowledge',     sub:'Facts · Evidence · Gaps · Coverage' },
         intelligence:  { title:'Intelligence',  sub:'Briefing · Opportunities · Health' },
         memory:        { title:'Memory',        sub:'Episodic · Semantic · Health' },
@@ -23330,10 +23330,33 @@ window.apexFileDropHandler = function(e){
         if (tab === 'pipeline'     && !window._officePipeRendered) { renderPipeline();    window._officePipeRendered = true; }
     };
 
+    function initAgentsPage() {
+        // Hide decisions panels, show THE OFFICE by default
+        ['actnStubPanel', 'actnMasterSurface'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        officeSetTab('office');
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        // Wire sub-tab buttons
         document.querySelectorAll('.office-tab-btn').forEach(function(btn) {
             btn.addEventListener('click', function() { officeSetTab(btn.dataset.tab); });
         });
+
+        // Hook switchPage so navigating to 'actions' always opens THE OFFICE
+        var _origSwitch = window.switchPage;
+        if (_origSwitch) {
+            window.switchPage = function(name) {
+                _origSwitch(name);
+                if (name === 'actions') { initAgentsPage(); }
+            };
+        }
+
+        // If already on the agents/actions page on load, show THE OFFICE
+        var hash = location.hash.slice(1);
+        if (hash === 'actions' || hash === 'agents') { initAgentsPage(); }
     });
 })();
 </script>
