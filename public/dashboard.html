@@ -2050,6 +2050,9 @@ html, body {
 .ds-panel.accent-green  { border-left: 3px solid var(--green); }
 .ds-panel.accent-amber  { border-left: 3px solid var(--amber); }
 .ds-panel.accent-red    { border-left: 3px solid var(--red); }
+/* Prevent dynamic content containers collapsing while data loads */
+.ds-panel > [id$="List"], .ds-panel > [id$="Panel"],
+.ds-panel > [id$="Grid"], .ds-panel > [id$="Cards"] { min-height: 72px; }
 .ds-panel-header {
   display: flex;
   align-items: center;
@@ -10423,7 +10426,7 @@ if(pipe){
                             <button class="ds-btn xs" data-fn="realityHealthRefresh">&#8634;</button>
                         </div>
                     </div>
-                    <div id="realityHealthGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:8px 0">
+                    <div id="realityHealthGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:12px 0;min-height:120px">
                         <div class="skel skel-row skel-wide"></div>
                     </div>
                 </div>
@@ -20442,9 +20445,11 @@ window.apexFileDropHandler = function(e){
                 el.innerHTML = Object.values(byEntity).map(function(e) {
                     var avg = e.count ? e.total / e.count : 0;
                     var col = healthCol(avg);
-                    return '<div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:10px 12px;border-left:3px solid '+col+'">' +
-                        '<div style="font:700 10px/1 \'JetBrains Mono\',monospace;color:'+col+';letter-spacing:1px">' + (e.entity_id||'').replace('DOM-','D') + '</div>' +
-                        '<div style="font:600 20px/1 \'JetBrains Mono\',monospace;color:#e8eaf0;margin:6px 0 2px">' + safePct(avg).toFixed(0) + '%</div>' +
+                    var label = avg >= 0.8 ? 'strong' : avg >= 0.5 ? 'partial' : 'low';
+                    return '<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:16px;border-left:3px solid '+col+';display:flex;flex-direction:column;gap:8px;min-height:90px">' +
+                        '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;color:'+col+';letter-spacing:.12em;text-transform:uppercase">' + (e.entity_id||'').replace('DOM-','Domain ') + '</div>' +
+                        '<div style="font:600 32px/1 \'JetBrains Mono\',monospace;color:#e8eaf0">' + safePct(avg).toFixed(0) + '<span style="font-size:14px;color:#52525b">%</span></div>' +
+                        '<div style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#52525b;letter-spacing:.08em">' + label + ' coverage</div>' +
                     '</div>';
                 }).join('');
             })
