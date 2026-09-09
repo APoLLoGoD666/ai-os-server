@@ -113,9 +113,11 @@ function parseGenomeYaml(content) {
 
 // ── Invariant checker ─────────────────────────────────────────────────────────
 
-function _checkInvariant(inv, domainId, domainKey, engine, health, shadowDir) {
+function _checkInvariant(inv, domainId, domainKey, engine, health, shadowDir, domainEntity) {
     const prop    = inv.property;
-    const entity  = engine.lookup(domainId);
+    // DOM-* IDs live in domain shadow registries, not the global ENT-* engine.
+    // Use the pre-loaded domainEntity if available, fall back to engine for non-DOM lookups.
+    const entity  = domainEntity || engine.lookup(domainId);
     const severity = inv.violation || 'advisory';
 
     if (prop === 'status') {
@@ -208,8 +210,18 @@ function validate() {
             continue;
         }
 
+        // Load domain entity from shadow registry — DOM-* IDs are not in the global engine.
+        let domainEntity = null;
+        const shadowEntitiesPath = path.join(shadowDir, 'entities.json');
+        if (fs.existsSync(shadowEntitiesPath)) {
+            try {
+                const shadowEnts = JSON.parse(fs.readFileSync(shadowEntitiesPath, 'utf8'));
+                domainEntity = shadowEnts.find(e => e.id === domainId) || null;
+            } catch (_) {}
+        }
+
         const invariants  = Array.isArray(genome.invariants) ? genome.invariants : [];
-        const checks      = invariants.map(inv => _checkInvariant(inv, domainId, domainKey, engine, health, shadowDir));
+        const checks      = invariants.map(inv => _checkInvariant(inv, domainId, domainKey, engine, health, shadowDir, domainEntity));
         const violations  = checks.filter(c => !c.ok);
         const warnings    = violations.map(v => `${v.property}: ${v.detail}`);
 

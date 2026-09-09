@@ -7397,10 +7397,10 @@ select:focus {
                     <span class="hub-card-label">Knowledge</span>
                     <span class="hub-card-sub">Documents &amp; sources</span>
                   </button>
-                  <button class="hub-card" data-goto="actions" aria-label="Agents">
+                  <button class="hub-card" data-goto="actions" aria-label="Actions">
                     <span class="hub-card-icon">&#9881;</span>
-                    <span class="hub-card-label">Agents</span>
-                    <span class="hub-card-sub">Background tasks &amp; runs</span>
+                    <span class="hub-card-label">Actions</span>
+                    <span class="hub-card-sub">Decisions &amp; agent runs</span>
                   </button>
                   <button class="hub-card apex-master-only" data-goto="governance" aria-label="Governance">
                     <span class="hub-card-icon">&#9878;</span>
@@ -11513,8 +11513,8 @@ async function _probePiper() {
     try {
         const r = await fetch('http://localhost:5002/health', { signal: AbortSignal.timeout(800) });
         _piperUp = r.ok;
-    } catch (_) { _piperUp = false; }
-    console.log('[TTS] Piper local:', _piperUp ? 'UP — local Piper active' : 'DOWN — using Gemini');
+        if (_piperUp) console.log('[TTS] Piper local: UP — local Piper active');
+    } catch (_) { _piperUp = false; /* expected when Piper not running — using Gemini */ }
 }
 async function _ttsPost(text, signal) {
     if (_piperUp) {
@@ -17649,6 +17649,7 @@ function fetchFinanceData() {
 var _finPageInited = false;
 function initFinancePage() {
     fetchFinanceData();
+    fetchPlaidStatus();
     if (!_finPageInited) { setTimeout(initFinanceCharts, 60); _finPageInited = true; }
 }
 
@@ -17659,6 +17660,185 @@ function initFinancePage() {
         if (name==='finance') initFinancePage();
     };
 })();
+
+// ── Plaid integration ─────────────────────────────────────────────────────────
+
+var _plaidLinkHandler = null;
+var _plaidScriptLoaded = false;
+
+// Loads Plaid Link JS SDK on demand (once)
+function _loadPlaidScript(cb) {
+    if (_plaidScriptLoaded) { cb(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+    s.onload = function() { _plaidScriptLoaded = true; cb(); };
+    s.onerror = function() { console.warn('[Plaid] failed to load Link script'); };
+    document.head.appendChild(s);
+}
+
+// Populate net-worth hero + bank stat from accounts array
+function _populatePlaidAccounts(accounts) {
+    var depository = accounts.filter(function(a){ return a.type === 'depository'; });
+    var credit     = accounts.filter(function(a){ return a.type === 'credit'; });
+    var assets     = depository.reduce(function(s, a){ return s + (a.balances.current || 0); }, 0);
+    var liab       = credit.reduce(function(s, a){ return s + (a.balances.current || 0); }, 0);
+    var netWorth   = assets - liab;
+    var fmt        = function(n){ return '£' + Math.round(n).toLocaleString('en-GB'); };
+
+    var nwEl = document.getElementById('fin-net-worth-val');
+    var nwSub = document.getElementById('fin-net-worth-sub');
+    var assEl = document.getElementById('fin-assets-val');
+    var liabEl = document.getElementById('fin-liab-val');
+    var bankEl = document.getElementById('finStatBank');
+    if (nwEl)   nwEl.textContent  = fmt(netWorth);
+    if (nwSub)  nwSub.textContent = 'Updated just now';
+    if (assEl)  assEl.textContent = fmt(assets);
+    if (liabEl) liabEl.textContent = fmt(liab);
+    if (bankEl) bankEl.textContent = fmt(assets);
+
+    // Remove "Plaid not connected" badge from linked accounts header
+    var badge = document.querySelector('#page-finance .ds-badge.amber');
+    if (badge && badge.textContent.includes('Plaid')) badge.style.display = 'none';
+
+    // Stat card: bank balance sub-label
+    var bankSub = bankEl && bankEl.nextElementSibling;
+    if (bankSub) bankSub.innerHTML = '<span class="ds-dot green"></span><span style="color:var(--green)">' + accounts.length + ' account' + (accounts.length === 1 ? '' : 's') + ' linked</span>';
+
+    // Render real account cards (no overlay)
+    var row = document.getElementById('financeCardsRow');
+    if (row && accounts.length) {
+        var grads = [
+            'linear-gradient(135deg,#1a237e,#0d47a1)',
+            'linear-gradient(135deg,#1b5e20,#2e7d32)',
+            'linear-gradient(135deg,#4a148c,#6a1b9a)',
+            'linear-gradient(135deg,#0d3b5e,#1565c0)',
+        ];
+        row.innerHTML = accounts.slice(0, 4).map(function(a, i) {
+            var bal = a.balances.current != null ? fmt(a.balances.current) : '—';
+            var name = (a.official_name || a.name || 'Account').slice(0, 18);
+            var last4 = a.mask ? '•••• ' + a.mask : '•••• ••••';
+            var sub = a.institution_name || a.subtype || '';
+            return '<div class="fin-card" style="background:' + grads[i % grads.length] + '">' +
+                '<div style="display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);letter-spacing:0.1em">' + escapeHtml(name) + '</span><span style="font-size:12px;color:rgba(255,255,255,0.5)">' + escapeHtml(sub) + '</span></div>' +
+                '<div class="fin-card-num">' + last4 + '</div>' +
+                '<div class="fin-card-bottom"><span class="fin-card-holder">' + bal + '</span><span class="fin-card-expiry">' + (a.type || '') + '</span></div>' +
+                '</div>';
+        }).join('');
+    }
+}
+
+// Update income/expense bar chart and spend doughnut from cashflow API response
+function _populatePlaidCharts(cashflow, categories) {
+    // Income vs Expenses bar chart
+    var incChart = _finCharts && _finCharts['income'];
+    if (incChart && cashflow && cashflow.length) {
+        incChart.data.labels = cashflow.map(function(m){ return m.month.slice(5); }); // "MM" label
+        incChart.data.datasets[0].data = cashflow.map(function(m){ return m.income; });
+        incChart.data.datasets[1].data = cashflow.map(function(m){ return m.expenses; });
+        incChart.update();
+        // Hide the "No transaction data" note
+        var note = document.querySelector('#page-finance canvas#fin-chart-income + div');
+        if (!note) {
+            var canvas = document.getElementById('fin-chart-income');
+            if (canvas) note = canvas.parentElement && canvas.parentElement.nextElementSibling;
+        }
+        if (note) note.style.display = 'none';
+    }
+
+    // Spend by category doughnut
+    var spendChart = _finCharts && _finCharts['spend'];
+    var legend     = document.getElementById('fin-spend-legend');
+    if (spendChart && categories && Object.keys(categories).length) {
+        var sorted = Object.entries(categories).sort(function(a, b){ return b[1] - a[1]; }).slice(0, 6);
+        var colors = ['rgba(0,212,255,0.75)','rgba(167,130,255,0.75)','rgba(239,180,90,0.75)','rgba(74,222,128,0.75)','rgba(255,77,106,0.75)','rgba(100,180,255,0.75)'];
+        spendChart.data.labels   = sorted.map(function(e){ return e[0]; });
+        spendChart.data.datasets[0].data            = sorted.map(function(e){ return +e[1].toFixed(2); });
+        spendChart.data.datasets[0].backgroundColor = colors.slice(0, sorted.length);
+        spendChart.update();
+        if (legend) {
+            legend.innerHTML = sorted.map(function(e, i){
+                return '<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + colors[i] + '"></span>' +
+                    '<span style="flex:1;color:var(--text-mid)">' + escapeHtml(e[0]) + '</span>' +
+                    '<span class="t-mono" style="color:var(--text)">£' + Math.round(e[1]).toLocaleString('en-GB') + '</span></div>';
+            }).join('');
+        }
+    }
+}
+
+// Open Plaid Link flow
+function openPlaidLink() {
+    _loadPlaidScript(function() {
+        if (typeof Plaid === 'undefined') { console.warn('[Plaid] SDK not available'); return; }
+        fetch('/api/finance/plaid/link-token', {
+            method: 'POST',
+            headers: buildApiHeaders(),
+        }).then(function(r){ return r.json(); }).then(function(d){
+            if (!d.ok || !d.link_token) { console.error('[Plaid] link-token failed:', d.error); return; }
+            _plaidLinkHandler = Plaid.create({
+                token: d.link_token,
+                onSuccess: function(public_token, metadata) {
+                    fetch('/api/finance/plaid/exchange-token', {
+                        method: 'POST',
+                        headers: Object.assign({'Content-Type':'application/json'}, buildApiHeaders()),
+                        body: JSON.stringify({
+                            public_token: public_token,
+                            institution_name: metadata.institution && metadata.institution.name,
+                            institution_id:   metadata.institution && metadata.institution.institution_id,
+                        }),
+                    }).then(function(r){ return r.json(); }).then(function(d){
+                        if (d.ok) { fetchPlaidStatus(); }
+                        else console.error('[Plaid] exchange failed:', d.error);
+                    }).catch(function(e){ console.error('[Plaid] exchange error:', e); });
+                },
+                onExit: function(err) { if (err) console.warn('[Plaid] Link exited:', err); },
+            });
+            _plaidLinkHandler.open();
+        }).catch(function(e){ console.error('[Plaid] link-token error:', e); });
+    });
+}
+
+// Wire all "Connect via Plaid" buttons on the finance page
+function _wirePlaidButtons() {
+    var row = document.getElementById('financeCardsRow');
+    if (row) {
+        row.addEventListener('click', function(e) {
+            var btn = e.target.closest('button');
+            if (btn && btn.textContent.includes('Plaid')) openPlaidLink();
+        });
+    }
+}
+
+// Fetch Plaid status and populate the page if connected
+function fetchPlaidStatus() {
+    fetch('/api/finance/plaid/status', { headers: buildApiHeaders() })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if (!d.ok || !d.connected) {
+                _wirePlaidButtons();
+                return;
+            }
+            // Fetch accounts and cashflow in parallel
+            Promise.all([
+                fetch('/api/finance/plaid/accounts',  { headers: buildApiHeaders() }).then(function(r){ return r.json(); }),
+                fetch('/api/finance/plaid/cashflow',   { headers: buildApiHeaders() }).then(function(r){ return r.json(); }),
+            ]).then(function(results) {
+                var accts = results[0], cf = results[1];
+                if (accts.ok && accts.accounts && accts.accounts.length) {
+                    _populatePlaidAccounts(accts.accounts);
+                }
+                // Charts must exist before populating — wait for initFinanceCharts if needed
+                var tryCharts = function() {
+                    if (_finCharts && (_finCharts['income'] || _finCharts['spend'])) {
+                        if (cf.ok) _populatePlaidCharts(cf.cashflow, cf.categories);
+                    } else {
+                        setTimeout(tryCharts, 200);
+                    }
+                };
+                tryCharts();
+            }).catch(function(e){ console.warn('[Plaid] data fetch error:', e); });
+        })
+        .catch(function(e){ console.warn('[Plaid] status error:', e); });
+}
 
 // ── BUSINESS PAGE ─────────────────────────────────────────────────────────────
 var _bizCrmView = 'table';
@@ -20533,11 +20713,11 @@ window.apexFileDropHandler = function(e){
     document.addEventListener('click', function(e) {
         var fn = e.target && e.target.dataset && e.target.dataset.fn;
         if (fn === 'realitySeed') {
-            e.target.disabled = true; e.target.textContent = '…';
+            var btn = e.target; btn.disabled = true; btn.textContent = '…';
             fetch('/api/reality-architecture/seed', { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, h()), body:'{}' })
                 .then(function(r) { return r.json(); })
-                .then(function(d) { e.target.disabled=false; e.target.textContent='⬆ Seed'; if (d.ok) window.loadRealityPage(); })
-                .catch(function() { e.target.disabled=false; e.target.textContent='⬆ Seed'; });
+                .then(function(d) { btn.disabled=false; btn.textContent='Initialise Data'; if (d.ok) window.loadRealityPage(); })
+                .catch(function() { btn.disabled=false; btn.textContent='Initialise Data'; });
         }
         if (fn === 'realityHealthRefresh') { loadRealityHealth(); }
     });

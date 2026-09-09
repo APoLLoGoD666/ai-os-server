@@ -266,6 +266,13 @@ function status(sessionId) {
     _ensureDir();
     const ids      = fs.readdirSync(CONSENSUS_DIR).filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
     const sessions = ids.map(id => _load(id)).filter(Boolean);
+    // Lazy-expire any PENDING sessions that have passed their deadline
+    sessions.forEach(s => {
+        if (s.status === 'PENDING' && _isExpired(s)) {
+            s.status = 'EXPIRED';
+            _save(s);
+        }
+    });
     return {
         ok:       true,
         total:    sessions.length,

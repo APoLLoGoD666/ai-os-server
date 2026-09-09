@@ -172,41 +172,37 @@ function _postResponseHook(ctx) {
                     outcome,
                 });
 
-                // W3: Memory write + read-back verification
-                if (!ctx.flags.memWriteDisabled) {
+                // W3: Episodic memory write — agent task episodes only, not raw HTTP telemetry.
+                // HTTP telemetry (requestId/path/outcome/durationMs) belongs in request_logs,
+                // not episodic memory. Only write when a genuine agent decision was made.
+                if (!ctx.flags.memWriteDisabled && ctx.decision.made) {
                     try {
-                        // taskId is a request UUID (not an agent run ID) — pass null to avoid FK violation
                         const memoryId = await memGateway.storeMemory({
                             layer:            LAYER_EPISODIC,
                             content:          JSON.stringify({
                                 requestId:  ctx.requestId,
-                                path:       ctx.metadata.path,
+                                action:     ctx.decision.action,
                                 outcome,
-                                durationMs: measure.durationMs,
+                                reasoning:  ctx.decision.reasoning,
                                 attention:  ctx.attention.score,
                                 tier:       ctx.attention.executionHint,
                             }),
-                            tags:             ['execution', ctx.identity.executionClass.toLowerCase()],
+                            tags:             ['agent-episode', ctx.identity.executionClass.toLowerCase()],
                             source:           'civilization-kernel',
                             taskId:           null,
                             traceId:          ctx.requestId,
-                            importance:       ctx.flags.humanReviewRequired ? 8 : 5,
+                            importance:       ctx.flags.humanReviewRequired ? 8 : 6,
                             requestingEntity: 'civilization-kernel',
                             outcome,
                         });
-                        auditRecord.memoryStatus = 'written';
-
-                        // W3: read-back — verify by memory_id returned from the write
-                        const verified = !!memoryId;
-                        auditRecord.writeVerified = verified;
-                        auditRecord.memoryStatus  = verified ? 'verified' : 'write_unconfirmed';
-
+                        auditRecord.memoryStatus = memoryId ? 'verified' : 'write_unconfirmed';
+                        auditRecord.writeVerified = !!memoryId;
                     } catch (e) {
                         auditRecord.memoryStatus = 'error';
                         auditRecord.errors.push(e.message.slice(0, 80));
                     }
                 } else {
-                    auditRecord.memoryStatus = 'restricted';
+                    auditRecord.memoryStatus = ctx.flags.memWriteDisabled ? 'restricted' : 'skipped';
                 }
 
                 // Decision memory for decided requests
