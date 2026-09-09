@@ -1,6 +1,7 @@
 node_modules
 .env
-.registry-cache/
+.registry-cache/*
+!.registry-cache/entities.json
 runtime/live/
 logs/
 
