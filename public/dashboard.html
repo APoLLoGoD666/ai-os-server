@@ -23261,6 +23261,8 @@ window.apexFileDropHandler = function(e){
         document.querySelectorAll('.office-tab-btn').forEach(function(b) {
             b.classList.toggle('active', b.dataset.tab === tab);
         });
+        var pg = document.getElementById('page-agents');
+        if (pg) pg.scrollTop = 0;
         if (tab === 'office'       && !window._officeMapRendered)  { renderOfficeMap();   window._officeMapRendered  = true; }
         if (tab === 'departments'  && !window._officeDeptRendered) { renderDeptCards();   window._officeDeptRendered = true; }
         if (tab === 'pipeline'     && !window._officePipeRendered) { renderPipeline();    window._officePipeRendered = true; }
