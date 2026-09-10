@@ -590,79 +590,93 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 .ao-agent-detail--open { max-height:120px; }
 .ao-agent-detail-body { margin:2px 0 8px 12px; padding:7px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(255,255,255,0.06); border-radius:0 4px 4px 0; font:500 10px/1.5 'Inter',system-ui,sans-serif; color:#52525b; }
 
-/* ── Supreme Council Page ────────────────────────────────────────────────── */
+/* ── Supreme Council Page ───────────────────────────────────────────────── */
 #page-council { padding:0 !important; gap:0 !important; overflow:hidden !important; }
-.ec-topbar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; height:42px; background:#080808; border-bottom:1px solid rgba(255,255,255,0.06); z-index:5; }
-.ec-title { font:700 13px/1 'JetBrains Mono',monospace; letter-spacing:.06em; color:#f4f4f5; }
-.ec-conn-dot { width:6px; height:6px; border-radius:50%; background:#34d399; flex-shrink:0; box-shadow:0 0 6px #34d399; transition:background .3s; }
+.ec-topbar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 20px; height:44px; background:#080808; border-bottom:1px solid rgba(255,255,255,0.07); z-index:5; }
+.ec-title { font:700 12px/1 'JetBrains Mono',monospace; letter-spacing:.08em; color:#f4f4f5; }
+.ec-conn-dot { width:6px; height:6px; border-radius:50%; background:#34d399; flex-shrink:0; box-shadow:0 0 6px #34d399; transition:background .4s,box-shadow .4s; }
 .ec-subtitle { font:500 10px/1 'JetBrains Mono',monospace; color:#3f3f46; letter-spacing:.04em; }
-.ec-convene-btn { padding:6px 14px; background:rgba(124,108,242,0.09); border:1px solid rgba(124,108,242,0.28); border-radius:6px; color:#a78bfa; font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.06em; cursor:pointer; transition:background .15s; }
-.ec-convene-btn:hover { background:rgba(124,108,242,0.18); }
-.ec-convene-btn:disabled { opacity:.4; cursor:not-allowed; }
-.ec-clock { font:600 13px/1 'JetBrains Mono',monospace; color:#3f3f46; letter-spacing:.04em; }
+.ec-convene-btn { padding:6px 14px; background:rgba(212,175,55,0.07); border:1px solid rgba(212,175,55,0.25); border-radius:6px; color:#c9a227; font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.06em; cursor:pointer; transition:background .15s; }
+.ec-convene-btn:hover { background:rgba(212,175,55,0.14); }
+.ec-convene-btn:disabled { opacity:.35; cursor:not-allowed; }
+.ec-clock { font:600 12px/1 'JetBrains Mono',monospace; color:#2a2a2a; letter-spacing:.04em; }
 .ec-main { flex:1; min-height:0; display:flex; overflow:hidden; }
-.ec-chamber { flex:1; min-width:0; position:relative; overflow:hidden; background:radial-gradient(ellipse at 50% 50%, rgba(20,16,34,1) 0%, #07070a 80%); }
-.ec-entity-card { position:absolute; background:rgba(10,10,14,0.97); border-radius:10px; padding:14px 16px 12px; z-index:2; transition:box-shadow .15s,border-color .15s; cursor:default; }
-.ec-entity-card:hover { box-shadow:0 0 0 1px rgba(255,255,255,0.14),0 8px 28px rgba(0,0,0,0.5) !important; }
-.ec-entity-tag { font:700 11px/1 'JetBrains Mono',monospace; letter-spacing:.09em; margin-bottom:5px; display:flex; align-items:center; gap:7px; }
-.ec-entity-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-.ec-entity-name { font:500 10px/1.3 'Inter',system-ui,sans-serif; color:#71717a; margin-top:2px; }
-.ec-entity-domain { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:4px; letter-spacing:.03em; }
-.ec-entity-last { margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05); }
-.ec-entity-last-label { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.07em; color:#27272a; }
-.ec-entity-last-vote { font:500 10px/1.3 'Inter',system-ui,sans-serif; color:#52525b; margin-top:3px; }
-.ec-conf-bar { height:2px; background:rgba(255,255,255,0.06); border-radius:2px; margin-top:7px; overflow:hidden; }
-.ec-conf-fill { height:100%; border-radius:2px; transition:width .5s; }
-.ec-conf-label { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:3px; }
-.ec-entity-status { display:inline-flex; align-items:center; gap:5px; margin-top:7px; }
-.ec-status-dot { width:5px; height:5px; border-radius:50%; }
-.ec-status-dot.idle { background:#3f3f46; }
-.ec-status-dot.deliberating { background:#7c6cf2; box-shadow:0 0 6px #7c6cf2; animation:ecPulse 1.2s ease-in-out infinite; }
-@keyframes ecPulse { 0%,100%{opacity:1}50%{opacity:.3} }
-@media (prefers-reduced-motion:reduce) { .ec-status-dot.deliberating,.ec-emblem-status.deliberating { animation:none; } }
-.ec-emblem { position:absolute; display:flex; flex-direction:column; align-items:center; gap:6px; z-index:3; transform:translate(-50%,-50%); pointer-events:none; }
-.ec-emblem-ring { width:88px; height:88px; border-radius:50%; border:1px solid rgba(124,108,242,0.2); display:flex; align-items:center; justify-content:center; background:radial-gradient(circle,rgba(124,108,242,0.14) 0%,rgba(124,108,242,0.04) 60%,transparent 100%); box-shadow:0 0 44px rgba(124,108,242,0.1); }
-.ec-emblem-orb { width:58px; height:58px; border-radius:50%; background:radial-gradient(circle,rgba(124,108,242,0.32) 0%,rgba(124,108,242,0.1) 60%,transparent 100%); border:1px solid rgba(124,108,242,0.36); display:flex; align-items:center; justify-content:center; box-shadow:0 0 22px rgba(124,108,242,0.22); }
-.ec-emblem-inner { font-size:22px; color:#a78bfa; opacity:.85; }
-.ec-emblem-label { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:#3f3f46; }
-.ec-emblem-status { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#27272a; }
-.ec-emblem-status.deliberating { color:#a78bfa; animation:ecPulse 1.2s ease-in-out infinite; }
-.ec-delib-panel { width:390px; flex-shrink:0; background:#080808; border-left:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; overflow:hidden; }
+/* Chamber — scrollable flex container that centres the grid */
+.ec-chamber { flex:1; min-width:0; overflow:auto; background:radial-gradient(ellipse at 50% 44%,rgba(16,12,28,1) 0%,#060609 72%); display:flex; align-items:center; justify-content:center; padding:20px 24px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.05) transparent; }
+/* 7-entity grid */
+.ec-grid { display:flex; flex-direction:column; gap:10px; width:100%; max-width:700px; }
+.ec-row { display:flex; gap:10px; }
+/* Exec card (6 voting execs) */
+.ec-card { flex:1; min-width:0; background:rgba(11,11,15,0.98); border-radius:8px; padding:13px 14px 11px; border-left:3px solid transparent; outline:1px solid rgba(255,255,255,0.07); outline-offset:-1px; transition:outline-color .2s,box-shadow .2s; }
+.ec-card:hover { outline-color:rgba(255,255,255,0.13); box-shadow:0 4px 20px rgba(0,0,0,0.4); }
+/* CEO card */
+.ec-card-ceo { background:rgba(13,11,8,0.98); border-radius:8px; padding:14px 18px 13px; border-left:3px solid rgba(201,162,39,0.4); outline:1px solid rgba(212,175,55,0.12); outline-offset:-1px; transition:outline-color .2s,box-shadow .2s; }
+.ec-card-ceo:hover { outline-color:rgba(212,175,55,0.22); box-shadow:0 4px 24px rgba(0,0,0,0.5); }
+.ec-card-ceo-inner { display:flex; gap:16px; align-items:flex-start; margin-top:10px; padding-top:9px; border-top:1px solid rgba(212,175,55,0.09); }
+/* Header */
+.ec-card-hdr { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:3px; }
+.ec-abbr { font:700 13px/1 'JetBrains Mono',monospace; letter-spacing:.05em; }
+.ec-synthesizer-tag { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.07em; color:#c9a22760; }
+.ec-full-name { font:500 10px/1 'Inter',system-ui,sans-serif; color:#3f3f46; }
+/* Vote section */
+.ec-vote-row { margin-top:9px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05); display:flex; align-items:flex-start; gap:7px; }
+.ec-vbadge { flex-shrink:0; padding:3px 6px; border-radius:3px; font:700 7px/1 'JetBrains Mono',monospace; letter-spacing:.05em; white-space:nowrap; }
+.ec-vbadge.va { background:rgba(52,211,153,0.09);color:#34d399;border:1px solid rgba(52,211,153,0.2); }
+.ec-vbadge.vr { background:rgba(239,68,68,0.09);color:#ef4444;border:1px solid rgba(239,68,68,0.2); }
+.ec-vbadge.vn { background:rgba(113,113,122,0.09);color:#52525b;border:1px solid rgba(113,113,122,0.18); }
+.ec-vbadge.v0 { background:rgba(255,255,255,0.03);color:#27272a;border:1px solid rgba(255,255,255,0.07); }
+.ec-vrat { font:500 9px/1.4 'Inter',system-ui,sans-serif; color:#27272a; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; flex:1; }
+.ec-cbar { height:2px; background:rgba(255,255,255,0.05); border-radius:2px; margin-top:5px; overflow:hidden; }
+.ec-cfill { height:100%; border-radius:2px; transition:width .5s; }
+.ec-cpct { font:700 8px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:2px; }
+/* CEO inner columns */
+.ec-ceo-left { flex-shrink:0; display:flex; flex-direction:column; gap:6px; }
+.ec-divider { width:1px; flex-shrink:0; background:rgba(212,175,55,0.1); align-self:stretch; }
+.ec-rec-section { flex:1; min-width:0; }
+.ec-rec-lbl { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.09em; color:#c9a22760; margin-bottom:5px; }
+.ec-rec-txt { font:500 10px/1.5 'Inter',system-ui,sans-serif; color:#52525b; }
+/* Status row */
+.ec-srow { display:flex; align-items:center; gap:5px; margin-top:8px; }
+.ec-sdot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.ec-sdot.idle { background:#1e1e22; }
+.ec-sdot.on { background:#7c6cf2; box-shadow:0 0 5px #7c6cf255; animation:ecPulse 1.2s ease-in-out infinite; }
+.ec-sdot.ceo-on { background:#c9a227; box-shadow:0 0 5px #c9a22755; animation:ecPulse 1.2s ease-in-out infinite; }
+.ec-slbl { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.06em; color:#27272a; }
+@keyframes ecPulse { 0%,100%{opacity:1}50%{opacity:.2} }
+@media (prefers-reduced-motion:reduce) { .ec-sdot.on,.ec-sdot.ceo-on { animation:none; } }
+/* Right panel */
+.ec-delib-panel { width:340px; flex-shrink:0; background:#080808; border-left:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; overflow:hidden; }
 .ec-delib-top { padding:14px 16px 12px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
-.ec-panel-label { font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.09em; color:#3f3f46; margin-bottom:10px; }
-.ec-question-inp { width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 11px; font:12px/1.5 'Inter',system-ui,sans-serif; color:#f4f4f5; outline:none; resize:none; box-sizing:border-box; }
-.ec-question-inp::placeholder { color:#3f3f46; }
-.ec-question-inp:focus { border-color:rgba(124,108,242,0.35); }
-.ec-submit-btn { margin-top:8px; width:100%; padding:9px 0; background:rgba(124,108,242,0.09); border:1px solid rgba(124,108,242,0.25); border-radius:7px; color:#a78bfa; font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.07em; cursor:pointer; transition:background .15s; }
-.ec-submit-btn:hover { background:rgba(124,108,242,0.18); }
-.ec-submit-btn:disabled { opacity:.4; cursor:not-allowed; }
-.ec-delib-status { margin-top:9px; padding:9px 11px; background:rgba(124,108,242,0.05); border:1px solid rgba(124,108,242,0.14); border-radius:6px; font:500 10px/1.5 'Inter',system-ui,sans-serif; color:#71717a; }
-.ec-history-hdr { display:flex; align-items:center; justify-content:space-between; padding:11px 16px 8px; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.04); }
-.ec-history-title { font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.09em; color:#3f3f46; }
-.ec-refresh-btn { background:none; border:none; color:#3f3f46; font-size:14px; cursor:pointer; padding:2px 4px; transition:color .12s; line-height:1; }
+.ec-panel-label { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#2d2d2d; margin-bottom:10px; }
+.ec-question-inp { width:100%; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.09); border-radius:6px; padding:9px 11px; font:12px/1.5 'Inter',system-ui,sans-serif; color:#e4e4e7; outline:none; resize:none; box-sizing:border-box; transition:border-color .15s; }
+.ec-question-inp::placeholder { color:#272727; }
+.ec-question-inp:focus { border-color:rgba(124,108,242,0.3); }
+.ec-submit-btn { margin-top:8px; width:100%; padding:9px 0; background:rgba(124,108,242,0.07); border:1px solid rgba(124,108,242,0.2); border-radius:6px; color:#9d90f5; font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.07em; cursor:pointer; transition:background .15s; }
+.ec-submit-btn:hover { background:rgba(124,108,242,0.15); }
+.ec-submit-btn:disabled { opacity:.35; cursor:not-allowed; }
+.ec-delib-status { margin-top:10px; padding:10px 11px; background:rgba(124,108,242,0.04); border:1px solid rgba(124,108,242,0.12); border-radius:6px; }
+.ec-history-hdr { display:flex; align-items:center; justify-content:space-between; padding:10px 16px 7px; flex-shrink:0; }
+.ec-history-title { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#2d2d2d; }
+.ec-refresh-btn { background:none; border:none; color:#2d2d2d; font-size:13px; cursor:pointer; padding:2px 4px; transition:color .12s; line-height:1; }
 .ec-refresh-btn:hover { color:#71717a; }
-.ec-history-list { flex:1; overflow-y:auto; padding:10px 16px 16px; display:flex; flex-direction:column; gap:10px; scrollbar-width:thin; scrollbar-color:rgba(124,108,242,0.2) transparent; }
-.ec-loading { font:500 10px/1.4 'JetBrains Mono',monospace; color:#27272a; text-align:center; padding:24px 0; letter-spacing:.03em; }
-.ec-delib-item { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:11px 13px; }
-.ec-delib-q { font:600 11px/1.4 'Inter',system-ui,sans-serif; color:#a1a1aa; }
-.ec-delib-meta { display:flex; align-items:center; gap:8px; margin-top:6px; }
-.ec-delib-badge { padding:2px 7px; border-radius:4px; font:700 8px/1.2 'JetBrains Mono',monospace; letter-spacing:.05em; }
-.ec-delib-badge.resolved { background:rgba(52,211,153,0.07);color:#34d399;border:1px solid rgba(52,211,153,0.16); }
-.ec-delib-badge.deliberating { background:rgba(124,108,242,0.07);color:#a78bfa;border:1px solid rgba(124,108,242,0.16); }
-.ec-delib-badge.escalated { background:rgba(251,191,36,0.07);color:#fbbf24;border:1px solid rgba(251,191,36,0.16); }
-.ec-consensus-row { display:flex; align-items:center; gap:8px; margin-top:7px; }
-.ec-consensus-bar { flex:1; height:3px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
-.ec-consensus-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#7c6cf2,#a78bfa); }
-.ec-consensus-pct { font:700 9px/1 'JetBrains Mono',monospace; color:#3f3f46; white-space:nowrap; }
-.ec-votes-row { display:flex; gap:4px; margin-top:7px; flex-wrap:wrap; }
-.ec-vote-chip { padding:2px 6px; border-radius:3px; font:700 8px/1.2 'JetBrains Mono',monospace; letter-spacing:.04em; }
-.ec-delib-rec { margin-top:8px; padding:8px 9px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(124,108,242,0.3); border-radius:0 4px 4px 0; font:500 10px/1.5 'Inter',system-ui,sans-serif; color:#52525b; }
-.ec-delib-time { font:500 8px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:5px; }
-.ec-exec-vote-row { display:flex; align-items:center; gap:8px; }
-.ec-exec-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-.ec-exec-id { font:700 9px/1 'JetBrains Mono',monospace; color:#3f3f46; width:28px; flex-shrink:0; letter-spacing:.04em; }
-.ec-exec-vote { font:500 10px/1 'Inter',system-ui,sans-serif; color:#71717a; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ec-exec-conf { font:700 9px/1 'JetBrains Mono',monospace; color:#3f3f46; flex-shrink:0; }
+.ec-history-list { flex:1; overflow-y:auto; padding:4px 12px 14px; display:flex; flex-direction:column; gap:7px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.05) transparent; }
+.ec-loading { font:500 10px/1 'JetBrains Mono',monospace; color:#1e1e1e; text-align:center; padding:28px 0; letter-spacing:.04em; }
+/* History items */
+.ec-hi { background:rgba(255,255,255,0.015); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:9px 11px; transition:border-color .15s; }
+.ec-hi:hover { border-color:rgba(255,255,255,0.1); }
+.ec-hi-q { font:500 10px/1.4 'Inter',system-ui,sans-serif; color:#52525b; }
+.ec-hi-meta { display:flex; align-items:center; gap:6px; margin-top:5px; }
+.ec-hi-badge { padding:2px 5px; border-radius:3px; font:700 7px/1.2 'JetBrains Mono',monospace; letter-spacing:.05em; }
+.ec-hi-badge.res { background:rgba(52,211,153,0.07);color:#34d399;border:1px solid rgba(52,211,153,0.14); }
+.ec-hi-badge.esc { background:rgba(251,191,36,0.07);color:#fbbf24;border:1px solid rgba(251,191,36,0.14); }
+.ec-hi-when { font:500 8px/1 'JetBrains Mono',monospace; color:#27272a; margin-left:auto; }
+.ec-hi-cons { display:flex; align-items:center; gap:6px; margin-top:5px; }
+.ec-hi-bar { flex:1; height:2px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; }
+.ec-hi-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,#7c6cf2,#a78bfa); }
+.ec-hi-pct { font:700 8px/1 'JetBrains Mono',monospace; color:#27272a; white-space:nowrap; }
+.ec-hi-chips { display:flex; gap:3px; margin-top:5px; flex-wrap:wrap; }
+.ec-hi-chip { padding:2px 5px; border-radius:3px; font:700 7px/1.2 'JetBrains Mono',monospace; letter-spacing:.03em; }
+.ec-hi-rec { margin-top:6px; font:500 9px/1.4 'Inter',system-ui,sans-serif; color:#27272a; border-left:1px solid rgba(212,175,55,0.2); padding-left:7px; }
 
 /* ── V-11-K: canonical progressive disclosure ────────────────────────── */
 .apex-disclosure { }
@@ -11424,7 +11438,7 @@ if(pipe){
                     <div style="display:flex;align-items:center;gap:10px">
                         <div class="ec-title">SUPREME COUNCIL</div>
                         <div class="ec-conn-dot" id="ecConnDot"></div>
-                        <div class="ec-subtitle">Executive Deliberation Chamber</div>
+                        <div class="ec-subtitle">7 Executives · Deliberation Chamber</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:10px">
                         <button class="ec-convene-btn" id="ecConveneBtn" aria-label="Convene weekly strategic session" onclick="ecConvene()">⬡ WEEKLY SESSION</button>
@@ -11435,13 +11449,13 @@ if(pipe){
                     <div class="ec-chamber" id="ecChamber" aria-label="Council chamber"></div>
                     <div class="ec-delib-panel" role="complementary" aria-label="Deliberation panel">
                         <div class="ec-delib-top">
-                            <div class="ec-panel-label">DELIBERATION CHAMBER</div>
-                            <textarea class="ec-question-inp" id="ecQuestionInp" rows="3" placeholder="Submit a strategic question to the council… (Ctrl+Enter to send)" aria-label="Council question"></textarea>
+                            <div class="ec-panel-label">ASK THE COUNCIL</div>
+                            <textarea class="ec-question-inp" id="ecQuestionInp" rows="3" placeholder="Ask the council a strategic question… (Ctrl+Enter)" aria-label="Council question"></textarea>
                             <button class="ec-submit-btn" id="ecSubmitBtn" onclick="ecSubmitQuestion()">DELIBERATE →</button>
                             <div class="ec-delib-status" id="ecDelibStatus" style="display:none" aria-live="polite"></div>
                         </div>
                         <div class="ec-history-hdr">
-                            <span class="ec-history-title">RECENT DELIBERATIONS</span>
+                            <span class="ec-history-title">SESSIONS</span>
                             <button class="ec-refresh-btn" aria-label="Refresh history" onclick="councilRefresh()">↻</button>
                         </div>
                         <div class="ec-history-list" id="ecHistoryList" role="list">
@@ -24121,15 +24135,13 @@ window.apexFileDropHandler = function(e){
     'use strict';
 
     var EC_ENTITIES = [
-        { id:'cso', name:'Chief Strategy Officer',     abbr:'CSO', color:'#7c6cf2', domain:'Strategy · Roadmap · Initiatives' },
-        { id:'cto', name:'Chief Technology Officer',   abbr:'CTO', color:'#3b82f6', domain:'Architecture · Infrastructure · Dev' },
-        { id:'cfo', name:'Chief Financial Officer',    abbr:'CFO', color:'#22c55e', domain:'Budget · Cost · ROI · Integrity' },
-        { id:'coo', name:'Chief Operating Officer',    abbr:'COO', color:'#f59e0b', domain:'Operations · Reliability · Process' },
-        { id:'cio', name:'Chief Intelligence Officer', abbr:'CIO', color:'#06b6d4', domain:'Memory · Knowledge · Cognition' },
-        { id:'cgo', name:'Chief Governance Officer',   abbr:'CGO', color:'#ef4444', domain:'Constitution · Ethics · Policy' },
+        { id:'cso', name:'Chief Strategy Officer',     abbr:'CSO', color:'#7c6cf2' },
+        { id:'cto', name:'Chief Technology Officer',   abbr:'CTO', color:'#3b82f6' },
+        { id:'cfo', name:'Chief Financial Officer',    abbr:'CFO', color:'#22c55e' },
+        { id:'coo', name:'Chief Operating Officer',    abbr:'COO', color:'#f59e0b' },
+        { id:'cio', name:'Chief Intelligence Officer', abbr:'CIO', color:'#06b6d4' },
+        { id:'cgo', name:'Chief Governance Officer',   abbr:'CGO', color:'#ef4444' },
     ];
-    // CEO is the synthesizer — not a voter, renders as the central authority card
-    var EC_CEO = { id:'ceo', name:'Chief Executive Officer', abbr:'CEO', color:'#d4af37', domain:'Synthesis · Authority · Final Recommendation' };
     var _ecLastRec = '';
 
     var _ecLastVotes    = {};
@@ -24153,42 +24165,69 @@ window.apexFileDropHandler = function(e){
         return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    function _voteColor(vote) {
-        if (!vote) return '#3f3f46';
+    function _vbCls(vote) {
+        if (!vote || vote === '—') return 'v0';
         var v = vote.toLowerCase();
-        if (/approve|yes|proceed|go|accept|support/.test(v))  return '#34d399';
-        if (/reject|no|hold|deny|stop|block|against/.test(v)) return '#ef4444';
-        if (/abstain|neutral|pass|defer/.test(v))             return '#71717a';
-        return '#a78bfa';
+        if (/approve|yes|proceed|go|accept|support/.test(v))  return 'va';
+        if (/reject|no|hold|deny|stop|block|against/.test(v)) return 'vr';
+        if (/abstain|neutral|pass|defer/.test(v))             return 'vn';
+        return 'va';
     }
 
-    function _buildCard(entity, lastVote) {
-        var el = document.createElement('div');
-        el.className  = 'ec-entity-card';
-        el.id         = 'ec-card-' + entity.id;
-        el.style.border = '1px solid rgba(255,255,255,0.08)';
-        var conf    = lastVote ? (lastVote.confidence || 0) : 0;
+    function _buildExecCard(entity, lv) {
+        var vote    = lv ? (lv.vote || '—') : '—';
+        var conf    = lv ? (lv.confidence || 0) : 0;
         var confPct = Math.round(conf * 100);
-        var cColor  = conf > 0.7 ? '#34d399' : conf > 0.45 ? '#f59e0b' : '#52525b';
-        var vote    = lastVote ? (lastVote.vote || '—') : '—';
-        var sdClass = _ecDeliberating ? 'deliberating' : 'idle';
-        var sdLabel = _ecDeliberating ? 'DELIBERATING' : 'IDLE';
+        var confCol = conf > 0.7 ? '#34d399' : conf > 0.45 ? '#f59e0b' : '#3f3f46';
+        var vCls    = _vbCls(vote);
+        var rat     = lv ? (lv.rationale || '') : '';
+        var el = document.createElement('div');
+        el.className = 'ec-card';
+        el.id        = 'ec-card-' + entity.id;
+        el.style.borderLeftColor = entity.color + '55';
         el.innerHTML =
-            '<div class="ec-entity-tag">' +
-              '<span class="ec-entity-dot" style="background:'+entity.color+';box-shadow:0 0 6px '+entity.color+'40"></span>' +
-              '<span style="color:'+entity.color+'">'+entity.abbr+'</span>' +
+            '<div class="ec-card-hdr">' +
+              '<span class="ec-abbr" style="color:' + entity.color + '">' + entity.abbr + '</span>' +
+              '<span class="ec-vbadge ' + vCls + '">' + _esc(vote) + '</span>' +
             '</div>' +
-            '<div class="ec-entity-name">'+entity.name+'</div>' +
-            '<div class="ec-entity-domain">'+entity.domain+'</div>' +
-            '<div class="ec-entity-last">' +
-              '<div class="ec-entity-last-label">LAST VOTE</div>' +
-              '<div class="ec-entity-last-vote">'+_esc(vote)+'</div>' +
-              '<div class="ec-conf-bar"><div class="ec-conf-fill" style="width:'+confPct+'%;background:'+cColor+'"></div></div>' +
-              '<div class="ec-conf-label">CONFIDENCE '+(lastVote ? confPct+'%' : '—')+'</div>' +
+            '<div class="ec-full-name">' + _esc(entity.name) + '</div>' +
+            (lv ?
+              '<div class="ec-vote-row">' +
+                '<span class="ec-vrat">' + _esc(rat.slice(0, 80)) + (rat.length > 80 ? '…' : '') + '</span>' +
+              '</div>' +
+              '<div class="ec-cbar"><div class="ec-cfill" style="width:' + confPct + '%;background:' + confCol + '"></div></div>' +
+              '<div class="ec-cpct">CONF ' + confPct + '%</div>'
+            : '') +
+            '<div class="ec-srow">' +
+              '<span class="ec-sdot idle" id="ec-sdot-' + entity.id + '"></span>' +
+              '<span class="ec-slbl" id="ec-slbl-' + entity.id + '">IDLE</span>' +
+            '</div>';
+        return el;
+    }
+
+    function _buildCeoCard() {
+        var rec = _ecLastRec ? _ecLastRec.slice(0, 200) + (_ecLastRec.length > 200 ? '…' : '') : 'Awaiting deliberation.';
+        var el = document.createElement('div');
+        el.className = 'ec-card-ceo';
+        el.id        = 'ec-card-ceo';
+        el.innerHTML =
+            '<div class="ec-card-hdr">' +
+              '<span class="ec-abbr" style="color:#c9a227">CEO</span>' +
+              '<span class="ec-synthesizer-tag">SYNTHESIZER</span>' +
             '</div>' +
-            '<div class="ec-entity-status">' +
-              '<span class="ec-status-dot '+sdClass+'"></span>' +
-              '<span style="color:#3f3f46;font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em">'+sdLabel+'</span>' +
+            '<div class="ec-full-name" style="color:#6b5a1a">Chief Executive Officer</div>' +
+            '<div class="ec-card-ceo-inner">' +
+              '<div class="ec-ceo-left">' +
+                '<div class="ec-srow">' +
+                  '<span class="ec-sdot idle" id="ec-sdot-ceo"></span>' +
+                  '<span class="ec-slbl" id="ec-slbl-ceo">IDLE</span>' +
+                '</div>' +
+              '</div>' +
+              '<div class="ec-divider"></div>' +
+              '<div class="ec-rec-section">' +
+                '<div class="ec-rec-lbl">LAST RECOMMENDATION</div>' +
+                '<div class="ec-rec-txt" id="ec-rec-txt">' + _esc(rec) + '</div>' +
+              '</div>' +
             '</div>';
         return el;
     }
@@ -24197,105 +24236,69 @@ window.apexFileDropHandler = function(e){
         var chamber = document.getElementById('ecChamber');
         if (!chamber) return;
         chamber.innerHTML = '';
-        var W = chamber.offsetWidth  || 640;
-        var H = chamber.offsetHeight || 420;
 
-        // 6 exec cards: top row [CSO, CTO, CFO], bottom row [COO, CIO, CGO]
-        var cols   = 3, rows = 2;
-        var padX   = 24, padY = 30;
-        var cellW  = (W - padX * 2) / cols;
-        var cellH  = (H - padY * 2) / rows;
-        var cardW  = Math.min(Math.max(cellW - 24, 150), 195);
-        var cardH  = 152;
+        var grid = document.createElement('div');
+        grid.className = 'ec-grid';
 
-        EC_ENTITIES.forEach(function(entity, i) {
-            var col  = i % cols;
-            var row  = Math.floor(i / cols);
-            var x    = padX + col * cellW + (cellW - cardW) / 2;
-            var y    = padY + row * cellH + (cellH - cardH) / 2;
-            var card = _buildCard(entity, _ecLastVotes[entity.id]);
-            card.style.left  = Math.round(x) + 'px';
-            card.style.top   = Math.round(y) + 'px';
-            card.style.width = Math.round(cardW) + 'px';
-            chamber.appendChild(card);
+        // Row 1: CSO, CTO, CFO
+        var row1 = document.createElement('div');
+        row1.className = 'ec-row';
+        [EC_ENTITIES[0], EC_ENTITIES[1], EC_ENTITIES[2]].forEach(function(e) {
+            row1.appendChild(_buildExecCard(e, _ecLastVotes[e.id]));
         });
+        grid.appendChild(row1);
 
-        // CEO — central authority card, positioned at canvas centre
-        var ceoW   = Math.min(cardW + 10, 205);
-        var ceoH   = 160;
-        var ceoX   = Math.round(W / 2 - ceoW / 2);
-        var ceoY   = Math.round(H / 2 - ceoH / 2);
-        var ceoRec = _ecLastRec ? _ecLastRec.slice(0, 90) + (_ecLastRec.length > 90 ? '…' : '') : '—';
-        var sdClass = _ecDeliberating ? 'deliberating' : 'idle';
-        var sdLabel = _ecDeliberating ? 'SYNTHESISING' : 'IDLE';
+        // Row 2: CEO synthesizer (full width)
+        grid.appendChild(_buildCeoCard());
 
-        var ceoCard = document.createElement('div');
-        ceoCard.className  = 'ec-entity-card';
-        ceoCard.id         = 'ec-card-ceo';
-        ceoCard.style.left   = ceoX + 'px';
-        ceoCard.style.top    = ceoY + 'px';
-        ceoCard.style.width  = ceoW + 'px';
-        ceoCard.style.border = '1px solid rgba(212,175,55,0.35)';
-        ceoCard.style.boxShadow = '0 0 28px rgba(212,175,55,0.08)';
-        ceoCard.style.zIndex = '4';
-        ceoCard.innerHTML =
-            '<div class="ec-entity-tag">' +
-              '<span class="ec-entity-dot" style="background:#d4af37;box-shadow:0 0 7px #d4af3760"></span>' +
-              '<span style="color:#d4af37">CEO</span>' +
-              '<span style="margin-left:auto;font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.07em;color:#d4af3780">SYNTHESIZER</span>' +
-            '</div>' +
-            '<div class="ec-entity-name">'+EC_CEO.name+'</div>' +
-            '<div class="ec-entity-domain">'+EC_CEO.domain+'</div>' +
-            '<div class="ec-entity-last">' +
-              '<div class="ec-entity-last-label">LAST RECOMMENDATION</div>' +
-              '<div class="ec-entity-last-vote" style="color:#a1a1aa;line-height:1.4">'+_esc(ceoRec)+'</div>' +
-            '</div>' +
-            '<div class="ec-entity-status">' +
-              '<span class="ec-status-dot '+sdClass+'" style="background:'+(sdClass==='deliberating'?'#d4af37':'#3f3f46')+';box-shadow:'+(sdClass==='deliberating'?'0 0 6px #d4af37':'none')+'"></span>' +
-              '<span style="color:#3f3f46;font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em" id="ecStatus">'+sdLabel+'</span>' +
-            '</div>';
-        chamber.appendChild(ceoCard);
+        // Row 3: COO, CIO, CGO
+        var row3 = document.createElement('div');
+        row3.className = 'ec-row';
+        [EC_ENTITIES[3], EC_ENTITIES[4], EC_ENTITIES[5]].forEach(function(e) {
+            row3.appendChild(_buildExecCard(e, _ecLastVotes[e.id]));
+        });
+        grid.appendChild(row3);
+
+        chamber.appendChild(grid);
         _ecBuilt = true;
     }
 
     function _setDeliberating(on) {
         _ecDeliberating = on;
-        var s = document.getElementById('ecStatus');
-        if (s) { s.textContent = on ? 'SYNTHESISING' : 'IDLE'; }
+        EC_ENTITIES.forEach(function(e) {
+            var dot = document.getElementById('ec-sdot-' + e.id);
+            var lbl = document.getElementById('ec-slbl-' + e.id);
+            if (dot) dot.className = 'ec-sdot ' + (on ? 'on' : 'idle');
+            if (lbl) lbl.textContent = on ? 'DELIBERATING' : 'IDLE';
+        });
+        var ceoDot = document.getElementById('ec-sdot-ceo');
+        var ceoLbl = document.getElementById('ec-slbl-ceo');
+        if (ceoDot) ceoDot.className = 'ec-sdot ' + (on ? 'ceo-on' : 'idle');
+        if (ceoLbl) ceoLbl.textContent = on ? 'SYNTHESISING' : 'IDLE';
         var cd = document.getElementById('ecConnDot');
-        if (cd) cd.style.background = on ? '#a78bfa' : '#34d399';
-        document.querySelectorAll('.ec-entity-status .ec-status-dot').forEach(function(d) {
-            d.className = 'ec-status-dot ' + (on ? 'deliberating' : 'idle');
-        });
-        document.querySelectorAll('.ec-entity-status span:last-child').forEach(function(sp) {
-            sp.textContent = on ? 'DELIBERATING' : 'IDLE';
-        });
+        if (cd) { cd.style.background = on ? '#a78bfa' : '#34d399'; cd.style.boxShadow = '0 0 6px ' + (on ? '#a78bfa' : '#34d399'); }
         var sb = document.getElementById('ecSubmitBtn');
         var cb = document.getElementById('ecConveneBtn');
         if (sb) sb.disabled = on;
         if (cb) cb.disabled = on;
     }
 
-    function _renderActiveVotes(votes) {
+    function _renderSessionResult(votes, recommendation) {
         var el = document.getElementById('ecDelibStatus');
         if (!el) return;
-        var html = '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.09em;color:#7c6cf2;margin-bottom:9px;display:flex;align-items:center;gap:6px">' +
-            '<span class="ec-status-dot deliberating"></span> COUNCIL IN SESSION</div>' +
-            '<div style="display:flex;flex-direction:column;gap:6px">';
-        votes.forEach(function(v) {
-            var ent = EC_ENTITIES.find(function(e) { return e.id === v.entityId; }) || { color:'#3f3f46', abbr:(v.entityId||'?').toUpperCase() };
-            var confPct = Math.round((v.confidence || 0) * 100);
-            var vc = _voteColor(v.vote);
-            html +=
-                '<div class="ec-exec-vote-row">' +
-                  '<span class="ec-exec-dot" style="background:'+ent.color+'"></span>' +
-                  '<span class="ec-exec-id">'+ent.abbr+'</span>' +
-                  '<span class="ec-exec-vote" style="color:'+vc+'">'+_esc(v.vote||'…')+'</span>' +
-                  '<span class="ec-exec-conf">'+(v.confidence ? confPct+'%' : '')+'</span>' +
-                '</div>';
-        });
-        html += '</div>';
-        el.innerHTML = html;
+        var vHtml = (votes || []).map(function(v) {
+            var ent = EC_ENTITIES.find(function(e) { return e.id === v.entityId; }) || { abbr: (v.entityId || '?').toUpperCase() };
+            var cls = _vbCls(v.vote);
+            return '<span class="ec-vbadge ' + cls + '" title="' + _esc(v.rationale || '') + '">' + ent.abbr + ' ' + _esc((v.vote || '?').toUpperCase()) + '</span>';
+        }).join('');
+        var recHtml = recommendation ?
+            '<div style="margin-top:8px;padding:8px 9px;background:rgba(124,108,242,0.04);border-left:2px solid rgba(124,108,242,0.3);border-radius:0 4px 4px 0">' +
+              '<div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#7c6cf2;margin-bottom:5px">COUNCIL RECOMMENDATION</div>' +
+              '<div style="font:500 10px/1.5 \'Inter\',system-ui,sans-serif;color:#52525b">' + _esc(recommendation) + '</div>' +
+            '</div>' : '';
+        el.innerHTML =
+            '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">' + vHtml + '</div>' +
+            recHtml;
         el.style.display = 'block';
     }
 
@@ -24303,39 +24306,39 @@ window.apexFileDropHandler = function(e){
         var list = document.getElementById('ecHistoryList');
         if (!list) return;
         if (!deliberations || !deliberations.length) {
-            list.innerHTML = '<div class="ec-loading">No deliberations yet. Submit a question to convene the council.</div>';
+            list.innerHTML = '<div class="ec-loading">No sessions yet. Submit a question to convene.</div>';
             return;
         }
         list.innerHTML = '';
         deliberations.slice(0, 10).forEach(function(d) {
-            var item = document.createElement('div');
-            item.className  = 'ec-delib-item';
-            item.setAttribute('role', 'listitem');
             var status     = d.status || 'resolved';
-            var badgeCls   = status === 'escalated' ? 'escalated' : status === 'deliberating' ? 'deliberating' : 'resolved';
+            var badgeCls   = status === 'escalated' ? 'esc' : 'res';
             var consPct    = Math.round((d.consensus_level || 0) * 100);
             var discussion = d.discussion || [];
-            var votesHtml  = discussion.map(function(v) {
-                var ent = EC_ENTITIES.find(function(e) { return e.id === v.entity; }) || { color:'#3f3f46', abbr:(v.entity||'?').toUpperCase() };
-                var vc  = _voteColor(v.vote);
-                return '<span class="ec-vote-chip" style="background:'+vc+'18;color:'+vc+';border:1px solid '+vc+'30" title="'+_esc(v.rationale||'')+'">'+ent.abbr+' '+(v.vote||'?').toUpperCase()+'</span>';
+            var chipsHtml  = discussion.map(function(v) {
+                var ent = EC_ENTITIES.find(function(e) { return e.id === v.entity; }) || { abbr: (v.entity || '?').toUpperCase() };
+                var cls = _vbCls(v.vote);
+                var cc  = cls === 'va' ? '#34d399' : cls === 'vr' ? '#ef4444' : cls === 'vn' ? '#52525b' : '#27272a';
+                return '<span class="ec-hi-chip" style="background:' + cc + '14;color:' + cc + ';border:1px solid ' + cc + '30" title="' + _esc(v.rationale || '') + '">' + ent.abbr + '</span>';
             }).join('');
-            var rec     = d.final_recommendation || '';
-            var recHtml = rec ? '<div class="ec-delib-rec">'+_esc(rec.slice(0,220))+(rec.length>220?'…':'')+'</div>' : '';
-            var q = d.question || '';
+            var rec  = d.final_recommendation || '';
+            var q    = d.question || '';
+            var item = document.createElement('div');
+            item.className = 'ec-hi';
+            item.setAttribute('role', 'listitem');
             item.innerHTML =
-                '<div class="ec-delib-q">'+_esc(q.slice(0,130))+(q.length>130?'…':'')+'</div>' +
-                '<div class="ec-delib-meta">' +
-                  '<span class="ec-delib-badge '+badgeCls+'">'+status.toUpperCase()+'</span>' +
-                  '<span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#27272a">'+_ago(d.resolved_at||d.created_at)+'</span>' +
+                '<div class="ec-hi-q">' + _esc(q.slice(0, 130)) + (q.length > 130 ? '…' : '') + '</div>' +
+                '<div class="ec-hi-meta">' +
+                  '<span class="ec-hi-badge ' + badgeCls + '">' + status.toUpperCase() + '</span>' +
+                  '<span class="ec-hi-when">' + _ago(d.resolved_at || d.created_at) + '</span>' +
                 '</div>' +
-                '<div class="ec-consensus-row">' +
-                  '<div class="ec-consensus-bar"><div class="ec-consensus-fill" style="width:'+consPct+'%"></div></div>' +
-                  '<span class="ec-consensus-pct">'+consPct+'% CONSENSUS</span>' +
-                '</div>' +
-                (votesHtml ? '<div class="ec-votes-row">'+votesHtml+'</div>' : '') +
-                recHtml +
-                '<div class="ec-delib-time">'+new Date(d.created_at||Date.now()).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+'</div>';
+                (consPct > 0 ?
+                  '<div class="ec-hi-cons">' +
+                    '<div class="ec-hi-bar"><div class="ec-hi-fill" style="width:' + consPct + '%"></div></div>' +
+                    '<span class="ec-hi-pct">' + consPct + '%</span>' +
+                  '</div>' : '') +
+                (chipsHtml ? '<div class="ec-hi-chips">' + chipsHtml + '</div>' : '') +
+                (rec ? '<div class="ec-hi-rec">' + _esc(rec.slice(0, 160)) + (rec.length > 160 ? '…' : '') + '</div>' : '');
             list.appendChild(item);
         });
     }
@@ -24390,13 +24393,7 @@ window.apexFileDropHandler = function(e){
             });
             if (data.recommendation) _ecLastRec = data.recommendation;
             _renderChamber();
-            _renderActiveVotes(data.votes || []);
-            if (statusEl && data.recommendation) {
-                statusEl.innerHTML +=
-                    '<div style="margin-top:10px;padding:9px;background:rgba(124,108,242,0.06);border-left:2px solid rgba(124,108,242,0.4);border-radius:0 4px 4px 0;font:500 10px/1.5 \'Inter\',system-ui,sans-serif;color:#71717a">' +
-                    '<div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#7c6cf2;margin-bottom:6px">COUNCIL RECOMMENDATION</div>' +
-                    _esc(data.recommendation) + '</div>';
-            }
+            _renderSessionResult(data.votes || [], data.recommendation || '');
             councilRefresh();
         })
         .catch(function(err) {
