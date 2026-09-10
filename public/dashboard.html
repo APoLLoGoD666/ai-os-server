@@ -7370,6 +7370,36 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
 }
 #apex-snap-content .snap-section-title:first-child { margin-top: 0; }
 
+/* ── Copy button on AI messages ──────────────────────────────────────── */
+.chat-bubble.ai, .apex-card { position: relative; }
+.msg-copy-btn {
+    position: absolute;
+    top: 6px; right: 6px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 5px;
+    color: rgba(255,255,255,0.3);
+    cursor: pointer;
+    padding: 4px 5px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+}
+.chat-bubble.ai:hover .msg-copy-btn,
+.apex-card:hover .msg-copy-btn { opacity: 1; }
+.msg-copy-btn:hover {
+    background: rgba(0,212,255,0.12);
+    border-color: rgba(0,212,255,0.3);
+    color: rgba(0,212,255,0.8);
+}
+.msg-copy-btn.copied {
+    color: #22c55e;
+    border-color: rgba(34,197,94,0.4);
+    opacity: 1;
+}
+
 /* ── Markdown in chat bubbles ─────────────────────────────────────────── */
 .chat-bubble.ai strong { color: rgba(255,255,255,0.95); }
 .chat-bubble.ai code {
@@ -13563,6 +13593,17 @@ function _cleanForDisplay(text) {
         .replace(/\[APPROVAL REQUIRED\]/gi, "")
         .trim();
 }
+function _copyMsg(text, btn) {
+    navigator.clipboard.writeText(String(text || '')).then(function() {
+        if (!btn) return;
+        btn.classList.add('copied');
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+        setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        }, 1500);
+    }).catch(function() {});
+}
 function _renderMd(text) {
     // Render markdown as safe HTML for visual display
     var s = String(text || '')
@@ -13606,6 +13647,13 @@ function renderChatMessage(role, message, opts) {
             return;
         }
         bubble.innerHTML = _renderMd(stripped || raw);
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'msg-copy-btn';
+        copyBtn.title = 'Copy';
+        copyBtn.setAttribute('aria-label', 'Copy message');
+        copyBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        copyBtn.addEventListener('click', function(){ _copyMsg(stripped || raw, copyBtn); });
+        bubble.appendChild(copyBtn);
     }
 
     log.appendChild(bubble);
@@ -19537,6 +19585,14 @@ document.addEventListener('DOMContentLoaded',function(){
     sum.className = 'apex-card-summary';
     sum.textContent = summary;
     l0.appendChild(sum);
+
+    var copyCardBtn = document.createElement('button');
+    copyCardBtn.className = 'msg-copy-btn';
+    copyCardBtn.title = 'Copy';
+    copyCardBtn.setAttribute('aria-label', 'Copy message');
+    copyCardBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    copyCardBtn.addEventListener('click', function(){ _copyMsg(text, copyCardBtn); });
+    l0.appendChild(copyCardBtn);
 
     // Confidence dot (unknown by default — the current /chat contract doesn't return confidence)
     var conf = document.createElement('span');
