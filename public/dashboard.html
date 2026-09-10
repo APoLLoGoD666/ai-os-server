@@ -590,6 +590,48 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 .ao-agent-detail--open { max-height:120px; }
 .ao-agent-detail-body { margin:2px 0 8px 12px; padding:7px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(255,255,255,0.06); border-radius:0 4px 4px 0; font:500 10px/1.5 'Inter',system-ui,sans-serif; color:#52525b; }
 
+/* ── Civilisation Page ──────────────────────────────────────────────────── */
+#page-civilisation { padding:0 !important; gap:0 !important; overflow:hidden !important; }
+.civ-topbar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; height:42px; background:#080808; border-bottom:1px solid rgba(255,255,255,0.06); z-index:5; }
+.civ-title { font:700 13px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#f4f4f5; }
+.civ-subtitle { font:500 9px/1 'JetBrains Mono',monospace; color:#3f3f46; letter-spacing:.06em; }
+.civ-conn-dot { width:6px; height:6px; border-radius:50%; background:#34d399; box-shadow:0 0 6px #34d399; transition:background .4s,box-shadow .4s; flex-shrink:0; }
+.civ-gate { padding:3px 10px; border-radius:4px; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.08em; display:inline-block; }
+.civ-body { flex:1; min-height:0; overflow-y:auto; padding:14px 18px; display:flex; flex-direction:column; gap:8px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.06) transparent; background:radial-gradient(ellipse at 50% 0%,rgba(124,108,242,0.035) 0%,transparent 55%),#080808; }
+.civ-cols { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.civ-card { background:rgba(10,10,14,0.97); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:14px 16px 12px; }
+.civ-card-label { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; margin-bottom:10px; }
+.civ-card-val { font:700 15px/1 'JetBrains Mono',monospace; color:#f4f4f5; }
+.civ-card-sub { font:500 10px/1.4 'Inter',system-ui,sans-serif; color:#3f3f46; margin-top:6px; }
+.civ-status-row { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.civ-domain-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:5px; }
+.civ-domain-item { display:flex; align-items:center; gap:8px; padding:7px 10px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:5px; }
+.civ-domain-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.civ-domain-name { font:600 9px/1 'JetBrains Mono',monospace; letter-spacing:.06em; color:#71717a; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.civ-domain-id { font:500 8px/1 'JetBrains Mono',monospace; color:#27272a; flex-shrink:0; }
+.civ-domain-ok { font:700 8px/1 'JetBrains Mono',monospace; color:#34d399; flex-shrink:0; }
+.civ-domain-fail { font:700 8px/1 'JetBrains Mono',monospace; color:#ef4444; flex-shrink:0; }
+.civ-section-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.civ-section-title { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; }
+.civ-stats { display:flex; gap:16px; margin-bottom:10px; font:500 9px/1 'JetBrains Mono',monospace; color:#52525b; }
+.civ-stat-val { color:#a1a1aa; font-weight:700; }
+.civ-sess-item { display:flex; align-items:center; gap:10px; padding:8px 10px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:5px; }
+.civ-sess-meta { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:3px; }
+.civ-sess-title { font:600 11px/1.2 'Inter',system-ui,sans-serif; color:#a1a1aa; flex:1; min-width:0; }
+.civ-sbadge { flex-shrink:0; padding:2px 7px; border-radius:3px; font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.05em; }
+.civ-sbadge.pending  { background:rgba(251,191,36,0.08);  color:#fbbf24; border:1px solid rgba(251,191,36,0.22); }
+.civ-sbadge.approved { background:rgba(52,211,153,0.08);  color:#34d399; border:1px solid rgba(52,211,153,0.22); }
+.civ-sbadge.expired  { background:rgba(113,113,122,0.06); color:#52525b; border:1px solid rgba(113,113,122,0.15); }
+.civ-sbadge.rejected { background:rgba(239,68,68,0.08);   color:#ef4444; border:1px solid rgba(239,68,68,0.22); }
+.civ-btn { padding:4px 12px; border-radius:5px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.06em; color:#71717a; cursor:pointer; transition:all .15s; }
+.civ-btn:hover { background:rgba(255,255,255,0.08); color:#a1a1aa; }
+.civ-btn.accent { background:rgba(34,211,238,0.06); border-color:rgba(34,211,238,0.22); color:#22d3ee; }
+.civ-btn.accent:hover { background:rgba(34,211,238,0.12); }
+.civ-approval-item { display:flex; align-items:flex-start; gap:10px; padding:8px 10px; background:rgba(251,191,36,0.03); border:1px solid rgba(251,191,36,0.1); border-left:2px solid rgba(251,191,36,0.35); border-radius:0 5px 5px 0; }
+.civ-approval-name { font:600 11px/1.2 'Inter',system-ui,sans-serif; color:#e4e4e7; flex:1; }
+.civ-approval-desc { font:500 9px/1.4 'Inter',system-ui,sans-serif; color:#52525b; margin-top:3px; }
+.civ-empty { font:500 10px/1 'JetBrains Mono',monospace; color:#27272a; }
+
 /* ── Supreme Council Page ───────────────────────────────────────────────── */
 #page-council { padding:0 !important; gap:0 !important; overflow:hidden !important; }
 .ec-topbar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 20px; height:48px; background:linear-gradient(180deg,#0d0d18 0%,#090912 100%); border-bottom:1px solid rgba(124,108,242,0.18); z-index:5; position:relative; }
@@ -10757,92 +10799,80 @@ if(pipe){
 
             <!-- ══ CIVILISATION PAGE ══ -->
             <div class="page apex-master-only" id="page-civilisation">
-                <div style="padding:16px;display:flex;flex-direction:column;gap:12px;height:100%;box-sizing:border-box;overflow-y:auto">
-
-                    <!-- Page Header -->
-                    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
-                        <div>
-                            <div class="ds-page-title" style="letter-spacing:7px">CIVILISATION</div>
-                            <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">ADVANCED ANALYSIS &middot; SYSTEM MODEL</div>
-                        </div>
-                        <div style="text-align:right">
-                            <div id="civGateLabel" style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#22d3ee;background:rgba(34,211,238,0.1);padding:5px 12px;border-radius:6px;display:inline-block">LOADING</div>
-                        </div>
+                <!-- Topbar -->
+                <div class="civ-topbar">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span class="civ-title">CIVILISATION</span>
+                        <div class="civ-conn-dot"></div>
+                        <span class="civ-subtitle">ADVANCED ANALYSIS &middot; SYSTEM MODEL</span>
                     </div>
-
-                    <!-- Constitutional Status row -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-                        <div class="ds-panel" style="padding:12px">
-                            <div class="ds-label">GENOME</div>
-                            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <div class="civ-gate" id="civGateLabel" style="color:#52525b;border:1px solid rgba(113,113,122,0.2)">LOADING</div>
+                        <button class="civ-btn" data-fn="civRefresh">↺ REFRESH</button>
+                    </div>
+                </div>
+                <!-- Body -->
+                <div class="civ-body">
+                    <!-- Constitutional status -->
+                    <div class="civ-cols">
+                        <div class="civ-card">
+                            <div class="civ-card-label">GENOME</div>
+                            <div class="civ-status-row">
                                 <span class="ds-dot" id="civGenomeDot"></span>
-                                <span id="civGenomeStatus" style="font:600 13px/1 'JetBrains Mono',monospace;color:var(--text)">—</span>
+                                <span class="civ-card-val" id="civGenomeStatus">—</span>
                             </div>
-                            <div id="civGenomeSummary" style="font-size:10px;color:var(--text-mute);margin-top:6px">—</div>
+                            <div class="civ-card-sub" id="civGenomeSummary">—</div>
                         </div>
-                        <div class="ds-panel" style="padding:12px">
-                            <div class="ds-label">CONTRACTS</div>
-                            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                        <div class="civ-card">
+                            <div class="civ-card-label">CONTRACTS</div>
+                            <div class="civ-status-row">
                                 <span class="ds-dot" id="civContractsDot"></span>
-                                <span id="civContractsStatus" style="font:600 13px/1 'JetBrains Mono',monospace;color:var(--text)">—</span>
+                                <span class="civ-card-val" id="civContractsStatus">—</span>
                             </div>
-                            <div id="civContractsSummary" style="font-size:10px;color:var(--text-mute);margin-top:6px">—</div>
+                            <div class="civ-card-sub" id="civContractsSummary">—</div>
                         </div>
-                        <div class="ds-panel" style="padding:12px">
-                            <div class="ds-label">CLOCK</div>
-                            <div id="civClockDomains" style="font:600 13px/1 'JetBrains Mono',monospace;color:var(--text);margin-top:8px">— domains</div>
-                            <div id="civClockAt" style="font-size:10px;color:var(--text-mute);margin-top:6px">—</div>
-                        </div>
-                    </div>
-
-                    <!-- Domains grid -->
-                    <div class="ds-panel" style="padding:12px">
-                        <div class="ds-label" style="margin-bottom:10px">DOMAIN STATUS</div>
-                        <div id="civDomainsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px">
-                            <div style="color:var(--text-mute);font-size:11px">Loading…</div>
+                        <div class="civ-card">
+                            <div class="civ-card-label">CLOCK</div>
+                            <div class="civ-card-val" id="civClockDomains">— domains</div>
+                            <div class="civ-card-sub" id="civClockAt">—</div>
                         </div>
                     </div>
-
+                    <!-- Domain status -->
+                    <div class="civ-card">
+                        <div class="civ-card-label">DOMAIN STATUS</div>
+                        <div class="civ-domain-grid" id="civDomainsGrid">
+                            <span class="civ-empty">Loading…</span>
+                        </div>
+                    </div>
                     <!-- Consensus sessions -->
-                    <div class="ds-panel" style="padding:12px">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                            <div class="ds-label">CONSENSUS SESSIONS</div>
-                            <button class="ds-btn xs" id="civProposeBtn" data-fn="civOpenPropose">+ Propose</button>
+                    <div class="civ-card">
+                        <div class="civ-section-hdr">
+                            <span class="civ-section-title">CONSENSUS SESSIONS</span>
+                            <button class="civ-btn accent" id="civProposeBtn" data-fn="civOpenPropose">+ PROPOSE</button>
                         </div>
-                        <div id="civConsensusStats" style="display:flex;gap:16px;margin-bottom:8px">
-                            <span style="font-size:11px;color:var(--text-mute)">Total <strong id="civCTotal" style="color:var(--text)">—</strong></span>
-                            <span style="font-size:11px;color:var(--text-mute)">Pending <strong id="civCPending" style="color:#f59e0b">—</strong></span>
-                            <span style="font-size:11px;color:var(--text-mute)">Approved <strong id="civCApproved" style="color:#22d3ee">—</strong></span>
+                        <div class="civ-stats">
+                            <span>TOTAL <span class="civ-stat-val" id="civCTotal">—</span></span>
+                            <span>PENDING <span class="civ-stat-val" style="color:#fbbf24" id="civCPending">—</span></span>
+                            <span>APPROVED <span class="civ-stat-val" style="color:#22d3ee" id="civCApproved">—</span></span>
                         </div>
-                        <div id="civSessionsList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto">
-                            <div style="color:var(--text-mute);font-size:11px">No sessions</div>
+                        <div id="civSessionsList" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.06) transparent">
+                            <span class="civ-empty">No sessions</span>
                         </div>
                     </div>
-
                     <!-- Self-Expansion Engine -->
-                    <div class="ds-panel" style="padding:12px">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                            <div class="ds-label">SELF-EXPANSION ENGINE</div>
-                            <button class="ds-btn xs" id="expScanBtn" onclick="expScan()">⚡ Scan Now</button>
+                    <div class="civ-card">
+                        <div class="civ-section-hdr">
+                            <span class="civ-section-title">SELF-EXPANSION ENGINE</span>
+                            <button class="civ-btn accent" id="expScanBtn" onclick="expScan()">⚡ SCAN NOW</button>
                         </div>
-                        <!-- Status counts -->
-                        <div id="expCounts" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px">
-                            <span style="font-size:11px;color:var(--text-mute)">Loading…</span>
-                        </div>
-                        <!-- Pending approvals -->
+                        <div id="expCounts" class="civ-stats"><span class="civ-empty">Loading…</span></div>
                         <div id="expPendingWrap">
-                            <div style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:#f59e0b;margin-bottom:6px">AWAITING APPROVAL</div>
-                            <div id="expPendingList" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">
-                                <div style="color:var(--text-mute);font-size:11px">No pending approvals</div>
+                            <div class="civ-section-title" style="color:#f59e0b;margin-bottom:8px">AWAITING APPROVAL</div>
+                            <div id="expPendingList" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.06) transparent">
+                                <span class="civ-empty">No pending approvals</span>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Refresh -->
-                    <div style="display:flex;justify-content:flex-end">
-                        <button class="ds-btn xs" data-fn="civRefresh">↺ Refresh</button>
-                    </div>
-
                 </div>
             </div><!-- #page-civilisation -->
 
@@ -20950,22 +20980,25 @@ window.apexFileDropHandler = function(e){
         el.className = 'ds-dot ' + (ok ? 'green' : 'red');
     }
     function _buildDomainCard(d) {
-        var ok  = d.ok !== false && !d.error;
-        var col = ok ? 'var(--cyan)' : '#ef4444';
-        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px">'
-            + '<div style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:0.1em;color:' + col + ';margin-bottom:4px">' + (d.name || d.id || '?').toUpperCase() + '</div>'
-            + '<div style="font-size:10px;color:var(--text-mute)">' + (d.id || '') + '</div>'
-            + '<div style="font-size:10px;color:' + col + ';margin-top:4px">' + (d.error ? 'ERROR' : (ok ? 'OK' : 'FAIL')) + '</div>'
+        var ok = d.ok !== false && !d.error;
+        var statusCls = ok ? 'civ-domain-ok' : 'civ-domain-fail';
+        var dotCol = ok ? '#34d399' : '#ef4444';
+        return '<div class="civ-domain-item">'
+            + '<span class="civ-domain-dot" style="background:' + dotCol + '"></span>'
+            + '<span class="civ-domain-name">' + (d.name || d.id || '?').toUpperCase() + '</span>'
+            + '<span class="civ-domain-id">' + (d.id || '') + '</span>'
+            + '<span class="' + statusCls + '">' + (d.error ? 'ERR' : (ok ? 'OK' : 'FAIL')) + '</span>'
             + '</div>';
     }
     function _buildSessionRow(s) {
-        var col = s.status === 'APPROVED' ? '#22d3ee' : s.status === 'REJECTED' ? '#ef4444' : '#f59e0b';
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px">'
-            + '<div>'
-            + '<div style="font-size:11px;color:var(--text)">' + (s.title || s.id) + '</div>'
-            + '<div style="font-size:10px;color:var(--text-mute)">' + s.id + ' &middot; ' + s.type + '</div>'
+        var st = (s.status || '').toLowerCase();
+        var badgeCls = st === 'approved' ? 'approved' : st === 'rejected' ? 'rejected' : st === 'expired' ? 'expired' : 'pending';
+        return '<div class="civ-sess-item">'
+            + '<div style="flex:1;min-width:0">'
+            + '<div class="civ-sess-title">' + (s.title || s.id) + '</div>'
+            + '<div class="civ-sess-meta">' + s.id + ' &middot; ' + s.type + '</div>'
             + '</div>'
-            + '<div style="font:600 10px/1 \'JetBrains Mono\',monospace;color:' + col + '">' + s.status + '</div>'
+            + '<span class="civ-sbadge ' + badgeCls + '">' + s.status + '</span>'
             + '</div>';
     }
     window.civRefresh = function() {
