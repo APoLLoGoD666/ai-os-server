@@ -18594,13 +18594,15 @@ function bizOpenDetail(id) {
     if (roster) roster.style.display = 'none';
     if (detail) detail.style.display = 'block';
     var isPlaceholder = id === '__placeholder__';
-    var label = isPlaceholder ? 'SAMPLE BUSINESS' : String(id).toUpperCase();
-    var nameEl   = document.getElementById('biz-detail-name');
-    var headEl   = document.getElementById('biz-detail-heading');
-    var typeEl   = document.getElementById('biz-detail-type');
-    if (nameEl) nameEl.textContent = label;
+    var biz = _bizRegistry[id] || {};
+    var label = isPlaceholder ? 'SAMPLE BUSINESS' : (biz.name || String(id)).toUpperCase();
+    var subLabel = isPlaceholder ? 'PLACEHOLDER · ADD A REAL BUSINESS TO GET STARTED' : ((biz.type ? biz.type.toUpperCase() + ' · ' : '') + 'REVENUE · CLIENTS · SALES · GROWTH');
+    var nameEl = document.getElementById('biz-detail-name');
+    var headEl = document.getElementById('biz-detail-heading');
+    var typeEl = document.getElementById('biz-detail-type');
+    if (nameEl) nameEl.textContent = biz.name || label;
     if (headEl) headEl.textContent = label;
-    if (typeEl) typeEl.textContent = isPlaceholder ? 'PLACEHOLDER · ADD A REAL BUSINESS TO GET STARTED' : 'REVENUE · CLIENTS · SALES · GROWTH';
+    if (typeEl) typeEl.textContent = subLabel;
     bizSwitchTab('overview');
     refreshBizPage();
 }
@@ -18626,16 +18628,102 @@ function bizSwitchTab(name) {
     if (show) show.style.display = 'block';
 }
 
+var _bizRegistry = {};
+
+function loadBizRoster() {
+    var grid = document.getElementById('biz-card-grid');
+    if (!grid) return;
+    grid.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:20px 0">Loading businesses…</div>';
+    fetch('/api/business', { headers: { 'x-app-key': APP_KEY } })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var businesses = d.businesses || [];
+            _bizRegistry = {};
+            if (!businesses.length) {
+                grid.innerHTML = '<div onclick="bizOpenDetail(\'__placeholder__\')" style="position:relative;cursor:pointer;background:rgba(255,255,255,0.02);border:1.5px dashed rgba(255,255,255,0.11);border-radius:0;padding:28px 24px;display:flex;flex-direction:column;gap:14px;transition:background 200ms,border-color 200ms;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%);min-height:190px" onmouseover="this.style.background=\'rgba(0,212,255,0.04)\';this.style.borderColor=\'rgba(0,212,255,0.35)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.02)\';this.style.borderColor=\'rgba(255,255,255,0.11)\'"><div style="position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 18px 18px 0;border-color:transparent rgba(0,212,255,0.15) transparent transparent;pointer-events:none"></div><div style="font-size:22px;font-weight:200;color:rgba(0,212,255,0.4);line-height:1">+</div><div><div style="font:600 13px/1.3 Inter,sans-serif;color:rgba(255,255,255,0.65);letter-spacing:0.05em">Your First Business</div><div style="font:400 10px/1.5 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.28);margin-top:5px;letter-spacing:0.06em">NO BUSINESS ADDED YET</div></div><div style="display:flex;gap:20px"><div><div style="font:600 15px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.18)">&#8212;</div><div style="font:400 8px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.18);margin-top:4px;letter-spacing:0.12em">REVENUE</div></div><div><div style="font:600 15px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.18)">&#8212;</div><div style="font:400 8px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.18);margin-top:4px;letter-spacing:0.12em">CLIENTS</div></div><div><div style="font:600 15px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.18)">&#8212;</div><div style="font:400 8px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.18);margin-top:4px;letter-spacing:0.12em">PROJECTS</div></div></div><div style="font:400 10px/1 Inter,sans-serif;color:rgba(0,212,255,0.35);margin-top:auto;letter-spacing:0.04em">Click &ldquo;+ Add Business&rdquo; to get started &#8594;</div></div>';
+                return;
+            }
+            grid.innerHTML = businesses.map(function(biz) {
+                _bizRegistry[biz.id] = biz;
+                var initials = (biz.name || 'B').split(' ').map(function(w){ return w[0]; }).join('').toUpperCase().slice(0,2);
+                var created = biz.created_at ? new Date(biz.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '';
+                return '<div data-biz-id="' + biz.id + '" onclick="bizOpenDetail(' + biz.id + ')" tabindex="0" role="button" aria-label="Open ' + biz.name + ' dashboard" style="position:relative;cursor:pointer;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.09);border-radius:0;padding:24px;display:flex;flex-direction:column;gap:12px;transition:background 200ms,border-color 200ms;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%);min-height:180px" onmouseover="this.style.background=\'rgba(236,127,163,0.05)\';this.style.borderColor=\'rgba(236,127,163,0.35)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.025)\';this.style.borderColor=\'rgba(255,255,255,0.09)\'" onkeydown="if(event.key===\'Enter\'||event.key===\' \')bizOpenDetail(' + biz.id + ')">'
+                    + '<div style="position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 18px 18px 0;border-color:transparent rgba(236,127,163,0.2) transparent transparent;pointer-events:none"></div>'
+                    + '<div style="width:36px;height:36px;border-radius:8px;background:rgba(236,127,163,0.15);display:flex;align-items:center;justify-content:center;font:700 13px/1 Inter,sans-serif;color:#ec7fa3;letter-spacing:0.05em">' + initials + '</div>'
+                    + '<div style="flex:1"><div style="font:600 14px/1.3 Inter,sans-serif;color:#eaeff5;letter-spacing:0.03em">' + biz.name + '</div>'
+                    + (biz.type ? '<div style="font:400 10px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.35);margin-top:5px;letter-spacing:0.08em;text-transform:uppercase">' + biz.type + '</div>' : '')
+                    + (biz.description ? '<div style="font:400 11px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.4);margin-top:7px">' + biz.description.slice(0,80) + (biz.description.length>80?'…':'') + '</div>' : '')
+                    + '</div>'
+                    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto">'
+                    + '<span style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.2)">' + created + '</span>'
+                    + '<span style="font:400 10px/1 Inter,sans-serif;color:rgba(236,127,163,0.5)">Open dashboard &#8594;</span>'
+                    + '</div></div>';
+            }).join('');
+        })
+        .catch(function(e) {
+            if (grid) grid.innerHTML = '<div style="color:#ef4444;font-size:12px;padding:20px 0">Could not load businesses — ' + e.message + '</div>';
+        });
+}
+
 function bizAddNew() {
-    if (window.showModal) { window.showModal('Add Business', '<p style="color:var(--text-mid)">Business registry coming soon. For now, click the placeholder card to explore the full dashboard.</p>'); }
-    else { alert('Business registry coming soon — click the placeholder card to explore the dashboard.'); }
+    if (!document.getElementById('biz-add-modal')) {
+        var el = document.createElement('div');
+        el.id = 'biz-add-modal';
+        el.className = 'ds-modal-backdrop';
+        el.style.cssText = 'display:none;align-items:center;justify-content:center';
+        el.setAttribute('role', 'dialog');
+        el.setAttribute('aria-modal', 'true');
+        el.setAttribute('aria-labelledby', 'biz-modal-title');
+        el.onclick = function(e) { if (e.target === el) bizCloseAddModal(); };
+        el.innerHTML = '<div class="ds-modal-box"><div class="ds-modal-header"><span id="biz-modal-title">Add Business</span><button class="ds-modal-close" onclick="bizCloseAddModal()" aria-label="Close">&times;</button></div><div class="ds-modal-body"><div style="display:flex;flex-direction:column;gap:16px"><div><label for="biz-add-name" style="display:block;font:600 11px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:#8893a0;margin-bottom:8px">BUSINESS NAME *</label><input id="biz-add-name" type="text" placeholder="e.g. Apex Consulting Ltd" class="ds-input" style="width:100%;box-sizing:border-box" autocomplete="organization"></div><div><label for="biz-add-type" style="display:block;font:600 11px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:#8893a0;margin-bottom:8px">TYPE / INDUSTRY</label><input id="biz-add-type" type="text" placeholder="e.g. SaaS, Agency, E-commerce" class="ds-input" style="width:100%;box-sizing:border-box"></div><div><label for="biz-add-desc" style="display:block;font:600 11px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:#8893a0;margin-bottom:8px">DESCRIPTION</label><textarea id="biz-add-desc" placeholder="Short description of what this business does…" class="ds-input" rows="3" style="width:100%;box-sizing:border-box;resize:vertical"></textarea></div><div id="biz-add-err" role="alert" style="display:none;color:#ef4444;font-size:12px;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:6px;border:1px solid rgba(239,68,68,0.2)"></div></div></div><div class="ds-modal-footer"><button class="ds-btn" onclick="bizCloseAddModal()">Cancel</button><button class="ds-btn cyan" id="biz-add-submit" onclick="bizSubmitAdd()">Add Business</button></div></div>';
+        document.body.appendChild(el);
+        document.getElementById('biz-add-name').addEventListener('keydown', function(e) { if (e.key === 'Enter') bizSubmitAdd(); });
+    }
+    var modal = document.getElementById('biz-add-modal');
+    modal.style.display = 'flex';
+    ['biz-add-name','biz-add-type','biz-add-desc'].forEach(function(id){ var el = document.getElementById(id); if(el) el.value = ''; });
+    var errEl = document.getElementById('biz-add-err');
+    if (errEl) errEl.style.display = 'none';
+    setTimeout(function() { var n = document.getElementById('biz-add-name'); if (n) n.focus(); }, 60);
+}
+
+function bizCloseAddModal() {
+    var modal = document.getElementById('biz-add-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function bizSubmitAdd() {
+    var name = (document.getElementById('biz-add-name') || {}).value || '';
+    var type = (document.getElementById('biz-add-type') || {}).value || '';
+    var desc = (document.getElementById('biz-add-desc') || {}).value || '';
+    var errEl = document.getElementById('biz-add-err');
+    var btn   = document.getElementById('biz-add-submit');
+    if (!name.trim()) {
+        if (errEl) { errEl.textContent = 'Business name is required.'; errEl.style.display = 'block'; }
+        return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+    if (errEl) errEl.style.display = 'none';
+    fetch('/api/business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-app-key': APP_KEY },
+        body: JSON.stringify({ name: name.trim(), type: type.trim() || null, description: desc.trim() || null })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Add Business'; }
+        if (!d.ok) { if (errEl) { errEl.textContent = d.error || 'Failed to add business.'; errEl.style.display = 'block'; } return; }
+        bizCloseAddModal();
+        loadBizRoster();
+    }).catch(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'Add Business'; }
+        if (errEl) { errEl.textContent = 'Network error — please try again.'; errEl.style.display = 'block'; }
+    });
 }
 
 (function(){
     var _prevBiz = window.switchPage;
     window.switchPage = function(name){
         if (typeof _prevBiz==='function') _prevBiz(name);
-        if (name==='business') refreshBizPage();
+        if (name==='business') { loadBizRoster(); refreshBizPage(); }
     };
 })();
 
