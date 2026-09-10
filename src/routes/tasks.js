@@ -100,14 +100,51 @@ router.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
     const { taskId } = req.body || {};
     if (!taskId) return res.status(400).json({ ok: false, error: 'taskId required' });
     // V-11-H-B1 CRITICAL: verify ownership BEFORE _runTask is invoked.
-    // Cross-account approval would deploy arbitrary code to production (P0-2).
     const { data: task, error: taskErr } = await sbAdmin
-        .from('apex_tasks').select('id,human_id').eq('id', taskId).single();
+        .from('apex_tasks').select('id,human_id,metadata,title').eq('id', taskId).single();
     if (taskErr || !task) return res.status(404).json({ ok: false, error: `${taskId} not found` });
     const identity = req.identity || {};
     if (identity.role !== 'master' && task.human_id && task.human_id !== identity.humanId) {
         return res.status(403).json({ ok: false, error: 'FORBIDDEN', message: 'Not the owner of this task' });
     }
+
+    // Council dispatch tasks: route to the domain agent instead of the auto-pipeline
+    const meta = task.metadata || {};
+    if (meta.type === 'council_dispatch' && meta.dispatch?.slug && meta.dispatch?.action) {
+        await sbAdmin.from('apex_tasks')
+            .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+            .eq('id', taskId);
+        res.json({ ok: true, status: 'dispatching', taskId, agent: meta.dispatch.slug });
+        setImmediate(async () => {
+            try {
+                const { invokeDomainAgent } = require('../../agent-system/domain-agents');
+                const result = await invokeDomainAgent(meta.dispatch.slug, meta.dispatch.action, { maxTokens: 1000 });
+                const updatedMeta = {
+                    ...meta,
+                    execution: {
+                        agent:     meta.dispatch.slug,
+                        reply:     result.reply.slice(0, 2000),
+                        timestamp: new Date().toISOString(),
+                    },
+                };
+                await sbAdmin.from('apex_tasks')
+                    .update({ status: 'done', metadata: updatedMeta, updated_at: new Date().toISOString() })
+                    .eq('id', taskId);
+                await sbAdmin.from('apex_notifications').insert({
+                    id:       `notif-${Date.now()}`,
+                    message:  `[${meta.dispatch.slug.toUpperCase()} AGENT] ${result.reply.slice(0, 300)}`,
+                    type:     'info',
+                    human_id: task.human_id || null,
+                }).catch(() => {});
+            } catch (e) {
+                await sbAdmin.from('apex_tasks')
+                    .update({ status: 'failed', metadata: { ...meta, execution_error: e.message }, updated_at: new Date().toISOString() })
+                    .eq('id', taskId).catch(() => {});
+            }
+        });
+        return;
+    }
+
     return _runTask(taskId, res);
 });
 
