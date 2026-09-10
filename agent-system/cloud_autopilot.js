@@ -6,7 +6,7 @@ const runtime = require('../lib/models/runtime');
 
 const client = require('../lib/clients').getAnthropicClient();
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
+const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 const ROOT = __dirname;
 const CLOUD_BACKUP_DIR = path.join(ROOT, "cloud_ai_backups");
 
