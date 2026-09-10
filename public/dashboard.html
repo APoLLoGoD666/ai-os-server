@@ -590,6 +590,36 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 .ao-agent-detail--open { max-height:120px; }
 .ao-agent-detail-body { margin:2px 0 8px 12px; padding:7px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(255,255,255,0.06); border-radius:0 4px 4px 0; font:500 10px/1.5 'Inter',system-ui,sans-serif; color:#52525b; }
 
+/* ── Agent Detail Page ──────────────────────────────────────────────────── */
+.ao-back-btn { display:inline-flex; align-items:center; gap:6px; background:transparent; border:none; color:#52525b; font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.06em; cursor:pointer; padding:4px 2px; transition:color .12s; }
+.ao-back-btn:hover { color:#a1a1aa; }
+#page-agent-detail { padding:0 !important; gap:0 !important; overflow:hidden !important; }
+.agd-body { flex:1; min-height:0; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:12px; background:radial-gradient(ellipse at 50% 0%,rgba(99,102,241,0.04) 0%,transparent 60%),#070707; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.06) transparent; }
+.agd-hero { display:flex; align-items:flex-start; gap:20px; padding:22px 24px; background:rgba(10,10,14,0.97); border:1px solid rgba(255,255,255,0.1); border-radius:12px; }
+.agd-orb { width:54px; height:54px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.agd-hero-info { flex:1; min-width:0; }
+.agd-name { font:700 18px/1.2 'JetBrains Mono',monospace; color:#f4f4f5; margin-bottom:4px; }
+.agd-dept-label { font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.08em; margin-bottom:10px; }
+.agd-desc { font:400 13px/1.6 'Inter',system-ui,sans-serif; color:#71717a; max-width:640px; }
+.agd-badges { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.agd-badge { padding:3px 10px; border-radius:20px; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.06em; }
+.agd-badge.live { background:rgba(52,211,153,0.08); color:#34d399; border:1px solid rgba(52,211,153,0.22); }
+.agd-badge.dormant { background:rgba(40,40,45,0.8); color:#52525b; border:1px solid rgba(255,255,255,0.07); }
+.agd-section { background:rgba(10,10,14,0.97); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:18px 20px; }
+.agd-section-title { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; margin-bottom:14px; }
+.agd-prompt { font:400 11px/1.7 'JetBrains Mono',monospace; color:#3f3f46; white-space:pre-wrap; overflow-wrap:break-word; margin:0; max-height:280px; overflow-y:auto; }
+.agd-run-row { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.agd-run-row:last-child { border-bottom:none; }
+.agd-run-status { flex-shrink:0; padding:2px 7px; border-radius:4px; font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.05em; margin-top:2px; }
+.agd-run-body { flex:1; min-width:0; }
+.agd-run-task { font:500 11px/1.4 'Inter',system-ui,sans-serif; color:#a1a1aa; }
+.agd-run-meta { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:3px; }
+.agd-empty { font:500 10px/1 'JetBrains Mono',monospace; color:#27272a; padding:4px 0; }
+.agd-tools-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:6px; }
+.agd-tool { padding:9px 12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:7px; }
+.agd-tool-name { font:700 10px/1 'JetBrains Mono',monospace; color:#71717a; display:block; margin-bottom:4px; }
+.agd-tool span { font:400 10px/1.4 'Inter',system-ui,sans-serif; color:#3f3f46; }
+
 /* ── Civilisation Page ──────────────────────────────────────────────────── */
 #page-civilisation { padding:0 !important; gap:0 !important; overflow:hidden !important; }
 .civ-topbar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; height:42px; background:#080808; border-bottom:1px solid rgba(255,255,255,0.06); z-index:5; }
@@ -11217,6 +11247,24 @@ if(pipe){
                     </div>
                 </div>
             </div><!-- #page-agents -->
+
+            <!-- ══ PAGE: AGENT DETAIL ══ -->
+            <div class="page" id="page-agent-detail">
+                <div class="ao-topbar">
+                    <div style="display:flex;align-items:center;gap:14px">
+                        <button class="ao-back-btn" data-fn="agentDetailBack">&#8592; AGENTS</button>
+                        <span style="width:1px;height:16px;background:rgba(255,255,255,0.08)"></span>
+                        <span class="ao-title" id="agentDetailTitle">—</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span id="agentDetailDept" style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:3px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#52525b">—</span>
+                        <span class="ao-clock" id="agentDetailClock">--:--:-- --</span>
+                    </div>
+                </div>
+                <div class="agd-body" id="agentDetailBody">
+                    <div class="agd-section"><div class="agd-empty">Select an agent to view its profile.</div></div>
+                </div>
+            </div><!-- #page-agent-detail -->
 
             <!-- ══ PAGE: APPROVALS (UX-14 — Actions / Approvals) ══ -->
             <div class="page" id="page-approvals">
@@ -23908,60 +23956,32 @@ window.apexFileDropHandler = function(e){
         var bx = cw * AO_BRAIN_CX;
         var by = ch * AO_BRAIN_CY;
 
-        // SVG: brain→floor dashed curves + floor→card solid connectors
-        var CARD_W = 185, CARD_H = 115;
+        // SVG: direct dashed lines from brain → each card center
+        var CARD_W = 185, CARD_H = 130;
+        // SVG rendered before cards exist, so positions calculated from layout fractions
         var svgParts = AO_LAYOUT.map(function(lay) {
             var d = DEPTS.find(function(x){ return x.id === lay.id; });
             if (!d) return '';
-            var fx = lay.cx * cw, fy = lay.cy * ch;               // floor center
-            var cardCx = lay.cardL * cw + CARD_W / 2;             // card center x
-            var cardCy = lay.cardT * ch + CARD_H / 2;             // card center y
-            var mx = (fx + bx) / 2, my = (fy + by) / 2 - 18;     // brain curve midpoint
-
-            // Brain → floor (long dashed curve)
-            var brainLine = '<path d="M' + fx + ' ' + fy + ' Q' + mx + ' ' + my + ' ' + bx + ' ' + by + '"' +
-                ' stroke="' + d.color + '" stroke-opacity="0.18" stroke-width="1.5"' +
-                ' stroke-dasharray="5 8" fill="none"/>';
-
-            // Floor → card (short solid line, dept color, slightly thicker)
-            var connLine = '<line x1="' + fx + '" y1="' + fy + '" x2="' + cardCx + '" y2="' + cardCy + '"' +
-                ' stroke="' + d.color + '" stroke-opacity="0.35" stroke-width="1"' +
-                ' stroke-dasharray="3 4"/>';
-
-            // Small dot at floor center to anchor both lines
-            var dot = '<circle cx="' + fx + '" cy="' + fy + '" r="3"' +
-                ' fill="' + d.color + '" fill-opacity="0.5"/>';
-
-            return brainLine + connLine + dot;
+            var cardCx = lay.cardL * cw + CARD_W / 2;
+            var cardCy = lay.cardT * ch + CARD_H / 2;
+            var mx = (cardCx + bx) / 2;
+            var my = (cardCy + by) / 2 - 20;
+            var line = '<path d="M' + bx + ' ' + by + ' Q' + mx + ' ' + my + ' ' + cardCx + ' ' + cardCy + '"' +
+                ' stroke="' + d.color + '" stroke-opacity="0.22" stroke-width="1.2"' +
+                ' stroke-dasharray="4 7" fill="none"/>';
+            var dot = '<circle cx="' + cardCx + '" cy="' + cardCy + '" r="2.5"' +
+                ' fill="' + d.color + '" fill-opacity="0.4"/>';
+            return line + dot;
         }).join('');
         svgEl.innerHTML = svgParts;
 
-        // Remove old islands + brain
-        canvas.querySelectorAll('.ao-island, .ao-card, .ao-brain').forEach(function(el){ el.remove(); });
+        // Remove old cards + brain (no islands)
+        canvas.querySelectorAll('.ao-card, .ao-brain').forEach(function(el){ el.remove(); });
 
         // Render each dept
         AO_LAYOUT.forEach(function(lay) {
             var d = DEPTS.find(function(x){ return x.id === lay.id; });
             if (!d) return;
-
-            var cx = lay.cx * cw, cy = lay.cy * ch;
-            var fw = 60 + d.agents * 22; // floor width scales with agent count
-            var fh = 56;
-
-            // Floor island
-            var island = document.createElement('div');
-            island.className = 'ao-island';
-            island.style.cssText = 'left:' + (cx - fw/2) + 'px;top:' + (cy - fh/2) + 'px;width:' + fw + 'px;height:' + fh + 'px;';
-
-            var floorDiv = document.createElement('div');
-            floorDiv.className = 'ao-floor';
-            floorDiv.style.cssText = 'width:100%;height:100%;' +
-                'background:linear-gradient(145deg,rgba(20,20,28,0.98),rgba(14,14,20,0.95));' +
-                'border:1px solid ' + d.color + '28;' +
-                'box-shadow:0 8px 24px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.02) inset;' +
-                'transform:rotate(-11deg) skewX(-17deg) scaleY(0.68);';
-            island.appendChild(floorDiv);
-            canvas.appendChild(island);
 
             // Stat card
             var cardL = lay.cardL * cw, cardT = lay.cardT * ch;
@@ -24014,42 +24034,12 @@ window.apexFileDropHandler = function(e){
                         '<span style="font:700 8px/1 \'JetBrains Mono\',monospace;color:' + statusColor + ';letter-spacing:.04em;margin-left:auto;flex-shrink:0;margin-right:6px">' + statusLabel + '</span>' +
                         '<span class="ao-roster-chev">▶</span>';
 
-                    var detail = document.createElement('div');
-                    detail.className = 'ao-agent-detail' + (window._aoExpandedAgents[agentKey] ? ' ao-agent-detail--open' : '');
-                    // Start with the local desc; fetch full profile from API on first open
-                    detail.innerHTML = '<div class="ao-agent-detail-body" id="aoAgentBody-' + agentKey + '">' + agent.desc + '</div>';
-                    detail._loaded = false;
-
-                    if (window._aoExpandedAgents[agentKey]) {
-                        row.querySelector('.ao-roster-chev').textContent = '▼';
-                    }
-
                     row.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        var isOpen = detail.classList.toggle('ao-agent-detail--open');
-                        row.querySelector('.ao-roster-chev').textContent = isOpen ? '▼' : '▶';
-                        window._aoExpandedAgents[agentKey] = isOpen;
-                        // Fetch full agent profile from API on first expand
-                        if (isOpen && !detail._loaded && agent.slug) {
-                            detail._loaded = true;
-                            var bodyEl = document.getElementById('aoAgentBody-' + agentKey);
-                            fetch('/api/agents/' + agent.slug, { headers: {'x-app-key': window._appKey||''} })
-                                .then(function(r){ return r.json(); })
-                                .then(function(data){
-                                    if (!data.ok || !data.agent) return;
-                                    var a = data.agent;
-                                    var promptSnippet = (a.system_prompt || '').split('\n').slice(0,4).join('\n').trim();
-                                    if (bodyEl) bodyEl.innerHTML =
-                                        '<strong style="color:#a1a1aa;font-size:10px">' + (a.name || agent.n) + '</strong><br>' +
-                                        '<span style="color:#52525b">' + (a.description || agent.desc) + '</span>' +
-                                        (promptSnippet ? '<pre style="margin-top:6px;font:9px/1.4 \'JetBrains Mono\',monospace;color:#3f3f46;white-space:pre-wrap;overflow-wrap:break-word">' + promptSnippet + '</pre>' : '');
-                                }).catch(function(){});
-                        }
+                        window.openAgentDetail(agent, d.color, d.name);
                     });
 
-                    rowWrap.appendChild(row);
-                    rowWrap.appendChild(detail);
-                    rosterEl.appendChild(rowWrap);
+                    rosterEl.appendChild(row);
                 });
             }
         });
@@ -24161,6 +24151,111 @@ window.apexFileDropHandler = function(e){
     };
 
     window.aoOpenApprovals = function() { if (window.switchPage) window.switchPage('actions'); };
+
+    window.agentDetailBack = function() { if (window.switchPage) window.switchPage('agents'); };
+
+    window.openAgentDetail = function(agent, color, deptName) {
+        var titleEl = document.getElementById('agentDetailTitle');
+        var deptEl  = document.getElementById('agentDetailDept');
+        var bodyEl  = document.getElementById('agentDetailBody');
+        if (titleEl) titleEl.textContent = agent.n;
+        if (deptEl)  { deptEl.textContent = deptName; deptEl.style.color = color; deptEl.style.borderColor = color + '44'; deptEl.style.background = color + '12'; }
+        if (bodyEl) {
+            bodyEl.innerHTML =
+                '<div class="agd-hero">' +
+                    '<div class="agd-orb" style="background:' + color + '18;border:1px solid ' + color + '44">' +
+                        '<span style="font:800 22px/1 \'JetBrains Mono\',monospace;color:' + color + '">' + agent.n.slice(0,2).toUpperCase() + '</span>' +
+                    '</div>' +
+                    '<div class="agd-hero-info">' +
+                        '<div class="agd-name" id="agdFullName">' + agent.n + '</div>' +
+                        '<div class="agd-dept" style="color:' + color + '">' + deptName + '</div>' +
+                        '<div class="agd-desc" id="agdDesc">' + agent.desc + '</div>' +
+                        '<div class="agd-badges">' +
+                            '<span class="agd-badge ' + (agent.live ? 'live' : 'dormant') + '">' + (agent.live ? 'LIVE' : 'DORMANT') + '</span>' +
+                            '<span class="agd-badge dormant" id="agdSlugBadge">' + agent.slug + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="agd-section" id="agdCapabilities">' +
+                    '<div class="agd-section-title">CAPABILITIES</div>' +
+                    '<div class="agd-empty">Loading...</div>' +
+                '</div>' +
+                '<div class="agd-section" id="agdPromptSection">' +
+                    '<div class="agd-section-title">SYSTEM PROMPT</div>' +
+                    '<div class="agd-empty">Loading...</div>' +
+                '</div>' +
+                '<div class="agd-section" id="agdRunsSection">' +
+                    '<div class="agd-section-title">RECENT RUNS</div>' +
+                    '<div class="agd-empty">Loading...</div>' +
+                '</div>';
+        }
+        if (window.switchPage) window.switchPage('agent-detail');
+        // Fetch full agent profile
+        if (agent.slug) {
+            fetch('/api/agents/' + agent.slug, { headers: {'x-app-key': window._appKey||''} })
+                .then(function(r){ return r.json(); })
+                .then(function(data) {
+                    if (!data.ok || !data.agent) return;
+                    var a = data.agent;
+                    var nameEl = document.getElementById('agdFullName');
+                    var descEl = document.getElementById('agdDesc');
+                    var capEl  = document.getElementById('agdCapabilities');
+                    var promEl = document.getElementById('agdPromptSection');
+                    if (nameEl && a.name) nameEl.textContent = a.name;
+                    if (descEl && a.description) descEl.textContent = a.description;
+                    // Capabilities / tools
+                    if (capEl) {
+                        var tools = a.tools || [];
+                        capEl.innerHTML = '<div class="agd-section-title">CAPABILITIES</div>' +
+                            (tools.length
+                                ? '<div class="agd-tools-grid">' + tools.map(function(t){
+                                    var tname = typeof t === 'string' ? t : (t.name || t.function || '—');
+                                    var tdesc = typeof t === 'object' ? (t.description || '') : '';
+                                    return '<div class="agd-tool"><span class="agd-tool-name">' + tname + '</span>' + (tdesc ? '<span>' + tdesc + '</span>' : '') + '</div>';
+                                  }).join('') + '</div>'
+                                : '<div class="agd-empty">No tools configured</div>');
+                    }
+                    // System prompt
+                    if (promEl) {
+                        var prompt = (a.system_prompt || '').trim();
+                        promEl.innerHTML = '<div class="agd-section-title">SYSTEM PROMPT</div>' +
+                            (prompt
+                                ? '<pre class="agd-prompt">' + prompt.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>'
+                                : '<div class="agd-empty">No system prompt set</div>');
+                    }
+                }).catch(function(){});
+        } else {
+            var capEl = document.getElementById('agdCapabilities');
+            var promEl = document.getElementById('agdPromptSection');
+            if (capEl) capEl.innerHTML = '<div class="agd-section-title">CAPABILITIES</div><div class="agd-empty">Not registered in system</div>';
+            if (promEl) promEl.innerHTML = '<div class="agd-section-title">SYSTEM PROMPT</div><div class="agd-empty">Not registered in system</div>';
+        }
+        // Fetch recent runs for this agent
+        fetch('/api/agents/runs?agent=' + encodeURIComponent(agent.slug || agent.n) + '&limit=10', { headers: {'x-app-key': window._appKey||''} })
+            .then(function(r){ return r.json(); })
+            .then(function(data) {
+                var runs = Array.isArray(data) ? data : (data.runs || data.data || []);
+                var runsEl = document.getElementById('agdRunsSection');
+                if (!runsEl) return;
+                var STATUS_COLOR = { completed:'#34d399', done:'#34d399', failed:'#ef4444', running:'#38bdf8', pending:'#fbbf24', inprogress:'#38bdf8' };
+                runsEl.innerHTML = '<div class="agd-section-title">RECENT RUNS</div>' +
+                    (runs.length
+                        ? runs.map(function(r){
+                            var st = (r.status || 'unknown').toLowerCase();
+                            var sc = STATUS_COLOR[st] || '#52525b';
+                            return '<div class="agd-run-row">' +
+                                '<span class="agd-run-status" style="background:' + sc + '14;color:' + sc + ';border:1px solid ' + sc + '33">' + st.toUpperCase() + '</span>' +
+                                '<div class="agd-run-body">' +
+                                    '<div class="agd-run-task">' + (r.description || r.task || r.title || '—') + '</div>' +
+                                    '<div class="agd-run-meta">' + (r.created_at ? new Date(r.created_at).toLocaleString() : '') + (r.duration_ms ? ' · ' + r.duration_ms + 'ms' : '') + '</div>' +
+                                '</div></div>';
+                          }).join('')
+                        : '<div class="agd-empty">No runs recorded for this agent</div>');
+            }).catch(function(){
+                var runsEl = document.getElementById('agdRunsSection');
+                if (runsEl) runsEl.innerHTML = '<div class="agd-section-title">RECENT RUNS</div><div class="agd-empty">No runs recorded for this agent</div>';
+            });
+    };
 
     // ── Live data ─────────────────────────────────────────────────────────────
     async function aoFetchLiveData() {
