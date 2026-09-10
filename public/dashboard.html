@@ -7238,8 +7238,8 @@ select:focus {
             <div id="topbar-pg-sub" style="font-size:9px;letter-spacing:0.09em;color:rgba(170,190,220,0.6);font-family:'JetBrains Mono',monospace;">AI · Interface · Control</div>
         </div>
         <div class="topbar-center" style="display:flex;flex-direction:row;align-items:center;gap:10px">
-            <div class="clock-time" id="clockTime">--:--:--</div>
-            <div class="clock-date" id="clockDate">--</div>
+            <div class="clock-time" id="clockTime" style="font-size:11px!important;font-weight:500!important;letter-spacing:0.06em!important;">--:--:--</div>
+            <div class="clock-date" id="clockDate" style="font-size:7px!important;">--</div>
         </div>
         <span id="mobilePageName" style="display:none">CMD</span>
         <!-- V-11-A: User identity display (right side of topbar) -->
@@ -7427,7 +7427,7 @@ select:focus {
                         <span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.18em;color:#5e6ad2">AGENT ORCHESTRATION</span>
                         <span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0">MASTER VIEW</span>
                     </div>
-                    <div style="margin-top:8px;font-size:11px;color:rgba(232,244,255,0.55);line-height:1.5">Agent status, autonomy level, and manual triggers appear here. Full authoring in Phase J.</div>
+                    <div style="margin-top:8px;font-size:11px;color:rgba(232,244,255,0.55);line-height:1.5">Agent status, autonomy level, and manual triggers appear here.</div>
                 </div>
 
                 <!-- Hidden stubs kept for JS compatibility (state indicators referenced elsewhere) -->
@@ -7539,7 +7539,7 @@ select:focus {
             </div>
             <!-- ══ PAGE: SETTINGS ══ -->
             <div class="page" id="page-settings">
-              <div style="max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px;padding:8px 0">
+              <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px;padding:8px 0">
 
                 <!-- ACCOUNT SECTION -->
                 <div class="ds-panel">
@@ -7636,6 +7636,21 @@ select:focus {
                     </div>
                 </div>
 
+                <!-- ═══ NEEDS ATTENTION ═══ -->
+                <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);padding:16px 18px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div style="width:6px;height:6px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;animation:pulse 1.5s infinite;flex-shrink:0"></div>
+                            <span style="font:600 11px/1 'Inter',sans-serif;color:#eaeff5">Needs Attention</span>
+                            <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#ef4444;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:4px;padding:2px 6px">TOP 3</span>
+                        </div>
+                        <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#4a5568">Who requires a response?</span>
+                    </div>
+                    <div id="networkAttentionList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto">
+                        <div style="font-size:11px;color:var(--text-mute);padding:6px 0;text-align:center">Loading&#8230;</div>
+                    </div>
+                </div>
+
                 <!-- ═══ CALENDAR ═══ -->
                 <div style="background:#0d1424;border-radius:16px;border:1px solid rgba(255,255,255,0.07);overflow:hidden">
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.05)">
@@ -7702,21 +7717,6 @@ select:focus {
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                </div>
-
-                <!-- ═══ NEEDS ATTENTION ═══ -->
-                <div style="background:#0d1424;border-radius:12px;border:1px solid rgba(255,255,255,0.07);padding:16px 18px">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <div style="width:6px;height:6px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;animation:pulse 1.5s infinite;flex-shrink:0"></div>
-                            <span style="font:600 11px/1 'Inter',sans-serif;color:#eaeff5">Needs Attention</span>
-                            <span style="font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:1px;color:#ef4444;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:4px;padding:2px 6px">TOP 3</span>
-                        </div>
-                        <span style="font:400 10px/1 'JetBrains Mono',monospace;color:#4a5568">Who requires a response?</span>
-                    </div>
-                    <div id="networkAttentionList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto">
-                        <div style="font-size:11px;color:var(--text-mute);padding:6px 0;text-align:center">Loading&#8230;</div>
                     </div>
                 </div>
 
@@ -9839,7 +9839,6 @@ if(pipe){
                         <div class="td-section-hdr"><span class="td-section-label">Today</span></div>
                         <div id="today-active-panel"></div>
                     </div>
-                    <div class="td-legacy-sep"><span class="td-legacy-sep-text">System · Governance Architecture</span></div>
                 </div>
                 <div id="ovr-pipeline" style="display:none"></div>
 
@@ -10498,7 +10497,7 @@ if(pipe){
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">REALITY</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">How APEX models and understands the world</div>
+                        <div style="font:400 12px/1.5 Inter,sans-serif;letter-spacing:0.04em;color:#8893a0;margin-top:8px">How APEX models and understands the world</div>
                     </div>
                     <div style="text-align:right">
                         <button class="ds-btn cyan" data-fn="realitySeed">Initialise Data</button>
@@ -11164,10 +11163,6 @@ if(pipe){
                         </div>
                         <div id="memSemanticList" data-apex-state="empty" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
                     </section>
-                    <!-- Read-only boundary note (UX-15) -->
-                    <div style="padding:10px 12px;background:rgba(255,159,67,0.04);border:1px solid rgba(255,159,67,0.15);border-radius:8px;font-size:10px;color:#8893a0;line-height:1.5">
-                        <strong style="color:rgba(232,244,255,0.6)">Read-only surface:</strong> Correction and deletion of memory records are not yet available in this interface. This view is inspection-only.
-                    </div>
                 </div>
             </div><!-- #page-memory -->
 
@@ -11175,7 +11170,7 @@ if(pipe){
             <div class="page" id="page-governance">
                 <div class="page-header">
                     <div class="page-header-left">
-                        <span style="font-size:13px;font-weight:600;color:rgba(232,244,255,0.9)">Governance</span>
+                        <span class="ds-page-title">GOVERNANCE</span>
                         <span style="font-size:10px;color:#8893a0;margin-left:8px">Constitutional · Authority · Records</span>
                     </div>
                     <button class="ds-btn ds-btn-sm" onclick="governanceRefresh()" style="font-size:10px">↻ Refresh</button>
@@ -11210,10 +11205,6 @@ if(pipe){
                         </div>
                     </div>
 
-                    <!-- Read-only boundary note (UX-16) -->
-                    <div style="padding:10px 12px;background:rgba(255,159,67,0.04);border:1px solid rgba(255,159,67,0.15);border-radius:8px;font-size:10px;color:#8893a0;line-height:1.5">
-                        <strong style="color:rgba(232,244,255,0.6)">Read-only surface:</strong> Constitutional records are displayed as metadata only. Internal constitutional chain-of-thought and deliberation payloads are not accessible from this interface.
-                    </div>
 
                     <!-- V-11-E E-3: APEX Constitution Charter — moved from COMMAND -->
                     <div id="apex-constitution-charter" style="background:#0d1424;border-radius:14px;border:1px solid rgba(91,158,255,0.15);border-top:2px solid rgba(91,158,255,0.4);padding:18px 22px;margin-top:8px">
