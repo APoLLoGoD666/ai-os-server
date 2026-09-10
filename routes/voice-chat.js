@@ -206,7 +206,7 @@ router.post('/voice-chat', _auth, async (req, res) => {
                     for (const block of response.content) {
                         if (block.type === 'tool_use') {
                             console.log(`[APEX] Tool call: ${block.name}`, block.input);
-                            const result = await executeApexTool(block.name, block.input);
+                            const result = await executeApexTool(block.name, block.input, { humanId: req.identity?.humanId || null });
                             console.log(`[APEX] Tool result:`, result);
                             toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
                         }

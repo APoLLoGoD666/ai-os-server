@@ -58,10 +58,13 @@ function pcmToWav(pcm) {
 // POST /api/tts/gemini
 // Body: { text: string }
 // Returns: audio/wav (Gemini 2.5 Flash TTS, 24kHz PCM)
+const VALID_VOICES = new Set(['Fenrir','Orus','Kore','Charon','Puck','Aoede','Leda','Zephyr']);
+
 router.post('/tts/gemini', _auth, async (req, res) => {
     const t0 = Date.now();
     try {
-        const text = cleanForTTS(req.body?.text || '');
+        const text  = cleanForTTS(req.body?.text || '');
+        const voice = VALID_VOICES.has(req.body?.voice) ? req.body.voice : DEFAULT_VOICE;
         if (!text) return res.status(400).json({ ok: false, error: 'No text provided' });
         if (text.length > 4000) return res.status(400).json({ ok: false, error: 'Text exceeds 4000 char limit' });
 
@@ -71,7 +74,7 @@ router.post('/tts/gemini', _auth, async (req, res) => {
             return res.status(503).json({ ok: false, error: 'GOOGLE_API_KEY not configured' });
         }
 
-        const cacheKey = crypto.createHash('sha1').update(text).digest('hex');
+        const cacheKey = crypto.createHash('sha1').update(`${voice}:${text}`).digest('hex');
         const cached = cacheGet(cacheKey);
         if (cached) {
             res.set('Content-Type', 'audio/wav');
@@ -87,7 +90,7 @@ router.post('/tts/gemini', _auth, async (req, res) => {
             contents: [{ parts: [{ text }] }],
             generationConfig: {
                 responseModalities: ['AUDIO'],
-                speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: DEFAULT_VOICE } } }
+                speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } }
             }
         };
 
@@ -128,7 +131,7 @@ router.post('/tts/gemini', _auth, async (req, res) => {
         res.set('X-Apex-Latency-Ms', String(latency));
         res.send(wav);
 
-        console.log(`[TTS/Gemini] ${latency}ms · ${wav.length}B · "${text.slice(0, 50)}"`);
+        console.log(`[TTS/Gemini] ${latency}ms · ${voice} · ${wav.length}B · "${text.slice(0, 50)}"`);
     } catch (err) {
         console.error('[TTS/Gemini] unhandled:', err.message);
         res.status(500).json({ ok: false, error: err.message });
@@ -136,7 +139,7 @@ router.post('/tts/gemini', _auth, async (req, res) => {
 });
 
 router.get('/tts/gemini/voices', _auth, (_req, res) => {
-    res.json({ voices: [DEFAULT_VOICE, 'Orus', 'Kore', 'Charon'], default: DEFAULT_VOICE, model: MODEL });
+    res.json({ voices: [...VALID_VOICES], default: DEFAULT_VOICE, model: MODEL });
 });
 
 module.exports = router;

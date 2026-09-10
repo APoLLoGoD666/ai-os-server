@@ -11671,6 +11671,16 @@ if(pipe){
             <input class="chat-input" id="chatInput" type="text" placeholder="Type or speak to APEX…" autocomplete="off" aria-label="Message APEX" />
             <button class="clear-chat-btn" data-fn="clearChat" title="Clear chat" aria-label="Clear conversation">Clear</button>
             <button class="auto-listen-btn on" id="autoListenBtn" data-fn="toggleAutoListen" title="Toggle auto-listen" aria-pressed="true" aria-label="Auto-listen">Auto-listen</button>
+            <select id="apexVoiceSelect" title="TTS voice" aria-label="Voice selection" style="background:var(--color-surface,#1a1a1a);color:var(--color-text-muted,#888);border:1px solid var(--color-border,#333);border-radius:var(--radius-sm,4px);padding:2px 4px;font-size:0.75rem;cursor:pointer;height:28px;" onchange="window.setApexVoice(this.value)">
+                <option value="Fenrir">Fenrir</option>
+                <option value="Orus">Orus</option>
+                <option value="Kore">Kore</option>
+                <option value="Charon">Charon</option>
+                <option value="Puck">Puck</option>
+                <option value="Aoede">Aoede</option>
+                <option value="Leda">Leda</option>
+                <option value="Zephyr">Zephyr</option>
+            </select>
             <button class="send-btn" data-fn="sendChatCommand" title="Send" aria-label="Send message">&#10148;</button>
         </div>
 
@@ -12048,9 +12058,31 @@ async function _ttsPost(text, signal) {
             if (r.ok) return r;
         } catch(e) { if (e.name === 'AbortError') throw e; _piperUp = false; console.warn('[TTS] Piper failed, falling back to Gemini'); }
     }
-    return fetch(buildApiUrl(_GEMINI_TTS_PATH), { method: 'POST', headers: buildApiHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ text }), signal, credentials: 'same-origin' });
+    return fetch(buildApiUrl(_GEMINI_TTS_PATH), { method: 'POST', headers: buildApiHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ text, voice: _ttsVoice }), signal, credentials: 'same-origin' });
 }
 _probePiper();
+// Retry Piper probe every 60s — covers the case where Piper starts after page load.
+setInterval(_probePiper, 60000);
+
+// Voice preference — persisted in localStorage, sent with every TTS request.
+let _ttsVoice = (() => {
+    try { return localStorage.getItem('apex_tts_voice') || 'Fenrir'; } catch(_) { return 'Fenrir'; }
+})();
+const _VALID_TTS_VOICES = ['Fenrir','Orus','Kore','Charon','Puck','Aoede','Leda','Zephyr'];
+window.setApexVoice = function(v) {
+    if (!_VALID_TTS_VOICES.includes(v)) return;
+    _ttsVoice = v;
+    try { localStorage.setItem('apex_tts_voice', v); } catch(_) {}
+    const sel = document.getElementById('apexVoiceSelect');
+    if (sel) sel.value = v;
+    console.log('[TTS] voice set to:', v);
+};
+// Restore saved voice selection after DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('apexVoiceSelect');
+    if (sel && _VALID_TTS_VOICES.includes(_ttsVoice)) sel.value = _ttsVoice;
+}, { once: true });
+
 window.setTtsProvider = function(p) {
     _ttsProvider = 'gemini'; // always Gemini — no fallback
     try { localStorage.setItem('apex_tts_provider', _ttsProvider); } catch(_){}
@@ -12248,15 +12280,13 @@ async function _httBegin() {
                 _vcAddHistory('assistant', reply);
                 renderChatMessage('ai', reply);
 
-                // Reset audio session from play-and-record to playback.
-                // iOS keeps the session in play-and-record after getUserMedia
-                // even after all tracks are stopped. speechSynthesis cannot
-                // acquire the loudspeaker while the session is play-and-record.
-                if (navigator.audioSession) {
+                // Flip iOS audio session from play-and-record → playback before TTS.
+                // Only wait if the session type actually needed to change; if it was
+                // already 'playback' the switch is a no-op and no delay is needed.
+                if (navigator.audioSession && navigator.audioSession.type !== 'playback') {
                     try { navigator.audioSession.type = 'playback'; } catch(_) {}
+                    await new Promise(r => setTimeout(r, 600));
                 }
-                // Wait 1000ms for iOS to fully release the audio session.
-                await new Promise(r => setTimeout(r, 1000));
                 _httSpeak(reply);
 
             } catch (err) {
@@ -12874,7 +12904,8 @@ async function _processSpeak() {
     if (srec) { try { srec.stop(); _srecActive = false; } catch (_) {} }
     if (!isIOSPWA) _startInterruptListener();
 
-    // Safety watchdog: force-reset speaking state after 30 seconds
+    // Safety watchdog: force-reset speaking state if audio hangs.
+    // Duration is word-count-scaled with a low floor so short replies don't lock the mic.
     _speakSafetyTimer = setTimeout(() => {
         if (!isSpeakingNow) return;
         console.warn('[Speak] safety timeout — forcing isSpeakingNow reset');
@@ -12888,10 +12919,10 @@ async function _processSpeak() {
         unmuteDeepgram();
         setOrbState(autoListen && isListening ? (dgMode === "conversation" ? "listening" : "waiting") : "ready");
     }, (() => {
-        const totalWords = speakQueue.reduce((n, item) => n + (item.text ? item.text.split(/\s+/).length : 0), 0) || 30;
+        const totalWords = speakQueue.reduce((n, item) => n + (item.text ? item.text.split(/\s+/).length : 0), 0) || 15;
         return isIOSPWA
-            ? Math.min(30000, Math.max(4000, totalWords * 500 + 3000))
-            : Math.max(20000, totalWords * 400 + 8000);
+            ? Math.min(25000, Math.max(4000, totalWords * 500 + 2000))
+            : Math.min(90000, Math.max(6000, totalWords * 450 + 3000));
     })());
 
     while (speakQueue.length) {
