@@ -11572,6 +11572,10 @@ if(pipe){
             <span class="nav-label">Actions</span>
             <span class="ds-notif-badge amber" id="navActionsBadge" style="display:none"></span>
         </button>
+        <button class="nav-btn" id="nav-council" aria-label="Supreme Council">
+            <span class="nav-icon">⬡</span>
+            <span class="nav-label">Council</span>
+        </button>
         <button class="nav-btn" id="nav-domains" aria-label="Domains">
             <span class="nav-icon">&#9643;</span>
             <span class="nav-label">Domains</span>
@@ -11580,10 +11584,6 @@ if(pipe){
             <span class="nav-icon">◉</span>
             <span class="nav-label">System</span>
             <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
-        </button>
-        <button class="nav-btn" id="nav-council" aria-label="Supreme Council">
-            <span class="nav-icon">⬡</span>
-            <span class="nav-label">Council</span>
         </button>
         <!-- SETTINGS (bottom) -->
         <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0"></div>
@@ -24128,6 +24128,9 @@ window.apexFileDropHandler = function(e){
         { id:'cio', name:'Chief Intelligence Officer', abbr:'CIO', color:'#06b6d4', domain:'Memory · Knowledge · Cognition' },
         { id:'cgo', name:'Chief Governance Officer',   abbr:'CGO', color:'#ef4444', domain:'Constitution · Ethics · Policy' },
     ];
+    // CEO is the synthesizer — not a voter, renders as the central authority card
+    var EC_CEO = { id:'ceo', name:'Chief Executive Officer', abbr:'CEO', color:'#d4af37', domain:'Synthesis · Authority · Final Recommendation' };
+    var _ecLastRec = '';
 
     var _ecLastVotes    = {};
     var _ecDeliberating = false;
@@ -24196,11 +24199,13 @@ window.apexFileDropHandler = function(e){
         chamber.innerHTML = '';
         var W = chamber.offsetWidth  || 640;
         var H = chamber.offsetHeight || 420;
+
+        // 6 exec cards: top row [CSO, CTO, CFO], bottom row [COO, CIO, CGO]
         var cols   = 3, rows = 2;
-        var padX   = 28, padY = 36;
+        var padX   = 24, padY = 30;
         var cellW  = (W - padX * 2) / cols;
         var cellH  = (H - padY * 2) / rows;
-        var cardW  = Math.min(Math.max(cellW - 26, 155), 198);
+        var cardW  = Math.min(Math.max(cellW - 24, 150), 195);
         var cardH  = 152;
 
         EC_ENTITIES.forEach(function(entity, i) {
@@ -24215,25 +24220,48 @@ window.apexFileDropHandler = function(e){
             chamber.appendChild(card);
         });
 
-        var emblem = document.createElement('div');
-        emblem.className = 'ec-emblem';
-        emblem.id        = 'ecEmblem';
-        emblem.style.left = Math.round(W / 2) + 'px';
-        emblem.style.top  = Math.round(H / 2) + 'px';
-        emblem.innerHTML =
-            '<div class="ec-emblem-ring">' +
-              '<div class="ec-emblem-orb"><div class="ec-emblem-inner">⬡</div></div>' +
+        // CEO — central authority card, positioned at canvas centre
+        var ceoW   = Math.min(cardW + 10, 205);
+        var ceoH   = 160;
+        var ceoX   = Math.round(W / 2 - ceoW / 2);
+        var ceoY   = Math.round(H / 2 - ceoH / 2);
+        var ceoRec = _ecLastRec ? _ecLastRec.slice(0, 90) + (_ecLastRec.length > 90 ? '…' : '') : '—';
+        var sdClass = _ecDeliberating ? 'deliberating' : 'idle';
+        var sdLabel = _ecDeliberating ? 'SYNTHESISING' : 'IDLE';
+
+        var ceoCard = document.createElement('div');
+        ceoCard.className  = 'ec-entity-card';
+        ceoCard.id         = 'ec-card-ceo';
+        ceoCard.style.left   = ceoX + 'px';
+        ceoCard.style.top    = ceoY + 'px';
+        ceoCard.style.width  = ceoW + 'px';
+        ceoCard.style.border = '1px solid rgba(212,175,55,0.35)';
+        ceoCard.style.boxShadow = '0 0 28px rgba(212,175,55,0.08)';
+        ceoCard.style.zIndex = '4';
+        ceoCard.innerHTML =
+            '<div class="ec-entity-tag">' +
+              '<span class="ec-entity-dot" style="background:#d4af37;box-shadow:0 0 7px #d4af3760"></span>' +
+              '<span style="color:#d4af37">CEO</span>' +
+              '<span style="margin-left:auto;font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.07em;color:#d4af3780">SYNTHESIZER</span>' +
             '</div>' +
-            '<div class="ec-emblem-label">SUPREME COUNCIL</div>' +
-            '<div class="ec-emblem-status" id="ecStatus">IDLE</div>';
-        chamber.appendChild(emblem);
+            '<div class="ec-entity-name">'+EC_CEO.name+'</div>' +
+            '<div class="ec-entity-domain">'+EC_CEO.domain+'</div>' +
+            '<div class="ec-entity-last">' +
+              '<div class="ec-entity-last-label">LAST RECOMMENDATION</div>' +
+              '<div class="ec-entity-last-vote" style="color:#a1a1aa;line-height:1.4">'+_esc(ceoRec)+'</div>' +
+            '</div>' +
+            '<div class="ec-entity-status">' +
+              '<span class="ec-status-dot '+sdClass+'" style="background:'+(sdClass==='deliberating'?'#d4af37':'#3f3f46')+';box-shadow:'+(sdClass==='deliberating'?'0 0 6px #d4af37':'none')+'"></span>' +
+              '<span style="color:#3f3f46;font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em" id="ecStatus">'+sdLabel+'</span>' +
+            '</div>';
+        chamber.appendChild(ceoCard);
         _ecBuilt = true;
     }
 
     function _setDeliberating(on) {
         _ecDeliberating = on;
         var s = document.getElementById('ecStatus');
-        if (s) { s.textContent = on ? 'DELIBERATING' : 'IDLE'; s.className = 'ec-emblem-status' + (on ? ' deliberating' : ''); }
+        if (s) { s.textContent = on ? 'SYNTHESISING' : 'IDLE'; }
         var cd = document.getElementById('ecConnDot');
         if (cd) cd.style.background = on ? '#a78bfa' : '#34d399';
         document.querySelectorAll('.ec-entity-status .ec-status-dot').forEach(function(d) {
@@ -24326,6 +24354,7 @@ window.apexFileDropHandler = function(e){
                     (delibs[0].discussion || []).forEach(function(v) {
                         _ecLastVotes[v.entity] = { vote: v.vote, rationale: v.rationale, confidence: v.confidence || 0.7 };
                     });
+                    if (delibs[0].final_recommendation) _ecLastRec = delibs[0].final_recommendation;
                     _renderChamber();
                 }
                 _renderHistory(delibs);
@@ -24359,6 +24388,7 @@ window.apexFileDropHandler = function(e){
             (data.votes || []).forEach(function(v) {
                 _ecLastVotes[v.entityId] = { vote: v.vote, rationale: v.rationale, confidence: v.confidence };
             });
+            if (data.recommendation) _ecLastRec = data.recommendation;
             _renderChamber();
             _renderActiveVotes(data.votes || []);
             if (statusEl && data.recommendation) {
