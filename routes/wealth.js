@@ -5,6 +5,11 @@ const _auth = require('../lib/app-auth');
 
 const sb = getSupabaseClient;
 
+function _scope(q, req) {
+    const hid = req.identity?.humanId || null;
+    return hid ? q.or(`human_id.eq.${hid},human_id.is.null`) : q;
+}
+
 router.get('/wealth/transactions', _auth, async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 30;
@@ -12,6 +17,7 @@ router.get('/wealth/transactions', _auth, async (req, res) => {
         const since = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
         let q = sb().from('apex_finance_entries').select('*').gte('transaction_date', since).order('transaction_date', { ascending: false });
         if (type) q = q.eq('type', type);
+        if (req.identity?.humanId) q = q.or(`human_id.eq.${req.identity.humanId},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, transactions: data || [] });
@@ -21,7 +27,7 @@ router.get('/wealth/transactions', _auth, async (req, res) => {
 router.post('/wealth/transactions', _auth, async (req, res) => {
     try {
         const { type, amount, currency, category, description, merchant, transaction_date } = req.body || {};
-        const { data, error } = await sb().from('apex_finance_entries').insert({ type, amount, currency, category, description, merchant, transaction_date }).select().single();
+        const { data, error } = await sb().from('apex_finance_entries').insert({ type, amount, currency, category, description, merchant, transaction_date, human_id: req.identity?.humanId || null }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, transaction: data });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -31,7 +37,7 @@ router.get('/wealth/summary', _auth, async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 30;
         const since = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
-        const { data, error } = await sb().from('apex_finance_entries').select('type, amount, category').gte('transaction_date', since);
+        const { data, error } = await _scope(sb().from('apex_finance_entries').select('type, amount, category').gte('transaction_date', since), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         const rows = data || [];
         let income = 0, expenses = 0;
@@ -48,7 +54,7 @@ router.get('/wealth/summary', _auth, async (req, res) => {
 
 router.get('/wealth/subscriptions', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_subscriptions').select('*').eq('active', true).order('name');
+        const { data, error } = await _scope(sb().from('apex_subscriptions').select('*').eq('active', true).order('name'), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, subscriptions: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -57,7 +63,7 @@ router.get('/wealth/subscriptions', _auth, async (req, res) => {
 router.post('/wealth/subscriptions', _auth, async (req, res) => {
     try {
         const { name, amount, currency, billing_cycle, next_billing_date, category } = req.body || {};
-        const { data, error } = await sb().from('apex_subscriptions').insert({ name, amount, currency, billing_cycle, next_billing_date, category, active: true }).select().single();
+        const { data, error } = await sb().from('apex_subscriptions').insert({ name, amount, currency, billing_cycle, next_billing_date, category, active: true, human_id: req.identity?.humanId || null }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, subscription: data });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -74,7 +80,7 @@ router.delete('/wealth/subscriptions/:id', _auth, async (req, res) => {
 
 router.get('/wealth/net-worth/latest', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_net_worth_snapshot').select('*').order('snapped_at', { ascending: false }).limit(1).single();
+        const { data, error } = await _scope(sb().from('apex_net_worth_snapshot').select('*').order('snapped_at', { ascending: false }).limit(1), req);
         if (error && error.code !== 'PGRST116') return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, snapshot: data || null });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -83,7 +89,7 @@ router.get('/wealth/net-worth/latest', _auth, async (req, res) => {
 router.post('/wealth/net-worth/snapshot', _auth, async (req, res) => {
     try {
         const { assets_gbp, liabilities_gbp, breakdown } = req.body || {};
-        const { data, error } = await sb().from('apex_net_worth_snapshot').insert({ assets_gbp, liabilities_gbp, breakdown }).select().single();
+        const { data, error } = await sb().from('apex_net_worth_snapshot').insert({ assets_gbp, liabilities_gbp, breakdown, human_id: req.identity?.humanId || null }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, snapshot: data });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }

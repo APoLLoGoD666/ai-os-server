@@ -7,9 +7,9 @@ const sb = getSupabaseClient;
 
 router.get('/business', _auth, async (req, res) => {
     try {
-        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const _hid = req.identity?.humanId || null;
         let q = sb().from('apex_businesses').select('*').order('created_at', { ascending: false });
-        if (_hid !== null) q = q.eq('human_id', _hid);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, businesses: data || [] });

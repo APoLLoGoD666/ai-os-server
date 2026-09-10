@@ -11,7 +11,7 @@ function sb() { return _sbClient(); }
 router.get('/briefing/today', _auth, async (req, res) => {
     const requestId = req.requestId || '';
     try {
-        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const _hid = req.identity?.humanId || null;
         const scope = q => _hid !== null ? q.eq('human_id', _hid) : q;
         const today     = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];

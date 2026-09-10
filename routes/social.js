@@ -5,11 +5,16 @@ const _auth = require('../lib/app-auth');
 
 const sb = getSupabaseClient;
 
+function _scope(q, req) {
+    const hid = req.identity?.humanId || null;
+    return hid ? q.or(`human_id.eq.${hid},human_id.is.null`) : q;
+}
+
 // Social accounts
 router.get('/social/accounts', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_social_accounts')
-            .select('id,platform,username,status,notes,created_at').order('platform', { ascending: true }).limit(50);
+        const { data, error } = await _scope(sb().from('apex_social_accounts')
+            .select('id,platform,username,status,notes,created_at').order('platform', { ascending: true }).limit(50), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, accounts: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -20,7 +25,8 @@ router.post('/social/accounts', _auth, async (req, res) => {
         const { platform, username, status, notes } = req.body || {};
         if (!platform) return res.status(400).json({ ok: false, error: 'platform required' });
         const { data, error } = await sb().from('apex_social_accounts').insert({
-            platform, username: username || null, status: status || 'active', notes: notes || null
+            platform, username: username || null, status: status || 'active', notes: notes || null,
+            human_id: req.identity?.humanId || null
         }).select('id,platform,username,status,notes,created_at').single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, account: data });
@@ -35,6 +41,7 @@ router.get('/social/posts', _auth, async (req, res) => {
             .order('created_at', { ascending: false }).limit(50);
         if (req.query.account_id) q = q.eq('account_id', req.query.account_id);
         if (req.query.status) q = q.eq('status', req.query.status);
+        if (req.identity?.humanId) q = q.or(`human_id.eq.${req.identity.humanId},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, posts: data || [] });
@@ -48,7 +55,8 @@ router.post('/social/posts', _auth, async (req, res) => {
         const { data, error } = await sb().from('apex_social_posts').insert({
             account_id: account_id || null, platform: platform || null,
             content, status: status || 'draft',
-            scheduled_at: scheduled_at || null, metrics: {}
+            scheduled_at: scheduled_at || null, metrics: {},
+            human_id: req.identity?.humanId || null
         }).select('id,account_id,platform,content,status,scheduled_at,created_at').single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, post: data });

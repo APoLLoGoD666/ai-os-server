@@ -5,11 +5,17 @@ const _auth = require('../lib/app-auth');
 
 const sb = getSupabaseClient;
 
+function _scope(q, req) {
+    const hid = req.identity?.humanId || null;
+    return hid ? q.or(`human_id.eq.${hid},human_id.is.null`) : q;
+}
+
 // Wishlist
 router.get('/shopping/wishlist', _auth, async (req, res) => {
     try {
         let q = sb().from('apex_wishlist').select('*').order('priority', { ascending: false }).limit(100);
         if (req.query.purchased === 'false') q = q.eq('purchased', false);
+        if (req.identity?.humanId) q = q.or(`human_id.eq.${req.identity.humanId},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, items: data || [] });
@@ -24,7 +30,8 @@ router.post('/shopping/wishlist', _auth, async (req, res) => {
             name, url: url || null,
             price_target_gbp: price_target_gbp != null ? Number(price_target_gbp) : null,
             current_price_gbp: current_price_gbp != null ? Number(current_price_gbp) : null,
-            priority: priority || 'medium', purchased: false, notes: notes || null
+            priority: priority || 'medium', purchased: false, notes: notes || null,
+            human_id: req.identity?.humanId || null
         }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, item: data });
@@ -46,8 +53,8 @@ router.get('/shopping/purchases', _auth, async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 30;
         const since = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
-        const { data, error } = await sb().from('apex_purchases')
-            .select('*').gte('purchase_date', since).order('purchase_date', { ascending: false }).limit(100);
+        const { data, error } = await _scope(sb().from('apex_purchases')
+            .select('*').gte('purchase_date', since).order('purchase_date', { ascending: false }).limit(100), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         const total = (data || []).reduce((s, p) => s + (Number(p.amount_gbp) || 0), 0);
         res.json({ ok: true, purchases: data || [], total_gbp: total });
@@ -60,7 +67,8 @@ router.post('/shopping/purchases', _auth, async (req, res) => {
         if (!name || amount_gbp == null) return res.status(400).json({ ok: false, error: 'name and amount_gbp required' });
         const { data, error } = await sb().from('apex_purchases').insert({
             name, amount_gbp: Number(amount_gbp), category: category || null,
-            purchase_date: purchase_date || new Date().toISOString().split('T')[0], notes: notes || null
+            purchase_date: purchase_date || new Date().toISOString().split('T')[0], notes: notes || null,
+            human_id: req.identity?.humanId || null
         }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, purchase: data });

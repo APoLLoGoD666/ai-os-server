@@ -5,11 +5,16 @@ const _auth = require('../lib/app-auth');
 
 const sb = getSupabaseClient;
 
+function _scope(q, req) {
+    const hid = req.identity?.humanId || null;
+    return hid ? q.or(`human_id.eq.${hid},human_id.is.null`) : q;
+}
+
 router.get('/spiritual/log', _auth, async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 30;
         const since = new Date(Date.now() - days * 86400000).toISOString();
-        const { data, error } = await sb().from('apex_spiritual_sessions').select('*').gte('created_at', since).order('created_at', { ascending: false });
+        const { data, error } = await _scope(sb().from('apex_spiritual_sessions').select('*').gte('created_at', since).order('created_at', { ascending: false }), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, log: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -18,7 +23,7 @@ router.get('/spiritual/log', _auth, async (req, res) => {
 router.post('/spiritual/log', _auth, async (req, res) => {
     try {
         const { type, duration_min, notes } = req.body || {};
-        const { data, error } = await sb().from('apex_spiritual_sessions').insert({ type, duration_min, notes }).select().single();
+        const { data, error } = await sb().from('apex_spiritual_sessions').insert({ type, duration_min, notes, human_id: req.identity?.humanId || null }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, entry: data });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -28,7 +33,7 @@ router.get('/spiritual/summary', _auth, async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 7;
         const since = new Date(Date.now() - days * 86400000).toISOString();
-        const { data, error } = await sb().from('apex_spiritual_sessions').select('type, duration_min').gte('created_at', since);
+        const { data, error } = await _scope(sb().from('apex_spiritual_sessions').select('type, duration_min').gte('created_at', since), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         const byType = {};
         let total_minutes = 0;
@@ -44,7 +49,7 @@ router.get('/spiritual/summary', _auth, async (req, res) => {
 router.get('/spiritual/streak', _auth, async (req, res) => {
     try {
         const type = req.query.type || 'meditation';
-        const { data, error } = await sb().from('apex_spiritual_sessions').select('created_at').eq('type', type).order('created_at', { ascending: false }).limit(365);
+        const { data, error } = await _scope(sb().from('apex_spiritual_sessions').select('created_at').eq('type', type).order('created_at', { ascending: false }).limit(365), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         const dates = (data || []).map(r => new Date(r.created_at).toISOString().split('T')[0]);
         const unique = [...new Set(dates)].sort().reverse();

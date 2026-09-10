@@ -8,10 +8,10 @@ const sb = getSupabaseClient;
 
 router.get('/university/assignments', _auth, async (req, res) => {
     try {
-        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const _hid = req.identity?.humanId || null;
         const done = req.query.completed === 'true';
         let q = sb().from('apex_university_assignments').select('*').eq('completed', done).order('due_date', { ascending: true });
-        if (_hid !== null) q = q.eq('human_id', _hid);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, assignments: data || [] });

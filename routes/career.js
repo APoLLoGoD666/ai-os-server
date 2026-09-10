@@ -5,11 +5,17 @@ const _auth = require('../lib/app-auth');
 
 const sb = getSupabaseClient;
 
+function _scope(q, req) {
+    const hid = req.identity?.humanId || null;
+    return hid ? q.or(`human_id.eq.${hid},human_id.is.null`) : q;
+}
+
 // Job applications
 router.get('/career/applications', _auth, async (req, res) => {
     try {
         let q = sb().from('apex_job_applications').select('*').order('applied_date', { ascending: false }).limit(100);
         if (req.query.status) q = q.eq('status', req.query.status);
+        if (req.identity?.humanId) q = q.or(`human_id.eq.${req.identity.humanId},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, applications: data || [] });
@@ -23,7 +29,8 @@ router.post('/career/applications', _auth, async (req, res) => {
         const { data, error } = await sb().from('apex_job_applications').insert({
             company, role, status: status || 'applied',
             applied_date: applied_date || new Date().toISOString().split('T')[0],
-            salary_range: salary_range || null, url: url || null, notes: notes || null
+            salary_range: salary_range || null, url: url || null, notes: notes || null,
+            human_id: req.identity?.humanId || null
         }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, application: data });
@@ -45,6 +52,7 @@ router.get('/career/interviews', _auth, async (req, res) => {
     try {
         let q = sb().from('apex_interviews').select('*').order('interview_date', { ascending: true }).limit(100);
         if (req.query.application_id) q = q.eq('application_id', req.query.application_id);
+        if (req.identity?.humanId) q = q.or(`human_id.eq.${req.identity.humanId},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, interviews: data || [] });
@@ -57,7 +65,8 @@ router.post('/career/interviews', _auth, async (req, res) => {
         if (!application_id) return res.status(400).json({ ok: false, error: 'application_id required' });
         const { data, error } = await sb().from('apex_interviews').insert({
             application_id, interview_date: interview_date || null,
-            type: type || 'other', notes: notes || null, outcome: outcome || null
+            type: type || 'other', notes: notes || null, outcome: outcome || null,
+            human_id: req.identity?.humanId || null
         }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, interview: data });
@@ -69,6 +78,7 @@ router.get('/career/skills', _auth, async (req, res) => {
     try {
         let q = sb().from('apex_skills').select('*').order('category', { ascending: true }).limit(200);
         if (req.query.category) q = q.eq('category', req.query.category);
+        if (req.identity?.humanId) q = q.or(`human_id.eq.${req.identity.humanId},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, skills: data || [] });
@@ -81,7 +91,8 @@ router.post('/career/skills', _auth, async (req, res) => {
         if (!name) return res.status(400).json({ ok: false, error: 'name required' });
         const { data, error } = await sb().from('apex_skills').insert({
             name, category: category || null, level: level || 'intermediate',
-            target_level: target_level || null, notes: notes || null
+            target_level: target_level || null, notes: notes || null,
+            human_id: req.identity?.humanId || null
         }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, skill: data });

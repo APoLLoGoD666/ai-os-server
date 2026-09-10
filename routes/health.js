@@ -5,6 +5,11 @@ const _auth = require('../lib/app-auth');
 
 const sb = getSupabaseClient;
 
+function _scope(q, req) {
+    const hid = req.identity?.humanId || null;
+    return hid ? q.or(`human_id.eq.${hid},human_id.is.null`) : q;
+}
+
 router.get('/health/ping', (req, res) => {
     res.json({ ok: true, status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -13,7 +18,7 @@ router.get('/health/workouts', _auth, async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 91;
         const since = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
-        const { data, error } = await sb().from('apex_workouts').select('workout_date,type,duration_minutes,notes').gte('workout_date', since).order('workout_date', { ascending: true }).limit(200);
+        const { data, error } = await _scope(sb().from('apex_workouts').select('workout_date,type,duration_minutes,notes').gte('workout_date', since).order('workout_date', { ascending: true }).limit(200), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, workouts: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -29,7 +34,9 @@ router.post('/health/workouts', _auth, async (req, res) => {
             type,
             duration_minutes: duration_minutes != null ? Number(duration_minutes) : null,
             notes: notes || null,
-            workout_date: workout_date || new Date().toISOString().split('T')[0]
+            workout_date: workout_date || new Date().toISOString().split('T')[0],
+            human_id: req.identity?.humanId || null,
+            human_id: req.identity?.humanId || null
         }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, workout: data });
@@ -39,7 +46,7 @@ router.post('/health/workouts', _auth, async (req, res) => {
 router.get('/health/nutrition', _auth, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        const { data, error } = await sb().from('apex_nutrition_log').select('*').eq('log_date', today).order('created_at', { ascending: true });
+        const { data, error } = await _scope(sb().from('apex_nutrition_log').select('*').eq('log_date', today).order('created_at', { ascending: true }), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         const meals = data || [];
         const totals = meals.reduce((a, m) => ({
@@ -66,7 +73,8 @@ router.post('/health/nutrition', _auth, async (req, res) => {
             protein_g: protein_g != null ? Number(protein_g) : null,
             carbs_g: carbs_g != null ? Number(carbs_g) : null,
             fat_g: fat_g != null ? Number(fat_g) : null,
-            log_date: log_date || new Date().toISOString().split('T')[0]
+            log_date: log_date || new Date().toISOString().split('T')[0],
+            human_id: req.identity?.humanId || null
         }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, meal: data });
@@ -76,7 +84,7 @@ router.post('/health/nutrition', _auth, async (req, res) => {
 router.get('/health/sleep', _auth, async (req, res) => {
     try {
         const since = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-        const { data, error } = await sb().from('apex_sleep_log').select('date,hours,quality_score,notes').gte('date', since).order('date', { ascending: true });
+        const { data, error } = await _scope(sb().from('apex_sleep_log').select('date,hours,quality_score,notes').gte('date', since).order('date', { ascending: true }), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, sleep: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -93,7 +101,8 @@ router.post('/health/sleep', _auth, async (req, res) => {
             date: logDate,
             hours: hoursNum,
             quality_score: quality_score || null,
-            notes: notes || null
+            notes: notes || null,
+            human_id: req.identity?.humanId || null
         }, { onConflict: 'date' }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, sleep: data });
@@ -103,7 +112,7 @@ router.post('/health/sleep', _auth, async (req, res) => {
 router.get('/mood', _auth, async (req, res) => {
     try {
         const since = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-        const { data, error } = await sb().from('apex_mood_log').select('date,score').gte('date', since).order('date', { ascending: true });
+        const { data, error } = await _scope(sb().from('apex_mood_log').select('date,score').gte('date', since).order('date', { ascending: true }), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, moods: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -115,7 +124,7 @@ router.post('/mood', _auth, async (req, res) => {
         if (score == null || score === '') return res.status(400).json({ ok: false, error: 'score required' });
         const scoreNum = Number(score);
         if (isNaN(scoreNum)) return res.status(400).json({ ok: false, error: 'score must be a number' });
-        const { data, error } = await sb().from('apex_mood_log').upsert({ date: date || new Date().toISOString().split('T')[0], score: scoreNum }, { onConflict: 'date' }).select().single();
+        const { data, error } = await sb().from('apex_mood_log').upsert({ date: date || new Date().toISOString().split('T')[0], score: scoreNum, human_id: req.identity?.humanId || null }, { onConflict: 'date' }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, mood: data });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -124,7 +133,7 @@ router.post('/mood', _auth, async (req, res) => {
 router.get('/health/metrics', _auth, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 14, 50);
-        const { data, error } = await sb().from('apex_body_measurements').select('*').order('measured_at', { ascending: false }).limit(limit);
+        const { data, error } = await _scope(sb().from('apex_body_measurements').select('*').order('measured_at', { ascending: false }).limit(limit), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, metrics: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -133,7 +142,7 @@ router.get('/health/metrics', _auth, async (req, res) => {
 router.get('/health/supplements', _auth, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        const { data, error } = await sb().from('apex_supplements').select('id,name,taken,log_date').eq('log_date', today);
+        const { data, error } = await _scope(sb().from('apex_supplements').select('id,name,taken,log_date').eq('log_date', today), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, supplements: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -144,7 +153,7 @@ router.post('/health/supplements', _auth, async (req, res) => {
         const { supplement_id, taken } = req.body || {};
         if (!supplement_id) return res.status(400).json({ ok: false, error: 'supplement_id required' });
         const today = new Date().toISOString().split('T')[0];
-        const { data, error } = await sb().from('apex_supplements').upsert({ id: supplement_id, log_date: today, taken: !!taken }, { onConflict: 'id,log_date' }).select().single();
+        const { data, error } = await sb().from('apex_supplements').upsert({ id: supplement_id, log_date: today, taken: !!taken, human_id: req.identity?.humanId || null }, { onConflict: 'id,log_date' }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, supplement: data });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }

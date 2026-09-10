@@ -5,11 +5,16 @@ const _auth = require('../lib/app-auth');
 
 const sb = getSupabaseClient;
 
+function _scope(q, req) {
+    const hid = req.identity?.humanId || null;
+    return hid ? q.or(`human_id.eq.${hid},human_id.is.null`) : q;
+}
+
 // Trips
 router.get('/travel/trips', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_trips')
-            .select('*').order('start_date', { ascending: false }).limit(50);
+        const { data, error } = await _scope(sb().from('apex_trips')
+            .select('*').order('start_date', { ascending: false }).limit(50), req);
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, trips: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -22,7 +27,8 @@ router.post('/travel/trips', _auth, async (req, res) => {
         const { data, error } = await sb().from('apex_trips').insert({
             name, destination: destination || null, start_date: start_date || null,
             end_date: end_date || null, status: status || 'planned',
-            budget_gbp: budget_gbp != null ? Number(budget_gbp) : null, notes: notes || null
+            budget_gbp: budget_gbp != null ? Number(budget_gbp) : null, notes: notes || null,
+            human_id: req.identity?.humanId || null
         }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, trip: data });
@@ -34,6 +40,7 @@ router.get('/travel/expenses', _auth, async (req, res) => {
     try {
         let q = sb().from('apex_trip_expenses').select('*').order('expense_date', { ascending: false }).limit(100);
         if (req.query.trip_id) q = q.eq('trip_id', req.query.trip_id);
+        if (req.identity?.humanId) q = q.or(`human_id.eq.${req.identity.humanId},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, expenses: data || [] });
@@ -46,7 +53,8 @@ router.post('/travel/expenses', _auth, async (req, res) => {
         if (!trip_id || !description || amount_gbp == null) return res.status(400).json({ ok: false, error: 'trip_id, description, amount_gbp required' });
         const { data, error } = await sb().from('apex_trip_expenses').insert({
             trip_id, description, amount_gbp: Number(amount_gbp),
-            category: category || null, expense_date: expense_date || new Date().toISOString().split('T')[0]
+            category: category || null, expense_date: expense_date || new Date().toISOString().split('T')[0],
+            human_id: req.identity?.humanId || null
         }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, expense: data });
@@ -58,6 +66,7 @@ router.get('/travel/itinerary', _auth, async (req, res) => {
     try {
         let q = sb().from('apex_itinerary_items').select('*').order('item_date', { ascending: true }).limit(100);
         if (req.query.trip_id) q = q.eq('trip_id', req.query.trip_id);
+        if (req.identity?.humanId) q = q.or(`human_id.eq.${req.identity.humanId},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, items: data || [] });
@@ -70,7 +79,8 @@ router.post('/travel/itinerary', _auth, async (req, res) => {
         if (!trip_id || !title) return res.status(400).json({ ok: false, error: 'trip_id and title required' });
         const { data, error } = await sb().from('apex_itinerary_items').insert({
             trip_id, item_date: item_date || null, title,
-            location: location || null, notes: notes || null
+            location: location || null, notes: notes || null,
+            human_id: req.identity?.humanId || null
         }).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, item: data });

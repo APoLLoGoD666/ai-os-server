@@ -8,9 +8,9 @@ const sb = getSupabaseClient;
 
 router.get('/finance/invoices', _auth, async (req, res) => {
     try {
-        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const _hid = req.identity?.humanId || null;
         let q = sb().from('apex_invoices').select('id,title,amount,status,due_date,client_name,created_at').order('created_at', { ascending: false }).limit(50);
-        if (_hid !== null) q = q.eq('human_id', _hid);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, invoices: data || [] });
@@ -19,9 +19,9 @@ router.get('/finance/invoices', _auth, async (req, res) => {
 
 router.get('/finance/expenses', _auth, async (req, res) => {
     try {
-        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const _hid = req.identity?.humanId || null;
         let q = sb().from('apex_transactions').select('id,description,amount,category,date,source').eq('type', 'expense').order('date', { ascending: false }).limit(50);
-        if (_hid !== null) q = q.eq('human_id', _hid);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, expenses: data || [] });
@@ -30,9 +30,9 @@ router.get('/finance/expenses', _auth, async (req, res) => {
 
 router.get('/finance/subscriptions', _auth, async (req, res) => {
     try {
-        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const _hid = req.identity?.humanId || null;
         let q = sb().from('apex_subscriptions').select('id,name,amount,billing_cycle,category,active,next_billing_date').order('name', { ascending: true }).limit(100);
-        if (_hid !== null) q = q.eq('human_id', _hid);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, subscriptions: data || [] });
@@ -41,9 +41,9 @@ router.get('/finance/subscriptions', _auth, async (req, res) => {
 
 router.get('/finance/investments', _auth, async (req, res) => {
     try {
-        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const _hid = req.identity?.humanId || null;
         let q = sb().from('apex_investments').select('id,name,type,amount,current_value,platform,notes').order('name', { ascending: true }).limit(100);
-        if (_hid !== null) q = q.eq('human_id', _hid);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, investments: data || [] });
@@ -52,9 +52,9 @@ router.get('/finance/investments', _auth, async (req, res) => {
 
 router.get('/finance/balance', _auth, async (req, res) => {
     try {
-        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const _hid = req.identity?.humanId || null;
         let q = sb().from('apex_transactions').select('amount,type');
-        if (_hid !== null) q = q.eq('human_id', _hid);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         let income = 0, expenses = 0;
@@ -68,11 +68,11 @@ router.get('/finance/balance', _auth, async (req, res) => {
 
 router.get('/finance/cashflow', _auth, async (req, res) => {
     try {
-        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const _hid = req.identity?.humanId || null;
         const cutoff = new Date();
         cutoff.setMonth(cutoff.getMonth() - 6);
         let q = sb().from('apex_transactions').select('amount,type,date').gte('date', cutoff.toISOString().split('T')[0]);
-        if (_hid !== null) q = q.eq('human_id', _hid);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         const months = {};
@@ -91,11 +91,11 @@ router.get('/finance/cashflow', _auth, async (req, res) => {
 
 router.get('/finance/profit-loss', _auth, async (req, res) => {
     try {
-        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const _hid = req.identity?.humanId || null;
         const cutoff = new Date();
         cutoff.setMonth(cutoff.getMonth() - 6);
         let q = sb().from('apex_transactions').select('amount,type,category,date').gte('date', cutoff.toISOString().split('T')[0]);
-        if (_hid !== null) q = q.eq('human_id', _hid);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         const months = {};
