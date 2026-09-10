@@ -7051,8 +7051,10 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
     }
     /* Show nav-more button (overrides inline style="display:none") */
     #nav-more { display: flex !important; }
-    /* Prevent bottom nav from covering last content item when page is scrolled */
-    .page { padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px)) !important; }
+    /* Shrink page-and-input so the fixed bottom nav doesn't cover page content */
+    .page-and-input { padding-bottom: calc(49px + env(safe-area-inset-bottom, 0px)) !important; }
+    /* Also add scroll buffer so last content item is above the nav when scrolled */
+    .page { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important; }
     /* Tab button sizing */
     .nav-btn {
         flex: 1 !important;
