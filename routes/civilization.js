@@ -147,6 +147,13 @@ router.post('/civilization/opportunities/:id/action', _auth, async (req, res) =>
 
 // ─── Executive Council ─────────────────────────────────────────────────────────
 
+router.post('/civilization/council/session', _auth, async (req, res) => {
+  try {
+    const result = await require('../lib/council/session').runWeeklySession();
+    res.json({ ok: true, ...result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 router.post('/civilization/council/deliberate', _auth, async (req, res) => {
   try {
     const { question, context = {} } = req.body;
