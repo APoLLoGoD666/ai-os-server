@@ -21914,9 +21914,8 @@ window.apexFileDropHandler = function(e){
         var stub    = document.getElementById('actnStubPanel');
         var surface = document.getElementById('actnMasterSurface');
         var isMaster = document.body.classList.contains('apex-role-master');
-        if (stub)    stub.style.display    = isMaster ? 'none'  : 'block';
-        if (surface) surface.style.display = isMaster ? ''      : 'none';
-        if (!isMaster) return;
+        if (stub)    stub.style.display    = 'none';
+        if (surface) surface.style.display = '';
         window.actionsRefresh();
         // V-11-K: catch any disclosures rendered by refresh.
         setTimeout(function() { if (window._disclosure) window._disclosure.initAll(); }, 250);
