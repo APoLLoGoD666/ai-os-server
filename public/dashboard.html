@@ -24436,6 +24436,20 @@ window.apexFileDropHandler = function(e){
         return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    function _cleanCouncilText(text, maxLen) {
+        if (!text) return '';
+        text = String(text);
+        // Strip code fences
+        text = text.replace(/```[\s\S]*?```/g, '').trim();
+        // Strip JSON blobs
+        if (text.charAt(0) === '{' || text.charAt(0) === '[') {
+            try { var p = JSON.parse(text); text = p.choice || p.decision || p.rationale || p.summary || text; }
+            catch (e) { text = text.replace(/[{}\[\]"]/g, ' ').replace(/\s+/g, ' ').trim(); }
+        }
+        text = text.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+        return maxLen ? text.slice(0, maxLen) : text;
+    }
+
     function _vbCls(vote) {
         if (!vote || vote === '—') return 'v0';
         var v = vote.toLowerCase();
@@ -24446,12 +24460,12 @@ window.apexFileDropHandler = function(e){
     }
 
     function _buildExecCard(entity, lv) {
-        var vote    = lv ? (lv.vote || '—') : '—';
+        var vote    = lv ? _cleanCouncilText(lv.vote || '—', 40) : '—';
         var conf    = lv ? (lv.confidence || 0) : 0;
         var confPct = Math.round(conf * 100);
         var confCol = conf > 0.7 ? '#34d399' : conf > 0.45 ? '#f59e0b' : '#3f3f46';
         var vCls    = _vbCls(vote);
-        var rat     = lv ? (lv.rationale || '') : '';
+        var rat     = lv ? _cleanCouncilText(lv.rationale || '', 280) : '';
         var el = document.createElement('div');
         el.className = 'ec-card';
         el.id        = 'ec-card-' + entity.id;
