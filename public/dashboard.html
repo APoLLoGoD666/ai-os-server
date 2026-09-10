@@ -24023,13 +24023,26 @@ window.apexFileDropHandler = function(e){
 
     window.aoAddTask = function() {
         var inp = document.getElementById('aoTaskInp');
-        if (!inp || !inp.value.trim()) return;
+        var raw = inp ? inp.value.trim() : '';
+        if (!raw) return;
         var d = DEPTS[window._aoDeptIdx || 0];
-        var t = { status:'backlog', title:inp.value.trim(), tags:d.name + ' · JUST ADDED', age:'just now' };
+        var title = '[' + d.name + '] ' + raw;
+        // Optimistic local insert
+        var t = { status:'backlog', title: title, tags: d.name, age:'just now' };
         window._aoTasks = [t].concat(window._aoTasks || []);
         inp.value = '';
         aoUpdateCounts();
         aoRenderTasks();
+        // Persist to backend
+        fetch('/api/tasks/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-app-key': window._appKey || '' },
+            body: JSON.stringify({ title: title })
+        }).then(function(r) { return r.json(); }).then(function(d) {
+            if (!d.ok) console.warn('[agents] task save failed:', d.error);
+            // Reload to get server-assigned ID + real status
+            setTimeout(aoFetchLiveData, 600);
+        }).catch(function(e) { console.warn('[agents] task save error:', e.message); });
     };
 
     window.aoOpenApprovals = function() { if (window.switchPage) window.switchPage('actions'); };
