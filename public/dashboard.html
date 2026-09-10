@@ -18315,6 +18315,22 @@ function fetchPlaidStatus() {
         .then(function(d){
             if (!d.ok || !d.connected) {
                 _wirePlaidButtons();
+                // Fallback: populate charts from internal transaction data when Plaid not connected
+                var _tryInternalCharts = function() {
+                    if (_finCharts && (_finCharts['income'] || _finCharts['spend'])) {
+                        Promise.all([
+                            fetch('/api/finance/cashflow',    { headers: buildApiHeaders() }).then(function(r){ return r.json(); }),
+                            fetch('/api/finance/profit-loss', { headers: buildApiHeaders() }).then(function(r){ return r.json(); }),
+                        ]).then(function(res) {
+                            var cf = res[0], pnl = res[1];
+                            if (!cf.ok || !cf.cashflow || !cf.cashflow.length) return;
+                            var cats = {};
+                            if (pnl.ok && pnl.pnl) pnl.pnl.forEach(function(m){ Object.entries(m.categories||{}).forEach(function(e){ cats[e[0]] = (cats[e[0]]||0)+e[1]; }); });
+                            _populatePlaidCharts(cf.cashflow, cats);
+                        }).catch(function(e){ console.warn('[finance] internal chart fallback', e); });
+                    } else { setTimeout(_tryInternalCharts, 200); }
+                };
+                _tryInternalCharts();
                 return;
             }
             // Fetch accounts and cashflow in parallel
