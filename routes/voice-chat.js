@@ -16,6 +16,7 @@ const { pgSearchDocuments }                                         = require('.
 const { getSupabaseClient, getAnthropicClient }                     = require('../lib/clients');
 const { HAIKU_MODEL, SONNET_MODEL }                                 = require('../config');
 const _vcRuntime = require('../lib/models/runtime');
+const { getManifest: _vcGetManifest }                               = require('../lib/apex-self-manifest');
 
 const client  = getAnthropicClient();
 const sbAdmin = getSupabaseClient();
@@ -161,6 +162,7 @@ router.post('/voice-chat', _auth, async (req, res) => {
                     caller:    'voice_chat',
                     maxTokens: _isConversational ? 45 : 200,
                     system: [
+                        _vcGetManifest(),
                         _voiceTemporal ? `TEMPORAL CONTEXT: ${_sessionTracker.formatForPrompt(_voiceTemporal)}` : '',
                         enrichedContext ? enrichedContext + '\n\n---\n\n' : '',
                         alexContext,

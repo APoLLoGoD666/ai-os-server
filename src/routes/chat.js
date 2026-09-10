@@ -23,6 +23,7 @@ const { toolUseInputToCommand: _toolUseInputToCommand } = require('../../lib/age
 const { timeAgo } = require('../../lib/chat-context');
 const client = require('../../lib/clients').getAnthropicClient();
 const { HAIKU_MODEL } = require('../../config');
+const { getManifest } = require('../../lib/apex-self-manifest');
 
 // Module-level counter for cognitive evolution trigger (B5)
 let _chatCountSinceEvolution = 0;
@@ -195,6 +196,7 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
 
         const { result: streamMsg } = await runtime.execute({
             client, model: HAIKU_MODEL, caller: 'chat_fallback', maxTokens: 500,
+            system: getManifest(),
             tools: TOOLS,
             messages: [{ role: 'user', content: prompt }],
         });
