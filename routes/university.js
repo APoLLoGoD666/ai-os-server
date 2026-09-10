@@ -8,9 +8,11 @@ const sb = getSupabaseClient;
 
 router.get('/university/assignments', _auth, async (req, res) => {
     try {
-        if (!isMasterRequest(req)) return res.json({ ok: true, assignments: [] });
+        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
         const done = req.query.completed === 'true';
-        const { data, error } = await sb().from('apex_university_assignments').select('*').eq('completed', done).order('due_date', { ascending: true });
+        let q = sb().from('apex_university_assignments').select('*').eq('completed', done).order('due_date', { ascending: true });
+        if (_hid !== null) q = q.eq('human_id', _hid);
+        const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, assignments: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -41,7 +43,6 @@ router.patch('/university/assignments/:id', _auth, async (req, res) => {
 
 router.get('/university/modules', _auth, async (req, res) => {
     try {
-        if (!isMasterRequest(req)) return res.json({ ok: true, modules: [] });
         const current = req.query.current !== 'false';
         let q = sb().from('apex_university_modules').select('*').order('code');
         if (current) q = q.eq('current', true);
@@ -71,7 +72,6 @@ router.post('/university/study-sessions', _auth, async (req, res) => {
 
 router.get('/university/study-sessions', _auth, async (req, res) => {
     try {
-        if (!isMasterRequest(req)) return res.json({ ok: true, sessions: [] });
         const days = parseInt(req.query.days) || 7;
         const since = new Date(Date.now() - days * 86400000).toISOString();
         const { data, error } = await sb().from('apex_university_sessions').select('*').gte('started_at', since).order('started_at', { ascending: false });
@@ -82,10 +82,12 @@ router.get('/university/study-sessions', _auth, async (req, res) => {
 
 router.get('/university/deadlines', _auth, async (req, res) => {
     try {
-        if (!isMasterRequest(req)) return res.json({ ok: true, deadlines: [] });
+        const _hid2 = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
         const now = new Date().toISOString().split('T')[0];
         const cutoff = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
-        const { data, error } = await sb().from('apex_university_assignments').select('*').gte('due_date', now).lte('due_date', cutoff).eq('completed', false).order('due_date', { ascending: true });
+        let q2 = sb().from('apex_university_assignments').select('*').gte('due_date', now).lte('due_date', cutoff).eq('completed', false).order('due_date', { ascending: true });
+        if (_hid2 !== null) q2 = q2.eq('human_id', _hid2);
+        const { data, error } = await q2;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, deadlines: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }

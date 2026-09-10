@@ -340,7 +340,7 @@ if (!CRON_SECRET)     console.warn('[Startup] CRON_SECRET not set — cron endpo
     }
     _files.forEach(f => {
         try {
-            app.use('/api', _personalDataGate, require(path.join(_rdir, f)));
+            app.use('/api', require(path.join(_rdir, f)));
             console.log('[Routes] loaded:', f);
         } catch (e) {
             console.warn('[Routes] load failed:', f, e.message);

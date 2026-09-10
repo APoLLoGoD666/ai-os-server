@@ -45,8 +45,14 @@ router.post('/api/finance/transaction', requireAppAccess, async (req, res) => {
 
 router.get('/api/finance/transactions', requireAppAccess, async (req, res) => {
     try {
-        if (!isMasterRequest(req)) return res.json({ ok: true, transactions: [] });
-        const transactions = await pgListTransactions(30);
+        const identity = req.identity || {};
+        let transactions;
+        if (identity.role === 'master') {
+            transactions = await pgListTransactions(30);
+        } else {
+            const { data } = await getSupabaseClient().from('transactions').select().eq('human_id', identity.humanId || '').order('date', { ascending: false }).order('created_at', { ascending: false }).limit(30);
+            transactions = data || [];
+        }
         return res.json({ ok: true, transactions });
     } catch (error) {
         return res.status(500).json({ ok: false, reply: error.message });
@@ -55,7 +61,21 @@ router.get('/api/finance/transactions', requireAppAccess, async (req, res) => {
 
 router.get('/api/finance/summary', requireAppAccess, async (req, res) => {
     try {
-        if (!isMasterRequest(req)) return res.json({ ok: true, summary: null, budgets: [] });
+        const identity = req.identity || {};
+        if (identity.role !== 'master') {
+            const now2 = new Date();
+            const monthStart = new Date(now2.getFullYear(), now2.getMonth(), 1).toISOString().split('T')[0];
+            const nextMonthStart = new Date(now2.getFullYear(), now2.getMonth() + 1, 1).toISOString().split('T')[0];
+            const { data: uTx } = await getSupabaseClient().from('transactions').select('category,type,amount').eq('human_id', identity.humanId || '').gte('date', monthStart).lt('date', nextMonthStart);
+            const groups = {};
+            for (const row of uTx || []) {
+                const key = `${row.category}:${row.type}`;
+                if (!groups[key]) groups[key] = { category: row.category, type: row.type, total: 0 };
+                groups[key].total += parseFloat(row.amount) || 0;
+            }
+            const summary = Object.values(groups).sort((a, b) => b.total - a.total);
+            return res.json({ ok: true, summary, budgets: [], month: now2.getMonth() + 1, year: now2.getFullYear() });
+        }
         const cached = getCached("finance_summary");
         if (cached) return res.json(cached);
         const now   = new Date();

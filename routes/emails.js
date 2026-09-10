@@ -8,7 +8,6 @@ const { checkEmails, sendEmailReply } = require('../agent-system/email_agent');
 
 router.get('/emails', requireAppAccess, async (req, res) => {
     try {
-        if (!isMasterRequest(req)) return res.json({ ok: true, emails: [] });
         const cached = getCached("emails");
         if (cached) return res.json(cached);
         const emails = await pgListEmailQueue(20);

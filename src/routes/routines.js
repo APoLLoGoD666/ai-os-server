@@ -5,7 +5,6 @@ const { pgCreateRoutine, pgListRoutines, pgUpdateRoutine, pgDeleteRoutine } = re
 const { getCached, setCache, clearCache } = require('../../lib/server-utils');
 
 router.get('/api/routines', requireAppAccess, async (req, res) => {
-    if (!isMasterRequest(req)) return res.json({ ok: true, routines: [] });
     try {
         const cached = getCached("routines");
         if (cached) return res.json(cached);

@@ -11,7 +11,8 @@ function sb() { return _sbClient(); }
 router.get('/briefing/today', _auth, async (req, res) => {
     const requestId = req.requestId || '';
     try {
-        if (!isMasterRequest(req)) return res.json({ ok: true, generatedAt: new Date().toISOString(), briefing: { calendar: { events: [] }, emails: { unread: [] }, finance: { weekNet: 0, weekIncome: 0, weekExpenses: 0, overdueInvoices: [] }, health: { nutrition: [], sleep: null, workouts: [] }, journal: { latest: null }, assignments: [] } });
+        const _hid = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const scope = q => _hid !== null ? q.eq('human_id', _hid) : q;
         const today     = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         const weekAgo   = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
@@ -21,13 +22,13 @@ router.get('/briefing/today', _auth, async (req, res) => {
             await Promise.allSettled([
                 sb().from('apex_calendar_events').select('title,event_date,start_time,location').eq('event_date', today).order('start_time', { ascending: true }).limit(10),
                 sb().from('email_threads').select('subject,sender,labels,date,is_read').eq('is_read', false).order('date', { ascending: false }).limit(10),
-                sb().from('apex_transactions').select('amount,type,category,date').gte('date', weekAgo),
-                sb().from('apex_invoices').select('title,amount,status,due_date,client_name').eq('status', 'unpaid').lte('due_date', weekAhead),
-                sb().from('apex_nutrition_log').select('calories,protein_g,carbs_g,fat_g,log_date').eq('log_date', today).limit(5),
-                sb().from('apex_sleep_log').select('date,hours,quality_score,notes').eq('date', yesterday).maybeSingle(),
-                sb().from('apex_workouts').select('type,duration_minutes,workout_date').gte('workout_date', weekAgo).order('workout_date', { ascending: false }).limit(3),
-                sb().from('apex_journal_entries').select('entry_text,mood_score,created_at').order('created_at', { ascending: false }).limit(1),
-                sb().from('apex_university_assignments').select('title,due_date,completed').eq('completed', false).lte('due_date', weekAhead).order('due_date', { ascending: true }).limit(5),
+                scope(sb().from('apex_transactions').select('amount,type,category,date').gte('date', weekAgo)),
+                scope(sb().from('apex_invoices').select('title,amount,status,due_date,client_name').eq('status', 'unpaid').lte('due_date', weekAhead)),
+                scope(sb().from('apex_nutrition_log').select('calories,protein_g,carbs_g,fat_g,log_date').eq('log_date', today).limit(5)),
+                scope(sb().from('apex_sleep_log').select('date,hours,quality_score,notes').eq('date', yesterday).maybeSingle()),
+                scope(sb().from('apex_workouts').select('type,duration_minutes,workout_date').gte('workout_date', weekAgo).order('workout_date', { ascending: false }).limit(3)),
+                scope(sb().from('apex_journal_entries').select('entry_text,mood_score,created_at').order('created_at', { ascending: false }).limit(1)),
+                scope(sb().from('apex_university_assignments').select('title,due_date,completed').eq('completed', false).lte('due_date', weekAhead).order('due_date', { ascending: true }).limit(5)),
             ]);
 
         const val = r => r.status === 'fulfilled' ? (r.value.data ?? null) : null;
@@ -58,13 +59,14 @@ router.get('/briefing/today', _auth, async (req, res) => {
 router.get('/briefing/priority-inbox', _auth, async (req, res) => {
     const requestId = req.requestId || '';
     try {
-        if (!isMasterRequest(req)) return res.json({ ok: true, inbox: { emails: [], assignments: [], follow_ups: [], meetings: [] } });
+        const _hid2 = req.identity?.role !== 'master' ? (req.identity?.humanId || '') : null;
+        const scope2 = q => _hid2 !== null ? q.eq('human_id', _hid2) : q;
         const today    = new Date().toISOString().split('T')[0];
         const weekAhead = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
         const [emails, assignments, followUps, calendar] = await Promise.allSettled([
             sb().from('apex_email_queue').select('id,sender,subject,priority,category').in('priority', ['urgent','normal']).neq('status', 'sent').neq('status', 'rejected').order('priority', { ascending: true }).limit(10),
-            sb().from('apex_assignments').select('id,module,title,due_date').eq('status', 'pending').lte('due_date', weekAhead).order('due_date', { ascending: true }).limit(5),
+            scope2(sb().from('apex_assignments').select('id,module,title,due_date').eq('status', 'pending').lte('due_date', weekAhead).order('due_date', { ascending: true }).limit(5)),
             sb().from('apex_follow_ups').select('id,note,due_date').eq('completed', false).lte('due_date', today).limit(10),
             sb().from('apex_calendar_events').select('title,start_time').eq('event_date', today).order('start_time', { ascending: true }).limit(5),
         ]);
