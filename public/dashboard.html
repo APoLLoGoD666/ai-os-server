@@ -7350,9 +7350,16 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
 ═══════════════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 899px) {
     .app { display: flex !important; flex-direction: column !important; }
-    .page-and-input { flex: 1 !important; }
+    /* Topbar must never shrink — guards against flex squeezing it to 0 */
+    .topbar { flex-shrink: 0 !important; overflow: hidden !important; }
+    .page-and-input { flex: 1 !important; min-height: 0 !important; }
     .chat-input { height: 44px !important; }
     .send-btn, .mic-btn { width: 44px !important; height: 44px !important; }
+}
+/* Desktop layout must always win at ≥900px — explicit override of any mobile bleed */
+@media (min-width: 900px) {
+    .topbar { flex-shrink: 0 !important; }
+    .bottom-nav { position: static !important; bottom: auto !important; }
 }
 
 /* ══ V-11-I VOICE UX — canonical state indicators & a11y ══════════════════════════
@@ -25113,6 +25120,59 @@ window.apexFileDropHandler = function(e){
             else councilRefresh();
         }
     };
+})();
+</script>
+
+<script>
+/* ── Layout guardian — ensures desktop/mobile layout is always in sync with actual
+   viewport width. Runs immediately on load and on every resize. Prevents the
+   "mobile nav at bottom, topbar gone" flash caused by CSS cascade timing issues. */
+(function() {
+    var BREAKPOINT = 900;
+    var _app = document.getElementById('main-content');
+    var _nav = document.getElementById('apexSideNav');
+    var _bar = document.querySelector('.topbar');
+
+    function _applyLayout() {
+        if (!_app) return;
+        var w = window.innerWidth;
+        if (w >= BREAKPOINT) {
+            // Desktop: clear any inline styles set by previous mobile run
+            _app.style.removeProperty('display');
+            _app.style.removeProperty('flex-direction');
+            if (_nav) {
+                _nav.style.removeProperty('position');
+                _nav.style.removeProperty('bottom');
+                _nav.style.removeProperty('left');
+                _nav.style.removeProperty('right');
+                _nav.style.removeProperty('width');
+                _nav.style.removeProperty('height');
+            }
+            if (_bar) _bar.style.removeProperty('flex-shrink');
+        } else {
+            // Mobile: reinforce flex column so topbar is always the first item
+            _app.style.display = 'flex';
+            _app.style.flexDirection = 'column';
+            if (_bar) _bar.style.flexShrink = '0';
+        }
+    }
+
+    // Run immediately (synchronous, before first paint where possible)
+    _applyLayout();
+
+    // Re-run on resize to catch window resize and orientation change
+    var _rt;
+    window.addEventListener('resize', function() {
+        clearTimeout(_rt);
+        _rt = setTimeout(_applyLayout, 60);
+    });
+
+    // One extra pass after DOM is fully ready in case layout shifted
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _applyLayout);
+    } else {
+        setTimeout(_applyLayout, 0);
+    }
 })();
 </script>
 </body>
