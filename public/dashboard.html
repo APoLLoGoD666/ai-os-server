@@ -10139,170 +10139,238 @@ if(pipe){
 
             <!-- ══ PAGE: BUSINESS ══ -->
             <div class="page" id="page-business">
-                <!-- V-11-F F-1: LIFE & WORK L0 summary block -->
+                <!-- L0 summary -->
                 <div class="lw-l0" data-l0="true">
                     <div class="lw-l0-summary" id="business-l0-summary">Loading your business activity&hellip;</div>
                     <div class="lw-l0-status" id="business-l0-status"></div>
                 </div>
 
-                <!-- Page Header -->
-                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
-                    <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">BUSINESS &amp; WORK</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">REVENUE &middot; CLIENTS &middot; SALES &middot; GROWTH &middot; MARKETING</div>
-                        <div class="lw-page-purpose" style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Active projects, tasks, clients, and approvals.</div>
+                <!-- ══ ROSTER VIEW ══ -->
+                <div id="biz-roster">
+                    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:28px">
+                        <div>
+                            <div class="ds-page-title" style="letter-spacing:7px">BUSINESS HUB</div>
+                            <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">COMPANIES &middot; REVENUE &middot; CLIENTS &middot; GROWTH</div>
+                            <div style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Select a business to manage its full dashboard.</div>
+                        </div>
+                        <button class="ds-btn cyan" onclick="bizAddNew()">+ Add Business</button>
                     </div>
-                    <div style="text-align:right">
-                        <button class="ds-btn cyan" data-fn="refreshBizPage">&#8635; Refresh</button>
-                    </div>
-                </div>
 
-                <div class="ds-grid-stats">
-                    <div class="ds-stat-card ac-green">
-                        <div class="ds-stat-label">Revenue</div>
-                        <div class="ds-stat-value green" id="bizStatRevenue">&#8212;</div>
-                        <div class="ds-stat-sub">this month</div>
-                    </div>
-                    <div class="ds-stat-card ac-purple">
-                        <div class="ds-stat-label">Active Clients</div>
-                        <div class="ds-stat-value purple" id="bizStatClients">&#8212;</div>
-                        <div class="ds-stat-sub">in pipeline</div>
-                    </div>
-                    <div class="ds-stat-card ac-cyan">
-                        <div class="ds-stat-label">Leads</div>
-                        <div class="ds-stat-value cyan" id="bizStatLeads">&#8212;</div>
-                        <div class="ds-stat-sub">open</div>
-                    </div>
-                    <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">Conversions</div>
-                        <div class="ds-stat-value amber" id="bizStatConversions">&#8212;</div>
-                        <div class="ds-stat-sub">this month</div>
-                    </div>
-                </div>
+                    <!-- Business card grid -->
+                    <div id="biz-card-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px">
 
-                <!-- Pending approvals (compact) -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left">
-                            <span class="ds-dot red pulse"></span>
-                            <span class="t-label">Pending approvals</span>
+                        <!-- Placeholder card -->
+                        <div onclick="bizOpenDetail('__placeholder__')"
+                             style="position:relative;cursor:pointer;background:rgba(255,255,255,0.02);border:1.5px dashed rgba(255,255,255,0.11);border-radius:0;padding:28px 24px;display:flex;flex-direction:column;gap:14px;transition:background 200ms,border-color 200ms;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%);min-height:190px"
+                             onmouseover="this.style.background='rgba(0,212,255,0.04)';this.style.borderColor='rgba(0,212,255,0.35)'"
+                             onmouseout="this.style.background='rgba(255,255,255,0.02)';this.style.borderColor='rgba(255,255,255,0.11)'">
+                            <!-- Clip corner accent -->
+                            <div style="position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 18px 18px 0;border-color:transparent rgba(0,212,255,0.15) transparent transparent;pointer-events:none"></div>
+                            <div style="font-size:22px;font-weight:200;color:rgba(0,212,255,0.4);line-height:1">+</div>
+                            <div>
+                                <div style="font:600 13px/1.3 Inter,sans-serif;color:rgba(255,255,255,0.65);letter-spacing:0.05em">Your First Business</div>
+                                <div style="font:400 10px/1.5 'JetBrains Mono',monospace;color:rgba(255,255,255,0.28);margin-top:5px;letter-spacing:0.06em">NO BUSINESS ADDED YET</div>
+                            </div>
+                            <div style="display:flex;gap:20px">
+                                <div><div style="font:600 15px/1 'JetBrains Mono',monospace;color:rgba(255,255,255,0.18)">&#8212;</div><div style="font:400 8px/1 'JetBrains Mono',monospace;color:rgba(255,255,255,0.18);margin-top:4px;letter-spacing:0.12em">REVENUE</div></div>
+                                <div><div style="font:600 15px/1 'JetBrains Mono',monospace;color:rgba(255,255,255,0.18)">&#8212;</div><div style="font:400 8px/1 'JetBrains Mono',monospace;color:rgba(255,255,255,0.18);margin-top:4px;letter-spacing:0.12em">CLIENTS</div></div>
+                                <div><div style="font:600 15px/1 'JetBrains Mono',monospace;color:rgba(255,255,255,0.18)">&#8212;</div><div style="font:400 8px/1 'JetBrains Mono',monospace;color:rgba(255,255,255,0.18);margin-top:4px;letter-spacing:0.12em">PROJECTS</div></div>
+                            </div>
+                            <div style="font:400 10px/1 Inter,sans-serif;color:rgba(0,212,255,0.35);margin-top:auto;letter-spacing:0.04em">Open business dashboard &#8594;</div>
                         </div>
-                        <div class="ds-panel-header-right">
-                            <span class="ds-badge red" id="bizApprovalBadge">&#8212;</span>
-                            <button class="ds-btn xs red" data-fn="denyAllApprovals">Deny all</button>
-                        </div>
-                    </div>
-                    <div id="bizApprovalList" style="display:flex;flex-direction:column;gap:8px">
-                        <div class="ds-skel-row">Loading approvals&#8230;</div>
-                    </div>
-                </div>
 
-                <!-- CRM with Kanban toggle -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left">
-                            <span class="ds-dot purple"></span>
-                            <span class="t-label">CRM &#183; client pipeline</span>
-                        </div>
-                        <div class="ds-panel-header-right">
-                            <button class="ds-btn xs" id="bizCrmViewBtn" data-fn="toggleBizCrmView">&#9778; Kanban</button>
-                            <button class="ds-btn xs purple">+ Add client</button>
-                        </div>
                     </div>
-                    <!-- Table view -->
-                    <div id="bizCrmTableView">
-                        <table class="ds-table">
-                            <thead><tr><th>Client</th><th>Stage</th><th>Value</th><th>Follow-up</th><th></th></tr></thead>
-                            <tbody id="bizCrmTbody">
-                                <tr><td colspan="5" style="padding:14px;text-align:center;color:var(--text-faint);font-style:italic">Loading CRM&#8230;</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <!-- Kanban view -->
-                    <div id="bizCrmKanban" style="display:none;overflow-x:auto;padding-bottom:8px">
-                        <div style="display:flex;gap:12px;min-width:600px">
-                            <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbLead">
-                                <div class="t-label" style="margin-bottom:8px;color:var(--cyan)">Lead</div>
-                                <div class="kb-col" data-stage="lead" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
-                            </div>
-                            <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbProposal">
-                                <div class="t-label" style="margin-bottom:8px;color:var(--amber)">Proposal</div>
-                                <div class="kb-col" data-stage="proposal" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
-                            </div>
-                            <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbNegotiation">
-                                <div class="t-label" style="margin-bottom:8px;color:var(--purple)">Negotiation</div>
-                                <div class="kb-col" data-stage="negotiation" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
-                            </div>
-                            <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbWon">
-                                <div class="t-label" style="margin-bottom:8px;color:var(--green)">Won</div>
-                                <div class="kb-col" data-stage="won" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                </div><!-- /biz-roster -->
 
-                <!-- Projects + Tasks -->
-                <div class="ds-grid-2">
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Projects</span>
-                            </div>
+                <!-- ══ DETAIL VIEW ══ -->
+                <div id="biz-detail" style="display:none">
+
+                    <!-- Breadcrumb -->
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+                        <button onclick="bizCloseDetail()"
+                                style="background:none;border:1px solid rgba(255,255,255,0.12);border-radius:5px;color:rgba(255,255,255,0.45);font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;padding:6px 12px;cursor:pointer;transition:all 150ms"
+                                onmouseover="this.style.borderColor='rgba(0,212,255,0.4)';this.style.color='#00d4ff'"
+                                onmouseout="this.style.borderColor='rgba(255,255,255,0.12)';this.style.color='rgba(255,255,255,0.45)'">
+                            &#8592; BUSINESS HUB
+                        </button>
+                        <span style="color:rgba(255,255,255,0.18);font-size:12px">/</span>
+                        <span id="biz-detail-name" style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;color:rgba(255,255,255,0.55)">&#8212;</span>
+                    </div>
+
+                    <!-- Detail header -->
+                    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:16px">
+                        <div>
+                            <div id="biz-detail-heading" class="ds-page-title" style="letter-spacing:5px">BUSINESS</div>
+                            <div id="biz-detail-type" style="font:500 10px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:10px">REVENUE &middot; CLIENTS &middot; SALES &middot; GROWTH</div>
                         </div>
-                        <div id="bizProjectsPanel" style="display:flex;flex-direction:column;gap:8px">
-                            <div class="skel skel-row skel-wide"></div>
+                        <button class="ds-btn cyan" onclick="refreshBizPage()">&#8635; Refresh</button>
+                    </div>
+
+                    <!-- Stats (all IDs preserved) -->
+                    <div class="ds-grid-stats">
+                        <div class="ds-stat-card ac-green">
+                            <div class="ds-stat-label">Revenue</div>
+                            <div class="ds-stat-value green" id="bizStatRevenue">&#8212;</div>
+                            <div class="ds-stat-sub">this month</div>
+                        </div>
+                        <div class="ds-stat-card ac-purple">
+                            <div class="ds-stat-label">Active Clients</div>
+                            <div class="ds-stat-value purple" id="bizStatClients">&#8212;</div>
+                            <div class="ds-stat-sub">in pipeline</div>
+                        </div>
+                        <div class="ds-stat-card ac-cyan">
+                            <div class="ds-stat-label">Leads</div>
+                            <div class="ds-stat-value cyan" id="bizStatLeads">&#8212;</div>
+                            <div class="ds-stat-sub">open</div>
+                        </div>
+                        <div class="ds-stat-card ac-amber">
+                            <div class="ds-stat-label">Conversions</div>
+                            <div class="ds-stat-value amber" id="bizStatConversions">&#8212;</div>
+                            <div class="ds-stat-sub">this month</div>
                         </div>
                     </div>
 
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot amber"></span>
-                                <span class="t-label">Task queue &#183; by priority</span>
-                            </div>
-                            <div class="ds-panel-header-right">
-                                <button class="ds-btn xs amber" data-fn="toggleTaskAddRow">+ Add</button>
-                            </div>
-                        </div>
-                        <div id="taskAddRow" style="display:none;gap:6px;margin-bottom:6px">
-                            <input id="taskAddInput" class="ds-input" placeholder="Task description&#8230;">
-                            <button class="ds-btn xs green" data-fn="addTaskFromInput">Save</button>
-                        </div>
-                        <div id="bizTaskQueue" style="display:flex;flex-direction:column;gap:6px">
-                            <div class="skel skel-row skel-wide"></div>
-                        </div>
+                    <!-- Tab bar -->
+                    <div id="biz-tab-bar" style="display:flex;gap:3px;padding:4px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;margin:16px 0 0">
+                        <button class="biz-dtab" data-tab="overview" onclick="bizSwitchTab('overview')" style="flex:1;padding:8px 6px;font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;border:none;border-radius:5px;cursor:pointer;transition:all 150ms;background:rgba(0,212,255,0.12);color:#00d4ff">OVERVIEW</button>
+                        <button class="biz-dtab" data-tab="crm"      onclick="bizSwitchTab('crm')"      style="flex:1;padding:8px 6px;font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;border:none;border-radius:5px;cursor:pointer;transition:all 150ms;background:transparent;color:rgba(255,255,255,0.38)">CLIENTS</button>
+                        <button class="biz-dtab" data-tab="projects" onclick="bizSwitchTab('projects')" style="flex:1;padding:8px 6px;font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;border:none;border-radius:5px;cursor:pointer;transition:all 150ms;background:transparent;color:rgba(255,255,255,0.38)">PROJECTS</button>
+                        <button class="biz-dtab" data-tab="tasks"    onclick="bizSwitchTab('tasks')"    style="flex:1;padding:8px 6px;font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;border:none;border-radius:5px;cursor:pointer;transition:all 150ms;background:transparent;color:rgba(255,255,255,0.38)">TASKS</button>
+                        <button class="biz-dtab" data-tab="docs"     onclick="bizSwitchTab('docs')"     style="flex:1;padding:8px 6px;font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;border:none;border-radius:5px;cursor:pointer;transition:all 150ms;background:transparent;color:rgba(255,255,255,0.38)">DOCS</button>
                     </div>
-                </div>
 
-                <!-- Documents + Proposals -->
-                <div class="ds-grid-2">
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Documents &#183; contracts</span>
+                    <!-- OVERVIEW tab: approvals -->
+                    <div id="biz-tab-overview" class="biz-dpanel" style="display:block;margin-top:14px">
+                        <div class="ds-panel">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot red pulse"></span>
+                                    <span class="t-label">Pending approvals</span>
+                                </div>
+                                <div class="ds-panel-header-right">
+                                    <span class="ds-badge red" id="bizApprovalBadge">&#8212;</span>
+                                    <button class="ds-btn xs red" data-fn="denyAllApprovals">Deny all</button>
+                                </div>
                             </div>
-                            <div class="ds-panel-header-right">
-                                <button class="ds-btn xs cyan">Upload</button>
+                            <div id="bizApprovalList" style="display:flex;flex-direction:column;gap:8px">
+                                <div class="ds-skel-row">Loading approvals&#8230;</div>
                             </div>
-                        </div>
-                        <div id="bizDocumentsPanel" style="display:flex;flex-direction:column;gap:6px">
-                            <div class="skel skel-row skel-wide"></div>
                         </div>
                     </div>
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot purple"></span>
-                                <span class="t-label">Proposals</span>
+
+                    <!-- CLIENTS tab: CRM -->
+                    <div id="biz-tab-crm" class="biz-dpanel" style="display:none;margin-top:14px">
+                        <div class="ds-panel">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot purple"></span>
+                                    <span class="t-label">CRM &#183; client pipeline</span>
+                                </div>
+                                <div class="ds-panel-header-right">
+                                    <button class="ds-btn xs" id="bizCrmViewBtn" data-fn="toggleBizCrmView">&#9778; Kanban</button>
+                                    <button class="ds-btn xs purple">+ Add client</button>
+                                </div>
+                            </div>
+                            <div id="bizCrmTableView">
+                                <table class="ds-table">
+                                    <thead><tr><th>Client</th><th>Stage</th><th>Value</th><th>Follow-up</th><th></th></tr></thead>
+                                    <tbody id="bizCrmTbody">
+                                        <tr><td colspan="5" style="padding:14px;text-align:center;color:var(--text-faint);font-style:italic">Loading CRM&#8230;</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="bizCrmKanban" style="display:none;overflow-x:auto;padding-bottom:8px">
+                                <div style="display:flex;gap:12px;min-width:600px">
+                                    <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbLead">
+                                        <div class="t-label" style="margin-bottom:8px;color:var(--cyan)">Lead</div>
+                                        <div class="kb-col" data-stage="lead" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
+                                    </div>
+                                    <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbProposal">
+                                        <div class="t-label" style="margin-bottom:8px;color:var(--amber)">Proposal</div>
+                                        <div class="kb-col" data-stage="proposal" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
+                                    </div>
+                                    <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbNegotiation">
+                                        <div class="t-label" style="margin-bottom:8px;color:var(--purple)">Negotiation</div>
+                                        <div class="kb-col" data-stage="negotiation" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
+                                    </div>
+                                    <div style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px" id="kbWon">
+                                        <div class="t-label" style="margin-bottom:8px;color:var(--green)">Won</div>
+                                        <div class="kb-col" data-stage="won" style="min-height:60px;display:flex;flex-direction:column;gap:6px"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div id="bizProposalsPanel" style="display:flex;flex-direction:column;gap:6px">
-                            <div class="skel skel-row skel-wide"></div>
+                    </div>
+
+                    <!-- PROJECTS tab -->
+                    <div id="biz-tab-projects" class="biz-dpanel" style="display:none;margin-top:14px">
+                        <div class="ds-panel">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot cyan"></span>
+                                    <span class="t-label">Projects</span>
+                                </div>
+                            </div>
+                            <div id="bizProjectsPanel" style="display:flex;flex-direction:column;gap:8px">
+                                <div class="skel skel-row skel-wide"></div>
+                            </div>
                         </div>
                     </div>
-                </div>
+
+                    <!-- TASKS tab -->
+                    <div id="biz-tab-tasks" class="biz-dpanel" style="display:none;margin-top:14px">
+                        <div class="ds-panel">
+                            <div class="ds-panel-header">
+                                <div class="ds-panel-header-left">
+                                    <span class="ds-dot amber"></span>
+                                    <span class="t-label">Task queue &#183; by priority</span>
+                                </div>
+                                <div class="ds-panel-header-right">
+                                    <button class="ds-btn xs amber" data-fn="toggleTaskAddRow">+ Add</button>
+                                </div>
+                            </div>
+                            <div id="taskAddRow" style="display:none;gap:6px;margin-bottom:6px">
+                                <input id="taskAddInput" class="ds-input" placeholder="Task description&#8230;">
+                                <button class="ds-btn xs green" data-fn="addTaskFromInput">Save</button>
+                            </div>
+                            <div id="bizTaskQueue" style="display:flex;flex-direction:column;gap:6px">
+                                <div class="skel skel-row skel-wide"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DOCS tab -->
+                    <div id="biz-tab-docs" class="biz-dpanel" style="display:none;margin-top:14px">
+                        <div class="ds-grid-2">
+                            <div class="ds-panel">
+                                <div class="ds-panel-header">
+                                    <div class="ds-panel-header-left">
+                                        <span class="ds-dot cyan"></span>
+                                        <span class="t-label">Documents &#183; contracts</span>
+                                    </div>
+                                    <div class="ds-panel-header-right">
+                                        <button class="ds-btn xs cyan">Upload</button>
+                                    </div>
+                                </div>
+                                <div id="bizDocumentsPanel" style="display:flex;flex-direction:column;gap:6px">
+                                    <div class="skel skel-row skel-wide"></div>
+                                </div>
+                            </div>
+                            <div class="ds-panel">
+                                <div class="ds-panel-header">
+                                    <div class="ds-panel-header-left">
+                                        <span class="ds-dot purple"></span>
+                                        <span class="t-label">Proposals</span>
+                                    </div>
+                                </div>
+                                <div id="bizProposalsPanel" style="display:flex;flex-direction:column;gap:6px">
+                                    <div class="skel skel-row skel-wide"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /biz-detail -->
 
             </div>
 
@@ -18520,6 +18588,52 @@ function refreshBizPage() {
     fetchBizCrm();
     fetchBizProjects();
     fetchBizTasks();
+}
+
+var _activeBizId = null;
+
+function bizOpenDetail(id) {
+    _activeBizId = id;
+    var roster = document.getElementById('biz-roster');
+    var detail = document.getElementById('biz-detail');
+    if (roster) roster.style.display = 'none';
+    if (detail) detail.style.display = 'block';
+    var isPlaceholder = id === '__placeholder__';
+    var label = isPlaceholder ? 'SAMPLE BUSINESS' : String(id).toUpperCase();
+    var nameEl   = document.getElementById('biz-detail-name');
+    var headEl   = document.getElementById('biz-detail-heading');
+    var typeEl   = document.getElementById('biz-detail-type');
+    if (nameEl) nameEl.textContent = label;
+    if (headEl) headEl.textContent = label;
+    if (typeEl) typeEl.textContent = isPlaceholder ? 'PLACEHOLDER · ADD A REAL BUSINESS TO GET STARTED' : 'REVENUE · CLIENTS · SALES · GROWTH';
+    bizSwitchTab('overview');
+    refreshBizPage();
+}
+
+function bizCloseDetail() {
+    _activeBizId = null;
+    var roster = document.getElementById('biz-roster');
+    var detail = document.getElementById('biz-detail');
+    if (detail) detail.style.display = 'none';
+    if (roster) roster.style.display = 'block';
+}
+
+function bizSwitchTab(name) {
+    var tabs = document.querySelectorAll('#biz-tab-bar .biz-dtab');
+    tabs.forEach(function(btn) {
+        var active = btn.dataset.tab === name;
+        btn.style.background = active ? 'rgba(0,212,255,0.12)' : 'transparent';
+        btn.style.color      = active ? '#00d4ff' : 'rgba(255,255,255,0.38)';
+    });
+    var panels = document.querySelectorAll('.biz-dpanel');
+    panels.forEach(function(p) { p.style.display = 'none'; });
+    var show = document.getElementById('biz-tab-' + name);
+    if (show) show.style.display = 'block';
+}
+
+function bizAddNew() {
+    if (window.showModal) { window.showModal('Add Business', '<p style="color:var(--text-mid)">Business registry coming soon. For now, click the placeholder card to explore the full dashboard.</p>'); }
+    else { alert('Business registry coming soon — click the placeholder card to explore the dashboard.'); }
 }
 
 (function(){
