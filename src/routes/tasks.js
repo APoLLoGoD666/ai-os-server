@@ -33,9 +33,9 @@ router.get('/api/tasks', requireAppAccess, async (req, res) => {
         // Non-Master: always filter to caller's own rows.
         let filter = null;
         if (scope.bypass) {
-            // Master. scope=all → no filter. scope=me → filter to master's humanId.
-            // Default (no ?scope): no filter (matches historical Master behaviour).
-            if (req.query?.scope === 'me') filter = { humanId: scope.humanId, bypass: false };
+            // Master. scope=all → no filter (full cross-account view).
+            // Default: own + system (null) rows — same as any user, prevents leaking other accounts' data.
+            if (req.query?.scope !== 'all') filter = { humanId: scope.humanId, bypass: false };
         } else {
             filter = { humanId: scope.humanId, bypass: false };
         }

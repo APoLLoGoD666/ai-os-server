@@ -18308,6 +18308,20 @@ function _populatePlaidCharts(cashflow, categories) {
         if (note) note.style.display = 'none';
     }
 
+    // Cashflow line chart — monthly net running balance
+    var cfChart = _finCharts && _finCharts['cashflow'];
+    if (cfChart && cashflow && cashflow.length) {
+        var running = 0;
+        var nets = cashflow.map(function(m) { running += m.net; return +running.toFixed(2); });
+        cfChart.data.labels = cashflow.map(function(m) { return m.month.slice(5); });
+        cfChart.data.datasets[0].data = nets;
+        cfChart.update();
+        var cfCanvas = document.getElementById('fin-chart-cashflow');
+        if (cfCanvas && cfCanvas.parentElement && cfCanvas.parentElement.nextElementSibling) {
+            cfCanvas.parentElement.nextElementSibling.style.display = 'none';
+        }
+    }
+
     // Spend by category doughnut
     var spendChart = _finCharts && _finCharts['spend'];
     var legend     = document.getElementById('fin-spend-legend');
