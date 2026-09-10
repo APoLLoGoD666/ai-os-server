@@ -10219,6 +10219,11 @@ if(pipe){
                         <div class="td-greeting-day" id="ovr-greeting"></div>
                         <div class="td-greeting-line">What matters now</div>
                     </div>
+                    <div id="today-time-context"></div>
+                    <div class="td-section" id="today-section-priorities">
+                        <div class="td-section-hdr"><span class="td-section-label">APEX Now</span></div>
+                        <div id="today-priorities-panel"></div>
+                    </div>
                     <div class="td-section" id="today-section-needs">
                         <div class="td-section-hdr"><span class="td-section-label">Needs You</span></div>
                         <div id="today-needs-panel"></div>
@@ -17008,8 +17013,74 @@ window._v11hLoadTodayActions = function() {
         }
     };
 })();
-var _ovrIntId = setInterval(initOverviewPage, 120000);
+var _ovrIntId = setInterval(initOverviewPage, 60000);
 if (window._apexIntervals) window._apexIntervals.push(_ovrIntId);
+
+// ── Time-aware Today context ──────────────────────────────────────────────────
+(function(){
+    var _PH=[
+        {s:0, e:6,  n:'Deep Rest',    col:'#374151',pri:['Protect this time — minimal activity','System maintenance window','Low-priority monitoring only']},
+        {s:6, e:10, n:'Morning',      col:'#efb45a',pri:['Review APEX briefing & yesterday\'s log','High-focus creative or strategic work','Set your top 3 goals for today']},
+        {s:10,e:13, n:'Peak Output',  col:'#3fd29a',pri:['Ship work · execute hard tasks first','Protect this window from distractions','Push on anything requiring deep focus']},
+        {s:13,e:16, n:'Afternoon',    col:'#5b9eff',pri:['Meetings · collaboration · review','Check agent runs & system activity','Clear communications backlog']},
+        {s:16,e:19, n:'Closing Loops',col:'#7c6fff',pri:['Clear blockers from today','Log completed work & update tasks','Review finance, business & pipeline']},
+        {s:19,e:22, n:'Reflection',   col:'#ec7fa3',pri:['Review day outcomes vs goals set','Journal entry & commit key memories','Prepare top 3 priorities for tomorrow']},
+        {s:22,e:24, n:'Wind Down',    col:'#4a5568',pri:['Low-priority review only','Avoid new commitments tonight','Prepare for rest — protect tomorrow']}
+    ];
+    function _ph(h){return _PH.find(function(p){return h>=p.s&&h<p.e;})||_PH[0];}
+    function _tick(){
+        var now=new Date(),h=now.getHours(),m=now.getMinutes();
+        var dayPct=Math.round((h*60+m)/1440*100);
+        var phase=_ph(h);
+        var next=_PH[(_PH.indexOf(phase)+1)%_PH.length];
+        var minLeft=next.s*60-(h*60+m);if(minLeft<0)minLeft+=1440;
+        var ntStr=minLeft>=60?Math.floor(minLeft/60)+'h '+(minLeft%60)+'m':minLeft+'m';
+        var hh=h%12||12,mm=m<10?'0'+m:String(m),ap=h<12?'AM':'PM';
+
+        // Greeting
+        var gEl=document.getElementById('ovr-greeting');
+        if(gEl)gEl.textContent=(h<12?'Good morning':h<18?'Good afternoon':'Good evening')
+            +' · '+now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+
+        // Time context bar
+        var tcEl=document.getElementById('today-time-context');
+        if(tcEl)tcEl.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 24px;background:rgba(255,255,255,0.012);border-top:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05)">'
+            +'<div style="display:flex;align-items:center;gap:12px">'
+            +'<span style="font:700 15px/1 \'JetBrains Mono\',monospace;color:'+phase.col+'">'+hh+':'+mm+' '+ap+'</span>'
+            +'<span style="font:500 8px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:'+phase.col+';opacity:0.7;text-transform:uppercase">'+phase.n+'</span>'
+            +'</div>'
+            +'<div style="display:flex;align-items:center;gap:16px">'
+            +'<div style="text-align:right">'
+            +'<div style="font:600 8px/1 \'JetBrains Mono\',monospace;color:#636d7a;letter-spacing:0.8px">'+dayPct+'% DAY ELAPSED</div>'
+            +'<div style="width:88px;height:2px;background:rgba(255,255,255,0.06);border-radius:1px;margin-top:5px;overflow:hidden">'
+            +'<div style="width:'+dayPct+'%;height:100%;background:'+phase.col+';border-radius:1px"></div>'
+            +'</div></div>'
+            +'<div style="font:400 7.5px/1.5 \'JetBrains Mono\',monospace;color:#374151;text-align:right">'+next.n+'<br>in '+ntStr+'</div>'
+            +'</div></div>';
+
+        // Priorities panel
+        var prEl=document.getElementById('today-priorities-panel');
+        if(prEl){
+            var html='<div class="td-noticed-card">';
+            phase.pri.forEach(function(p,i){
+                html+='<div class="td-noticed-row">'
+                    +'<span style="width:5px;height:5px;border-radius:50%;flex:0 0 5px;background:'+(i===0?phase.col:'rgba(255,255,255,0.08)')+'"></span>'
+                    +'<span style="font:'+(i===0?'600':'400')+' 11px/1 \'Inter\',sans-serif;color:'+(i===0?'#e8eaf0':'#5a6a7a')+'">'+p+'</span>'
+                    +'</div>';
+            });
+            html+='<div style="padding:7px 14px;font:400 7.5px/1 \'JetBrains Mono\',monospace;color:#2a3441;letter-spacing:1px">PHASE '+phase.s+':00–'+phase.e+':00 · '+next.n.toUpperCase()+' IN '+ntStr+'</div>';
+            html+='</div>';
+            prEl.innerHTML=html;
+        }
+
+        // Update TIME node text in graph
+        var rts=document.querySelectorAll('#nd-rtime text');
+        if(rts&&rts[1])rts[1].textContent='24h/day · '+dayPct+'% elapsed';
+    }
+    _tick();
+    var _tid=setInterval(_tick,60000);
+    if(window._apexIntervals)window._apexIntervals.push(_tid);
+})();
 
 // ── System page ───────────────────────────────────────────────────────────────
 
