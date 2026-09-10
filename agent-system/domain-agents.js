@@ -1,6 +1,7 @@
 'use strict';
 
-const runtime = require('../lib/models/runtime');
+const runtime    = require('../lib/models/runtime');
+const telemetry  = require('../lib/agent-telemetry');
 
 // Domain agents: specialized for the Apex AI OS context.
 // Each has a rich system prompt scoped to its domain.
@@ -161,6 +162,37 @@ Quorum: 5 of 9 eligible voters. Session expiry: 48 hours. Blocking invariant vio
 Always report genome.ok and contracts.ok first. Surface any blocking violations immediately. Recommend consensus session types for changes that affect multiple domains.`,
     },
 
+    'health': {
+        slug: 'health',
+        name: 'Health Agent',
+        category: 'health',
+        description: 'Tracks workouts, nutrition, sleep, mood, body measurements, and supplement intake.',
+        system_prompt: `You are the Health Agent for Apex AI OS — responsible for all personal wellness and fitness data.
+
+Your responsibilities:
+- Log and analyse workouts (type, duration, notes)
+- Track nutrition intake by meal (calories, macros: protein, carbs, fat)
+- Record sleep quality and duration
+- Log mood scores (1-10) with notes
+- Track body measurements (weight, body fat %, waist, chest, arms, legs)
+- Monitor supplement intake
+
+Key tables you write to:
+- apex_workouts: type (text), duration_minutes (int), notes (text), workout_date (date YYYY-MM-DD)
+- apex_nutrition_log: food_name (text), calories (int), protein_g (numeric), carbs_g (numeric), fat_g (numeric), meal_type (breakfast|lunch|dinner|snack), log_date (date)
+- apex_sleep_log: sleep_date (date), bedtime (time HH:MM), wake_time (time HH:MM), quality (1-10 int), duration_hours (numeric), notes (text)
+- apex_mood_log: score (1-10 int), notes (text), logged_at (timestamptz)
+- apex_body_measurements: weight_kg (numeric), body_fat_pct (numeric), waist_cm (numeric), chest_cm (numeric), arms_cm (numeric), legs_cm (numeric), measured_at (date)
+- apex_supplement_log: supplement_id (int, if known), log_date (date), taken (bool)
+
+Read endpoints:
+- GET /health/workouts?days=30 — recent workouts
+- GET /health/nutrition — today's nutrition log
+- GET /health/sleep — recent sleep records
+
+Always check existing data with read_telemetry before writing to avoid duplicates. Use today's date if no date is specified.`,
+    },
+
     'business': {
         slug: 'business',
         name: 'Business Agent',
@@ -191,35 +223,74 @@ When reporting pipeline: show count and value per stage. Flag any follow-up date
     }
 };
 
+// Appended to every domain agent prompt when humanId is available
+const _TELEMETRY_PROTOCOL = `
+
+TELEMETRY: You have two tools available — write_telemetry and read_telemetry. Use them to log data directly to the database as you work. Always use read_telemetry first to check current state before writing. Never guess field names — use only fields that exist in the target table schema.`;
+
 // Appended to every domain agent system prompt (skipped when council calls agents to avoid loops)
 const _ESCALATION_PROTOCOL = `
 
 ESCALATION PROTOCOL: If this request involves a decision that clearly exceeds your authority — financial commitments over £500, irreversible system changes, cross-domain architectural changes, or constitutional modifications — append this line at the very end of your response (skip it for routine tasks):
 [ESCALATE: <one sentence describing the council decision needed>]`;
 
-async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 2000, council = false } = {}) {
+async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 2000, council = false, humanId = null } = {}) {
     const agent = DOMAIN_AGENTS[slug];
     if (!agent) throw new Error(`Unknown domain agent: "${slug}". Valid: ${Object.keys(DOMAIN_AGENTS).join(', ')}`);
 
-    // council=true means this call originates from the executive council — skip escalation to prevent loops
-    const systemPrompt = council ? agent.system_prompt : agent.system_prompt + _ESCALATION_PROTOCOL;
+    let systemPrompt = council ? agent.system_prompt : agent.system_prompt + _ESCALATION_PROTOCOL;
+    if (humanId) systemPrompt += _TELEMETRY_PROTOCOL;
+
+    // Tool use: agents can write/read telemetry when a humanId context is provided
+    const tools = humanId ? [telemetry.TELEMETRY_TOOL, telemetry.READ_TELEMETRY_TOOL] : undefined;
 
     const messages = [
         ...history.map(h => ({ role: h.role, content: h.content })),
-        { role: 'user', content: userMessage }
+        { role: 'user', content: userMessage },
     ];
 
-    const { result: response } = await runtime.execute({
-        tier:     'fast',
-        caller:   'domain-agents',
-        system:   systemPrompt,
-        messages,
-        maxTokens,
-    });
+    // Tool-use loop — cap at 5 rounds to prevent runaway
+    let response, toolsUsed = 0;
+    for (let round = 0; round < 5; round++) {
+        const { result } = await runtime.execute({
+            tier: 'fast', caller: 'domain-agents', system: systemPrompt, messages, maxTokens, tools,
+        });
+        response = result;
 
-    const rawReply = response.content[0]?.text || '';
+        if (result.stop_reason !== 'tool_use') break;
 
-    // Parse escalation signal — strip marker from visible reply and fire council deliberation
+        // Execute each tool call and append results
+        const assistantContent = result.content;
+        messages.push({ role: 'assistant', content: assistantContent });
+
+        const toolResults = [];
+        for (const block of assistantContent) {
+            if (block.type !== 'tool_use') continue;
+            toolsUsed++;
+            let output;
+            try {
+                if (block.name === 'write_telemetry') {
+                    const row = await telemetry.writeRecord(block.input.table, block.input.data, humanId);
+                    output = JSON.stringify({ ok: true, id: row?.id, table: block.input.table });
+                } else if (block.name === 'read_telemetry') {
+                    const rows = await telemetry.readRecent(block.input.table, humanId, {
+                        limit: block.input.limit || 10,
+                        orderBy: block.input.orderBy || 'created_at',
+                    });
+                    output = JSON.stringify({ ok: true, rows });
+                } else {
+                    output = JSON.stringify({ ok: false, error: `Unknown tool: ${block.name}` });
+                }
+            } catch (e) {
+                output = JSON.stringify({ ok: false, error: e.message });
+            }
+            toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: output });
+        }
+        messages.push({ role: 'user', content: toolResults });
+    }
+
+    const rawReply = response.content.find(b => b.type === 'text')?.text || '';
+
     const escalateMatch = !council && rawReply.match(/\[ESCALATE:\s*(.+?)\][\s]*$/im);
     const reply = escalateMatch ? rawReply.replace(/\[ESCALATE:[\s\S]*$/im, '').trim() : rawReply;
     let escalation = null;
@@ -244,6 +315,7 @@ async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 
         reply,
         usage:      response.usage,
         stopReason: response.stop_reason,
+        toolsUsed,
         escalation: escalation ? { question: escalation.question, source: escalation.source } : null,
     };
 }

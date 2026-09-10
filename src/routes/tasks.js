@@ -118,7 +118,7 @@ router.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
         setImmediate(async () => {
             try {
                 const { invokeDomainAgent } = require('../../agent-system/domain-agents');
-                const result = await invokeDomainAgent(meta.dispatch.slug, meta.dispatch.action, { maxTokens: 1000 });
+                const result = await invokeDomainAgent(meta.dispatch.slug, meta.dispatch.action, { maxTokens: 1500, humanId: task.human_id || null });
                 const updatedMeta = {
                     ...meta,
                     execution: {

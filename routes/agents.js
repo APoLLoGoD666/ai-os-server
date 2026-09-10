@@ -80,7 +80,7 @@ router.post('/agents/domain/invoke', _auth, async (req, res) => {
     if (history !== undefined && !Array.isArray(history))
         return res.status(400).json({ ok: false, error: 'history must be an array' });
     try {
-        const result = await _domain().invokeDomainAgent(slug, message, { history: history || [] });
+        const result = await _domain().invokeDomainAgent(slug, message, { history: history || [], humanId: req.identity?.humanId || null });
         res.json({ ok: true, ...result });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });

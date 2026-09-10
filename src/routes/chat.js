@@ -82,7 +82,7 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
         const _govIntent = _detectGovernanceIntent(userMessage);
         if (_govIntent) {
             try {
-                const _govResult = await _invokeDomainAgent(_govIntent.slug, _govIntent.task);
+                const _govResult = await _invokeDomainAgent(_govIntent.slug, _govIntent.task, { humanId: req.identity?.humanId || null });
                 clearTimeout(chatTimeout);
                 const _govReplyRaw = `[${_govResult.agent.name}]\n\n${_govResult.reply}`;
                 const { reply: _govReply, mode: _govMode, intent: _govIntent2 } = _cogOrch.shape(userMessage, _govReplyRaw, req.executionClass || 'EXECUTIVE', req.conversationId);
