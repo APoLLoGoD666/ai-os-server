@@ -17,7 +17,7 @@ router.get('/notifications', requireAppAccess, async (req, res) => {
             // Direct scoped query — pgListNotifications is unscoped.
             const { data } = await sbAdmin.from('apex_notifications')
                 .select('*')
-                .eq('human_id', identity.humanId)
+                .or(`human_id.eq.${identity.humanId},human_id.is.null`)
                 .order('created_at', { ascending: false })
                 .limit(50);
             notifications = data || [];
@@ -83,7 +83,7 @@ router.get('/api/notifications', requireAppAccess, async (req, res) => {
         const isMaster = identity.role === 'master';
         let query = sbAdmin.from('apex_notifications')
             .select('*').eq('read', false).order('created_at', { ascending: false });
-        if (!isMaster) query = query.eq('human_id', identity.humanId);
+        if (!isMaster) query = query.or(`human_id.eq.${identity.humanId},human_id.is.null`);
         const { data } = await query;
         res.json({ ok: true, notifications: data || [] });
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }

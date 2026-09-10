@@ -66,7 +66,7 @@ router.get('/intelligence/agent-runs', requireAppAccess, async (req, res) => {
             .select('task_id,objective,success,cost_usd,complexity,created_at')
             .order('created_at', { ascending: false })
             .limit(limit);
-        if (!isMaster) query = query.eq('human_id', identity.humanId);
+        if (!isMaster) query = query.or(`human_id.eq.${identity.humanId},human_id.is.null`);
         const { data, error } = await query;
         if (error) return res.json({ ok: false, error: error.message, runs: [] });
         res.json({ ok: true, runs: data || [] });
