@@ -136,7 +136,7 @@ router.post('/tts/gemini', _auth, async (req, res) => {
 });
 
 router.get('/tts/gemini/voices', _auth, (_req, res) => {
-    res.json({ voices: ['Orus'], default: DEFAULT_VOICE, model: MODEL });
+    res.json({ voices: [DEFAULT_VOICE, 'Orus', 'Kore', 'Charon'], default: DEFAULT_VOICE, model: MODEL });
 });
 
 module.exports = router;

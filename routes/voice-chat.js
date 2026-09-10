@@ -24,6 +24,8 @@ const sbAdmin = getSupabaseClient();
 router.post('/voice-chat', _auth, async (req, res) => {
     try {
         const rawMessage = req.body?.message;
+        // Accept up to 6 prior turns for multi-turn voice continuity
+        const _vcHistory = Array.isArray(req.body?.history) ? req.body.history.slice(-6) : [];
 
         if (!rawMessage || typeof rawMessage !== 'string' || !rawMessage.trim()) {
             return res.status(400).json({ ok: false, reply: 'Please enter a message.' });
@@ -41,6 +43,13 @@ router.post('/voice-chat', _auth, async (req, res) => {
         console.log('[LATENCY] +0ms request received');
 
         const userMessage = rawMessage.trim();
+        // Assign conversationId from body (dashboard sends it) or header fallback
+        if (!req.conversationId) {
+            req.conversationId = req.body?.sessionId
+                || req.headers['x-conversation-id']
+                || req.headers['x-session-id']
+                || `vc-${req.identity?.humanId || 'anon'}-${Date.now()}`;
+        }
 
         setImmediate(() => _gateway.storeMemory({ layer: 2, source: 'voice_chat', content: JSON.stringify({ role: 'user', message: userMessage }), tags: ['conversation', 'voice'], requestingEntity: 'voice_chat', taskId: req.conversationId }).catch(() => {}));
 
@@ -150,7 +159,17 @@ router.post('/voice-chat', _auth, async (req, res) => {
 
         if (!finalReply) {
             const _voiceModel = _isFastPath ? HAIKU_MODEL : SONNET_MODEL;
-            const messages    = [{ role: 'user', content: userMessage }];
+            // Inject prior turns for multi-turn continuity (max 6 turns = 12 messages).
+            // Enforce alternating roles — Claude rejects consecutive same-role messages.
+            const _priorRaw = _vcHistory.filter(h => h.role && h.content).map(h => ({ role: h.role, content: String(h.content) }));
+            const _priorMessages = [];
+            let _expectRole = 'user';
+            for (const m of _priorRaw) {
+                if (m.role === _expectRole) { _priorMessages.push(m); _expectRole = _expectRole === 'user' ? 'assistant' : 'user'; }
+            }
+            // Ensure history ends with assistant so the new user turn is valid
+            if (_priorMessages.length && _priorMessages[_priorMessages.length - 1].role === 'user') _priorMessages.pop();
+            const messages = [..._priorMessages, { role: 'user', content: userMessage }];
             let loopCount = 0;
             const maxLoops = 8;
 
@@ -160,7 +179,7 @@ router.post('/voice-chat', _auth, async (req, res) => {
                     client,
                     model:     _voiceModel,
                     caller:    'voice_chat',
-                    maxTokens: _isConversational ? 45 : 200,
+                    maxTokens: _isConversational ? 100 : 400,
                     system: [
                         _vcGetManifest(),
                         _voiceTemporal ? `TEMPORAL CONTEXT: ${_sessionTracker.formatForPrompt(_voiceTemporal)}` : '',
@@ -229,7 +248,7 @@ router.post('/voice-chat', _auth, async (req, res) => {
         // rather than silently create an unowned task that would fall to Master.
         const _vcCallerHumanId = req.identity?.humanId || null;
         setImmediate(async () => {
-            const actionWords = /\b(remind|add|schedule|book|create|set|buy|order|call|email|text|send|check|research|find|draft|write|plan|note|do|make)\b/i;
+            const actionWords = /\b(remind me|add a|schedule|book|create|buy|order|call|email|text|send|draft|write a|plan|make a|set a reminder|set an alarm|note down)\b/i;
             if (actionWords.test(userMessage)) {
                 if (!_vcCallerHumanId) {
                     console.warn('[voice-chat] skipping task insert: req.identity.humanId missing');

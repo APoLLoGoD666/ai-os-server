@@ -12020,6 +12020,13 @@ let _lastSpokenText     = '';
 let _lastSpeakMs        = 0;
 let _voiceWordBudget    = 0;
 const _VOICE_WORD_LIMIT = 2000;
+// Voice conversation history — keeps last 6 turns for multi-turn continuity
+const _vcSessionId = `vc-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+const _vcConvHistory = [];
+function _vcAddHistory(role, content) {
+    _vcConvHistory.push({ role, content: content.slice(0, 400) });
+    if (_vcConvHistory.length > 12) _vcConvHistory.splice(0, 2); // keep last 6 pairs
+}
 // ── TTS provider — locked to Gemini 2.5 (Orus voice) ─────────────────────────
 var _ttsProvider = 'gemini';
 const _PIPER_URL = 'http://localhost:5002/tts';
@@ -12225,18 +12232,20 @@ async function _httBegin() {
                 }
 
                 renderChatMessage('user', transcript);
+                _vcAddHistory('user', transcript);
 
                 // Get AI reply
                 const aRes  = await fetch(buildApiUrl('/api/voice-chat'), {
                     method: 'POST',
                     headers: buildApiHeaders({ 'Content-Type': 'application/json' }),
-                    body: JSON.stringify({ message: transcript })
+                    body: JSON.stringify({ message: transcript, sessionId: _vcSessionId, history: _vcConvHistory.slice(0, -1) })
                 });
                 const aData = await aRes.json();
                 const reply = (aData.reply || '').trim();
 
                 if (!reply) { setOrbState('waiting'); return; }
 
+                _vcAddHistory('assistant', reply);
                 renderChatMessage('ai', reply);
 
                 // Reset audio session from play-and-record to playback.
@@ -14047,12 +14056,13 @@ async function sendVoiceChatCommand(msg) {
     if (typeof _v11eShowThinking === 'function') _v11eShowThinking();
     _t0Voice = Date.now();
 
+    _vcAddHistory('user', msg);
     let _vcData = null;
     try {
         _vcData = await fetchJson("/api/voice-chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: msg })
+            body: JSON.stringify({ message: msg, sessionId: _vcSessionId, history: _vcConvHistory.slice(0, -1) })
         });
     } catch (_vcErr) {
         console.warn("[Voice] /api/voice-chat failed, falling back to /chat:", _vcErr.message);
@@ -14083,6 +14093,7 @@ async function sendVoiceChatCommand(msg) {
         hideTypingIndicator();
         if (typeof _v11eHideThinking === 'function') _v11eHideThinking();
         const reply = _vcData.reply || "Done.";
+        _vcAddHistory('assistant', reply);
         renderChatMessage("ai", reply);
         setOrbState("speaking");
         speak(reply, { useFiller: true });
