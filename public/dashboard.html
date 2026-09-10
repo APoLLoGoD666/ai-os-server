@@ -12786,6 +12786,13 @@ function _startInterruptListener() {
         const _isEcho = _txWords.length > 0 && (_echoHits / _txWords.length) >= 0.55;
         console.log(`[Interrupt] "${transcript}" — words:${wordCount} conf:${res.confidence.toFixed(2)} echo:${_isEcho} lastHighDb:${msSinceVoice}ms ago`);
         if (!isSpeakingNow) { _stopInterruptListener(); return; }
+        // Wake-word interrupt: saying "apex" alone stops speech and starts listening
+        const _lcTx = transcript.toLowerCase().replace(/[^\w\s]/g, '').trim();
+        if (/^(hey\s+)?apex$/.test(_lcTx) && (Date.now() - (window._ttsPlayStartMs || 0)) > 500) {
+            _vadInterruptSR = null;
+            interruptSpeech();
+            return;
+        }
         if (wordCount >= 3 && res.confidence >= 0.65 && !_isEcho && (Date.now() - (window._ttsPlayStartMs || 0)) > 2000) {
             _vadInterruptSR = null;
             interruptSpeech();
