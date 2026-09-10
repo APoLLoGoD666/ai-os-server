@@ -7164,6 +7164,233 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
     .cmd-feed-col { display: none !important; }
 }
 
+/* ── Session bar ──────────────────────────────────────────────────────── */
+#cmd-session-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px 0;
+    flex-shrink: 0;
+}
+#cmd-session-title {
+    flex: 1;
+    font-size: 11px;
+    color: rgba(255,255,255,0.28);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#cmd-new-chat, #cmd-history-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: rgba(255,255,255,0.35);
+    font-size: 13px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+#cmd-new-chat:hover, #cmd-history-btn:hover {
+    border-color: rgba(0,212,255,0.35);
+    color: rgba(0,212,255,0.8);
+}
+
+/* ── Sessions drawer ──────────────────────────────────────────────────── */
+#cmd-sessions-drawer {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: min(280px, 80vw);
+    background: rgba(10,12,16,0.98);
+    border-right: 1px solid rgba(255,255,255,0.07);
+    backdrop-filter: blur(20px);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0,0,0.2,1);
+    overflow: hidden;
+}
+#cmd-sessions-drawer.open {
+    transform: translateX(0);
+}
+#cmd-sessions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+#cmd-sessions-header span {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+}
+#cmd-sessions-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.3);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+}
+#cmd-sessions-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+.conv-session-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.conv-session-item:hover, .conv-session-item.active {
+    background: rgba(0,212,255,0.05);
+}
+.conv-session-item-title {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+}
+.conv-session-item-date {
+    font-size: 10px;
+    color: rgba(255,255,255,0.28);
+}
+#cmd-sessions-empty {
+    padding: 24px 16px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+    text-align: center;
+}
+
+/* ── Snapshot panel ───────────────────────────────────────────────────── */
+#apex-snap-panel {
+    position: fixed;
+    top: 0; right: 0;
+    width: min(440px, 94vw);
+    height: 100vh;
+    background: rgba(11,13,17,0.98);
+    border-left: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(24px);
+    z-index: 850;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0,0,0.2,1);
+    pointer-events: none;
+}
+#apex-snap-panel.open {
+    transform: translateX(0);
+    pointer-events: all;
+}
+#apex-snap-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+    gap: 10px;
+}
+#apex-snap-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: rgba(0,212,255,0.6);
+    text-transform: uppercase;
+}
+#apex-snap-title {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#apex-snap-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.3);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    transition: color 0.15s;
+}
+#apex-snap-close:hover { color: rgba(255,255,255,0.7); }
+#apex-snap-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: rgba(255,255,255,0.8);
+}
+#apex-snap-content strong { color: rgba(255,255,255,0.95); }
+#apex-snap-content code {
+    background: rgba(255,255,255,0.07);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+}
+#apex-snap-content .md-li {
+    padding: 2px 0 2px 14px;
+    position: relative;
+    color: rgba(255,255,255,0.75);
+}
+#apex-snap-content .md-li::before {
+    content: '·';
+    position: absolute;
+    left: 4px;
+    color: rgba(0,212,255,0.5);
+}
+#apex-snap-content p { margin: 0 0 10px; }
+#apex-snap-content p:last-child { margin-bottom: 0; }
+#apex-snap-content .snap-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(0,212,255,0.5);
+    margin: 16px 0 8px;
+}
+#apex-snap-content .snap-section-title:first-child { margin-top: 0; }
+
+/* ── Markdown in chat bubbles ─────────────────────────────────────────── */
+.chat-bubble.ai strong { color: rgba(255,255,255,0.95); }
+.chat-bubble.ai code {
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 11.5px;
+    font-family: var(--font-mono);
+}
+.chat-bubble.ai .md-li {
+    padding-left: 12px;
+    position: relative;
+    color: rgba(255,255,255,0.78);
+}
+.chat-bubble.ai .md-li::before {
+    content: '–';
+    position: absolute;
+    left: 0;
+    color: rgba(0,212,255,0.45);
+}
+
 </style>
 
 <style id="apex-phase-f">
@@ -7328,126 +7555,39 @@ select:focus {
         <div class="page-wrap" id="pageWrap">
 
             <!-- ══ PAGE: COMMAND (V-11-E single-column conversation) ══ -->
-            <div class="page" id="page-command">
+            <div class="page" id="page-command" style="position:relative;overflow:hidden">
 
-                <!-- Ambient PlasmaOrb (E-5: non-interactive; desktop only) -->
-                <canvas id="plasmaOrb" data-guard="1"></canvas>
-
-                <!-- System architecture map trigger -->
-                <div id="cmd-arch-trigger" style="padding:8px 16px 0;display:flex;justify-content:flex-end">
-                  <button onclick="window._toggleArchPanel()" style="background:none;border:1px solid rgba(94,106,210,0.25);border-radius:6px;padding:4px 10px;font:500 10px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;color:rgba(94,106,210,0.7);cursor:pointer;transition:all 0.15s" aria-label="System architecture map" title="View system architecture and module connections">SYSTEM MAP</button>
+                <!-- Sessions drawer (slides in from left) -->
+                <div id="cmd-sessions-drawer">
+                    <div id="cmd-sessions-header">
+                        <span>Conversations</span>
+                        <button id="cmd-sessions-close" aria-label="Close history">✕</button>
+                    </div>
+                    <div id="cmd-sessions-list"></div>
                 </div>
 
-                <!-- Architecture panel -->
-                <div id="cmd-arch-panel" style="display:none;overflow-y:auto;flex-shrink:0;max-height:60vh;padding:0 16px 12px;border-bottom:1px solid rgba(94,106,210,0.12);margin-bottom:8px">
-                  <div style="display:flex;flex-direction:column;gap:16px;padding-top:12px">
-
-                    <!-- Flow 1: Chat -->
-                    <details class="arch-flow" open>
-                      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(94,106,210,0.06);border-radius:8px;border:1px solid rgba(94,106,210,0.14)">
-                        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#5e6ad2">COMMAND — Text</span>
-                        <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">▸</span>
-                      </summary>
-                      <div class="arch-steps">
-                        <div class="arch-step"><span class="arch-num">1</span><span>You type a message and press send</span></div>
-                        <div class="arch-step"><span class="arch-num">2</span><span>APEX checks your identity and permission level</span></div>
-                        <div class="arch-step"><span class="arch-num">3</span><span>Your message is sent to the AI model with your personal context</span></div>
-                        <div class="arch-step"><span class="arch-num">4</span><span>The AI generates a response (typically under 3 seconds)</span></div>
-                        <div class="arch-step"><span class="arch-num">5</span><span>The response appears in the conversation thread</span></div>
-                        <div class="arch-step"><span class="arch-num">6</span><span>If an action is needed, an approval card appears before it runs</span></div>
-                      </div>
-                    </details>
-
-                    <!-- Flow 2: Voice -->
-                    <details class="arch-flow">
-                      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,212,255,0.04);border-radius:8px;border:1px solid rgba(0,212,255,0.12)">
-                        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#00d4ff">COMMAND — Voice</span>
-                        <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">▸</span>
-                      </summary>
-                      <div class="arch-steps">
-                        <div class="arch-step"><span class="arch-num">1</span><span>You press the mic button (or V key on desktop)</span></div>
-                        <div class="arch-step"><span class="arch-num">2</span><span>Your browser captures audio from your microphone</span></div>
-                        <div class="arch-step"><span class="arch-num">3</span><span>Speech is converted to text in real time</span></div>
-                        <div class="arch-step"><span class="arch-num">4</span><span>The text follows the same path as a typed message</span></div>
-                        <div class="arch-step"><span class="arch-num">5</span><span>The response appears in your conversation thread</span></div>
-                      </div>
-                    </details>
-
-                    <!-- Flow 3: Agent task -->
-                    <details class="arch-flow">
-                      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(16,185,129,0.04);border-radius:8px;border:1px solid rgba(16,185,129,0.12)">
-                        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#10b981">AGENT TASK</span>
-                        <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">▸</span>
-                      </summary>
-                      <div class="arch-steps">
-                        <div class="arch-step"><span class="arch-num">1</span><span>A task is created — either by you or suggested by APEX</span></div>
-                        <div class="arch-step"><span class="arch-num">2</span><span>You approve it before anything runs</span></div>
-                        <div class="arch-step"><span class="arch-num">3</span><span>APEX works through the task one step at a time (max 10 steps)</span></div>
-                        <div class="arch-step"><span class="arch-num">4</span><span>Each step that needs the AI checks in with the model</span></div>
-                        <div class="arch-step"><span class="arch-num">5</span><span>If something goes wrong, the task stops safely and reports back</span></div>
-                        <div class="arch-step"><span class="arch-num">6</span><span>When complete, results appear in ACTIONS and the activity log</span></div>
-                      </div>
-                    </details>
-
-                    <!-- Flow 4: Intelligence -->
-                    <details class="arch-flow">
-                      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(124,111,255,0.04);border-radius:8px;border:1px solid rgba(124,111,255,0.12)">
-                        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#7c6fff">INTELLIGENCE</span>
-                        <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">▸</span>
-                      </summary>
-                      <div class="arch-steps">
-                        <div class="arch-step"><span class="arch-num">1</span><span>APEX regularly scans your data for patterns and opportunities</span></div>
-                        <div class="arch-step"><span class="arch-num">2</span><span>Each finding is scored for confidence and relevance</span></div>
-                        <div class="arch-step"><span class="arch-num">3</span><span>Supporting evidence is attached so you can verify it</span></div>
-                        <div class="arch-step"><span class="arch-num">4</span><span>Findings appear in the INTELLIGENCE page with full context</span></div>
-                        <div class="arch-step"><span class="arch-num">5</span><span>You can expand any finding to see the full reasoning chain</span></div>
-                      </div>
-                    </details>
-
-                    <!-- Flow 5: Proactive -->
-                    <details class="arch-flow">
-                      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(245,158,11,0.04);border-radius:8px;border:1px solid rgba(245,158,11,0.12)">
-                        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#f59e0b">PROACTIVE</span>
-                        <span style="margin-left:auto;font-size:11px;color:var(--text-mute)">▸</span>
-                      </summary>
-                      <div class="arch-steps">
-                        <div class="arch-step"><span class="arch-num">1</span><span>A scheduled trigger fires (time-based or event-based)</span></div>
-                        <div class="arch-step"><span class="arch-num">2</span><span>APEX checks whether this concerns you specifically</span></div>
-                        <div class="arch-step"><span class="arch-num">3</span><span>A notification is created and linked to your account only</span></div>
-                        <div class="arch-step"><span class="arch-num">4</span><span>It appears in your ACTIONS queue ready for review</span></div>
-                      </div>
-                    </details>
-
-                  </div>
+                <!-- Session bar -->
+                <div id="cmd-session-bar">
+                    <button id="cmd-history-btn" title="Conversation history" aria-label="Open conversation history">◷</button>
+                    <span id="cmd-session-title">New conversation</span>
+                    <button id="cmd-new-chat" title="New conversation" aria-label="Start new conversation">+</button>
                 </div>
 
-                <!-- Conversation thread — E-1 makes chatLog visible; E-2 replaces .cmd-split -->
+                <!-- Conversation thread -->
                 <div id="cmdThread">
-                    <!-- Approval cards are inserted here before #chatLog by renderCentreApprovalCard -->
                     <div id="chatLog" role="log" aria-live="polite" aria-relevant="additions"></div>
                     <div id="typingIndicator" style="display:none"></div>
                 </div>
 
-                <!-- Master-only agent orchestration panel (E-9; role-gated by applyRoleProfile) -->
-                <div id="v11-cmd-agent-panel" class="apex-master-only" style="display:none;padding:12px 16px;margin:0 20px 12px;border:1px solid rgba(94,106,210,0.18);border-radius:10px;background:rgba(94,106,210,0.04)">
-                    <div style="display:flex;align-items:center;justify-content:space-between">
-                        <span style="font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:0.18em;color:#5e6ad2">AGENT ORCHESTRATION</span>
-                        <span style="font:500 9px/1 'JetBrains Mono',monospace;color:#8893a0">MASTER VIEW</span>
-                    </div>
-                    <div style="margin-top:8px;font-size:11px;color:rgba(232,244,255,0.55);line-height:1.5">Agent status, autonomy level, and manual triggers appear here.</div>
-                </div>
-
-                <!-- Hidden stubs kept for JS compatibility (state indicators referenced elsewhere) -->
+                <!-- JS compatibility stubs -->
                 <span id="cmdOrbState" style="display:none">STANDBY</span>
-                <div class="waveform" id="waveform" style="display:none;position:absolute;left:50%;bottom:70px;transform:translateX(-50%);z-index:5">
-                    <div class="wb"></div><div class="wb"></div><div class="wb"></div>
-                    <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
-                </div>
+                <div class="waveform" id="waveform" style="display:none"><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div></div>
+                <canvas id="plasmaOrb" style="display:none"></canvas>
                 <canvas id="cmdStars" style="display:none"></canvas>
                 <canvas id="cmdOrbCanvas" style="display:none"></canvas>
-                <div id="apexTtsToggle" style="display:none" data-provider="gemini">
-                    <span id="apexTtsDot"></span><span id="apexTtsLabel"></span>
-                </div>
+                <div id="apexTtsToggle" style="display:none" data-provider="gemini"><span id="apexTtsDot"></span><span id="apexTtsLabel"></span></div>
+                <div id="cmd-arch-panel" style="display:none"></div>
+                <div id="v11-cmd-agent-panel" style="display:none"></div>
 
             </div><!-- #page-command -->
 
@@ -13410,6 +13550,7 @@ function toggleAutoListen() {
 
 // ══ CHAT ══════════════════════════════════════════════════════════════
 function _cleanForDisplay(text) {
+    // Strip markdown for TTS/voice — keeps spoken text clean
     return String(text || "")
         .replace(/\*\*(.+?)\*\*/g, "$1")
         .replace(/\*(.+?)\*/g, "$1")
@@ -13422,6 +13563,19 @@ function _cleanForDisplay(text) {
         .replace(/\[APPROVAL REQUIRED\]/gi, "")
         .trim();
 }
+function _renderMd(text) {
+    // Render markdown as safe HTML for visual display
+    var s = String(text || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+        .replace(/\*([^*\n]+?)\*/g,'<em>$1</em>')
+        .replace(/`([^`\n]+)`/g,'<code>$1</code>')
+        .replace(/^#{1,3} (.+)$/gm,'<div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(0,212,255,0.55);margin:10px 0 4px">$1</div>')
+        .replace(/^[-*•] (.+)$/gm,'<div class="md-li">$1</div>')
+        .replace(/\n\n+/g,'</p><p>')
+        .replace(/\n/g,'<br>');
+    return '<p style="margin:0">' + s + '</p>';
+}
 
 function renderChatMessage(role, message, opts) {
     const log = document.getElementById("chatLog");
@@ -13433,25 +13587,31 @@ function renderChatMessage(role, message, opts) {
         renderCentreApprovalCard(message);
     }
 
-    const display = role === "ai" ? _cleanForDisplay(message) : String(message || "");
+    const raw = String(message || "");
+    const bubble = document.createElement("div");
+    bubble.className = `chat-bubble ${role}`;
 
-    // V-11-E E-9: render assistant replies as archetype cards (progressive disclosure)
-    if (role === "ai" && typeof _v11eRenderApexCard === 'function') {
-        _v11eRenderApexCard(log, display || message);
+    if (role === "user" || role === "system") {
+        bubble.textContent = raw;
     } else {
-        const bubble = document.createElement("div");
-        bubble.className = `chat-bubble ${role}`;
-        bubble.textContent = display || message;
-        log.appendChild(bubble);
+        // AI reply: render markdown; use apex card only for long structured content
+        const stripped = _cleanForDisplay(raw);
+        const isLong = stripped.length > 280;
+        const hasStructure = /\n[-*•]|\*\*|#{1,3} |\n\n/.test(raw);
+
+        if (isLong && hasStructure && typeof _v11eRenderApexCard === 'function') {
+            _v11eRenderApexCard(log, stripped);
+            if (nearBottom) log.scrollTop = log.scrollHeight;
+            if (!opts.skipPersist && typeof _v11eSaveHistoryEntry === 'function') _v11eSaveHistoryEntry(role, stripped);
+            return;
+        }
+        bubble.innerHTML = _renderMd(stripped || raw);
     }
 
-    if (nearBottom || role === "user" || role === "system") {
-        log.scrollTop = log.scrollHeight;
-    }
-
-    // V-11-E E-6: persist to per-identity localStorage (excluding system rows and silent restores)
+    log.appendChild(bubble);
+    if (nearBottom || role === "user" || role === "system") log.scrollTop = log.scrollHeight;
     if (!opts.skipPersist && (role === "user" || role === "ai") && typeof _v11eSaveHistoryEntry === 'function') {
-        _v11eSaveHistoryEntry(role, display || message);
+        _v11eSaveHistoryEntry(role, _cleanForDisplay(raw) || raw);
     }
 }
 
@@ -13482,20 +13642,20 @@ async function renderProgressiveResponse(chunks) {
 
     if (nearBottom) log.scrollTop = log.scrollHeight;
 
+    var fullText = '';
     for (var i = 0; i < chunks.length; i++) {
         var chunk = chunks[i];
         if (chunk.delay > 0) {
             await new Promise(function(r) { setTimeout(r, chunk.delay); });
         }
-        var sep = bubble.textContent ? '\n\n' : '';
-        bubble.textContent += sep + (chunk.content || '');
+        fullText += (fullText ? '\n\n' : '') + (chunk.content || '');
+        bubble.innerHTML = _renderMd(fullText);
         log.scrollTop = log.scrollHeight;
     }
 
     if (streamHint && streamHint.parentNode) streamHint.parentNode.removeChild(streamHint);
 
-    // V-11-E E-6: persist full streamed reply
-    if (typeof _v11eSaveHistoryEntry === 'function') _v11eSaveHistoryEntry('ai', bubble.textContent);
+    if (typeof _v11eSaveHistoryEntry === 'function') _v11eSaveHistoryEntry('ai', _cleanForDisplay(fullText) || fullText);
 }
 window.renderProgressiveResponse = renderProgressiveResponse;
 
@@ -13533,11 +13693,10 @@ async function sendChatCommandFromText(command, options = {}) {
     lastSendWasVoice = false;
 
     if (!silent) renderChatMessage("user", command);
+    if (typeof _setSnapIntent === 'function') _setSnapIntent(command);
     setOrbState("thinking");
     if (!silent) showTypingIndicator();
-    // V-11-E D-E5 / E-9: show pre-arrival "APEX is thinking…" indicator
     if (!silent && typeof _v11eShowThinking === 'function') _v11eShowThinking();
-    const t0 = Date.now();
 
     try {
         const data = await fetchJson("/chat", {
@@ -13560,6 +13719,7 @@ async function sendChatCommandFromText(command, options = {}) {
                 setOrbState("speaking");
                 speak(reply, { useFiller: wasVoice });
             }
+            if (typeof _checkAndOpenSnap === 'function') _checkAndOpenSnap(command, reply);
         } else {
             setOrbState("ready");
         }
@@ -19338,61 +19498,10 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 
 /* ═══════════════════════════════════════════════════════════════════
-   V-11-E helpers — E-6 (localStorage history), E-9 (archetypes + toast),
-   E-11 (keyboard shortcuts)
+   V-11-E helpers — E-9 (archetypes + toast), E-11 (keyboard shortcuts)
+   History/session management is handled by the session IIFE at bottom.
    ═══════════════════════════════════════════════════════════════════ */
 (function(){
-  var HIST_MAX = 100;
-  var HIST_PREFIX = 'apex_chat_history_';
-  var _hydrating = false;
-
-  function _humanId(){
-    try { return (window._apexUser && window._apexUser.id) || null; } catch(_) { return null; }
-  }
-  function _key(){
-    var id = _humanId();
-    return id ? (HIST_PREFIX + id) : null;
-  }
-  function _read(){
-    var k = _key(); if(!k) return [];
-    try { var raw = localStorage.getItem(k); return raw ? (JSON.parse(raw) || []) : []; }
-    catch(_) { return []; }
-  }
-  function _write(list){
-    var k = _key(); if(!k) return;
-    if(!Array.isArray(list)) list = [];
-    if(list.length > HIST_MAX) list = list.slice(list.length - HIST_MAX);
-    try { localStorage.setItem(k, JSON.stringify(list)); } catch(_) {}
-  }
-
-  window._v11eSaveHistoryEntry = function(role, content){
-    if(_hydrating) return;
-    if(!role || !content) return;
-    var mapped = (role === 'ai') ? 'assistant' : (role === 'user' ? 'user' : null);
-    if(!mapped) return;
-    var list = _read();
-    list.push({ role: mapped, content: String(content), timestamp: new Date().toISOString() });
-    _write(list);
-  };
-  window._v11eClearHistory = function(){
-    var k = _key(); if(!k) return;
-    try { localStorage.removeItem(k); } catch(_) {}
-  };
-  window._v11eLoadHistory = function(){
-    var list = _read();
-    if(!list.length) return;
-    var log = document.getElementById('chatLog');
-    if(!log) return;
-    // Only hydrate if log is empty (avoid duplication on re-entry)
-    if(log.children.length) return;
-    _hydrating = true;
-    try {
-      list.forEach(function(entry){
-        var role = entry.role === 'assistant' ? 'ai' : 'user';
-        try { renderChatMessage(role, entry.content, { skipPersist: true }); } catch(_) {}
-      });
-    } finally { _hydrating = false; }
-  };
 
   // Archetype detection
   function _detectArchetype(text){
@@ -23575,6 +23684,256 @@ window.apexFileDropHandler = function(e){
                 if (pg && pg.classList.contains('active')) aoRenderCanvas();
             }, 120);
         });
+    });
+})();
+</script>
+
+<!-- ── Snapshot panel ──────────────────────────────────────────────────── -->
+<div id="apex-snap-panel" aria-label="Snapshot panel" role="complementary">
+    <div id="apex-snap-header">
+        <span id="apex-snap-label">SNAPSHOT</span>
+        <span id="apex-snap-title">Overview</span>
+        <button id="apex-snap-close" aria-label="Close snapshot">✕</button>
+    </div>
+    <div id="apex-snap-content"></div>
+</div>
+
+<script>
+/* ── Snapshot panel ─────────────────────────────────────────────────────── */
+(function(){
+    var _snapIntent = false;
+    var _snapKeywords = /\b(snapshot|overview|summary|how('?s| is) my|show me (my|the)|give me (a view|an? overview)|what('?s| is) (my|the) (finance|health|spending|balance|budget|email|calendar|task|relation|position)|how (am i|are (my|we)|much|many))\b/i;
+
+    window._setSnapIntent = function(msg){ _snapIntent = _snapKeywords.test(msg); };
+
+    window._openSnapPanel = function(content, title){
+        var panel = document.getElementById('apex-snap-panel');
+        var el    = document.getElementById('apex-snap-content');
+        var t     = document.getElementById('apex-snap-title');
+        if(!panel || !el) return;
+        if(t) t.textContent = title || 'Overview';
+        el.innerHTML = _mdToHtml(content);
+        panel.classList.add('open');
+    };
+
+    window._closeSnapPanel = function(){
+        var panel = document.getElementById('apex-snap-panel');
+        if(panel) panel.classList.remove('open');
+    };
+
+    window._checkAndOpenSnap = function(userMsg, reply){
+        if(!_snapIntent) return;
+        _snapIntent = false;
+        var title = (userMsg || '').replace(/^(show me|give me|what is|how is|snapshot of|overview of|summary of)\s*/i,'').replace(/\bmy\b/i,'').trim();
+        title = title.charAt(0).toUpperCase() + title.slice(1);
+        window._openSnapPanel(reply, title || 'Overview');
+    };
+
+    function _mdToHtml(text){
+        var s = String(text||'')
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+            .replace(/\*([^*\n]+?)\*/g,'<em>$1</em>')
+            .replace(/`([^`]+)`/g,'<code>$1</code>')
+            .replace(/^#{1,3} (.+)$/gm,'<div class="snap-section-title">$1</div>')
+            .replace(/^[-*•] (.+)$/gm,'<div class="md-li">$1</div>')
+            .replace(/\n\n+/g,'</p><p>')
+            .replace(/\n/g,'<br>');
+        return '<p>' + s + '</p>';
+    }
+
+    document.addEventListener('click', function(e){
+        if(e.target && e.target.id === 'apex-snap-close') window._closeSnapPanel();
+    });
+    document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape') window._closeSnapPanel();
+    });
+})();
+
+/* ── Session-based conversation history ─────────────────────────────────── */
+(function(){
+    var SESSION_PREFIX  = 'apex_conv_';
+    var SESSIONS_KEY_PFX = 'apex_sessions_';
+    var CURRENT_KEY_PFX  = 'apex_current_';
+    var MAX_SESSIONS = 40;
+    var _hydrating = false;
+    var _currentSessionId = null;
+
+    function _uid(){ return (window._apexUser && window._apexUser.id) || null; }
+    function _sessionsKey(){ var u=_uid(); return u ? SESSIONS_KEY_PFX+u : null; }
+    function _currentKey(){  var u=_uid(); return u ? CURRENT_KEY_PFX+u  : null; }
+    function _msgKey(sid){   return SESSION_PREFIX+sid; }
+
+    function _readSessions(){
+        var k=_sessionsKey(); if(!k) return [];
+        try{ var r=localStorage.getItem(k); return r ? JSON.parse(r)||[] : []; }catch(_){ return []; }
+    }
+    function _writeSessions(list){
+        var k=_sessionsKey(); if(!k) return;
+        if(list.length > MAX_SESSIONS) list = list.slice(list.length - MAX_SESSIONS);
+        try{ localStorage.setItem(k, JSON.stringify(list)); }catch(_){}
+    }
+    function _readMsgs(sid){
+        if(!sid) return [];
+        try{ var r=localStorage.getItem(_msgKey(sid)); return r ? JSON.parse(r)||[] : []; }catch(_){ return []; }
+    }
+    function _writeMsgs(sid, msgs){
+        if(!sid) return;
+        try{ localStorage.setItem(_msgKey(sid), JSON.stringify(msgs)); }catch(_){}
+    }
+    function _genId(){
+        return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    }
+    function _getCurrentSessionId(){
+        if(_currentSessionId) return _currentSessionId;
+        var k=_currentKey(); if(!k) return null;
+        try{ return localStorage.getItem(k) || null; }catch(_){ return null; }
+    }
+    function _setCurrentSessionId(sid){
+        _currentSessionId = sid;
+        var k=_currentKey(); if(!k) return;
+        try{ localStorage.setItem(k, sid); }catch(_){}
+    }
+
+    function _ensureSession(){
+        var sid = _getCurrentSessionId();
+        if(sid) return sid;
+        sid = _genId();
+        _setCurrentSessionId(sid);
+        var sessions = _readSessions();
+        sessions.push({ id: sid, title: 'New conversation', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        _writeSessions(sessions);
+        return sid;
+    }
+
+    function _updateSessionTitle(sid, firstMessage){
+        var sessions = _readSessions();
+        var s = sessions.find(function(x){ return x.id === sid; });
+        if(s && s.title === 'New conversation'){
+            s.title = firstMessage.slice(0, 50) + (firstMessage.length > 50 ? '…' : '');
+            s.updatedAt = new Date().toISOString();
+            _writeSessions(sessions);
+            var el = document.getElementById('cmd-session-title');
+            if(el) el.textContent = s.title;
+        }
+    }
+
+    function _touchSession(sid){
+        var sessions = _readSessions();
+        var s = sessions.find(function(x){ return x.id === sid; });
+        if(s){ s.updatedAt = new Date().toISOString(); _writeSessions(sessions); }
+    }
+
+    window._v11eSaveHistoryEntry = function(role, content){
+        if(_hydrating) return;
+        if(!role || !content) return;
+        var mapped = role === 'ai' ? 'assistant' : role === 'user' ? 'user' : null;
+        if(!mapped) return;
+        var sid = _ensureSession();
+        var msgs = _readMsgs(sid);
+        if(msgs.length === 1 && mapped === 'user') _updateSessionTitle(sid, content);
+        msgs.push({ role: mapped, content: String(content), ts: new Date().toISOString() });
+        _writeMsgs(sid, msgs);
+        _touchSession(sid);
+    };
+
+    window._v11eClearHistory = function(){
+        var sid = _getCurrentSessionId();
+        if(sid) try{ localStorage.removeItem(_msgKey(sid)); }catch(_){}
+    };
+
+    window._v11eLoadHistory = function(){
+        var sid = _getCurrentSessionId();
+        if(!sid) return;
+        var msgs = _readMsgs(sid);
+        if(!msgs.length) return;
+        var log = document.getElementById('chatLog');
+        if(!log || log.children.length) return;
+        _hydrating = true;
+        try{
+            msgs.forEach(function(m){
+                var role = m.role === 'assistant' ? 'ai' : 'user';
+                try{ renderChatMessage(role, m.content, { skipPersist: true }); }catch(_){}
+            });
+        } finally { _hydrating = false; }
+        var sessions = _readSessions();
+        var s = sessions.find(function(x){ return x.id === sid; });
+        var titleEl = document.getElementById('cmd-session-title');
+        if(titleEl && s) titleEl.textContent = s.title;
+    };
+
+    window._startNewConversation = function(){
+        var log = document.getElementById('chatLog');
+        if(log) log.innerHTML = '';
+        _currentSessionId = null;
+        var k = _currentKey();
+        if(k) try{ localStorage.removeItem(k); }catch(_){}
+        var titleEl = document.getElementById('cmd-session-title');
+        if(titleEl) titleEl.textContent = 'New conversation';
+        window._closeSessionsDrawer();
+    };
+
+    window._openSessionsDrawer = function(){
+        var drawer = document.getElementById('cmd-sessions-drawer');
+        if(!drawer) return;
+        _renderSessionsList();
+        drawer.classList.add('open');
+    };
+    window._closeSessionsDrawer = function(){
+        var drawer = document.getElementById('cmd-sessions-drawer');
+        if(drawer) drawer.classList.remove('open');
+    };
+
+    function _renderSessionsList(){
+        var container = document.getElementById('cmd-sessions-list');
+        if(!container) return;
+        var sessions = _readSessions().slice().reverse();
+        if(!sessions.length){
+            container.innerHTML = '<div id="cmd-sessions-empty">No past conversations yet.</div>';
+            return;
+        }
+        container.innerHTML = '';
+        var currentId = _getCurrentSessionId();
+        sessions.forEach(function(s){
+            var item = document.createElement('div');
+            item.className = 'conv-session-item' + (s.id === currentId ? ' active' : '');
+            var d = new Date(s.updatedAt || s.createdAt);
+            var dateStr = d.toLocaleDateString('en-GB',{ day:'numeric', month:'short' }) + ' · ' + d.toLocaleTimeString('en-GB',{ hour:'2-digit', minute:'2-digit' });
+            item.innerHTML = '<div class="conv-session-item-title">'+_esc(s.title)+'</div><div class="conv-session-item-date">'+dateStr+'</div>';
+            item.addEventListener('click', function(){
+                _loadSession(s.id);
+            });
+            container.appendChild(item);
+        });
+    }
+
+    function _loadSession(sid){
+        var log = document.getElementById('chatLog');
+        if(log) log.innerHTML = '';
+        _setCurrentSessionId(sid);
+        _currentSessionId = sid;
+        var sessions = _readSessions();
+        var s = sessions.find(function(x){ return x.id === sid; });
+        var titleEl = document.getElementById('cmd-session-title');
+        if(titleEl && s) titleEl.textContent = s.title;
+        var msgs = _readMsgs(sid);
+        _hydrating = true;
+        try{
+            msgs.forEach(function(m){
+                var role = m.role === 'assistant' ? 'ai' : 'user';
+                try{ renderChatMessage(role, m.content, { skipPersist: true }); }catch(_){}
+            });
+        } finally { _hydrating = false; }
+        window._closeSessionsDrawer();
+    }
+
+    function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    document.addEventListener('click', function(e){
+        if(!e.target) return;
+        if(e.target.id === 'cmd-new-chat') window._startNewConversation();
+        if(e.target.id === 'cmd-history-btn') window._openSessionsDrawer();
+        if(e.target.id === 'cmd-sessions-close') window._closeSessionsDrawer();
     });
 })();
 </script>
