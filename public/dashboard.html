@@ -590,6 +590,80 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 .ao-agent-detail--open { max-height:120px; }
 .ao-agent-detail-body { margin:2px 0 8px 12px; padding:7px 10px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(255,255,255,0.06); border-radius:0 4px 4px 0; font:500 10px/1.5 'Inter',system-ui,sans-serif; color:#52525b; }
 
+/* ── Supreme Council Page ────────────────────────────────────────────────── */
+#page-council { padding:0 !important; gap:0 !important; overflow:hidden !important; }
+.ec-topbar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; height:42px; background:#080808; border-bottom:1px solid rgba(255,255,255,0.06); z-index:5; }
+.ec-title { font:700 13px/1 'JetBrains Mono',monospace; letter-spacing:.06em; color:#f4f4f5; }
+.ec-conn-dot { width:6px; height:6px; border-radius:50%; background:#34d399; flex-shrink:0; box-shadow:0 0 6px #34d399; transition:background .3s; }
+.ec-subtitle { font:500 10px/1 'JetBrains Mono',monospace; color:#3f3f46; letter-spacing:.04em; }
+.ec-convene-btn { padding:6px 14px; background:rgba(124,108,242,0.09); border:1px solid rgba(124,108,242,0.28); border-radius:6px; color:#a78bfa; font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.06em; cursor:pointer; transition:background .15s; }
+.ec-convene-btn:hover { background:rgba(124,108,242,0.18); }
+.ec-convene-btn:disabled { opacity:.4; cursor:not-allowed; }
+.ec-clock { font:600 13px/1 'JetBrains Mono',monospace; color:#3f3f46; letter-spacing:.04em; }
+.ec-main { flex:1; min-height:0; display:flex; overflow:hidden; }
+.ec-chamber { flex:1; min-width:0; position:relative; overflow:hidden; background:radial-gradient(ellipse at 50% 50%, rgba(20,16,34,1) 0%, #07070a 80%); }
+.ec-entity-card { position:absolute; background:rgba(10,10,14,0.97); border-radius:10px; padding:14px 16px 12px; z-index:2; transition:box-shadow .15s,border-color .15s; cursor:default; }
+.ec-entity-card:hover { box-shadow:0 0 0 1px rgba(255,255,255,0.14),0 8px 28px rgba(0,0,0,0.5) !important; }
+.ec-entity-tag { font:700 11px/1 'JetBrains Mono',monospace; letter-spacing:.09em; margin-bottom:5px; display:flex; align-items:center; gap:7px; }
+.ec-entity-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.ec-entity-name { font:500 10px/1.3 'Inter',system-ui,sans-serif; color:#71717a; margin-top:2px; }
+.ec-entity-domain { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:4px; letter-spacing:.03em; }
+.ec-entity-last { margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05); }
+.ec-entity-last-label { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.07em; color:#27272a; }
+.ec-entity-last-vote { font:500 10px/1.3 'Inter',system-ui,sans-serif; color:#52525b; margin-top:3px; }
+.ec-conf-bar { height:2px; background:rgba(255,255,255,0.06); border-radius:2px; margin-top:7px; overflow:hidden; }
+.ec-conf-fill { height:100%; border-radius:2px; transition:width .5s; }
+.ec-conf-label { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:3px; }
+.ec-entity-status { display:inline-flex; align-items:center; gap:5px; margin-top:7px; }
+.ec-status-dot { width:5px; height:5px; border-radius:50%; }
+.ec-status-dot.idle { background:#3f3f46; }
+.ec-status-dot.deliberating { background:#7c6cf2; box-shadow:0 0 6px #7c6cf2; animation:ecPulse 1.2s ease-in-out infinite; }
+@keyframes ecPulse { 0%,100%{opacity:1}50%{opacity:.3} }
+@media (prefers-reduced-motion:reduce) { .ec-status-dot.deliberating,.ec-emblem-status.deliberating { animation:none; } }
+.ec-emblem { position:absolute; display:flex; flex-direction:column; align-items:center; gap:6px; z-index:3; transform:translate(-50%,-50%); pointer-events:none; }
+.ec-emblem-ring { width:88px; height:88px; border-radius:50%; border:1px solid rgba(124,108,242,0.2); display:flex; align-items:center; justify-content:center; background:radial-gradient(circle,rgba(124,108,242,0.14) 0%,rgba(124,108,242,0.04) 60%,transparent 100%); box-shadow:0 0 44px rgba(124,108,242,0.1); }
+.ec-emblem-orb { width:58px; height:58px; border-radius:50%; background:radial-gradient(circle,rgba(124,108,242,0.32) 0%,rgba(124,108,242,0.1) 60%,transparent 100%); border:1px solid rgba(124,108,242,0.36); display:flex; align-items:center; justify-content:center; box-shadow:0 0 22px rgba(124,108,242,0.22); }
+.ec-emblem-inner { font-size:22px; color:#a78bfa; opacity:.85; }
+.ec-emblem-label { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:#3f3f46; }
+.ec-emblem-status { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#27272a; }
+.ec-emblem-status.deliberating { color:#a78bfa; animation:ecPulse 1.2s ease-in-out infinite; }
+.ec-delib-panel { width:390px; flex-shrink:0; background:#080808; border-left:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; overflow:hidden; }
+.ec-delib-top { padding:14px 16px 12px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
+.ec-panel-label { font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.09em; color:#3f3f46; margin-bottom:10px; }
+.ec-question-inp { width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:9px 11px; font:12px/1.5 'Inter',system-ui,sans-serif; color:#f4f4f5; outline:none; resize:none; box-sizing:border-box; }
+.ec-question-inp::placeholder { color:#3f3f46; }
+.ec-question-inp:focus { border-color:rgba(124,108,242,0.35); }
+.ec-submit-btn { margin-top:8px; width:100%; padding:9px 0; background:rgba(124,108,242,0.09); border:1px solid rgba(124,108,242,0.25); border-radius:7px; color:#a78bfa; font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.07em; cursor:pointer; transition:background .15s; }
+.ec-submit-btn:hover { background:rgba(124,108,242,0.18); }
+.ec-submit-btn:disabled { opacity:.4; cursor:not-allowed; }
+.ec-delib-status { margin-top:9px; padding:9px 11px; background:rgba(124,108,242,0.05); border:1px solid rgba(124,108,242,0.14); border-radius:6px; font:500 10px/1.5 'Inter',system-ui,sans-serif; color:#71717a; }
+.ec-history-hdr { display:flex; align-items:center; justify-content:space-between; padding:11px 16px 8px; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.ec-history-title { font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.09em; color:#3f3f46; }
+.ec-refresh-btn { background:none; border:none; color:#3f3f46; font-size:14px; cursor:pointer; padding:2px 4px; transition:color .12s; line-height:1; }
+.ec-refresh-btn:hover { color:#71717a; }
+.ec-history-list { flex:1; overflow-y:auto; padding:10px 16px 16px; display:flex; flex-direction:column; gap:10px; scrollbar-width:thin; scrollbar-color:rgba(124,108,242,0.2) transparent; }
+.ec-loading { font:500 10px/1.4 'JetBrains Mono',monospace; color:#27272a; text-align:center; padding:24px 0; letter-spacing:.03em; }
+.ec-delib-item { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:11px 13px; }
+.ec-delib-q { font:600 11px/1.4 'Inter',system-ui,sans-serif; color:#a1a1aa; }
+.ec-delib-meta { display:flex; align-items:center; gap:8px; margin-top:6px; }
+.ec-delib-badge { padding:2px 7px; border-radius:4px; font:700 8px/1.2 'JetBrains Mono',monospace; letter-spacing:.05em; }
+.ec-delib-badge.resolved { background:rgba(52,211,153,0.07);color:#34d399;border:1px solid rgba(52,211,153,0.16); }
+.ec-delib-badge.deliberating { background:rgba(124,108,242,0.07);color:#a78bfa;border:1px solid rgba(124,108,242,0.16); }
+.ec-delib-badge.escalated { background:rgba(251,191,36,0.07);color:#fbbf24;border:1px solid rgba(251,191,36,0.16); }
+.ec-consensus-row { display:flex; align-items:center; gap:8px; margin-top:7px; }
+.ec-consensus-bar { flex:1; height:3px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+.ec-consensus-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#7c6cf2,#a78bfa); }
+.ec-consensus-pct { font:700 9px/1 'JetBrains Mono',monospace; color:#3f3f46; white-space:nowrap; }
+.ec-votes-row { display:flex; gap:4px; margin-top:7px; flex-wrap:wrap; }
+.ec-vote-chip { padding:2px 6px; border-radius:3px; font:700 8px/1.2 'JetBrains Mono',monospace; letter-spacing:.04em; }
+.ec-delib-rec { margin-top:8px; padding:8px 9px; background:rgba(255,255,255,0.02); border-left:2px solid rgba(124,108,242,0.3); border-radius:0 4px 4px 0; font:500 10px/1.5 'Inter',system-ui,sans-serif; color:#52525b; }
+.ec-delib-time { font:500 8px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:5px; }
+.ec-exec-vote-row { display:flex; align-items:center; gap:8px; }
+.ec-exec-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.ec-exec-id { font:700 9px/1 'JetBrains Mono',monospace; color:#3f3f46; width:28px; flex-shrink:0; letter-spacing:.04em; }
+.ec-exec-vote { font:500 10px/1 'Inter',system-ui,sans-serif; color:#71717a; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ec-exec-conf { font:700 9px/1 'JetBrains Mono',monospace; color:#3f3f46; flex-shrink:0; }
+
 /* ── V-11-K: canonical progressive disclosure ────────────────────────── */
 .apex-disclosure { }
 .apex-disclosure-trigger {
@@ -7537,6 +7611,7 @@ select:focus {
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["research"]'>RESEARCH</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["activity"]'>ACTIVITY</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["agents"]'>AGENTS</button>
+            <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["council"]'>COUNCIL</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["approvals"]'>APPROVALS</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["knowledge"]'>KNOWLEDGE</button>
             <button class="_mnav-btn" data-fn="_mobileNavTo" data-args='["intelligence"]'>INTEL</button>
@@ -11343,6 +11418,39 @@ if(pipe){
                 </div>
             </div><!-- #page-memory -->
 
+            <!-- ══ PAGE: COUNCIL (Supreme Council Deliberation Chamber) ══ -->
+            <div class="page" id="page-council">
+                <div class="ec-topbar">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <div class="ec-title">SUPREME COUNCIL</div>
+                        <div class="ec-conn-dot" id="ecConnDot"></div>
+                        <div class="ec-subtitle">Executive Deliberation Chamber</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <button class="ec-convene-btn" id="ecConveneBtn" aria-label="Convene weekly strategic session" onclick="ecConvene()">⬡ WEEKLY SESSION</button>
+                        <div class="ec-clock" id="ecClock" aria-live="off"></div>
+                    </div>
+                </div>
+                <div class="ec-main">
+                    <div class="ec-chamber" id="ecChamber" aria-label="Council chamber"></div>
+                    <div class="ec-delib-panel" role="complementary" aria-label="Deliberation panel">
+                        <div class="ec-delib-top">
+                            <div class="ec-panel-label">DELIBERATION CHAMBER</div>
+                            <textarea class="ec-question-inp" id="ecQuestionInp" rows="3" placeholder="Submit a strategic question to the council… (Ctrl+Enter to send)" aria-label="Council question"></textarea>
+                            <button class="ec-submit-btn" id="ecSubmitBtn" onclick="ecSubmitQuestion()">DELIBERATE →</button>
+                            <div class="ec-delib-status" id="ecDelibStatus" style="display:none" aria-live="polite"></div>
+                        </div>
+                        <div class="ec-history-hdr">
+                            <span class="ec-history-title">RECENT DELIBERATIONS</span>
+                            <button class="ec-refresh-btn" aria-label="Refresh history" onclick="councilRefresh()">↻</button>
+                        </div>
+                        <div class="ec-history-list" id="ecHistoryList" role="list">
+                            <div class="ec-loading">Loading deliberation history…</div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- #page-council -->
+
             <!-- ══ PAGE: GOVERNANCE (UX-16 — Constitutional · Authority · Records) ══ -->
             <div class="page" id="page-governance">
                 <div class="page-header">
@@ -11473,6 +11581,10 @@ if(pipe){
             <span class="nav-label">System</span>
             <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
         </button>
+        <button class="nav-btn" id="nav-council" aria-label="Supreme Council">
+            <span class="nav-icon">⬡</span>
+            <span class="nav-label">Council</span>
+        </button>
         <!-- SETTINGS (bottom) -->
         <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0"></div>
         <button class="nav-btn" id="nav-settings" aria-label="Settings">
@@ -11488,7 +11600,7 @@ if(pipe){
     // V-11-F F-7: 'operation' removed (merged into business)
     // V-11-F F-9: civilisation/reality moved out of LIFE & WORK swipe sequence to end (SYSTEM → Advanced)
     // V-11-H H-18: 'agents' / 'approvals' / 'activity' consolidated into 'actions' (positioned after 'intelligence' per Section 32).
-    var pages = ['overview','domains', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'memory', 'governance', 'civilisation', 'reality', 'settings'];
+    var pages = ['overview','domains', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'memory', 'council', 'governance', 'civilisation', 'reality', 'settings'];
     var activePage = 'overview';
 
     var pageMeta = {
@@ -11514,6 +11626,7 @@ if(pipe){
         memory:        { title:'Memory',        sub:'Episodic · Semantic · Health' },
         governance:    { title:'Governance',    sub:'Constitutional · Authority · Records' },
         domains:       { title:'Domains',        sub:'Your life areas' },
+        council:       { title:'Council',        sub:'Supreme Council · Deliberations · Votes · Decisions' },
         settings:      { title:'Settings',       sub:'Account & preferences' }
     };
     window.switchPage = function(name) {
@@ -23014,6 +23127,7 @@ window.apexFileDropHandler = function(e){
         _origSwitch2(name);
         if (name === 'activity')     { actRefresh(); }
         if (name === 'agents')       { agentsRefresh(); }
+        if (name === 'council'  && typeof window.councilRefresh === 'function') { window.councilRefresh(); }
         if (name === 'approvals')    { approvalsRefresh(); }
         // V-11-H H-1: 'actions' initialises the canonical surface (role-adapted).
         if (name === 'actions'  && typeof window.actionsInitPage === 'function')  { window.actionsInitPage(); }
@@ -23998,6 +24112,300 @@ window.apexFileDropHandler = function(e){
         if(e.target.id === 'cmd-history-btn') window._openSessionsDrawer();
         if(e.target.id === 'cmd-sessions-close') window._closeSessionsDrawer();
     });
+})();
+</script>
+
+<!-- ══ SUPREME COUNCIL IIFE ══ -->
+<script>
+(function() {
+    'use strict';
+
+    var EC_ENTITIES = [
+        { id:'cso', name:'Chief Strategy Officer',     abbr:'CSO', color:'#7c6cf2', domain:'Strategy · Roadmap · Initiatives' },
+        { id:'cto', name:'Chief Technology Officer',   abbr:'CTO', color:'#3b82f6', domain:'Architecture · Infrastructure · Dev' },
+        { id:'cfo', name:'Chief Financial Officer',    abbr:'CFO', color:'#22c55e', domain:'Budget · Cost · ROI · Integrity' },
+        { id:'coo', name:'Chief Operating Officer',    abbr:'COO', color:'#f59e0b', domain:'Operations · Reliability · Process' },
+        { id:'cio', name:'Chief Intelligence Officer', abbr:'CIO', color:'#06b6d4', domain:'Memory · Knowledge · Cognition' },
+        { id:'cgo', name:'Chief Governance Officer',   abbr:'CGO', color:'#ef4444', domain:'Constitution · Ethics · Policy' },
+    ];
+
+    var _ecLastVotes    = {};
+    var _ecDeliberating = false;
+    var _ecBuilt        = false;
+
+    function _h() {
+        try { return { 'x-app-key': window._appKey || '' }; } catch(_) { return {}; }
+    }
+
+    function _ago(dateStr) {
+        if (!dateStr) return '';
+        var s = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+        if (s < 90)    return 'just now';
+        if (s < 3600)  return Math.floor(s/60)   + 'm ago';
+        if (s < 86400) return Math.floor(s/3600)  + 'h ago';
+        return new Date(dateStr).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    }
+
+    function _esc(s) {
+        return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function _voteColor(vote) {
+        if (!vote) return '#3f3f46';
+        var v = vote.toLowerCase();
+        if (/approve|yes|proceed|go|accept|support/.test(v))  return '#34d399';
+        if (/reject|no|hold|deny|stop|block|against/.test(v)) return '#ef4444';
+        if (/abstain|neutral|pass|defer/.test(v))             return '#71717a';
+        return '#a78bfa';
+    }
+
+    function _buildCard(entity, lastVote) {
+        var el = document.createElement('div');
+        el.className  = 'ec-entity-card';
+        el.id         = 'ec-card-' + entity.id;
+        el.style.border = '1px solid rgba(255,255,255,0.08)';
+        var conf    = lastVote ? (lastVote.confidence || 0) : 0;
+        var confPct = Math.round(conf * 100);
+        var cColor  = conf > 0.7 ? '#34d399' : conf > 0.45 ? '#f59e0b' : '#52525b';
+        var vote    = lastVote ? (lastVote.vote || '—') : '—';
+        var sdClass = _ecDeliberating ? 'deliberating' : 'idle';
+        var sdLabel = _ecDeliberating ? 'DELIBERATING' : 'IDLE';
+        el.innerHTML =
+            '<div class="ec-entity-tag">' +
+              '<span class="ec-entity-dot" style="background:'+entity.color+';box-shadow:0 0 6px '+entity.color+'40"></span>' +
+              '<span style="color:'+entity.color+'">'+entity.abbr+'</span>' +
+            '</div>' +
+            '<div class="ec-entity-name">'+entity.name+'</div>' +
+            '<div class="ec-entity-domain">'+entity.domain+'</div>' +
+            '<div class="ec-entity-last">' +
+              '<div class="ec-entity-last-label">LAST VOTE</div>' +
+              '<div class="ec-entity-last-vote">'+_esc(vote)+'</div>' +
+              '<div class="ec-conf-bar"><div class="ec-conf-fill" style="width:'+confPct+'%;background:'+cColor+'"></div></div>' +
+              '<div class="ec-conf-label">CONFIDENCE '+(lastVote ? confPct+'%' : '—')+'</div>' +
+            '</div>' +
+            '<div class="ec-entity-status">' +
+              '<span class="ec-status-dot '+sdClass+'"></span>' +
+              '<span style="color:#3f3f46;font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em">'+sdLabel+'</span>' +
+            '</div>';
+        return el;
+    }
+
+    function _renderChamber() {
+        var chamber = document.getElementById('ecChamber');
+        if (!chamber) return;
+        chamber.innerHTML = '';
+        var W = chamber.offsetWidth  || 640;
+        var H = chamber.offsetHeight || 420;
+        var cols   = 3, rows = 2;
+        var padX   = 28, padY = 36;
+        var cellW  = (W - padX * 2) / cols;
+        var cellH  = (H - padY * 2) / rows;
+        var cardW  = Math.min(Math.max(cellW - 26, 155), 198);
+        var cardH  = 152;
+
+        EC_ENTITIES.forEach(function(entity, i) {
+            var col  = i % cols;
+            var row  = Math.floor(i / cols);
+            var x    = padX + col * cellW + (cellW - cardW) / 2;
+            var y    = padY + row * cellH + (cellH - cardH) / 2;
+            var card = _buildCard(entity, _ecLastVotes[entity.id]);
+            card.style.left  = Math.round(x) + 'px';
+            card.style.top   = Math.round(y) + 'px';
+            card.style.width = Math.round(cardW) + 'px';
+            chamber.appendChild(card);
+        });
+
+        var emblem = document.createElement('div');
+        emblem.className = 'ec-emblem';
+        emblem.id        = 'ecEmblem';
+        emblem.style.left = Math.round(W / 2) + 'px';
+        emblem.style.top  = Math.round(H / 2) + 'px';
+        emblem.innerHTML =
+            '<div class="ec-emblem-ring">' +
+              '<div class="ec-emblem-orb"><div class="ec-emblem-inner">⬡</div></div>' +
+            '</div>' +
+            '<div class="ec-emblem-label">SUPREME COUNCIL</div>' +
+            '<div class="ec-emblem-status" id="ecStatus">IDLE</div>';
+        chamber.appendChild(emblem);
+        _ecBuilt = true;
+    }
+
+    function _setDeliberating(on) {
+        _ecDeliberating = on;
+        var s = document.getElementById('ecStatus');
+        if (s) { s.textContent = on ? 'DELIBERATING' : 'IDLE'; s.className = 'ec-emblem-status' + (on ? ' deliberating' : ''); }
+        var cd = document.getElementById('ecConnDot');
+        if (cd) cd.style.background = on ? '#a78bfa' : '#34d399';
+        document.querySelectorAll('.ec-entity-status .ec-status-dot').forEach(function(d) {
+            d.className = 'ec-status-dot ' + (on ? 'deliberating' : 'idle');
+        });
+        document.querySelectorAll('.ec-entity-status span:last-child').forEach(function(sp) {
+            sp.textContent = on ? 'DELIBERATING' : 'IDLE';
+        });
+        var sb = document.getElementById('ecSubmitBtn');
+        var cb = document.getElementById('ecConveneBtn');
+        if (sb) sb.disabled = on;
+        if (cb) cb.disabled = on;
+    }
+
+    function _renderActiveVotes(votes) {
+        var el = document.getElementById('ecDelibStatus');
+        if (!el) return;
+        var html = '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.09em;color:#7c6cf2;margin-bottom:9px;display:flex;align-items:center;gap:6px">' +
+            '<span class="ec-status-dot deliberating"></span> COUNCIL IN SESSION</div>' +
+            '<div style="display:flex;flex-direction:column;gap:6px">';
+        votes.forEach(function(v) {
+            var ent = EC_ENTITIES.find(function(e) { return e.id === v.entityId; }) || { color:'#3f3f46', abbr:(v.entityId||'?').toUpperCase() };
+            var confPct = Math.round((v.confidence || 0) * 100);
+            var vc = _voteColor(v.vote);
+            html +=
+                '<div class="ec-exec-vote-row">' +
+                  '<span class="ec-exec-dot" style="background:'+ent.color+'"></span>' +
+                  '<span class="ec-exec-id">'+ent.abbr+'</span>' +
+                  '<span class="ec-exec-vote" style="color:'+vc+'">'+_esc(v.vote||'…')+'</span>' +
+                  '<span class="ec-exec-conf">'+(v.confidence ? confPct+'%' : '')+'</span>' +
+                '</div>';
+        });
+        html += '</div>';
+        el.innerHTML = html;
+        el.style.display = 'block';
+    }
+
+    function _renderHistory(deliberations) {
+        var list = document.getElementById('ecHistoryList');
+        if (!list) return;
+        if (!deliberations || !deliberations.length) {
+            list.innerHTML = '<div class="ec-loading">No deliberations yet. Submit a question to convene the council.</div>';
+            return;
+        }
+        list.innerHTML = '';
+        deliberations.slice(0, 10).forEach(function(d) {
+            var item = document.createElement('div');
+            item.className  = 'ec-delib-item';
+            item.setAttribute('role', 'listitem');
+            var status     = d.status || 'resolved';
+            var badgeCls   = status === 'escalated' ? 'escalated' : status === 'deliberating' ? 'deliberating' : 'resolved';
+            var consPct    = Math.round((d.consensus_level || 0) * 100);
+            var discussion = d.discussion || [];
+            var votesHtml  = discussion.map(function(v) {
+                var ent = EC_ENTITIES.find(function(e) { return e.id === v.entity; }) || { color:'#3f3f46', abbr:(v.entity||'?').toUpperCase() };
+                var vc  = _voteColor(v.vote);
+                return '<span class="ec-vote-chip" style="background:'+vc+'18;color:'+vc+';border:1px solid '+vc+'30" title="'+_esc(v.rationale||'')+'">'+ent.abbr+' '+(v.vote||'?').toUpperCase()+'</span>';
+            }).join('');
+            var rec     = d.final_recommendation || '';
+            var recHtml = rec ? '<div class="ec-delib-rec">'+_esc(rec.slice(0,220))+(rec.length>220?'…':'')+'</div>' : '';
+            var q = d.question || '';
+            item.innerHTML =
+                '<div class="ec-delib-q">'+_esc(q.slice(0,130))+(q.length>130?'…':'')+'</div>' +
+                '<div class="ec-delib-meta">' +
+                  '<span class="ec-delib-badge '+badgeCls+'">'+status.toUpperCase()+'</span>' +
+                  '<span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:#27272a">'+_ago(d.resolved_at||d.created_at)+'</span>' +
+                '</div>' +
+                '<div class="ec-consensus-row">' +
+                  '<div class="ec-consensus-bar"><div class="ec-consensus-fill" style="width:'+consPct+'%"></div></div>' +
+                  '<span class="ec-consensus-pct">'+consPct+'% CONSENSUS</span>' +
+                '</div>' +
+                (votesHtml ? '<div class="ec-votes-row">'+votesHtml+'</div>' : '') +
+                recHtml +
+                '<div class="ec-delib-time">'+new Date(d.created_at||Date.now()).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+'</div>';
+            list.appendChild(item);
+        });
+    }
+
+    window.councilRefresh = function() {
+        if (!_ecBuilt) {
+            setTimeout(function() { _renderChamber(); window.councilRefresh(); }, 80);
+            return;
+        }
+        fetch('/api/civilization/council/history?limit=10', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.ok) return;
+                var delibs = data.deliberations || [];
+                if (delibs.length) {
+                    (delibs[0].discussion || []).forEach(function(v) {
+                        _ecLastVotes[v.entity] = { vote: v.vote, rationale: v.rationale, confidence: v.confidence || 0.7 };
+                    });
+                    _renderChamber();
+                }
+                _renderHistory(delibs);
+            })
+            .catch(function() {
+                var list = document.getElementById('ecHistoryList');
+                if (list) list.innerHTML = '<div class="ec-loading">Could not load history.</div>';
+            });
+    };
+
+    window.ecSubmitQuestion = function() {
+        var inp = document.getElementById('ecQuestionInp');
+        var q   = inp ? inp.value.trim() : '';
+        if (!q) { if (inp) inp.focus(); return; }
+        _setDeliberating(true);
+        var statusEl = document.getElementById('ecDelibStatus');
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = '<div style="font:500 10px/1 \'JetBrains Mono\',monospace;color:#3f3f46;letter-spacing:.04em;animation:ecPulse 1.2s ease-in-out infinite">Convening council…</div>';
+        }
+        fetch('/api/civilization/council/deliberate', {
+            method:  'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, _h()),
+            body:    JSON.stringify({ question: q })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            _setDeliberating(false);
+            if (!data.ok) throw new Error(data.error || 'Deliberation failed');
+            if (inp) inp.value = '';
+            (data.votes || []).forEach(function(v) {
+                _ecLastVotes[v.entityId] = { vote: v.vote, rationale: v.rationale, confidence: v.confidence };
+            });
+            _renderChamber();
+            _renderActiveVotes(data.votes || []);
+            if (statusEl && data.recommendation) {
+                statusEl.innerHTML +=
+                    '<div style="margin-top:10px;padding:9px;background:rgba(124,108,242,0.06);border-left:2px solid rgba(124,108,242,0.4);border-radius:0 4px 4px 0;font:500 10px/1.5 \'Inter\',system-ui,sans-serif;color:#71717a">' +
+                    '<div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#7c6cf2;margin-bottom:6px">COUNCIL RECOMMENDATION</div>' +
+                    _esc(data.recommendation) + '</div>';
+            }
+            councilRefresh();
+        })
+        .catch(function(err) {
+            _setDeliberating(false);
+            var se = document.getElementById('ecDelibStatus');
+            if (se) { se.style.display = 'block'; se.innerHTML = '<span style="color:#ef4444;font:500 10px/1 \'JetBrains Mono\',monospace">'+_esc(err.message)+'</span>'; }
+        });
+    };
+
+    window.ecConvene = function() {
+        var inp = document.getElementById('ecQuestionInp');
+        if (inp) inp.value = 'Convene the weekly APEX Supreme Council strategic session. What are the highest-priority decisions and actions for the coming week? Focus on resource allocation, opportunity capture, governance improvements, and operational excellence.';
+        window.ecSubmitQuestion();
+    };
+
+    // Clock
+    function _ecClock() {
+        var el = document.getElementById('ecClock');
+        if (el) el.textContent = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    }
+    setInterval(_ecClock, 1000);
+
+    // Ctrl+Enter in question input
+    document.addEventListener('keydown', function(e) {
+        if (e.target && e.target.id === 'ecQuestionInp' && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            window.ecSubmitQuestion();
+        }
+    });
+
+    // Wire into switchPage
+    var _prevSwitchEC = window.switchPage;
+    window.switchPage = function(name) {
+        _prevSwitchEC(name);
+        if (name === 'council') {
+            if (!_ecBuilt) setTimeout(function() { _renderChamber(); councilRefresh(); }, 60);
+            else councilRefresh();
+        }
+    };
 })();
 </script>
 </body>
