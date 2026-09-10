@@ -191,9 +191,18 @@ When reporting pipeline: show count and value per stage. Flag any follow-up date
     }
 };
 
-async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 2000 } = {}) {
+// Appended to every domain agent system prompt (skipped when council calls agents to avoid loops)
+const _ESCALATION_PROTOCOL = `
+
+ESCALATION PROTOCOL: If this request involves a decision that clearly exceeds your authority — financial commitments over £500, irreversible system changes, cross-domain architectural changes, or constitutional modifications — append this line at the very end of your response (skip it for routine tasks):
+[ESCALATE: <one sentence describing the council decision needed>]`;
+
+async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 2000, council = false } = {}) {
     const agent = DOMAIN_AGENTS[slug];
     if (!agent) throw new Error(`Unknown domain agent: "${slug}". Valid: ${Object.keys(DOMAIN_AGENTS).join(', ')}`);
+
+    // council=true means this call originates from the executive council — skip escalation to prevent loops
+    const systemPrompt = council ? agent.system_prompt : agent.system_prompt + _ESCALATION_PROTOCOL;
 
     const messages = [
         ...history.map(h => ({ role: h.role, content: h.content })),
@@ -203,16 +212,39 @@ async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 
     const { result: response } = await runtime.execute({
         tier:     'fast',
         caller:   'domain-agents',
-        system:   agent.system_prompt,
+        system:   systemPrompt,
         messages,
         maxTokens,
     });
 
+    const rawReply = response.content[0]?.text || '';
+
+    // Parse escalation signal — strip marker from visible reply and fire council deliberation
+    const escalateMatch = !council && rawReply.match(/\[ESCALATE:\s*(.+?)\][\s]*$/im);
+    const reply = escalateMatch ? rawReply.replace(/\[ESCALATE:[\s\S]*$/im, '').trim() : rawReply;
+    let escalation = null;
+
+    if (escalateMatch) {
+        const escalateQ = escalateMatch[1].trim();
+        escalation = { question: escalateQ, source: slug };
+        setImmediate(async () => {
+            try {
+                const council = require('../lib/executive/executive-council');
+                const result = await council.deliberate(escalateQ, {
+                    source:       `domain-agent:${slug}`,
+                    agentMessage: userMessage.slice(0, 200),
+                });
+                escalation.deliberationId = result.deliberationId;
+            } catch (_) {}
+        });
+    }
+
     return {
-        agent: { slug: agent.slug, name: agent.name, category: agent.category },
-        reply: response.content[0]?.text || '',
-        usage: response.usage,
-        stopReason: response.stop_reason
+        agent:      { slug: agent.slug, name: agent.name, category: agent.category },
+        reply,
+        usage:      response.usage,
+        stopReason: response.stop_reason,
+        escalation: escalation ? { question: escalation.question, source: escalation.source } : null,
     };
 }
 
