@@ -315,6 +315,8 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 .actn-card-why {
     font: 400 11px/1.5 Inter, sans-serif;
     color: rgba(232,244,255,0.5);
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 .actn-card-evidence {
     font: 500 11px/1.4 'JetBrains Mono', monospace;
@@ -1685,7 +1687,8 @@ html, body {
 .agent-drawer-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: flex-start; }
 .agent-drawer-close { background: none; border: none; color: var(--text-mute); cursor: pointer; font-size: 18px; padding: 4px; }
 .agent-drawer-body { padding: 16px 20px; }
-.agent-run-row { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; }
+.agent-run-row { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; overflow: hidden; }
+.agent-run-row > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Mood selector ──────────────────────────────────────────────────── */
 .mood-faces { display: flex; gap: 10px; margin: 8px 0; }
@@ -4722,6 +4725,8 @@ body::before, body::after { display: none!important; }
   border-top: 1px solid var(--ax-bd)!important; border-radius: 4px!important;
   padding: 0!important; overflow: hidden!important;
   box-shadow: none!important; animation: none!important;
+  /* Fix: overflow:hidden sets flex min-size to 0, causing panels to collapse in flex columns */
+  flex-shrink: 0!important;
 }
 .ds-panel-header {
   display: flex!important; align-items: center!important; justify-content: space-between!important;
@@ -7046,6 +7051,8 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
     }
     /* Show nav-more button (overrides inline style="display:none") */
     #nav-more { display: flex !important; }
+    /* Prevent bottom nav from covering last content item when page is scrolled */
+    .page { padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px)) !important; }
     /* Tab button sizing */
     .nav-btn {
         flex: 1 !important;
@@ -20678,7 +20685,7 @@ window.apexFileDropHandler = function(e){
         var el = document.getElementById('realityClaimsPanel');
         var filter = document.getElementById('realityClaimsFilter');
         if (!el) return;
-        var url = '/api/reality/claims?limit=20' + (filter && filter.value ? '&stage=' + encodeURIComponent(filter.value) : '');
+        var url = '/api/reality/claims?limit=20&domain=DOM-000001' + (filter && filter.value ? '&stage=' + encodeURIComponent(filter.value) : '');
         fetch(url, { headers: h() })
             .then(function(r) { return r.json(); })
             .then(function(d) {
@@ -22168,6 +22175,8 @@ window.apexFileDropHandler = function(e){
         if (obj.indexOf('agent-run-')       === 0) return 'Agent completed a task';
         if (obj.indexOf('consolidation-')   === 0) return 'Memory consolidated';
         if (obj === 'reflexion')                   return 'APEX reflected on recent interactions';
+        // Don't display raw JSON as a label
+        if (obj.charAt(0) === '{' || obj.charAt(0) === '[') return 'System interaction recorded';
         return obj || 'Interaction recorded';
     }
 
@@ -23512,9 +23521,9 @@ window.apexFileDropHandler = function(e){
         } catch(e) {}
 
         try {
-            var r3 = await fetch('/api/memory?limit=1&count=true', { headers: {'x-app-key': window._appKey||''} });
+            var r3 = await fetch('/api/memory/health', { headers: {'x-app-key': window._appKey||''} });
             var md  = await r3.json();
-            var cnt = md.count || md.total || 0;
+            var cnt = (md.data && md.data.episodic && md.data.episodic.total) || 0;
             if (cnt > 0) {
                 AO_BRAIN_NOTES = cnt;
                 var el = document.getElementById('aoBrainNotes');
