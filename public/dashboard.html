@@ -261,7 +261,14 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
         grid-template-columns: 2fr 1fr;
         gap: 20px;
     }
+    /* When lessons panel is still loading or empty, briefing expands full-width */
+    #page-intelligence .int-panels:has(#intLessonsPanel[data-apex-state="loading"]),
+    #page-intelligence .int-panels:has(#intLessonsPanel[data-apex-state="empty"]) {
+        grid-template-columns: 1fr;
+    }
 }
+/* Hide TODAY Needs You section when content resolves to the empty state */
+#today-section-needs:has(.td-empty-today) { display: none; }
 @media (min-width: 1024px) {
     #page-memory .mem-panels,
     #page-knowledge .kn-panels {
@@ -7328,7 +7335,7 @@ select:focus {
 
                 <!-- System architecture map trigger -->
                 <div id="cmd-arch-trigger" style="padding:8px 16px 0;display:flex;justify-content:flex-end">
-                  <button onclick="window._toggleArchPanel()" style="background:none;border:1px solid rgba(94,106,210,0.25);border-radius:6px;padding:4px 10px;font:500 10px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;color:rgba(94,106,210,0.7);cursor:pointer;transition:all 0.15s" aria-label="System architecture map">SYSTEM MAP</button>
+                  <button onclick="window._toggleArchPanel()" style="background:none;border:1px solid rgba(94,106,210,0.25);border-radius:6px;padding:4px 10px;font:500 10px/1 'JetBrains Mono',monospace;letter-spacing:0.12em;color:rgba(94,106,210,0.7);cursor:pointer;transition:all 0.15s" aria-label="System architecture map" title="View system architecture and module connections">SYSTEM MAP</button>
                 </div>
 
                 <!-- Architecture panel -->
@@ -7733,8 +7740,8 @@ select:focus {
                         </div>
                     </div>
                     <div id="emailFilterPills" style="display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap">
-                        <button class="ds-pill active" data-fn="filterEmails" data-args='["all","__this__"]'>ALL</button>
-                        <button class="ds-pill" data-fn="filterEmails" data-args='["urgent","__this__"]' style="display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:#ef4444;flex-shrink:0"></span>PRIORITY</button>
+                        <button class="ds-pill" data-fn="filterEmails" data-args='["all","__this__"]'>ALL</button>
+                        <button class="ds-pill active" data-fn="filterEmails" data-args='["urgent","__this__"]' style="display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:#ef4444;flex-shrink:0"></span>PRIORITY</button>
                         <button class="ds-pill" data-fn="filterEmails" data-args='["draft","__this__"]'>DRAFT</button>
                         <button class="ds-pill" data-fn="filterEmails" data-args='["icloud","__this__"]' style="display:flex;align-items:center;gap:5px"><svg width="10" height="8" viewBox="0 0 20 13" fill="none"><path d="M15 5C15 5 15.3 2 12.5 2C10.5 2 9.5 3.5 9.5 3.5C9.5 3.5 8.8 2.5 7 2.5C5 2.5 4 4 4 5C4 5 2 5.5 2 7.5C2 9.5 3.5 11 5.5 11H15C17 11 18 9.5 18 8C18 6.5 16.7 5.3 15 5Z" fill="rgba(91,158,255,0.8)"/></svg>ICLOUD</button>
                         <button class="ds-pill" data-fn="filterEmails" data-args='["gmail","__this__"]' style="display:flex;align-items:center;gap:5px"><svg width="10" height="8" viewBox="0 0 24 20" fill="none"><rect width="24" height="20" rx="3" fill="rgba(234,67,53,0.5)"/><path d="M2 2l10 9L22 2" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>GMAIL</button>
@@ -8070,7 +8077,7 @@ select:focus {
                         <div class="ds-stat-sub" style="color:var(--text-faint)">0 sent &#183; 0 overdue</div>
                     </div>
                     <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">AI credits</div>
+                        <div class="ds-stat-label">APEX API cost</div>
                         <div class="ds-stat-value amber" id="finStatCredit">&#8212;</div>
                         <div class="ds-stat-sub"><span class="ds-dot amber pulse"></span><span id="finStatCreditSub" style="color:var(--amber)">loading</span></div>
                     </div>
@@ -8519,7 +8526,7 @@ select:focus {
                             <span class="ds-panel-title">Workouts</span>
                             <div class="ds-panel-right"><button class="ds-btn green btn--xs">+ Log</button></div>
                         </div>
-                        <div class="ds-skel" style="margin-bottom:10px">Today&#39;s workout &#183; log via voice</div>
+                        <div style="font-size:11px;color:rgba(0,212,255,0.45);margin-bottom:10px;text-align:center;letter-spacing:0.03em">+ Log today&#39;s workout via voice</div>
                         <div class="t-label" style="margin-bottom:6px">Last 91 days</div>
                         <div class="contrib-grid-ds" id="workoutContribGrid"></div>
                         <div style="display:flex;justify-content:space-between;margin-top:8px">
@@ -10750,11 +10757,11 @@ if(pipe){
                         <span class="ao-conn-dot"></span>
                         <span style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#3f3f46">CONNECTED TO</span>
                         <div style="display:flex;gap:4px">
-                            <span class="ao-icon-pill">&#128220;</span>
-                            <span class="ao-icon-pill">&#9881;</span>
-                            <span class="ao-icon-pill">&#128269;</span>
-                            <span class="ao-icon-pill">&#128295;</span>
-                            <span class="ao-icon-pill">&#9993;</span>
+                            <span class="ao-icon-pill" title="Documents">&#128220;</span>
+                            <span class="ao-icon-pill" title="Settings">&#9881;</span>
+                            <span class="ao-icon-pill" title="Search agents">&#128269;</span>
+                            <span class="ao-icon-pill" title="Tools">&#128295;</span>
+                            <span class="ao-icon-pill" title="Messages">&#9993;</span>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:10px">
@@ -11121,6 +11128,20 @@ if(pipe){
                     <button class="ds-btn cyan" data-fn="memoryRefresh" aria-label="Refresh memory">↻ Refresh</button>
                 </div>
                 <div class="mem-panels" style="display:flex;flex-direction:column;gap:10px">
+                    <!-- Semantic facts (GET /api/memory/semantic/search) — promoted to top as primary interactive feature -->
+                    <section role="region" aria-label="Facts APEX knows about you" class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot amber"></span>
+                                <span class="t-label">Facts APEX Knows About You</span>
+                            </div>
+                            <div style="display:flex;gap:6px;align-items:center">
+                                <input id="memSemanticSearch" type="text" placeholder="Search facts APEX knows about you…" aria-label="Search facts APEX knows about you" data-input="memorySearch" style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,212,255,0.12);border-radius:6px;color:#e8f4ff;font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 8px;width:220px" />
+                                <span style="font-size:10px;color:#8893a0" id="memSemanticCount">—</span>
+                            </div>
+                        </div>
+                        <div id="memSemanticList" data-apex-state="empty" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
+                    </section>
                     <!-- Memory health overview (GET /api/memory/health) -->
                     <section role="region" aria-label="Memory health" class="ds-panel">
                         <div class="ds-panel-header">
@@ -11148,20 +11169,6 @@ if(pipe){
                         <div id="memEpisodicList" data-apex-state="loading" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto" aria-busy="true">
                             <div class="skel skel-row skel-wide"></div>
                         </div>
-                    </section>
-                    <!-- Semantic facts (GET /api/memory/semantic/search) -->
-                    <section role="region" aria-label="Facts APEX knows about you" class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot amber"></span>
-                                <span class="t-label">Facts APEX Knows About You</span>
-                            </div>
-                            <div style="display:flex;gap:6px;align-items:center">
-                                <input id="memSemanticSearch" type="text" placeholder="Search facts APEX knows about you…" aria-label="Search facts APEX knows about you" data-input="memorySearch" style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,212,255,0.12);border-radius:6px;color:#e8f4ff;font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 8px;width:220px" />
-                                <span style="font-size:10px;color:#8893a0" id="memSemanticCount">—</span>
-                            </div>
-                        </div>
-                        <div id="memSemanticList" data-apex-state="empty" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
                     </section>
                 </div>
             </div><!-- #page-memory -->
