@@ -577,6 +577,24 @@ router.get('/intelligence/briefing', requireAppAccess, async (req, res) => {
     }
 });
 
+// ── GET /api/intelligence/briefing/trace ──────────────────────────────────────
+// Returns the full reasoning trace for the most recent briefing: all scored
+// items, exact Claude prompt, and raw response. Master-only. Zero API cost —
+// served from the same in-memory cache as the briefing (6h TTL).
+
+router.get('/intelligence/briefing/trace', requireAppAccess, async (req, res) => {
+    try {
+        const role = req.identity && req.identity.role;
+        if (role !== 'master') return res.json({ ok: false, error: 'Master access required.' });
+        const cache = require('../lib/memory/cache');
+        const trace = cache.get('sie:briefing:trace:v1');
+        if (!trace) return res.json({ ok: false, error: 'No trace yet — load the Intelligence page to generate a fresh briefing.' });
+        res.json({ ok: true, trace });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 // ── GET /api/intelligence/opportunities ───────────────────────────────────────
 // Read-only query against the persisted opportunities table.
 // Does NOT call opportunity-engine.detect() which is write-oriented.

@@ -23466,26 +23466,26 @@ window.apexFileDropHandler = function(e){
                 }
                 var b = d.briefing;
                 if (ageEl && b.generated_at) ageEl.textContent = 'Generated ' + _timeAgo(b.generated_at) + ' · 6h cache';
-                var ev = b._evidence || {};
                 var fields = [
-                    { key: 'biggest_opportunity',      label: 'Biggest Opportunity',       value: b.biggest_opportunity,        color: '#27ae60' },
-                    { key: 'biggest_threat',           label: 'Biggest Threat',             value: b.biggest_threat,             color: '#ff4d6d' },
-                    { key: 'biggest_bottleneck',       label: 'Biggest Bottleneck',         value: b.biggest_bottleneck,         color: '#ff8c42' },
-                    { key: 'highest_leverage_action',  label: 'Highest Leverage Action',    value: b.highest_leverage_action,    color: '#00d4ff' },
+                    { key: 'biggest_opportunity',        label: 'Biggest Opportunity',     value: b.biggest_opportunity,        color: '#27ae60' },
+                    { key: 'biggest_threat',             label: 'Biggest Threat',           value: b.biggest_threat,             color: '#ff4d6d' },
+                    { key: 'biggest_bottleneck',         label: 'Biggest Bottleneck',       value: b.biggest_bottleneck,         color: '#ff8c42' },
+                    { key: 'highest_leverage_action',    label: 'Highest Leverage Action',  value: b.highest_leverage_action,    color: '#00d4ff' },
                     { key: 'strategic_focus_this_week',  label: 'Focus This Week',          value: b.strategic_focus_this_week,  color: 'rgba(232,244,255,0.75)' },
                     { key: 'strategic_focus_this_month', label: 'Focus This Month',         value: b.strategic_focus_this_month, color: 'rgba(232,244,255,0.6)' },
                 ];
                 var html = fields.map(function(f) {
-                    var evHtml = _intBriefingEvidenceHtml(f.key, ev[f.key]);
-                    return '<div class="int-brief-row" data-int-brief-key="' + f.key + '" style="border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer" onclick="_intBriefingToggle(this)">' +
-                        '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px">' +
-                            '<div>' +
+                    return '<div class="int-brief-row" data-brief-key="' + f.key + '" data-brief-label="' + _escapeHtml(f.label) + '" data-brief-color="' + f.color + '" ' +
+                        'style="border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;border-radius:4px;transition:background 120ms ease" ' +
+                        'onmouseenter="this.style.background=\'rgba(255,255,255,0.03)\'" onmouseleave="this.style.background=\'\'" ' +
+                        'onclick="_intOpenReasoningModal(this)">' +
+                        '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px 8px;gap:12px">' +
+                            '<div style="flex:1;min-width:0">' +
                                 '<div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">' + _escapeHtml(f.label) + '</div>' +
-                                '<div style="font-size:11px;color:' + f.color + ';line-height:1.5">' + _escapeHtml(f.value || 'Unavailable — insufficient data') + '</div>' +
+                                '<div style="font-size:11px;color:' + f.color + ';line-height:1.5">' + _escapeHtml(f.value || 'Unavailable') + '</div>' +
                             '</div>' +
-                            (evHtml ? '<span class="int-brief-chevron" style="font-size:11px;color:rgba(232,244,255,0.3);margin-left:8px;flex-shrink:0;transition:transform 200ms ease">›</span>' : '') +
+                            '<span style="flex-shrink:0;font-size:9px;color:rgba(232,244,255,0.18);font-family:\'JetBrains Mono\',monospace;letter-spacing:0.06em;white-space:nowrap">WHY &#x203A;</span>' +
                         '</div>' +
-                        (evHtml ? '<div class="int-brief-evidence" style="display:none;padding-bottom:10px">' + evHtml + '</div>' : '') +
                     '</div>';
                 }).join('');
                 window.setState(el, 'ready', { html: html });
@@ -23572,6 +23572,237 @@ window.apexFileDropHandler = function(e){
         if (!lines.length) return '';
         return '<div style="background:rgba(255,255,255,0.03);border-radius:6px;padding:10px 12px;border:1px solid rgba(255,255,255,0.06)">' + lines.join('') + '</div>';
     }
+
+    /* ── Reasoning Chain Modal ──────────────────────────────────────────────── */
+
+    function _intOpenReasoningModal(row) {
+        var key   = row.dataset.briefKey;
+        var label = row.dataset.briefLabel || key;
+        var color = row.dataset.briefColor || 'rgba(232,244,255,0.8)';
+        var ex = document.getElementById('_intTraceModal');
+        if (ex) { ex.remove(); return; }
+        var modal = document.createElement('div');
+        modal.id = '_intTraceModal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,0.92);backdrop-filter:blur(14px);display:flex;align-items:flex-start;justify-content:center;padding:20px 16px 48px;overflow-y:auto';
+        var inner = '<div style="width:100%;max-width:700px;background:#0f0f1c;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;box-shadow:0 32px 80px rgba(0,0,0,0.7)">' +
+            '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:16px">' +
+                '<div>' +
+                    '<div style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:0.14em;text-transform:uppercase;color:#8893a0;margin-bottom:7px">Reasoning Chain</div>' +
+                    '<div style="font:600 15px/1.3 Inter,sans-serif;color:' + color + '">' + _escapeHtml(label) + '</div>' +
+                '</div>' +
+                '<button onclick="document.getElementById(\'_intTraceModal\').remove()" style="flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(232,244,255,0.45);padding:7px 15px;font-size:12px;cursor:pointer;transition:background 150ms ease" onmouseenter="this.style.background=\'rgba(255,255,255,0.1)\'" onmouseleave="this.style.background=\'rgba(255,255,255,0.06)\'">Close &#x2715;</button>' +
+            '</div>' +
+            '<div id="_intTraceBody" style="color:#8893a0;font-size:12px">Loading trace…</div>' +
+        '</div>';
+        modal.innerHTML = inner;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+        var onEsc = function(e) { if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', onEsc); } };
+        document.addEventListener('keydown', onEsc);
+        fetch('/api/intelligence/briefing/trace', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var body = document.getElementById('_intTraceBody');
+                if (!body) return;
+                if (!d || !d.ok || !d.trace) {
+                    body.innerHTML = '<div style="color:#ff8c42;font-size:12px;line-height:1.6">' + _escapeHtml((d && d.error) || 'No trace available.') + '</div>';
+                    return;
+                }
+                body.innerHTML = _intRenderTrace(key, label, color, d.trace);
+            })
+            .catch(function() {
+                var body = document.getElementById('_intTraceBody');
+                if (body) body.innerHTML = '<div style="color:#ff4d6d">Network error loading trace.</div>';
+            });
+    }
+    window._intOpenReasoningModal = _intOpenReasoningModal;
+
+    function _intTrSection(title, body, open) {
+        var id = '_trs' + (Math.random() * 1e9 | 0);
+        return '<div style="margin-bottom:4px">' +
+            '<button onclick="var b=document.getElementById(\'' + id + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';this.querySelector(\'.trc-chev\').style.transform=open?\'\':\' rotate(90deg)\'" ' +
+            'style="display:flex;align-items:center;gap:7px;width:100%;background:none;border:none;border-top:1px solid rgba(255,255,255,0.06);padding:11px 0 8px;cursor:pointer;color:#8893a0;font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:0.1em;text-transform:uppercase">' +
+                '<span class="trc-chev" style="font-size:13px;transition:transform 200ms ease;' + (open ? 'transform:rotate(90deg)' : '') + '">&#x203A;</span>' +
+                _escapeHtml(title) +
+            '</button>' +
+            '<div id="' + id + '" style="display:' + (open ? 'block' : 'none') + ';padding-bottom:8px">' + body + '</div>' +
+        '</div>';
+    }
+
+    function _intTrPill(label, val, col) {
+        return '<span style="display:inline-block;background:rgba(255,255,255,0.06);border-radius:3px;padding:2px 7px;font-size:9px;color:' + (col || 'rgba(232,244,255,0.5)') + ';margin:2px 3px 2px 0">' + _escapeHtml(String(label)) + ': ' + _escapeHtml(String(val == null ? 'n/a' : val)) + '</span>';
+    }
+
+    function _intTrOppList(list) {
+        var max = list.length ? Math.max.apply(null, list.map(function(o) { return o.score || 0; })) : 100;
+        return list.map(function(o, i) {
+            var pct = max > 0 ? Math.round((o.score || 0) / max * 100) : 0;
+            var win = i === 0;
+            return '<div style="padding:9px 0;border-top:' + (i ? '1px solid rgba(255,255,255,0.04)' : 'none') + '">' +
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:' + (win ? '8px' : '4px') + '">' +
+                    '<span style="font-size:9px;color:#8893a0;width:18px;flex-shrink:0">#' + (i+1) + '</span>' +
+                    '<div style="flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px">' +
+                        '<div style="width:' + pct + '%;height:100%;background:' + (win ? '#27ae60' : 'rgba(255,255,255,0.12)') + ';border-radius:2px;transition:width 0.5s"></div>' +
+                    '</div>' +
+                    '<span style="font-size:10px;font-weight:' + (win ? '700' : '400') + ';color:' + (win ? '#27ae60' : 'rgba(232,244,255,0.35)') + ';width:26px;text-align:right;flex-shrink:0">' + (o.score || 0) + '</span>' +
+                    (win ? '<span style="font-size:8px;background:#27ae60;color:#000;padding:1px 5px;border-radius:3px;font-weight:700;flex-shrink:0">WINNER</span>' : '') +
+                '</div>' +
+                '<div style="padding-left:26px">' +
+                    '<div style="font-size:11px;color:' + (win ? 'rgba(232,244,255,0.92)' : 'rgba(232,244,255,0.5)') + ';font-weight:' + (win ? '600' : '400') + ';margin-bottom:3px">' + _escapeHtml(String(o.title || '')) + '</div>' +
+                    '<div style="font-size:10px;color:#8893a0;margin-bottom:' + (win ? '7px' : '0') + '">' + (o.category ? _escapeHtml(o.category) + ' &middot; ' : '') + _escapeHtml(String(o.urgency || '').replace(/_/g, ' ')) + '</div>' +
+                    (win && o.description ? '<div style="font-size:10px;color:rgba(232,244,255,0.45);line-height:1.55;margin-bottom:7px">' + _escapeHtml(String(o.description)) + '</div>' : '') +
+                    (win && o.scores ? '<div style="display:flex;flex-wrap:wrap">' +
+                        _intTrPill('Alignment', o.scores.founder_alignment, '#7c6cf2') +
+                        _intTrPill('Exp. Value', o.scores.expected_value) +
+                        _intTrPill('Empire', o.scores.empire_impact) +
+                        _intTrPill('Financial', o.scores.financial_impact) +
+                        _intTrPill('Risk', o.scores.risk, '#ff4d6d') +
+                    '</div>' : '') +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function _intTrThrList(list) {
+        var sevCol = { existential:'#ff1744', critical:'#ff4d6d', high:'#ff6b35', medium:'#ff9f43', low:'#ffd166' };
+        return list.map(function(t, i) {
+            var win = i === 0;
+            var col = sevCol[t.severity] || '#ff8c42';
+            return '<div style="padding:9px 0;border-top:' + (i ? '1px solid rgba(255,255,255,0.04)' : 'none') + '">' +
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">' +
+                    '<span style="font-size:9px;color:#8893a0;width:18px;flex-shrink:0">#' + (i+1) + '</span>' +
+                    '<span style="font-size:8px;background:' + col + '22;color:' + col + ';padding:2px 6px;border-radius:3px;font-weight:700;text-transform:uppercase;flex-shrink:0">' + _escapeHtml(String(t.severity || '')) + '</span>' +
+                    '<span style="font-size:9px;color:#8893a0;flex:1">' + _escapeHtml(String(t.type || '').replace(/_/g, ' ')) + '</span>' +
+                    (win ? '<span style="font-size:8px;background:' + col + ';color:#000;padding:1px 5px;border-radius:3px;font-weight:700">WORST</span>' : '<span style="font-size:10px;color:rgba(232,244,255,0.3)">' + (t.score || 0) + '</span>') +
+                '</div>' +
+                '<div style="padding-left:26px">' +
+                    '<div style="font-size:11px;color:' + (win ? 'rgba(232,244,255,0.85)' : 'rgba(232,244,255,0.5)') + ';line-height:1.55;margin-bottom:3px">' + _escapeHtml(String(t.description || '')) + '</div>' +
+                    '<div style="font-size:9px;color:#8893a0">Source: ' + _escapeHtml(String(t.source || '').replace(/_/g, ' ')) + '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function _intTrBnList(list) {
+        var max = list.length ? Math.max.apply(null, list.map(function(b) { return b.impact_score || 0; })) : 100;
+        return list.map(function(b, i) {
+            var win = i === 0;
+            var pct = max > 0 ? Math.round((b.impact_score || 0) / max * 100) : 0;
+            return '<div style="padding:9px 0;border-top:' + (i ? '1px solid rgba(255,255,255,0.04)' : 'none') + '">' +
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">' +
+                    '<span style="font-size:9px;color:#8893a0;width:18px;flex-shrink:0">#' + (i+1) + '</span>' +
+                    '<div style="flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px">' +
+                        '<div style="width:' + pct + '%;height:100%;background:' + (win ? '#ff8c42' : 'rgba(255,255,255,0.12)') + ';border-radius:2px"></div>' +
+                    '</div>' +
+                    '<span style="font-size:10px;color:' + (win ? '#ff8c42' : 'rgba(232,244,255,0.35)') + ';font-weight:' + (win ? '700' : '400') + ';width:26px;text-align:right;flex-shrink:0">' + (b.impact_score || 0) + '</span>' +
+                    (win ? '<span style="font-size:8px;background:#ff8c42;color:#000;padding:1px 5px;border-radius:3px;font-weight:700;flex-shrink:0">WORST</span>' : '') +
+                '</div>' +
+                '<div style="padding-left:26px">' +
+                    '<div style="font-size:11px;color:' + (win ? 'rgba(232,244,255,0.9)' : 'rgba(232,244,255,0.55)') + ';font-weight:' + (win ? '600' : '400') + ';margin-bottom:3px">' + _escapeHtml(String(b.label || '')) + '</div>' +
+                    '<div style="font-size:10px;color:rgba(232,244,255,0.45);line-height:1.5;margin-bottom:' + (win ? '7px' : '0') + '">' + _escapeHtml(String(b.description || '')) + '</div>' +
+                    (win && b.action ? '<div style="font-size:10px;color:#00d4ff;background:rgba(0,212,255,0.07);border-radius:4px;padding:5px 8px;margin-bottom:4px">&#x25B6; ' + _escapeHtml(String(b.action)) + '</div>' : '') +
+                    (win && b.blocked_goals && b.blocked_goals.length ? '<div style="font-size:9px;color:#8893a0">Blocking: ' + _escapeHtml(b.blocked_goals.join(', ').replace(/goal_/g, '').replace(/_/g, ' ')) + '</div>' : '') +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function _intTrGoalList(list) {
+        return list.map(function(g, i) {
+            var win = i === 0;
+            var prob = g.probability_of_success != null ? Math.round(g.probability_of_success * 100) : null;
+            var probCol = prob == null ? 'rgba(232,244,255,0.4)' : prob < 30 ? '#ff4d6d' : prob < 60 ? '#ff8c42' : '#27ae60';
+            return '<div style="padding:9px 0;border-top:' + (i ? '1px solid rgba(255,255,255,0.04)' : 'none') + '">' +
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">' +
+                    '<span style="font-size:9px;color:#8893a0;width:18px;flex-shrink:0">#' + (i+1) + '</span>' +
+                    '<span style="font-size:11px;color:' + (win ? 'rgba(232,244,255,0.9)' : 'rgba(232,244,255,0.5)') + ';font-weight:' + (win ? '600' : '400') + ';flex:1">' + _escapeHtml(String(g.label || '')) + '</span>' +
+                    (win ? '<span style="font-size:8px;background:#00d4ff;color:#000;padding:1px 5px;border-radius:3px;font-weight:700">CHOSEN</span>' : '') +
+                '</div>' +
+                '<div style="padding-left:26px;display:flex;flex-wrap:wrap;margin-bottom:' + (win && g.missing_requirements && g.missing_requirements.length ? '6px' : '0') + '">' +
+                    _intTrPill('Progress', (g.progress_pct || 0) + '%') +
+                    _intTrPill('Weight', g.weight) +
+                    (prob != null ? _intTrPill('Success', prob + '%', probCol) : '') +
+                    _intTrPill('Horizon', String(g.horizon || 'ongoing').replace(/_/g, ' ')) +
+                '</div>' +
+                (win && g.missing_requirements && g.missing_requirements.length ? '<div style="padding-left:26px;font-size:10px;color:#ff8c42">Missing: ' + g.missing_requirements.map(function(r) { return _escapeHtml(String(r)); }).join(', ') + '</div>' : '') +
+            '</div>';
+        }).join('');
+    }
+
+    function _intTrSynthesisBlock(syn) {
+        var h = '';
+        h += '<div style="font-size:10px;margin-bottom:10px">' +
+            'Claude was called: ' + (syn.parse_success ?
+                '<span style="color:#27ae60">Yes &mdash; JSON parsed and used</span>' :
+                '<span style="color:#ff8c42">Yes &mdash; response could not be parsed, deterministic fallbacks used</span>') +
+        '</div>';
+        if (syn.prompt) {
+            var pid = '_trp' + (Math.random() * 1e9 | 0);
+            h += '<button onclick="var b=document.getElementById(\'' + pid + '\');b.style.display=b.style.display===\'none\'?\'block\':\'none\'" ' +
+                'style="background:rgba(124,108,242,0.1);border:1px solid rgba(124,108,242,0.25);border-radius:6px;color:#9d90f5;font-size:11px;padding:7px 14px;cursor:pointer;margin-bottom:8px;display:block">Exact prompt sent to Claude &#x203A;</button>' +
+                '<pre id="' + pid + '" style="display:none;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:14px;font-size:10px;color:rgba(232,244,255,0.6);white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;margin:0 0 12px;line-height:1.6">' + _escapeHtml(String(syn.prompt)) + '</pre>';
+        }
+        if (syn.raw_response) {
+            var rid = '_trr' + (Math.random() * 1e9 | 0);
+            h += '<button onclick="var b=document.getElementById(\'' + rid + '\');b.style.display=b.style.display===\'none\'?\'block\':\'none\'" ' +
+                'style="background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.18);border-radius:6px;color:#00d4ff;font-size:11px;padding:7px 14px;cursor:pointer;margin-bottom:8px;display:block">Claude\'s raw response &#x203A;</button>' +
+                '<pre id="' + rid + '" style="display:none;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:14px;font-size:10px;color:rgba(232,244,255,0.7);white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;margin:0;line-height:1.6">' + _escapeHtml(String(syn.raw_response)) + '</pre>';
+        }
+        return h;
+    }
+
+    function _intRenderTrace(key, label, color, tr) {
+        if (!tr) return '<div style="color:#ff4d6d">No trace data.</div>';
+        var h = [];
+        var isOpp  = key === 'biggest_opportunity';
+        var isThr  = key === 'biggest_threat';
+        var isBn   = key === 'biggest_bottleneck';
+        var isGoal = key === 'highest_leverage_action';
+        var isSyn  = key === 'strategic_focus_this_week' || key === 'strategic_focus_this_month';
+
+        // Context
+        if (tr.context && (tr.context.graph_summary || tr.context.empire_summary || tr.context.perf_summary)) {
+            var ctx = '';
+            if (tr.context.graph_summary) ctx += '<div style="font-size:11px;color:rgba(232,244,255,0.6);line-height:1.6;margin-bottom:8px">' + _escapeHtml(String(tr.context.graph_summary)) + '</div>';
+            if (tr.context.empire_summary) ctx += '<div style="font-size:11px;color:rgba(232,244,255,0.45);line-height:1.55;margin-bottom:8px">' + _escapeHtml(String(tr.context.empire_summary)) + '</div>';
+            if (tr.context.perf_summary) ctx += '<div style="font-size:10px;color:#7c6cf2;background:rgba(124,108,242,0.08);border-radius:4px;padding:6px 9px">' + _escapeHtml(String(tr.context.perf_summary)) + '</div>';
+            h.push(_intTrSection('Founder & Empire Context', ctx, false));
+        }
+
+        // Field-specific data lists
+        if (isOpp && tr.opportunities_analyzed && tr.opportunities_analyzed.length) {
+            h.push(_intTrSection('All Opportunities Scored (' + tr.opportunities_analyzed.length + ')', _intTrOppList(tr.opportunities_analyzed), true));
+        }
+        if (isThr && tr.threats_analyzed && tr.threats_analyzed.length) {
+            h.push(_intTrSection('All Threats Detected (' + tr.threats_analyzed.length + ')', _intTrThrList(tr.threats_analyzed), true));
+        }
+        if (isBn && tr.bottlenecks_analyzed && tr.bottlenecks_analyzed.length) {
+            h.push(_intTrSection('All Bottlenecks Ranked (' + tr.bottlenecks_analyzed.length + ')', _intTrBnList(tr.bottlenecks_analyzed), true));
+        }
+        if (isGoal && tr.goals_analyzed && tr.goals_analyzed.length) {
+            h.push(_intTrSection('All Goals Analyzed (' + tr.goals_analyzed.length + ')', _intTrGoalList(tr.goals_analyzed), true));
+        }
+        if (isSyn) {
+            var total = (tr.opportunities_analyzed||[]).length + (tr.threats_analyzed||[]).length +
+                        (tr.bottlenecks_analyzed||[]).length + (tr.goals_analyzed||[]).length;
+            var synData = '';
+            if ((tr.opportunities_analyzed||[]).length) synData += '<div style="margin-bottom:12px"><div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Opportunities (' + tr.opportunities_analyzed.length + ')</div>' + _intTrOppList(tr.opportunities_analyzed.slice(0, 5)) + '</div>';
+            if ((tr.threats_analyzed||[]).length)       synData += '<div style="margin-bottom:12px"><div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Threats (' + tr.threats_analyzed.length + ')</div>' + _intTrThrList(tr.threats_analyzed.slice(0, 5)) + '</div>';
+            if ((tr.bottlenecks_analyzed||[]).length)   synData += '<div style="margin-bottom:12px"><div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Bottlenecks (' + tr.bottlenecks_analyzed.length + ')</div>' + _intTrBnList(tr.bottlenecks_analyzed.slice(0, 5)) + '</div>';
+            if ((tr.goals_analyzed||[]).length)         synData += '<div><div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Goals (' + tr.goals_analyzed.length + ')</div>' + _intTrGoalList(tr.goals_analyzed.slice(0, 5)) + '</div>';
+            h.push(_intTrSection('All Data Fed to AI (' + total + ' items)', synData, true));
+        }
+
+        // AI synthesis — always shown
+        if (tr.synthesis) {
+            h.push(_intTrSection('AI Synthesis', _intTrSynthesisBlock(tr.synthesis), true));
+        }
+
+        return h.join('');
+    }
+    window._intRenderTrace = _intRenderTrace;
 
     function _intLoadHealth() {
         var el = document.getElementById('intHealthPanel');
