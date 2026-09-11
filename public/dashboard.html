@@ -23475,7 +23475,7 @@ window.apexFileDropHandler = function(e){
                     { key: 'strategic_focus_this_month', label: 'Focus This Month',         value: b.strategic_focus_this_month, color: 'rgba(232,244,255,0.6)' },
                 ];
                 var html = fields.map(function(f) {
-                    return '<div class="int-brief-row" data-brief-key="' + f.key + '" data-brief-label="' + _escapeHtml(f.label) + '" data-brief-color="' + f.color + '" ' +
+                    return '<div class="int-brief-row" data-brief-key="' + f.key + '" data-brief-label="' + _escapeHtml(f.label) + '" data-brief-color="' + f.color + '" data-brief-value="' + _escapeHtml(f.value || '') + '" ' +
                         'style="border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;border-radius:4px;transition:background 120ms ease" ' +
                         'onmouseenter="this.style.background=\'rgba(255,255,255,0.03)\'" onmouseleave="this.style.background=\'\'" ' +
                         'onclick="_intOpenReasoningModal(this)">' +
@@ -23579,8 +23579,9 @@ window.apexFileDropHandler = function(e){
         var key   = row.dataset.briefKey;
         var label = row.dataset.briefLabel || key;
         var color = row.dataset.briefColor || 'rgba(232,244,255,0.8)';
+        var value = row.dataset.briefValue || '';
         var ex = document.getElementById('_intTraceModal');
-        if (ex) { ex.remove(); return; }
+        if (ex) ex.remove(); // always remove old, then open fresh for this field
         var modal = document.createElement('div');
         modal.id = '_intTraceModal';
         modal.setAttribute('role', 'dialog');
@@ -23590,7 +23591,8 @@ window.apexFileDropHandler = function(e){
             '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:16px">' +
                 '<div>' +
                     '<div style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:0.14em;text-transform:uppercase;color:#8893a0;margin-bottom:7px">Reasoning Chain</div>' +
-                    '<div style="font:600 15px/1.3 Inter,sans-serif;color:' + color + '">' + _escapeHtml(label) + '</div>' +
+                    '<div style="font:600 15px/1.3 Inter,sans-serif;color:' + color + ';margin-bottom:' + (value ? '8px' : '0') + '">' + _escapeHtml(label) + '</div>' +
+                    (value ? '<div style="font-size:11px;color:rgba(232,244,255,0.6);line-height:1.55;max-width:520px">' + _escapeHtml(value) + '</div>' : '') +
                 '</div>' +
                 '<button onclick="document.getElementById(\'_intTraceModal\').remove()" style="flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(232,244,255,0.45);padding:7px 15px;font-size:12px;cursor:pointer;transition:background 150ms ease" onmouseenter="this.style.background=\'rgba(255,255,255,0.1)\'" onmouseleave="this.style.background=\'rgba(255,255,255,0.06)\'">Close &#x2715;</button>' +
             '</div>' +
@@ -23771,18 +23773,24 @@ window.apexFileDropHandler = function(e){
             h.push(_intTrSection('Founder & Empire Context', ctx, false));
         }
 
+        var _noData = '<div style="font-size:11px;color:#8893a0;padding:8px 0">No data available yet — run the SIE analysis cycle to populate.</div>';
+
         // Field-specific data lists
-        if (isOpp && tr.opportunities_analyzed && tr.opportunities_analyzed.length) {
-            h.push(_intTrSection('All Opportunities Scored (' + tr.opportunities_analyzed.length + ')', _intTrOppList(tr.opportunities_analyzed), true));
+        if (isOpp) {
+            var oppData = (tr.opportunities_analyzed && tr.opportunities_analyzed.length) ? _intTrOppList(tr.opportunities_analyzed) : _noData;
+            h.push(_intTrSection('All Opportunities Scored (' + (tr.opportunities_analyzed||[]).length + ')', oppData, true));
         }
-        if (isThr && tr.threats_analyzed && tr.threats_analyzed.length) {
-            h.push(_intTrSection('All Threats Detected (' + tr.threats_analyzed.length + ')', _intTrThrList(tr.threats_analyzed), true));
+        if (isThr) {
+            var thrData = (tr.threats_analyzed && tr.threats_analyzed.length) ? _intTrThrList(tr.threats_analyzed) : _noData;
+            h.push(_intTrSection('All Threats Detected (' + (tr.threats_analyzed||[]).length + ')', thrData, true));
         }
-        if (isBn && tr.bottlenecks_analyzed && tr.bottlenecks_analyzed.length) {
-            h.push(_intTrSection('All Bottlenecks Ranked (' + tr.bottlenecks_analyzed.length + ')', _intTrBnList(tr.bottlenecks_analyzed), true));
+        if (isBn) {
+            var bnData = (tr.bottlenecks_analyzed && tr.bottlenecks_analyzed.length) ? _intTrBnList(tr.bottlenecks_analyzed) : _noData;
+            h.push(_intTrSection('All Bottlenecks Ranked (' + (tr.bottlenecks_analyzed||[]).length + ')', bnData, true));
         }
-        if (isGoal && tr.goals_analyzed && tr.goals_analyzed.length) {
-            h.push(_intTrSection('All Goals Analyzed (' + tr.goals_analyzed.length + ')', _intTrGoalList(tr.goals_analyzed), true));
+        if (isGoal) {
+            var goalData = (tr.goals_analyzed && tr.goals_analyzed.length) ? _intTrGoalList(tr.goals_analyzed) : _noData;
+            h.push(_intTrSection('All Goals Analyzed (' + (tr.goals_analyzed||[]).length + ')', goalData, true));
         }
         if (isSyn) {
             var total = (tr.opportunities_analyzed||[]).length + (tr.threats_analyzed||[]).length +
@@ -23792,12 +23800,13 @@ window.apexFileDropHandler = function(e){
             if ((tr.threats_analyzed||[]).length)       synData += '<div style="margin-bottom:12px"><div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Threats (' + tr.threats_analyzed.length + ')</div>' + _intTrThrList(tr.threats_analyzed.slice(0, 5)) + '</div>';
             if ((tr.bottlenecks_analyzed||[]).length)   synData += '<div style="margin-bottom:12px"><div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Bottlenecks (' + tr.bottlenecks_analyzed.length + ')</div>' + _intTrBnList(tr.bottlenecks_analyzed.slice(0, 5)) + '</div>';
             if ((tr.goals_analyzed||[]).length)         synData += '<div><div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Goals (' + tr.goals_analyzed.length + ')</div>' + _intTrGoalList(tr.goals_analyzed.slice(0, 5)) + '</div>';
+            if (!synData) synData = _noData;
             h.push(_intTrSection('All Data Fed to AI (' + total + ' items)', synData, true));
         }
 
-        // AI synthesis — always shown
+        // AI synthesis — collapsed by default; same content for all 6 fields since one Claude call generates all
         if (tr.synthesis) {
-            h.push(_intTrSection('AI Synthesis', _intTrSynthesisBlock(tr.synthesis), true));
+            h.push(_intTrSection('AI Synthesis (shared across all 6 fields)', _intTrSynthesisBlock(tr.synthesis), false));
         }
 
         return h.join('');
