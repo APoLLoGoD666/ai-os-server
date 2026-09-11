@@ -159,6 +159,10 @@ module.exports = {
         return this.read('01 Executive/Lessons.md') || '';
     },
 
+    getStandingRules() {
+        return this.read('01 Executive/Standing-Rules.md') || '';
+    },
+
     // Returns the last N lessons — merges disk content with in-memory buffer.
     // Async variant also pulls from Supabase to recover lessons from prior restarts.
     getRecentLessons(n = 12) {
@@ -200,26 +204,30 @@ module.exports = {
     },
 
     getFullContext() {
-        const northStar = this.read('01 Executive/North-Star.md');
-        const lessons = this.read('01 Executive/Lessons.md');
-        const features = this.read('01 Executive/Features.md');
+        const standingRules = this.read('01 Executive/Standing-Rules.md');
+        const northStar     = this.read('01 Executive/North-Star.md');
+        const lessons       = this.read('01 Executive/Lessons.md');
+        const features      = this.read('01 Executive/Features.md');
         const parts = [];
-        if (northStar) parts.push('# NORTH STAR\n' + northStar);
-        if (lessons) parts.push('# LESSONS LEARNED\n' + lessons);
-        if (features) parts.push('# COMPLETED FEATURES\n' + features);
+        if (standingRules) parts.push('# STANDING RULES\n' + standingRules);
+        if (northStar)     parts.push('# NORTH STAR\n' + northStar);
+        if (lessons)       parts.push('# LESSONS LEARNED\n' + lessons);
+        if (features)      parts.push('# COMPLETED FEATURES\n' + features);
         return parts.length ? parts.join('\n\n---\n\n') : '';
     },
 
     async getFullContextAsync() {
-        const [northStar, lessons, features] = await Promise.all([
+        const [standingRules, northStar, lessons, features] = await Promise.all([
+            _apiRead('01 Executive/Standing-Rules.md'),
             _apiRead('01 Executive/North-Star.md'),
             _apiRead('01 Executive/Lessons.md'),
             _apiRead('01 Executive/Features.md'),
         ]);
         const parts = [];
-        if (northStar) parts.push('# NORTH STAR\n' + northStar);
-        if (lessons)   parts.push('# LESSONS LEARNED\n' + lessons);
-        if (features)  parts.push('# COMPLETED FEATURES\n' + features);
+        if (standingRules) parts.push('# STANDING RULES\n' + standingRules);
+        if (northStar)     parts.push('# NORTH STAR\n' + northStar);
+        if (lessons)       parts.push('# LESSONS LEARNED\n' + lessons);
+        if (features)      parts.push('# COMPLETED FEATURES\n' + features);
         return parts.length ? parts.join('\n\n---\n\n') : '';
     },
 

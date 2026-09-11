@@ -241,6 +241,17 @@ async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 
     let systemPrompt = council ? agent.system_prompt : agent.system_prompt + _ESCALATION_PROTOCOL;
     if (humanId) systemPrompt += _TELEMETRY_PROTOCOL;
 
+    // Inject standing rules (always apply) + TF-IDF vault context for non-council calls
+    if (!council) {
+        try {
+            const obsidianMemory = require('./obsidian-memory');
+            const standingRules = obsidianMemory.getStandingRules();
+            if (standingRules) systemPrompt = `STANDING RULES (always apply):\n${standingRules}\n\n` + systemPrompt;
+            const vaultCtx = obsidianMemory.getVaultContext(userMessage);
+            if (vaultCtx) systemPrompt += '\n\n' + vaultCtx;
+        } catch {}
+    }
+
     // Tool use: agents can write/read telemetry when a humanId context is provided
     const tools = humanId ? [telemetry.TELEMETRY_TOOL, telemetry.READ_TELEMETRY_TOOL] : undefined;
 
