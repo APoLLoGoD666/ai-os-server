@@ -17069,9 +17069,9 @@ async function initOverviewPage() {
     // ── A. NEEDS YOU ──
     if (needsEl) {
         if (!inboxJ) {
-            window.setState(needsEl,'failed',{message:"APEX couldn’t reach your priority inbox.",retryFn:'initOverviewPage'});
+            window.setState(needsEl,'failed',{message:"APEX couldn't reach your priority inbox.",retryFn:'initOverviewPage'});
         } else if (!inbox) {
-            window.setState(needsEl,'failed',{message:"APEX couldn’t load your priority inbox.",retryFn:'initOverviewPage'});
+            window.setState(needsEl,'failed',{message:"APEX couldn't load your priority inbox.",retryFn:'initOverviewPage'});
         } else {
             var items = _tdNeedsItems(inbox);
             if (items.length===0) {
@@ -17095,9 +17095,9 @@ async function initOverviewPage() {
     // ── B. APEX NOTICED ──
     if (noticedEl) {
         if (!briefJ) {
-            window.setState(noticedEl,'failed',{message:"APEX couldn’t update part of your briefing.",retryFn:'initOverviewPage'});
+            window.setState(noticedEl,'failed',{message:"APEX couldn't update part of your briefing.",retryFn:'initOverviewPage'});
         } else if (!brief) {
-            window.setState(noticedEl,'failed',{message:"APEX couldn’t load briefing data.",retryFn:'initOverviewPage'});
+            window.setState(noticedEl,'failed',{message:"APEX couldn't load briefing data.",retryFn:'initOverviewPage'});
         } else {
             var rows = _tdInsights(brief);
             if (rows.length===0) {
@@ -22484,22 +22484,22 @@ window.apexFileDropHandler = function(e){
         _actnLoadCapabilities();
     };
 
-    // Smart-diff hash — skip re-render when the pending list hasn’t changed.
-    var _actnLastPendingHash = ‘’;
+    // Smart-diff hash — skip re-render when the pending list hasn't changed.
+    var _actnLastPendingHash = '';
 
     function _actnLoadPending() {
-        var panel = document.getElementById(‘actnPendingPanel’);
-        var list  = document.getElementById(‘actnPendingList’);
-        var count = document.getElementById(‘actnPendingCount’);
+        var panel = document.getElementById('actnPendingPanel');
+        var list  = document.getElementById('actnPendingList');
+        var count = document.getElementById('actnPendingCount');
         if (!panel || !list) return;
         // Show loading skeleton only on first load (no existing content).
-        if (!list.children.length) _actnSetState(list, panel, ‘loading’);
-        fetch(‘/api/tasks’, { headers: _h() })
+        if (!list.children.length) _actnSetState(list, panel, 'loading');
+        fetch('/api/tasks', { headers: _h() })
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 var tasks = d.tasks || d || [];
                 var pending = (Array.isArray(tasks) ? tasks : []).filter(function(t) {
-                    return t.status === ‘awaiting_approval’ || t.status === ‘pending_approval’ || t.status === ‘approval_required’;
+                    return t.status === 'awaiting_approval' || t.status === 'pending_approval' || t.status === 'approval_required';
                 });
                 pending.sort(function(a, b) {
                     var pa = window._apexActionPriority(a).tier;
@@ -22508,30 +22508,30 @@ window.apexFileDropHandler = function(e){
                     return new Date(b.created_at || 0) - new Date(a.created_at || 0);
                 });
                 // Always update badge + count.
-                var badge = document.getElementById(‘navActionsBadge’);
-                if (badge) { badge.textContent = pending.length || ‘’; badge.style.display = pending.length ? ‘’ : ‘none’; }
-                if (count) count.textContent = pending.length ? pending.length + ‘ pending’ : ‘caught up’;
+                var badge = document.getElementById('navActionsBadge');
+                if (badge) { badge.textContent = pending.length || ''; badge.style.display = pending.length ? '' : 'none'; }
+                if (count) count.textContent = pending.length ? pending.length + ' pending' : 'caught up';
                 // Smart diff — skip re-render if list is identical.
-                var newHash = pending.map(function(t) { return t.id + ‘:’ + t.status; }).join(‘|’);
+                var newHash = pending.map(function(t) { return t.id + ':' + t.status; }).join('|');
                 if (newHash === _actnLastPendingHash && list.children.length > 0) return;
                 _actnLastPendingHash = newHash;
                 if (!pending.length) {
-                    _actnSetState(list, panel, ‘empty’, { message: ‘No pending approvals — you\’re caught up.’ });
+                    _actnSetState(list, panel, 'empty', { message: 'No pending approvals — you\'re caught up.' });
                     return;
                 }
                 // Top 5 visible, rest behind "Show more".
                 var MAX_SHOW = 5;
                 var visible = pending.slice(0, MAX_SHOW);
                 var hidden  = pending.slice(MAX_SHOW);
-                list.removeAttribute(‘aria-busy’);
-                list.innerHTML = visible.map(_actnRenderPendingCard).join(‘’);
+                list.removeAttribute('aria-busy');
+                list.innerHTML = visible.map(_actnRenderPendingCard).join('');
                 if (hidden.length) {
-                    var btn = document.createElement(‘button’);
-                    btn.className = ‘actn-show-more-btn’;
-                    btn.textContent = ‘Show ‘ + hidden.length + ‘ more’;
+                    var btn = document.createElement('button');
+                    btn.className = 'actn-show-more-btn';
+                    btn.textContent = 'Show ' + hidden.length + ' more';
                     btn.onclick = function() {
                         hidden.forEach(function(t) {
-                            var tmp = document.createElement(‘div’);
+                            var tmp = document.createElement('div');
                             tmp.innerHTML = _actnRenderPendingCard(t);
                             list.insertBefore(tmp.firstChild, btn);
                         });
@@ -22539,10 +22539,10 @@ window.apexFileDropHandler = function(e){
                     };
                     list.appendChild(btn);
                 }
-                panel.setAttribute(‘data-apex-state’, ‘ready’);
+                panel.setAttribute('data-apex-state', 'ready');
             })
             .catch(function() {
-                _actnSetState(list, panel, ‘failed’, { message: ‘Could not load pending approvals.’, retryFn: ‘_actnLoadPending()’ });
+                _actnSetState(list, panel, 'failed', { message: 'Could not load pending approvals.', retryFn: '_actnLoadPending()' });
             });
     }
     window._actnLoadPending = _actnLoadPending;
