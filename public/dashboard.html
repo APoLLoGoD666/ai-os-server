@@ -440,6 +440,32 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 }
 .actn-reject-actions { display: flex; gap: 8px; }
 
+/* Redesigned pending-approval card */
+.actn-card2 {
+    background: rgba(18,18,30,0.97);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.actn-card2:hover { border-color: rgba(255,255,255,0.15); box-shadow: 0 2px 12px rgba(0,0,0,0.3); }
+.actn-card2-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.actn-card2-type { font:600 10px/1 'JetBrains Mono',monospace; letter-spacing:0.1em; text-transform:uppercase; color:rgba(232,244,255,0.38); }
+.actn-card2-title { font:600 13px/1.4 Inter,sans-serif; color:rgba(232,244,255,0.92); }
+.actn-card2-desc  { font:400 12px/1.55 Inter,sans-serif; color:rgba(232,244,255,0.58); }
+.actn-card2-meta  { font:400 11px/1 Inter,sans-serif; color:rgba(232,244,255,0.32); }
+.actn-card2-btns  { display:flex; gap:8px; margin-top:2px; }
+.actn-show-more-btn {
+    width:100%; padding:10px; background:transparent;
+    border:1px dashed rgba(255,255,255,0.1); border-radius:8px;
+    color:rgba(232,244,255,0.38); font:500 12px/1 Inter,sans-serif;
+    cursor:pointer; transition:all 150ms ease;
+}
+.actn-show-more-btn:hover { border-color:rgba(255,255,255,0.2); color:rgba(232,244,255,0.7); }
+
 .actn-stub {
     padding: 40px 20px;
     text-align: center;
@@ -11475,7 +11501,7 @@ if(pipe){
                                 </div>
                                 <span id="actnPendingCount" style="font-size:10px;color:#8893a0">—</span>
                             </div>
-                            <div id="actnPendingList" style="display:flex;flex-direction:column;gap:8px;padding:10px" aria-busy="true"></div>
+                            <div id="actnPendingList" style="display:flex;flex-direction:column;gap:8px;padding:10px;max-height:480px;overflow-y:auto" aria-busy="true"></div>
                         </section>
                         <!-- H-12: In-flight tasks -->
                         <section role="region" aria-label="In-flight tasks" class="ds-panel" id="actnInFlightPanel" data-apex-state="loading">
@@ -22433,13 +22459,13 @@ window.apexFileDropHandler = function(e){
         window.actionsRefresh();
         // V-11-K: catch any disclosures rendered by refresh.
         setTimeout(function() { if (window._disclosure) window._disclosure.initAll(); }, 250);
-        // H-12: poll every 15s while active — reuses activePage guard.
+        // Poll every 30s while active — smart diff skips re-render when nothing changed.
         if (_actnPollTimer) clearInterval(_actnPollTimer);
         _actnPollTimer = setInterval(function() {
             if (window.activePage !== 'actions') return;
             _actnLoadPending();
             _actnLoadInFlight();
-        }, 15000);
+        }, 30000);
     };
     window.actionsPausePage = function() {
         if (_actnPollTimer) { clearInterval(_actnPollTimer); _actnPollTimer = null; }
@@ -22458,112 +22484,105 @@ window.apexFileDropHandler = function(e){
         _actnLoadCapabilities();
     };
 
-    // H-5: setState + H-2 canonical card render.
+    // Smart-diff hash — skip re-render when the pending list hasn’t changed.
+    var _actnLastPendingHash = ‘’;
+
     function _actnLoadPending() {
-        var panel = document.getElementById('actnPendingPanel');
-        var list  = document.getElementById('actnPendingList');
-        var count = document.getElementById('actnPendingCount');
+        var panel = document.getElementById(‘actnPendingPanel’);
+        var list  = document.getElementById(‘actnPendingList’);
+        var count = document.getElementById(‘actnPendingCount’);
         if (!panel || !list) return;
-        _actnSetState(list, panel, 'loading');
-        fetch('/api/tasks', { headers: _h() })
+        // Show loading skeleton only on first load (no existing content).
+        if (!list.children.length) _actnSetState(list, panel, ‘loading’);
+        fetch(‘/api/tasks’, { headers: _h() })
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 var tasks = d.tasks || d || [];
                 var pending = (Array.isArray(tasks) ? tasks : []).filter(function(t) {
-                    return t.status === 'awaiting_approval' || t.status === 'pending_approval' || t.status === 'approval_required';
+                    return t.status === ‘awaiting_approval’ || t.status === ‘pending_approval’ || t.status === ‘approval_required’;
                 });
-                // H-8: sort by priority tier, then created_at desc.
                 pending.sort(function(a, b) {
                     var pa = window._apexActionPriority(a).tier;
                     var pb = window._apexActionPriority(b).tier;
                     if (pa !== pb) return pa - pb;
                     return new Date(b.created_at || 0) - new Date(a.created_at || 0);
                 });
-                var badge = document.getElementById('navActionsBadge');
-                if (badge) { badge.textContent = pending.length || ''; badge.style.display = pending.length ? '' : 'none'; }
-                if (count) count.textContent = pending.length + ' pending';
+                // Always update badge + count.
+                var badge = document.getElementById(‘navActionsBadge’);
+                if (badge) { badge.textContent = pending.length || ‘’; badge.style.display = pending.length ? ‘’ : ‘none’; }
+                if (count) count.textContent = pending.length ? pending.length + ‘ pending’ : ‘caught up’;
+                // Smart diff — skip re-render if list is identical.
+                var newHash = pending.map(function(t) { return t.id + ‘:’ + t.status; }).join(‘|’);
+                if (newHash === _actnLastPendingHash && list.children.length > 0) return;
+                _actnLastPendingHash = newHash;
                 if (!pending.length) {
-                    _actnSetState(list, panel, 'empty', { message: 'No pending approvals — you’re caught up.' });
+                    _actnSetState(list, panel, ‘empty’, { message: ‘No pending approvals — you\’re caught up.’ });
                     return;
                 }
-                list.removeAttribute('aria-busy');
-                list.innerHTML = pending.map(_actnRenderPendingCard).join('');
-                panel.setAttribute('data-apex-state', 'ready');
-                // V-11-K: wire canonical disclosure primitive on new cards.
-                if (window._disclosure) window._disclosure.initAll(list);
+                // Top 5 visible, rest behind "Show more".
+                var MAX_SHOW = 5;
+                var visible = pending.slice(0, MAX_SHOW);
+                var hidden  = pending.slice(MAX_SHOW);
+                list.removeAttribute(‘aria-busy’);
+                list.innerHTML = visible.map(_actnRenderPendingCard).join(‘’);
+                if (hidden.length) {
+                    var btn = document.createElement(‘button’);
+                    btn.className = ‘actn-show-more-btn’;
+                    btn.textContent = ‘Show ‘ + hidden.length + ‘ more’;
+                    btn.onclick = function() {
+                        hidden.forEach(function(t) {
+                            var tmp = document.createElement(‘div’);
+                            tmp.innerHTML = _actnRenderPendingCard(t);
+                            list.insertBefore(tmp.firstChild, btn);
+                        });
+                        btn.remove();
+                    };
+                    list.appendChild(btn);
+                }
+                panel.setAttribute(‘data-apex-state’, ‘ready’);
             })
             .catch(function() {
-                _actnSetState(list, panel, 'failed', { message: 'Could not load pending approvals.', retryFn: '_actnLoadPending()' });
+                _actnSetState(list, panel, ‘failed’, { message: ‘Could not load pending approvals.’, retryFn: ‘_actnLoadPending()’ });
             });
     }
     window._actnLoadPending = _actnLoadPending;
 
     function _actnRenderPendingCard(t) {
-        var id       = String(t.id);
-        var icon     = window._apexActionIcon(t.task_type);
-        var isCouncil = (String(t.id||'').startsWith('COUNCIL-') || String((t.metadata||{}).type||'').startsWith('council'));
-        var label    = _actnEscape(isCouncil ? (t.title||'Council Decision') : (t.task_type || t.type || 'Task'));
-        var priority = window._apexActionPriority(t);
-        var info     = window._apexActionInfo(t);
-        var meta     = t.metadata || {};
-        var rawDesc  = t.description || meta.recommendation || meta.task_title || '';
-        var descFull = String(rawDesc);
-        var truncated = descFull.length > 200 ? descFull.slice(0, 200) + '…' : descFull;
-        var descHtml = _actnEscape(truncated || 'No description provided.');
-        var origin   = _actnEscape(info.origin);
-        var revLabel = info.reversibility === 'yes'     ? 'Reversible'
-                       : info.reversibility === 'partial' ? 'Partially reversible'
-                       :                                    'Not reversible';
-        var irreversibleWarn = info.reversibility === 'no'
-            ? '<div class="actn-warn-irreversible">This action cannot be undone once run.</div>'
-            : '';
-        // V-11-K: evidence uses the canonical V-11-J contract.
-        var evidenceRefs = Array.isArray(t.evidence_refs) ? t.evidence_refs : [];
-        var evidenceHtml = (typeof window._renderEvidenceRefs === 'function')
-            ? window._renderEvidenceRefs(evidenceRefs)
-            : '<p class="apex-disclosure-empty">No evidence references available.</p>';
-        // V-11-K: L0 keeps icon/title/priority/approval buttons. L1 hides WHAT/WHY/cost/risk;
-        // L2 (nested disclosure) hides evidence. Approval buttons NEVER hide.
-        return '<div class="actn-card apex-disclosure" data-open="false" data-actn-task-id="' + _actnEscape(id) + '">' +
-            '<div class="actn-card-header">' +
-                '<button type="button" class="apex-disclosure-trigger" aria-label="Show context for ' + label + '">' +
-                    '<span class="apex-disclosure-chevron" aria-hidden="true">›</span>' +
-                    '<span class="actn-card-icon" aria-hidden="true">' + icon + '</span>' +
-                    '<span class="actn-card-title">' + label + '</span>' +
-                '</button>' +
-                '<span class="actn-priority-chip" style="background:' + priority.color + '" aria-label="Priority: ' + priority.label + '">' + priority.label + '</span>' +
+        var id        = String(t.id);
+        var isCouncil = (id.startsWith('COUNCIL-') || String((t.metadata||{}).type||'').startsWith('council'));
+        var isInbox   = id.startsWith('INBOX-');
+        var typeLabel = isCouncil ? 'Council Decision' : isInbox ? 'Inbox Note' : (t.task_type || t.type || 'Task');
+        var priority  = window._apexActionPriority(t);
+        var info      = window._apexActionInfo(t);
+        var meta      = t.metadata || {};
+        // Title: use t.title for council/inbox tasks, fall back to task_type
+        var title     = _actnEscape(String(t.title || typeLabel).slice(0, 120));
+        // Description: recommendation or body, only shown if different from title
+        var rawDesc   = t.description || meta.recommendation || meta.body || '';
+        var desc      = rawDesc && rawDesc !== t.title ? _actnEscape(String(rawDesc).slice(0, 180)) + (rawDesc.length > 180 ? '…' : '') : '';
+        // Meta line: origin + time ago
+        var timeStr   = (t.created_at || t.updated_at) ? ' · ' + _timeAgo(t.created_at || t.updated_at) : '';
+        var metaLine  = _actnEscape(info.origin) + timeStr;
+        var irrevWarn = info.reversibility === 'no'
+            ? '<div style="font:600 11px/1.4 Inter,sans-serif;color:#ff4d6d;padding:2px 0">⚠ Cannot be undone</div>' : '';
+        return '<div class="actn-card2" style="border-left:3px solid ' + priority.color + '" data-actn-task-id="' + _actnEscape(id) + '">' +
+            '<div class="actn-card2-top">' +
+                '<span class="actn-card2-type">' + _actnEscape(typeLabel) + '</span>' +
+                '<span class="actn-priority-chip" style="background:' + priority.color + ';border-radius:4px;font-size:10px;padding:2px 7px;font-weight:700;letter-spacing:0.07em">' + priority.label + '</span>' +
             '</div>' +
-            irreversibleWarn +
-            '<div class="apex-disclosure-body">' +
-                '<div class="actn-card-what"><strong style="color:rgba(232,244,255,0.6);font-size:10px;letter-spacing:0.08em">WHAT:</strong> ' + descHtml + '</div>' +
-                '<div class="actn-card-why"><strong style="color:rgba(232,244,255,0.5);font-size:10px;letter-spacing:0.08em">WHY:</strong> ' + origin + '</div>' +
-                '<div class="actn-cost-row">' +
-                    '<span><strong style="color:rgba(232,244,255,0.5)">COST:</strong> ' + _actnEscape(info.cost) + '</span>' +
-                    '<span class="sep">·</span>' +
-                    '<span><strong style="color:rgba(232,244,255,0.5)">RISK:</strong> ' + _actnEscape(info.risk) + '</span>' +
-                    '<span class="sep">·</span>' +
-                    '<span>' + revLabel + '</span>' +
-                '</div>' +
-                '<div class="apex-disclosure" data-open="false" style="margin-top:8px">' +
-                    '<button type="button" class="apex-disclosure-trigger apex-disclosure-label-l1" aria-label="Show evidence">' +
-                        '<span class="apex-disclosure-chevron" aria-hidden="true">›</span>' +
-                        '<span>Evidence</span>' +
-                    '</button>' +
-                    '<div class="apex-disclosure-body">' +
-                        '<div class="actn-card-evidence" style="padding-top:6px">' + evidenceHtml + '</div>' +
-                    '</div>' +
-                '</div>' +
-            '</div>' +
-            '<div class="actn-card-actions">' +
-                '<button class="actn-card-btn approve" data-actn-appr="' + _actnEscape(id) + '" aria-label="Approve action">Approve</button>' +
-                '<button class="actn-card-btn detail"  data-actn-detail="' + _actnEscape(id) + '" aria-label="View action detail">View detail</button>' +
-                '<button class="actn-card-btn reject"  data-actn-reject-init="' + _actnEscape(id) + '" aria-label="Reject action">Reject</button>' +
+            '<div class="actn-card2-title">' + title + '</div>' +
+            (desc ? '<div class="actn-card2-desc">' + desc + '</div>' : '') +
+            irrevWarn +
+            '<div class="actn-card2-meta">' + metaLine + '</div>' +
+            '<div class="actn-card2-btns">' +
+                '<button class="actn-card-btn approve" data-actn-appr="' + _actnEscape(id) + '" aria-label="Approve">Approve</button>' +
+                '<button class="actn-card-btn reject"  data-actn-reject-init="' + _actnEscape(id) + '" aria-label="Reject">Reject</button>' +
             '</div>' +
             '<div class="actn-reject-reason" data-actn-reject-panel="' + _actnEscape(id) + '" style="display:none">' +
-                '<label style="font-size:11px;color:rgba(232,244,255,0.6)">Tell APEX why (optional — helps it improve)</label>' +
+                '<label style="font-size:11px;color:rgba(232,244,255,0.6)">Reason (optional — helps APEX improve)</label>' +
                 '<textarea maxlength="280" placeholder="e.g. Wrong priority, too expensive, not needed now"></textarea>' +
                 '<div class="actn-reject-actions">' +
-                    '<button class="actn-card-btn reject" data-actn-reject-confirm="' + _actnEscape(id) + '">Confirm Rejection</button>' +
+                    '<button class="actn-card-btn reject" data-actn-reject-confirm="' + _actnEscape(id) + '">Confirm</button>' +
                     '<button class="actn-card-btn" style="background:rgba(255,255,255,0.05);color:rgba(232,244,255,0.7);border-color:rgba(255,255,255,0.1)" data-actn-reject-cancel="' + _actnEscape(id) + '">Cancel</button>' +
                 '</div>' +
             '</div>' +
@@ -23031,7 +23050,21 @@ window.apexFileDropHandler = function(e){
         var permApprove     = t.dataset.actnPermApprove;
         var permDeny        = t.dataset.actnPermDeny;
 
-        if (apprId)       { _actnOpenModal(apprId); }
+        if (apprId) {
+            var origTxt = t.textContent;
+            t.textContent = '…'; t.disabled = true;
+            fetch('/api/tasks/approve', { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, _h()), body: JSON.stringify({ taskId: apprId }) })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (typeof window._v11eToast === 'function') window._v11eToast(d && d.ok ? 'Approved ✓' : 'Approval failed');
+                    _actnLastPendingHash = '';
+                    setTimeout(function() { _actnLoadPending(); _actnLoadRecent(); _actnLoadInFlight(); }, 300);
+                })
+                .catch(function() {
+                    t.textContent = origTxt; t.disabled = false;
+                    if (typeof window._v11eToast === 'function') window._v11eToast('Request failed');
+                });
+        }
         if (detailId)     { _actnOpenModal(detailId); }
         if (rejectInitId) {
             var panel = document.querySelector('[data-actn-reject-panel="' + rejectInitId.replace(/"/g,'') + '"]');
