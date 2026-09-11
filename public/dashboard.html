@@ -23466,23 +23466,111 @@ window.apexFileDropHandler = function(e){
                 }
                 var b = d.briefing;
                 if (ageEl && b.generated_at) ageEl.textContent = 'Generated ' + _timeAgo(b.generated_at) + ' · 6h cache';
+                var ev = b._evidence || {};
                 var fields = [
-                    { label: 'Biggest Opportunity',       value: b.biggest_opportunity,       color: '#27ae60' },
-                    { label: 'Biggest Threat',            value: b.biggest_threat,            color: '#ff4d6d' },
-                    { label: 'Biggest Bottleneck',        value: b.biggest_bottleneck,        color: '#ff8c42' },
-                    { label: 'Highest Leverage Action',   value: b.highest_leverage_action,   color: '#00d4ff' },
-                    { label: 'Focus This Week',           value: b.strategic_focus_this_week,  color: 'rgba(232,244,255,0.75)' },
-                    { label: 'Focus This Month',          value: b.strategic_focus_this_month, color: 'rgba(232,244,255,0.6)' },
+                    { key: 'biggest_opportunity',      label: 'Biggest Opportunity',       value: b.biggest_opportunity,        color: '#27ae60' },
+                    { key: 'biggest_threat',           label: 'Biggest Threat',             value: b.biggest_threat,             color: '#ff4d6d' },
+                    { key: 'biggest_bottleneck',       label: 'Biggest Bottleneck',         value: b.biggest_bottleneck,         color: '#ff8c42' },
+                    { key: 'highest_leverage_action',  label: 'Highest Leverage Action',    value: b.highest_leverage_action,    color: '#00d4ff' },
+                    { key: 'strategic_focus_this_week',  label: 'Focus This Week',          value: b.strategic_focus_this_week,  color: 'rgba(232,244,255,0.75)' },
+                    { key: 'strategic_focus_this_month', label: 'Focus This Month',         value: b.strategic_focus_this_month, color: 'rgba(232,244,255,0.6)' },
                 ];
                 var html = fields.map(function(f) {
-                    return '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
-                        '<div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:3px">' + _escapeHtml(f.label) + '</div>' +
-                        '<div style="font-size:11px;color:' + f.color + ';line-height:1.5">' + _escapeHtml(f.value || 'Unavailable — insufficient data') + '</div>' +
+                    var evHtml = _intBriefingEvidenceHtml(f.key, ev[f.key]);
+                    return '<div class="int-brief-row" data-int-brief-key="' + f.key + '" style="border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer" onclick="_intBriefingToggle(this)">' +
+                        '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px">' +
+                            '<div>' +
+                                '<div style="font-size:9px;color:#8893a0;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">' + _escapeHtml(f.label) + '</div>' +
+                                '<div style="font-size:11px;color:' + f.color + ';line-height:1.5">' + _escapeHtml(f.value || 'Unavailable — insufficient data') + '</div>' +
+                            '</div>' +
+                            (evHtml ? '<span class="int-brief-chevron" style="font-size:11px;color:rgba(232,244,255,0.3);margin-left:8px;flex-shrink:0;transition:transform 200ms ease">›</span>' : '') +
+                        '</div>' +
+                        (evHtml ? '<div class="int-brief-evidence" style="display:none;padding-bottom:10px">' + evHtml + '</div>' : '') +
                     '</div>';
                 }).join('');
                 window.setState(el, 'ready', { html: html });
             })
             .catch(function() { window.setState(el, 'failed', { message: 'Briefing unavailable.', retryFn: 'intelligenceRefresh()' }); });
+    }
+
+    function _intBriefingToggle(row) {
+        var panel = row.querySelector('.int-brief-evidence');
+        var chevron = row.querySelector('.int-brief-chevron');
+        if (!panel) return;
+        var open = panel.style.display !== 'none';
+        panel.style.display = open ? 'none' : 'block';
+        if (chevron) chevron.style.transform = open ? '' : 'rotate(90deg)';
+    }
+    window._intBriefingToggle = _intBriefingToggle;
+
+    function _intBriefingEvidenceHtml(key, ev) {
+        if (!ev) return '';
+        var lines = [];
+        var s = function(v) { return _escapeHtml(String(v || '')); };
+        var pill = function(label, val, col) {
+            return '<span style="display:inline-block;background:rgba(255,255,255,0.06);border-radius:4px;padding:2px 7px;font-size:10px;color:' + (col || 'rgba(232,244,255,0.55)') + ';margin:2px 3px 2px 0">' + s(label) + ': ' + s(val) + '</span>';
+        };
+        if (ev.type === 'opportunity') {
+            lines.push('<div style="font-size:10px;color:rgba(232,244,255,0.45);margin-bottom:6px">Source: detected opportunity</div>');
+            lines.push('<div style="font-size:11px;color:rgba(232,244,255,0.8);font-weight:600;margin-bottom:4px">' + s(ev.title) + '</div>');
+            if (ev.description) lines.push('<div style="font-size:11px;color:rgba(232,244,255,0.55);line-height:1.5;margin-bottom:6px">' + s(ev.description) + '</div>');
+            if (ev.scores) {
+                lines.push('<div style="margin-bottom:4px">' +
+                    pill('Score', ev.score, '#27ae60') +
+                    pill('Alignment', ev.scores.founder_alignment, '#7c6cf2') +
+                    pill('Expected Value', ev.scores.expected_value) +
+                    pill('Empire', ev.scores.empire_impact) +
+                    pill('Risk', ev.scores.risk) +
+                '</div>');
+            }
+            if (ev.urgency) lines.push('<div style="font-size:10px;color:#8893a0">Urgency: ' + s(ev.urgency.replace(/_/g, ' ')) + (ev.all_count > 1 ? ' · ' + ev.all_count + ' opportunities analyzed' : '') + '</div>');
+        } else if (ev.type === 'threat') {
+            lines.push('<div style="font-size:10px;color:rgba(232,244,255,0.45);margin-bottom:6px">Source: ' + s(ev.source ? ev.source.replace(/_/g, ' ') : 'threat monitor') + (ev.all_count ? ' · ' + ev.all_count + ' threats detected' : '') + '</div>');
+            lines.push('<div style="margin-bottom:6px">' +
+                pill('Type', (ev.threat_type || '').replace(/_/g, ' '), '#ff8c42') +
+                pill('Severity', ev.severity, '#ff4d6d') +
+                pill('Score', ev.score) +
+            '</div>');
+            lines.push('<div style="font-size:11px;color:rgba(232,244,255,0.7);line-height:1.5;margin-bottom:6px">' + s(ev.description) + '</div>');
+            if (ev.top_others && ev.top_others.length) {
+                lines.push('<div style="font-size:10px;color:#8893a0;margin-bottom:4px">Also flagged:</div>');
+                ev.top_others.forEach(function(t) {
+                    lines.push('<div style="font-size:10px;color:rgba(232,244,255,0.45);padding:3px 0;border-top:1px solid rgba(255,255,255,0.04)">' + s(t.description) + ' <span style="color:#ff4d6d">[' + s(t.severity) + ']</span></div>');
+                });
+            }
+        } else if (ev.type === 'bottleneck') {
+            lines.push('<div style="font-size:10px;color:rgba(232,244,255,0.45);margin-bottom:6px">Source: bottleneck detector</div>');
+            lines.push('<div style="margin-bottom:6px">' +
+                pill('Type', (ev.bottleneck_type || '').replace(/_/g, ' '), '#ff8c42') +
+                pill('Impact', ev.impact_score) +
+            '</div>');
+            lines.push('<div style="font-size:11px;color:rgba(232,244,255,0.7);line-height:1.5;margin-bottom:6px">' + s(ev.description) + '</div>');
+            if (ev.action) lines.push('<div style="font-size:10px;color:#00d4ff;background:rgba(0,212,255,0.06);border-radius:4px;padding:5px 8px;margin-bottom:4px">Action: ' + s(ev.action) + '</div>');
+            if (ev.blocked_goals && ev.blocked_goals.length) lines.push('<div style="font-size:10px;color:#8893a0">Blocking: ' + s(ev.blocked_goals.join(', ').replace(/goal_/g, '').replace(/_/g, ' ')) + '</div>');
+        } else if (ev.type === 'goal') {
+            lines.push('<div style="font-size:10px;color:rgba(232,244,255,0.45);margin-bottom:6px">Source: founder goal graph</div>');
+            lines.push('<div style="font-size:11px;color:rgba(232,244,255,0.8);font-weight:600;margin-bottom:4px">' + s(ev.label) + '</div>');
+            lines.push('<div style="margin-bottom:6px">' +
+                pill('Progress', (ev.progress_pct || 0) + '%') +
+                pill('Weight', ev.weight) +
+                pill('Success Prob.', ev.probability_of_success ? Math.round(ev.probability_of_success * 100) + '%' : 'unknown') +
+                pill('Horizon', (ev.horizon || 'ongoing').replace(/_/g, ' ')) +
+            '</div>');
+            if (ev.missing_requirements && ev.missing_requirements.length) {
+                lines.push('<div style="font-size:10px;color:#8893a0;margin-bottom:3px">Missing requirements:</div>');
+                lines.push('<div style="font-size:10px;color:rgba(232,244,255,0.5)">' + ev.missing_requirements.map(function(r) { return '· ' + s(r); }).join('<br>') + '</div>');
+            }
+        } else if (ev.type === 'synthesis') {
+            lines.push('<div style="font-size:10px;color:rgba(232,244,255,0.45);margin-bottom:6px">AI synthesis — model saw: ' + s(ev.model_inputs) + '</div>');
+            if (ev.top_inputs && ev.top_inputs.length) {
+                lines.push('<div style="font-size:10px;color:#8893a0;margin-bottom:3px">Key inputs:</div>');
+                ev.top_inputs.forEach(function(inp) {
+                    lines.push('<div style="font-size:10px;color:rgba(232,244,255,0.5);padding:3px 0;border-top:1px solid rgba(255,255,255,0.04)">· ' + s(inp) + '</div>');
+                });
+            }
+        }
+        if (!lines.length) return '';
+        return '<div style="background:rgba(255,255,255,0.03);border-radius:6px;padding:10px 12px;border:1px solid rgba(255,255,255,0.06)">' + lines.join('') + '</div>';
     }
 
     function _intLoadHealth() {
