@@ -57,20 +57,28 @@ router.post('/cron/run-schedules', requireCronAccess, async (req, res) => {
             duration_ms: durationMs,
         }).then(({ error }) => { if (error) console.warn('[Cron] log insert failed:', error.message); });
 
-        // Domain agent sweeps — piggyback on existing cron. Morning (6-9 UTC): system + finance. Evening (18-21 UTC): uni + health.
+        // Domain agent sweeps — piggyback on existing cron. Morning (6-9 UTC): ops + finance + business + marketing + comms. Evening (18-21 UTC): uni + health.
         const _utcH = new Date().getUTCHours();
         const _isMorning = _utcH >= 6 && _utcH <= 9;
         const _isEvening = _utcH >= 18 && _utcH <= 21;
         if (_isMorning || _isEvening) {
-            const _sweepSlugs = _isMorning ? ['system', 'finance'] : ['uni', 'health'];
-            const _sweepMsg = _isMorning
-                ? 'Run your morning domain health check. Review your domain\'s current state and any data available. Flag anything that needs a decision or action. Escalate if required.'
-                : 'Run your evening domain health check. Review today\'s activity in your domain. Flag any issues or upcoming items that need attention. Escalate if required.';
+            const _SWEEP_BRIEFS = {
+                system:    'Morning system check: Review pipeline health, scan for failed agent runs or cost spikes since midnight, flag any anomalies. Delegate a dashboard refresh to ops-internal-dashboards if needed.',
+                finance:   'Morning finance check: Review any new transactions, check budgets for overruns, flag any invoices due today or overdue. Delegate follow-up tasks to your team as needed.',
+                business:  'Morning business check: Review the CRM pipeline for stale deals (no activity > 7 days) and overdue follow-ups. Flag proposals awaiting response. Brief your sales team on today\'s priority actions.',
+                marketing: 'Morning marketing check: Review campaign performance from the last 24h. Flag any scheduled posts that need assets or copy. Brief the content team on this week\'s priority deliverables.',
+                comms:     'Morning comms check: Review any unanswered client emails older than 24h. Flag urgent items (complaints, legal, overdue payments). Brief the triage team on today\'s inbox priorities.',
+                uni:       'Evening study check: Review upcoming assignment deadlines in the next 7 days, flag any overdue flashcard reviews, and suggest one study focus for tomorrow.',
+                health:    'Evening health check: Summarise today\'s logged workouts, nutrition, and mood. Flag any missed supplement logs. Suggest one recovery or wellness action for tonight.',
+            };
+            const _sweepSlugs = _isMorning
+                ? ['system', 'finance', 'business', 'marketing', 'comms']
+                : ['uni', 'health'];
             setImmediate(async () => {
                 const { invokeDomainAgent } = require('../../agent-system/domain-agents');
                 for (const slug of _sweepSlugs) {
                     try {
-                        await invokeDomainAgent(slug, _sweepMsg, { maxTokens: 300 });
+                        await invokeDomainAgent(slug, _SWEEP_BRIEFS[slug], { maxTokens: 300 });
                     } catch (e) { console.warn(`[DomainSweep] ${slug}:`, e.message); }
                 }
             });
