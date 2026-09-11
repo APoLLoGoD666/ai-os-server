@@ -252,6 +252,20 @@ async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 
         } catch {}
     }
 
+    // Cross-domain context: prepend SIE strategic summary so every agent has full situational awareness
+    if (!council) {
+        try {
+            const _sieCache = require('../lib/memory/cache');
+            const _brief = _sieCache.get('sie:briefing:v1');
+            if (_brief) {
+                const _ctx = [];
+                if (_brief.biggest_threat)      _ctx.push(`Top threat: ${String(_brief.biggest_threat).slice(0, 120)}`);
+                if (_brief.biggest_opportunity) _ctx.push(`Top opportunity: ${String(_brief.biggest_opportunity).slice(0, 120)}`);
+                if (_ctx.length) systemPrompt = `STRATEGIC CONTEXT (APEX SIE):\n${_ctx.join('\n')}\n\n` + systemPrompt;
+            }
+        } catch {}
+    }
+
     // Tool use: agents can write/read telemetry when a humanId context is provided
     const tools = humanId ? [telemetry.TELEMETRY_TOOL, telemetry.READ_TELEMETRY_TOOL] : undefined;
 

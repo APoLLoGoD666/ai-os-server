@@ -17204,11 +17204,15 @@ window._v11hLoadTodayActions = function() {
             var top = pending.slice(0, 3);
             var extra = pending.length - top.length;
             var html = top.map(function(t) {
-                var icon  = (typeof window._apexActionIcon === 'function') ? window._apexActionIcon(t.task_type) : '⊛';
-                var label = esc(t.task_type || 'Task');
-                return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:6px;margin-bottom:6px">' +
-                    '<span aria-hidden="true">' + icon + '</span>' +
-                    '<span style="flex:1;font-size:12px;color:rgba(232,244,255,0.85)">' + label + '</span>' +
+                var isCouncil = t.metadata && t.metadata.type === 'council_dispatch';
+                var icon  = isCouncil ? '&#9670;' : (typeof window._apexActionIcon === 'function') ? window._apexActionIcon(t.task_type) : '⊛';
+                var label = esc(t.title || t.task_type || 'Task');
+                var badge = isCouncil ? '<span style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:1px;color:#7c6cf2;background:rgba(124,108,242,0.12);border:1px solid rgba(124,108,242,0.3);border-radius:3px;padding:2px 5px;flex-shrink:0">COUNCIL</span>' : '';
+                var borderCol = isCouncil ? 'rgba(124,108,242,0.25)' : 'rgba(255,255,255,0.05)';
+                return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid ' + borderCol + ';border-radius:6px;margin-bottom:6px">' +
+                    '<span aria-hidden="true" style="color:' + (isCouncil ? '#7c6cf2' : 'inherit') + '">' + icon + '</span>' +
+                    '<span style="flex:1;font-size:12px;color:rgba(232,244,255,0.85);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + label + '</span>' +
+                    badge +
                     '<button type="button" class="actn-card-btn approve" style="min-height:32px;padding:4px 10px" data-actn-appr="' + esc(String(t.id)) + '">Approve</button>' +
                     '<button type="button" class="actn-card-btn reject"  style="min-height:32px;padding:4px 10px" data-actn-reject-init="' + esc(String(t.id)) + '">Reject</button>' +
                 '</div>';

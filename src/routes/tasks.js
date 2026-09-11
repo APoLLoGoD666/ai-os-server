@@ -136,6 +136,18 @@ router.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
                     type:     'info',
                     human_id: task.human_id || null,
                 }).catch(() => {});
+                // Close decision outcome tracking loop
+                if (meta.deliberationId) {
+                    try {
+                        const outcomes = require('../../lib/intelligence/decision-outcome-engine');
+                        await outcomes.measureByDecisionId(
+                            meta.deliberationId,
+                            `${meta.dispatch.slug} agent executed: ${result.reply.slice(0, 300)}`,
+                            result.escalation ? 'Agent re-escalated to council' : null,
+                            `Council → ${meta.dispatch.slug}: ${result.reply.slice(0, 200)}`
+                        );
+                    } catch {}
+                }
             } catch (e) {
                 await sbAdmin.from('apex_tasks')
                     .update({ status: 'failed', metadata: { ...meta, execution_error: e.message }, updated_at: new Date().toISOString() })

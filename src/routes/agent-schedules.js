@@ -56,6 +56,26 @@ router.post('/cron/run-schedules', requireCronAccess, async (req, res) => {
             schedules_run: scheduleRun.results?.filter(r => r.ran).length ?? 0,
             duration_ms: durationMs,
         }).then(({ error }) => { if (error) console.warn('[Cron] log insert failed:', error.message); });
+
+        // Domain agent sweeps — piggyback on existing cron. Morning (6-9 UTC): system + finance. Evening (18-21 UTC): uni + health.
+        const _utcH = new Date().getUTCHours();
+        const _isMorning = _utcH >= 6 && _utcH <= 9;
+        const _isEvening = _utcH >= 18 && _utcH <= 21;
+        if (_isMorning || _isEvening) {
+            const _sweepSlugs = _isMorning ? ['system', 'finance'] : ['uni', 'health'];
+            const _sweepMsg = _isMorning
+                ? 'Run your morning domain health check. Review your domain\'s current state and any data available. Flag anything that needs a decision or action. Escalate if required.'
+                : 'Run your evening domain health check. Review today\'s activity in your domain. Flag any issues or upcoming items that need attention. Escalate if required.';
+            setImmediate(async () => {
+                const { invokeDomainAgent } = require('../../agent-system/domain-agents');
+                for (const slug of _sweepSlugs) {
+                    try {
+                        await invokeDomainAgent(slug, _sweepMsg, { maxTokens: 300 });
+                    } catch (e) { console.warn(`[DomainSweep] ${slug}:`, e.message); }
+                }
+            });
+        }
+
         return res.status(200).json({
             ok: true,
             summary: scheduleRun.results.map(formatScheduleRunSummary).join("\n") || "No enabled schedules are due right now.",
