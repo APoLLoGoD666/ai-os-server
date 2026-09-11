@@ -151,7 +151,7 @@ router.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
 router.post('/api/tasks/reject', requireAppAccess, async (req, res) => {
     const { taskId, reason } = req.body || {};
     if (!taskId) return res.status(400).json({ ok: false, error: 'taskId required' });
-    const { data: task } = await sbAdmin.from('apex_tasks').select('id,status,human_id').eq('id', taskId).single();
+    const { data: task } = await sbAdmin.from('apex_tasks').select('id,status,human_id,title,metadata').eq('id', taskId).single();
     if (!task) return res.status(404).json({ ok: false, error: `${taskId} not found` });
     // V-11-H-B1: ownership check before any status change.
     const identity = req.identity || {};
@@ -170,6 +170,16 @@ router.post('/api/tasks/reject', requireAppAccess, async (req, res) => {
         type: 'info',
         human_id: task.human_id || identity.humanId || null,
     }).catch(() => {});
+    // Reject-as-lesson: feed the rejection reason into the lesson pipeline
+    setImmediate(async () => {
+        try {
+            const meta = task.metadata || {};
+            const parts = [`Task "${(task.title || taskId).slice(0, 150)}" was rejected`];
+            if (reason) parts.push(`Reason: ${reason.slice(0, 300)}`);
+            if (meta.recommendation) parts.push(`Council decision was: ${meta.recommendation.slice(0, 300)}`);
+            await require('../../agent-system/obsidian-memory').logLesson(parts.join('. '), { taskId });
+        } catch {}
+    });
     return res.json({ ok: true, taskId, status: 'rejected' });
 });
 

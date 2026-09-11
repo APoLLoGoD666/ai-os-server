@@ -83,12 +83,36 @@ module.exports = {
         _lessonHashes.add(_hash);
         if (_lessonHashes.size > 200) _lessonHashes.delete(_lessonHashes.values().next().value);
 
+        // Classify: standing rule (reusable principle) vs one-off (task-specific observation).
+        // Uses Haiku for cost efficiency — defaults to standing_rule on any failure.
+        let lessonType = 'standing_rule';
+        try {
+            const runtime = require('../lib/models/runtime');
+            const { result } = await runtime.execute({
+                tier: 'fast',
+                caller: 'lesson-classifier',
+                messages: [{ role: 'user', content: `Classify as "standing_rule" or "one_off".\nstanding_rule = reusable principle that applies to future tasks\none_off = specific to this single task or context only\n\nLesson: "${lesson.slice(0, 300)}"\n\nReply with ONLY: standing_rule OR one_off` }],
+                maxTokens: 10,
+            });
+            const raw = (result?.content?.[0]?.text || '').trim().toLowerCase();
+            if (raw.includes('one_off') || raw.includes('one-off')) lessonType = 'one_off';
+        } catch { /* keep default */ }
+
         const now  = new Date();
         const date = now.toISOString().split('T')[0];
         const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        const entry = `## ${date} ${time}\n${lesson}`;
+
         // Write via REST API (works on Render) then sync to filesystem as well
-        await _apiAppend('01 Executive/Lessons.md', `## ${date} ${time}\n${lesson}`).catch(() => {});
-        const diskOk = this.append('01 Executive/Lessons.md', `## ${date} ${time}\n${lesson}`);
+        await _apiAppend('01 Executive/Lessons.md', entry).catch(() => {});
+        const diskOk = this.append('01 Executive/Lessons.md', entry);
+
+        // Standing rules also land in a dedicated file for permanent injection into future prompts
+        if (lessonType === 'standing_rule') {
+            await _apiAppend('01 Executive/Standing-Rules.md', entry).catch(() => {});
+            this.append('01 Executive/Standing-Rules.md', entry);
+        }
+
         _lessonBuffer.push(`${date} ${time}: ${lesson}`);
         if (_lessonBuffer.length > 50) _lessonBuffer.shift();
 
@@ -103,7 +127,7 @@ module.exports = {
                 supabaseOk = false;
             }
         }
-        return { diskOk, supabaseOk };
+        return { diskOk, supabaseOk, lessonType };
     },
 
     logDecision(decision, reason) {
@@ -217,37 +241,88 @@ module.exports = {
         return results;
     },
 
-    searchVault(query) {
+    searchVault(query, maxResults = 5) {
         try {
-            const keywords = query.split(/\s+/).filter(w => w.length > 3);
-            if (!keywords.length) return [];
+            const terms = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+            if (!terms.length) return [];
             const files = this._collectMdFiles(VAULT, 2);
-            const scored = [];
-            for (const filePath of files) {
+            if (!files.length) return [];
+
+            // Single-pass: build per-doc term frequency maps
+            const MAX_FILES = 600;
+            const docs = [];
+            for (const filePath of files.slice(0, MAX_FILES)) {
                 try {
                     const content = fs.readFileSync(filePath, 'utf8');
-                    const lowerContent = content.toLowerCase();
-                    let score = 0;
-                    let excerpt = '';
-                    for (const kw of keywords) {
-                        if (lowerContent.includes(kw.toLowerCase())) score++;
-                    }
-                    if (score > 0) {
-                        const lines = content.split('\n');
-                        for (const line of lines) {
-                            if (keywords.some(kw => line.toLowerCase().includes(kw.toLowerCase()))) {
-                                excerpt = line.slice(0, 200);
-                                break;
-                            }
-                        }
-                        scored.push({ path: filePath, score, excerpt });
-                    }
+                    if (content.length > 80000) continue;
+                    const words = content.toLowerCase().split(/\W+/).filter(w => w.length > 1);
+                    const total = words.length || 1;
+                    const freq = {};
+                    for (const w of words) freq[w] = (freq[w] || 0) + 1;
+                    const tf = {};
+                    for (const term of terms) tf[term] = (freq[term] || 0) / total;
+                    docs.push({ path: filePath, content, tf });
                 } catch {}
             }
+            if (!docs.length) return [];
+
+            const N = docs.length;
+            // IDF: log(1 + N / (1 + df)) — rewards terms rare across the corpus
+            const idf = {};
+            for (const term of terms) {
+                const df = docs.filter(d => d.tf[term] > 0).length;
+                idf[term] = Math.log(1 + N / (1 + df));
+            }
+
+            // Score each doc with TF-IDF sum, extract first matching excerpt
+            const scored = [];
+            for (const doc of docs) {
+                let score = 0;
+                for (const term of terms) score += doc.tf[term] * idf[term];
+                if (score > 0) {
+                    let excerpt = '';
+                    for (const line of doc.content.split('\n')) {
+                        if (terms.some(t => line.toLowerCase().includes(t))) {
+                            excerpt = line.trim().slice(0, 250);
+                            break;
+                        }
+                    }
+                    scored.push({ path: doc.path, score, excerpt });
+                }
+            }
             scored.sort((a, b) => b.score - a.score);
-            return scored.slice(0, 5);
+            return scored.slice(0, maxResults);
         } catch {
             return [];
+        }
+    },
+
+    getVaultContext(query, maxNotes = 5) {
+        try {
+            const results = this.searchVault(query, maxNotes);
+            if (!results.length) return '';
+            const parts = results.map((r, i) => {
+                const name = path.relative(VAULT, r.path).replace(/\\/g, '/');
+                return `[${i + 1}] ${name}\n${r.excerpt}`;
+            });
+            return `Relevant vault notes:\n${parts.join('\n\n')}`;
+        } catch {
+            return '';
+        }
+    },
+
+    async writeProvenance(taskId, { title = '', notesRead = [], toolsUsed = [], outcome = 'completed', commitHash = '' } = {}) {
+        try {
+            const date = new Date().toISOString().split('T')[0];
+            const safeTitle = String(title).slice(0, 200).replace(/:/g, '-');
+            const notesLine = notesRead.map(n => `"${String(n).replace(/"/g, '')}"`).join(', ');
+            const toolsLine = toolsUsed.map(t => `"${String(t).replace(/"/g, '')}"`).join(', ');
+            const content = `---\nid: ${taskId}\ntitle: ${safeTitle}\ndate: ${date}\noutcome: ${outcome}\ncommit: ${commitHash || ''}\nnotes_read: [${notesLine}]\ntools_used: [${toolsLine}]\n---\n\n# ${safeTitle}\n\n**Date:** ${date}  **Outcome:** ${outcome}${commitHash ? `  **Commit:** ${commitHash}` : ''}${notesRead.length ? `\n\n## Notes consulted\n${notesRead.map(n => `- ${n}`).join('\n')}` : ''}${toolsUsed.length ? `\n\n## Files changed\n${toolsUsed.map(t => `- ${t}`).join('\n')}` : ''}\n`;
+            const notePath = `02 Projects/Completed/${taskId}.md`;
+            this.write(notePath, content);
+            await _apiWrite(notePath, content).catch(() => {});
+        } catch (e) {
+            console.warn('[ObsidianMemory] writeProvenance failed (non-fatal):', e.message);
         }
     },
 
