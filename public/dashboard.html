@@ -10316,8 +10316,8 @@ if(pipe){
 /* V-11-D1: TODAY surface */
 #today-surface{padding:0 0 32px}
 .td-greeting{padding:22px 24px 20px}
-.td-greeting-day{font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;text-transform:uppercase}
-.td-greeting-line{font:700 24px/1.15 'Inter',sans-serif;color:#f3f7fb;margin-top:6px}
+.td-greeting-day{font:700 22px/1.2 'Inter',sans-serif;color:#f3f7fb;letter-spacing:-0.01em}
+.td-greeting-line{font:500 10px/1 'JetBrains Mono',monospace;letter-spacing:2.5px;color:#8893a0;text-transform:uppercase;margin-top:10px}
 .td-section{padding:0 24px 22px}
 .td-section-hdr{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:12px}
 .td-section-label{font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#636d7a;text-transform:uppercase;flex:1}
@@ -10349,7 +10349,8 @@ if(pipe){
 .td-legacy-sep-text{font:500 8px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;text-transform:uppercase;white-space:nowrap}
 @media(max-width:640px){
   .td-greeting{padding:16px 16px 14px}
-  .td-greeting-line{font-size:19px}
+  .td-greeting-day{font-size:19px}
+  .td-greeting-line{font-size:9px}
   .td-section{padding:0 16px 18px}
   .td-legacy-sep{padding:4px 16px 16px}
 }
@@ -10362,7 +10363,7 @@ if(pipe){
                     </div>
                     <div id="today-time-context"></div>
                     <div class="td-section" id="today-section-priorities">
-                        <div class="td-section-hdr"><span class="td-section-label">APEX Now</span></div>
+                        <div class="td-section-hdr"><span class="td-section-label">Important Today</span></div>
                         <div id="today-priorities-panel"></div>
                     </div>
                     <div class="td-section" id="today-section-needs">
@@ -17033,7 +17034,7 @@ function _tdInsights(brief) {
             color:hrs>=7?'#3fd29a':'#efb45a', dest:'health'});
     }
     if (brief.assignments && brief.assignments.length>0) {
-        rows.push({lbl:'Upcoming assignments', val:brief.assignments.length+' due', color:'#efb45a', dest:'university'});
+        rows.push({lbl:'Upcoming assignments', val:brief.assignments.length+' due', color:'#efb45a'});
     }
     return rows;
 }
@@ -17052,19 +17053,44 @@ async function initOverviewPage() {
     var noticedEl = document.getElementById('today-noticed-panel');
     var activeEl  = document.getElementById('today-active-panel');
 
-    if (needsEl)   window.setState(needsEl,   'loading');
-    if (noticedEl) window.setState(noticedEl, 'loading');
-    if (activeEl)  window.setState(activeEl,  'loading');
+    if (needsEl   && needsEl.getAttribute('data-apex-state')   !== 'ready') window.setState(needsEl,   'loading');
+    if (noticedEl && noticedEl.getAttribute('data-apex-state') !== 'ready') window.setState(noticedEl, 'loading');
+    if (activeEl  && activeEl.getAttribute('data-apex-state')  !== 'ready') window.setState(activeEl,  'loading');
 
     var results = await Promise.allSettled([
         fetch('/api/briefing/priority-inbox',{credentials:'same-origin'}).then(function(r){return r.json();}),
-        fetch('/api/briefing/today',          {credentials:'same-origin'}).then(function(r){return r.json();})
+        fetch('/api/briefing/today',          {credentials:'same-origin'}).then(function(r){return r.json();}),
+        fetch('/api/tasks',                   {credentials:'same-origin'}).then(function(r){return r.json();})
     ]);
 
     var inboxJ = results[0].status==='fulfilled' ? results[0].value : null;
     var briefJ = results[1].status==='fulfilled' ? results[1].value : null;
+    var tasksJ = results[2].status==='fulfilled' ? results[2].value : null;
     var inbox  = inboxJ&&inboxJ.ok  ? inboxJ.inbox    : null;
     var brief  = briefJ&&briefJ.ok  ? briefJ.briefing : null;
+    var _allTasks = (tasksJ && Array.isArray(tasksJ.tasks||tasksJ)) ? (tasksJ.tasks||tasksJ) : [];
+    var _todayTasks = _allTasks.filter(function(t){ return t.status==='pending'||t.status==='in_progress'; }).slice(0,6);
+
+    // ── 0. IMPORTANT TODAY (pending/in-progress tasks) ──
+    var prEl = document.getElementById('today-priorities-panel');
+    if (prEl) {
+        if (!_todayTasks.length) {
+            prEl.innerHTML = '<div class="td-empty-today">No pending tasks — you\'re clear for now.</div>';
+        } else {
+            var _prHtml = '<div class="td-noticed-card">';
+            _todayTasks.forEach(function(t) {
+                var dot = t.status==='in_progress' ? '#3fd29a' : 'rgba(255,255,255,0.2)';
+                var badge = t.status==='in_progress' ? '<span style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:0.5px;color:#3fd29a;flex-shrink:0">IN PROGRESS</span>' : '';
+                _prHtml += '<div class="td-noticed-row">'
+                    +'<span style="width:5px;height:5px;border-radius:50%;flex:0 0 5px;background:'+dot+'"></span>'
+                    +'<span class="td-noticed-lbl">'+_tdEsc(t.title||'Task')+'</span>'
+                    +badge
+                    +'</div>';
+            });
+            _prHtml += '</div>';
+            prEl.innerHTML = _prHtml;
+        }
+    }
 
     // ── A. NEEDS YOU ──
     if (needsEl) {
@@ -17143,12 +17169,10 @@ async function initOverviewPage() {
                         +'</span></div>';
                 });
                 assigns.slice(0,3).forEach(function(a){
-                    schedHtml += '<div class="td-noticed-row" onclick="switchPage(\'university\')" role="button" tabindex="0">'
+                    schedHtml += '<div class="td-noticed-row">'
                         +'<span class="td-noticed-lbl">Due: '+_tdEsc(a.title||'Assignment')+'</span>'
-                        +'<span style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
-                        +'<span class="td-noticed-val" style="color:#efb45a">'+(a.due_date?a.due_date.slice(0,10):'')+'</span>'
-                        +'<span class="td-portal-arrow" aria-hidden="true">&#8594;</span>'
-                        +'</span></div>';
+                        +(a.due_date?'<span class="td-noticed-val" style="color:#efb45a;flex-shrink:0">'+a.due_date.slice(0,10)+'</span>':'')
+                        +'</div>';
                 });
                 schedHtml += '</div>';
                 window.setState(activeEl,'ready',{html:schedHtml});
@@ -17246,8 +17270,7 @@ if (window._apexIntervals) window._apexIntervals.push(_ovrIntId);
         var tcEl=document.getElementById('today-time-context');
         if(tcEl)tcEl.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 24px;background:rgba(255,255,255,0.012);border-top:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05)">'
             +'<div style="display:flex;align-items:center;gap:12px">'
-            +'<span style="font:700 15px/1 \'JetBrains Mono\',monospace;color:'+phase.col+'">'+hh+':'+mm+' '+ap+'</span>'
-            +'<span style="font:500 8px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:'+phase.col+';opacity:0.7;text-transform:uppercase">'+phase.n+'</span>'
+            +'<span style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:1.5px;color:'+phase.col+';text-transform:uppercase">'+phase.n+'</span>'
             +'</div>'
             +'<div style="display:flex;align-items:center;gap:16px">'
             +'<div style="text-align:right">'
@@ -17258,20 +17281,6 @@ if (window._apexIntervals) window._apexIntervals.push(_ovrIntId);
             +'<div style="font:400 7.5px/1.5 \'JetBrains Mono\',monospace;color:#374151;text-align:right">'+next.n+'<br>in '+ntStr+'</div>'
             +'</div></div>';
 
-        // Priorities panel
-        var prEl=document.getElementById('today-priorities-panel');
-        if(prEl){
-            var html='<div class="td-noticed-card">';
-            phase.pri.forEach(function(p,i){
-                html+='<div class="td-noticed-row">'
-                    +'<span style="width:5px;height:5px;border-radius:50%;flex:0 0 5px;background:'+(i===0?phase.col:'rgba(255,255,255,0.08)')+'"></span>'
-                    +'<span style="font:'+(i===0?'600':'400')+' 11px/1 \'Inter\',sans-serif;color:'+(i===0?'#e8eaf0':'#5a6a7a')+'">'+p+'</span>'
-                    +'</div>';
-            });
-            html+='<div style="padding:7px 14px;font:400 7.5px/1 \'JetBrains Mono\',monospace;color:#2a3441;letter-spacing:1px">PHASE '+phase.s+':00–'+phase.e+':00 · '+next.n.toUpperCase()+' IN '+ntStr+'</div>';
-            html+='</div>';
-            prEl.innerHTML=html;
-        }
 
         // Update TIME node text in graph
         var rts=document.querySelectorAll('#nd-rtime text');
@@ -23624,7 +23633,7 @@ window.apexFileDropHandler = function(e){
     function _intTrSection(title, body, open) {
         var id = '_trs' + (Math.random() * 1e9 | 0);
         return '<div style="margin-bottom:4px">' +
-            '<button onclick="var b=document.getElementById(\'' + id + '\');var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';this.querySelector(\'.trc-chev\').style.transform=open?\'\':\' rotate(90deg)\'" ' +
+            '<button onclick="var b=document.getElementById(\'' + id + '\');var _isOpen=b.style.display!==\'none\';b.style.display=_isOpen?\'none\':\'block\';this.querySelector(\'.trc-chev\').style.transform=_isOpen?\'\':\' rotate(90deg)\'" ' +
             'style="display:flex;align-items:center;gap:7px;width:100%;background:none;border:none;border-top:1px solid rgba(255,255,255,0.06);padding:11px 0 8px;cursor:pointer;color:#8893a0;font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:0.1em;text-transform:uppercase">' +
                 '<span class="trc-chev" style="font-size:13px;transition:transform 200ms ease;' + (open ? 'transform:rotate(90deg)' : '') + '">&#x203A;</span>' +
                 _escapeHtml(title) +
@@ -23773,7 +23782,13 @@ window.apexFileDropHandler = function(e){
             h.push(_intTrSection('Founder & Empire Context', ctx, false));
         }
 
-        var _noData = '<div style="font-size:11px;color:#8893a0;padding:8px 0">No data available yet — run the SIE analysis cycle to populate.</div>';
+        var _emptyHints = {
+            biggest_opportunity:    'No opportunities in <b>detected</b> status yet. Insert rows into the <b>opportunities</b> table (status = detected) to populate this field.',
+            biggest_threat:         'No threats detected. They auto-generate from: domain health &lt; 50%, agent failure rate &gt; 30%, unacknowledged anti-goal alerts, and FKG anti-goal nodes.',
+            biggest_bottleneck:     'No bottlenecks detected. These auto-generate when projects stall, goals have unmet dependencies, or agents show sustained failures.',
+            highest_leverage_action:'No active goals found. Insert rows with <b>status = active</b> into the <b>founder_goals</b> table to populate.',
+        };
+        var _noData = '<div style="font-size:11px;color:#8893a0;line-height:1.65;padding:8px 0">' + (_emptyHints[key] || 'No data available yet — run the SIE analysis cycle to populate.') + '</div>';
 
         // Field-specific data lists
         if (isOpp) {
