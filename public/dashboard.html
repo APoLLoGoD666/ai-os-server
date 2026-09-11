@@ -22382,18 +22382,21 @@ window.apexFileDropHandler = function(e){
     // H-2: Client-side cost/risk/reversibility heuristic (interim, per O-4/H-B4).
     window._apexActionInfo = function(task) {
         var t = String((task && task.task_type) || '').toLowerCase();
-        var desc = String((task && task.description) || '');
+        var meta = (task && task.metadata) || {};
+        var desc = String((task && task.description) || meta.recommendation || meta.task_title || '');
+        var isCouncil = String((task && task.id)||'').startsWith('COUNCIL-') || String(meta.type||'').startsWith('council');
         var cost, risk, reversibility;
-        if (/(file|write|create|generate)/.test(t))     cost = '$0.01–$0.05 estimated';
+        if (isCouncil)                                       cost = 'Agent execution cost';
+        else if (/(file|write|create|generate)/.test(t))    cost = '$0.01–$0.05 estimated';
         else if (/(search|read|list|inspect|view)/.test(t)) cost = 'No cost';
-        else                                             cost = '$0.01 estimated';
+        else                                                 cost = '$0.01 estimated';
         if (/(delete|remove|drop)/.test(t))              risk = 'High';
-        else if (/(write|create|send)/.test(t))          risk = 'Medium';
+        else if (isCouncil || /(write|create|send)/.test(t)) risk = 'Medium';
         else                                             risk = 'Low';
         if (/(delete|remove|drop)/.test(t))              reversibility = 'no';
         else if (/(write|create|send)/.test(t))          reversibility = 'partial';
         else                                             reversibility = 'yes';
-        var origin = (desc ? desc.slice(0, 80) : 'Originated from your instruction');
+        var origin = isCouncil ? 'Supreme Council deliberation' : (desc ? desc.slice(0, 80) : 'Originated from your instruction');
         return { cost: cost, risk: risk, reversibility: reversibility, origin: origin };
     };
 
@@ -22401,10 +22404,12 @@ window.apexFileDropHandler = function(e){
     window._apexActionPriority = function(task) {
         var info = window._apexActionInfo(task || {});
         var t = String((task && task.task_type) || '').toLowerCase();
-        var desc = String((task && task.description) || '').toLowerCase();
-        if (/(error|critical|urgent)/.test(desc) || info.reversibility === 'no') return { tier:0, label:'Critical', color:'#ff4444' };
+        var meta = (task && task.metadata) || {};
+        var desc = String((task && task.description) || meta.recommendation || '').toLowerCase();
+        var isCouncil = String((task && task.id)||'').startsWith('COUNCIL-') || String(meta.type||'').startsWith('council');
+        if (/(error|critical|urgent|emergency|failure|breach)/.test(desc) || info.reversibility === 'no') return { tier:0, label:'Critical', color:'#ff4444' };
         if (/(delete|remove|drop)/.test(t))                                       return { tier:1, label:'Urgent',   color:'#ff8c00' };
-        if (info.risk === 'Medium' || info.risk === 'High')                       return { tier:2, label:'Important',color:'#ffd700' };
+        if (isCouncil || info.risk === 'Medium' || info.risk === 'High')          return { tier:2, label:'Important', color:'#ffd700' };
         return { tier:3, label:'Standard', color:'#888888' };
     };
 
@@ -22496,11 +22501,14 @@ window.apexFileDropHandler = function(e){
     function _actnRenderPendingCard(t) {
         var id       = String(t.id);
         var icon     = window._apexActionIcon(t.task_type);
-        var label    = _actnEscape(t.task_type || t.type || 'Task');
+        var isCouncil = (String(t.id||'').startsWith('COUNCIL-') || String((t.metadata||{}).type||'').startsWith('council'));
+        var label    = _actnEscape(isCouncil ? (t.title||'Council Decision') : (t.task_type || t.type || 'Task'));
         var priority = window._apexActionPriority(t);
         var info     = window._apexActionInfo(t);
-        var descFull = String(t.description || '');
-        var truncated = descFull.length > 160 ? descFull.slice(0, 160) + '…' : descFull;
+        var meta     = t.metadata || {};
+        var rawDesc  = t.description || meta.recommendation || meta.task_title || '';
+        var descFull = String(rawDesc);
+        var truncated = descFull.length > 200 ? descFull.slice(0, 200) + '…' : descFull;
         var descHtml = _actnEscape(truncated || 'No description provided.');
         var origin   = _actnEscape(info.origin);
         var revLabel = info.reversibility === 'yes'     ? 'Reversible'
