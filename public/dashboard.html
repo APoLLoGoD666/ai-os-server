@@ -11417,7 +11417,7 @@ if(pipe){
                 </div>
                 <!-- Portal tab bar — shared across council / office / domain -->
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('approvals')">ACTIONS</button>
+                    <button class="portal-tab" onclick="window.switchPage('actions')">ACTIONS</button>
                     <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
                     <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
                     <button class="portal-tab active" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
@@ -11501,7 +11501,7 @@ if(pipe){
                     </div>
                 </div>
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('approvals')">ACTIONS</button>
+                    <button class="portal-tab" onclick="window.switchPage('actions')">ACTIONS</button>
                     <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
                     <button class="portal-tab active" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
@@ -11557,12 +11557,6 @@ if(pipe){
                         <div style="font-size:10px;color:#8893a0;text-align:center">Approval ≠ execution · Governance gate applies after approval</div>
                     </div>
                 </div>
-                <div class="portal-tab-bar">
-                    <button class="portal-tab active" onclick="window.switchPage('approvals')">ACTIONS</button>
-                    <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
-                    <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
-                    <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
-                </div>
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">APPROVALS</div>
@@ -11605,6 +11599,12 @@ if(pipe){
 
             <!-- ══ PAGE: ACTIONS (V-11-H canonical surface) ══ -->
             <div class="page" id="page-actions">
+                <div class="portal-tab-bar">
+                    <button class="portal-tab active" onclick="window.switchPage('actions')">ACTIONS</button>
+                    <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
+                    <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
+                    <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
+                </div>
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">ACTIONS</div>
@@ -11936,7 +11936,7 @@ if(pipe){
                     </div>
                 </div>
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('approvals')">ACTIONS</button>
+                    <button class="portal-tab" onclick="window.switchPage('actions')">ACTIONS</button>
                     <button class="portal-tab active" onclick="window.switchPage('council')">COUNCIL</button>
                     <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
@@ -25858,7 +25858,7 @@ window.apexFileDropHandler = function(e){
 <script>
 (function() {
     'use strict';
-    var _PORTAL_PAGES = ['council', 'agents', 'domain-agents', 'approvals'];
+    var _PORTAL_PAGES = ['council', 'agents', 'domain-agents', 'actions'];
 
     // Keep nav-portal active whenever a portal-member page is shown
     function _highlightPortalNav() {
