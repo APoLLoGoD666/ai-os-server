@@ -10391,6 +10391,19 @@ if(pipe){
 .apex-stream-entry.type-info{border-left:2px solid #f59e0b;color:#fcd34d}
 .da-card.apex-flashing{animation:apex-node-flash 500ms ease-out}
 .ao-brain-orb.apex-pulsing{animation:apex-brain-pulse 900ms ease-in-out 2}
+/* ── Activity Feed Strip ─────────────────────────────────────────── */
+.aaf-strip{flex-shrink:0;height:68px;display:flex;align-items:center;gap:10px;padding:0 14px;border-top:1px solid rgba(255,255,255,0.05);background:rgba(0,0,0,0.22)}
+.aaf-strip-label{font:700 7px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#3f3f46;white-space:nowrap;writing-mode:vertical-lr;transform:rotate(180deg);flex-shrink:0}
+.aaf-strip-track{display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;flex:1;align-items:center}
+.aaf-strip-track::-webkit-scrollbar{display:none}
+.aaf-card{flex-shrink:0;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:5px;padding:7px 11px;min-width:150px;max-width:210px;animation:apex-stream-in 280ms ease-out both;transition:border-color 600ms ease}
+.aaf-card.aaf-new{border-color:rgba(124,108,242,0.4);box-shadow:0 0 12px rgba(124,108,242,0.12)}
+.aaf-card-name{font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#e8e4ff;margin-bottom:5px;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aaf-card-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.aaf-card-meta{font:500 8px/1.5 'JetBrains Mono',monospace;letter-spacing:.04em;color:#52525b}
+.aaf-card-meta .ok{color:#22c55e}.aaf-card-meta .err{color:#ef4444}.aaf-card-meta .esc{color:#f59e0b}.aaf-card-meta .dlg{color:#7c6cf2}
+.aaf-empty{font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:.05em;color:#3f3f46}
+.aaf-run-badge{font:700 7px/1 'JetBrains Mono',monospace;letter-spacing:.04em;pointer-events:none}
                 </style>
                 <!-- ── TODAY: D1 human-first surface ── -->
                 <div id="today-surface">
@@ -11447,6 +11460,12 @@ if(pipe){
                         </div>
                     </div>
                 </div>
+                <div class="aaf-strip" id="aoActivityStrip">
+                    <div class="aaf-strip-label">LIVE RUNS</div>
+                    <div class="aaf-strip-track" id="aoActivityTrack">
+                        <div class="aaf-empty">Waiting for agent runs...</div>
+                    </div>
+                </div>
             </div><!-- #page-agents -->
 
             <!-- ══ PAGE: AGENT DETAIL ══ -->
@@ -11509,6 +11528,12 @@ if(pipe){
                         <div class="ao-task-list" id="daReplyPanel" style="padding:12px;font:500 11px/1.6 'JetBrains Mono',monospace;color:#8893a0">
                             Select a domain agent from the map, then send a message.
                         </div>
+                    </div>
+                </div>
+                <div class="aaf-strip" id="daActivityStrip">
+                    <div class="aaf-strip-label">LIVE RUNS</div>
+                    <div class="aaf-strip-track" id="daActivityTrack">
+                        <div class="aaf-empty">Waiting for domain agent runs...</div>
                     </div>
                 </div>
             </div><!-- #page-domain-agents -->
@@ -26424,6 +26449,182 @@ window.apexFileDropHandler = function(e){
     } else {
         setTimeout(_applyLayout, 0);
     }
+})();
+</script>
+
+<!-- ── Apex Activity Feed ── -->
+<script>
+(function() {
+    'use strict';
+    var _runs    = [];
+    var _lastId  = null;
+    var _timer   = null;
+    var _started = false;
+
+    function _esc(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function _ago(ts) {
+        var s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+        if (s < 90)    return 'just now';
+        if (s < 3600)  return Math.floor(s / 60) + 'm ago';
+        return Math.floor(s / 3600) + 'h ago';
+    }
+    function _dur(ms) {
+        if (!ms) return '—';
+        if (ms < 1000) return ms + 'ms';
+        return (ms / 1000).toFixed(1) + 's';
+    }
+    function _tok(n) {
+        if (!n) return '';
+        return (n > 999 ? (n / 1000).toFixed(1) + 'k' : n) + ' tok';
+    }
+
+    // Domain → accent color (mirrors DA_AGENTS colors)
+    var _DOMAIN_COLOR = {
+        finance:'#6366f1', infrastructure:'#3b82f6', operations:'#f59e0b',
+        education:'#22c55e', governance:'#a78bfa', health:'#ec4899',
+        business:'#34d399', marketing:'#a78bfa', communications:'#06b6d4',
+        engineering:'#3b82f6', sales:'#34d399', strategy:'#7c6cf2',
+        'paid-media':'#f59e0b', product:'#06b6d4', design:'#ec4899',
+        academic:'#22c55e', specialized:'#52525b'
+    };
+    function _color(run) {
+        // Try to match DA_AGENTS by name first
+        if (window.DA_AGENTS) {
+            for (var i = 0; i < DA_AGENTS.length; i++) {
+                if (DA_AGENTS[i].name === run.agent_name) return DA_AGENTS[i].color;
+            }
+        }
+        return _DOMAIN_COLOR[(run.domain || '').toLowerCase()] || '#52525b';
+    }
+
+    function _makeCard(run, isNew) {
+        var col     = _color(run);
+        var summary = run.agent_summary || {};
+        var badges  = '';
+        if (summary.escalation)  badges += '<span class="esc">↑ESC</span> ';
+        if (summary.delegation)  badges += '<span class="dlg">→' + _esc(summary.delegation.slice(0,10)) + '</span>';
+        var tokStr = _tok(run.token_count);
+        var meta   = '<span class="' + (run.success ? 'ok' : 'err') + '">' + (run.success ? '✓' : '✗') + '</span> ' +
+                     _dur(run.duration_ms) +
+                     (tokStr ? ' · ' + tokStr : '') +
+                     ' · ' + _ago(run.created_at) +
+                     (badges ? ' · ' + badges : '');
+        var card = document.createElement('div');
+        card.className = 'aaf-card' + (isNew ? ' aaf-new' : '');
+        card.dataset.taskId = run.task_id || '';
+        card.innerHTML =
+            '<div class="aaf-card-name">' +
+                '<span class="aaf-card-dot" style="background:' + col + ';box-shadow:0 0 5px ' + col + '88"></span>' +
+                _esc((run.agent_name || run.domain || '?').slice(0, 22)) +
+            '</div>' +
+            '<div class="aaf-card-meta">' + meta + '</div>';
+        return card;
+    }
+
+    function _updateTrack(trackId, newRuns, allRuns) {
+        var track = document.getElementById(trackId);
+        if (!track) return;
+        var empty = track.querySelector('.aaf-empty');
+        if (empty && newRuns.length) empty.remove();
+        // Prepend new cards (newest left)
+        newRuns.forEach(function(run) {
+            var card = _makeCard(run, true);
+            track.insertBefore(card, track.firstChild);
+            setTimeout(function() { card.classList.remove('aaf-new'); }, 1800);
+        });
+        // Trim to 15
+        while (track.children.length > 15) track.removeChild(track.lastChild);
+        // Re-show empty if nothing
+        if (!track.children.length) {
+            var msg = document.createElement('div');
+            msg.className = 'aaf-empty';
+            msg.textContent = 'Waiting for agent runs...';
+            track.appendChild(msg);
+        }
+    }
+
+    function _annotateDACards(runs) {
+        if (!window.DA_AGENTS) return;
+        var stats = {};
+        runs.forEach(function(r) {
+            var k = r.agent_name || '';
+            if (!stats[k]) stats[k] = 0;
+            stats[k]++;
+        });
+        document.querySelectorAll('.da-card[data-slug]').forEach(function(card) {
+            var slug = card.dataset.slug;
+            var ag = DA_AGENTS.find(function(a) { return a.slug === slug; });
+            if (!ag) return;
+            var count = stats[ag.name] || 0;
+            if (!count) return;
+            var prev = card.querySelector('.aaf-run-badge');
+            if (prev) prev.remove();
+            var badge = document.createElement('div');
+            badge.className = 'aaf-run-badge';
+            badge.style.cssText = 'position:absolute;top:4px;right:6px;font:700 7px/1 \'JetBrains Mono\',monospace;letter-spacing:.04em;color:' + ag.color + 'aa';
+            badge.textContent = count + (count === 1 ? ' run' : ' runs');
+            card.appendChild(badge);
+        });
+    }
+
+    function _poll() {
+        var active = document.querySelector('.page.active');
+        if (!active) return;
+        var pid = active.id;
+        if (pid !== 'page-agents' && pid !== 'page-domain-agents') return;
+        fetch('/api/agents/activity?limit=15', {
+            headers: { 'x-app-key': window._appKey || '' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.ok || !Array.isArray(d.runs)) return;
+            var all = d.runs;
+            // Diff: find runs newer than _lastId
+            var newRuns = all;
+            if (_lastId) {
+                var idx = all.findIndex ? all.findIndex(function(r) { return r.task_id === _lastId; })
+                                        : (function() { for (var i=0;i<all.length;i++) { if (all[i].task_id===_lastId) return i; } return -1; })();
+                newRuns = idx >= 0 ? all.slice(0, idx) : (_runs.length ? [] : all);
+            }
+            _runs = all;
+            _lastId = all.length ? all[0].task_id : null;
+            if (newRuns.length || !_runs.length) {
+                _updateTrack('aoActivityTrack', newRuns, all);
+                _updateTrack('daActivityTrack', newRuns, all);
+            }
+            _annotateDACards(all);
+            // Stream log for new runs
+            newRuns.forEach(function(r) {
+                if (window.apexSysLog) {
+                    apexSysLog('✓ ' + (r.agent_name || r.domain) + ' · ' + _dur(r.duration_ms), 'ok');
+                }
+            });
+        })
+        .catch(function() {});
+    }
+
+    function _start() {
+        if (_started) return;
+        _started = true;
+        setTimeout(_poll, 600);
+        _timer = setInterval(_poll, 10000);
+    }
+
+    // Trigger immediate poll when switching to agent pages
+    var _origSwitch = window.switchPage;
+    window.switchPage = function(name) {
+        _origSwitch(name);
+        if (name === 'agents' || name === 'domain-agents') setTimeout(_poll, 200);
+    };
+
+    // Wait for auth key before starting
+    var _chk = setInterval(function() {
+        if (window._appKey) { clearInterval(_chk); _start(); }
+    }, 500);
+
+    window.apexActivityRefresh = _poll;
 })();
 </script>
 
