@@ -163,6 +163,106 @@ router.post('/civilization/council/deliberate', _auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// POST /api/civilization/council/run — full chain SSE stream
+// Stages: council → CEO dispatch → domain agent → office agent → council reflection
+router.post('/civilization/council/run', _auth, async (req, res) => {
+  const { question } = req.body || {};
+  if (!question) return res.status(400).json({ ok: false, error: 'question required' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const emit = (event, data) => {
+    if (!res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    // ── Stage 1: Council deliberates ──────────────────────────────────────
+    emit('stage', { id: 'council', label: 'Council deliberating…', status: 'active' });
+
+    const delib = await _council().deliberate(question, {});
+
+    emit('stage', {
+      id: 'council', label: 'Council decided', status: 'done',
+      data: {
+        recommendation: delib.recommendation,
+        votes:          (delib.votes || []).map(v => ({ entityId: v.entityId, vote: v.vote, confidence: v.confidence })),
+        consensusLevel: delib.consensusLevel,
+        dispatch:       delib.dispatch || null,
+      }
+    });
+
+    // ── Stage 2: CEO dispatches to domain agent ───────────────────────────
+    const dispatch = delib.dispatch;
+    let domainReply = null;
+    let officeReply = null;
+
+    if (dispatch && dispatch.slug && dispatch.action) {
+      emit('stage', { id: 'domain', label: `${dispatch.slug.toUpperCase()} agent processing…`, status: 'active', data: { slug: dispatch.slug } });
+
+      const domainResult = await require('../agent-system/domain-agents').invokeDomainAgent(
+        dispatch.slug, dispatch.action, { council: false }
+      );
+      domainReply = domainResult.reply || '';
+
+      emit('stage', {
+        id: 'domain', label: `${dispatch.slug.toUpperCase()} agent complete`, status: 'done',
+        data: { reply: domainReply.slice(0, 500), delegation: domainResult.delegation || null }
+      });
+
+      // ── Stage 3: Office agent (if domain agent delegated) ───────────────
+      if (domainResult.delegation) {
+        const { slug: officeSlug, task: officeTask } = domainResult.delegation;
+        emit('stage', { id: 'office', label: `${officeSlug} executing…`, status: 'active', data: { slug: officeSlug } });
+
+        try {
+          const officeResult = await require('../agent-system/agent-library').invokeAgent(officeSlug, officeTask);
+          officeReply = officeResult.reply || '';
+          emit('stage', {
+            id: 'office', label: `${officeSlug} complete`, status: 'done',
+            data: { reply: officeReply.slice(0, 400) }
+          });
+        } catch (e) {
+          emit('stage', { id: 'office', label: `${officeSlug} failed`, status: 'error', data: { error: e.message } });
+        }
+      } else {
+        emit('stage', { id: 'office', label: 'No delegation required', status: 'skipped' });
+      }
+    } else {
+      emit('stage', { id: 'domain', label: 'No domain dispatch', status: 'skipped' });
+      emit('stage', { id: 'office', label: 'No office agent required', status: 'skipped' });
+    }
+
+    // ── Stage 4: Council reflects on outcome ──────────────────────────────
+    emit('stage', { id: 'reflection', label: 'Council reflecting on outcome…', status: 'active' });
+
+    const runtime = require('../lib/models/runtime');
+    const reflectPrompt = `You are the CEO of APEX. A task loop just completed.
+
+Original question: ${question.slice(0, 200)}
+Council recommendation: ${(delib.recommendation || '').slice(0, 300)}${domainReply ? `\nDomain agent outcome: ${domainReply.slice(0, 300)}` : ''}${officeReply ? `\nOffice agent result: ${officeReply.slice(0, 300)}` : ''}
+
+In exactly 2 sentences: Was the objective achieved? What should be noted for next time?`;
+
+    const { result: refResult } = await runtime.execute({
+      tier: 'fast', caller: 'council-reflect',
+      messages: [{ role: 'user', content: reflectPrompt }],
+      maxTokens: 150,
+    });
+    const reflection = refResult.content[0]?.text || '';
+
+    emit('stage', { id: 'reflection', label: 'Reflection complete', status: 'done', data: { reflection } });
+    emit('complete', { ok: true, deliberationId: delib.deliberationId });
+
+  } catch (e) {
+    emit('error', { message: e.message });
+  }
+
+  res.end();
+});
+
 router.get('/civilization/council/history', _auth, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || '10'), 50);

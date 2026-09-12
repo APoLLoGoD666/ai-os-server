@@ -10447,6 +10447,28 @@ if(pipe){
 #sidebarLive .sl-name{font:500 9px/1.3 'JetBrains Mono',monospace;color:#a1a1aa;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #sidebarLive .sl-time{font:500 8px/1 'JetBrains Mono',monospace;color:#3f3f46;flex-shrink:0}
 #sidebarLive .sl-empty{font:500 8px/1 'JetBrains Mono',monospace;color:#2d2d30;padding:10px 0}
+/* ── Council chain visualization ─────────────────────────────────── */
+#ecChainViz{display:none;flex-direction:column;gap:0;margin-top:10px}
+.ec-chain-stage{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);position:relative}
+.ec-chain-stage:last-child{border-bottom:none}
+.ec-chain-stage-left{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:18px}
+.ec-chain-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);transition:all 250ms}
+.ec-chain-dot.active{border-color:#7c6cf2;background:#7c6cf2;animation:ec-dot-pulse 800ms ease-in-out infinite}
+.ec-chain-dot.done{border-color:#22c55e;background:#22c55e;animation:none}
+.ec-chain-dot.error{border-color:#ef4444;background:#ef4444;animation:none}
+.ec-chain-dot.skipped{border-color:rgba(255,255,255,0.08);background:transparent;animation:none}
+.ec-chain-line{width:1.5px;background:rgba(255,255,255,0.06);flex:1;min-height:12px}
+.ec-chain-body{flex:1;min-width:0;padding-top:1px}
+.ec-chain-lbl{font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#52525b;margin-bottom:4px;transition:color 250ms}
+.ec-chain-lbl.active{color:#a78bfa}
+.ec-chain-lbl.done{color:#d4d4d8}
+.ec-chain-lbl.error{color:#ef4444}
+.ec-chain-lbl.skipped{color:#27272a}
+.ec-chain-text{font:400 10px/1.5 'JetBrains Mono',monospace;color:#71717a;white-space:pre-wrap;word-break:break-word;max-height:80px;overflow:hidden}
+.ec-chain-text.active{color:#52525b;animation:ec-chain-blink .9s ease-in-out infinite}
+.ec-chain-text.done{color:#71717a}
+@keyframes ec-dot-pulse{0%,100%{box-shadow:0 0 0 0 rgba(124,108,242,0.4)}50%{box-shadow:0 0 0 4px rgba(124,108,242,0)}}
+@keyframes ec-chain-blink{0%,100%{opacity:.5}50%{opacity:1}}
 .aaf-card-name{font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#e8e4ff;margin-bottom:5px;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aaf-card-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 .aaf-card-meta{font:500 8px/1.5 'JetBrains Mono',monospace;letter-spacing:.04em;color:#52525b}
@@ -12002,6 +12024,24 @@ if(pipe){
                             <textarea class="ec-question-inp" id="ecQuestionInp" rows="4" placeholder="Submit a question to the council…" aria-label="Council question"></textarea>
                             <button class="ec-submit-btn" id="ecSubmitBtn" onclick="ecSubmitQuestion()">CONVENE DELIBERATION →</button>
                             <div class="ec-delib-status" id="ecDelibStatus" style="display:none" aria-live="polite"></div>
+                            <div id="ecChainViz" aria-live="polite">
+                                <div class="ec-chain-stage" id="ecStage-council">
+                                    <div class="ec-chain-stage-left"><div class="ec-chain-dot" id="ecDot-council"></div><div class="ec-chain-line"></div></div>
+                                    <div class="ec-chain-body"><div class="ec-chain-lbl" id="ecLbl-council">COUNCIL</div><div class="ec-chain-text" id="ecTxt-council"></div></div>
+                                </div>
+                                <div class="ec-chain-stage" id="ecStage-domain">
+                                    <div class="ec-chain-stage-left"><div class="ec-chain-dot" id="ecDot-domain"></div><div class="ec-chain-line"></div></div>
+                                    <div class="ec-chain-body"><div class="ec-chain-lbl" id="ecLbl-domain">DOMAIN AGENT</div><div class="ec-chain-text" id="ecTxt-domain"></div></div>
+                                </div>
+                                <div class="ec-chain-stage" id="ecStage-office">
+                                    <div class="ec-chain-stage-left"><div class="ec-chain-dot" id="ecDot-office"></div><div class="ec-chain-line"></div></div>
+                                    <div class="ec-chain-body"><div class="ec-chain-lbl" id="ecLbl-office">OFFICE AGENT</div><div class="ec-chain-text" id="ecTxt-office"></div></div>
+                                </div>
+                                <div class="ec-chain-stage" id="ecStage-reflection">
+                                    <div class="ec-chain-stage-left"><div class="ec-chain-dot" id="ecDot-reflection"></div></div>
+                                    <div class="ec-chain-body"><div class="ec-chain-lbl" id="ecLbl-reflection">REFLECTION</div><div class="ec-chain-text" id="ecTxt-reflection"></div></div>
+                                </div>
+                            </div>
                         </div>
                         <div class="ec-history-hdr">
                             <span class="ec-history-title">SESSION ARCHIVE</span>
@@ -26263,54 +26303,125 @@ window.apexFileDropHandler = function(e){
             });
     };
 
+    // ── Chain stage helpers ───────────────────────────────────────────────
+    function _chainSet(id, status, label, text) {
+        var dot = document.getElementById('ecDot-' + id);
+        var lbl = document.getElementById('ecLbl-' + id);
+        var txt = document.getElementById('ecTxt-' + id);
+        if (dot) { dot.className = 'ec-chain-dot ' + status; }
+        if (lbl) { lbl.className = 'ec-chain-lbl ' + status; if (label) lbl.textContent = label; }
+        if (txt) { txt.className = 'ec-chain-text ' + status; if (text !== undefined) txt.textContent = text; }
+    }
+    function _chainReset() {
+        ['council','domain','office','reflection'].forEach(function(id) { _chainSet(id, '', '', ''); });
+    }
+
     window.ecSubmitQuestion = function() {
         var inp = document.getElementById('ecQuestionInp');
         var q   = inp ? inp.value.trim() : '';
         if (!q) { if (inp) inp.focus(); return; }
         _setDeliberating(true);
+
+        // Show chain viz, hide old status
         var statusEl = document.getElementById('ecDelibStatus');
-        if (statusEl) {
-            statusEl.style.display = 'block';
-            statusEl.innerHTML = '<div style="font:500 10px/1 \'JetBrains Mono\',monospace;color:#3f3f46;letter-spacing:.04em;animation:ecPulse 1.2s ease-in-out infinite">Convening council…</div>';
-        }
-        // Visual: staggered exec card flash + stream logs
-        window.apexSysLog('◈ Council convening...', 'info');
+        if (statusEl) statusEl.style.display = 'none';
+        var chainEl = document.getElementById('ecChainViz');
+        if (chainEl) chainEl.style.display = 'flex';
+        _chainReset();
+
+        window.apexSysLog('◈ Council chain initiated…', 'info');
         EC_ENTITIES.forEach(function(e, i) {
             setTimeout(function() {
-                window.apexSysLog('◈ ' + e.abbr + ' deliberating...', 'proc');
                 var card = document.getElementById('ec-card-' + e.id);
                 if (card) { card.style.animation = 'none'; void card.offsetWidth; card.style.animation = 'apex-ec-flash 420ms ease-out'; setTimeout(function(){ card.style.animation = ''; }, 420); }
             }, i * 260);
         });
-        fetch('/api/civilization/council/deliberate', {
+
+        fetch('/api/civilization/council/run', {
             method:  'POST',
             headers: Object.assign({ 'Content-Type': 'application/json' }, _h()),
             body:    JSON.stringify({ question: q })
         })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            _setDeliberating(false);
-            if (!data.ok) throw new Error(data.error || 'Deliberation failed');
-            if (inp) inp.value = '';
-            // Visual: CEO golden flash + log
-            var ceoCard = document.getElementById('ec-card-ceo');
-            if (ceoCard) { ceoCard.style.animation = 'none'; void ceoCard.offsetWidth; ceoCard.style.animation = 'apex-ceo-flash 650ms ease-out'; setTimeout(function(){ ceoCard.style.animation = ''; }, 650); }
-            var cons = data.recommendation ? Math.round((data.recommendation.consensus_level || 0) * 100) : null;
-            window.apexSysLog('✓ CEO synthesis complete' + (cons ? ' · ' + cons + '% consensus' : ''), 'ok');
-            (data.votes || []).forEach(function(v) {
-                _ecLastVotes[v.entityId] = { vote: v.vote, rationale: v.rationale, confidence: v.confidence };
-            });
-            if (data.recommendation) _ecLastRec = data.recommendation;
-            _renderChamber();
-            _renderSessionResult(data.votes || [], data.recommendation || '');
-            _staggerVoteReveal(data.votes || []);
-            councilRefresh();
+        .then(function(resp) {
+            if (!resp.ok) return resp.json().then(function(e) { throw new Error(e.error || 'Request failed'); });
+            var reader = resp.body.getReader();
+            var decoder = new TextDecoder();
+            var buf = '';
+            var lastEvent = '';
+            function pump() {
+                return reader.read().then(function(chunk) {
+                    if (chunk.done) return;
+                    buf += decoder.decode(chunk.value, { stream: true });
+                    var lines = buf.split('\n');
+                    buf = lines.pop();
+                    lines.forEach(function(line) {
+                        if (line.startsWith('event: ')) { lastEvent = line.slice(7).trim(); return; }
+                        if (!line.startsWith('data: ')) return;
+                        var raw;
+                        try { raw = JSON.parse(line.slice(6)); } catch { return; }
+
+                        if (lastEvent === 'stage') {
+                            var id = raw.id, st = raw.status, lbl = raw.label, d = raw.data || {};
+                            _chainSet(id, st, lbl.toUpperCase().replace(/…$/, '').trim(), '');
+                            if (st === 'active') {
+                                window.apexSysLog('◈ ' + lbl, 'proc');
+                            }
+                            if (st === 'done' && id === 'council') {
+                                var votes = d.votes || [];
+                                votes.forEach(function(v) {
+                                    _ecLastVotes[v.entityId] = { vote: v.vote, confidence: v.confidence };
+                                });
+                                if (d.recommendation) {
+                                    _ecLastRec = d.recommendation;
+                                    _chainSet('council', 'done', 'COUNCIL', d.recommendation.slice(0, 140));
+                                }
+                                _renderChamber();
+                                _staggerVoteReveal(votes);
+                                var ceoCard = document.getElementById('ec-card-ceo');
+                                if (ceoCard) { ceoCard.style.animation = 'none'; void ceoCard.offsetWidth; ceoCard.style.animation = 'apex-ceo-flash 650ms ease-out'; setTimeout(function(){ ceoCard.style.animation = ''; }, 650); }
+                                window.apexSysLog('✓ CEO decided' + (d.dispatch ? ' → dispatch: ' + d.dispatch.slug : ''), 'ok');
+                            }
+                            if (st === 'done' && id === 'domain' && d.reply) {
+                                _chainSet('domain', 'done', (d.delegation ? '→ ' + d.delegation.slug : 'DOMAIN AGENT'), d.reply.slice(0, 160));
+                                window.apexSysLog('✓ Domain agent complete' + (d.delegation ? ' · delegating to ' + d.delegation.slug : ''), 'ok');
+                            }
+                            if (st === 'done' && id === 'office' && d.reply) {
+                                _chainSet('office', 'done', 'OFFICE AGENT', d.reply.slice(0, 140));
+                                window.apexSysLog('✓ Office agent complete', 'ok');
+                            }
+                            if (st === 'done' && id === 'reflection' && d.reflection) {
+                                _chainSet('reflection', 'done', 'REFLECTION', d.reflection);
+                                window.apexSysLog('✓ Council reflected', 'ok');
+                            }
+                            if (st === 'skipped') {
+                                _chainSet(id, 'skipped', raw.label.toUpperCase(), '—');
+                            }
+                            if (st === 'error') {
+                                _chainSet(id, 'error', lbl.toUpperCase(), d.error || 'Error');
+                                window.apexSysLog('✗ ' + lbl + ': ' + (d.error || 'error'), 'err');
+                            }
+                        }
+                        if (lastEvent === 'complete') {
+                            _setDeliberating(false);
+                            if (inp) inp.value = '';
+                            councilRefresh();
+                            if (window.apexActivityRefresh) apexActivityRefresh();
+                        }
+                        if (lastEvent === 'error') {
+                            _setDeliberating(false);
+                            window.apexSysLog('✗ Chain error: ' + (raw.message || 'unknown'), 'err');
+                            _chainSet('council', 'error', 'ERROR', raw.message || 'Chain failed');
+                        }
+                    });
+                    return pump();
+                });
+            }
+            return pump();
         })
         .catch(function(err) {
             _setDeliberating(false);
             window.apexSysLog('✗ Council error: ' + err.message, 'err');
-            var se = document.getElementById('ecDelibStatus');
-            if (se) { se.style.display = 'block'; se.innerHTML = '<span style="color:#ef4444;font:500 10px/1 \'JetBrains Mono\',monospace">'+_esc(err.message)+'</span>'; }
+            _chainSet('council', 'error', 'ERROR', err.message);
         });
     };
 
