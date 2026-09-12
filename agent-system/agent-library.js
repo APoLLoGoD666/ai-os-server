@@ -298,7 +298,7 @@ async function invokeAgent(slugOrKeyword, userMessage, { anthropicClient } = {})
     const agent = getAgent(slugOrKeyword);
     if (!agent) throw new Error(`Agent "${slugOrKeyword}" not found. Call /api/agents/sync first.`);
 
-    const { result: response } = await runtime.execute({
+    const { result: response, meta } = await runtime.execute({
         tier:      'fast',
         caller:    'agent-library',
         maxTokens: 1500,
@@ -306,9 +306,30 @@ async function invokeAgent(slugOrKeyword, userMessage, { anthropicClient } = {})
         messages:  [{ role: 'user', content: userMessage }],
     });
 
+    const reply = response.content[0]?.text || '';
+
+    setImmediate(async () => {
+        try {
+            const sb = require('../lib/clients').getSupabaseClient();
+            await sb.from('apex_agent_runs').insert({
+                task_id:          `ao-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                agent_name:       agent.name,
+                domain:           agent.category,
+                task_description: userMessage.slice(0, 300),
+                objective:        userMessage.slice(0, 300),
+                success:          true,
+                duration_ms:      meta?.latency || null,
+                model:            meta?.model || null,
+                model_used:       meta?.model || null,
+                token_usage:      response.usage || null,
+                token_count:      (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0),
+            });
+        } catch (_) {}
+    });
+
     return {
         agent: { slug: agent.slug, name: agent.name, category: agent.category },
-        reply: response.content[0]?.text || '',
+        reply,
         usage: response.usage
     };
 }

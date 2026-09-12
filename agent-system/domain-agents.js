@@ -364,12 +364,13 @@ async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 
     ];
 
     // Tool-use loop — cap at 5 rounds to prevent runaway
-    let response, toolsUsed = 0;
+    let response, toolsUsed = 0, _lastMeta;
     for (let round = 0; round < 5; round++) {
-        const { result } = await runtime.execute({
+        const { result, meta } = await runtime.execute({
             tier: 'fast', caller: 'domain-agents', system: systemPrompt, messages, maxTokens, tools,
         });
         response = result;
+        _lastMeta = meta;
 
         if (result.stop_reason !== 'tool_use') break;
 
@@ -439,6 +440,30 @@ async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 
             } catch (e) { console.warn(`[Delegate] ${delegateSlug}:`, e.message); }
         });
     }
+
+    setImmediate(async () => {
+        try {
+            const sb = require('../lib/clients').getSupabaseClient();
+            await sb.from('apex_agent_runs').insert({
+                task_id:          `da-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                agent_name:       agent.name,
+                domain:           agent.category,
+                task_description: userMessage.slice(0, 300),
+                objective:        userMessage.slice(0, 300),
+                success:          true,
+                duration_ms:      _lastMeta?.latency || null,
+                model:            _lastMeta?.model || null,
+                model_used:       _lastMeta?.model || null,
+                token_usage:      response.usage || null,
+                token_count:      (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0),
+                agent_summary:    {
+                    toolsUsed,
+                    escalation: !!escalation,
+                    delegation: delegateMatch ? delegateMatch[1].trim() : null,
+                },
+            });
+        } catch (_) {}
+    });
 
     return {
         agent:      { slug: agent.slug, name: agent.name, category: agent.category },
