@@ -635,6 +635,27 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 .ao-ta { font:500 9px/1 'JetBrains Mono',monospace; color:#27272a; margin-top:2px; }
 .ao-card { cursor:pointer; transition:box-shadow .15s,border-color .15s; }
 .ao-card:hover { box-shadow:0 0 0 1px rgba(255,255,255,0.14),0 8px 28px rgba(0,0,0,0.5) !important; }
+/* ── Portal page ──────────────────────────────────────────────────────── */
+.portal-tab-bar { display:flex; gap:0; padding:0 16px; border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(0,0,0,0.2); flex-shrink:0; }
+.portal-tab { background:none; border:none; border-bottom:2px solid transparent; color:rgba(242,242,242,0.3); font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; padding:13px 20px; cursor:pointer; transition:color 150ms,border-color 150ms; }
+.portal-tab:hover { color:rgba(242,242,242,0.6); }
+.portal-tab.active { color:#7c6cf2; border-bottom-color:#7c6cf2; }
+.portal-content { flex:1; overflow-y:auto; padding:22px 20px; display:none; }
+.portal-content.active { display:block; }
+.portal-exec-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-bottom:20px; }
+.portal-exec-card { background:rgba(10,10,10,0.9); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:16px; cursor:pointer; transition:border-top-color 150ms,transform 80ms; }
+.portal-exec-card:hover { transform:translateY(-1px); }
+.portal-dept-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; }
+.portal-dept-card { background:rgba(10,10,10,0.9); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:16px; cursor:pointer; transition:border-top-color 150ms; }
+.portal-da-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; }
+.portal-da-card { background:rgba(10,10,10,0.9); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:14px; cursor:pointer; transition:border-color 150ms; }
+.portal-da-card:hover { border-color:rgba(255,255,255,0.14); }
+.portal-section-hdr { margin-bottom:18px; }
+.portal-section-hdr .label { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:rgba(242,242,242,0.25); margin-bottom:4px; }
+.portal-section-hdr .title { font:600 14px/1 'Inter',sans-serif; color:rgba(242,242,242,0.8); }
+.portal-section-hdr .sub { font:400 10px/1.5 'Inter',sans-serif; color:rgba(242,242,242,0.38); margin-top:4px; }
+.portal-open-btn { background:none; border:1px solid rgba(94,106,210,0.22); color:#7c6cf2; font:700 9px/1 'JetBrains Mono',monospace; padding:8px 16px; border-radius:6px; cursor:pointer; letter-spacing:.06em; transition:background 150ms; }
+.portal-open-btn:hover { background:rgba(94,106,210,0.08); }
 .ao-card--open { z-index:10 !important; border-color:rgba(255,255,255,0.18) !important; }
 .ao-card-toggle { display:flex; align-items:center; justify-content:space-between; margin-top:9px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.07em; color:#3f3f46; user-select:none; transition:color .12s; }
 .ao-card--open .ao-card-toggle { color:#71717a; }
@@ -11465,6 +11486,29 @@ if(pipe){
                 </div>
             </div><!-- #page-domain-agents -->
 
+            <!-- ══ PAGE: PORTAL — Agency Overview ══ -->
+            <div class="page" id="page-portal">
+                <div class="ao-topbar">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span class="ao-title">AGENCY OVERVIEW <span style="font-size:9px;color:#52525b;letter-spacing:.08em">PORTAL</span></span>
+                        <span class="ao-conn-dot"></span>
+                        <span style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#3f3f46">COUNCIL · OFFICE · DOMAIN</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#3f3f46">3 SYSTEMS ACTIVE</span>
+                        <span class="ao-clock" id="portalClock">--:--:-- --</span>
+                    </div>
+                </div>
+                <div class="portal-tab-bar">
+                    <button class="portal-tab active" id="ptab-council" onclick="portalSwitchTab('council')">COUNCIL</button>
+                    <button class="portal-tab" id="ptab-agents" onclick="portalSwitchTab('agents')">OFFICE AGENTS</button>
+                    <button class="portal-tab" id="ptab-domain" onclick="portalSwitchTab('domain')">DOMAIN AGENTS</button>
+                </div>
+                <div class="portal-content active" id="portal-content-council"></div>
+                <div class="portal-content" id="portal-content-agents"></div>
+                <div class="portal-content" id="portal-content-domain"></div>
+            </div><!-- #page-portal -->
+
             <!-- ══ PAGE: APPROVALS (UX-14 — Actions / Approvals) ══ -->
             <div class="page" id="page-approvals">
                 <!-- Two-step approval modal (UX-14 INV-ACTION-24: blocking, not dismissible by swipe) -->
@@ -12036,6 +12080,10 @@ if(pipe){
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Domain</span>
         </button>
+        <button class="nav-btn" id="nav-portal" aria-label="Agency Overview">
+            <span class="nav-icon">◬</span>
+            <span class="nav-label">Overview</span>
+        </button>
         <button class="nav-btn" id="nav-domains" aria-label="Domains">
             <span class="nav-icon">&#9643;</span>
             <span class="nav-label">Domains</span>
@@ -12060,7 +12108,7 @@ if(pipe){
     // V-11-F F-7: 'operation' removed (merged into business)
     // V-11-F F-9: civilisation/reality moved out of LIFE & WORK swipe sequence to end (SYSTEM → Advanced)
     // V-11-H H-18: 'agents' / 'approvals' / 'activity' consolidated into 'actions' (positioned after 'intelligence' per Section 32).
-    var pages = ['overview','domains', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'domain-agents', 'memory', 'council', 'governance', 'civilisation', 'reality', 'settings'];
+    var pages = ['overview','domains', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'domain-agents', 'portal', 'memory', 'council', 'governance', 'civilisation', 'reality', 'settings'];
     var activePage = 'overview';
 
     var pageMeta = {
@@ -12082,6 +12130,7 @@ if(pipe){
         actions:       { title:'Actions',       sub:'Decisions · In-flight · History · Notifications' },
         agents:        { title:'Agents',        sub:'The Office · Departments · Pipeline' },
         'domain-agents': { title:'Domain Agents',  sub:'Core · Council Dispatch · Direct Routing' },
+        portal:          { title:'Overview',        sub:'Council · Office Agents · Domain Agents' },
         knowledge:     { title:'Knowledge',     sub:'Facts · Evidence · Gaps · Coverage' },
         intelligence:  { title:'Intelligence',  sub:'Briefing · Opportunities · Health' },
         memory:        { title:'Memory',        sub:'Episodic · Semantic · Health' },
@@ -24591,7 +24640,7 @@ window.apexFileDropHandler = function(e){
 // V-11-D2: boot-time page resolver — hash → localStorage → TODAY default
 // V-11-H H-18: hash-alias resolver — #approvals/#agents/#activity → #actions with subpanel scroll.
 (function() {
-    var _d2Pages = ['overview','command','operation','system','finance','communication','business','health','university','occult','research','civilisation','reality','activity','agents','approvals','actions','knowledge','intelligence','memory','governance'];
+    var _d2Pages = ['overview','command','operation','system','finance','communication','business','health','university','occult','research','civilisation','reality','activity','agents','domain-agents','portal','approvals','actions','knowledge','intelligence','memory','governance'];
     var _hashAliases = Object.create(null);
     _hashAliases.approvals = 'actnPendingPanel';
     _hashAliases.agents    = 'actnRunsPanel';
@@ -25144,15 +25193,105 @@ window.apexFileDropHandler = function(e){
    ═══════════════════════════════════════════════════════════════════════ */
 (function() {
     var DA_AGENTS = [
-        { id:'business',     name:'BUSINESS',   color:'#34d399', slug:'business',     category:'BUSINESS',       team:'Sales · Delivery ×17', desc:'CRM, client pipeline, project management, proposals.' },
-        { id:'marketing',    name:'MARKETING',  color:'#a78bfa', slug:'marketing',    category:'MARKETING',      team:'Marketing Team ×6',    desc:'Brand growth, content strategy, campaigns across all channels.' },
-        { id:'comms',        name:'COMMS',       color:'#2dd4bf', slug:'comms',        category:'COMMUNICATIONS', team:'Comms Team ×5',        desc:'Inbox triage, client replies, vendor correspondence.' },
-        { id:'system',       name:'SYSTEM',      color:'#64748b', slug:'system',       category:'INFRASTRUCTURE', team:'Ops Team ×5',          desc:'Pipeline health, Render infra, cost monitoring.' },
-        { id:'file',         name:'FILE',         color:'#38bdf8', slug:'file',         category:'KNOWLEDGE',      team:'Direct',               desc:'Obsidian vault, documents, knowledge base.' },
-        { id:'finance',      name:'FINANCE',     color:'#6366f1', slug:'finance',      category:'FINANCE',        team:'Finance Team ×4',      desc:'Budgets, invoices, transactions, analysis.' },
-        { id:'health',       name:'HEALTH',      color:'#f43f5e', slug:'health',       category:'HEALTH',         team:'Direct',               desc:'Workouts, nutrition, sleep, mood logging.' },
-        { id:'uni',          name:'UNIVERSITY',  color:'#f59e0b', slug:'uni',          category:'EDUCATION',      team:'Direct',               desc:'Assignments, flashcards, study sessions.' },
-        { id:'civilisation', name:'GOVERNANCE',  color:'#e879f9', slug:'civilisation', category:'GOVERNANCE',     team:'Direct',               desc:'Constitutional gate, genome validation, consensus.' },
+        {
+            id:'business', name:'BUSINESS', color:'#34d399', slug:'business', category:'BUSINESS',
+            team:'Sales · Delivery ×17', desc:'CRM, client pipeline, project management, proposals. Manages the full revenue and delivery chain from lead to handoff.',
+            model:'claude-haiku-4-5-20251001',
+            keywords:['client','proposal','crm','project','contract','business','lead','pipeline','follow-up','deal','invoice client','project brief'],
+            capabilities:['CRM pipeline management','Client proposal generation','Contract & scope review','Lead qualification & enrichment','Deal progression tracking','Project delivery coordination','Client onboarding workflows','Revenue forecasting'],
+            officeAgents:['Lead Enricher','Prospector','Inbound Leads','Follow-up Agent','Proposal Agent','Pipeline Agent','Project Co-ordinator','Onboarder','Designer Assistant','QA Checker','Client Reports','Client Assets','Quality Assurance'],
+            escalates:true, delegates:true,
+            routeSource:'detectDomain: client / proposal / crm / project / contract / business',
+            dispatchNote:'Routes to 13 office agents across Sales ×6 and Delivery ×7. Highest delegation volume.'
+        },
+        {
+            id:'marketing', name:'MARKETING', color:'#a78bfa', slug:'marketing', category:'MARKETING',
+            team:'Marketing Team ×6', desc:'Brand growth, content strategy, and campaigns across every channel. From Instagram to Meta ads to newsletter — the full marketing stack.',
+            model:'claude-haiku-4-5-20251001',
+            keywords:['marketing','brand','campaign','content','audience','social','instagram','meta ads','newsletter','seo','growth','content calendar'],
+            capabilities:['Content calendar planning','Instagram organic strategy','Meta ads management','Brand voice & identity','Newsletter campaigns','SEO optimisation','Audience growth strategy','Creative brief generation','Campaign analytics'],
+            officeAgents:['Instagram Organic','Meta Ads','Graphics Designer','Newsletter Agent','Research Agent','Video Editor Agent'],
+            escalates:true, delegates:true,
+            routeSource:'detectDomain: marketing / brand / campaign / content / social / instagram',
+            dispatchNote:'Newly integrated in office agent build. Routes to 6 marketing specialists.'
+        },
+        {
+            id:'comms', name:'COMMS', color:'#2dd4bf', slug:'comms', category:'COMMUNICATIONS',
+            team:'Comms Team ×5', desc:'Full inbox management, client correspondence, vendor emails, contractor comms, and internal communications. Zero email left behind.',
+            model:'claude-haiku-4-5-20251001',
+            keywords:['inbox','email triage','client email','vendor email','contractor email','unanswered email','email reply','comms','correspondence','follow-up email'],
+            capabilities:['Email inbox triage & prioritisation','Client email drafting','Vendor correspondence management','Contractor comms handling','Internal email management','Correspondence thread tracking','Follow-up scheduling','Tone & voice matching'],
+            officeAgents:['Triage Agent','Client Emails','Vendor Emails','Contractor Emails','Internal Emails'],
+            escalates:true, delegates:true,
+            routeSource:'detectDomain: inbox / email / triage / comms / correspondence',
+            dispatchNote:'Newly integrated. Routes to 5 comms office agents by email type.'
+        },
+        {
+            id:'system', name:'SYSTEM', color:'#64748b', slug:'system', category:'INFRASTRUCTURE',
+            team:'Ops Team ×5', desc:'Pipeline health, Render infrastructure, cost monitoring, circuit breaker management, and system anomaly detection. The nerve centre.',
+            model:'claude-haiku-4-5-20251001',
+            keywords:['server','pipeline','render','health','uptime','deploy','system status','circuit breaker','cost spike','haiku','sonnet','infra','agent run'],
+            capabilities:['Render health monitoring','Pipeline status checks','Cost spike detection & alerting','Circuit breaker management','Deployment verification','System alert routing','Infra anomaly detection','SIE threat analysis integration','Cron sweep execution'],
+            officeAgents:['Compliance Checker','Legal Review','Intel Agent','Internal Dashboards','Internal Reporting'],
+            escalates:true, delegates:true,
+            routeSource:'detectDomain: server / pipeline / render / health / deploy / system status',
+            dispatchNote:'First domain agent built. Receives morning cron sweep + SIE escalations. Routes to Ops ×5.'
+        },
+        {
+            id:'file', name:'FILE', color:'#38bdf8', slug:'file', category:'KNOWLEDGE',
+            team:'Direct (no office sub-agents)', desc:'Obsidian vault navigation, document retrieval, knowledge base queries, and storage management. Your personal intelligence layer.',
+            model:'claude-haiku-4-5-20251001',
+            keywords:['file','folder','vault','obsidian','document','note','wiki','upload','storage','knowledge base'],
+            capabilities:['Vault navigation & search','Document retrieval by topic','Knowledge base queries','File & folder organisation','Note creation','Wiki-style search','Storage management','Cross-reference discovery'],
+            officeAgents:[],
+            escalates:true, delegates:false,
+            routeSource:'detectDomain: file / folder / vault / obsidian / document / note',
+            dispatchNote:'Direct execution — no office agent sub-layer. Reads from Supabase Storage + vault.'
+        },
+        {
+            id:'finance', name:'FINANCE', color:'#6366f1', slug:'finance', category:'FINANCE',
+            team:'Finance Team ×4', desc:'Budgets, invoices, transaction analysis, spending intelligence. Tracks every pound, flags anomalies, and keeps the books clean.',
+            model:'claude-haiku-4-5-20251001',
+            keywords:['finance','money','spend','budget','invoice','transaction','payment','income','expense','cost','£','$','gbp','bank','subscription'],
+            capabilities:['Budget tracking & alerts','Invoice processing & status','Transaction categorisation','Expense analysis & trends','Financial reporting','Accounts payable management','Bank reconciliation','Subscription monitoring','Spend forecasting'],
+            officeAgents:['Finance Agent','Invoicing Agent','Accounts Payable','Reconciliation Agent'],
+            escalates:true, delegates:true,
+            routeSource:'detectDomain: finance / money / spend / budget / invoice / transaction / £ / $',
+            dispatchNote:'Highest council escalation rate. Routes to Finance ×4 for execution.'
+        },
+        {
+            id:'health', name:'HEALTH', color:'#f43f5e', slug:'health', category:'HEALTH',
+            team:'Direct (no office sub-agents)', desc:'Workouts, nutrition, sleep, mood, and body tracking. Private health intelligence — all data stays local, no escalation.',
+            model:'claude-haiku-4-5-20251001',
+            keywords:['workout','nutrition','macro','calorie','supplement','sleep log','mood log','body measurement','fitness track'],
+            capabilities:['Workout logging & performance analysis','Nutrition & macro tracking','Sleep quality review','Mood trend analysis','Supplement stack review','Body measurement tracking','Recovery protocol suggestions','Health goal tracking'],
+            officeAgents:[],
+            escalates:false, delegates:false,
+            routeSource:'detectDomain: workout / nutrition / macro / calorie / sleep log / mood log',
+            dispatchNote:'Personal private domain — no office agents, no escalation, no delegation.'
+        },
+        {
+            id:'uni', name:'UNIVERSITY', color:'#f59e0b', slug:'uni', category:'EDUCATION',
+            team:'Direct (no office sub-agents)', desc:'Academic support across assignments, lectures, modules, deadlines, flashcards, and study sessions. Including CS249R and textbook synthesis.',
+            model:'claude-haiku-4-5-20251001',
+            keywords:['uni','university','assignment','lecture','module','flashcard','deadline','exam','study','coursework','cs249r','textbook'],
+            capabilities:['Assignment planning & structuring','Lecture note synthesis','Flashcard generation from notes','Deadline & calendar tracking','Study session planning','Module summaries','Exam prep & revision strategies','Coursework review & feedback'],
+            officeAgents:[],
+            escalates:false, delegates:false,
+            routeSource:'detectDomain: uni / university / assignment / lecture / module / exam',
+            dispatchNote:'Academic domain — direct execution only. No delegation chain.'
+        },
+        {
+            id:'civilisation', name:'GOVERNANCE', color:'#e879f9', slug:'civilisation', category:'GOVERNANCE',
+            team:'Direct (no office sub-agents)', desc:'Constitutional gate enforcement, entity genome validation, civilisation-level consensus. The highest authority layer below the council.',
+            model:'claude-haiku-4-5-20251001',
+            keywords:['constitution','governance','charter','law','compliance','entity','registry','genome','validation','audit','civilisation','authority'],
+            capabilities:['Constitutional gate enforcement','Entity registry management','Genome validation protocols','Consensus building','Audit trail review','Charter compliance checks','Trust score computation','Civilisation protocol execution'],
+            officeAgents:[],
+            escalates:true, delegates:false,
+            routeSource:'detectDomain: constitution / governance / charter / registry / genome',
+            dispatchNote:'Apex governance layer. Escalates critical constitutional matters to the council.'
+        },
     ];
 
     var CARD_W = 172, CARD_H = 110;
@@ -25238,16 +25377,96 @@ window.apexFileDropHandler = function(e){
     function daSelectAgent(slug) {
         _daActiveSlug = slug;
         var d = DA_AGENTS.find(function(x){ return x.slug === slug; });
-        if (d) {
-            var dot = document.getElementById('daDeptDot');
-            var name = document.getElementById('daDeptName');
-            var inp = document.getElementById('daTaskInp');
-            if (dot)  dot.style.background = d.color;
-            if (name) name.textContent = d.name;
-            if (inp)  { inp.placeholder = 'Message the '+d.name.toLowerCase()+' agent...'; inp.focus(); }
-            var reply = document.getElementById('daReplyPanel');
-            if (reply) reply.innerHTML = '<div style="color:'+d.color+'88;font-size:10px;padding:4px 0">'+d.name+' agent selected. '+d.desc+'</div>';
+        if (!d) return;
+        var dot = document.getElementById('daDeptDot');
+        var nameEl = document.getElementById('daDeptName');
+        var inp = document.getElementById('daTaskInp');
+        if (dot)    dot.style.background = d.color;
+        if (nameEl) nameEl.textContent = d.name;
+        if (inp)    { inp.placeholder = 'Message the '+d.name.toLowerCase()+' agent...'; inp.focus(); }
+
+        var reply = document.getElementById('daReplyPanel');
+        if (!reply) { daRenderCanvas(); return; }
+
+        var kwHtml = (d.keywords||[]).map(function(k){
+            return '<span style="display:inline-block;padding:2px 8px;border-radius:3px;background:'+d.color+'14;color:'+d.color+'cc;font:600 8px/1.2 \'JetBrains Mono\',monospace;letter-spacing:.04em;margin:2px 2px">'+k+'</span>';
+        }).join('');
+
+        var capHtml = (d.capabilities||[]).map(function(c){
+            return '<div style="display:flex;align-items:flex-start;gap:6px;padding:3px 0">'+
+                '<span style="width:4px;height:4px;border-radius:50%;background:'+d.color+';flex-shrink:0;margin-top:4px"></span>'+
+                '<span style="font:400 10px/1.45 \'Inter\',sans-serif;color:rgba(232,244,255,0.72)">'+c+'</span>'+
+            '</div>';
+        }).join('');
+
+        var officeHtml = '';
+        if (d.officeAgents && d.officeAgents.length) {
+            officeHtml = d.officeAgents.map(function(a, i){
+                return '<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03)">'+
+                    '<span style="font:600 8px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.22);min-width:14px;text-align:right">'+(i+1)+'</span>'+
+                    '<span style="width:1px;height:11px;background:'+d.color+'44;flex-shrink:0"></span>'+
+                    '<span style="font:500 10px/1 \'Inter\',sans-serif;color:rgba(232,244,255,0.68)">'+a+'</span>'+
+                '</div>';
+            }).join('');
+        } else {
+            officeHtml = '<span style="font:500 9px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.22)">No office sub-agents — executes directly</span>';
         }
+
+        var escalateHtml = d.escalates
+            ? '<span style="color:#f59e0b;font-weight:700">↑ YES</span><div style="color:rgba(242,242,242,0.28);font-size:9px;margin-top:3px;line-height:1.35">Escalates to Supreme Council on strategic or critical matters</div>'
+            : '<span style="color:rgba(242,242,242,0.22)">No escalation path</span>';
+        var delegateHtml = d.delegates
+            ? '<span style="color:#34d399;font-weight:700">→ YES</span><div style="color:rgba(242,242,242,0.28);font-size:9px;margin-top:3px;line-height:1.35">Delegates tasks to office agents via <code style="color:#7c6cf2;background:rgba(94,106,210,0.1);padding:1px 4px;border-radius:2px">[DELEGATE: slug: task]</code></div>'
+            : '<span style="color:rgba(242,242,242,0.22)">No delegation — solo execution</span>';
+
+        reply.innerHTML =
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06)">'+
+                '<span style="width:9px;height:9px;border-radius:50%;background:'+d.color+';box-shadow:0 0 9px '+d.color+'66;flex-shrink:0"></span>'+
+                '<span style="font:700 12px/1 \'JetBrains Mono\',monospace;letter-spacing:.07em;color:'+d.color+'">'+d.name+'</span>'+
+                '<span style="font:600 8px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.28);margin-left:auto">'+d.category+'</span>'+
+                '<span style="background:rgba(52,211,153,0.1);color:#34d399;font:700 8px/1 \'JetBrains Mono\',monospace;padding:2px 8px;border-radius:3px;border:1px solid rgba(52,211,153,0.22)">READY</span>'+
+            '</div>'+
+            '<div style="font:400 11px/1.65 \'Inter\',sans-serif;color:rgba(232,244,255,0.6);margin-bottom:14px">'+d.desc+'</div>'+
+            '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px">'+
+                '<div><div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:rgba(242,242,242,0.25);margin-bottom:5px">MODEL</div>'+
+                '<span style="background:rgba(94,106,210,0.1);color:#7c6cf2;font:600 9px/1 \'JetBrains Mono\',monospace;padding:3px 10px;border-radius:4px;border:1px solid rgba(94,106,210,0.22)">'+d.model+'</span></div>'+
+                '<div><div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:rgba(242,242,242,0.25);margin-bottom:5px">OFFICE AGENTS</div>'+
+                '<span style="background:'+d.color+'14;color:'+d.color+';font:700 10px/1 \'JetBrains Mono\',monospace;padding:3px 10px;border-radius:4px;border:1px solid '+d.color+'30">'+
+                    (d.officeAgents&&d.officeAgents.length ? d.officeAgents.length+' agents' : 'direct')+
+                '</span></div>'+
+            '</div>'+
+            '<div style="margin-bottom:14px">'+
+                '<div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:rgba(242,242,242,0.25);margin-bottom:7px">ROUTING KEYWORDS</div>'+
+                '<div style="display:flex;flex-wrap:wrap;gap:0">'+kwHtml+'</div>'+
+                '<div style="font:400 9px/1.4 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.2);margin-top:6px">'+d.routeSource+'</div>'+
+            '</div>'+
+            '<div style="margin-bottom:14px">'+
+                '<div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:rgba(242,242,242,0.25);margin-bottom:7px">CAPABILITIES</div>'+
+                capHtml+
+            '</div>'+
+            '<div style="margin-bottom:14px">'+
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">'+
+                    '<div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:rgba(242,242,242,0.25)">OFFICE TEAM</div>'+
+                    (d.officeAgents&&d.officeAgents.length?'<span style="background:'+d.color+'14;color:'+d.color+';font:700 8px/1 \'JetBrains Mono\',monospace;padding:1px 7px;border-radius:3px">'+d.officeAgents.length+'</span>':'')+
+                '</div>'+
+                officeHtml+
+                '<div style="font:400 9px/1.4 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.18);margin-top:7px">'+d.dispatchNote+'</div>'+
+            '</div>'+
+            '<div style="margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+                '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:7px;padding:9px">'+
+                    '<div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:rgba(242,242,242,0.25);margin-bottom:6px">ESCALATES</div>'+
+                    '<div style="font:600 9px/1 \'JetBrains Mono\',monospace">'+escalateHtml+'</div>'+
+                '</div>'+
+                '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:7px;padding:9px">'+
+                    '<div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:rgba(242,242,242,0.25);margin-bottom:6px">DELEGATES</div>'+
+                    '<div style="font:600 9px/1 \'JetBrains Mono\',monospace">'+delegateHtml+'</div>'+
+                '</div>'+
+            '</div>'+
+            '<div style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.05);border-radius:7px;padding:10px 12px;font:500 9px/1.55 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.32)">'+
+                '<span style="color:#7c6cf2">POST</span> <span style="color:rgba(232,244,255,0.45)">/api/agents/domain/invoke</span><br>'+
+                '{ slug: <span style="color:'+d.color+'">"'+d.slug+'"</span>, message: <span style="color:rgba(242,242,242,0.45)">"..."</span> }'+
+            '</div>';
+
         daRenderCanvas();
     }
 
@@ -25584,6 +25803,225 @@ window.apexFileDropHandler = function(e){
         if(e.target.id === 'cmd-history-btn') window._openSessionsDrawer();
         if(e.target.id === 'cmd-sessions-close') window._closeSessionsDrawer();
     });
+})();
+</script>
+
+<!-- ══ PORTAL IIFE ══ -->
+<script>
+(function() {
+    'use strict';
+
+    var _portalInited = { council:false, agents:false, domain:false };
+    var _portalActive = 'council';
+
+    var _EXEC_CARDS = [
+        { id:'cso', abbr:'CSO', name:'Chief Strategy Officer',     color:'#7c6cf2', role:'Strategic direction, market positioning, long-term planning & opportunity mapping.' },
+        { id:'cto', abbr:'CTO', name:'Chief Technology Officer',   color:'#3b82f6', role:'Tech architecture, AI pipeline, infrastructure design & system resilience.' },
+        { id:'cfo', abbr:'CFO', name:'Chief Financial Officer',    color:'#22c55e', role:'Financial health, budget oversight, cost efficiency & treasury management.' },
+        { id:'coo', abbr:'COO', name:'Chief Operating Officer',    color:'#f59e0b', role:'Operations efficiency, process optimisation, delivery standards & team coordination.' },
+        { id:'cio', abbr:'CIO', name:'Chief Intelligence Officer', color:'#06b6d4', role:'Intelligence synthesis, threat detection, opportunity identification & SIE integration.' },
+        { id:'cgo', abbr:'CGO', name:'Chief Governance Officer',   color:'#ef4444', role:'Constitutional compliance, authority chain management & audit trail integrity.' },
+        { id:'ceo', abbr:'CEO', name:'Chief Executive Officer',    color:'#c9a227', role:'Final synthesizer. Produces the binding recommendation from all executive votes.', isCeo:true },
+    ];
+
+    var _DEPTS = [
+        { name:'MARKETING',   color:'#a78bfa', count:6,  agents:['Instagram Organic','Meta Ads','Graphics Designer','Newsletter Agent','Research Agent','Video Editor Agent'],           desc:'Full-stack brand & growth.' },
+        { name:'COMMS',       color:'#2dd4bf', count:5,  agents:['Triage Agent','Client Emails','Vendor Emails','Contractor Emails','Internal Emails'],                                  desc:'Inbox zero & correspondence.' },
+        { name:'OPERATIONS',  color:'#64748b', count:5,  agents:['Compliance Checker','Legal Review','Intel Agent','Internal Dashboards','Internal Reporting'],                          desc:'Infra, compliance & ops intel.' },
+        { name:'SALES',       color:'#38bdf8', count:6,  agents:['Lead Enricher','Prospector','Inbound Leads','Follow-up Agent','Proposal Agent','Pipeline Agent'],                      desc:'Lead to close pipeline.' },
+        { name:'DELIVERY',    color:'#34d399', count:7,  agents:['Project Co-ordinator','Onboarder','Designer Assistant','QA Checker','Client Reports','Client Assets','Quality Assurance'], desc:'Project execution & QA.' },
+        { name:'FINANCE',     color:'#6366f1', count:4,  agents:['Finance Agent','Invoicing Agent','Accounts Payable','Reconciliation Agent'],                                           desc:'Books, invoices & reconciliation.' },
+    ];
+
+    var _DOMAIN_SUMMARY = [
+        { slug:'business',     name:'BUSINESS',    color:'#34d399', category:'BUSINESS',       teamCount:13, escalates:true,  delegates:true  },
+        { slug:'marketing',    name:'MARKETING',   color:'#a78bfa', category:'MARKETING',      teamCount:6,  escalates:true,  delegates:true  },
+        { slug:'comms',        name:'COMMS',       color:'#2dd4bf', category:'COMMUNICATIONS', teamCount:5,  escalates:true,  delegates:true  },
+        { slug:'system',       name:'SYSTEM',      color:'#64748b', category:'INFRASTRUCTURE', teamCount:5,  escalates:true,  delegates:true  },
+        { slug:'file',         name:'FILE',        color:'#38bdf8', category:'KNOWLEDGE',      teamCount:0,  escalates:true,  delegates:false },
+        { slug:'finance',      name:'FINANCE',     color:'#6366f1', category:'FINANCE',        teamCount:4,  escalates:true,  delegates:true  },
+        { slug:'health',       name:'HEALTH',      color:'#f43f5e', category:'HEALTH',         teamCount:0,  escalates:false, delegates:false },
+        { slug:'uni',          name:'UNIVERSITY',  color:'#f59e0b', category:'EDUCATION',      teamCount:0,  escalates:false, delegates:false },
+        { slug:'civilisation', name:'GOVERNANCE',  color:'#e879f9', category:'GOVERNANCE',     teamCount:0,  escalates:true,  delegates:false },
+    ];
+
+    function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function portalStartClock() {
+        (function tick(){
+            var d = new Date(), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+            var ap = h >= 12 ? 'pm' : 'am'; h = h%12||12;
+            var el = document.getElementById('portalClock');
+            if (el) el.textContent = h+':'+('0'+m).slice(-2)+':'+('0'+s).slice(-2)+' '+ap;
+        })();
+        setInterval(function(){
+            var d = new Date(), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+            var ap = h>=12?'pm':'am'; h=h%12||12;
+            var el = document.getElementById('portalClock');
+            if (el) el.textContent = h+':'+('0'+m).slice(-2)+':'+('0'+s).slice(-2)+' '+ap;
+        }, 1000);
+    }
+
+    function portalRenderCouncil() {
+        if (_portalInited.council) return;
+        _portalInited.council = true;
+        var c = document.getElementById('portal-content-council');
+        if (!c) return;
+        var cards = _EXEC_CARDS.map(function(e){
+            return '<div class="portal-exec-card" style="border-top:2px solid '+e.color+'44" '+
+                'onmouseover="this.style.borderTopColor=\''+e.color+'99\'" onmouseout="this.style.borderTopColor=\''+e.color+'44\'" '+
+                'onclick="window.switchPage(\'council\')" tabindex="0" role="button" aria-label="'+_esc(e.name)+'">'+
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'+
+                    '<span style="font:700 13px/1 \'JetBrains Mono\',monospace;color:'+e.color+'">'+e.abbr+'</span>'+
+                    (e.isCeo?'<span style="background:rgba(201,162,39,0.12);color:#c9a227;font:700 7px/1 \'JetBrains Mono\',monospace;padding:2px 7px;border-radius:3px;border:1px solid rgba(201,162,39,0.22)">SYNTHESIZER</span>':
+                    '<span style="margin-left:auto;width:5px;height:5px;border-radius:50%;background:'+e.color+'55;box-shadow:0 0 5px '+e.color+'44"></span>')+
+                '</div>'+
+                '<div style="font:500 10px/1.4 \'Inter\',sans-serif;color:rgba(232,244,255,0.75);margin-bottom:6px">'+_esc(e.name)+'</div>'+
+                '<div style="font:400 9px/1.45 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.3)">'+_esc(e.role)+'</div>'+
+            '</div>';
+        }).join('');
+        c.innerHTML =
+            '<div class="portal-section-hdr"><div class="label">SUPREME COUNCIL</div>'+
+            '<div class="title">7 Executives · Deliberation Chamber</div>'+
+            '<div class="sub">The council deliberates on strategic questions, approves domain dispatches, and synthesizes org intelligence into binding decisions. The CEO vote is the final recommendation.</div></div>'+
+            '<div class="portal-exec-grid">'+cards+'</div>'+
+            '<div style="background:rgba(94,106,210,0.05);border:1px solid rgba(94,106,210,0.14);border-radius:10px;padding:16px;margin-bottom:16px">'+
+                '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#7c6cf2;margin-bottom:10px">QUICK QUESTION</div>'+
+                '<div style="display:flex;gap:8px">'+
+                    '<input id="portalCouncilInp" class="ao-task-inp" style="flex:1" placeholder="Ask the council a question..." />'+
+                    '<button class="ao-add-btn" onclick="portalCouncilAsk()">ASK</button>'+
+                '</div>'+
+                '<div id="portalCouncilResult" style="margin-top:10px;font:400 10px/1.6 \'Inter\',sans-serif;color:rgba(242,242,242,0.45)"></div>'+
+            '</div>'+
+            '<div style="text-align:right"><button class="portal-open-btn" onclick="window.switchPage(\'council\')">OPEN COUNCIL CHAMBER →</button></div>';
+    }
+
+    function portalRenderAgents() {
+        if (_portalInited.agents) return;
+        _portalInited.agents = true;
+        var c = document.getElementById('portal-content-agents');
+        if (!c) return;
+        var total = _DEPTS.reduce(function(s,d){return s+d.count;},0);
+        var deptCards = _DEPTS.map(function(d){
+            var agentRows = d.agents.map(function(a,i){
+                return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)">'+
+                    '<span style="font:600 8px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.2);min-width:12px;text-align:right">'+(i+1)+'</span>'+
+                    '<span style="width:1px;height:10px;background:'+d.color+'44;flex-shrink:0"></span>'+
+                    '<span style="font:400 10px/1 \'Inter\',sans-serif;color:rgba(232,244,255,0.62)">'+_esc(a)+'</span>'+
+                '</div>';
+            }).join('');
+            return '<div class="portal-dept-card" style="border-top:2px solid '+d.color+'44" '+
+                'onmouseover="this.style.borderTopColor=\''+d.color+'88\'" onmouseout="this.style.borderTopColor=\''+d.color+'44\'" '+
+                'onclick="window.switchPage(\'agents\')" tabindex="0" role="button" aria-label="'+_esc(d.name)+' department">'+
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+                    '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.07em;color:'+d.color+'">'+_esc(d.name)+'</span>'+
+                    '<span style="background:'+d.color+'18;color:'+d.color+';font:700 9px/1 \'JetBrains Mono\',monospace;padding:2px 7px;border-radius:3px;margin-left:auto">'+d.count+' agents</span>'+
+                '</div>'+
+                '<div style="font:400 9px/1.4 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.3);margin-bottom:10px">'+_esc(d.desc)+'</div>'+
+                agentRows+
+            '</div>';
+        }).join('');
+        c.innerHTML =
+            '<div class="portal-section-hdr"><div class="label">AGENTS OFFICE</div>'+
+            '<div class="title">6 Departments · '+total+' Agents</div>'+
+            '<div class="sub">Office agents execute tasks within their domains. They are dispatched by domain agents via the <code style="color:#7c6cf2;background:rgba(94,106,210,0.1);padding:1px 5px;border-radius:3px">[DELEGATE]</code> protocol or invoked directly from this dashboard.</div></div>'+
+            '<div class="portal-dept-grid">'+deptCards+'</div>'+
+            '<div style="margin-top:16px;text-align:right"><button class="portal-open-btn" onclick="window.switchPage(\'agents\')">OPEN AGENTS OFFICE →</button></div>';
+    }
+
+    function portalRenderDomain() {
+        if (_portalInited.domain) return;
+        _portalInited.domain = true;
+        var c = document.getElementById('portal-content-domain');
+        if (!c) return;
+        var daCards = _DOMAIN_SUMMARY.map(function(d){
+            var esc = d.escalates
+                ? '<span style="background:rgba(245,158,11,0.12);color:#f59e0b;font:700 7px/1 \'JetBrains Mono\',monospace;padding:2px 6px;border-radius:2px;border:1px solid rgba(245,158,11,0.22)">↑ ESCALATES</span>'
+                : '';
+            var del = d.delegates
+                ? '<span style="background:rgba(52,211,153,0.1);color:#34d399;font:700 7px/1 \'JetBrains Mono\',monospace;padding:2px 6px;border-radius:2px;border:1px solid rgba(52,211,153,0.2)">→ DELEGATES</span>'
+                : '';
+            return '<div class="portal-da-card" style="border-top:2px solid '+d.color+'44" '+
+                'onmouseover="this.style.borderColor=\''+d.color+'66\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.06)\'" '+
+                'onclick="window.switchPage(\'domain-agents\')" tabindex="0" role="button" aria-label="'+_esc(d.name)+' domain agent">'+
+                '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">'+
+                    '<span style="width:7px;height:7px;border-radius:50%;background:'+d.color+';box-shadow:0 0 7px '+d.color+'55;flex-shrink:0"></span>'+
+                    '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em;color:'+d.color+'">'+_esc(d.name)+'</span>'+
+                    '<span style="margin-left:auto;font:600 8px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.25)">'+_esc(d.category)+'</span>'+
+                '</div>'+
+                (d.teamCount ? '<div style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.3);margin-bottom:8px">'+d.teamCount+' office agents</div>' : '<div style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.2);margin-bottom:8px">direct execution</div>')+
+                '<div style="display:flex;gap:4px;flex-wrap:wrap">'+esc+del+'</div>'+
+            '</div>';
+        }).join('');
+        c.innerHTML =
+            '<div class="portal-section-hdr"><div class="label">DOMAIN AGENTS</div>'+
+            '<div class="title">9 Domain Agents · Core Intelligence Layer</div>'+
+            '<div class="sub">Domain agents are the primary routing layer. Each covers a life/work domain, receives chat messages via keyword routing, and can escalate to the council or delegate to office agents. Click any card to open the domain agent map.</div></div>'+
+            '<div class="portal-da-grid">'+daCards+'</div>'+
+            '<div style="margin-top:16px;text-align:right"><button class="portal-open-btn" onclick="window.switchPage(\'domain-agents\')">OPEN DOMAIN MAP →</button></div>';
+    }
+
+    window.portalSwitchTab = function(tab) {
+        _portalActive = tab;
+        ['council','agents','domain'].forEach(function(t){
+            var btn = document.getElementById('ptab-'+t);
+            var cnt = document.getElementById('portal-content-'+t);
+            if (btn) btn.classList.toggle('active', t===tab);
+            if (cnt) cnt.classList.toggle('active', t===tab);
+        });
+        if (tab === 'council') portalRenderCouncil();
+        if (tab === 'agents')  portalRenderAgents();
+        if (tab === 'domain')  portalRenderDomain();
+    };
+
+    window.portalCouncilAsk = function() {
+        var inp = document.getElementById('portalCouncilInp');
+        var res = document.getElementById('portalCouncilResult');
+        var q = inp ? inp.value.trim() : '';
+        if (!q) return;
+        inp.value = '';
+        if (res) res.innerHTML = '<span style="color:#52525b">Convening council deliberation…</span>';
+        fetch('/api/executive-council/deliberate', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','x-app-key':window._appKey||''},
+            body: JSON.stringify({ question: q })
+        }).then(function(r){ return r.json(); }).then(function(d){
+            if (!res) return;
+            var rec = d.recommendation || d.response || (d.ok ? 'Deliberation complete.' : (d.error||'No response.'));
+            res.innerHTML = '<div style="color:#7c6cf2;font:700 9px/1 \'JetBrains Mono\',monospace;margin-bottom:6px">COUNCIL RECOMMENDATION</div>'+
+                '<div style="font:400 10px/1.6 \'Inter\',sans-serif;color:rgba(232,244,255,0.7)">'+String(rec).slice(0,500)+(rec.length>500?'…':'')+'</div>'+
+                '<button onclick="window.switchPage(\'council\')" style="margin-top:8px;background:none;border:none;color:#7c6cf2;font:600 9px/1 \'JetBrains Mono\',monospace;cursor:pointer;letter-spacing:.05em;padding:0">VIEW FULL SESSION →</button>';
+        }).catch(function(e){
+            if (res) res.innerHTML = '<span style="color:#ef4444;font-size:10px">Error: '+(e.message||'failed')+'</span>';
+        });
+    };
+
+    var _portalInputBound = false;
+    function _bindPortalInput() {
+        if (_portalInputBound) return;
+        var inp = document.getElementById('portalCouncilInp');
+        if (!inp) return;
+        inp.addEventListener('keydown', function(e){
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.portalCouncilAsk(); }
+        });
+        _portalInputBound = true;
+    }
+
+    var _origSwitchPortal = window.switchPage;
+    window.switchPage = function(name) {
+        if (_origSwitchPortal) _origSwitchPortal(name);
+        if (name === 'portal') {
+            setTimeout(function(){
+                portalStartClock();
+                portalRenderCouncil();
+                _bindPortalInput();
+            }, 80);
+        }
+    };
+
+    if (location.hash.slice(1) === 'portal') {
+        setTimeout(function(){ portalStartClock(); portalRenderCouncil(); _bindPortalInput(); }, 100);
+    }
 })();
 </script>
 
