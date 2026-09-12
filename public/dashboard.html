@@ -10375,6 +10375,22 @@ if(pipe){
   .td-section{padding:0 16px 18px}
   .td-legacy-sep{padding:4px 16px 16px}
 }
+/* ── Apex Orchestration Visualizer ─────────────────────────────── */
+@keyframes apex-node-flash{0%,100%{opacity:1;transform:scale(1)}40%{opacity:.45;transform:scale(0.97)}65%{opacity:1;transform:scale(1.02)}}
+@keyframes apex-path-flow{to{stroke-dashoffset:-40}}
+@keyframes apex-brain-pulse{0%,100%{box-shadow:0 0 40px rgba(124,108,242,0.4)}50%{box-shadow:0 0 72px rgba(124,108,242,0.9),0 0 120px rgba(124,108,242,0.38)}}
+@keyframes apex-stream-in{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+@keyframes apex-ec-flash{0%,100%{filter:brightness(1)}35%{filter:brightness(1.85) saturate(2)}}
+@keyframes apex-ceo-flash{0%,100%{filter:brightness(1)}30%{filter:brightness(2.3) saturate(2.6)}65%{filter:brightness(1.7)}}
+#apex-sys-stream{position:fixed;bottom:24px;left:24px;z-index:9800;width:300px;max-height:210px;overflow:hidden;pointer-events:none;display:flex;flex-direction:column;gap:3px}
+.apex-stream-entry{background:rgba(13,13,13,0.85);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(8px);border-radius:4px;padding:5px 10px;font:600 9px/1.35 'JetBrains Mono',monospace;letter-spacing:.05em;color:rgba(232,244,255,0.7);animation:apex-stream-in 200ms ease-out both;transition:opacity 550ms ease}
+.apex-stream-entry.type-route{border-left:2px solid #7c6cf2;color:#a78bfa}
+.apex-stream-entry.type-proc{border-left:2px solid #06b6d4;color:#67e8f9}
+.apex-stream-entry.type-ok{border-left:2px solid #22c55e;color:#86efac}
+.apex-stream-entry.type-err{border-left:2px solid #ef4444;color:#fca5a5}
+.apex-stream-entry.type-info{border-left:2px solid #f59e0b;color:#fcd34d}
+.da-card.apex-flashing{animation:apex-node-flash 500ms ease-out}
+.ao-brain-orb.apex-pulsing{animation:apex-brain-pulse 900ms ease-in-out 2}
                 </style>
                 <!-- ── TODAY: D1 human-first surface ── -->
                 <div id="today-surface">
@@ -24944,6 +24960,11 @@ window.apexFileDropHandler = function(e){
         if (!raw) return;
         var d = DEPTS[window._aoDeptIdx || 0];
         var title = '[' + d.name + '] ' + raw;
+        // Visual: flash dept island + log
+        window.apexSysLog('→ ' + d.name + ' task assigned', 'route');
+        var islands = document.querySelectorAll('.ao-island');
+        var island = islands[window._aoDeptIdx || 0];
+        if (island) { island.style.animation = 'none'; void island.offsetWidth; island.style.animation = 'apex-node-flash 500ms ease-out'; setTimeout(function(){ island.style.animation = ''; }, 500); }
         // Optimistic local insert
         var t = { status:'backlog', title: title, tags: d.name, age:'just now' };
         window._aoTasks = [t].concat(window._aoTasks || []);
@@ -24956,10 +24977,10 @@ window.apexFileDropHandler = function(e){
             headers: { 'Content-Type': 'application/json', 'x-app-key': window._appKey || '' },
             body: JSON.stringify({ title: title })
         }).then(function(r) { return r.json(); }).then(function(d) {
-            if (!d.ok) console.warn('[agents] task save failed:', d.error);
-            // Reload to get server-assigned ID + real status
+            if (!d.ok) { window.apexSysLog('✗ Task save failed', 'err'); console.warn('[agents] task save failed:', d.error); }
+            else { window.apexSysLog('✓ Task saved', 'ok'); }
             setTimeout(aoFetchLiveData, 600);
-        }).catch(function(e) { console.warn('[agents] task save error:', e.message); });
+        }).catch(function(e) { window.apexSysLog('✗ Task error: '+(e.message||'?'), 'err'); console.warn('[agents] task save error:', e.message); });
     };
 
     window.aoOpenApprovals = function() { if (window.switchPage) window.switchPage('actions'); };
@@ -25319,9 +25340,11 @@ window.apexFileDropHandler = function(e){
             var cardCy = lay.cardT * ch + CARD_H / 2;
             var mx = (cardCx + bx) / 2, my = (cardCy + by) / 2 - 20;
             var isActive = _daActiveSlug === d.slug;
-            return '<path d="M'+bx+' '+by+' Q'+mx+' '+my+' '+cardCx+' '+cardCy+'"'+
-                ' stroke="'+d.color+'" stroke-opacity="'+(isActive?'0.55':'0.18')+'" stroke-width="'+(isActive?'1.8':'1.1')+'"'+
-                ' stroke-dasharray="4 6" fill="none"/>'+
+            var pathId    = isActive ? ' id="da-active-path"' : '';
+            var pathAnim  = isActive ? ' style="animation:apex-path-flow 600ms linear infinite"' : '';
+            return '<path'+pathId+' d="M'+bx+' '+by+' Q'+mx+' '+my+' '+cardCx+' '+cardCy+'"'+
+                ' stroke="'+d.color+'" stroke-opacity="'+(isActive?'0.6':'0.18')+'" stroke-width="'+(isActive?'2':'1.1')+'"'+
+                ' stroke-dasharray="4 6"'+pathAnim+' fill="none"/>'+
                 '<circle cx="'+cardCx+'" cy="'+cardCy+'" r="2.5" fill="'+d.color+'" fill-opacity="'+(isActive?'0.9':'0.35')+'"/>';
         }).join('');
         svgEl.innerHTML = svgParts;
@@ -25463,20 +25486,31 @@ window.apexFileDropHandler = function(e){
             return;
         }
         inp.value = '';
+        var agData = DA_AGENTS.find(function(x){ return x.slug === _daActiveSlug; });
+        var col = agData ? agData.color : '#7c6cf2';
+        // Visual: flash card + pulse brain
+        var activeCard = document.querySelector('.da-card[data-slug="'+_daActiveSlug+'"]');
+        if (activeCard) { activeCard.classList.remove('apex-flashing'); void activeCard.offsetWidth; activeCard.classList.add('apex-flashing'); setTimeout(function(){ activeCard.classList.remove('apex-flashing'); }, 500); }
+        var orb = document.querySelector('.ao-brain-orb');
+        if (orb) { orb.classList.remove('apex-pulsing'); void orb.offsetWidth; orb.classList.add('apex-pulsing'); setTimeout(function(){ orb.classList.remove('apex-pulsing'); }, 1800); }
+        window.apexSysLog('→ Routing to ' + _daActiveSlug.toUpperCase() + '...', 'route');
         if (reply) reply.innerHTML = '<div style="color:#8893a0;font-size:10px;padding:8px 0">Sending to '+_daActiveSlug+' agent...</div>';
         fetch('/api/agents/domain/invoke', {
             method:'POST',
             headers:{'Content-Type':'application/json','x-app-key':window._appKey||''},
             body: JSON.stringify({ slug:_daActiveSlug, message:raw })
         }).then(function(r){ return r.json(); }).then(function(d) {
+            window.apexSysLog('◈ ' + (d.agent ? d.agent.name : _daActiveSlug).toUpperCase() + ' processing...', 'proc');
+            setTimeout(function() {
+                window.apexSysLog('✓ ' + (d.agent ? d.agent.name : _daActiveSlug).toUpperCase() + ' responded', 'ok');
+                if (activeCard) { activeCard.classList.remove('apex-flashing'); void activeCard.offsetWidth; activeCard.classList.add('apex-flashing'); setTimeout(function(){ activeCard.classList.remove('apex-flashing'); }, 500); }
+            }, 220);
             if (!reply) return;
             var text = d.reply || (d.ok ? 'Done.' : (d.error||'No response'));
             var agName = d.agent ? d.agent.name : _daActiveSlug;
-            var agData = DA_AGENTS.find(function(x){ return x.slug === _daActiveSlug; });
-            var col = agData ? agData.color : '#7c6cf2';
             var extras = '';
-            if (d.escalation) extras += ' <span style="color:#f59e0b;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.04em">↑ ESCALATED</span>';
-            if (d.delegation) extras += ' <span style="color:#34d399;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.04em">→ DELEGATED: '+_escapeHtml(d.delegation.slug||'')+'</span>';
+            if (d.escalation) { extras += ' <span style="color:#f59e0b;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.04em">↑ ESCALATED</span>'; window.apexSysLog('↑ Escalated to Council', 'info'); }
+            if (d.delegation) { extras += ' <span style="color:#34d399;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.04em">→ DELEGATED: '+_escapeHtml(d.delegation.slug||'')+'</span>'; window.apexSysLog('→ Delegated: '+(d.delegation.slug||''), 'route'); }
             reply.innerHTML =
                 '<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
                     '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.07em;color:'+col+'">'+_escapeHtml(agName.toUpperCase())+'</span>'+
@@ -25484,6 +25518,7 @@ window.apexFileDropHandler = function(e){
                 '</div>'+
                 '<div style="font-size:11px;color:rgba(232,244,255,0.8);line-height:1.65;white-space:pre-wrap;max-height:400px;overflow-y:auto">'+_escapeHtml(text.slice(0,1200))+(text.length>1200?'\n...':'')+'</div>';
         }).catch(function(e) {
+            window.apexSysLog('✗ Error: '+(e.message||'unknown'), 'err');
             if (reply) reply.innerHTML = '<div style="color:#ef4444;font-size:10px">Error: '+(e.message||'unknown')+'</div>';
         });
     };
@@ -26191,6 +26226,15 @@ window.apexFileDropHandler = function(e){
             statusEl.style.display = 'block';
             statusEl.innerHTML = '<div style="font:500 10px/1 \'JetBrains Mono\',monospace;color:#3f3f46;letter-spacing:.04em;animation:ecPulse 1.2s ease-in-out infinite">Convening council…</div>';
         }
+        // Visual: staggered exec card flash + stream logs
+        window.apexSysLog('◈ Council convening...', 'info');
+        EC_ENTITIES.forEach(function(e, i) {
+            setTimeout(function() {
+                window.apexSysLog('◈ ' + e.abbr + ' deliberating...', 'proc');
+                var card = document.getElementById('ec-card-' + e.id);
+                if (card) { card.style.animation = 'none'; void card.offsetWidth; card.style.animation = 'apex-ec-flash 420ms ease-out'; setTimeout(function(){ card.style.animation = ''; }, 420); }
+            }, i * 260);
+        });
         fetch('/api/civilization/council/deliberate', {
             method:  'POST',
             headers: Object.assign({ 'Content-Type': 'application/json' }, _h()),
@@ -26201,6 +26245,11 @@ window.apexFileDropHandler = function(e){
             _setDeliberating(false);
             if (!data.ok) throw new Error(data.error || 'Deliberation failed');
             if (inp) inp.value = '';
+            // Visual: CEO golden flash + log
+            var ceoCard = document.getElementById('ec-card-ceo');
+            if (ceoCard) { ceoCard.style.animation = 'none'; void ceoCard.offsetWidth; ceoCard.style.animation = 'apex-ceo-flash 650ms ease-out'; setTimeout(function(){ ceoCard.style.animation = ''; }, 650); }
+            var cons = data.recommendation ? Math.round((data.recommendation.consensus_level || 0) * 100) : null;
+            window.apexSysLog('✓ CEO synthesis complete' + (cons ? ' · ' + cons + '% consensus' : ''), 'ok');
             (data.votes || []).forEach(function(v) {
                 _ecLastVotes[v.entityId] = { vote: v.vote, rationale: v.rationale, confidence: v.confidence };
             });
@@ -26212,6 +26261,7 @@ window.apexFileDropHandler = function(e){
         })
         .catch(function(err) {
             _setDeliberating(false);
+            window.apexSysLog('✗ Council error: ' + err.message, 'err');
             var se = document.getElementById('ecDelibStatus');
             if (se) { se.style.display = 'block'; se.innerHTML = '<span style="color:#ef4444;font:500 10px/1 \'JetBrains Mono\',monospace">'+_esc(err.message)+'</span>'; }
         });
@@ -26374,6 +26424,43 @@ window.apexFileDropHandler = function(e){
     } else {
         setTimeout(_applyLayout, 0);
     }
+})();
+</script>
+
+<!-- ── Apex System Thinking Stream ── -->
+<div id="apex-sys-stream"></div>
+<script>
+(function() {
+    var _entries = [];
+    window.apexFlash = function(el, color) {
+        if (!el) return;
+        var prev = el.style.boxShadow;
+        el.style.transition = 'box-shadow 120ms ease';
+        el.style.boxShadow = '0 0 28px '+(color||'#7c6cf2')+'aa, 0 0 54px '+(color||'#7c6cf2')+'33';
+        setTimeout(function(){ el.style.boxShadow = prev; el.style.transition = ''; }, 380);
+    };
+    window.apexSysLog = function(msg, type) {
+        var stream = document.getElementById('apex-sys-stream');
+        if (!stream) return;
+        var el = document.createElement('div');
+        el.className = 'apex-stream-entry type-'+(type||'info');
+        el.textContent = msg;
+        stream.appendChild(el);
+        _entries.push(el);
+        while (_entries.length > 6) {
+            var old = _entries.shift();
+            old.style.opacity = '0';
+            setTimeout(function(o){ if (o.parentNode) o.parentNode.removeChild(o); }.bind(null, old), 600);
+        }
+        setTimeout(function() {
+            el.style.opacity = '0';
+            setTimeout(function() {
+                if (el.parentNode) el.parentNode.removeChild(el);
+                var i = _entries.indexOf(el);
+                if (i !== -1) _entries.splice(i, 1);
+            }, 600);
+        }, 4000);
+    };
 })();
 </script>
 </body>
