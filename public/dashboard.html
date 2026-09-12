@@ -11417,6 +11417,7 @@ if(pipe){
                 </div>
                 <!-- Portal tab bar — shared across council / office / domain -->
                 <div class="portal-tab-bar">
+                    <button class="portal-tab" onclick="window.switchPage('approvals')">ACTIONS</button>
                     <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
                     <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
                     <button class="portal-tab active" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
@@ -11500,6 +11501,7 @@ if(pipe){
                     </div>
                 </div>
                 <div class="portal-tab-bar">
+                    <button class="portal-tab" onclick="window.switchPage('approvals')">ACTIONS</button>
                     <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
                     <button class="portal-tab active" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
@@ -11554,6 +11556,12 @@ if(pipe){
                         </div>
                         <div style="font-size:10px;color:#8893a0;text-align:center">Approval ≠ execution · Governance gate applies after approval</div>
                     </div>
+                </div>
+                <div class="portal-tab-bar">
+                    <button class="portal-tab active" onclick="window.switchPage('approvals')">ACTIONS</button>
+                    <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
+                    <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
+                    <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
                 </div>
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
@@ -11928,6 +11936,7 @@ if(pipe){
                     </div>
                 </div>
                 <div class="portal-tab-bar">
+                    <button class="portal-tab" onclick="window.switchPage('approvals')">ACTIONS</button>
                     <button class="portal-tab active" onclick="window.switchPage('council')">COUNCIL</button>
                     <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
@@ -12099,11 +12108,6 @@ if(pipe){
         <button class="nav-btn" id="nav-command" role="tab" aria-selected="false">
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Command</span>
-        </button>
-        <button class="nav-btn" id="nav-actions" role="tab" aria-selected="false" aria-label="Actions">
-            <span class="nav-icon">◈</span>
-            <span class="nav-label">Actions</span>
-            <span class="ds-notif-badge amber" id="navActionsBadge" style="display:none"></span>
         </button>
         <button class="nav-btn" id="nav-portal" aria-label="Agency Overview">
             <span class="nav-icon">◬</span>
@@ -25854,7 +25858,7 @@ window.apexFileDropHandler = function(e){
 <script>
 (function() {
     'use strict';
-    var _PORTAL_PAGES = ['council', 'agents', 'domain-agents'];
+    var _PORTAL_PAGES = ['council', 'agents', 'domain-agents', 'approvals'];
 
     // Keep nav-portal active whenever a portal-member page is shown
     function _highlightPortalNav() {
