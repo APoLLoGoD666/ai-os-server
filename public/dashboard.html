@@ -11386,6 +11386,12 @@ if(pipe){
                         <span class="ao-clock" id="aoClock">--:--:-- --</span>
                     </div>
                 </div>
+                <!-- Portal tab bar — shared across council / office / domain -->
+                <div class="portal-tab-bar">
+                    <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
+                    <button class="portal-tab active" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
+                    <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
+                </div>
                 <!-- Main layout: canvas + task panel -->
                 <div class="ao-main">
                     <div class="ao-canvas" id="aoCanvas">
@@ -11458,6 +11464,11 @@ if(pipe){
                         <span class="ao-clock" id="daClock">--:--:-- --</span>
                     </div>
                 </div>
+                <div class="portal-tab-bar">
+                    <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
+                    <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
+                    <button class="portal-tab active" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
+                </div>
                 <div class="ao-main">
                     <div class="ao-canvas" id="daCanvas">
                         <svg class="ao-svg" id="daSvg"></svg>
@@ -11487,27 +11498,7 @@ if(pipe){
             </div><!-- #page-domain-agents -->
 
             <!-- ══ PAGE: PORTAL — Agency Overview ══ -->
-            <div class="page" id="page-portal">
-                <div class="ao-topbar">
-                    <div style="display:flex;align-items:center;gap:10px">
-                        <span class="ao-title">AGENCY OVERVIEW <span style="font-size:9px;color:#52525b;letter-spacing:.08em">PORTAL</span></span>
-                        <span class="ao-conn-dot"></span>
-                        <span style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#3f3f46">COUNCIL · OFFICE · DOMAIN</span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:12px">
-                        <span style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#3f3f46">3 SYSTEMS ACTIVE</span>
-                        <span class="ao-clock" id="portalClock">--:--:-- --</span>
-                    </div>
-                </div>
-                <div class="portal-tab-bar">
-                    <button class="portal-tab active" id="ptab-council" onclick="portalSwitchTab('council')">COUNCIL</button>
-                    <button class="portal-tab" id="ptab-agents" onclick="portalSwitchTab('agents')">OFFICE AGENTS</button>
-                    <button class="portal-tab" id="ptab-domain" onclick="portalSwitchTab('domain')">DOMAIN AGENTS</button>
-                </div>
-                <div class="portal-content active" id="portal-content-council"></div>
-                <div class="portal-content" id="portal-content-agents"></div>
-                <div class="portal-content" id="portal-content-domain"></div>
-            </div><!-- #page-portal -->
+            <div class="page" id="page-portal"><!-- redirect-only: PORTAL IIFE routes to council --></div>
 
             <!-- ══ PAGE: APPROVALS (UX-14 — Actions / Approvals) ══ -->
             <div class="page" id="page-approvals">
@@ -11895,6 +11886,11 @@ if(pipe){
                         <div class="ec-clock" id="ecClock" aria-live="off"></div>
                     </div>
                 </div>
+                <div class="portal-tab-bar">
+                    <button class="portal-tab active" onclick="window.switchPage('council')">COUNCIL</button>
+                    <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
+                    <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
+                </div>
                 <div class="ec-main">
                     <div class="ec-chamber" id="ecChamber" aria-label="Council chamber">
                         <div class="ec-scan" aria-hidden="true"></div>
@@ -12067,18 +12063,6 @@ if(pipe){
             <span class="nav-icon">◈</span>
             <span class="nav-label">Actions</span>
             <span class="ds-notif-badge amber" id="navActionsBadge" style="display:none"></span>
-        </button>
-        <button class="nav-btn" id="nav-council" aria-label="Supreme Council">
-            <span class="nav-icon">⬡</span>
-            <span class="nav-label">Council</span>
-        </button>
-        <button class="nav-btn" id="nav-agents" aria-label="Agents">
-            <span class="nav-icon">◈</span>
-            <span class="nav-label">Agents</span>
-        </button>
-        <button class="nav-btn" id="nav-domain-agents" aria-label="Domain Agents">
-            <span class="nav-icon">⬡</span>
-            <span class="nav-label">Domain</span>
         </button>
         <button class="nav-btn" id="nav-portal" aria-label="Agency Overview">
             <span class="nav-icon">◬</span>
@@ -25810,220 +25794,36 @@ window.apexFileDropHandler = function(e){
 <script>
 (function() {
     'use strict';
+    var _PORTAL_PAGES = ['council', 'agents', 'domain-agents'];
 
-    var _portalInited = { council:false, agents:false, domain:false };
-    var _portalActive = 'council';
-
-    var _EXEC_CARDS = [
-        { id:'cso', abbr:'CSO', name:'Chief Strategy Officer',     color:'#7c6cf2', role:'Strategic direction, market positioning, long-term planning & opportunity mapping.' },
-        { id:'cto', abbr:'CTO', name:'Chief Technology Officer',   color:'#3b82f6', role:'Tech architecture, AI pipeline, infrastructure design & system resilience.' },
-        { id:'cfo', abbr:'CFO', name:'Chief Financial Officer',    color:'#22c55e', role:'Financial health, budget oversight, cost efficiency & treasury management.' },
-        { id:'coo', abbr:'COO', name:'Chief Operating Officer',    color:'#f59e0b', role:'Operations efficiency, process optimisation, delivery standards & team coordination.' },
-        { id:'cio', abbr:'CIO', name:'Chief Intelligence Officer', color:'#06b6d4', role:'Intelligence synthesis, threat detection, opportunity identification & SIE integration.' },
-        { id:'cgo', abbr:'CGO', name:'Chief Governance Officer',   color:'#ef4444', role:'Constitutional compliance, authority chain management & audit trail integrity.' },
-        { id:'ceo', abbr:'CEO', name:'Chief Executive Officer',    color:'#c9a227', role:'Final synthesizer. Produces the binding recommendation from all executive votes.', isCeo:true },
-    ];
-
-    var _DEPTS = [
-        { name:'MARKETING',   color:'#a78bfa', count:6,  agents:['Instagram Organic','Meta Ads','Graphics Designer','Newsletter Agent','Research Agent','Video Editor Agent'],           desc:'Full-stack brand & growth.' },
-        { name:'COMMS',       color:'#2dd4bf', count:5,  agents:['Triage Agent','Client Emails','Vendor Emails','Contractor Emails','Internal Emails'],                                  desc:'Inbox zero & correspondence.' },
-        { name:'OPERATIONS',  color:'#64748b', count:5,  agents:['Compliance Checker','Legal Review','Intel Agent','Internal Dashboards','Internal Reporting'],                          desc:'Infra, compliance & ops intel.' },
-        { name:'SALES',       color:'#38bdf8', count:6,  agents:['Lead Enricher','Prospector','Inbound Leads','Follow-up Agent','Proposal Agent','Pipeline Agent'],                      desc:'Lead to close pipeline.' },
-        { name:'DELIVERY',    color:'#34d399', count:7,  agents:['Project Co-ordinator','Onboarder','Designer Assistant','QA Checker','Client Reports','Client Assets','Quality Assurance'], desc:'Project execution & QA.' },
-        { name:'FINANCE',     color:'#6366f1', count:4,  agents:['Finance Agent','Invoicing Agent','Accounts Payable','Reconciliation Agent'],                                           desc:'Books, invoices & reconciliation.' },
-    ];
-
-    var _DOMAIN_SUMMARY = [
-        { slug:'business',     name:'BUSINESS',    color:'#34d399', category:'BUSINESS',       teamCount:13, escalates:true,  delegates:true  },
-        { slug:'marketing',    name:'MARKETING',   color:'#a78bfa', category:'MARKETING',      teamCount:6,  escalates:true,  delegates:true  },
-        { slug:'comms',        name:'COMMS',       color:'#2dd4bf', category:'COMMUNICATIONS', teamCount:5,  escalates:true,  delegates:true  },
-        { slug:'system',       name:'SYSTEM',      color:'#64748b', category:'INFRASTRUCTURE', teamCount:5,  escalates:true,  delegates:true  },
-        { slug:'file',         name:'FILE',        color:'#38bdf8', category:'KNOWLEDGE',      teamCount:0,  escalates:true,  delegates:false },
-        { slug:'finance',      name:'FINANCE',     color:'#6366f1', category:'FINANCE',        teamCount:4,  escalates:true,  delegates:true  },
-        { slug:'health',       name:'HEALTH',      color:'#f43f5e', category:'HEALTH',         teamCount:0,  escalates:false, delegates:false },
-        { slug:'uni',          name:'UNIVERSITY',  color:'#f59e0b', category:'EDUCATION',      teamCount:0,  escalates:false, delegates:false },
-        { slug:'civilisation', name:'GOVERNANCE',  color:'#e879f9', category:'GOVERNANCE',     teamCount:0,  escalates:true,  delegates:false },
-    ];
-
-    function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-    function portalStartClock() {
-        (function tick(){
-            var d = new Date(), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
-            var ap = h >= 12 ? 'pm' : 'am'; h = h%12||12;
-            var el = document.getElementById('portalClock');
-            if (el) el.textContent = h+':'+('0'+m).slice(-2)+':'+('0'+s).slice(-2)+' '+ap;
-        })();
-        setInterval(function(){
-            var d = new Date(), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
-            var ap = h>=12?'pm':'am'; h=h%12||12;
-            var el = document.getElementById('portalClock');
-            if (el) el.textContent = h+':'+('0'+m).slice(-2)+':'+('0'+s).slice(-2)+' '+ap;
-        }, 1000);
-    }
-
-    function portalRenderCouncil() {
-        if (_portalInited.council) return;
-        _portalInited.council = true;
-        var c = document.getElementById('portal-content-council');
-        if (!c) return;
-        var cards = _EXEC_CARDS.map(function(e){
-            return '<div class="portal-exec-card" style="border-top:2px solid '+e.color+'44" '+
-                'onmouseover="this.style.borderTopColor=\''+e.color+'99\'" onmouseout="this.style.borderTopColor=\''+e.color+'44\'" '+
-                'onclick="window.switchPage(\'council\')" tabindex="0" role="button" aria-label="'+_esc(e.name)+'">'+
-                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'+
-                    '<span style="font:700 13px/1 \'JetBrains Mono\',monospace;color:'+e.color+'">'+e.abbr+'</span>'+
-                    (e.isCeo?'<span style="background:rgba(201,162,39,0.12);color:#c9a227;font:700 7px/1 \'JetBrains Mono\',monospace;padding:2px 7px;border-radius:3px;border:1px solid rgba(201,162,39,0.22)">SYNTHESIZER</span>':
-                    '<span style="margin-left:auto;width:5px;height:5px;border-radius:50%;background:'+e.color+'55;box-shadow:0 0 5px '+e.color+'44"></span>')+
-                '</div>'+
-                '<div style="font:500 10px/1.4 \'Inter\',sans-serif;color:rgba(232,244,255,0.75);margin-bottom:6px">'+_esc(e.name)+'</div>'+
-                '<div style="font:400 9px/1.45 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.3)">'+_esc(e.role)+'</div>'+
-            '</div>';
-        }).join('');
-        c.innerHTML =
-            '<div class="portal-section-hdr"><div class="label">SUPREME COUNCIL</div>'+
-            '<div class="title">7 Executives · Deliberation Chamber</div>'+
-            '<div class="sub">The council deliberates on strategic questions, approves domain dispatches, and synthesizes org intelligence into binding decisions. The CEO vote is the final recommendation.</div></div>'+
-            '<div class="portal-exec-grid">'+cards+'</div>'+
-            '<div style="background:rgba(94,106,210,0.05);border:1px solid rgba(94,106,210,0.14);border-radius:10px;padding:16px;margin-bottom:16px">'+
-                '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#7c6cf2;margin-bottom:10px">QUICK QUESTION</div>'+
-                '<div style="display:flex;gap:8px">'+
-                    '<input id="portalCouncilInp" class="ao-task-inp" style="flex:1" placeholder="Ask the council a question..." />'+
-                    '<button class="ao-add-btn" onclick="portalCouncilAsk()">ASK</button>'+
-                '</div>'+
-                '<div id="portalCouncilResult" style="margin-top:10px;font:400 10px/1.6 \'Inter\',sans-serif;color:rgba(242,242,242,0.45)"></div>'+
-            '</div>'+
-            '<div style="text-align:right"><button class="portal-open-btn" onclick="window.switchPage(\'council\')">OPEN COUNCIL CHAMBER →</button></div>';
-    }
-
-    function portalRenderAgents() {
-        if (_portalInited.agents) return;
-        _portalInited.agents = true;
-        var c = document.getElementById('portal-content-agents');
-        if (!c) return;
-        var total = _DEPTS.reduce(function(s,d){return s+d.count;},0);
-        var deptCards = _DEPTS.map(function(d){
-            var agentRows = d.agents.map(function(a,i){
-                return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)">'+
-                    '<span style="font:600 8px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.2);min-width:12px;text-align:right">'+(i+1)+'</span>'+
-                    '<span style="width:1px;height:10px;background:'+d.color+'44;flex-shrink:0"></span>'+
-                    '<span style="font:400 10px/1 \'Inter\',sans-serif;color:rgba(232,244,255,0.62)">'+_esc(a)+'</span>'+
-                '</div>';
-            }).join('');
-            return '<div class="portal-dept-card" style="border-top:2px solid '+d.color+'44" '+
-                'onmouseover="this.style.borderTopColor=\''+d.color+'88\'" onmouseout="this.style.borderTopColor=\''+d.color+'44\'" '+
-                'onclick="window.switchPage(\'agents\')" tabindex="0" role="button" aria-label="'+_esc(d.name)+' department">'+
-                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
-                    '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.07em;color:'+d.color+'">'+_esc(d.name)+'</span>'+
-                    '<span style="background:'+d.color+'18;color:'+d.color+';font:700 9px/1 \'JetBrains Mono\',monospace;padding:2px 7px;border-radius:3px;margin-left:auto">'+d.count+' agents</span>'+
-                '</div>'+
-                '<div style="font:400 9px/1.4 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.3);margin-bottom:10px">'+_esc(d.desc)+'</div>'+
-                agentRows+
-            '</div>';
-        }).join('');
-        c.innerHTML =
-            '<div class="portal-section-hdr"><div class="label">AGENTS OFFICE</div>'+
-            '<div class="title">6 Departments · '+total+' Agents</div>'+
-            '<div class="sub">Office agents execute tasks within their domains. They are dispatched by domain agents via the <code style="color:#7c6cf2;background:rgba(94,106,210,0.1);padding:1px 5px;border-radius:3px">[DELEGATE]</code> protocol or invoked directly from this dashboard.</div></div>'+
-            '<div class="portal-dept-grid">'+deptCards+'</div>'+
-            '<div style="margin-top:16px;text-align:right"><button class="portal-open-btn" onclick="window.switchPage(\'agents\')">OPEN AGENTS OFFICE →</button></div>';
-    }
-
-    function portalRenderDomain() {
-        if (_portalInited.domain) return;
-        _portalInited.domain = true;
-        var c = document.getElementById('portal-content-domain');
-        if (!c) return;
-        var daCards = _DOMAIN_SUMMARY.map(function(d){
-            var esc = d.escalates
-                ? '<span style="background:rgba(245,158,11,0.12);color:#f59e0b;font:700 7px/1 \'JetBrains Mono\',monospace;padding:2px 6px;border-radius:2px;border:1px solid rgba(245,158,11,0.22)">↑ ESCALATES</span>'
-                : '';
-            var del = d.delegates
-                ? '<span style="background:rgba(52,211,153,0.1);color:#34d399;font:700 7px/1 \'JetBrains Mono\',monospace;padding:2px 6px;border-radius:2px;border:1px solid rgba(52,211,153,0.2)">→ DELEGATES</span>'
-                : '';
-            return '<div class="portal-da-card" style="border-top:2px solid '+d.color+'44" '+
-                'onmouseover="this.style.borderColor=\''+d.color+'66\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.06)\'" '+
-                'onclick="window.switchPage(\'domain-agents\')" tabindex="0" role="button" aria-label="'+_esc(d.name)+' domain agent">'+
-                '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">'+
-                    '<span style="width:7px;height:7px;border-radius:50%;background:'+d.color+';box-shadow:0 0 7px '+d.color+'55;flex-shrink:0"></span>'+
-                    '<span style="font:700 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.06em;color:'+d.color+'">'+_esc(d.name)+'</span>'+
-                    '<span style="margin-left:auto;font:600 8px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.25)">'+_esc(d.category)+'</span>'+
-                '</div>'+
-                (d.teamCount ? '<div style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.3);margin-bottom:8px">'+d.teamCount+' office agents</div>' : '<div style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(242,242,242,0.2);margin-bottom:8px">direct execution</div>')+
-                '<div style="display:flex;gap:4px;flex-wrap:wrap">'+esc+del+'</div>'+
-            '</div>';
-        }).join('');
-        c.innerHTML =
-            '<div class="portal-section-hdr"><div class="label">DOMAIN AGENTS</div>'+
-            '<div class="title">9 Domain Agents · Core Intelligence Layer</div>'+
-            '<div class="sub">Domain agents are the primary routing layer. Each covers a life/work domain, receives chat messages via keyword routing, and can escalate to the council or delegate to office agents. Click any card to open the domain agent map.</div></div>'+
-            '<div class="portal-da-grid">'+daCards+'</div>'+
-            '<div style="margin-top:16px;text-align:right"><button class="portal-open-btn" onclick="window.switchPage(\'domain-agents\')">OPEN DOMAIN MAP →</button></div>';
-    }
-
-    window.portalSwitchTab = function(tab) {
-        _portalActive = tab;
-        ['council','agents','domain'].forEach(function(t){
-            var btn = document.getElementById('ptab-'+t);
-            var cnt = document.getElementById('portal-content-'+t);
-            if (btn) btn.classList.toggle('active', t===tab);
-            if (cnt) cnt.classList.toggle('active', t===tab);
-        });
-        if (tab === 'council') portalRenderCouncil();
-        if (tab === 'agents')  portalRenderAgents();
-        if (tab === 'domain')  portalRenderDomain();
-    };
-
-    window.portalCouncilAsk = function() {
-        var inp = document.getElementById('portalCouncilInp');
-        var res = document.getElementById('portalCouncilResult');
-        var q = inp ? inp.value.trim() : '';
-        if (!q) return;
-        inp.value = '';
-        if (res) res.innerHTML = '<span style="color:#52525b">Convening council deliberation…</span>';
-        fetch('/api/executive-council/deliberate', {
-            method:'POST',
-            headers:{'Content-Type':'application/json','x-app-key':window._appKey||''},
-            body: JSON.stringify({ question: q })
-        }).then(function(r){ return r.json(); }).then(function(d){
-            if (!res) return;
-            var rec = d.recommendation || d.response || (d.ok ? 'Deliberation complete.' : (d.error||'No response.'));
-            res.innerHTML = '<div style="color:#7c6cf2;font:700 9px/1 \'JetBrains Mono\',monospace;margin-bottom:6px">COUNCIL RECOMMENDATION</div>'+
-                '<div style="font:400 10px/1.6 \'Inter\',sans-serif;color:rgba(232,244,255,0.7)">'+String(rec).slice(0,500)+(rec.length>500?'…':'')+'</div>'+
-                '<button onclick="window.switchPage(\'council\')" style="margin-top:8px;background:none;border:none;color:#7c6cf2;font:600 9px/1 \'JetBrains Mono\',monospace;cursor:pointer;letter-spacing:.05em;padding:0">VIEW FULL SESSION →</button>';
-        }).catch(function(e){
-            if (res) res.innerHTML = '<span style="color:#ef4444;font-size:10px">Error: '+(e.message||'failed')+'</span>';
-        });
-    };
-
-    var _portalInputBound = false;
-    function _bindPortalInput() {
-        if (_portalInputBound) return;
-        var inp = document.getElementById('portalCouncilInp');
-        if (!inp) return;
-        inp.addEventListener('keydown', function(e){
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.portalCouncilAsk(); }
-        });
-        _portalInputBound = true;
+    // Keep nav-portal active whenever a portal-member page is shown
+    function _highlightPortalNav() {
+        setTimeout(function(){
+            var btn = document.getElementById('nav-portal');
+            if (btn) btn.classList.add('active');
+        }, 4);
     }
 
     var _origSwitchPortal = window.switchPage;
     window.switchPage = function(name) {
-        if (_origSwitchPortal) _origSwitchPortal(name);
         if (name === 'portal') {
-            setTimeout(function(){
-                portalStartClock();
-                portalRenderCouncil();
-                _bindPortalInput();
-            }, 80);
+            // Redirect portal nav to council (default tab)
+            _origSwitchPortal('council');
+            _highlightPortalNav();
+            return;
         }
+        _origSwitchPortal(name);
+        if (_PORTAL_PAGES.indexOf(name) !== -1) _highlightPortalNav();
     };
 
     if (location.hash.slice(1) === 'portal') {
-        setTimeout(function(){ portalStartClock(); portalRenderCouncil(); _bindPortalInput(); }, 100);
+        setTimeout(function(){ window.switchPage('council'); }, 100);
     }
 })();
 </script>
+
+<!-- portal redirect handled in PORTAL IIFE above -->
+<script>(function(){})();</script>
 
 <!-- ══ SUPREME COUNCIL IIFE ══ -->
 <script>
