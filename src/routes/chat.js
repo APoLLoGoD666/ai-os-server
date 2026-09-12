@@ -184,6 +184,27 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
             if (_chatSkillConf < 0.4) _chatDomainAgent = null;
         }
 
+        // Route to domain agent when keyword match is confident
+        if (_chatDomainAgent && _chatDomainSlug) {
+            try {
+                const _dResult = await _invokeDomainAgent(_chatDomainSlug, userMessage, { humanId: req.identity?.humanId || null });
+                clearTimeout(chatTimeout);
+                const _dRaw = `[${_dResult.agent.name}]\n\n${_dResult.reply}`;
+                const { reply: _dReply, mode: _dMode, intent: _dIntent } = _cogOrch.shape(userMessage, _dRaw, req.executionClass || 'EXECUTIVE', req.conversationId);
+                const _dSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
+                const _dPlan = _timingEng.buildStreamPlan(_dReply, _dIntent, req.executionClass || 'EXECUTIVE', _dSnap);
+                _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _dIntent, userMessage, reply: _dReply, mode: _dMode, executionClass: req.executionClass });
+                _eae.recordTransition({ sessionId: req.conversationId });
+                _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply: _dReply, intent: _dIntent, mode: _dMode });
+                setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: _dReply }), tags: ['conversation', 'chat', 'domain-agent', _chatDomainSlug], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+                setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); });
+                return res.status(200).json({ ok: true, reply: _dReply, response_mode: _dMode, stream_plan: _dPlan, domain_agent: _chatDomainSlug });
+            } catch (e) {
+                if (res.headersSent) return;
+                console.warn('[DomainAgent] chat routing failed, falling through:', e.message);
+            }
+        }
+
         const _chatEnrichedCtx = _chatGatewayCtx ? { ..._chatGatewayCtx } : {};
         if (_chatTopOpps?.length) {
             _chatEnrichedCtx._top_opportunities = _chatTopOpps.slice(0, 3).map(o => `• ${o.title} (score ${Math.round((o.composite_score||0)*100)}/100)`).join('\n');

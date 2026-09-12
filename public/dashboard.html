@@ -11424,6 +11424,47 @@ if(pipe){
                 </div>
             </div><!-- #page-agent-detail -->
 
+            <!-- ══ PAGE: DOMAIN AGENTS ══ -->
+            <div class="page" id="page-domain-agents">
+                <div class="ao-topbar">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span class="ao-title">DOMAIN AGENTS <span style="font-size:9px;color:#52525b;letter-spacing:.08em">CORE</span></span>
+                        <span class="ao-conn-dot"></span>
+                        <span style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#3f3f46">COUNCIL DISPATCHED</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span style="font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#3f3f46">9 AGENTS</span>
+                        <span class="ao-clock" id="daClock">--:--:-- --</span>
+                    </div>
+                </div>
+                <div class="ao-main">
+                    <div class="ao-canvas" id="daCanvas">
+                        <svg class="ao-svg" id="daSvg"></svg>
+                    </div>
+                    <button class="ao-panel-tog" id="daTaskTog" aria-label="Toggle message panel" onclick="daTogglePanel()">&#8249;</button>
+                    <div class="ao-task-panel">
+                        <div class="ao-task-top">
+                            <div class="ao-dept-row">
+                                <div class="ao-dept-sel" id="daDeptSel">
+                                    <span class="ao-dept-sel-dot" id="daDeptDot" style="background:#7c6cf2"></span>
+                                    <span id="daDeptName">SELECT AGENT</span>
+                                </div>
+                            </div>
+                            <div class="ao-task-row">
+                                <input class="ao-task-inp" id="daTaskInp" placeholder="Select an agent from the map..." />
+                                <button class="ao-add-btn" data-fn="daSend">SEND</button>
+                            </div>
+                            <div class="ao-status-hdr">
+                                <span class="ao-status-title">AGENT RESPONSE</span>
+                            </div>
+                        </div>
+                        <div class="ao-task-list" id="daReplyPanel" style="padding:12px;font:500 11px/1.6 'JetBrains Mono',monospace;color:#8893a0">
+                            Select a domain agent from the map, then send a message.
+                        </div>
+                    </div>
+                </div>
+            </div><!-- #page-domain-agents -->
+
             <!-- ══ PAGE: APPROVALS (UX-14 — Actions / Approvals) ══ -->
             <div class="page" id="page-approvals">
                 <!-- Two-step approval modal (UX-14 INV-ACTION-24: blocking, not dismissible by swipe) -->
@@ -11991,6 +12032,10 @@ if(pipe){
             <span class="nav-icon">◈</span>
             <span class="nav-label">Agents</span>
         </button>
+        <button class="nav-btn" id="nav-domain-agents" aria-label="Domain Agents">
+            <span class="nav-icon">⬡</span>
+            <span class="nav-label">Domain</span>
+        </button>
         <button class="nav-btn" id="nav-domains" aria-label="Domains">
             <span class="nav-icon">&#9643;</span>
             <span class="nav-label">Domains</span>
@@ -12015,7 +12060,7 @@ if(pipe){
     // V-11-F F-7: 'operation' removed (merged into business)
     // V-11-F F-9: civilisation/reality moved out of LIFE & WORK swipe sequence to end (SYSTEM → Advanced)
     // V-11-H H-18: 'agents' / 'approvals' / 'activity' consolidated into 'actions' (positioned after 'intelligence' per Section 32).
-    var pages = ['overview','domains', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'memory', 'council', 'governance', 'civilisation', 'reality', 'settings'];
+    var pages = ['overview','domains', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'domain-agents', 'memory', 'council', 'governance', 'civilisation', 'reality', 'settings'];
     var activePage = 'overview';
 
     var pageMeta = {
@@ -12036,6 +12081,7 @@ if(pipe){
         approvals:     { title:'Approvals',     sub:'Pending · Actions · Governance' },
         actions:       { title:'Actions',       sub:'Decisions · In-flight · History · Notifications' },
         agents:        { title:'Agents',        sub:'The Office · Departments · Pipeline' },
+        'domain-agents': { title:'Domain Agents',  sub:'Core · Council Dispatch · Direct Routing' },
         knowledge:     { title:'Knowledge',     sub:'Facts · Evidence · Gaps · Coverage' },
         intelligence:  { title:'Intelligence',  sub:'Briefing · Opportunities · Health' },
         memory:        { title:'Memory',        sub:'Episodic · Semantic · Health' },
@@ -25091,6 +25137,203 @@ window.apexFileDropHandler = function(e){
             }, 120);
         });
     });
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DOMAIN AGENTS — core agent map, council dispatch, direct messaging
+   ═══════════════════════════════════════════════════════════════════════ */
+(function() {
+    var DA_AGENTS = [
+        { id:'business',     name:'BUSINESS',   color:'#34d399', slug:'business',     category:'BUSINESS',       team:'Sales · Delivery ×17', desc:'CRM, client pipeline, project management, proposals.' },
+        { id:'marketing',    name:'MARKETING',  color:'#a78bfa', slug:'marketing',    category:'MARKETING',      team:'Marketing Team ×6',    desc:'Brand growth, content strategy, campaigns across all channels.' },
+        { id:'comms',        name:'COMMS',       color:'#2dd4bf', slug:'comms',        category:'COMMUNICATIONS', team:'Comms Team ×5',        desc:'Inbox triage, client replies, vendor correspondence.' },
+        { id:'system',       name:'SYSTEM',      color:'#64748b', slug:'system',       category:'INFRASTRUCTURE', team:'Ops Team ×5',          desc:'Pipeline health, Render infra, cost monitoring.' },
+        { id:'file',         name:'FILE',         color:'#38bdf8', slug:'file',         category:'KNOWLEDGE',      team:'Direct',               desc:'Obsidian vault, documents, knowledge base.' },
+        { id:'finance',      name:'FINANCE',     color:'#6366f1', slug:'finance',      category:'FINANCE',        team:'Finance Team ×4',      desc:'Budgets, invoices, transactions, analysis.' },
+        { id:'health',       name:'HEALTH',      color:'#f43f5e', slug:'health',       category:'HEALTH',         team:'Direct',               desc:'Workouts, nutrition, sleep, mood logging.' },
+        { id:'uni',          name:'UNIVERSITY',  color:'#f59e0b', slug:'uni',          category:'EDUCATION',      team:'Direct',               desc:'Assignments, flashcards, study sessions.' },
+        { id:'civilisation', name:'GOVERNANCE',  color:'#e879f9', slug:'civilisation', category:'GOVERNANCE',     team:'Direct',               desc:'Constitutional gate, genome validation, consensus.' },
+    ];
+
+    var CARD_W = 172, CARD_H = 110;
+    var DA_LAYOUT = [
+        { id:'business',     cardL:0.02,  cardT:0.04  },
+        { id:'marketing',    cardL:0.355, cardT:0.04  },
+        { id:'comms',        cardL:0.685, cardT:0.04  },
+        { id:'system',       cardL:0.02,  cardT:0.41  },
+        { id:'file',         cardL:0.685, cardT:0.41  },
+        { id:'finance',      cardL:0.02,  cardT:0.76  },
+        { id:'health',       cardL:0.355, cardT:0.76  },
+        { id:'uni',          cardL:0.685, cardT:0.76  },
+        { id:'civilisation', cardL:0.355, cardT:0.91  },
+    ];
+    var DA_BRAIN_CX = 0.455, DA_BRAIN_CY = 0.475;
+    var _daActiveSlug = null;
+
+    function daStartClock() {
+        function tick() {
+            var now = new Date();
+            var h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+            var ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12;
+            var el = document.getElementById('daClock');
+            if (el) el.textContent = h + ':' + ('0'+m).slice(-2) + ':' + ('0'+s).slice(-2) + ' ' + ap;
+        }
+        tick(); setInterval(tick, 1000);
+    }
+
+    function daRenderCanvas() {
+        var canvas = document.getElementById('daCanvas');
+        var svgEl  = document.getElementById('daSvg');
+        if (!canvas || !svgEl) return;
+        var cw = canvas.offsetWidth || 800;
+        var ch = canvas.offsetHeight || 700;
+        var bx = cw * DA_BRAIN_CX;
+        var by = ch * DA_BRAIN_CY;
+        var svgParts = DA_LAYOUT.map(function(lay) {
+            var d = DA_AGENTS.find(function(x){ return x.id === lay.id; });
+            if (!d) return '';
+            var cardCx = lay.cardL * cw + CARD_W / 2;
+            var cardCy = lay.cardT * ch + CARD_H / 2;
+            var mx = (cardCx + bx) / 2, my = (cardCy + by) / 2 - 20;
+            var isActive = _daActiveSlug === d.slug;
+            return '<path d="M'+bx+' '+by+' Q'+mx+' '+my+' '+cardCx+' '+cardCy+'"'+
+                ' stroke="'+d.color+'" stroke-opacity="'+(isActive?'0.55':'0.18')+'" stroke-width="'+(isActive?'1.8':'1.1')+'"'+
+                ' stroke-dasharray="4 6" fill="none"/>'+
+                '<circle cx="'+cardCx+'" cy="'+cardCy+'" r="2.5" fill="'+d.color+'" fill-opacity="'+(isActive?'0.9':'0.35')+'"/>';
+        }).join('');
+        svgEl.innerHTML = svgParts;
+        canvas.querySelectorAll('.da-card, .ao-brain').forEach(function(el){ el.remove(); });
+        DA_LAYOUT.forEach(function(lay) {
+            var d = DA_AGENTS.find(function(x){ return x.id === lay.id; });
+            if (!d) return;
+            var isActive = _daActiveSlug === d.slug;
+            var card = document.createElement('div');
+            card.className = 'ao-card da-card' + (isActive ? ' ao-card--open' : '');
+            card.dataset.slug = d.slug;
+            card.style.cssText = 'left:'+(lay.cardL*cw)+'px;top:'+(lay.cardT*ch)+'px;width:'+CARD_W+'px;cursor:pointer;'+(isActive?'border-color:'+d.color+'55;box-shadow:0 0 16px '+d.color+'22;':'');
+            card.innerHTML =
+                '<div class="ao-card-name" style="color:'+d.color+'">'+
+                    '<span style="width:6px;height:6px;border-radius:50%;background:'+d.color+';flex-shrink:0;box-shadow:0 0 6px '+d.color+'66"></span>'+
+                    d.name+
+                '</div>'+
+                '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.07em;color:#52525b;margin:4px 0 6px">'+d.category+'</div>'+
+                '<div style="font-size:10px;color:rgba(232,244,255,0.45);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+d.desc+'</div>'+
+                '<div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">'+
+                    '<span style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.05em;color:'+d.color+'88">'+d.team+'</span>'+
+                    '<span style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.04em;color:'+(isActive?'#34d399':'#27272a')+'">'+(isActive?'ACTIVE':'READY')+'</span>'+
+                '</div>';
+            card.addEventListener('click', function(){ daSelectAgent(d.slug); });
+            canvas.appendChild(card);
+        });
+        var brain = document.createElement('div');
+        brain.className = 'ao-brain';
+        brain.style.cssText = 'left:'+bx+'px;top:'+(by-52)+'px;';
+        brain.innerHTML =
+            '<div class="ao-brain-orb" style="box-shadow:0 0 40px rgba(124,108,242,0.4)"><div class="ao-brain-inner" style="background:rgba(124,108,242,0.15)"></div></div>'+
+            '<div class="ao-brain-tag" style="color:#a78bfa">COUNCIL</div>'+
+            '<div class="ao-brain-notes">DISPATCH CENTER</div>';
+        canvas.appendChild(brain);
+    }
+
+    function daSelectAgent(slug) {
+        _daActiveSlug = slug;
+        var d = DA_AGENTS.find(function(x){ return x.slug === slug; });
+        if (d) {
+            var dot = document.getElementById('daDeptDot');
+            var name = document.getElementById('daDeptName');
+            var inp = document.getElementById('daTaskInp');
+            if (dot)  dot.style.background = d.color;
+            if (name) name.textContent = d.name;
+            if (inp)  { inp.placeholder = 'Message the '+d.name.toLowerCase()+' agent...'; inp.focus(); }
+            var reply = document.getElementById('daReplyPanel');
+            if (reply) reply.innerHTML = '<div style="color:'+d.color+'88;font-size:10px;padding:4px 0">'+d.name+' agent selected. '+d.desc+'</div>';
+        }
+        daRenderCanvas();
+    }
+
+    window.daSend = function() {
+        var inp = document.getElementById('daTaskInp');
+        var reply = document.getElementById('daReplyPanel');
+        var raw = inp ? inp.value.trim() : '';
+        if (!raw || !_daActiveSlug) {
+            if (reply) reply.innerHTML = '<div style="color:#f59e0b;font-size:10px">Select an agent first, then type a message.</div>';
+            return;
+        }
+        inp.value = '';
+        if (reply) reply.innerHTML = '<div style="color:#8893a0;font-size:10px;padding:8px 0">Sending to '+_daActiveSlug+' agent...</div>';
+        fetch('/api/agents/domain/invoke', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','x-app-key':window._appKey||''},
+            body: JSON.stringify({ slug:_daActiveSlug, message:raw })
+        }).then(function(r){ return r.json(); }).then(function(d) {
+            if (!reply) return;
+            var text = d.reply || (d.ok ? 'Done.' : (d.error||'No response'));
+            var agName = d.agent ? d.agent.name : _daActiveSlug;
+            var agData = DA_AGENTS.find(function(x){ return x.slug === _daActiveSlug; });
+            var col = agData ? agData.color : '#7c6cf2';
+            var extras = '';
+            if (d.escalation) extras += ' <span style="color:#f59e0b;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.04em">↑ ESCALATED</span>';
+            if (d.delegation) extras += ' <span style="color:#34d399;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.04em">→ DELEGATED: '+_escapeHtml(d.delegation.slug||'')+'</span>';
+            reply.innerHTML =
+                '<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+                    '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.07em;color:'+col+'">'+_escapeHtml(agName.toUpperCase())+'</span>'+
+                    extras+
+                '</div>'+
+                '<div style="font-size:11px;color:rgba(232,244,255,0.8);line-height:1.65;white-space:pre-wrap;max-height:400px;overflow-y:auto">'+_escapeHtml(text.slice(0,1200))+(text.length>1200?'\n...':'')+'</div>';
+        }).catch(function(e) {
+            if (reply) reply.innerHTML = '<div style="color:#ef4444;font-size:10px">Error: '+(e.message||'unknown')+'</div>';
+        });
+    };
+
+    window.daTogglePanel = function() {
+        var panel = document.querySelector('#page-domain-agents .ao-task-panel');
+        var tog = document.getElementById('daTaskTog');
+        if (!panel) return;
+        var isOpen = !panel.style.width || panel.style.width !== '0px';
+        panel.style.width = isOpen ? '0' : '';
+        panel.style.overflow = isOpen ? 'hidden' : '';
+        if (tog) tog.textContent = isOpen ? '›' : '‹';
+    };
+
+    var _daInited = false;
+    document.addEventListener('click', function(e) {
+        var fn = e.target.closest('[data-fn]');
+        if (fn && fn.getAttribute('data-fn') === 'daSend') { e.preventDefault(); window.daSend(); }
+    });
+
+    var _daInputBound = false;
+    function _bindDaInput() {
+        if (_daInputBound) return;
+        var inp = document.getElementById('daTaskInp');
+        if (!inp) return;
+        inp.addEventListener('keydown', function(e){ if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();window.daSend();} });
+        _daInputBound = true;
+    }
+
+    var _daResizeTimer;
+    window.addEventListener('resize', function(){
+        clearTimeout(_daResizeTimer);
+        _daResizeTimer = setTimeout(function(){
+            var pg = document.getElementById('page-domain-agents');
+            if (pg && pg.classList.contains('active')) daRenderCanvas();
+        }, 120);
+    });
+
+    var _origSwitchDA = window.switchPage;
+    window.switchPage = function(name) {
+        if (_origSwitchDA) _origSwitchDA(name);
+        if (name === 'domain-agents') {
+            setTimeout(function(){
+                daStartClock();
+                daRenderCanvas();
+                _bindDaInput();
+            }, 80);
+        }
+    };
+
+    if (location.hash.slice(1) === 'domain-agents') {
+        setTimeout(function(){ daStartClock(); daRenderCanvas(); _bindDaInput(); }, 100);
+    }
 })();
 </script>
 
