@@ -28115,28 +28115,36 @@ window.apexFileDropHandler = function(e){
         }
 
         var taskSt = (task.status || '').toLowerCase();
+        var taskMeta = task.metadata || {};
+        var councilRec = taskMeta.recommendation || '';
+
         if (!runs.length) {
             var execBadge, execMsg, execHint;
             if (taskSt === 'awaiting_approval' || taskSt === 'approval_required') {
                 execBadge = 'inferred';
-                execMsg = 'Task is awaiting approval — agents will execute once approved.';
-                execHint = 'Approve this task in the Actions panel to start pipeline execution.';
+                execMsg = 'Awaiting your approval — agents will execute once approved.';
+                execHint = 'Open ACTIONS to approve.';
             } else if (taskSt === 'pending') {
                 execBadge = 'inferred';
                 execMsg = 'Task is queued — pipeline execution has not started yet.';
                 execHint = '';
             } else if (taskSt === 'in_progress') {
                 execBadge = 'inferred';
-                execMsg = 'Task is running — no completed agent runs yet.';
-                execHint = 'Refresh shortly to see live run data.';
+                execMsg = 'Task is running — no completed agent runs logged yet.';
+                execHint = '';
             } else {
                 execBadge = 'unknown';
-                execMsg = 'No agent runs with authoritative provenance found.';
-                execHint = 'Runs created before the source_task_id migration do not carry provenance.';
+                execMsg = 'No linked agent runs found.';
+                execHint = '';
             }
             html += '<div class="apex-insp-section"><div class="apex-insp-section-hd">EXECUTION ' + _badge(execBadge) + '</div>';
             html += '<div class="apex-insp-muted">' + _esc(execMsg) + '</div>';
             if (execHint) html += '<div class="apex-insp-hint">' + _esc(execHint) + '</div>';
+            // Show council recommendation as the execution context
+            if (councilRec) {
+                html += '<div class="apex-insp-section-hd" style="margin-top:10px;font-size:.65rem">COUNCIL DECISION</div>';
+                html += '<div style="font-size:.78rem;line-height:1.6;color:var(--color-text,#e8e8e8);padding:8px;background:var(--color-surface-raised,#242424);border-radius:6px;margin-top:4px">' + _esc(councilRec) + '</div>';
+            }
             html += '</div>';
         } else {
             html += _runsSection('DOMAIN AGENT', domainRuns);
@@ -28152,10 +28160,9 @@ window.apexFileDropHandler = function(e){
             var resultLabel = { awaiting_approval:'AWAITING APPROVAL', approval_required:'AWAITING APPROVAL', in_progress:'IN PROGRESS', completed:'COMPLETED', done:'COMPLETED', failed:'FAILED', rejected:'REJECTED', pending:'QUEUED' }[st] || st.toUpperCase().replace(/_/g,' ');
             html += '<div class="apex-insp-value" style="color:' + resultColor + '">' + _esc(resultLabel) + '</div>';
             if (st === 'awaiting_approval' || st === 'approval_required') {
-                html += '<div class="apex-insp-hint">This task requires your approval before execution continues. Go to <strong>ACTIONS</strong> to approve.</div>';
-            } else if (st === 'completed' || st === 'done') {
-                var outcome = task.result || task.outcome || task.summary || '';
-                if (outcome) html += '<div class="apex-insp-sub">' + _esc(String(outcome).slice(0, 200)) + '</div>';
+                html += '<div class="apex-insp-hint">Open <strong>ACTIONS</strong> to approve and start execution.</div>';
+            } else if ((st === 'completed' || st === 'done') && councilRec && !runs.length) {
+                html += '<div style="font-size:.78rem;line-height:1.6;color:var(--color-text,#e8e8e8);padding:8px;background:var(--color-surface-raised,#242424);border-radius:6px;margin-top:6px">' + _esc(councilRec) + '</div>';
             }
         } else {
             html += '<div class="apex-insp-muted">Status unknown — task may still be running.</div>';
