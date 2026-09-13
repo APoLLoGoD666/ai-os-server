@@ -235,7 +235,8 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
                 setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: result.reply }), tags: ['conversation', 'chat', 'tool'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
                 setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('../../lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); if ((result.reply||'').split(/\s+/).length > 20) { require('../../lib/memory/consolidation-engine').submit('episode', req.conversationId||`chat-${Date.now()}`, { objective:`Chat: ${userMessage.slice(0,120)}`, success:true, source:'chat_tool', reply:(result.reply||'').slice(0,200) }, 25).catch(()=>{}); require('../../lib/intelligence/knowledge-validator').submitLesson((result.reply||'').slice(0,400), { taskId:req.conversationId, sourceType:'observation' }).catch(()=>{}); } });
                 return res.status(result.ok ? 200 : 404).json(result);
-            } else if (toolUseBlock && toolUseBlock.name.includes('_')) {
+            } else if (toolUseBlock) {
+                // External tool — execute then loop back through APEX cognitive pipeline
                 const _extT0 = Date.now();
                 const _extName = toolUseBlock.name;
                 const _extParams = toolUseBlock.input || {};
@@ -247,10 +248,31 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
                 }
                 const _extMs = Date.now() - _extT0;
                 const [_extSlug, ..._extAP] = _extName.split('_');
-                const { getSupabaseClient: _extSb } = require('../../lib/clients');
-                _extSb().from('tool_action_logs').insert({ slug: _extSlug, action: _extAP.join('_'), params: _extParams, result: _extErr ? null : _extResult, error: _extErr || null, duration_ms: _extMs, triggered_by: 'chat', human_id: req.identity?.humanId || null }).catch(() => {});
-                if (_extErr) return res.status(200).json({ ok: true, reply: `Tool error: ${_extErr}` });
-                return res.status(200).json({ ok: true, reply: JSON.stringify(_extResult) });
+                require('../../lib/clients').getSupabaseClient().from('tool_action_logs').insert({ slug: _extSlug, action: _extAP.join('_'), params: _extParams, result: _extErr ? null : _extResult, error: _extErr || null, duration_ms: _extMs, triggered_by: 'chat', human_id: req.identity?.humanId || null }).catch(() => {});
+
+                // Send tool_result back to Claude — response is shaped by APEX cognitive pipeline
+                const _toolContent = _extErr ? `Error: ${_extErr}` : JSON.stringify(_extResult);
+                const { result: _synthMsg } = await runtime.execute({
+                    client, model: HAIKU_MODEL, caller: 'chat_ext_synth', maxTokens: 500,
+                    system: getManifest(),
+                    tools: [...TOOLS, ...await _toolRegistry.getConnectedSchemas()],
+                    messages: [
+                        { role: 'user', content: prompt },
+                        { role: 'assistant', content: streamMsg.content },
+                        { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUseBlock.id, content: _toolContent }] },
+                    ],
+                });
+                clearTimeout(chatTimeout);
+                const _extRawReply = (_synthMsg.content || []).filter(p => p.type === 'text').map(p => p.text || '').join('\n').trim() || (_extErr ? `Tool error: ${_extErr}` : 'Done.');
+                const { reply, mode: _extMode, intent: _extIntent } = _cogOrch.shape(userMessage, _extRawReply, req.executionClass || 'EXECUTIVE', req.conversationId);
+                const _extSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
+                const _extPlan = _timingEng.buildStreamPlan(reply, _extIntent, req.executionClass || 'EXECUTIVE', _extSnap);
+                _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _extIntent, userMessage, reply, mode: _extMode, executionClass: req.executionClass });
+                _eae.recordTransition({ sessionId: req.conversationId });
+                _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply, intent: _extIntent, mode: _extMode });
+                setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: reply }), tags: ['conversation', 'chat', 'external_tool', _extSlug], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+                setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('../../lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); if ((reply||'').split(/\s+/).length > 20) { require('../../lib/memory/consolidation-engine').submit('episode', req.conversationId||`chat-${Date.now()}`, { objective:`Chat: ${userMessage.slice(0,120)}`, success:true, source:'chat_ext_tool', reply:(reply||'').slice(0,200) }, 25).catch(()=>{}); require('../../lib/intelligence/knowledge-validator').submitLesson((reply||'').slice(0,400), { taskId:req.conversationId, sourceType:'observation' }).catch(()=>{}); } });
+                return res.status(200).json({ ok: true, reply, response_mode: _extMode, stream_plan: _extPlan, memoryUsed: true, documentsUsed: relevantDocs.length });
             }
         }
 

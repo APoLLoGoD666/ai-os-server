@@ -29784,7 +29784,7 @@ var TOOLS=[{"name":"Zapier","slug":"zapier","color":"FF4A00","cat":"Automation",
     function _tlTest(slug) {
         _tlMsg('Testing…', null);
         fetch('/api/connections/' + slug + '/test', { method: 'POST', credentials: 'include',
-            headers: { 'x-app-key': _apiKey() } })
+            headers: { 'Content-Type': 'application/json', 'x-app-key': _apiKey() } })
         .then(function(r) { return r.json(); })
         .then(function(d) {
             if (d.ok) _tlMsg('✓ Responding (' + d.latencyMs + 'ms)', true);
