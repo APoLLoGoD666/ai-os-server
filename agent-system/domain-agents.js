@@ -323,7 +323,7 @@ const _ESCALATION_PROTOCOL = `
 ESCALATION PROTOCOL: If this request involves a decision that clearly exceeds your authority — financial commitments over £500, irreversible system changes, cross-domain architectural changes, or constitutional modifications — append this line at the very end of your response (skip it for routine tasks):
 [ESCALATE: <one sentence describing the council decision needed>]`;
 
-async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 2000, council = false, humanId = null } = {}) {
+async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 2000, council = false, humanId = null, sourceTaskId = null } = {}) {
     const agent = DOMAIN_AGENTS[slug];
     if (!agent) throw new Error(`Unknown domain agent: "${slug}". Valid: ${Object.keys(DOMAIN_AGENTS).join(', ')}`);
 
@@ -436,7 +436,7 @@ async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 
         setImmediate(async () => {
             try {
                 const agentLib = require('./agent-library');
-                await agentLib.invokeAgent(delegateSlug, delegateTask);
+                await agentLib.invokeAgent(delegateSlug, delegateTask, { sourceTaskId });
             } catch (e) { console.warn(`[Delegate] ${delegateSlug}:`, e.message); }
         });
     }
@@ -446,6 +446,7 @@ async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 
             const sb = require('../lib/clients').getSupabaseClient();
             await sb.from('apex_agent_runs').insert({
                 task_id:          `da-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                source_task_id:   sourceTaskId || null,
                 agent_name:       agent.name,
                 domain:           agent.category,
                 task_description: userMessage.slice(0, 300),

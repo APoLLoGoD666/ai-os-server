@@ -294,7 +294,7 @@ function getCategories() {
     return [...new Set([..._cache.values()].map(a => a.category))].sort();
 }
 
-async function invokeAgent(slugOrKeyword, userMessage, { anthropicClient } = {}) {
+async function invokeAgent(slugOrKeyword, userMessage, { anthropicClient, sourceTaskId = null } = {}) {
     const agent = getAgent(slugOrKeyword);
     if (!agent) throw new Error(`Agent "${slugOrKeyword}" not found. Call /api/agents/sync first.`);
 
@@ -313,6 +313,7 @@ async function invokeAgent(slugOrKeyword, userMessage, { anthropicClient } = {})
             const sb = require('../lib/clients').getSupabaseClient();
             await sb.from('apex_agent_runs').insert({
                 task_id:          `ao-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                source_task_id:   sourceTaskId || null,
                 agent_name:       agent.name,
                 domain:           agent.category,
                 task_description: userMessage.slice(0, 300),

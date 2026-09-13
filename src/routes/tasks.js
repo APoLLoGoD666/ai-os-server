@@ -118,13 +118,13 @@ router.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
         setImmediate(async () => {
             try {
                 const { invokeDomainAgent } = require('../../agent-system/domain-agents');
-                const result = await invokeDomainAgent(meta.dispatch.slug, meta.dispatch.action, { maxTokens: 1500, humanId: task.human_id || null, council: true });
+                const result = await invokeDomainAgent(meta.dispatch.slug, meta.dispatch.action, { maxTokens: 1500, humanId: task.human_id || null, council: true, sourceTaskId: taskId });
                 const delegation = result.delegation || null;
                 let officeResult = null;
                 if (delegation && delegation.slug && delegation.task) {
                     try {
                         const agentLib = require('../../agent-system/agent-library');
-                        officeResult = await agentLib.invokeAgent(delegation.slug, delegation.task);
+                        officeResult = await agentLib.invokeAgent(delegation.slug, delegation.task, { sourceTaskId: taskId });
                     } catch (oe) { officeResult = { reply: '[office agent error: ' + oe.message + ']' }; }
                 }
                 const updatedMeta = {
