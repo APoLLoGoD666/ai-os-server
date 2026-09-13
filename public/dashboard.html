@@ -28303,8 +28303,7 @@ window.apexFileDropHandler = function(e){
 <!-- ══ APEX INTEL PAGE ══ -->
 <style>
 /* ── Intel layout ── */
-#page-intel { display:none; flex-direction:column; height:100%; overflow:hidden; }
-#page-intel.active { display:flex; }
+#page-intel { overflow:hidden !important; padding:0 !important; gap:0 !important; }
 .intel-body { display:flex; flex:1; gap:0; overflow:hidden; min-height:0; }
 .intel-presets { width:300px; flex-shrink:0; display:flex; flex-direction:column; gap:10px; padding:16px; overflow-y:auto; border-right:1px solid var(--color-border,#333); }
 .intel-trace-wrap { flex:1; display:flex; flex-direction:column; overflow:hidden; padding:16px; gap:12px; min-width:0; }
@@ -28667,6 +28666,7 @@ window.apexFileDropHandler = function(e){
             var reader = resp.body.getReader();
             var decoder = new TextDecoder();
             var buf = '';
+            var pending = {}; // hoisted: survives across chunk boundaries
 
             function _read() {
                 reader.read().then(function (chunk) {
@@ -28674,14 +28674,15 @@ window.apexFileDropHandler = function(e){
                     buf += decoder.decode(chunk.value, { stream: true });
                     var lines = buf.split('\n');
                     buf = lines.pop(); // keep incomplete line
-                    var pending = {};
                     lines.forEach(function (line) {
                         line = line.trim();
                         if (line.startsWith('event:')) { pending.event = line.slice(6).trim(); }
-                        if (line.startsWith('data:'))  {
+                        else if (line.startsWith('data:'))  {
                             var raw = line.slice(5).trim();
                             if (pending.event === 'stage') _onStage(raw);
                             pending = {};
+                        } else if (line === '') {
+                            pending = {}; // blank line = event boundary
                         }
                     });
                     _read();
