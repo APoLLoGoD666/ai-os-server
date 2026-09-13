@@ -267,4 +267,96 @@ router.get('/operations/migrations/list', _auth, (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// GET /api/system/telemetry — live pipeline + cost + memory telemetry for Council audit
+router.get('/system/telemetry', _auth, async (req, res) => {
+    try {
+        const now = new Date();
+        const since24h = new Date(now - 86400000).toISOString();
+        const since7d  = new Date(now - 7 * 86400000).toISOString();
+
+        // ── Agent pipeline stats ──────────────────────────────────────────────
+        const [runs24h, runs7d, tasks] = await Promise.all([
+            sb().from('apex_agent_runs')
+                .select('success,duration_ms,cost_usd,agent_name,domain,model_used')
+                .gte('created_at', since24h),
+            sb().from('apex_agent_runs')
+                .select('success,cost_usd,agent_name')
+                .gte('created_at', since7d),
+            sb().from('apex_tasks')
+                .select('status')
+                .limit(500)
+        ]);
+
+        const r24 = runs24h.data || [];
+        const r7d = runs7d.data  || [];
+        const taskRows = tasks.data || [];
+
+        const successRate24h = r24.length ? Math.round(r24.filter(r => r.success).length / r24.length * 100) : null;
+        const successRate7d  = r7d.length ? Math.round(r7d.filter(r => r.success).length / r7d.length * 100) : null;
+        const avgDurationMs  = r24.length ? Math.round(r24.reduce((s, r) => s + (r.duration_ms || 0), 0) / r24.length) : null;
+        const costUsd24h     = r24.reduce((s, r) => s + (r.cost_usd || 0), 0);
+        const costUsd7d      = r7d.reduce((s, r) => s + (r.cost_usd || 0), 0);
+
+        // Unique agents active in 24h
+        const activeAgents24h = [...new Set(r24.map(r => r.agent_name).filter(Boolean))];
+        // Domains active in 24h
+        const activeDomains24h = [...new Set(r24.map(r => r.domain).filter(Boolean))];
+        // Models used
+        const models24h = r24.reduce((acc, r) => { if (r.model_used) acc[r.model_used] = (acc[r.model_used] || 0) + 1; return acc; }, {});
+
+        // Task breakdown
+        const taskBreakdown = taskRows.reduce((acc, t) => { acc[t.status || 'unknown'] = (acc[t.status || 'unknown'] || 0) + 1; return acc; }, {});
+
+        // ── Process memory ────────────────────────────────────────────────────
+        const mem = process.memoryUsage();
+        const memMb = {
+            rss:       Math.round(mem.rss / 1048576),
+            heapUsed:  Math.round(mem.heapUsed / 1048576),
+            heapTotal: Math.round(mem.heapTotal / 1048576)
+        };
+
+        // ── Supabase connectivity latency ─────────────────────────────────────
+        const sbStart = Date.now();
+        let sbLatencyMs = null, sbOk = false;
+        try {
+            await sb().from('apex_agent_runs').select('task_id').limit(1);
+            sbLatencyMs = Date.now() - sbStart;
+            sbOk = true;
+        } catch (_) { sbLatencyMs = null; }
+
+        res.json({
+            ok: true,
+            timestamp: now.toISOString(),
+            pipeline: {
+                runs_24h:       r24.length,
+                runs_7d:        r7d.length,
+                success_rate_24h_pct: successRate24h,
+                success_rate_7d_pct:  successRate7d,
+                avg_duration_ms:      avgDurationMs,
+                active_agents_24h:    activeAgents24h,
+                active_domains_24h:   activeDomains24h,
+                models_used_24h:      models24h
+            },
+            cost: {
+                usd_24h: Math.round(costUsd24h * 10000) / 10000,
+                usd_7d:  Math.round(costUsd7d  * 10000) / 10000
+            },
+            tasks: taskBreakdown,
+            memory: {
+                process_rss_mb:  memMb.rss,
+                heap_used_mb:    memMb.heapUsed,
+                heap_total_mb:   memMb.heapTotal
+            },
+            supabase: {
+                ok:         sbOk,
+                latency_ms: sbLatencyMs
+            },
+            server: {
+                uptime_s:    Math.round(process.uptime()),
+                node_version: process.version
+            }
+        });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;

@@ -28552,6 +28552,26 @@ window.apexFileDropHandler = function(e){
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
+    function _buildTelemetryContext(t) {
+        if (!t || !t.ok) return '';
+        var p = t.pipeline || {}, c = t.cost || {}, sb = t.supabase || {}, mem = t.memory || {}, srv = t.server || {}, tk = t.tasks || {};
+        var lines = [
+            '=== LIVE APEX SYSTEM TELEMETRY (fetched ' + new Date().toISOString() + ') ===',
+            'PIPELINE (last 24h): ' + (p.runs_24h || 0) + ' runs | success rate: ' + (p.success_rate_24h_pct != null ? p.success_rate_24h_pct + '%' : 'n/a') + ' | avg duration: ' + (p.avg_duration_ms != null ? p.avg_duration_ms + 'ms' : 'n/a'),
+            'PIPELINE (7d): ' + (p.runs_7d || 0) + ' runs | success rate: ' + (p.success_rate_7d_pct != null ? p.success_rate_7d_pct + '%' : 'n/a'),
+            'ACTIVE AGENTS (24h): ' + ((p.active_agents_24h || []).join(', ') || 'none'),
+            'ACTIVE DOMAINS (24h): ' + ((p.active_domains_24h || []).join(', ') || 'none'),
+            'MODELS USED (24h): ' + JSON.stringify(p.models_used_24h || {}),
+            'COST: $' + (c.usd_24h || 0) + ' (24h) | $' + (c.usd_7d || 0) + ' (7d)',
+            'TASKS: ' + JSON.stringify(tk),
+            'MEMORY: rss=' + (mem.process_rss_mb || '?') + 'MB heap=' + (mem.heap_used_mb || '?') + '/' + (mem.heap_total_mb || '?') + 'MB',
+            'SUPABASE: ' + (sb.ok ? 'connected (' + sb.latency_ms + 'ms)' : 'UNREACHABLE'),
+            'SERVER: uptime=' + (srv.uptime_s || '?') + 's node=' + (srv.node_version || '?'),
+            '=== END TELEMETRY ==='
+        ];
+        return lines.join('\n') + '\n\n';
+    }
+
     function _runPreset(id) {
         if (_running) return;
         var preset = PRESETS.find(function (p) { return p.id === id; });
@@ -28570,15 +28590,22 @@ window.apexFileDropHandler = function(e){
         if (statusEl) statusEl.innerHTML = '<span class="intel-spinner"></span>';
 
         _resetTrace();
-        // Mark council as active immediately
         _setStageStatus('council', 'active');
 
         var headers = Object.assign({ 'Content-Type': 'application/json' }, _h());
 
+        // For SYSTEM AUDIT: pre-fetch live telemetry and inject as context
+        var telemetryPromise = id === 'system'
+            ? fetch('/api/system/telemetry', { headers: _h() }).then(function (r) { return r.json(); }).catch(function () { return null; })
+            : Promise.resolve(null);
+
+        telemetryPromise.then(function (telemetry) {
+            var question = (id === 'system' ? _buildTelemetryContext(telemetry) : '') + preset.q;
+
         fetch('/api/civilization/council/run', {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify({ question: preset.q })
+            body: JSON.stringify({ question: question })
         }).then(function (resp) {
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
             var reader = resp.body.getReader();
@@ -28611,6 +28638,8 @@ window.apexFileDropHandler = function(e){
             if (sbody) sbody.innerHTML = '<div style="color:var(--color-error,#ef4444);font-size:.78rem">' + _esc(err.message) + '</div>';
             _finish();
         });
+
+        }); // end telemetryPromise.then
 
         function _finish() {
             _running = false;
