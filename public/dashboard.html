@@ -28422,15 +28422,19 @@ window.apexFileDropHandler = function(e){
         };
     }
 
-    // ── Stage definitions (order matters for rendering) ─────────────────────
+    // ── Stage definitions ────────────────────────────────────────────────────
     var STAGE_DEFS = [
-        { id:'council',    label:'COUNCIL DELIBERATION' },
-        { id:'domain',     label:'DOMAIN AGENT' },
-        { id:'office',     label:'OFFICE AGENT' },
-        { id:'reflection', label:'REFLECTION' }
+        { id:'council',    label:'COUNCIL DELIBERATION', page:'council' },
+        { id:'domain',     label:'DOMAIN AGENT',          page:'domain-agents' },
+        { id:'office',     label:'OFFICE AGENT',          page:'agents' },
+        { id:'reflection', label:'REFLECTION',            page:'council' }
     ];
 
+    // Tracks live slug per stage so click-nav can scroll to the right agent
+    var _stageSlug = {};
+
     function _resetTrace() {
+        _stageSlug = {};
         var trace = document.getElementById('intel-trace');
         if (!trace) return;
         trace.innerHTML = '';
@@ -28438,14 +28442,46 @@ window.apexFileDropHandler = function(e){
             var el = document.createElement('div');
             el.className = 'intel-stage';
             el.id = 'intel-stage-' + s.id;
+            el.setAttribute('data-stage-page', s.page);
+            el.style.cursor = 'pointer';
+            el.title = 'Click to open ' + s.page;
             el.innerHTML =
                 '<div class="intel-stage-hd">' +
                 '  <div class="intel-stage-dot"></div>' +
-                '  <div class="intel-stage-label">' + s.label + '</div>' +
+                '  <div class="intel-stage-label" id="intel-slabel-' + s.id + '">' + s.label + '</div>' +
+                '  <div class="intel-stage-nav" id="intel-snav-' + s.id + '" style="margin-left:auto;font-size:.65rem;color:var(--color-accent,#7c6cf2);opacity:0;transition:opacity 150ms">↗</div>' +
                 '</div>' +
                 '<div class="intel-stage-body" id="intel-sbody-' + s.id + '"></div>';
+            el.addEventListener('click', function () { _stageClick(s.id); });
+            el.addEventListener('mouseenter', function () {
+                var nav = document.getElementById('intel-snav-' + s.id);
+                if (nav) nav.style.opacity = '1';
+            });
+            el.addEventListener('mouseleave', function () {
+                var nav = document.getElementById('intel-snav-' + s.id);
+                if (nav) nav.style.opacity = '0';
+            });
             trace.appendChild(el);
         });
+    }
+
+    function _stageClick(id) {
+        var def = STAGE_DEFS.find(function(s){ return s.id === id; });
+        if (!def) return;
+        var slug = _stageSlug[id];
+        window.switchPage(def.page);
+        if (slug && (id === 'domain' || id === 'office')) {
+            // Highlight the specific agent card after page switch
+            setTimeout(function () {
+                var sel = '[data-slug="' + slug + '"], [data-agent-slug="' + slug + '"], #agent-' + slug + ', [id*="' + slug + '"]';
+                var el = document.querySelector(sel);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.style.outline = '2px solid var(--color-accent,#7c6cf2)';
+                    setTimeout(function(){ el.style.outline = ''; }, 2000);
+                }
+            }, 200);
+        }
     }
 
     function _setStageStatus(id, status) {
@@ -28478,6 +28514,14 @@ window.apexFileDropHandler = function(e){
 
         _setStageStatus(id, status === 'active' ? 'active' : status === 'done' ? 'done' : status === 'skipped' ? 'skipped' : status === 'error' ? 'error' : 'active');
 
+        // Update label with live agent name from server
+        if (evt.label) {
+            var lbl = document.getElementById('intel-slabel-' + id);
+            if (lbl) lbl.textContent = evt.label.toUpperCase();
+        }
+        // Store slug for click navigation
+        if (data.slug) _stageSlug[id] = data.slug;
+
         if (status !== 'done') return;
 
         var sbody = document.getElementById('intel-sbody-' + id);
@@ -28487,26 +28531,24 @@ window.apexFileDropHandler = function(e){
             var votes = data.votes || [];
             var consensusPct = data.consensusLevel ? Math.round(data.consensusLevel * 100) : Math.round((votes.filter(function(v){return (v.vote||'').toLowerCase()==='approve';}).length / Math.max(votes.length,1)) * 100);
             sbody.innerHTML = _buildVoteContent(votes, consensusPct);
-            // Stagger vote chips visible
             setTimeout(function () {
                 sbody.querySelectorAll('.intel-vote').forEach(function (chip) { chip.classList.add('shown'); });
             }, 50);
-            // Animate consensus bar
             setTimeout(function () {
                 var fill = document.getElementById('intel-cons-fill');
                 if (fill) fill.style.width = Math.min(consensusPct, 100) + '%';
             }, 100);
-            // Recommendation
             if (data.recommendation) {
                 sbody.innerHTML += '<div class="intel-result" id="intel-recommendation"></div>';
                 _typewriter(document.getElementById('intel-recommendation'), data.recommendation, 12);
             }
         } else if (id === 'domain' || id === 'office') {
             var reply = data.reply || data.result || data.summary || '';
+            var agentLabel = _stageSlug[id] ? '<div style="font-size:.68rem;color:var(--color-accent,#7c6cf2);margin-bottom:6px;font-weight:700;letter-spacing:.06em">' + _esc(_stageSlug[id].toUpperCase()) + '</div>' : '';
             if (reply) {
-                sbody.innerHTML = '<div class="intel-result">' + _esc(reply) + '</div>';
+                sbody.innerHTML = agentLabel + '<div class="intel-result">' + _esc(reply) + '</div>';
             } else {
-                sbody.innerHTML = '<div style="color:var(--color-text-muted);font-size:.72rem">No output returned</div>';
+                sbody.innerHTML = agentLabel + '<div style="color:var(--color-text-muted);font-size:.72rem">No output returned</div>';
             }
         } else if (id === 'reflection') {
             var ref = data.reflection || data.reply || data.result || data.summary || '';
@@ -28516,7 +28558,6 @@ window.apexFileDropHandler = function(e){
             }
         }
 
-        // Scroll trace into view
         var trace = document.getElementById('intel-trace');
         if (trace) trace.scrollTop = trace.scrollHeight;
     }
