@@ -26023,6 +26023,7 @@ window.apexFileDropHandler = function(e){
     if (location.hash.slice(1) === 'domain-agents') {
         setTimeout(function(){ daStartClock(); daRenderCanvas(); _bindDaInput(); }, 100);
     }
+    window.DA_AGENTS = DA_AGENTS;
 })();
 </script>
 
@@ -27463,20 +27464,17 @@ window.apexFileDropHandler = function(e){
             }).join('');
 
         } else if (tierId === 'office') {
-            // Group by domain, show all known office agents from runs + static list
-            var names = {};
-            _liveRuns.forEach(function (r) {
-                if (r.agent_name && !r.domain) names[r.agent_name] = r;
-                else if (r.agent_name) names[r.agent_name] = r;
+            var allOA = [];
+            (window.DA_AGENTS || []).forEach(function (da) {
+                (da.officeAgents || []).forEach(function (n) {
+                    allOA.push({ name: n, domain: da.id, color: da.color });
+                });
             });
-            var list = Object.keys(names);
-            if (!list.length) { body.innerHTML = '<div class="kg-runs-empty">NO RUNS YET</div>'; return; }
-            body.innerHTML = list.map(function (name) {
-                var run = names[name];
-                var state = _runState(run);
-                var domain = (run.domain || '').toLowerCase();
-                var col = _domainColor(domain);
-                return _entityRow(name, domain || 'office', state, col);
+            if (!allOA.length) { body.innerHTML = '<div class="kg-runs-empty">NO DATA</div>'; return; }
+            body.innerHTML = allOA.map(function (a) {
+                var run = _liveRuns.find(function (r) { return r.agent_name === a.name; });
+                var state = run ? _runState(run) : 'idle';
+                return _entityRow(a.name, a.domain.toUpperCase(), state, a.color);
             }).join('');
 
         } else if (tierId === 'actions') {
@@ -27510,12 +27508,13 @@ window.apexFileDropHandler = function(e){
             // Council runs: filter by domain presence or show all
             runs = _liveRuns.slice(0, 40);
         } else if (tierId === 'domain') {
-            // Domain agent runs: agent_name matches a DA_AGENTS entry
+            var daSlugs = (window.DA_AGENTS || []).map(function (a) { return a.slug; });
             var daNames = (window.DA_AGENTS || []).map(function (a) { return a.name; });
-            runs = _liveRuns.filter(function (r) { return daNames.indexOf(r.agent_name) !== -1 || r.domain; }).slice(0, 40);
+            runs = _liveRuns.filter(function (r) { return r.domain && daSlugs.indexOf(r.domain) !== -1 || daNames.indexOf(r.agent_name) !== -1; }).slice(0, 40);
         } else if (tierId === 'office') {
+            var daSlugs2 = (window.DA_AGENTS || []).map(function (a) { return a.slug; });
             var daNames2 = (window.DA_AGENTS || []).map(function (a) { return a.name; });
-            runs = _liveRuns.filter(function (r) { return daNames2.indexOf(r.agent_name) === -1; }).slice(0, 40);
+            runs = _liveRuns.filter(function (r) { return r.agent_name && daNames2.indexOf(r.agent_name) === -1 && (!r.domain || daSlugs2.indexOf(r.domain) === -1 || r.agent_name); }).slice(0, 40);
         } else if (tierId === 'actions') {
             runs = _liveRuns.slice(0, 40);
         }
@@ -27571,9 +27570,11 @@ window.apexFileDropHandler = function(e){
             var cntEl = document.getElementById('kg-count-actions');
             if (cntEl) cntEl.textContent = _liveTasks.length || '—';
 
-            var officeCount = new Set(_liveRuns.filter(function (r) { return r.agent_name; }).map(function (r) { return r.agent_name; })).size;
+            var officeCount = (window.DA_AGENTS || []).reduce(function (s, a) { return s + (a.officeAgents || []).length; }, 0);
             var offCntEl = document.getElementById('kg-count-office');
-            if (offCntEl && officeCount) offCntEl.textContent = officeCount;
+            if (offCntEl) offCntEl.textContent = officeCount || '—';
+            var domainCntEl = document.getElementById('kg-count-domain');
+            if (domainCntEl) domainCntEl.textContent = (window.DA_AGENTS || []).length || 9;
 
             // State dots on nodes
             TIERS.forEach(function (tier) {
