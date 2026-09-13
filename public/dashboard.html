@@ -8075,8 +8075,12 @@ header.topbar { grid-area: topbar !important; }
             <div id="sidebarRunList"><div class="sl-empty">—</div></div>
         </div>
 
-        <!-- SETTINGS (bottom) -->
+        <!-- TOOLS + SETTINGS (bottom) -->
         <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0"></div>
+        <button class="nav-btn" id="nav-tools" aria-label="Tools">
+            <span class="nav-icon">⬡</span>
+            <span class="nav-label">Tools</span>
+        </button>
         <button class="nav-btn" id="nav-settings" aria-label="Settings">
             <span class="nav-icon">◉</span>
             <span class="nav-label">Settings</span>
@@ -12315,7 +12319,8 @@ if(pipe){
         governance:    { title:'Governance',    sub:'Constitutional · Authority · Records' },
         domains:       { title:'Domains',        sub:'Your life areas' },
         council:       { title:'Council',        sub:'Supreme Council · Deliberations · Votes · Decisions' },
-        settings:      { title:'Settings',       sub:'Account & preferences' }
+        settings:      { title:'Settings',       sub:'Account & preferences' },
+        tools:         { title:'Tools',          sub:'API connections · automations · integrations' }
     };
     window.switchPage = function(name) {
         // V-11-F F-3: Redirect Users away from Master-only pages (silent — do not leak existence)
@@ -29045,6 +29050,437 @@ window.apexFileDropHandler = function(e){
         _bootstrap();
     }
 
+})();
+</script>
+<!-- ═══════════════════════════════════════════════════════════
+     TOOLS PAGE — API connections, automations, integrations
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+/* ── Tools page layout ───────────────────────────────────────── */
+#page-tools {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: #0d0d0d;
+}
+.tl-header {
+    flex-shrink: 0;
+    padding: 20px 20px 0;
+}
+.tl-search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.tl-search {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: rgba(255,255,255,0.8);
+    font: 400 13px/1 system-ui,-apple-system,sans-serif;
+    outline: none;
+    transition: border-color 150ms;
+}
+.tl-search::placeholder { color: rgba(255,255,255,0.2); }
+.tl-search:focus { border-color: rgba(124,108,242,0.5); }
+.tl-count {
+    font: 400 11px/1 'JetBrains Mono',monospace;
+    color: rgba(255,255,255,0.2);
+    white-space: nowrap;
+}
+/* Category filter pills */
+.tl-cats {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 14px;
+}
+.tl-cats::-webkit-scrollbar { display: none; }
+.tl-cat {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    border-radius: 99px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: transparent;
+    color: rgba(255,255,255,0.35);
+    font: 500 10px/1 system-ui,-apple-system,sans-serif;
+    cursor: pointer;
+    transition: all 150ms;
+    white-space: nowrap;
+}
+.tl-cat:hover { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.18); }
+.tl-cat.active {
+    background: rgba(124,108,242,0.15);
+    border-color: rgba(124,108,242,0.5);
+    color: #a78bfa;
+}
+/* Grid */
+.tl-grid-wrap {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 20px 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.06) transparent;
+}
+.tl-section-label {
+    font: 700 9px/1 'JetBrains Mono',monospace;
+    letter-spacing: .1em;
+    color: rgba(255,255,255,0.18);
+    padding: 14px 0 8px;
+}
+.tl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(82px,1fr));
+    gap: 8px;
+}
+/* Tool card */
+.tl-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    padding: 14px 8px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(14,14,22,0.95);
+    backdrop-filter: blur(12px);
+    cursor: pointer;
+    transition: border-color 180ms, box-shadow 180ms, transform 150ms cubic-bezier(0,0,0.2,1);
+    overflow: hidden;
+}
+.tl-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(ellipse at 50% 0%, var(--tc-glow, transparent) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 200ms;
+    pointer-events: none;
+}
+.tl-card:hover { transform: translateY(-2px); border-color: var(--tc, rgba(255,255,255,0.2)); box-shadow: 0 4px 24px var(--tc-glow, rgba(0,0,0,0)); }
+.tl-card:hover::before { opacity: 1; }
+.tl-card:active { transform: translateY(0); }
+.tl-icon-wrap {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    flex-shrink: 0;
+}
+.tl-icon-wrap img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    display: block;
+}
+.tl-name {
+    font: 500 9px/1.3 system-ui,-apple-system,sans-serif;
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    transition: color 180ms;
+}
+.tl-card:hover .tl-name { color: rgba(255,255,255,0.8); }
+/* Connected badge */
+.tl-conn-dot {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 6px #22c55e;
+}
+/* Hidden state */
+.tl-card[data-hidden] { display: none; }
+/* No results */
+.tl-empty {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 40px 0;
+    font: 400 12px/1 system-ui,-apple-system,sans-serif;
+    color: rgba(255,255,255,0.15);
+}
+</style>
+<script>
+/* ═══ Tools page ══════════════════════════════════════════════════════════ */
+(function () {
+    var TOOLS = [
+        // Automation
+        { name:'Zapier',          slug:'zapier',              color:'FF4A00', cat:'Automation' },
+        { name:'Make',            slug:'make',                color:'6D00CC', cat:'Automation' },
+        { name:'n8n',             slug:'n8n',                 color:'EA4B71', cat:'Automation' },
+        { name:'Pipedream',       slug:'pipedream',           color:'3C97E0', cat:'Automation' },
+        { name:'IFTTT',           slug:'ifttt',               color:'000000', cat:'Automation' },
+        { name:'Activepieces',    slug:'activepieces',        color:'4E2EDD', cat:'Automation' },
+        { name:'Workato',         slug:'workato',             color:'C3152F', cat:'Automation' },
+        // Communication
+        { name:'Slack',           slug:'slack',               color:'4A154B', cat:'Communication' },
+        { name:'Discord',         slug:'discord',             color:'5865F2', cat:'Communication' },
+        { name:'Telegram',        slug:'telegram',            color:'26A5E4', cat:'Communication' },
+        { name:'WhatsApp',        slug:'whatsapp',            color:'25D366', cat:'Communication' },
+        { name:'Zoom',            slug:'zoom',                color:'2D8CFF', cat:'Communication' },
+        { name:'Teams',           slug:'microsoftteams',      color:'6264A7', cat:'Communication' },
+        { name:'Twilio',          slug:'twilio',              color:'F22F46', cat:'Communication' },
+        { name:'Signal',          slug:'signal',              color:'3A76F0', cat:'Communication' },
+        { name:'Intercom',        slug:'intercom',            color:'1F8DED', cat:'Communication' },
+        // Email
+        { name:'Gmail',           slug:'gmail',               color:'EA4335', cat:'Email' },
+        { name:'Outlook',         slug:'microsoftoutlook',    color:'0078D4', cat:'Email' },
+        { name:'Mailchimp',       slug:'mailchimp',           color:'FFE01B', cat:'Email' },
+        { name:'SendGrid',        slug:'sendgrid',            color:'1A82E2', cat:'Email' },
+        { name:'Klaviyo',         slug:'klaviyo',             color:'000000', cat:'Email' },
+        { name:'Postmark',        slug:'postmarkapp',         color:'FFDE00', cat:'Email' },
+        { name:'Brevo',           slug:'brevo',               color:'0B996E', cat:'Email' },
+        // Workspace
+        { name:'Notion',          slug:'notion',              color:'000000', cat:'Workspace' },
+        { name:'Airtable',        slug:'airtable',            color:'18BFFF', cat:'Workspace' },
+        { name:'Google Sheets',   slug:'googlesheets',        color:'34A853', cat:'Workspace' },
+        { name:'Google Calendar', slug:'googlecalendar',      color:'4285F4', cat:'Workspace' },
+        { name:'Google Drive',    slug:'googledrive',         color:'4285F4', cat:'Workspace' },
+        { name:'Dropbox',         slug:'dropbox',             color:'0061FF', cat:'Workspace' },
+        { name:'OneDrive',        slug:'microsoftonedrive',   color:'0078D4', cat:'Workspace' },
+        { name:'Box',             slug:'box',                 color:'0061D5', cat:'Workspace' },
+        { name:'Coda',            slug:'coda',                color:'F46A54', cat:'Workspace' },
+        { name:'Confluence',      slug:'confluence',          color:'1868DB', cat:'Workspace' },
+        // Project Management
+        { name:'Trello',          slug:'trello',              color:'0052CC', cat:'Project Mgmt' },
+        { name:'Asana',           slug:'asana',               color:'F06A6A', cat:'Project Mgmt' },
+        { name:'Monday',          slug:'mondaydotcom',        color:'FF3D57', cat:'Project Mgmt' },
+        { name:'ClickUp',         slug:'clickup',             color:'7B68EE', cat:'Project Mgmt' },
+        { name:'Linear',          slug:'linear',              color:'5E6AD2', cat:'Project Mgmt' },
+        { name:'Jira',            slug:'jira',                color:'0052CC', cat:'Project Mgmt' },
+        { name:'Todoist',         slug:'todoist',             color:'DB4035', cat:'Project Mgmt' },
+        { name:'Basecamp',        slug:'basecamp',            color:'1D2D35', cat:'Project Mgmt' },
+        // CRM
+        { name:'HubSpot',         slug:'hubspot',             color:'FF7A59', cat:'CRM' },
+        { name:'Salesforce',      slug:'salesforce',          color:'00A1E0', cat:'CRM' },
+        { name:'Pipedrive',       slug:'pipedrive',           color:'006833', cat:'CRM' },
+        { name:'Zoho',            slug:'zoho',                color:'E42527', cat:'CRM' },
+        { name:'Zendesk',         slug:'zendesk',             color:'03363D', cat:'CRM' },
+        { name:'Freshdesk',       slug:'freshdesk',           color:'25C16F', cat:'CRM' },
+        // Finance
+        { name:'Stripe',          slug:'stripe',              color:'635BFF', cat:'Finance' },
+        { name:'PayPal',          slug:'paypal',              color:'003087', cat:'Finance' },
+        { name:'Square',          slug:'square',              color:'000000', cat:'Finance' },
+        { name:'QuickBooks',      slug:'quickbooks',          color:'2CA01C', cat:'Finance' },
+        { name:'Xero',            slug:'xero',                color:'13B5EA', cat:'Finance' },
+        { name:'Wise',            slug:'wise',                color:'00B9FF', cat:'Finance' },
+        { name:'Brex',            slug:'brex',                color:'0F1A33', cat:'Finance' },
+        { name:'Plaid',           slug:'plaid',               color:'000000', cat:'Finance' },
+        // Dev & Code
+        { name:'GitHub',          slug:'github',              color:'181717', cat:'Dev' },
+        { name:'GitLab',          slug:'gitlab',              color:'FC6D26', cat:'Dev' },
+        { name:'Vercel',          slug:'vercel',              color:'000000', cat:'Dev' },
+        { name:'Netlify',         slug:'netlify',             color:'00C7B7', cat:'Dev' },
+        { name:'Supabase',        slug:'supabase',            color:'3ECF8E', cat:'Dev' },
+        { name:'Firebase',        slug:'firebase',            color:'FFCA28', cat:'Dev' },
+        { name:'Heroku',          slug:'heroku',              color:'430098', cat:'Dev' },
+        { name:'Render',          slug:'render',              color:'46E3B7', cat:'Dev' },
+        // Cloud
+        { name:'AWS',             slug:'amazonaws',           color:'FF9900', cat:'Cloud' },
+        { name:'Google Cloud',    slug:'googlecloud',         color:'4285F4', cat:'Cloud' },
+        { name:'Azure',           slug:'microsoftazure',      color:'0078D4', cat:'Cloud' },
+        { name:'Cloudflare',      slug:'cloudflare',          color:'F38020', cat:'Cloud' },
+        { name:'DigitalOcean',    slug:'digitalocean',        color:'0080FF', cat:'Cloud' },
+        // Social
+        { name:'X / Twitter',     slug:'x',                   color:'000000', cat:'Social' },
+        { name:'LinkedIn',        slug:'linkedin',            color:'0A66C2', cat:'Social' },
+        { name:'Instagram',       slug:'instagram',           color:'E4405F', cat:'Social' },
+        { name:'Facebook',        slug:'facebook',            color:'1877F2', cat:'Social' },
+        { name:'YouTube',         slug:'youtube',             color:'FF0000', cat:'Social' },
+        { name:'TikTok',          slug:'tiktok',              color:'000000', cat:'Social' },
+        { name:'Pinterest',       slug:'pinterest',           color:'BD081C', cat:'Social' },
+        { name:'Reddit',          slug:'reddit',              color:'FF4500', cat:'Social' },
+        { name:'Spotify',         slug:'spotify',             color:'1DB954', cat:'Social' },
+        { name:'Twitch',          slug:'twitch',              color:'9146FF', cat:'Social' },
+        // Analytics
+        { name:'GA4',             slug:'googleanalytics',     color:'E37400', cat:'Analytics' },
+        { name:'Mixpanel',        slug:'mixpanel',            color:'7856FF', cat:'Analytics' },
+        { name:'Amplitude',       slug:'amplitude',           color:'1557FF', cat:'Analytics' },
+        { name:'Segment',         slug:'segment',             color:'52BD95', cat:'Analytics' },
+        { name:'Hotjar',          slug:'hotjar',              color:'FD3A5C', cat:'Analytics' },
+        { name:'Datadog',         slug:'datadog',             color:'632CA6', cat:'Analytics' },
+        // AI
+        { name:'OpenAI',          slug:'openai',              color:'412991', cat:'AI' },
+        { name:'Anthropic',       slug:'anthropic',           color:'D4A27F', cat:'AI' },
+        { name:'Hugging Face',    slug:'huggingface',         color:'FFD21E', cat:'AI' },
+        { name:'Cohere',          slug:'cohere',              color:'39594D', cat:'AI' },
+        { name:'Replicate',       slug:'replicate',           color:'000000', cat:'AI' },
+        { name:'Mistral',         slug:'mistral',             color:'FF7000', cat:'AI' },
+        // E-commerce
+        { name:'Shopify',         slug:'shopify',             color:'96BF48', cat:'E-commerce' },
+        { name:'WooCommerce',     slug:'woocommerce',         color:'96588A', cat:'E-commerce' },
+        { name:'Amazon',          slug:'amazon',              color:'FF9900', cat:'E-commerce' },
+        { name:'eBay',            slug:'ebay',                color:'E53238', cat:'E-commerce' },
+        { name:'Etsy',            slug:'etsy',                color:'F56400', cat:'E-commerce' },
+        // Design
+        { name:'Figma',           slug:'figma',               color:'F24E1E', cat:'Design' },
+        { name:'Canva',           slug:'canva',               color:'00C4CC', cat:'Design' },
+        { name:'Adobe',           slug:'adobe',               color:'FF0000', cat:'Design' },
+        { name:'Webflow',         slug:'webflow',             color:'4353FF', cat:'Design' },
+        { name:'Framer',          slug:'framer',              color:'0055FF', cat:'Design' },
+        // Data
+        { name:'Typeform',        slug:'typeform',            color:'262627', cat:'Data' },
+        { name:'Google Forms',    slug:'googleforms',         color:'7248B9', cat:'Data' },
+        { name:'MongoDB',         slug:'mongodb',             color:'47A248', cat:'Data' },
+        { name:'PostgreSQL',      slug:'postgresql',          color:'4169E1', cat:'Data' },
+        { name:'Redis',           slug:'redis',               color:'DC382D', cat:'Data' },
+        { name:'Elasticsearch',   slug:'elasticsearch',       color:'005571', cat:'Data' },
+        { name:'Snowflake',       slug:'snowflake',           color:'29B5E8', cat:'Data' },
+        { name:'Notion',          slug:'notion',              color:'000000', cat:'Data' },
+    ];
+
+    // Deduplicate by slug
+    var seen = {};
+    TOOLS = TOOLS.filter(function (t) { if (seen[t.slug]) return false; seen[t.slug] = true; return true; });
+
+    var ALL_CATS = ['All'].concat(TOOLS.reduce(function (acc, t) {
+        if (acc.indexOf(t.cat) === -1) acc.push(t.cat);
+        return acc;
+    }, []));
+
+    var _activeCat = 'All';
+    var _query     = '';
+
+    function _hexGlow(hex) {
+        var r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+        if (isNaN(r)) return 'rgba(124,108,242,0.18)';
+        return 'rgba(' + r + ',' + g + ',' + b + ',0.18)';
+    }
+
+    function _iconUrl(slug, color) {
+        // Simple Icons CDN — returns brand SVG in exact brand color
+        return 'https://cdn.simpleicons.org/' + slug + '/' + color;
+    }
+
+    function _render() {
+        var grid = document.getElementById('tl-grid');
+        if (!grid) return;
+
+        var query = _query.toLowerCase().trim();
+        var filtered = TOOLS.filter(function (t) {
+            var catOk = _activeCat === 'All' || t.cat === _activeCat;
+            var qOk   = !query || t.name.toLowerCase().indexOf(query) !== -1 || t.cat.toLowerCase().indexOf(query) !== -1;
+            return catOk && qOk;
+        });
+
+        // Update count
+        var cnt = document.getElementById('tl-count');
+        if (cnt) cnt.textContent = filtered.length + ' tools';
+
+        if (!filtered.length) {
+            grid.innerHTML = '<div class="tl-empty">No tools found</div>';
+            return;
+        }
+
+        // Group by category
+        var groups = [];
+        var groupMap = {};
+        filtered.forEach(function (t) {
+            if (!groupMap[t.cat]) { groupMap[t.cat] = []; groups.push(t.cat); }
+            groupMap[t.cat].push(t);
+        });
+
+        var html = '';
+        groups.forEach(function (cat) {
+            var tools = groupMap[cat];
+            if (_activeCat !== 'All') {
+                // No section label when filtering to one category
+                html += '<div class="tl-grid">';
+            } else {
+                html += '<div class="tl-section-label">' + cat.toUpperCase() + '</div><div class="tl-grid">';
+            }
+            tools.forEach(function (t) {
+                var glow = _hexGlow(t.color);
+                html += '<div class="tl-card" style="--tc:#' + t.color + ';--tc-glow:' + glow + '"' +
+                    ' title="' + t.name + '" onclick="window._tlOpen(\'' + t.slug + '\')">' +
+                    '<div class="tl-icon-wrap">' +
+                        '<img src="' + _iconUrl(t.slug, t.color) + '" alt="' + t.name + '" loading="lazy" ' +
+                        'onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span style=&quot;font:700 13px/1 system-ui;color:#' + t.color + '&quot;>\' + ' +
+                        '\'' + t.name.charAt(0) + '\'' + ' + \'</span>\'">' +
+                    '</div>' +
+                    '<div class="tl-name">' + t.name + '</div>' +
+                '</div>';
+            });
+            html += '</div>';
+        });
+
+        grid.innerHTML = html;
+    }
+
+    window._tlOpen = function (slug) {
+        // Placeholder — future: open connect modal
+    };
+
+    function _bootstrap() {
+        var pw = document.getElementById('pageWrap');
+        if (!pw || document.getElementById('page-tools')) return;
+
+        var pg = document.createElement('div');
+        pg.className = 'page';
+        pg.id = 'page-tools';
+
+        pg.innerHTML =
+            '<div class="tl-header">' +
+                '<div class="tl-search-row">' +
+                    '<input id="tl-search" class="tl-search" placeholder="Search tools..." autocomplete="off" />' +
+                    '<span id="tl-count" class="tl-count"></span>' +
+                '</div>' +
+                '<div class="tl-cats" id="tl-cats"></div>' +
+            '</div>' +
+            '<div class="tl-grid-wrap"><div id="tl-grid"></div></div>';
+
+        pw.appendChild(pg);
+
+        // Category pills
+        var catsEl = document.getElementById('tl-cats');
+        ALL_CATS.forEach(function (cat) {
+            var btn = document.createElement('button');
+            btn.className = 'tl-cat' + (cat === 'All' ? ' active' : '');
+            btn.textContent = cat;
+            btn.onclick = function () {
+                _activeCat = cat;
+                document.querySelectorAll('.tl-cat').forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                _render();
+            };
+            catsEl.appendChild(btn);
+        });
+
+        // Search
+        var searchEl = document.getElementById('tl-search');
+        if (searchEl) {
+            searchEl.addEventListener('input', function () {
+                _query = this.value;
+                _render();
+            });
+        }
+
+        _render();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _bootstrap);
+    } else {
+        _bootstrap();
+    }
 })();
 </script>
 </body>
