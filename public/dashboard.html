@@ -27287,6 +27287,41 @@ window.apexFileDropHandler = function(e){
 .kg-run-task { font:400 8px/1.5 'JetBrains Mono',monospace; color:rgba(255,255,255,0.35); overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .kg-runs-empty { display:flex; align-items:center; justify-content:center; height:80px; font:500 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#27272a; text-transform:uppercase; }
 
+/* ── Panel accent bar ── */
+.kg-panel-accent { height:2px; flex-shrink:0; transition:background 300ms; }
+.kg-panel-meta { padding:10px 16px 8px; border-bottom:1px solid rgba(255,255,255,0.04); flex-shrink:0; }
+.kg-panel-meta-label { font:600 7px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:#52525b; text-transform:uppercase; }
+.kg-panel-meta-stat { font:700 18px/1 'JetBrains Mono',monospace; color:#fff; margin-top:4px; }
+
+/* ── CEO / pinned entity card ── */
+.kg-pinned {
+  margin:10px 12px 6px; padding:10px 12px; border-radius:8px;
+  border:1px solid rgba(167,139,250,0.18);
+  background:linear-gradient(135deg,rgba(167,139,250,0.07) 0%,rgba(124,108,242,0.03) 100%);
+  display:flex; align-items:center; gap:10px; cursor:default;
+}
+.kg-pinned-icon { font-size:20px; line-height:1; }
+.kg-pinned-info { flex:1; min-width:0; }
+.kg-pinned-name { font:700 10px/1 'JetBrains Mono',monospace; color:#a78bfa; letter-spacing:.08em; }
+.kg-pinned-role { font:500 7px/1 'JetBrains Mono',monospace; color:#52525b; margin-top:4px; letter-spacing:.05em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kg-pinned-badge { font:700 7px/1 'JetBrains Mono',monospace; padding:2px 6px; border-radius:3px; color:#a78bfa; border:1px solid rgba(167,139,250,0.25); flex-shrink:0; }
+
+/* ── Accordion groups ── */
+.kg-group-hd {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 16px; cursor:pointer; user-select:none;
+  border-bottom:1px solid rgba(255,255,255,0.03);
+  transition:background 120ms;
+}
+.kg-group-hd:hover { background:rgba(255,255,255,0.025); }
+.kg-group-accent { width:2px; height:12px; border-radius:1px; flex-shrink:0; }
+.kg-group-name { font:700 7px/1 'JetBrains Mono',monospace; letter-spacing:.13em; color:rgba(255,255,255,0.4); text-transform:uppercase; flex:1; transition:color 150ms; }
+.kg-group-hd.open .kg-group-name { color:rgba(255,255,255,0.7); }
+.kg-group-count { font:600 7px/1 'JetBrains Mono',monospace; padding:2px 5px; border-radius:3px; border:1px solid #27272a; color:#52525b; flex-shrink:0; }
+.kg-group-arrow { font-size:8px; color:#3f3f46; transition:transform 220ms cubic-bezier(0,0,0.2,1); flex-shrink:0; }
+.kg-group-hd.open .kg-group-arrow { transform:rotate(90deg); color:#7c6cf2; }
+.kg-group-body { overflow:hidden; transition:height 220ms cubic-bezier(0,0,0.2,1); }
+
 /* ── Scan line overlay ── */
 @keyframes kg-scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
 .kg-scan { position:absolute; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(124,108,242,0.15),transparent); pointer-events:none; animation:kg-scan 8s linear infinite; top:0; }
@@ -27350,7 +27385,9 @@ window.apexFileDropHandler = function(e){
             '</div>' +
             '<div class="kg-wrap">' +
                 '<div class="kg-panel left" id="kg-left">' +
+                    '<div class="kg-panel-accent" id="kg-left-accent"></div>' +
                     '<div class="kg-panel-hd"><span class="kg-panel-title" id="kg-left-title">—</span><button class="kg-panel-close" onclick="window._kgCloseLeft()">✕</button></div>' +
+                    '<div class="kg-panel-meta" id="kg-left-meta" style="display:none"></div>' +
                     '<div class="kg-panel-body" id="kg-left-body"></div>' +
                 '</div>' +
                 '<div class="kg-canvas" id="kg-canvas">' +
@@ -27419,8 +27456,23 @@ window.apexFileDropHandler = function(e){
         var tier = TIERS.find(function (t) { return t.id === id; });
         var ltEl = document.getElementById('kg-left-title');
         var rtEl = document.getElementById('kg-right-title');
+        var acEl = document.getElementById('kg-left-accent');
+        var metaEl = document.getElementById('kg-left-meta');
         if (ltEl) ltEl.textContent = tier ? tier.label : id.toUpperCase();
         if (rtEl) rtEl.textContent = 'RECENT RUNS';
+        if (acEl && tier) acEl.style.background = 'linear-gradient(90deg,' + tier.color + ',transparent)';
+        var _META = {
+            council: { label:'DELIBERATION CHAMBER', stat:'7 ENTITIES' },
+            domain:  { label:'DOMAIN DISPATCH LAYER', stat:'9 DOMAINS' },
+            office:  { label:'EXECUTION LAYER', stat:'33 AGENTS' },
+            actions: { label:'TASK PIPELINE', stat:'' },
+        };
+        if (metaEl && _META[id]) {
+            var m = _META[id];
+            var stat = m.stat || (_liveTasks.length ? _liveTasks.length + ' TASKS' : '');
+            metaEl.style.display = 'block';
+            metaEl.innerHTML = '<div class="kg-panel-meta-label">' + m.label + '</div>' + (stat ? '<div class="kg-panel-meta-stat" style="color:' + (tier ? tier.color : '#fff') + '">' + stat + '</div>' : '');
+        } else if (metaEl) { metaEl.style.display = 'none'; }
 
         _renderLeft(id);
         _renderRight(id);
@@ -27441,55 +27493,112 @@ window.apexFileDropHandler = function(e){
         });
     };
 
+    // ── Accordion helpers ─────────────────────────────────────────────────────
+    window._kgToggleGroup = function (hd) {
+        var body = hd.nextElementSibling;
+        var open = hd.classList.contains('open');
+        if (open) {
+            body.style.height = body.scrollHeight + 'px';
+            requestAnimationFrame(function () { requestAnimationFrame(function () { body.style.height = '0'; }); });
+            hd.classList.remove('open');
+        } else {
+            hd.classList.add('open');
+            body.style.height = body.scrollHeight + 'px';
+            body.addEventListener('transitionend', function once() {
+                body.style.height = 'auto';
+                body.removeEventListener('transitionend', once);
+            });
+        }
+    };
+
+    function _accordion(groups) {
+        return groups.map(function (g, i) {
+            var open = i === 0;
+            return '<div>' +
+                '<div class="kg-group-hd' + (open ? ' open' : '') + '" onclick="window._kgToggleGroup(this)">' +
+                    '<div class="kg-group-accent" style="background:' + g.color + '"></div>' +
+                    '<span class="kg-group-name">' + _esc(g.name) + '</span>' +
+                    '<span class="kg-group-count">' + g.rows.length + '</span>' +
+                    '<span class="kg-group-arrow">›</span>' +
+                '</div>' +
+                '<div class="kg-group-body" style="height:' + (open ? 'auto' : '0') + '">' +
+                    g.rows.join('') +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
     // ── Left panel: entity list ───────────────────────────────────────────────
     function _renderLeft(tierId) {
         var body = document.getElementById('kg-left-body');
         if (!body) return;
 
         if (tierId === 'council') {
-            body.innerHTML = COUNCIL_ENTITIES.map(function (e) {
-                var state = _councilState(e.id);
-                return _entityRow(e.name, e.role, state, e.color);
-            }).join('');
+            var ceo = COUNCIL_ENTITIES[0];
+            var ceoDot = _councilState(ceo.id);
+            var execRows = COUNCIL_ENTITIES.slice(1).map(function (e) {
+                return _entityRow(e.name, e.role, _councilState(e.id), e.color);
+            });
+            body.innerHTML =
+                '<div class="kg-pinned">' +
+                    '<div class="kg-pinned-icon">⬡</div>' +
+                    '<div class="kg-pinned-info">' +
+                        '<div class="kg-pinned-name">CEO</div>' +
+                        '<div class="kg-pinned-role">Chief Executive Officer · Founder</div>' +
+                    '</div>' +
+                    '<span class="kg-pinned-badge">' + ceoDot.toUpperCase() + '</span>' +
+                '</div>' +
+                _accordion([{ name:'EXECUTIVE COUNCIL', color:'#7c6cf2', rows: execRows }]);
 
         } else if (tierId === 'domain') {
-            var agents = (window.DA_AGENTS || []);
-            if (!agents.length) {
-                body.innerHTML = '<div class="kg-runs-empty">NO DATA</div>';
-                return;
-            }
-            body.innerHTML = agents.map(function (a) {
-                var state = _agentState(a.name, a.category);
-                return _entityRow(a.name, a.category, state, a.color);
-            }).join('');
+            var das = (window.DA_AGENTS || []);
+            if (!das.length) { body.innerHTML = '<div class="kg-runs-empty">NO DATA</div>'; return; }
+            var _DG = [
+                { name:'REVENUE',        color:'#34d399', ids:['business','finance','marketing'] },
+                { name:'COMMUNICATIONS', color:'#2dd4bf', ids:['comms'] },
+                { name:'OPERATIONS',     color:'#64748b', ids:['system'] },
+                { name:'KNOWLEDGE',      color:'#38bdf8', ids:['file','health','uni'] },
+                { name:'GOVERNANCE',     color:'#e879f9', ids:['civilisation'] },
+            ];
+            body.innerHTML = _accordion(_DG.map(function (g) {
+                var rows = das.filter(function (a) { return g.ids.indexOf(a.id) !== -1; }).map(function (a) {
+                    return _entityRow(a.name, a.category, _agentState(a.name, a.slug), a.color);
+                });
+                return { name: g.name, color: g.color, rows: rows };
+            }).filter(function (g) { return g.rows.length; }));
 
         } else if (tierId === 'office') {
-            var allOA = [];
-            (window.DA_AGENTS || []).forEach(function (da) {
-                (da.officeAgents || []).forEach(function (n) {
-                    allOA.push({ name: n, domain: da.id, color: da.color });
+            var das2 = (window.DA_AGENTS || []).filter(function (da) { return (da.officeAgents||[]).length; });
+            if (!das2.length) { body.innerHTML = '<div class="kg-runs-empty">NO DATA</div>'; return; }
+            body.innerHTML = _accordion(das2.map(function (da) {
+                var rows = da.officeAgents.map(function (n) {
+                    var run = _liveRuns.find(function (r) { return r.agent_name === n; });
+                    return _entityRow(n, da.name, run ? _runState(run) : 'idle', da.color);
                 });
-            });
-            if (!allOA.length) { body.innerHTML = '<div class="kg-runs-empty">NO DATA</div>'; return; }
-            body.innerHTML = allOA.map(function (a) {
-                var run = _liveRuns.find(function (r) { return r.agent_name === a.name; });
-                var state = run ? _runState(run) : 'idle';
-                return _entityRow(a.name, a.domain.toUpperCase(), state, a.color);
-            }).join('');
+                return { name: da.name + ' · ' + da.team.split(' ')[0], color: da.color, rows: rows };
+            }));
 
         } else if (tierId === 'actions') {
             if (!_liveTasks.length) { body.innerHTML = '<div class="kg-runs-empty">NO TASKS</div>'; return; }
-            body.innerHTML = _liveTasks.slice(0, 30).map(function (t) {
-                var stMap = { completed:'ready', done:'ready', failed:'error', in_progress:'working', pending:'idle', awaiting_approval:'idle', approval_required:'idle' };
-                var state = stMap[t.status] || 'idle';
-                return _entityRow((t.title || t.id || '?').slice(0,40), t.status ? t.status.replace(/_/g,' ').toUpperCase() : '', state, '#7c6cf2');
-            }).join('');
+            var _AG = [
+                { name:'ACTIVE',           color:'#22c55e', statuses:['in_progress'] },
+                { name:'AWAITING APPROVAL',color:'#7c6cf2', statuses:['awaiting_approval','approval_required'] },
+                { name:'QUEUED',           color:'#f59e0b', statuses:['pending'] },
+                { name:'RESOLVED',         color:'#52525b', statuses:['completed','done','failed'] },
+            ];
+            var stMap = { completed:'ready', done:'ready', failed:'error', in_progress:'working', pending:'idle', awaiting_approval:'idle', approval_required:'idle' };
+            body.innerHTML = _accordion(_AG.map(function (g) {
+                var rows = _liveTasks.filter(function (t) { return g.statuses.indexOf(t.status) !== -1; }).slice(0,20).map(function (t) {
+                    return _entityRow((t.title||t.id||'?').slice(0,38), t.status.replace(/_/g,' ').toUpperCase(), stMap[t.status]||'idle', g.color);
+                });
+                return { name: g.name, color: g.color, rows: rows };
+            }).filter(function (g) { return g.rows.length; }));
         }
     }
 
     function _entityRow(name, role, state, color) {
         return '<div class="kg-entity">' +
-            '<div class="kg-entity-dot ' + state + '" style="background:' + (state==='idle'?'#3f3f46':color) + ';' + (state!=='idle'?'box-shadow:0 0 6px '+color:'')+  '"></div>' +
+            '<div class="kg-entity-dot ' + state + '" style="background:' + (state==='idle'?'#3f3f46':color) + ';' + (state!=='idle'?'box-shadow:0 0 6px '+color:'') + '"></div>' +
             '<div class="kg-entity-info">' +
                 '<div class="kg-entity-name">' + _esc(name) + '</div>' +
                 '<div class="kg-entity-role">' + _esc(role) + '</div>' +
