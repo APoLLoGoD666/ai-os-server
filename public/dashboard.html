@@ -27433,6 +27433,7 @@ window.apexFileDropHandler = function(e){
                     '<button class="portal-tab" onclick="window.switchPage(\'domain-agents\')">DOMAIN AGENTS</button>' +
                     '<button class="portal-tab" onclick="window.switchPage(\'agents\')">OFFICE AGENTS</button>' +
                     '<button class="portal-tab active" onclick="window.switchPage(\'test\')">MAP</button>' +
+                    '<button class="portal-tab" onclick="window.switchPage(\'intel\')">INTEL</button>' +
                 '</div>' +
                 '<div class="tp-outer" id="tpOuter">' +
                     '<div class="tp-stage" id="tpStage">' +
@@ -28374,9 +28375,9 @@ window.apexFileDropHandler = function(e){
             '  </div>' +
             '</div>';
 
-        var pageWrap = document.querySelector('.page-and-input') || document.getElementById('page-overview');
-        if (pageWrap && pageWrap.parentNode) {
-            pageWrap.parentNode.insertBefore(pg, pageWrap.nextSibling);
+        var pw = document.getElementById('pageWrap');
+        if (pw) {
+            pw.appendChild(pg);
         } else {
             document.body.appendChild(pg);
         }
@@ -28396,17 +28397,18 @@ window.apexFileDropHandler = function(e){
             presetsEl.appendChild(card);
         });
 
-        // ── Add INTEL tab to existing portal tab bars ───────────────────────
-        var tabBars = document.querySelectorAll('.portal-tab-bar');
-        tabBars.forEach(function (bar) {
-            if (bar.closest('#page-intel')) return;
-            if (bar.querySelector('[onclick*="intel"]')) return;
-            var btn = document.createElement('button');
-            btn.className = 'portal-tab';
-            btn.setAttribute('onclick', "window.switchPage('intel')");
-            btn.textContent = 'INTEL';
-            bar.appendChild(btn);
-        });
+        // ── Add INTEL tab to all portal tab bars (delayed so MAP bootstrap runs first) ──
+        setTimeout(function () {
+            document.querySelectorAll('.portal-tab-bar').forEach(function (bar) {
+                if (bar.closest('#page-intel')) return;
+                if (bar.querySelector('[onclick*="intel"]')) return;
+                var btn = document.createElement('button');
+                btn.className = 'portal-tab';
+                btn.setAttribute('onclick', "window.switchPage('intel')");
+                btn.textContent = 'INTEL';
+                bar.appendChild(btn);
+            });
+        }, 50);
 
         // ── Add sidebar nav button ──────────────────────────────────────────
         if (!document.getElementById('nav-intel')) {
