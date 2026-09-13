@@ -12,7 +12,7 @@ module.exports = function mountExpressConfig(app) {
                 scriptSrc:   ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.jsdelivr.net'],
                 styleSrc:    ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
                 connectSrc:  ["'self'", 'wss:', 'https:', 'http://localhost:5002', 'http://127.0.0.1:5002'],
-                imgSrc:      ["'self'", 'data:', 'blob:'],
+                imgSrc:      ["'self'", 'data:', 'blob:', 'https://cdn.simpleicons.org'],
                 mediaSrc:    ["'self'", 'blob:'],
                 workerSrc:   ["'self'", 'blob:'],
                 fontSrc:     ["'self'", 'data:', 'https://fonts.gstatic.com'],
