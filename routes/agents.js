@@ -119,7 +119,7 @@ router.post('/agents/seed-office', _auth, async (req, res) => {
 // GET /api/agents/activity?limit=20  — recent agent run log
 router.get('/agents/activity', _auth, async (req, res) => {
     try {
-        const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+        const limit = Math.min(parseInt(req.query.limit) || 20, 200);
         const { data, error } = await _sbSync()
             .from('apex_agent_runs')
             .select('task_id,agent_name,domain,task_description,success,duration_ms,model_used,token_count,agent_summary,created_at')

@@ -25355,21 +25355,63 @@ window.apexFileDropHandler = function(e){
             }
         } catch(e) {}
 
-        // Fetch recent agent runs → build slug→run map for live roster data
+        // Fetch recent agent runs → live roster data + dept DOING/DONE stats
         try {
-            var r4 = await fetch('/api/agents/activity?limit=50', { headers: {'x-app-key': window._appKey||''} });
+            var r4 = await fetch('/api/agents/activity?limit=200', { headers: {'x-app-key': window._appKey||''} });
             var actData = await r4.json();
             var runs = actData.runs || [];
             var actMap = {};
-            var now2 = Date.now();
+            var now4 = Date.now();
+
+            // agent slug prefix → dept id
+            var _pfx = {
+                'marketing-':'marketing', 'comms-':'comms', 'ops-':'operations',
+                'sales-':'sales', 'delivery-':'delivery', 'finance-':'finance',
+                'marketing':'marketing', 'comms':'comms', 'finance':'finance'
+            };
+            // Separate buckets: runs < 30min = DOING, runs < 24h = DONE
+            var _fromRuns = {};
+            DEPTS.forEach(function(d){ _fromRuns[d.id] = {doing:0, done:0}; });
+
             runs.forEach(function(r) {
-                // Index by slug (normalised) and also by raw agent_name
-                var slugKey = (r.agent_name || '').toLowerCase().replace(/\s+/g, '-');
-                var rawKey  = (r.agent_name || '').toLowerCase();
-                if (!actMap[slugKey]) actMap[slugKey] = r;
-                if (!actMap[rawKey])  actMap[rawKey]  = r;
+                var slug = (r.agent_name || '').toLowerCase().replace(/\s+/g,'-');
+                var raw  = (r.agent_name || '').toLowerCase();
+                if (!actMap[slug]) actMap[slug] = r;
+                if (!actMap[raw])  actMap[raw]  = r;
+
+                // Map to dept
+                var deptId = null;
+                var keys = Object.keys(_pfx);
+                for (var ki = 0; ki < keys.length; ki++) {
+                    if (slug.indexOf(keys[ki]) === 0) { deptId = _pfx[keys[ki]]; break; }
+                }
+                if (!deptId) return;
+                var age = now4 - new Date(r.created_at).getTime();
+                if (age < 30 * 60 * 1000)         _fromRuns[deptId].doing++;
+                else if (age < 24 * 60 * 60 * 1000) _fromRuns[deptId].done++;
             });
+
+            // Merge: use run-based DOING/DONE; keep task-based NEXT
+            var merged = window._aoDeptStats || {};
+            DEPTS.forEach(function(d) {
+                if (!merged[d.id]) merged[d.id] = {doing:0, next:0, done:0};
+                merged[d.id].doing = _fromRuns[d.id].doing;
+                merged[d.id].done  = _fromRuns[d.id].done;
+                // NEXT stays from task mapping (already set above)
+            });
+            window._aoDeptStats = merged;
             window._aoAgentActivity = actMap;
+
+            // Update cards already in the DOM
+            DEPTS.forEach(function(d) {
+                var s = merged[d.id] || {};
+                var card = document.querySelector('.ao-card[data-dept-id="' + d.id + '"]');
+                if (!card) return;
+                var dn  = card.querySelector('.ao-doing-num'); if (dn)  dn.textContent  = s.doing || '—';
+                var nn  = card.querySelector('.ao-next-num');  if (nn)  nn.textContent  = s.next  || '—';
+                var dn2 = card.querySelector('.ao-done-num');  if (dn2) dn2.textContent = s.done  || '—';
+            });
+
             // Re-render canvas if agents page is visible
             var _agPg = document.getElementById('page-agents');
             if (_agPg && _agPg.classList.contains('active')) aoRenderCanvas();
