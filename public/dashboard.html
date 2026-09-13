@@ -28410,20 +28410,6 @@ window.apexFileDropHandler = function(e){
             });
         }, 50);
 
-        // ── Add sidebar nav button ──────────────────────────────────────────
-        if (!document.getElementById('nav-intel')) {
-            var settingsBtn = document.getElementById('nav-settings');
-            var navBtn = document.createElement('button');
-            navBtn.className = 'nav-btn';
-            navBtn.id = 'nav-intel';
-            navBtn.setAttribute('aria-label', 'Intelligence Briefs');
-            navBtn.innerHTML = '<span class="nav-icon">◈</span><span class="nav-label">Intel</span>';
-            navBtn.addEventListener('click', function () { window.switchPage('intel'); });
-            if (settingsBtn && settingsBtn.parentNode) {
-                settingsBtn.parentNode.insertBefore(navBtn, settingsBtn);
-            }
-        }
-
         // ── Wrap switchPage to update INTEL tab active states ───────────────
         var _origSwitch = window.switchPage;
         window.switchPage = function (name) {
