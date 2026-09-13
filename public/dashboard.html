@@ -22836,16 +22836,29 @@ window.apexFileDropHandler = function(e){
         civilisation:'#8b5cf6', file:'#94a3b8'
     };
 
-    // Click handler: navigate to Agents page and expand the dept card for this domain agent.
+    // Dept ids that have office agent cards on the Agents canvas
+    var _DEPT_IDS = ['marketing','comms','operations','sales','delivery','finance'];
+
+    // Click handler: navigate to the right page for this domain agent.
     window._actnGotoDomainAgent = function(domainSlug) {
-        if (window.switchPage) window.switchPage('agents');
-        setTimeout(function() {
-            var card = document.querySelector('.ao-card[data-dept-id="' + domainSlug + '"]');
-            if (card) {
-                if (!window._aoExpandedIds[domainSlug]) window.aoToggleCard(domainSlug, card);
-                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }, 180);
+        if (_DEPT_IDS.indexOf(domainSlug) !== -1) {
+            // Has an office agents dept card — go to Agents page and expand it
+            if (window.switchPage) window.switchPage('agents');
+            setTimeout(function() {
+                var card = document.querySelector('.ao-card[data-dept-id="' + domainSlug + '"]');
+                if (card) {
+                    if (!window._aoExpandedIds[domainSlug]) window.aoToggleCard(domainSlug, card);
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 180);
+        } else {
+            // Domain-only agent (civilisation, system, health, business, file etc.)
+            // Go to Domain Agents page and select it in the panel
+            if (window.switchPage) window.switchPage('domain-agents');
+            setTimeout(function() {
+                if (window.daSelectAgent) window.daSelectAgent(domainSlug);
+            }, 220);
+        }
     };
 
     // H-12: in-flight tasks.
@@ -25004,20 +25017,27 @@ window.apexFileDropHandler = function(e){
             var rosterEl = document.getElementById('aoRoster-' + d.id);
             if (rosterEl) {
                 d.roster.forEach(function(agent, i) {
-                    var agentKey = d.id + '_' + i;
-                    var isLive = !!agent.live;
-                    var statusLabel = isLive ? 'live' : 'dormant';
-                    var statusColor = isLive ? '#34d399' : '#27272a';
+                    // Look up recent run for this agent
+                    var actRun = (window._aoAgentActivity || {})[agent.slug] ||
+                                 (window._aoAgentActivity || {})[agent.n.toLowerCase().replace(/\s+/g,'-')] ||
+                                 null;
+                    var secsSince = actRun ? Math.floor((Date.now() - new Date(actRun.created_at).getTime()) / 1000) : Infinity;
+                    var isActive  = secsSince < 7200; // ran within 2h
+                    var isLive    = !!agent.live || secsSince < 300; // hardcoded OR ran within 5 min
+                    var statusLabel = isActive ? (secsSince < 60 ? 'running' : (secsSince < 3600 ? Math.floor(secsSince/60)+'m ago' : '1h+ ago')) : 'dormant';
+                    var statusColor = isLive ? '#34d399' : (isActive ? '#fbbf24' : '#3f3f46');
+                    var taskSnip = (actRun && actRun.task_description) ? actRun.task_description.replace(/\n/g,' ').slice(0, 52) : null;
 
                     var rowWrap = document.createElement('div');
 
                     var row = document.createElement('div');
                     row.className = 'ao-roster-row';
                     row.innerHTML =
-                        '<span class="ao-roster-dot" style="background:' + (isLive ? d.color : d.color + '44') + '"></span>' +
+                        '<span class="ao-roster-dot" style="background:' + (isActive ? d.color : d.color + '33') + ';' + (isLive ? 'box-shadow:0 0 5px ' + d.color + '88' : '') + '"></span>' +
                         '<span class="ao-roster-name">' + agent.n + '</span>' +
                         '<span style="font:700 8px/1 \'JetBrains Mono\',monospace;color:' + statusColor + ';letter-spacing:.04em;margin-left:auto;flex-shrink:0;margin-right:6px">' + statusLabel + '</span>' +
-                        '<span class="ao-roster-chev">▶</span>';
+                        '<span class="ao-roster-chev">▶</span>' +
+                        (taskSnip ? '<div style="width:100%;font:400 8px/1.4 \'JetBrains Mono\',monospace;color:#52525b;margin-top:2px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + taskSnip + '</div>' : '');
 
                     row.addEventListener('click', function(e) {
                         e.stopPropagation();
@@ -25333,6 +25353,26 @@ window.apexFileDropHandler = function(e){
                 var el = document.getElementById('aoBrainNotes');
                 if (el) el.textContent = cnt + ' NOTES';
             }
+        } catch(e) {}
+
+        // Fetch recent agent runs → build slug→run map for live roster data
+        try {
+            var r4 = await fetch('/api/agents/activity?limit=50', { headers: {'x-app-key': window._appKey||''} });
+            var actData = await r4.json();
+            var runs = actData.runs || [];
+            var actMap = {};
+            var now2 = Date.now();
+            runs.forEach(function(r) {
+                // Index by slug (normalised) and also by raw agent_name
+                var slugKey = (r.agent_name || '').toLowerCase().replace(/\s+/g, '-');
+                var rawKey  = (r.agent_name || '').toLowerCase();
+                if (!actMap[slugKey]) actMap[slugKey] = r;
+                if (!actMap[rawKey])  actMap[rawKey]  = r;
+            });
+            window._aoAgentActivity = actMap;
+            // Re-render canvas if agents page is visible
+            var _agPg = document.getElementById('page-agents');
+            if (_agPg && _agPg.classList.contains('active')) aoRenderCanvas();
         } catch(e) {}
     }
 
@@ -25665,6 +25705,7 @@ window.apexFileDropHandler = function(e){
 
         daRenderCanvas();
     }
+    window.daSelectAgent = daSelectAgent;
 
     window.daSend = function() {
         var inp = document.getElementById('daTaskInp');
