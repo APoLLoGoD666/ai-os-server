@@ -28115,10 +28115,30 @@ window.apexFileDropHandler = function(e){
             return s + '</div>';
         }
 
+        var taskSt = (task.status || '').toLowerCase();
         if (!runs.length) {
-            html += '<div class="apex-insp-section"><div class="apex-insp-section-hd">EXECUTION ' + _badge('unknown') + '</div>';
-            html += '<div class="apex-insp-muted">No agent runs with authoritative provenance found.</div>';
-            html += '<div class="apex-insp-hint">Runs before the source_task_id migration show as UNKNOWN.</div></div>';
+            var execBadge, execMsg, execHint;
+            if (taskSt === 'awaiting_approval' || taskSt === 'approval_required') {
+                execBadge = 'inferred';
+                execMsg = 'Task is awaiting approval — agents will execute once approved.';
+                execHint = 'Approve this task in the Actions panel to start pipeline execution.';
+            } else if (taskSt === 'pending') {
+                execBadge = 'inferred';
+                execMsg = 'Task is queued — pipeline execution has not started yet.';
+                execHint = '';
+            } else if (taskSt === 'in_progress') {
+                execBadge = 'inferred';
+                execMsg = 'Task is running — no completed agent runs yet.';
+                execHint = 'Refresh shortly to see live run data.';
+            } else {
+                execBadge = 'unknown';
+                execMsg = 'No agent runs with authoritative provenance found.';
+                execHint = 'Runs created before the source_task_id migration do not carry provenance.';
+            }
+            html += '<div class="apex-insp-section"><div class="apex-insp-section-hd">EXECUTION ' + _badge(execBadge) + '</div>';
+            html += '<div class="apex-insp-muted">' + _esc(execMsg) + '</div>';
+            if (execHint) html += '<div class="apex-insp-hint">' + _esc(execHint) + '</div>';
+            html += '</div>';
         } else {
             html += _runsSection('DOMAIN AGENT', domainRuns);
             html += _runsSection('OFFICE AGENT', officeRuns);
@@ -28127,9 +28147,17 @@ window.apexFileDropHandler = function(e){
 
         // RESULT
         var st = task.status || null;
+        var resultColor = _statusColor(st);
         html += '<div class="apex-insp-section"><div class="apex-insp-section-hd">RESULT</div>';
         if (st) {
-            html += '<div class="apex-insp-value" style="color:' + _statusColor(st) + '">' + _esc(st.toUpperCase()) + '</div>';
+            var resultLabel = { awaiting_approval:'AWAITING APPROVAL', approval_required:'AWAITING APPROVAL', in_progress:'IN PROGRESS', completed:'COMPLETED', done:'COMPLETED', failed:'FAILED', rejected:'REJECTED', pending:'QUEUED' }[st] || st.toUpperCase().replace(/_/g,' ');
+            html += '<div class="apex-insp-value" style="color:' + resultColor + '">' + _esc(resultLabel) + '</div>';
+            if (st === 'awaiting_approval' || st === 'approval_required') {
+                html += '<div class="apex-insp-hint">This task requires your approval before execution continues. Go to <strong>ACTIONS</strong> to approve.</div>';
+            } else if (st === 'completed' || st === 'done') {
+                var outcome = task.result || task.outcome || task.summary || '';
+                if (outcome) html += '<div class="apex-insp-sub">' + _esc(String(outcome).slice(0, 200)) + '</div>';
+            }
         } else {
             html += '<div class="apex-insp-muted">Status unknown — task may still be running.</div>';
         }
@@ -28142,7 +28170,8 @@ window.apexFileDropHandler = function(e){
 
     function _statusColor(st) {
         return ({ completed:'#22c55e', done:'#22c55e', failed:'#ef4444', rejected:'#ef4444',
-                  in_progress:'#f59e0b', pending:'#52525b', approval_required:'#7c6cf2' })[st] || '#71717a';
+                  in_progress:'#f59e0b', pending:'#52525b',
+                  approval_required:'#7c6cf2', awaiting_approval:'#7c6cf2' })[st] || '#71717a';
     }
 
     // ── Follow Work (by taskId) ────────────────────────────────────────────────
