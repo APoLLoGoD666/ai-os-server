@@ -22828,6 +22828,26 @@ window.apexFileDropHandler = function(e){
         '</div>';
     }
 
+    // Domain agent → dept colour map (mirrors DEPTS array on agents page)
+    var _DOMAIN_COLORS = {
+        marketing:'#a78bfa', finance:'#6366f1', comms:'#2dd4bf',
+        operations:'#fbbf24', sales:'#34d399', delivery:'#38bdf8',
+        system:'#06b6d4', business:'#f97316', health:'#22c55e',
+        civilisation:'#8b5cf6', file:'#94a3b8'
+    };
+
+    // Click handler: navigate to Agents page and expand the dept card for this domain agent.
+    window._actnGotoDomainAgent = function(domainSlug) {
+        if (window.switchPage) window.switchPage('agents');
+        setTimeout(function() {
+            var card = document.querySelector('.ao-card[data-dept-id="' + domainSlug + '"]');
+            if (card) {
+                if (!window._aoExpandedIds[domainSlug]) window.aoToggleCard(domainSlug, card);
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 180);
+    };
+
     // H-12: in-flight tasks.
     function _actnLoadInFlight() {
         var panel = document.getElementById('actnInFlightPanel');
@@ -22847,17 +22867,22 @@ window.apexFileDropHandler = function(e){
                 }
                 list.removeAttribute('aria-busy');
                 list.innerHTML = inFlight.slice(0, 10).map(function(t) {
-                    var icon = window._apexActionIcon(t.task_type);
-                    var label = _actnEscape(t.task_type || t.type || 'Task');
-                    var desc  = _actnEscape(String(t.description || '').slice(0, 120));
-                    return '<div class="actn-card">' +
+                    var meta       = t.metadata || {};
+                    var dSlug      = (meta.dispatch && meta.dispatch.slug) || '';
+                    var dotColor   = _DOMAIN_COLORS[dSlug] || '#06b6d4';
+                    var taskTitle  = _actnEscape(t.title || t.description || t.task_type || 'Task');
+                    var agentLabel = dSlug ? dSlug.replace(/-/g,' ').toUpperCase() + ' AGENT' : '';
+                    var officeInfo = (meta.execution && meta.execution.office && meta.execution.office.agent)
+                        ? '→ ' + meta.execution.office.agent.replace(/-/g,' ').toUpperCase() : '';
+                    return '<div class="actn-card" style="cursor:pointer;border-left:3px solid ' + dotColor + '40"' +
+                        (dSlug ? ' onclick="_actnGotoDomainAgent(\'' + dSlug + '\')" title="View ' + agentLabel + '"' : '') + '>' +
                         '<div class="actn-card-header">' +
-                            '<span class="actn-card-icon" aria-hidden="true">' + icon + '</span>' +
-                            '<span class="actn-card-title">' + label + '</span>' +
                             '<span class="actn-status-dot" aria-hidden="true"></span>' +
-                            '<span style="font-size:11px;color:#06b6d4">' + _actnEscape(window._apexActionStatus('in_progress')) + '</span>' +
+                            '<span class="actn-card-title" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + taskTitle + '</span>' +
+                            '<span style="font-size:10px;color:#06b6d4;flex-shrink:0">RUNNING</span>' +
                         '</div>' +
-                        (desc ? '<div class="actn-card-what">' + desc + '</div>' : '') +
+                        (agentLabel ? '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:' + dotColor + ';margin-top:5px">⬡ ' + _actnEscape(agentLabel) + '</div>' : '') +
+                        (officeInfo ? '<div style="font:400 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#52525b;margin-top:3px">' + _actnEscape(officeInfo) + '</div>' : '') +
                     '</div>';
                 }).join('');
                 panel.setAttribute('data-apex-state', 'ready');
@@ -22890,8 +22915,8 @@ window.apexFileDropHandler = function(e){
                     var cols = { completed:'#27ae60', failed:'#ff4d6d', cancelled:'#8893a0', rejected:'#ff8c42', undone:'#a78bfa' };
                     var col = cols[t.status] || '#8893a0';
                     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
-                        '<span style="font-size:11px;color:rgba(232,244,255,0.75)">' + _actnEscape(t.task_type || t.type || 'Task') + '</span>' +
-                        '<div style="display:flex;align-items:center;gap:8px">' +
+                        '<span style="font-size:11px;color:rgba(232,244,255,0.75);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">' + _actnEscape(t.title || t.description || t.task_type || t.type || 'Task') + '</span>' +
+                        '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
                             '<span style="font-size:11px;color:' + col + '">' + _actnEscape(window._apexActionStatus(t.status)) + '</span>' +
                             '<span style="font-size:10px;color:#8893a0">' + (t.updated_at || t.created_at ? _actnEscape(_timeAgo(t.updated_at || t.created_at)) : '') + '</span>' +
                         '</div>' +
