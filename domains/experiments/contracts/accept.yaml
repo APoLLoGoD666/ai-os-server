@@ -1,0 +1,9 @@
+domain: DOM-000010
+events:
+  - name: ENTITY_CREATED
+    from: DOM-000003
+    handler: src/handlers/entity-created.js
+
+  - name: ENTITY_UPDATED
+    from: DOM-000003
+    handler: src/handlers/entity-updated.js

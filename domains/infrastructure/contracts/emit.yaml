@@ -1,0 +1,14 @@
+domain: DOM-000005
+events:
+  - name: ENTITY_UPDATED
+    description: An external service or infrastructure component changed state.
+    schema:
+      entity_id: string
+      changes: object
+      source: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 500
+    consumers:
+      - DOM-000003   # Registry updates the entity
+      - DOM-000006   # Observability tracks the change

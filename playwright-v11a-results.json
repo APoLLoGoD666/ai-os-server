@@ -1,0 +1,142 @@
+[
+  {
+    "status": "PASS",
+    "label": "T-1: /api/me returns master role",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-1: /api/me returns correct UUID",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-2: nav group \"TODAY\" present",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-2: nav group \"COMMAND\" present",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-2: nav group \"LIFE & WORK\" present",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-2: nav group \"INTELLIGENCE\" present",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-2: nav group \"ACTIONS\" present",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-2: nav group \"SYSTEM\" present",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-2: zero JS console errors",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-3: all 20 page divs present in DOM",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-4: #nav-agents visible for master",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-5: #nav-agents hidden for user",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-5: #nav-approvals hidden for user",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-6: topbar shows USER badge",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-7: topbar shows MASTER badge",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-8: user PROFILE section visible on SYSTEM page",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-8: master SYSTEM header hidden for user",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-9: master SYSTEM header visible",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-9: user PROFILE hidden for master on SYSTEM",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-10: PlasmaOrb present on COMMAND for master",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-10: PlasmaOrb present on COMMAND for user",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-11: no horizontal overflow at 1280px",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-12: no horizontal overflow at 390px",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-13: switchPage('finance') activates correct page",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-13: switchPage('intelligence') activates correct page",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-13: switchPage('memory') activates correct page",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-13: switchPage('operation') activates correct page",
+    "detail": ""
+  },
+  {
+    "status": "PASS",
+    "label": "T-13: switchPage('governance') activates correct page",
+    "detail": ""
+  }
+]

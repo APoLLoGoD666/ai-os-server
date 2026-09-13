@@ -1,0 +1,2244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX — UX-12 Intelligence Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --apex-color-bg: #0a0e1a;
+  --apex-color-surface: #111827;
+  --apex-color-surface-2: #1a2235;
+  --apex-color-border: rgba(0,212,255,0.12);
+  --apex-color-primary: #00d4ff;
+  --apex-color-accent: #7c3aed;
+  --apex-color-success: #10b981;
+  --apex-color-warning: #f59e0b;
+  --apex-color-error: #ef4444;
+  --apex-color-text: #e6f4ff;
+  --apex-color-muted: rgba(230,244,255,0.45);
+  --apex-font-ui: 'Inter', sans-serif;
+  --apex-font-brand: 'Cinzel', serif;
+  --apex-font-data: 'JetBrains Mono', monospace;
+  --apex-space-xs: 4px;
+  --apex-space-sm: 8px;
+  --apex-space-md: 16px;
+  --apex-space-lg: 24px;
+  --apex-space-xl: 32px;
+  --apex-radius-sm: 4px;
+  --apex-radius-md: 8px;
+  --apex-radius-lg: 12px;
+  --apex-transition-fast: 150ms ease;
+  --apex-transition-std: 250ms ease;
+  --apex-transition-slow: 350ms ease;
+  --apex-intel-explanation: #00d4ff;
+  --apex-intel-summary: rgba(0,212,255,0.6);
+  --apex-intel-pattern: #7c3aed;
+  --apex-intel-insight: #a855f7;
+  --apex-intel-risk: #ef4444;
+  --apex-intel-opportunity: #10b981;
+  --apex-intel-forecast: #f59e0b;
+  --apex-intel-recommendation: #10b981;
+  --apex-intel-decision-support: #7c3aed;
+  --apex-intel-uncertainty: rgba(245,158,11,0.6);
+  --apex-intel-no-conclusion: rgba(239,68,68,0.5);
+  --apex-known: #10b981;
+  --apex-inferred: #7c3aed;
+  --apex-synthesised: #a855f7;
+  --apex-interpreted: rgba(124,58,237,0.7);
+  --apex-recommendation-colour: #10b981;
+  --apex-uncertain: #f59e0b;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--apex-font-ui);
+  background: var(--apex-color-bg);
+  color: var(--apex-color-text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* HEADER */
+.apex-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--apex-space-md) var(--apex-space-xl);
+  border-bottom: 1px solid var(--apex-color-border);
+  background: var(--apex-color-surface);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.apex-wordmark {
+  font-family: var(--apex-font-brand);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--apex-color-primary);
+}
+.apex-subtitle {
+  font-size: 11px;
+  color: var(--apex-color-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.apex-phase-badge {
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  background: rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.3);
+  color: var(--apex-color-primary);
+  padding: 3px 10px;
+  border-radius: var(--apex-radius-sm);
+}
+.apex-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-md);
+}
+.active-domain-indicator {
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  letter-spacing: 0.08em;
+}
+.active-domain-indicator span {
+  color: var(--apex-color-primary);
+  font-weight: 600;
+}
+
+/* LAYOUT */
+.apex-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 0;
+  height: calc(100vh - 61px);
+  overflow: hidden;
+}
+
+/* COLUMNS */
+.col-left, .col-right {
+  background: var(--apex-color-surface);
+  border-right: 1px solid var(--apex-color-border);
+  overflow-y: auto;
+  padding: var(--apex-space-md);
+}
+.col-right {
+  border-right: none;
+  border-left: 1px solid var(--apex-color-border);
+}
+.col-center {
+  overflow-y: auto;
+  padding: var(--apex-space-md);
+  background: var(--apex-color-bg);
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.2); border-radius: 2px; }
+
+/* SECTION HEADERS */
+.section-header {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--apex-color-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--apex-space-sm);
+  padding-bottom: var(--apex-space-xs);
+  border-bottom: 1px solid var(--apex-color-border);
+}
+
+/* FILTER PILLS */
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--apex-space-xs);
+  margin-bottom: var(--apex-space-md);
+}
+.filter-pill {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: transparent;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+.filter-pill:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+.filter-pill.active { background: rgba(0,212,255,0.12); border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+
+/* DOMAIN SELECTOR */
+.domain-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: var(--apex-font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px var(--apex-space-sm);
+  margin-bottom: 3px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+.domain-btn:hover { background: rgba(0,212,255,0.06); color: var(--apex-color-text); }
+.domain-btn.active { background: rgba(0,212,255,0.1); border-color: var(--apex-color-border); color: var(--apex-color-primary); }
+
+/* DISCLOSURE SLIDER */
+.disclosure-track {
+  display: flex;
+  gap: 3px;
+  margin-bottom: var(--apex-space-md);
+}
+.disclosure-step {
+  flex: 1;
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  text-align: center;
+  padding: 5px 2px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: transparent;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+.disclosure-step:hover { border-color: var(--apex-color-primary); color: var(--apex-color-text); }
+.disclosure-step.active { background: rgba(0,212,255,0.15); border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+
+/* CONTROL BUTTONS */
+.ctrl-btn {
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 6px 10px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: transparent;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+  margin-bottom: 4px;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+.ctrl-btn:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); background: rgba(0,212,255,0.05); }
+.ctrl-btn.primary { border-color: var(--apex-color-primary); color: var(--apex-color-primary); background: rgba(0,212,255,0.08); }
+
+/* VOICE PANEL */
+.voice-panel {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  margin-bottom: var(--apex-space-md);
+}
+.voice-state-row {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  margin-bottom: var(--apex-space-sm);
+}
+.voice-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--apex-color-muted);
+  transition: background var(--apex-transition-std);
+}
+.voice-dot.thinking { background: var(--apex-color-warning); animation: pulse 1s infinite; }
+.voice-dot.speaking { background: var(--apex-color-primary); animation: pulse 0.6s infinite; }
+.voice-dot.active { background: var(--apex-color-success); }
+.voice-label {
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  letter-spacing: 0.08em;
+}
+
+/* PIPELINE */
+.pipeline-visual {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm);
+  margin-bottom: var(--apex-space-md);
+}
+.pipeline-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pipeline-node {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  padding: 4px var(--apex-space-sm);
+  border-radius: var(--apex-radius-sm);
+  transition: all var(--apex-transition-std);
+}
+.pipeline-node-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0,212,255,0.2);
+  flex-shrink: 0;
+  transition: all var(--apex-transition-std);
+}
+.pipeline-node.active .pipeline-node-dot { background: var(--apex-color-primary); box-shadow: 0 0 8px var(--apex-color-primary); }
+.pipeline-node.done .pipeline-node-dot { background: var(--apex-color-success); }
+.pipeline-node-label {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  color: var(--apex-color-muted);
+  letter-spacing: 0.06em;
+  transition: color var(--apex-transition-std);
+}
+.pipeline-node.active .pipeline-node-label { color: var(--apex-color-primary); }
+.pipeline-node.done .pipeline-node-label { color: var(--apex-color-success); }
+.pipeline-connector {
+  width: 1px;
+  height: 6px;
+  background: rgba(0,212,255,0.15);
+  margin-left: 11px;
+}
+
+/* INTEL CARDS */
+.intel-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-md);
+}
+.intel-card {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-left: 3px solid var(--apex-color-primary);
+  border-radius: var(--apex-radius-lg);
+  padding: var(--apex-space-md);
+  animation: fadeInUp var(--apex-transition-slow) ease;
+  transition: border-left-color var(--apex-transition-std);
+  position: relative;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.intel-card.challenged-state { border-left-color: var(--apex-color-warning) !important; border-color: rgba(245,158,11,0.3); }
+.intel-card.revised-state { border-left-color: var(--apex-color-primary) !important; border-color: rgba(0,212,255,0.3); }
+
+/* CARD HEADER */
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--apex-space-sm);
+  margin-bottom: var(--apex-space-sm);
+}
+.card-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  flex-wrap: wrap;
+}
+
+/* TYPE LABEL */
+.type-label {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: var(--apex-radius-sm);
+}
+
+/* EVIDENCE BADGE */
+.evidence-badge {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid;
+}
+.evidence-badge.known { color: var(--apex-known); border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.08); }
+.evidence-badge.inferred { color: var(--apex-inferred); border-color: rgba(124,58,237,0.4); background: rgba(124,58,237,0.08); }
+.evidence-badge.synthesised { color: var(--apex-synthesised); border-color: rgba(168,85,247,0.4); background: rgba(168,85,247,0.08); }
+.evidence-badge.interpreted { color: #a878f0; border-color: rgba(124,58,237,0.35); background: rgba(124,58,237,0.06); }
+.evidence-badge.recommendation { color: var(--apex-recommendation-colour); border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.08); }
+.evidence-badge.uncertain { color: var(--apex-uncertain); border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.08); }
+
+/* DOMAIN BADGE */
+.domain-badge {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: var(--apex-radius-sm);
+  background: rgba(0,212,255,0.06);
+  border: 1px solid rgba(0,212,255,0.15);
+  color: var(--apex-color-muted);
+}
+
+/* CARD DISMISS */
+.card-dismiss {
+  font-size: 14px;
+  color: var(--apex-color-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: color var(--apex-transition-fast);
+  flex-shrink: 0;
+}
+.card-dismiss:hover { color: var(--apex-color-error); }
+
+/* CARD OUTPUT */
+.card-output {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--apex-color-text);
+  margin-bottom: var(--apex-space-sm);
+}
+.card-output.brief { font-size: 12px; line-height: 1.5; }
+
+/* QUALITY ROW */
+.quality-row {
+  display: flex;
+  gap: var(--apex-space-sm);
+  margin-bottom: var(--apex-space-sm);
+}
+.quality-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.quality-bar-label {
+  font-family: var(--apex-font-data);
+  font-size: 8px;
+  color: var(--apex-color-muted);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.quality-bar-track {
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.quality-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width var(--apex-transition-slow);
+}
+.quality-bar-fill.high { background: var(--apex-color-success); }
+.quality-bar-fill.medium { background: var(--apex-color-warning); }
+.quality-bar-fill.low { background: var(--apex-color-error); }
+.quality-bar-value {
+  font-family: var(--apex-font-data);
+  font-size: 8px;
+  color: var(--apex-color-muted);
+}
+
+/* CARD ACTIONS */
+.card-actions {
+  display: flex;
+  gap: var(--apex-space-xs);
+  flex-wrap: wrap;
+  margin-bottom: var(--apex-space-sm);
+}
+.card-action-btn {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 4px 9px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: transparent;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+.card-action-btn:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); background: rgba(0,212,255,0.05); }
+.card-action-btn.active { border-color: var(--apex-color-primary); color: var(--apex-color-primary); background: rgba(0,212,255,0.1); }
+
+/* DISCLOSURE PANELS */
+.disclosure-panel {
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  margin-top: var(--apex-space-sm);
+  animation: fadeInUp var(--apex-transition-std) ease;
+}
+.disclosure-panel-label {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--apex-color-muted);
+  margin-bottom: var(--apex-space-xs);
+}
+.disclosure-panel.l1 { background: rgba(0,212,255,0.04); border: 1px solid rgba(0,212,255,0.1); }
+.disclosure-panel.l2 { background: rgba(124,58,237,0.04); border: 1px solid rgba(124,58,237,0.12); }
+.disclosure-panel.l3 { background: rgba(245,158,11,0.04); border: 1px solid rgba(245,158,11,0.12); }
+.disclosure-panel.l4 { background: rgba(16,185,129,0.04); border: 1px solid rgba(16,185,129,0.12); }
+.disclosure-text {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--apex-color-muted);
+}
+.disclosure-mono {
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--apex-color-muted);
+}
+.knowledge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0,212,255,0.06);
+  border: 1px solid rgba(0,212,255,0.15);
+  border-radius: var(--apex-radius-sm);
+  padding: 1px 6px;
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  color: var(--apex-color-primary);
+  margin: 2px;
+}
+.knowledge-item-state {
+  font-size: 8px;
+  color: var(--apex-color-success);
+}
+
+/* CONFLICT BLOCK */
+.conflict-block {
+  background: rgba(239,68,68,0.05);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  margin-top: var(--apex-space-sm);
+}
+.conflict-header {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--apex-color-error);
+  margin-bottom: var(--apex-space-sm);
+}
+.conflict-sources {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--apex-space-sm);
+}
+.conflict-source {
+  background: rgba(239,68,68,0.08);
+  border-radius: var(--apex-radius-sm);
+  padding: var(--apex-space-xs) var(--apex-space-sm);
+}
+.conflict-source-label {
+  font-family: var(--apex-font-data);
+  font-size: 8px;
+  color: var(--apex-color-error);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.conflict-source-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--apex-color-text);
+}
+.conflict-source-meta {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  color: var(--apex-color-muted);
+}
+.conflict-actions {
+  display: flex;
+  gap: var(--apex-space-sm);
+  margin-top: var(--apex-space-sm);
+}
+.conflict-action {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  padding: 3px 9px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid rgba(239,68,68,0.3);
+  background: transparent;
+  color: var(--apex-color-error);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+.conflict-action:hover { background: rgba(239,68,68,0.1); }
+
+/* GAP WARNING */
+.gap-warning {
+  background: rgba(245,158,11,0.05);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  margin-top: var(--apex-space-sm);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--apex-space-sm);
+}
+.gap-type-badge {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: var(--apex-radius-sm);
+  background: rgba(245,158,11,0.15);
+  color: var(--apex-color-warning);
+  flex-shrink: 0;
+}
+.gap-text {
+  font-size: 11px;
+  color: rgba(245,158,11,0.8);
+  line-height: 1.5;
+}
+
+/* PROPOSAL PANEL */
+.proposal-panel {
+  background: rgba(16,185,129,0.05);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  margin-top: var(--apex-space-sm);
+}
+.proposal-header {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--apex-color-success);
+  margin-bottom: var(--apex-space-xs);
+}
+.proposal-text {
+  font-size: 11px;
+  color: rgba(16,185,129,0.8);
+  line-height: 1.5;
+}
+
+/* BOUNDARY MARKER */
+.boundary-marker {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: rgba(0,212,255,0.4);
+  margin-top: var(--apex-space-xs);
+  padding: 3px 8px;
+  border: 1px solid rgba(0,212,255,0.12);
+  border-radius: var(--apex-radius-sm);
+  display: inline-block;
+}
+
+/* SEVERITY */
+.severity-badge {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: var(--apex-radius-sm);
+}
+.severity-badge.high { background: rgba(239,68,68,0.15); color: var(--apex-color-error); }
+.severity-badge.medium { background: rgba(245,158,11,0.15); color: var(--apex-color-warning); }
+.severity-badge.low { background: rgba(16,185,129,0.15); color: var(--apex-color-success); }
+
+/* CHALLENGED / REVISED */
+.state-badge {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border-radius: var(--apex-radius-sm);
+}
+.state-badge.challenged { background: rgba(245,158,11,0.15); color: var(--apex-color-warning); border: 1px solid rgba(245,158,11,0.3); }
+.state-badge.reviewed { background: rgba(0,212,255,0.1); color: var(--apex-color-primary); border: 1px solid rgba(0,212,255,0.3); }
+.state-badge.revised { background: rgba(16,185,129,0.1); color: var(--apex-color-success); border: 1px solid rgba(16,185,129,0.3); }
+
+/* CHALLENGE INPUT */
+.challenge-input-area {
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm);
+  margin-top: var(--apex-space-sm);
+}
+.challenge-turn {
+  font-size: 11px;
+  line-height: 1.6;
+  padding: var(--apex-space-xs) 0;
+}
+.challenge-turn.user { color: var(--apex-color-warning); }
+.challenge-turn.apex { color: var(--apex-color-text); }
+.challenge-turn-label {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 600;
+  margin-right: 6px;
+  opacity: 0.7;
+}
+
+/* SYNTHESIS NOTE */
+.synthesis-note {
+  background: rgba(168,85,247,0.06);
+  border: 1px solid rgba(168,85,247,0.2);
+  border-radius: var(--apex-radius-sm);
+  padding: var(--apex-space-xs) var(--apex-space-sm);
+  margin-top: var(--apex-space-sm);
+  font-size: 11px;
+  color: rgba(168,85,247,0.85);
+  font-family: var(--apex-font-data);
+}
+
+/* DECISION INTELLIGENCE */
+.decision-intel-panel {
+  background: rgba(124,58,237,0.06);
+  border: 1px solid rgba(124,58,237,0.2);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  margin-top: var(--apex-space-sm);
+}
+.decision-intel-header {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--apex-color-accent);
+  margin-bottom: var(--apex-space-sm);
+}
+.decision-option-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--apex-space-sm);
+  align-items: center;
+  padding: var(--apex-space-xs) 0;
+  border-bottom: 1px solid rgba(124,58,237,0.1);
+  font-size: 11px;
+}
+.decision-option-row:last-child { border-bottom: none; }
+.decision-option-label { color: var(--apex-color-text); font-weight: 500; }
+.decision-option-meta { color: var(--apex-color-muted); font-size: 10px; }
+.decision-option-conf {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  color: var(--apex-color-primary);
+}
+
+/* SCENARIO PANEL (RIGHT) */
+.scenario-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  margin-bottom: var(--apex-space-md);
+}
+.scenario-btn {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 5px 4px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: transparent;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+  text-align: center;
+}
+.scenario-btn:hover { border-color: var(--apex-color-primary); color: var(--apex-color-primary); background: rgba(0,212,255,0.05); }
+.scenario-btn.active { background: rgba(0,212,255,0.12); border-color: var(--apex-color-primary); color: var(--apex-color-primary); }
+
+/* INTEL LOG */
+.intel-log {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.log-entry {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--apex-color-muted);
+  padding: 3px var(--apex-space-sm);
+  border-left: 2px solid rgba(0,212,255,0.2);
+  animation: fadeInUp var(--apex-transition-fast) ease;
+}
+.log-time {
+  color: rgba(0,212,255,0.5);
+  margin-right: 6px;
+}
+
+/* CHALLENGE STATE PANEL */
+.challenge-state-panel {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  margin-bottom: var(--apex-space-md);
+}
+.challenge-state-flow {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-xs);
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  color: var(--apex-color-muted);
+  flex-wrap: wrap;
+}
+.challenge-state-node {
+  padding: 2px 7px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid rgba(0,212,255,0.15);
+  transition: all var(--apex-transition-std);
+}
+.challenge-state-node.active { border-color: var(--apex-color-warning); color: var(--apex-color-warning); background: rgba(245,158,11,0.1); }
+.challenge-state-node.done { border-color: var(--apex-color-success); color: var(--apex-color-success); background: rgba(16,185,129,0.1); }
+.challenge-arrow { opacity: 0.4; }
+
+/* GAP INDICATOR */
+.gap-indicator {
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  margin-bottom: var(--apex-space-md);
+  display: none;
+}
+.gap-indicator.visible { display: block; }
+.gap-indicator-label {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--apex-color-warning);
+  margin-bottom: 4px;
+}
+.gap-indicator-text {
+  font-size: 10px;
+  color: rgba(245,158,11,0.7);
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  top: 80px;
+  right: var(--apex-space-xl);
+  background: var(--apex-color-surface);
+  border: 1px solid var(--apex-color-primary);
+  border-radius: var(--apex-radius-lg);
+  padding: var(--apex-space-md) var(--apex-space-lg);
+  max-width: 360px;
+  z-index: 200;
+  animation: slideIn 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0,212,255,0.15);
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.toast-label {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--apex-color-primary);
+  margin-bottom: 6px;
+}
+.toast-text { font-size: 12px; line-height: 1.5; color: var(--apex-color-text); }
+.toast-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* COMPARISON TABLE */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-top: var(--apex-space-sm);
+}
+.comparison-table th {
+  font-family: var(--apex-font-data);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--apex-color-muted);
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--apex-color-border);
+}
+.comparison-table td {
+  padding: 5px 8px;
+  color: var(--apex-color-text);
+  border-bottom: 1px solid rgba(0,212,255,0.05);
+  vertical-align: top;
+}
+.comparison-table tr.recommended td { background: rgba(16,185,129,0.04); }
+.comparison-table .rec-tag {
+  font-family: var(--apex-font-data);
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--apex-color-success);
+  background: rgba(16,185,129,0.12);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+/* KNOWLEDGE ARROW */
+.knowledge-arrow-block {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-md);
+  background: rgba(0,212,255,0.04);
+  border: 1px solid rgba(0,212,255,0.12);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  margin-top: var(--apex-space-sm);
+}
+.ka-node {
+  text-align: center;
+}
+.ka-badge {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--apex-radius-sm);
+  margin-bottom: 3px;
+  display: inline-block;
+}
+.ka-label {
+  font-size: 9px;
+  color: var(--apex-color-muted);
+}
+.ka-arrow {
+  font-size: 18px;
+  color: var(--apex-color-primary);
+  opacity: 0.5;
+  flex: 1;
+  text-align: center;
+}
+
+/* FEED HEADER */
+.feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--apex-space-md);
+  padding-bottom: var(--apex-space-sm);
+  border-bottom: 1px solid var(--apex-color-border);
+}
+.feed-title {
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--apex-color-muted);
+}
+.feed-count {
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  color: var(--apex-color-primary);
+}
+
+/* SCENARIO LABEL */
+.active-scenario-label {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--apex-color-primary);
+  background: rgba(0,212,255,0.08);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: var(--apex-radius-sm);
+  padding: 3px 8px;
+}
+
+/* AGING BADGE */
+.aging-badge {
+  font-family: var(--apex-font-data);
+  font-size: 8px;
+  padding: 1px 5px;
+  border-radius: var(--apex-radius-sm);
+  background: rgba(245,158,11,0.12);
+  color: var(--apex-color-warning);
+  border: 1px solid rgba(245,158,11,0.25);
+}
+
+/* STALE INDICATOR */
+.stale-indicator {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  color: var(--apex-color-warning);
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--apex-radius-sm);
+  padding: 2px 7px;
+}
+
+/* CROSS-DOMAIN INDICATOR */
+.cross-domain-row {
+  display: flex;
+  gap: var(--apex-space-xs);
+  margin-top: var(--apex-space-xs);
+}
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center;
+  padding: var(--apex-space-xl);
+  color: var(--apex-color-muted);
+}
+.empty-state-icon { font-size: 32px; margin-bottom: var(--apex-space-md); opacity: 0.3; }
+.empty-state-text { font-size: 13px; }
+
+/* VERBOSITY BADGE */
+.verbosity-badge {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--apex-radius-sm);
+  background: rgba(124,58,237,0.1);
+  border: 1px solid rgba(124,58,237,0.25);
+  color: var(--apex-color-accent);
+}
+
+/* BRIEF MODE */
+.brief-mode .card-output { font-size: 12px; }
+.brief-mode .quality-row { display: none; }
+.brief-mode .evidence-available-note {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  color: var(--apex-color-muted);
+  margin-top: var(--apex-space-xs);
+}
+
+/* NOT INSTRUCTION PANEL */
+.not-instruction-panel {
+  background: rgba(239,68,68,0.03);
+  border: 1px solid rgba(239,68,68,0.15);
+  border-radius: var(--apex-radius-sm);
+  padding: var(--apex-space-xs) var(--apex-space-sm);
+  margin-top: var(--apex-space-xs);
+  font-size: 10px;
+  color: rgba(239,68,68,0.6);
+  font-family: var(--apex-font-data);
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="apex-header" role="banner">
+  <div>
+    <div class="apex-wordmark">APEX</div>
+    <div class="apex-subtitle">UX-12 — Intelligence</div>
+  </div>
+  <div class="apex-header-right">
+    <span class="apex-phase-badge">UX-12 CANONICAL</span>
+    <div class="active-domain-indicator">DOMAIN: <span id="activeDomainLabel">GLOBAL</span></div>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="apex-layout" role="main">
+
+  <!-- LEFT COLUMN -->
+  <aside class="col-left" aria-label="Intelligence Controls">
+
+    <div class="section-header">Intelligence Type</div>
+    <div class="filter-group" id="typeFilterGroup" role="group" aria-label="Filter by intelligence type">
+      <button class="filter-pill active" data-type="ALL" onclick="setTypeFilter('ALL')" aria-pressed="true">ALL</button>
+      <button class="filter-pill" data-type="EXPLANATION" onclick="setTypeFilter('EXPLANATION')">EXPLAN</button>
+      <button class="filter-pill" data-type="SUMMARY" onclick="setTypeFilter('SUMMARY')">SUMMARY</button>
+      <button class="filter-pill" data-type="PATTERN" onclick="setTypeFilter('PATTERN')">PATTERN</button>
+      <button class="filter-pill" data-type="INSIGHT" onclick="setTypeFilter('INSIGHT')">INSIGHT</button>
+      <button class="filter-pill" data-type="RISK" onclick="setTypeFilter('RISK')">RISK</button>
+      <button class="filter-pill" data-type="OPPORTUNITY" onclick="setTypeFilter('OPPORTUNITY')">OPPORT</button>
+      <button class="filter-pill" data-type="FORECAST" onclick="setTypeFilter('FORECAST')">FORECAST</button>
+      <button class="filter-pill" data-type="RECOMMENDATION" onclick="setTypeFilter('RECOMMENDATION')">RECOMM</button>
+      <button class="filter-pill" data-type="DECISION_SUPPORT" onclick="setTypeFilter('DECISION_SUPPORT')">DEC SUP</button>
+      <button class="filter-pill" data-type="UNCERTAINTY" onclick="setTypeFilter('UNCERTAINTY')">UNCERT</button>
+      <button class="filter-pill" data-type="NO_CONCLUSION" onclick="setTypeFilter('NO_CONCLUSION')">NO CONC</button>
+    </div>
+
+    <div class="section-header">Domain</div>
+    <button class="domain-btn active" data-domain="global" onclick="setDomain('global')" aria-label="Global domain">GLOBAL</button>
+    <button class="domain-btn" data-domain="finance" onclick="setDomain('finance')" aria-label="Finance domain">Finance</button>
+    <button class="domain-btn" data-domain="education" onclick="setDomain('education')" aria-label="Education domain">Education</button>
+    <button class="domain-btn" data-domain="business" onclick="setDomain('business')" aria-label="Business domain">Business</button>
+    <button class="domain-btn" data-domain="system" onclick="setDomain('system')" aria-label="System domain">System</button>
+
+    <div class="section-header" style="margin-top:var(--apex-space-md)">Disclosure Level</div>
+    <div class="disclosure-track" role="group" aria-label="Disclosure level">
+      <button class="disclosure-step active" data-level="0" onclick="setDisclosure(0)" aria-label="L0 Output only">L0</button>
+      <button class="disclosure-step" data-level="1" onclick="setDisclosure(1)" aria-label="L1 Basis">L1</button>
+      <button class="disclosure-step" data-level="2" onclick="setDisclosure(2)" aria-label="L2 Evidence">L2</button>
+      <button class="disclosure-step" data-level="3" onclick="setDisclosure(3)" aria-label="L3 Assumptions">L3</button>
+      <button class="disclosure-step" data-level="4" onclick="setDisclosure(4)" aria-label="L4 Full trace">L4</button>
+    </div>
+    <div id="disclosureLevelLabel" style="font-family:var(--apex-font-data);font-size:9px;color:var(--apex-color-muted);margin-bottom:var(--apex-space-md);">L0 — Output only</div>
+
+    <div class="section-header">Controls (selected card)</div>
+    <button class="ctrl-btn" onclick="applyControl('WHY')" aria-label="Show why this matters">[WHY?]</button>
+    <button class="ctrl-btn" onclick="applyControl('BASIS')" aria-label="Show knowledge basis">[SHOW BASIS]</button>
+    <button class="ctrl-btn" onclick="applyControl('EVIDENCE')" aria-label="Show evidence">[SHOW EVIDENCE]</button>
+    <button class="ctrl-btn" onclick="applyControl('UNCERTAIN')" aria-label="Show uncertainties">[WHAT IS UNCERTAIN?]</button>
+    <button class="ctrl-btn" onclick="applyControl('ALTERNATIVES')" aria-label="Compare alternatives">[COMPARE ALTERNATIVES]</button>
+    <button class="ctrl-btn" onclick="applyControl('CHALLENGE')" aria-label="Challenge this intelligence">[CHALLENGE]</button>
+
+    <div class="section-header" style="margin-top:var(--apex-space-md)">Voice</div>
+    <div class="voice-panel">
+      <div class="voice-state-row">
+        <div class="voice-dot" id="voiceDot"></div>
+        <span class="voice-label" id="voiceStateLabel">IDLE</span>
+        <span id="verbosityBadge" class="verbosity-badge" style="margin-left:auto;display:none">BRIEF</span>
+      </div>
+      <div id="voiceOutput" style="font-size:11px;color:var(--apex-color-muted);display:none;margin-bottom:var(--apex-space-sm);line-height:1.5;font-style:italic"></div>
+      <button class="ctrl-btn primary" onclick="triggerVoiceScenario()" aria-label="Ask intelligence via voice">Ask intelligence</button>
+    </div>
+
+    <div class="section-header">Intelligence Pipeline</div>
+    <div class="pipeline-visual" aria-label="Intelligence pipeline">
+      <div class="pipeline-nodes" id="pipelineNodes">
+        <div class="pipeline-node" id="pipe-INTENT"><div class="pipeline-node-dot"></div><span class="pipeline-node-label">INTENT</span></div>
+        <div class="pipeline-connector"></div>
+        <div class="pipeline-node" id="pipe-KNOWLEDGE"><div class="pipeline-node-dot"></div><span class="pipeline-node-label">KNOWLEDGE</span></div>
+        <div class="pipeline-connector"></div>
+        <div class="pipeline-node" id="pipe-EVIDENCE"><div class="pipeline-node-dot"></div><span class="pipeline-node-label">EVIDENCE</span></div>
+        <div class="pipeline-connector"></div>
+        <div class="pipeline-node" id="pipe-GAP"><div class="pipeline-node-dot"></div><span class="pipeline-node-label">GAP CHECK</span></div>
+        <div class="pipeline-connector"></div>
+        <div class="pipeline-node" id="pipe-ANALYSIS"><div class="pipeline-node-dot"></div><span class="pipeline-node-label">ANALYSIS</span></div>
+        <div class="pipeline-connector"></div>
+        <div class="pipeline-node" id="pipe-SYNTHESIS"><div class="pipeline-node-dot"></div><span class="pipeline-node-label">SYNTHESIS</span></div>
+        <div class="pipeline-connector"></div>
+        <div class="pipeline-node" id="pipe-INTERPRET"><div class="pipeline-node-dot"></div><span class="pipeline-node-label">INTERPRET</span></div>
+        <div class="pipeline-connector"></div>
+        <div class="pipeline-node" id="pipe-EVALUATE"><div class="pipeline-node-dot"></div><span class="pipeline-node-label">EVALUATE</span></div>
+        <div class="pipeline-connector"></div>
+        <div class="pipeline-node" id="pipe-OUTPUT"><div class="pipeline-node-dot"></div><span class="pipeline-node-label">OUTPUT</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CENTER COLUMN -->
+  <main class="col-center" id="centerFeed" aria-label="Intelligence Feed">
+    <div class="feed-header">
+      <span class="feed-title">INTELLIGENCE FEED</span>
+      <div style="display:flex;align-items:center;gap:var(--apex-space-sm)">
+        <span id="activeScenarioLabel" class="active-scenario-label" style="display:none"></span>
+        <span class="feed-count" id="feedCount">6 items</span>
+      </div>
+    </div>
+    <div class="intel-feed" id="intelFeed" role="list" aria-label="Intelligence items"></div>
+  </main>
+
+  <!-- RIGHT COLUMN -->
+  <aside class="col-right" aria-label="Scenario Panel">
+
+    <div class="section-header">Scenarios</div>
+    <div class="scenario-grid" id="scenarioGrid" role="group" aria-label="Scenario buttons"></div>
+
+    <div class="section-header">Intelligence Log</div>
+    <div class="intel-log" id="intelLog" aria-live="polite" aria-label="Intelligence log"></div>
+
+    <div class="section-header" style="margin-top:var(--apex-space-md)">Challenge State</div>
+    <div class="challenge-state-panel">
+      <div class="challenge-state-flow" id="challengeStateFlow">
+        <span class="challenge-state-node" id="cstate-CHALLENGED">CHALLENGED</span>
+        <span class="challenge-arrow">→</span>
+        <span class="challenge-state-node" id="cstate-REVIEWED">REVIEWED</span>
+        <span class="challenge-arrow">→</span>
+        <span class="challenge-state-node" id="cstate-REVISED">REVISED</span>
+      </div>
+      <div id="challengeCardRef" style="font-family:var(--apex-font-data);font-size:9px;color:var(--apex-color-muted);margin-top:4px;">No active challenge</div>
+    </div>
+
+    <div class="section-header" style="margin-top:var(--apex-space-md)">Active Gap</div>
+    <div class="gap-indicator" id="activeGapIndicator">
+      <div class="gap-indicator-label">GAP BLOCKING INTELLIGENCE</div>
+      <div class="gap-indicator-text" id="activeGapText"></div>
+    </div>
+    <div id="noGapNote" style="font-family:var(--apex-font-data);font-size:9px;color:var(--apex-color-muted);">No active gap</div>
+
+  </aside>
+</div>
+
+<script>
+// ============================================================
+// EVIDENCE TYPE & INTEL TYPE CONSTANTS
+// ============================================================
+const EVIDENCE_TYPE = {
+  KNOWN:          { label: 'KNOWN',          colour: 'var(--apex-known)' },
+  INFERRED:       { label: 'INFERRED',       colour: 'var(--apex-inferred)' },
+  SYNTHESISED:    { label: 'SYNTHESISED',    colour: 'var(--apex-synthesised)' },
+  INTERPRETED:    { label: 'INTERPRETED',    colour: 'var(--apex-interpreted)' },
+  RECOMMENDATION: { label: 'RECOMMENDATION', colour: 'var(--apex-recommendation-colour)' },
+  UNCERTAIN:      { label: 'UNCERTAIN',      colour: 'var(--apex-uncertain)' }
+};
+
+const INTEL_TYPE = {
+  EXPLANATION:      { colour: 'var(--apex-intel-explanation)' },
+  SUMMARY:          { colour: 'var(--apex-intel-summary)' },
+  COMPARISON:       { colour: 'var(--apex-intel-explanation)' },
+  PATTERN:          { colour: 'var(--apex-intel-pattern)' },
+  INSIGHT:          { colour: 'var(--apex-intel-insight)' },
+  RISK:             { colour: 'var(--apex-intel-risk)' },
+  OPPORTUNITY:      { colour: 'var(--apex-intel-opportunity)' },
+  FORECAST:         { colour: 'var(--apex-intel-forecast)' },
+  RECOMMENDATION:   { colour: 'var(--apex-intel-recommendation)' },
+  DECISION_SUPPORT: { colour: 'var(--apex-intel-decision-support)' },
+  UNCERTAINTY:      { colour: 'var(--apex-intel-uncertainty)' },
+  NO_CONCLUSION:    { colour: 'var(--apex-intel-no-conclusion)' }
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let intelCards = [
+  {
+    id: 'int-001', type: 'EXPLANATION', evidenceType: 'KNOWN', domain: 'finance',
+    output: 'October food spend rose because of 3 restaurant visits (£87 combined) in the first week of October — above the weekly average of £22.',
+    knowledgeConfidence: 0.92, reasoningConfidence: 0.88, completeness: 0.90,
+    basis: ['km-002: October food spending £312 of £500 budget', 'km-fin-012: 3 restaurant transactions Oct 1-7'],
+    evidence: 'Transaction data: 24 food transactions categorised. 3 restaurant outliers identified (>£20 each).',
+    assumptions: [], gaps: [], status: 'presented', challenged: false
+  },
+  {
+    id: 'int-002', type: 'RISK', evidenceType: 'INFERRED', domain: 'finance',
+    output: 'Food budget at 62% with 25% of month remaining. At current rate, budget exhaustion in 6 days.',
+    knowledgeConfidence: 0.85, reasoningConfidence: 0.72, completeness: 0.80,
+    basis: ['km-002: £312 of £500 food budget', 'km-fin-013: daily average £14.2'],
+    evidence: 'Trend: 22 days = £312. Rate: £14.2/day. Days remaining: ~13.3. Budget remaining: £188.',
+    assumptions: ['Daily spend rate is stable', 'No planned large food purchases'],
+    gaps: [], severity: 'MEDIUM', status: 'presented', challenged: false
+  },
+  {
+    id: 'int-003', type: 'OPPORTUNITY', evidenceType: 'SYNTHESISED', domain: 'business',
+    output: 'Client B follow-up is 3 days overdue. Based on past conversions, follow-up within 24h increases close rate by ~40%. Window closing.',
+    knowledgeConfidence: 0.68, reasoningConfidence: 0.55, completeness: 0.60,
+    basis: ['km-biz-007: Client B follow-up overdue', 'km-biz-003: historical close rate data (N=8)'],
+    evidence: 'Pattern from 8 historical leads: 5 closed within 24h follow-up (62.5%), 3 closed after 24h (37.5%).',
+    assumptions: ['Client B follows same pattern as historical leads (small N)', 'Relationship context unchanged'],
+    gaps: [{ type: 'INCOMPLETE', subject: 'Client B relationship history — only 2 prior interactions recorded' }],
+    status: 'presented', challenged: false
+  },
+  {
+    id: 'int-004', type: 'FORECAST', evidenceType: 'INFERRED', domain: 'finance',
+    output: 'At current savings rate (£350/month), goal of £5,000 emergency fund reached in approximately 8 months (June 2027). Assumes rate stable.',
+    knowledgeConfidence: 0.75, reasoningConfidence: 0.60, completeness: 0.65,
+    basis: ['km-fin-020: savings rate £350/month', 'km-fin-021: current balance £2,200'],
+    evidence: 'Calculation: (£5,000 - £2,200) / £350 = 8.0 months.',
+    assumptions: ['Savings rate remains £350/month', 'No extraordinary expenses', 'Goal unchanged'],
+    gaps: [{ type: 'ASSUMED', subject: 'Future savings rate — based on last 3 months average only' }],
+    horizon: 'Jun 2027', range: '6-12 months', status: 'presented', challenged: false
+  },
+  {
+    id: 'int-005', type: 'NO_CONCLUSION', evidenceType: 'UNCERTAIN', domain: 'system',
+    output: 'Cannot assess monthly infrastructure cost. Two conflicting figures recorded: £42 (Render dashboard, Sep 2026) and £67 (Invoice, Oct 2026). APEX cannot resolve without additional evidence.',
+    knowledgeConfidence: 0.28, reasoningConfidence: 0.10, completeness: 0.30,
+    basis: ['km-007: server cost conflicting'], evidence: null, assumptions: [],
+    gaps: [{ type: 'CONFLICTING', subject: 'Infrastructure cost — two sources contradict' }],
+    conflict: { sourceA: { value: '£42/month', source: 'Render dashboard', date: 'Sep 2026' }, sourceB: { value: '£67/month', source: 'Invoice scan', date: 'Oct 2026' } },
+    status: 'presented', challenged: false
+  },
+  {
+    id: 'int-006', type: 'RECOMMENDATION', evidenceType: 'RECOMMENDATION', domain: 'finance',
+    output: 'RECOMMENDATION: Create a November food budget of £420 (current rate + 10% buffer). Based on October pattern, this mitigates exhaustion risk while remaining achievable.',
+    knowledgeConfidence: 0.85, reasoningConfidence: 0.74, completeness: 0.80,
+    basis: ['int-002: food budget risk', 'int-001: October spend pattern', 'km-fin-022: prior months average £310'],
+    evidence: 'October rate: £312. 3-month average: £310. Buffer: 10% = £31. Recommendation: £420.',
+    assumptions: ['Spend pattern similar to October', 'No major planned food purchases'],
+    gaps: [],
+    decisionIntelligence: { recommendation: 'PROCEED', confidence: 0.74, alternatives: ['Keep £500 budget (status quo)', 'Reduce to £350 (strict)'] },
+    status: 'presented', challenged: false, proposalPending: true
+  }
+];
+
+let activeIntelType = 'ALL';
+let activeDomain = 'global';
+let disclosureLevel = 0;
+let activeVoiceState = 'IDLE';
+let challengedCardId = null;
+let intelLog = [];
+let pipelineActive = false;
+let extraCards = [];
+let briefMode = false;
+let activeScenario = null;
+let selectedCardId = 'int-001';
+let allCards = () => [...intelCards, ...extraCards];
+
+const DISCLOSURE_LABELS = ['L0 — Output only','L1 — Knowledge basis','L2 — Evidence','L3 — Assumptions & sources','L4 — Full trace'];
+
+// ============================================================
+// PIPELINE ANIMATION
+// ============================================================
+const PIPELINE_NODES = ['INTENT','KNOWLEDGE','EVIDENCE','GAP','ANALYSIS','SYNTHESIS','INTERPRET','EVALUATE','OUTPUT'];
+
+function resetPipeline() {
+  PIPELINE_NODES.forEach(n => {
+    const el = document.getElementById('pipe-' + n);
+    if (el) { el.classList.remove('active','done'); }
+  });
+}
+
+function animatePipeline(nodes, delay = 220) {
+  resetPipeline();
+  pipelineActive = true;
+  const allNodes = PIPELINE_NODES;
+  let i = 0;
+  const run = () => {
+    if (i > 0 && i - 1 < allNodes.length) {
+      const prev = allNodes[i - 1];
+      if (nodes.includes(prev)) {
+        const pel = document.getElementById('pipe-' + prev);
+        if (pel) { pel.classList.remove('active'); pel.classList.add('done'); }
+      }
+    }
+    if (i < allNodes.length) {
+      const cur = allNodes[i];
+      if (nodes.includes(cur)) {
+        const cel = document.getElementById('pipe-' + cur);
+        if (cel) { cel.classList.add('active'); cel.classList.remove('done'); }
+      }
+      i++;
+      setTimeout(run, delay);
+    } else {
+      pipelineActive = false;
+    }
+  };
+  run();
+}
+
+// ============================================================
+// LOGGING
+// ============================================================
+function addLog(msg) {
+  const now = new Date();
+  const t = now.toTimeString().slice(0,8);
+  intelLog.unshift({ time: t, msg });
+  if (intelLog.length > 40) intelLog.pop();
+  renderLog();
+  console.log(`[APEX UX-12] [${t}] ${msg}`);
+}
+
+function renderLog() {
+  const el = document.getElementById('intelLog');
+  el.innerHTML = intelLog.map(e =>
+    `<div class="log-entry"><span class="log-time">${e.time}</span>${e.msg}</div>`
+  ).join('');
+}
+
+// ============================================================
+// TYPE COLOUR HELPERS
+// ============================================================
+function getTypeColour(type) {
+  return (INTEL_TYPE[type] || INTEL_TYPE.EXPLANATION).colour;
+}
+function getTypeLabel(type) {
+  return type.replace('_', ' ');
+}
+function getEvidenceClass(et) {
+  return (et || 'KNOWN').toLowerCase();
+}
+function getQualityClass(v) {
+  if (v >= 0.75) return 'high';
+  if (v >= 0.45) return 'medium';
+  return 'low';
+}
+
+// ============================================================
+// RENDER SINGLE CARD
+// ============================================================
+function renderCard(card, overrides = {}) {
+  const typeColour = getTypeColour(card.type);
+  const evClass = getEvidenceClass(card.evidenceType);
+  const dl = overrides.disclosure !== undefined ? overrides.disclosure : disclosureLevel;
+  const brief = overrides.brief !== undefined ? overrides.brief : briefMode;
+
+  let html = `<div class="intel-card ${card.challenged ? 'challenged-state' : ''} ${card.revised ? 'revised-state' : ''}"
+    id="card-${card.id}" role="listitem"
+    style="border-left-color:${typeColour}"
+    aria-label="${getTypeLabel(card.type)} intelligence card">`;
+
+  // Header
+  html += `<div class="card-header">
+    <div class="card-header-left">
+      <span class="type-label" style="background:${typeColour}18;color:${typeColour}">${getTypeLabel(card.type)}</span>
+      <span class="evidence-badge ${evClass}">${EVIDENCE_TYPE[card.evidenceType]?.label || card.evidenceType}</span>
+      <span class="domain-badge">${card.domain.toUpperCase()}</span>`;
+
+  if (card.severity) {
+    html += `<span class="severity-badge ${card.severity.toLowerCase()}">RISK — ${card.severity}</span>`;
+  }
+  if (card.challenged) html += `<span class="state-badge challenged">CHALLENGED</span>`;
+  if (card.reviewed) html += `<span class="state-badge reviewed">REVIEWED</span>`;
+  if (card.revised) html += `<span class="state-badge revised">REVISED</span>`;
+  if (overrides.staleMark) html += `<span class="stale-indicator">STALE DATA</span>`;
+  if (overrides.agingBadge) html += `<span class="aging-badge">3 months old</span>`;
+
+  if (card.crossDomain) {
+    html += `<div class="cross-domain-row">
+      ${card.crossDomain.map(d => `<span class="domain-badge">${d.toUpperCase()}</span>`).join('')}
+    </div>`;
+  }
+
+  html += `</div>
+    <button class="card-dismiss" onclick="dismissCard('${card.id}')" aria-label="Dismiss card">×</button>
+  </div>`;
+
+  // Output
+  html += `<div class="card-output${brief ? ' brief' : ''}">${card.output}</div>`;
+
+  // Boundary markers
+  if (overrides.showKnowledgeInput) {
+    html += `<span class="boundary-marker">[KNOWLEDGE INPUT (UX-11)]</span> `;
+  }
+  if (overrides.showAgentBoundary) {
+    html += `<span class="boundary-marker">[→ AGENT (UX-13)]</span> `;
+  }
+  if (overrides.showApprovalBoundary || card.proposalPending) {
+    html += `<span class="boundary-marker">[→ APPROVAL (UX-14)]</span>`;
+  }
+
+  // Synthesis note
+  if (overrides.showSynthesis && card.evidenceType === 'SYNTHESISED') {
+    html += `<div class="synthesis-note">⟐ Synthesis: Combined ${card.basis.slice(0,2).join(' + ')} → ${card.type.toLowerCase()} insight</div>`;
+  }
+
+  // Not instruction note
+  if (overrides.showNotInstruction && card.type === 'RECOMMENDATION') {
+    html += `<div class="not-instruction-panel">RECOMMENDATION = advice. User decides. Not an instruction.</div>`;
+  }
+
+  // Quality row
+  if (!brief) {
+    const kc = Math.round(card.knowledgeConfidence * 100);
+    const rc = Math.round(card.reasoningConfidence * 100);
+    const cp = Math.round(card.completeness * 100);
+    html += `<div class="quality-row" aria-label="Quality indicators">
+      <div class="quality-bar-item">
+        <div class="quality-bar-label">KNOWLEDGE CONF</div>
+        <div class="quality-bar-track"><div class="quality-bar-fill ${getQualityClass(card.knowledgeConfidence)}" style="width:${kc}%"></div></div>
+        <div class="quality-bar-value">${kc}%</div>
+      </div>
+      <div class="quality-bar-item">
+        <div class="quality-bar-label">REASONING CONF</div>
+        <div class="quality-bar-track"><div class="quality-bar-fill ${getQualityClass(card.reasoningConfidence)}${overrides.staleMark?' medium':''}" style="width:${overrides.staleMark?Math.min(rc,60):rc}%"></div></div>
+        <div class="quality-bar-value">${overrides.staleMark?Math.min(rc,60)+'% ⚠':rc+'%'}</div>
+      </div>
+      <div class="quality-bar-item">
+        <div class="quality-bar-label">COMPLETENESS</div>
+        <div class="quality-bar-track"><div class="quality-bar-fill ${getQualityClass(card.completeness)}" style="width:${cp}%"></div></div>
+        <div class="quality-bar-value">${cp}%</div>
+      </div>
+    </div>`;
+  } else {
+    html += `<div style="font-family:var(--apex-font-data);font-size:9px;color:var(--apex-color-muted);margin-top:var(--apex-space-xs);">Evidence available via SHOW BASIS</div>`;
+  }
+
+  // Challenge dialogue
+  if (card.challengeDialogue) {
+    html += `<div class="challenge-input-area">`;
+    card.challengeDialogue.forEach(turn => {
+      html += `<div class="challenge-turn ${turn.role}"><span class="challenge-turn-label">${turn.role.toUpperCase()}:</span>${turn.text}</div>`;
+    });
+    html += `</div>`;
+  }
+
+  // L1 Basis
+  if (dl >= 1 && card.basis && card.basis.length) {
+    html += `<div class="disclosure-panel l1">
+      <div class="disclosure-panel-label">L1 — KNOWLEDGE BASIS</div>
+      <div class="disclosure-text">This intelligence used:</div>
+      <div style="margin-top:4px;display:flex;flex-wrap:wrap;">
+        ${card.basis.map(b => `<span class="knowledge-item"><span class="knowledge-item-state">●</span>${b}</span>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // L2 Evidence
+  if (dl >= 2 && card.evidence) {
+    html += `<div class="disclosure-panel l2">
+      <div class="disclosure-panel-label">L2 — EVIDENCE</div>
+      <div class="disclosure-mono">${card.evidence}</div>
+    </div>`;
+  } else if (dl >= 2 && !card.evidence) {
+    html += `<div class="disclosure-panel l2">
+      <div class="disclosure-panel-label">L2 — EVIDENCE</div>
+      <div class="disclosure-mono" style="color:var(--apex-color-error)">No direct evidence — conflicting sources prevent evidence aggregation.</div>
+    </div>`;
+  }
+
+  // L3 Assumptions
+  if (dl >= 3) {
+    html += `<div class="disclosure-panel l3">
+      <div class="disclosure-panel-label">L3 — ASSUMPTIONS & SOURCES</div>`;
+    if (card.assumptions && card.assumptions.length) {
+      html += `<div class="disclosure-mono">ASSUMES:<br>${card.assumptions.map(a => `  • ${a}`).join('<br>')}</div>`;
+    } else {
+      html += `<div class="disclosure-mono">No assumptions recorded for this item.</div>`;
+    }
+    if (card.gaps && card.gaps.length) {
+      html += `<div class="disclosure-mono" style="margin-top:4px;">MISSING / GAPS:<br>${card.gaps.map(g => `  • [${g.type}] ${g.subject}`).join('<br>')}</div>`;
+    }
+    html += `<div class="disclosure-mono" style="margin-top:4px;color:var(--apex-color-muted)">Sources: voice_chat 2026-09-15, CRM data, transaction export</div>`;
+    html += `</div>`;
+  }
+
+  // L4 Full trace
+  if (dl >= 4) {
+    html += `<div class="disclosure-panel l4">
+      <div class="disclosure-panel-label">L4 — FULL TRACE</div>
+      <div class="disclosure-mono">engine: apex-intel-v2.1<br>type: ${card.type}<br>evidence_type: ${card.evidenceType}<br>knowledge_conf: ${card.knowledgeConfidence}<br>reasoning_conf: ${card.reasoningConfidence}<br>completeness: ${card.completeness}<br>priority_weights: {recency:0.4, frequency:0.3, source_quality:0.3}<br>method: ${card.type === 'FORECAST' ? 'linear_projection' : card.type === 'SYNTHESIS' ? 'multi-source-fusion' : 'pattern-analysis'}<br>generated: ${new Date().toISOString().slice(0,19)}</div>
+    </div>`;
+  }
+
+  // Gap warnings
+  if (card.gaps && card.gaps.length) {
+    card.gaps.forEach(g => {
+      html += `<div class="gap-warning">
+        <span class="gap-type-badge">${g.type}</span>
+        <span class="gap-text">${g.subject} — cannot conclude with certainty</span>
+      </div>`;
+    });
+  }
+
+  // Conflict block
+  if (card.conflict) {
+    html += `<div class="conflict-block">
+      <div class="conflict-header">CONFLICTING EVIDENCE — CANNOT RESOLVE</div>
+      <div class="conflict-sources">
+        <div class="conflict-source">
+          <div class="conflict-source-label">SOURCE A</div>
+          <div class="conflict-source-value">${card.conflict.sourceA.value}</div>
+          <div class="conflict-source-meta">${card.conflict.sourceA.source} · ${card.conflict.sourceA.date}</div>
+        </div>
+        <div class="conflict-source">
+          <div class="conflict-source-label">SOURCE B</div>
+          <div class="conflict-source-value">${card.conflict.sourceB.value}</div>
+          <div class="conflict-source-meta">${card.conflict.sourceB.source} · ${card.conflict.sourceB.date}</div>
+        </div>
+      </div>
+      <div class="conflict-actions">
+        <button class="conflict-action" onclick="addLog('User: Accept uncertainty')">Accept uncertainty</button>
+        <button class="conflict-action" onclick="addLog('User: Request verification')">Request verification</button>
+      </div>
+    </div>`;
+  }
+
+  // Proposal panel
+  if (card.proposalPending && (overrides.showProposal !== false)) {
+    html += `<div class="proposal-panel">
+      <div class="proposal-header">→ PROPOSAL (requires UX-14 approval)</div>
+      <div class="proposal-text">${card.decisionIntelligence ? 'Create November budget £420 — awaiting approval before execution.' : 'Action proposal pending.'}</div>
+    </div>`;
+  }
+
+  // Decision intelligence
+  if (card.decisionIntelligence && overrides.showDecision) {
+    const di = card.decisionIntelligence;
+    html += `<div class="decision-intel-panel">
+      <div class="decision-intel-header">DECISION INTELLIGENCE — ${di.recommendation} (${Math.round(di.confidence*100)}% confidence)</div>
+      <div class="decision-option-row">
+        <span class="decision-option-label">Option A</span>
+        <span class="decision-option-meta">Keep £500 budget (status quo)</span>
+        <span class="decision-option-conf">60%</span>
+      </div>
+      <div class="decision-option-row" style="background:rgba(16,185,129,0.04)">
+        <span class="decision-option-label">Option B <span class="rec-tag" style="font-family:var(--apex-font-data);font-size:8px;font-weight:700;color:var(--apex-color-success);background:rgba(16,185,129,0.12);padding:1px 5px;border-radius:2px;">REC</span></span>
+        <span class="decision-option-meta">£420 with buffer</span>
+        <span class="decision-option-conf">74%</span>
+      </div>
+      <div class="decision-option-row">
+        <span class="decision-option-label">Option C</span>
+        <span class="decision-option-meta">Reduce to £350 (strict)</span>
+        <span class="decision-option-conf">52%</span>
+      </div>
+    </div>`;
+  }
+
+  // WHY expanded
+  if (overrides.showWhy) {
+    html += `<div class="disclosure-panel l1" style="border-color:rgba(0,212,255,0.2)">
+      <div class="disclosure-panel-label">WHY THIS MATTERS</div>
+      <div class="disclosure-text">${overrides.whyText || 'This matters because the identified condition directly affects a tracked goal or outcome.'}</div>
+    </div>`;
+  }
+
+  // Knowledge arrow (UX-11 → UX-12)
+  if (overrides.showKnowledgeArrow) {
+    html += `<div class="knowledge-arrow-block">
+      <div class="ka-node">
+        <div class="ka-badge" style="background:rgba(16,185,129,0.1);color:var(--apex-known)">KNOWN</div>
+        <div class="ka-label">UX-11 Knowledge</div>
+      </div>
+      <div class="ka-arrow">→</div>
+      <div class="ka-node">
+        <div class="ka-badge" style="background:rgba(124,58,237,0.1);color:var(--apex-inferred)">INFERRED</div>
+        <div class="ka-label">UX-12 Intelligence</div>
+      </div>
+    </div>`;
+  }
+
+  // Card actions
+  html += `<div class="card-actions">
+    <button class="card-action-btn" onclick="cardAction('${card.id}','why')" aria-label="Why does this matter">WHY</button>
+    <button class="card-action-btn" onclick="cardAction('${card.id}','basis')" aria-label="Show basis">SHOW BASIS</button>
+    <button class="card-action-btn" onclick="cardAction('${card.id}','challenge')" aria-label="Challenge this intelligence">CHALLENGE</button>
+    <button class="card-action-btn" onclick="dismissCard('${card.id}')" aria-label="Dismiss">DISMISS</button>
+  </div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+// ============================================================
+// RENDER FEED
+// ============================================================
+function renderFeed(cards, overrides = {}) {
+  const feed = document.getElementById('intelFeed');
+  const count = document.getElementById('feedCount');
+  if (!cards || cards.length === 0) {
+    feed.innerHTML = `<div class="empty-state"><div class="empty-state-icon">◌</div><div class="empty-state-text">No intelligence items match current filter.</div></div>`;
+    count.textContent = '0 items';
+    return;
+  }
+  feed.innerHTML = cards.map(c => renderCard(c, overrides[c.id] || overrides['*'] || {})).join('');
+  count.textContent = cards.length + ' item' + (cards.length !== 1 ? 's' : '');
+}
+
+function getFilteredCards() {
+  let cards = allCards();
+  if (activeIntelType !== 'ALL') cards = cards.filter(c => c.type === activeIntelType);
+  if (activeDomain !== 'global') cards = cards.filter(c => c.domain === activeDomain);
+  return cards;
+}
+
+function refreshFeed(overrides = {}) {
+  renderFeed(getFilteredCards(), overrides);
+}
+
+// ============================================================
+// CONTROLS
+// ============================================================
+function setTypeFilter(type) {
+  activeIntelType = type;
+  document.querySelectorAll('#typeFilterGroup .filter-pill').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === type);
+    b.setAttribute('aria-pressed', b.dataset.type === type ? 'true' : 'false');
+  });
+  refreshFeed();
+}
+
+function setDomain(domain) {
+  activeDomain = domain;
+  document.getElementById('activeDomainLabel').textContent = domain.toUpperCase();
+  document.querySelectorAll('.domain-btn').forEach(b => b.classList.toggle('active', b.dataset.domain === domain));
+  refreshFeed();
+}
+
+function setDisclosure(level) {
+  disclosureLevel = level;
+  document.querySelectorAll('.disclosure-step').forEach(b => b.classList.toggle('active', parseInt(b.dataset.level) === level));
+  document.getElementById('disclosureLevelLabel').textContent = DISCLOSURE_LABELS[level];
+  refreshFeed();
+}
+
+function applyControl(type) {
+  if (!selectedCardId) return;
+  const card = allCards().find(c => c.id === selectedCardId);
+  if (!card) return;
+  if (type === 'BASIS') setDisclosure(Math.max(disclosureLevel, 1));
+  if (type === 'EVIDENCE') setDisclosure(Math.max(disclosureLevel, 2));
+  if (type === 'UNCERTAIN') setDisclosure(Math.max(disclosureLevel, 3));
+  if (type === 'ALTERNATIVES') runScenario(9);
+  if (type === 'CHALLENGE') cardAction(selectedCardId, 'challenge');
+  if (type === 'WHY') cardAction(selectedCardId, 'why');
+  addLog(`Control [${type}] applied to ${selectedCardId}`);
+}
+
+function cardAction(id, action) {
+  selectedCardId = id;
+  const card = allCards().find(c => c.id === id);
+  if (!card) return;
+  if (action === 'why') {
+    addLog(`WHY: ${id} — impact on goal disclosed`);
+    const overrides = { [id]: { showWhy: true, whyText: id === 'int-002' ? 'Matters because budget exhaustion before month-end would require unplanned reallocation — affecting savings goal (km-fin-020).' : 'This matters because it directly affects a tracked goal or decision.' } };
+    refreshFeed(overrides);
+  }
+  if (action === 'basis') {
+    setDisclosure(Math.max(disclosureLevel, 1));
+    addLog(`BASIS: ${id} — knowledge basis disclosed at L1`);
+  }
+  if (action === 'challenge') {
+    challengeCard(id);
+  }
+}
+
+function challengeCard(id) {
+  const card = allCards().find(c => c.id === id);
+  if (!card) return;
+  card.challenged = true;
+  challengedCardId = id;
+  updateChallengeState('CHALLENGED');
+  document.getElementById('challengeCardRef').textContent = 'Challenging: ' + id;
+  addLog(`Challenge initiated on ${id}`);
+  refreshFeed();
+}
+
+function updateChallengeState(state) {
+  ['CHALLENGED','REVIEWED','REVISED'].forEach(s => {
+    const el = document.getElementById('cstate-' + s);
+    if (!el) return;
+    if (s === state) el.classList.add('active');
+    else if (['CHALLENGED','REVIEWED','REVISED'].indexOf(s) < ['CHALLENGED','REVIEWED','REVISED'].indexOf(state)) el.classList.add('done');
+    else { el.classList.remove('active','done'); }
+  });
+}
+
+function dismissCard(id) {
+  intelCards = intelCards.filter(c => c.id !== id);
+  extraCards = extraCards.filter(c => c.id !== id);
+  addLog(`Card ${id} dismissed`);
+  refreshFeed();
+}
+
+function setVoiceState(state) {
+  activeVoiceState = state;
+  const dot = document.getElementById('voiceDot');
+  const label = document.getElementById('voiceStateLabel');
+  dot.className = 'voice-dot ' + state.toLowerCase();
+  label.textContent = state;
+}
+
+function showToast(title, text, duration = 4000) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.setAttribute('role', 'alert');
+  el.innerHTML = `<button class="toast-close" onclick="this.parentElement.remove()">×</button>
+    <div class="toast-label">${title}</div>
+    <div class="toast-text">${text}</div>`;
+  document.body.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, duration);
+}
+
+function showActiveGap(text) {
+  document.getElementById('activeGapIndicator').classList.add('visible');
+  document.getElementById('activeGapText').textContent = text;
+  document.getElementById('noGapNote').style.display = 'none';
+}
+
+function clearActiveGap() {
+  document.getElementById('activeGapIndicator').classList.remove('visible');
+  document.getElementById('noGapNote').style.display = '';
+}
+
+function setActiveScenario(label) {
+  activeScenario = label;
+  const el = document.getElementById('activeScenarioLabel');
+  el.style.display = label ? '' : 'none';
+  el.textContent = label || '';
+  document.querySelectorAll('.scenario-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim() === label);
+  });
+}
+
+// ============================================================
+// VOICE SCENARIO
+// ============================================================
+function triggerVoiceScenario() { runScenario(28); }
+
+// ============================================================
+// SCENARIOS
+// ============================================================
+function runScenario(n) {
+  setActiveScenario('V-INTEL-' + String(n).padStart(2,'0'));
+  clearActiveGap();
+  briefMode = false;
+  document.getElementById('verbosityBadge').style.display = 'none';
+
+  switch(n) {
+    case 1: scenario01(); break; case 2: scenario02(); break; case 3: scenario03(); break;
+    case 4: scenario04(); break; case 5: scenario05(); break; case 6: scenario06(); break;
+    case 7: scenario07(); break; case 8: scenario08(); break; case 9: scenario09(); break;
+    case 10: scenario10(); break; case 11: scenario11(); break; case 12: scenario12(); break;
+    case 13: scenario13(); break; case 14: scenario14(); break; case 15: scenario15(); break;
+    case 16: scenario16(); break; case 17: scenario17(); break; case 18: scenario18(); break;
+    case 19: scenario19(); break; case 20: scenario20(); break; case 21: scenario21(); break;
+    case 22: scenario22(); break; case 23: scenario23(); break; case 24: scenario24(); break;
+    case 25: scenario25(); break; case 26: scenario26(); break; case 27: scenario27(); break;
+    case 28: scenario28(); break; case 29: scenario29(); break; case 30: scenario30(); break;
+    case 31: scenario31(); break; case 32: scenario32(); break; case 33: scenario33(); break;
+    case 34: scenario34(); break;
+  }
+}
+
+function scenario01() {
+  animatePipeline(['INTENT','KNOWLEDGE','ANALYSIS','EVALUATE','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-001');
+  renderFeed([c], { 'int-001': {} });
+  addLog('Explanation: food spend cause — KNOWN, confidence 88%.');
+}
+function scenario02() {
+  animatePipeline(['INTENT','KNOWLEDGE','ANALYSIS','OUTPUT']);
+  const finance = intelCards.filter(c => c.domain === 'finance');
+  renderFeed(finance);
+  const summary = { id:'int-sum-02', type:'SUMMARY', evidenceType:'KNOWN', domain:'finance',
+    output: 'Summary: 3 intelligence items in Finance domain — 1 risk, 1 explanation, 1 recommendation.',
+    knowledgeConfidence:0.90, reasoningConfidence:0.88, completeness:0.92, basis:[], evidence:null, assumptions:[], gaps:[] };
+  const feed = document.getElementById('intelFeed');
+  feed.innerHTML = renderCard(summary) + feed.innerHTML;
+  addLog('Summary of Finance intelligence.');
+}
+function scenario03() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','SYNTHESIS','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-003');
+  renderFeed([c], { 'int-003': { showSynthesis: true } });
+  addLog('Synthesis: Client B opportunity from 2 knowledge items.');
+}
+function scenario04() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','SYNTHESIS','INTERPRET','EVALUATE','OUTPUT']);
+  const pat = { id:'int-pat-04', type:'PATTERN', evidenceType:'INFERRED', domain:'finance',
+    output: 'End-of-month spend spike: observed 3 consecutive months. Pattern confidence: based on 3 occurrences — low sample.',
+    knowledgeConfidence:0.55, reasoningConfidence:0.48, completeness:0.50, basis:['km-fin-030: Oct spike','km-fin-031: Sep spike','km-fin-032: Aug spike'],
+    evidence:'3 consecutive month-end anomalies. Spike range: +18% to +34% above daily average.', assumptions:['Pattern is not coincidental (low N)'], gaps:[] };
+  extraCards = extraCards.filter(c => c.id !== 'int-pat-04');
+  extraCards.push(pat);
+  renderFeed([pat]);
+  addLog('Pattern detected: month-end spend spike.');
+}
+function scenario05() {
+  animatePipeline(['KNOWLEDGE','ANALYSIS','EVALUATE','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-002');
+  renderFeed([c]);
+  addLog('Risk: food budget exhaustion — INFERRED, severity MEDIUM.');
+}
+function scenario06() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','SYNTHESIS','INTERPRET','EVALUATE','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-003');
+  renderFeed([c], { 'int-003': { showSynthesis: true } });
+  addLog('Opportunity: Client B — evidence-backed, constraints disclosed.');
+}
+function scenario07() {
+  animatePipeline(['KNOWLEDGE','ANALYSIS','SYNTHESIS','INTERPRET','EVALUATE','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-004');
+  const dl_save = disclosureLevel;
+  disclosureLevel = 3;
+  renderFeed([c]);
+  disclosureLevel = dl_save;
+  addLog('Forecast: savings goal Jun 2027. Assumptions listed. Not a guarantee.');
+}
+function scenario08() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','SYNTHESIS','INTERPRET','EVALUATE','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-006');
+  renderFeed([c], { 'int-006': { showDecision: true, showNotInstruction: true } });
+  addLog('Recommendation: November budget £420.');
+}
+function scenario09() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','SYNTHESIS','INTERPRET','EVALUATE','OUTPUT']);
+  const ds = { id:'int-ds-09', type:'DECISION_SUPPORT', evidenceType:'SYNTHESISED', domain:'finance',
+    output: 'DECISION SUPPORT: Budget options for November food spending. Three alternatives analysed. APEX recommends Option B. Approval required for action (UX-14).',
+    knowledgeConfidence:0.85, reasoningConfidence:0.74, completeness:0.80,
+    basis:['int-001','int-002','int-006'], evidence:'Option A: status quo. Option B: £420 buffer. Option C: £350 strict.',
+    assumptions:['Current spend rate continues'], gaps:[],
+    decisionIntelligence: { recommendation:'PROCEED', confidence:0.74, alternatives:['Option A: £500','Option B: £420','Option C: £350'] },
+    proposalPending: true };
+  extraCards = extraCards.filter(c => c.id !== 'int-ds-09');
+  extraCards.push(ds);
+  renderFeed([ds], { 'int-ds-09': { showDecision: true, showApprovalBoundary: true } });
+  addLog('Decision support: 3 options shown.');
+}
+function scenario10() {
+  animatePipeline(['ANALYSIS','SYNTHESIS','EVALUATE','OUTPUT']);
+  const comp = { id:'int-comp-10', type:'COMPARISON', evidenceType:'SYNTHESISED', domain:'finance',
+    output: 'Comparison: 3 November budget options. Option B (£420) recommended based on evidence and risk analysis.',
+    knowledgeConfidence:0.85, reasoningConfidence:0.74, completeness:0.80, basis:['int-001','int-002'], evidence:null, assumptions:[], gaps:[] };
+  extraCards = extraCards.filter(c => c.id !== 'int-comp-10');
+  extraCards.push(comp);
+  const feed = document.getElementById('intelFeed');
+  const tableHtml = `<div class="intel-card" style="border-left-color:var(--apex-intel-explanation)">
+    <div class="card-header"><div class="card-header-left">
+      <span class="type-label" style="background:rgba(0,212,255,0.1);color:var(--apex-intel-explanation)">COMPARISON</span>
+      <span class="evidence-badge synthesised">SYNTHESISED</span>
+      <span class="domain-badge">FINANCE</span>
+    </div></div>
+    <div class="card-output">Budget options — November food spending</div>
+    <table class="comparison-table">
+      <thead><tr><th>OPTION</th><th>EVIDENCE</th><th>BENEFIT</th><th>RISK</th><th>CONF</th></tr></thead>
+      <tbody>
+        <tr><td>A: £500 (status quo)</td><td>3-month history</td><td>No change required</td><td>Spend overrun likely</td><td>60%</td></tr>
+        <tr class="recommended"><td>B: £420 buffer <span class="rec-tag" style="font-family:var(--apex-font-data);font-size:8px;font-weight:700;color:var(--apex-color-success);background:rgba(16,185,129,0.12);padding:1px 5px;border-radius:2px;">PROCEED</span></td><td>Oct average + 10%</td><td>Absorbs spike, realistic</td><td>Moderate stretch</td><td>74%</td></tr>
+        <tr><td>C: £350 (strict)</td><td>3-month average</td><td>Strong saving discipline</td><td>High exhaustion risk</td><td>52%</td></tr>
+      </tbody>
+    </table>
+    <div class="card-actions"><button class="card-action-btn" onclick="addLog('Comparison dismissed')">DISMISS</button></div>
+  </div>`;
+  renderFeed([]);
+  feed.innerHTML = tableHtml;
+  document.getElementById('feedCount').textContent = '1 item';
+  addLog('Comparison: 3 budget options.');
+}
+function scenario11() {
+  animatePipeline(['KNOWLEDGE','ANALYSIS','OUTPUT']);
+  setDisclosure(1);
+  const c = intelCards.find(x => x.id === 'int-002');
+  renderFeed([c]);
+  selectedCardId = 'int-002';
+  addLog('Supporting knowledge disclosed at L1.');
+}
+function scenario12() {
+  animatePipeline(['KNOWLEDGE','EVIDENCE','ANALYSIS','OUTPUT']);
+  setDisclosure(2);
+  const c = intelCards.find(x => x.id === 'int-001');
+  renderFeed([c]);
+  selectedCardId = 'int-001';
+  addLog('Evidence disclosed at L2.');
+}
+function scenario13() {
+  animatePipeline(['KNOWLEDGE','EVIDENCE','GAP','ANALYSIS','SYNTHESIS','OUTPUT']);
+  setDisclosure(3);
+  const c = intelCards.find(x => x.id === 'int-003');
+  renderFeed([c]);
+  selectedCardId = 'int-003';
+  addLog('Source/provenance at L3.');
+}
+function scenario14() {
+  animatePipeline(['KNOWLEDGE','EVIDENCE','GAP','ANALYSIS','OUTPUT']);
+  setDisclosure(3);
+  const c = intelCards.find(x => x.id === 'int-004');
+  renderFeed([c]);
+  addLog('Uncertainty disclosed: 2 assumptions, range 6-12 months.');
+}
+function scenario15() {
+  animatePipeline(['INTENT','KNOWLEDGE','GAP','OUTPUT']);
+  const unc = { id:'int-unc-15', type:'UNCERTAINTY', evidenceType:'UNCERTAIN', domain:'finance',
+    output: 'Insufficient knowledge — no data on Q4 2025 revenue. Gap: MISSING, severity HIGH. Cannot conclude.',
+    knowledgeConfidence:0.08, reasoningConfidence:0.05, completeness:0.10, basis:[], evidence:null,
+    assumptions:[], gaps:[{ type:'MISSING', subject:'Q4 2025 revenue — no data recorded, severity HIGH' }] };
+  extraCards = extraCards.filter(c => c.id !== 'int-unc-15');
+  extraCards.push(unc);
+  renderFeed([unc]);
+  showActiveGap('MISSING: Q4 2025 revenue — cannot conclude. Severity: HIGH.');
+  addLog('Insufficient evidence → UNCERTAINTY output.');
+}
+function scenario16() {
+  animatePipeline(['KNOWLEDGE','GAP','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-005');
+  renderFeed([c]);
+  showActiveGap('CONFLICTING: Infrastructure cost — both sources disclosed. User action required.');
+  addLog('Conflicting evidence — NO CONCLUSION. Both sources disclosed.');
+}
+function scenario17() {
+  animatePipeline(['KNOWLEDGE','EVIDENCE','GAP','ANALYSIS','EVALUATE','OUTPUT']);
+  const c = JSON.parse(JSON.stringify(intelCards.find(x => x.id === 'int-004')));
+  c.gaps.push({ type:'STALE', subject:'Savings rate data 3 months old' });
+  renderFeed([c], { [c.id]: { staleMark: true, agingBadge: true } });
+  addLog('Stale evidence — reasoning confidence capped.');
+}
+function scenario18() {
+  animatePipeline(['KNOWLEDGE','GAP','OUTPUT']);
+  const ref = { id:'int-ref-18', type:'UNCERTAINTY', evidenceType:'UNCERTAIN', domain:'finance',
+    output: 'Cannot assert certainty — evidence basis is ASSUMED only. Classification: UNCERTAIN.',
+    knowledgeConfidence:0.15, reasoningConfidence:0.08, completeness:0.10, basis:['km-assumed-01: unconfirmed estimate only'],
+    evidence:null, assumptions:['All data is assumed — no primary source'], gaps:[{ type:'ASSUMED', subject:'No confirmed evidence — assumed figures only' }] };
+  extraCards = extraCards.filter(c => c.id !== 'int-ref-18');
+  extraCards.push(ref);
+  renderFeed([ref]);
+  addLog('False certainty refused — ASSUMED evidence only.');
+}
+function scenario19() {
+  animatePipeline(['KNOWLEDGE','EVIDENCE','GAP','ANALYSIS','OUTPUT']);
+  setDisclosure(3);
+  const c = intelCards.find(x => x.id === 'int-003');
+  renderFeed([c]);
+  addLog('Assumptions identified and disclosed.');
+}
+function scenario20() {
+  animatePipeline(['INTENT','KNOWLEDGE','ANALYSIS','EVALUATE','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-002');
+  renderFeed([c], { 'int-002': { showWhy: true, whyText: 'Matters because budget exhaustion before month-end would require unplanned reallocation — affecting savings goal (km-fin-020). Link: km-fin-020 emergency fund goal.' } });
+  selectedCardId = 'int-002';
+  addLog('Why this matters: goal impact disclosed.');
+}
+function scenario21() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','EVALUATE','OUTPUT']);
+  const card = intelCards.find(x => x.id === 'int-002');
+  card.challenged = true;
+  card.challengeDialogue = [
+    { role:'user', text:'I have a bulk purchase planned which will end on Oct 28.' },
+    { role:'apex', text:'Adjusted: bulk purchase ends Oct 28 — risk lower if confirmed. Revising reasoning.' }
+  ];
+  challengedCardId = 'int-002';
+  updateChallengeState('REVIEWED');
+  document.getElementById('challengeCardRef').textContent = 'Reviewed: int-002';
+  renderFeed([card]);
+  addLog('Challenge → reviewed → revised.');
+}
+function scenario22() {
+  const card = intelCards.find(x => x.id === 'int-002');
+  card.challenged = false;
+  card.revised = true;
+  card.reasoningConfidence = 0.85;
+  card.output = 'REVISED: With confirmed bulk purchase ending Oct 28 (£120), budget exhaustion risk is now LOW. Remaining budget £188 covers forecast to month-end.';
+  card.challengeDialogue = [
+    { role:'user', text:'I have a bulk purchase planned which will end on Oct 28.' },
+    { role:'apex', text:'Evidence updated: bulk purchase £120 confirmed. Risk classification revised to LOW.' }
+  ];
+  updateChallengeState('REVISED');
+  document.getElementById('challengeCardRef').textContent = 'Revised: int-002';
+  renderFeed([card]);
+  animatePipeline(['KNOWLEDGE','EVIDENCE','ANALYSIS','EVALUATE','OUTPUT']);
+  addLog('Evidence updated → output revised.');
+}
+function scenario23() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-006');
+  const c2 = JSON.parse(JSON.stringify(c));
+  c2.challengeDialogue = [
+    { role:'user', text:'Why £420 not £350?' },
+    { role:'apex', text:'£350 reduces spend 11% below 3-month average — achievable but leaves no buffer. £420 is +10% on average — absorbs occasional spike without stress.' }
+  ];
+  renderFeed([c2], { [c2.id]: { showDecision: true } });
+  addLog('Follow-up: alternative explained.');
+}
+function scenario24() {
+  setDomain('finance');
+  animatePipeline(['INTENT','KNOWLEDGE','ANALYSIS','EVALUATE','OUTPUT']);
+  addLog('Domain intelligence: Finance.');
+}
+function scenario25() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','SYNTHESIS','INTERPRET','EVALUATE','OUTPUT']);
+  const cross = { id:'int-cross-25', type:'INSIGHT', evidenceType:'SYNTHESISED', domain:'finance',
+    output: 'CROSS-DOMAIN: Closing Client B this month (Business pipeline) would resolve October budget pressure (Finance). Client B deal: estimated £X revenue. Finance: £188 remaining. Synthesis: Business success directly relieves Finance gap.',
+    knowledgeConfidence:0.72, reasoningConfidence:0.60, completeness:0.65,
+    basis:['km-biz-007: Client B deal','km-002: Finance remaining budget'], evidence:'Business domain: Client B pipeline active. Finance domain: £188 budget remaining.',
+    assumptions:['Client B deal closes within month'], gaps:[], crossDomain:['finance','business'] };
+  extraCards = extraCards.filter(c => c.id !== 'int-cross-25');
+  extraCards.push(cross);
+  renderFeed([cross]);
+  addLog('Cross-domain intelligence: Finance + Business.');
+}
+function scenario26() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','OUTPUT']);
+  const ctx = { id:'int-ctx-26', type:'INSIGHT', evidenceType:'INTERPRETED', domain:'business',
+    output: 'CONTEXTUAL: APEX is aware you have a CS249R assignment due Nov 3 (Education domain) and a Client B follow-up overdue (Business domain). Current context: Business active. Relevant intelligence surfaces Business items first.',
+    knowledgeConfidence:0.78, reasoningConfidence:0.70, completeness:0.75,
+    basis:['km-edu-005: CS249R due Nov 3','km-biz-007: Client B overdue'], evidence:'Context signals from Education + Business domains.',
+    assumptions:['Context priority: Business > Education'], gaps:[] };
+  extraCards = extraCards.filter(c => c.id !== 'int-ctx-26');
+  extraCards.push(ctx);
+  renderFeed([intelCards.find(x => x.id === 'int-003'), ctx]);
+  addLog('Contextual intelligence: active domain scopes feed.');
+}
+function scenario27() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','SYNTHESIS','INTERPRET','EVALUATE','OUTPUT']);
+  showToast('APEX INTELLIGENCE', 'November budget risk detected. Creating budget now would reduce month-end stress. Proactive intelligence via UX-09 pipeline (L3).');
+  const proact = { id:'int-pro-27', type:'RISK', evidenceType:'INFERRED', domain:'finance',
+    output: 'PROACTIVE: November budget risk detected. Creating budget now would reduce month-end stress. [PROACTIVE DECISION — surfaced at L3 via UX-09 pipeline]',
+    knowledgeConfidence:0.82, reasoningConfidence:0.70, completeness:0.75,
+    basis:['int-002: food budget risk'], evidence:'Trend data from October suggests November risk without intervention.',
+    assumptions:['Spend rate continues'], gaps:[] };
+  extraCards = extraCards.filter(c => c.id !== 'int-pro-27');
+  extraCards.push(proact);
+  renderFeed([proact]);
+  addLog('Proactive intelligence via UX-09 pipeline.');
+}
+function scenario28() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','EVALUATE','OUTPUT']);
+  setVoiceState('THINKING');
+  const voiceOut = document.getElementById('voiceOutput');
+  voiceOut.style.display = '';
+  voiceOut.textContent = '...thinking...';
+  setTimeout(() => {
+    setVoiceState('SPEAKING');
+    voiceOut.textContent = '"Your October food budget risk is medium. At current rate, budget exhausted in about 6 days. Confidence: reasonable — based on October trend. Want more detail?"';
+    addLog('Voice intelligence: L0, spoken.');
+    setTimeout(() => { setVoiceState('IDLE'); voiceOut.style.display = 'none'; }, 4000);
+  }, 800);
+  const c = intelCards.find(x => x.id === 'int-002');
+  renderFeed([c]);
+}
+function scenario29() {
+  animatePipeline(['INTENT','KNOWLEDGE','OUTPUT']);
+  briefMode = true;
+  document.getElementById('verbosityBadge').style.display = '';
+  refreshFeed();
+  addLog('Personalisation: brief mode. Evidence untouched.');
+}
+function scenario30() {
+  animatePipeline(['KNOWLEDGE','ANALYSIS','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-001');
+  renderFeed([c], { 'int-001': { showKnowledgeInput: true, showKnowledgeArrow: true } });
+  addLog('Knowledge → Intelligence boundary shown.');
+}
+function scenario31() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','EVALUATE','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-006');
+  renderFeed([c], { 'int-006': { showAgentBoundary: true } });
+  addLog('Intelligence → Agent boundary shown.');
+}
+function scenario32() {
+  animatePipeline(['INTENT','KNOWLEDGE','EVIDENCE','ANALYSIS','EVALUATE','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-006');
+  renderFeed([c], { 'int-006': { showApprovalBoundary: true, showProposal: true } });
+  addLog('Intelligence → Action/Approval boundary shown.');
+}
+function scenario33() {
+  animatePipeline(['INTENT','KNOWLEDGE','ANALYSIS','EVALUATE','OUTPUT']);
+  const c = intelCards.find(x => x.id === 'int-006');
+  renderFeed([c], { 'int-006': { showNotInstruction: true } });
+  const feed = document.getElementById('intelFeed');
+  feed.innerHTML += `<div class="intel-card" style="border-left-color:var(--apex-color-error);opacity:0.5">
+    <div class="card-header"><div class="card-header-left">
+      <span class="type-label" style="background:rgba(239,68,68,0.1);color:var(--apex-color-error)">INSTRUCTION</span>
+      <span style="font-family:var(--apex-font-data);font-size:9px;color:var(--apex-color-error);background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:var(--apex-radius-sm);padding:2px 8px">NEVER SHOWN</span>
+    </div></div>
+    <div class="card-output" style="color:var(--apex-color-muted)">APEX never issues instructions. This type is shown only for contrast — it does not exist in the system.</div>
+  </div>`;
+  document.getElementById('feedCount').textContent = '2 items';
+  addLog('Recommendation ≠ instruction — clearly labelled.');
+}
+function scenario34() {
+  animatePipeline(['INTENT','KNOWLEDGE','GAP','OUTPUT']);
+  const nc = { id:'int-nc-34', type:'NO_CONCLUSION', evidenceType:'UNCERTAIN', domain:'finance',
+    output: 'Insufficient evidence: 1 unconfirmed observation, no secondary confirmation, ASSUMED gap open. APEX cannot conclude. No fabricated output.',
+    knowledgeConfidence:0.05, reasoningConfidence:0.03, completeness:0.05,
+    basis:['km-unconf-01: single unconfirmed observation (N=1, 0 confirmations)'],
+    evidence:null, assumptions:[], gaps:[{ type:'ASSUMED', subject:'Single observation — no secondary confirmation, ASSUMED gap open' }] };
+  extraCards = extraCards.filter(c => c.id !== 'int-nc-34');
+  extraCards.push(nc);
+  renderFeed([nc]);
+  showActiveGap('ASSUMED gap: single unconfirmed observation — cannot conclude. No fabrication.');
+  addLog('Insufficient evidence → NO CONCLUSION. No fabrication.');
+}
+
+// ============================================================
+// SCENARIO BUTTONS
+// ============================================================
+function buildScenarioButtons() {
+  const grid = document.getElementById('scenarioGrid');
+  const labels = [
+    'V-INTEL-01','V-INTEL-02','V-INTEL-03','V-INTEL-04','V-INTEL-05','V-INTEL-06',
+    'V-INTEL-07','V-INTEL-08','V-INTEL-09','V-INTEL-10','V-INTEL-11','V-INTEL-12',
+    'V-INTEL-13','V-INTEL-14','V-INTEL-15','V-INTEL-16','V-INTEL-17','V-INTEL-18',
+    'V-INTEL-19','V-INTEL-20','V-INTEL-21','V-INTEL-22','V-INTEL-23','V-INTEL-24',
+    'V-INTEL-25','V-INTEL-26','V-INTEL-27','V-INTEL-28','V-INTEL-29','V-INTEL-30',
+    'V-INTEL-31','V-INTEL-32','V-INTEL-33','V-INTEL-34'
+  ];
+  grid.innerHTML = labels.map((label, i) => {
+    const n = i + 1;
+    return `<button class="scenario-btn" onclick="runScenario(${n})" aria-label="Run scenario ${label}">${label}</button>`;
+  }).join('');
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+const KEY_MAP = {
+  '1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,
+  '0':10,'q':11,'w':12,'e':13,'r':14,'t':15,'y':16,'u':17,'i':18,'o':19,
+  'p':20,'a':21,'s':22,'f':23,'g':24,'h':25,'j':26,'k':27,'l':28,'z':29,
+  'x':30,'c':31,'b':32,'n':33,'m':34
+};
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const key = e.key.toLowerCase();
+  if (KEY_MAP[key]) { runScenario(KEY_MAP[key]); return; }
+  if (key === 'd') {
+    const domains = ['global','finance','education','business','system'];
+    const idx = (domains.indexOf(activeDomain) + 1) % domains.length;
+    setDomain(domains[idx]);
+  }
+  if (key === 'l') setDisclosure((disclosureLevel + 1) % 5);
+  if (key === 'v') triggerVoiceScenario();
+});
+
+// ============================================================
+// RESET
+// ============================================================
+function resetAll() {
+  activeIntelType = 'ALL';
+  activeDomain = 'global';
+  disclosureLevel = 0;
+  briefMode = false;
+  extraCards = [];
+  challengedCardId = null;
+  intelCards.forEach(c => {
+    c.challenged = false; c.revised = false; c.reviewed = false;
+    if (c.id === 'int-002') {
+      c.reasoningConfidence = 0.72;
+      c.output = 'Food budget at 62% with 25% of month remaining. At current rate, budget exhaustion in 6 days.';
+      c.challengeDialogue = undefined;
+    }
+  });
+  setVoiceState('IDLE');
+  clearActiveGap();
+  setActiveScenario(null);
+  document.getElementById('verbosityBadge').style.display = 'none';
+  updateChallengeState('');
+  document.getElementById('challengeCardRef').textContent = 'No active challenge';
+  setDisclosure(0);
+  setDomain('global');
+  setTypeFilter('ALL');
+  refreshFeed();
+  resetPipeline();
+  addLog('System reset.');
+}
+document.addEventListener('keydown', e => { if (e.key === 'X') resetAll(); });
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  buildScenarioButtons();
+  refreshFeed();
+  addLog('APEX UX-12 Intelligence prototype loaded.');
+}
+init();
+</script>
+</body>
+</html>

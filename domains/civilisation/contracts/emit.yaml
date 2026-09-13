@@ -1,0 +1,14 @@
+domain: DOM-000001
+events:
+  - name: DECISION_RECORDED
+    description: A civilisation-level decision has been recorded.
+    schema:
+      decision_id: string
+      decision: string
+      rationale: string
+      timestamp: number
+    guaranteed_delivery: false
+    max_latency_ms: 500
+    consumers:
+      - DOM-000006   # Observability records it in timeline
+      - DOM-000008   # Knowledge indexes decisions

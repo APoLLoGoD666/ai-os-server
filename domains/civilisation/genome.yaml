@@ -1,0 +1,34 @@
+id: DOM-000001
+name: Civilisation
+criticality: CRITICAL
+autonomy_level: 1
+
+description: >
+  The root domain — the living system as a whole.
+  Parent of all other domains. If this domain is unhealthy,
+  the entire civilisation is in distress.
+
+invariants:
+  - property: status
+    must_be: ACTIVE
+    violation: critical
+
+  - property: owner
+    must_be_set: true
+    violation: advisory
+
+  - property: health_score
+    minimum: 60
+    consecutive_readings: 5
+    violation: critical
+
+vital_connections:
+  - DOM-000003   # Registry — semantic brain
+  - DOM-000005   # Infrastructure — substrate
+
+ancestors: []   # Root domain has no ancestors
+
+healing_domain: DOM-000005
+
+clock_baseline_ticks_per_hour: 5
+prediction_accuracy_target: 0.75

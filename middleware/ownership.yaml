@@ -1,0 +1,18 @@
+domain: Civilisation
+capability: Constitutional Governance Gate
+runtime: core
+criticality: critical
+owner: Civilization Kernel
+entity_id: DOM-000001
+dependencies:
+  - Registry
+  - Infrastructure
+consumers:
+  - All Domains
+events_emitted:
+  - GOVERNANCE_VIOLATION
+events_consumed:
+  - ENTITY_CREATED
+  - ENTITY_UPDATED
+state_version_sensitive: false
+test_suite: null

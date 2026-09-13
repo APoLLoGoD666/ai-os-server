@@ -1,0 +1,14 @@
+id: LAW-004
+name: Entity Ownership Required
+description: >
+  Every new entity added to the Registry must declare an owner within 24 hours
+  of creation. Ownerless entities are flagged as ORPHAN and appear in the
+  Observatory's health alerts.
+category: hygiene
+enforcement: advisory
+condition:
+  operation: entity.create
+  required_fields: [owner]
+  grace_period_hours: 24
+remedy: Add an owner field to the entity definition.
+severity: HIGH

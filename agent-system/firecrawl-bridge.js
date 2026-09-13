@@ -139,7 +139,7 @@ async function scrapeWithRetry(url, opts = {}, maxRetries = 3) {
             }
         }
     }
-    throw lastError;
+    throw lastError || new Error('scrapeWithRetry: all attempts failed');
 }
 
 // Screenshot a URL — returns base64 PNG via Firecrawl screenshot format

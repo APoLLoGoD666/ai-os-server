@@ -1,0 +1,23 @@
+domain: Memory
+domain_id: DOM-000004
+capability: persistent-memory
+runtime: lib/memory/
+criticality: HIGH
+owner: Memory Subsystem
+
+entity_id: DOM-000004
+
+dependencies:
+  - DOM-000003   # Registry — entity graph
+  - DOM-000005   # Infrastructure — Supabase, Storage
+
+consumers:
+  - DOM-000002   # Intelligence reads memory
+  - DOM-000008   # Knowledge stored in memory
+
+events_emitted:
+  - MIGRATION_ADDED
+
+events_consumed:
+  - ENTITY_CREATED
+  - AGENT_COMPLETED

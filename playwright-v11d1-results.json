@@ -1,0 +1,279 @@
+{
+  "suite": "V-11-D1-PLAYWRIGHT",
+  "date": "2026-09-01T02:11:26.079Z",
+  "pass": 45,
+  "fail": 0,
+  "total": 45,
+  "results": [
+    {
+      "id": "A-1",
+      "desc": "nav-overview label is \"Today\"",
+      "status": "PASS",
+      "detail": "Today"
+    },
+    {
+      "id": "A-2",
+      "desc": "nav-intelligence label is \"Intelligence\"",
+      "status": "PASS",
+      "detail": "Intelligence"
+    },
+    {
+      "id": "B-1",
+      "desc": "topbar title is \"Today\"",
+      "status": "PASS",
+      "detail": "Today"
+    },
+    {
+      "id": "B-2",
+      "desc": "topbar sub is \"What matters now\"",
+      "status": "PASS",
+      "detail": "What matters now"
+    },
+    {
+      "id": "C-1",
+      "desc": "#today-surface exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "C-2",
+      "desc": "#today-needs-panel exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "C-3",
+      "desc": "#today-noticed-panel exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "C-4",
+      "desc": "#today-active-panel exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "C-5",
+      "desc": "#ovr-greeting exists and set",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "C-6",
+      "desc": "legacy separator present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D-1",
+      "desc": "NEEDS YOU panel is ready",
+      "status": "PASS",
+      "detail": "ready"
+    },
+    {
+      "id": "D-2",
+      "desc": "NEEDS YOU has at least 1 item",
+      "status": "PASS",
+      "detail": "3"
+    },
+    {
+      "id": "D-3",
+      "desc": "APEX NOTICED is ready",
+      "status": "PASS",
+      "detail": "ready"
+    },
+    {
+      "id": "D-4",
+      "desc": "APEX NOTICED has insight rows",
+      "status": "PASS",
+      "detail": "5"
+    },
+    {
+      "id": "D-5",
+      "desc": "TODAY SCHEDULE is ready",
+      "status": "PASS",
+      "detail": "ready"
+    },
+    {
+      "id": "D-6",
+      "desc": "TODAY SCHEDULE has rows",
+      "status": "PASS",
+      "detail": "3"
+    },
+    {
+      "id": "E-1",
+      "desc": "NEEDS YOU shows max 3 items",
+      "status": "PASS",
+      "detail": "3"
+    },
+    {
+      "id": "F-1",
+      "desc": "NEEDS YOU empty — ready state (positive message)",
+      "status": "PASS",
+      "detail": "ready"
+    },
+    {
+      "id": "F-2",
+      "desc": "NEEDS YOU empty — positive message shown",
+      "status": "PASS",
+      "detail": "Nothing needs your attention right now.APEX is monitoring yo"
+    },
+    {
+      "id": "F-3",
+      "desc": "NOTICED empty — empty state",
+      "status": "PASS",
+      "detail": "empty"
+    },
+    {
+      "id": "F-4",
+      "desc": "SCHEDULE empty — empty state",
+      "status": "PASS",
+      "detail": "empty"
+    },
+    {
+      "id": "G-1",
+      "desc": "NEEDS YOU failed state on API error",
+      "status": "PASS",
+      "detail": "failed"
+    },
+    {
+      "id": "G-2",
+      "desc": "NOTICED failed state on API error",
+      "status": "PASS",
+      "detail": "failed"
+    },
+    {
+      "id": "G-3",
+      "desc": "SCHEDULE failed state on API error",
+      "status": "PASS",
+      "detail": "failed"
+    },
+    {
+      "id": "H-1",
+      "desc": "#ovr-pipeline element still exists in DOM",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-2",
+      "desc": "#ovr-pipeline remains CSS-hidden",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "I-1",
+      "desc": "/api/briefing/priority-inbox called on nav to overview",
+      "status": "PASS",
+      "detail": "yes"
+    },
+    {
+      "id": "I-2",
+      "desc": "/api/briefing/today called on nav to overview",
+      "status": "PASS",
+      "detail": "yes"
+    },
+    {
+      "id": "J-1",
+      "desc": "/api/briefing/priority-inbox called exactly once on boot",
+      "status": "PASS",
+      "detail": "1"
+    },
+    {
+      "id": "J-2",
+      "desc": "/api/briefing/today called exactly once on boot",
+      "status": "PASS",
+      "detail": "1"
+    },
+    {
+      "id": "K-1",
+      "desc": "User: nav-overview label \"Today\"",
+      "status": "PASS",
+      "detail": "Today"
+    },
+    {
+      "id": "K-2",
+      "desc": "User: nav-intelligence label \"Intelligence\"",
+      "status": "PASS",
+      "detail": "Intelligence"
+    },
+    {
+      "id": "K-3",
+      "desc": "User: nav-occult hidden (master-only)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "K-4",
+      "desc": "User: nav-agents hidden (master-only)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "K-5",
+      "desc": "User: nav-governance hidden (master-only)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "K-6",
+      "desc": "User: today panels render (not forbidden)",
+      "status": "PASS",
+      "detail": "ready"
+    },
+    {
+      "id": "L-1",
+      "desc": "Master: nav-occult visible",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "L-2",
+      "desc": "Master: nav-agents visible",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "L-3",
+      "desc": "Master: nav-activity visible",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "M-1",
+      "desc": "All 20 pages reachable via switchPage",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "N-1",
+      "desc": "Command page exists in DOM (D2: TODAY is boot default)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "N-2",
+      "desc": "PlasmaOrb element present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "O-1",
+      "desc": "No overflow at 1280px",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "id": "O-2",
+      "desc": "No overflow at 390px (mobile)",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "id": "P-1",
+      "desc": "No JS errors on overview page",
+      "status": "PASS",
+      "detail": "clean"
+    }
+  ]
+}
