@@ -17803,13 +17803,8 @@ function _tdInsights(brief) {
     return rows;
 }
 
-async function initOverviewPage() {
-    var greetEl = document.getElementById('ovr-greeting');
-    var h = new Date().getHours();
-    if (greetEl) greetEl.textContent =
-        (h<12?'Good morning':h<18?'Good afternoon':'Good evening')
-        +' · '+new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-
+async function _initOverviewPageLegacy_DISABLED() {
+    // Replaced by Command Center initOverviewPage (see above)
     var pageEl = document.getElementById('page-overview');
     if (!pageEl || !pageEl.classList.contains('active')) return;
 
