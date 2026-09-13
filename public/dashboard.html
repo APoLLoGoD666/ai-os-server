@@ -28269,5 +28269,365 @@ window.apexFileDropHandler = function(e){
 
 })();
 </script>
+
+<!-- ══ APEX INTEL PAGE ══ -->
+<style>
+/* ── Intel layout ── */
+#page-intel { display:none; flex-direction:column; height:100%; overflow:hidden; }
+#page-intel.active { display:flex; }
+.intel-body { display:flex; flex:1; gap:0; overflow:hidden; min-height:0; }
+.intel-presets { width:300px; flex-shrink:0; display:flex; flex-direction:column; gap:10px; padding:16px; overflow-y:auto; border-right:1px solid var(--color-border,#333); }
+.intel-trace-wrap { flex:1; display:flex; flex-direction:column; overflow:hidden; padding:16px; gap:12px; min-width:0; }
+/* ── Preset cards ── */
+.intel-card { background:var(--color-surface,#1a1a1a); border:1px solid var(--color-border,#333); border-radius:var(--radius-md,8px); padding:14px 16px; cursor:pointer; transition:border-color 150ms,background 150ms,transform 100ms; text-align:left; width:100%; }
+.intel-card:hover { border-color:var(--color-accent,#7c6cf2); background:var(--color-surface-raised,#242424); }
+.intel-card:active { transform:scale(0.98); }
+.intel-card.active { border-color:var(--color-accent,#7c6cf2); background:#1e1b3a; }
+.intel-card.running { opacity:.7; pointer-events:none; }
+.intel-card-icon { font-size:20px; margin-bottom:6px; display:block; }
+.intel-card-title { font-size:.8rem; font-weight:700; letter-spacing:.08em; color:var(--color-text,#e8e8e8); text-transform:uppercase; }
+.intel-card-sub { font-size:.72rem; color:var(--color-text-muted,#888); margin-top:3px; line-height:1.4; }
+/* ── Trace panel ── */
+.intel-trace-hd { font-size:.7rem; font-weight:700; letter-spacing:.1em; color:var(--color-text-muted,#888); text-transform:uppercase; display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.intel-trace-hd-sep { flex:1; height:1px; background:var(--color-border,#333); }
+#intel-trace { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; min-height:0; }
+.intel-stage { border-left:2px solid var(--color-border,#333); padding:10px 14px; border-radius:0 var(--radius-md,8px) var(--radius-md,8px) 0; background:var(--color-surface,#1a1a1a); transition:border-color 200ms; }
+.intel-stage.is-active { border-color:var(--color-accent,#7c6cf2); }
+.intel-stage.is-done { border-color:var(--color-success,#22c55e); }
+.intel-stage.is-skipped { opacity:.45; border-color:var(--color-border,#333); }
+.intel-stage.is-error { border-color:var(--color-error,#ef4444); }
+.intel-stage-hd { display:flex; align-items:center; gap:8px; }
+.intel-stage-dot { width:8px; height:8px; border-radius:50%; background:var(--color-border,#333); flex-shrink:0; transition:background 200ms; }
+.is-active .intel-stage-dot { background:var(--color-accent,#7c6cf2); animation:intel-blink 900ms ease-in-out infinite; }
+.is-done .intel-stage-dot { background:var(--color-success,#22c55e); animation:none; }
+.is-error .intel-stage-dot { background:var(--color-error,#ef4444); animation:none; }
+.intel-stage-label { font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--color-text-muted,#888); }
+.is-active .intel-stage-label,.is-done .intel-stage-label { color:var(--color-text,#e8e8e8); }
+.intel-stage-body { margin-top:8px; font-size:.8rem; line-height:1.6; color:var(--color-text,#e8e8e8); display:none; }
+.is-active .intel-stage-body,.is-done .intel-stage-body { display:block; }
+/* ── Vote chips ── */
+.intel-votes { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.intel-vote { font-size:.68rem; padding:3px 8px; border-radius:var(--radius-full,9999px); border:1px solid; white-space:nowrap; opacity:0; transform:translateY(6px); transition:opacity 200ms,transform 200ms; }
+.intel-vote.shown { opacity:1; transform:none; }
+.intel-vote.approve { border-color:#22c55e44; background:#22c55e18; color:#22c55e; }
+.intel-vote.reject  { border-color:#ef444444; background:#ef444418; color:#ef4444; }
+.intel-vote.abstain { border-color:#f59e0b44; background:#f59e0b18; color:#f59e0b; }
+.intel-vote.defer   { border-color:#88888844; background:#88888818; color:#888; }
+/* ── Consensus bar ── */
+.intel-consensus { height:4px; border-radius:2px; background:var(--color-border,#333); overflow:hidden; margin-bottom:8px; }
+.intel-consensus-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,var(--color-accent,#7c6cf2),var(--color-success,#22c55e)); width:0; transition:width 600ms var(--ease-out,cubic-bezier(0,0,0.2,1)); }
+/* ── Result block ── */
+.intel-result { font-size:.85rem; line-height:1.7; color:var(--color-text,#e8e8e8); padding:12px; background:var(--color-surface-raised,#242424); border-radius:var(--radius-md,8px); white-space:pre-wrap; }
+/* ── Empty / idle state ── */
+.intel-idle { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--color-text-muted,#888); font-size:.8rem; text-align:center; }
+.intel-idle-icon { font-size:40px; opacity:.25; }
+/* ── Spinner ── */
+.intel-spinner { width:14px; height:14px; border:2px solid var(--color-border,#333); border-top-color:var(--color-accent,#7c6cf2); border-radius:50%; animation:intel-spin 700ms linear infinite; display:inline-block; vertical-align:middle; }
+@keyframes intel-spin { to { transform:rotate(360deg); } }
+@keyframes intel-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+@media (max-width: 600px) {
+  .intel-body { flex-direction:column; }
+  .intel-presets { width:auto; border-right:none; border-bottom:1px solid var(--color-border,#333); flex-direction:row; overflow-x:auto; flex-wrap:nowrap; padding:10px; gap:8px; flex-shrink:0; }
+  .intel-card { min-width:140px; }
+}
+</style>
+<script>
+/* APEX INTEL PAGE */
+(function () {
+    'use strict';
+
+    var PRESETS = [
+        { id:'weekly',   icon:'◈', title:'WEEKLY BRIEF',       sub:'Strategic focus for this week',         q:'What should APEX focus on strategically this week? Give a prioritised action plan.' },
+        { id:'risk',     icon:'◬', title:'RISK REVIEW',        sub:'Threats and vulnerabilities',            q:'Identify the top risks and threats I should be aware of right now across all life domains.' },
+        { id:'next',     icon:'▶', title:"WHAT'S NEXT?",       sub:'Highest-leverage next action',           q:'What is the single highest-leverage thing I should do next to make progress on my goals?' },
+        { id:'finance',  icon:'◆', title:'FINANCIAL PULSE',    sub:'Money, assets, opportunities',           q:'Give me a financial intelligence brief: current status, risks, and opportunities.' },
+        { id:'position', icon:'⬡', title:'STRATEGIC POSITION', sub:'Where am I vs where I want to be',      q:'Assess my current strategic position: what is working, what is not, and what needs to change.' },
+        { id:'system',   icon:'◉', title:'SYSTEM AUDIT',       sub:'AI OS health and optimisation',         q:'Audit the APEX AI OS system: what is performing well, what needs attention, and what should be improved?' }
+    ];
+
+    var _running = false;
+    var _currentPreset = null;
+
+    function _h() { return typeof buildApiHeaders === 'function' ? buildApiHeaders() : { 'x-app-key': window._appKey || '' }; }
+
+    function _bootstrap() {
+        // ── Build #page-intel ───────────────────────────────────────────────
+        var pg = document.createElement('div');
+        pg.id = 'page-intel';
+        pg.className = 'page';
+
+        // Portal tab bar (INTEL active)
+        pg.innerHTML =
+            '<div class="portal-tab-bar">' +
+            '  <button class="portal-tab" onclick="window.switchPage(\'council\')">COUNCIL</button>' +
+            '  <button class="portal-tab" onclick="window.switchPage(\'actions\')">ACTIONS</button>' +
+            '  <button class="portal-tab" onclick="window.switchPage(\'domain-agents\')">DOMAIN AGENTS</button>' +
+            '  <button class="portal-tab" onclick="window.switchPage(\'agents\')">OFFICE AGENTS</button>' +
+            '  <button class="portal-tab" onclick="window.switchPage(\'test\')">MAP</button>' +
+            '  <button class="portal-tab active" onclick="window.switchPage(\'intel\')">INTEL</button>' +
+            '</div>' +
+            '<div class="intel-body">' +
+            '  <div class="intel-presets" id="intel-presets"></div>' +
+            '  <div class="intel-trace-wrap">' +
+            '    <div class="intel-trace-hd">PROCESSING TRACE<div class="intel-trace-hd-sep"></div><span id="intel-trace-status"></span></div>' +
+            '    <div id="intel-trace"><div class="intel-idle"><div class="intel-idle-icon">⬡</div><div>Select a brief to see APEX think in real time</div></div></div>' +
+            '  </div>' +
+            '</div>';
+
+        var pageWrap = document.querySelector('.page-and-input') || document.getElementById('page-overview');
+        if (pageWrap && pageWrap.parentNode) {
+            pageWrap.parentNode.insertBefore(pg, pageWrap.nextSibling);
+        } else {
+            document.body.appendChild(pg);
+        }
+
+        // ── Render preset cards ─────────────────────────────────────────────
+        var presetsEl = document.getElementById('intel-presets');
+        PRESETS.forEach(function (p) {
+            var card = document.createElement('button');
+            card.className = 'intel-card';
+            card.id = 'intel-card-' + p.id;
+            card.setAttribute('aria-label', p.title);
+            card.innerHTML =
+                '<span class="intel-card-icon">' + p.icon + '</span>' +
+                '<div class="intel-card-title">' + p.title + '</div>' +
+                '<div class="intel-card-sub">' + p.sub + '</div>';
+            card.addEventListener('click', function () { _runPreset(p.id); });
+            presetsEl.appendChild(card);
+        });
+
+        // ── Add INTEL tab to existing portal tab bars ───────────────────────
+        var tabBars = document.querySelectorAll('.portal-tab-bar');
+        tabBars.forEach(function (bar) {
+            if (bar.closest('#page-intel')) return;
+            if (bar.querySelector('[onclick*="intel"]')) return;
+            var btn = document.createElement('button');
+            btn.className = 'portal-tab';
+            btn.setAttribute('onclick', "window.switchPage('intel')");
+            btn.textContent = 'INTEL';
+            bar.appendChild(btn);
+        });
+
+        // ── Add sidebar nav button ──────────────────────────────────────────
+        if (!document.getElementById('nav-intel')) {
+            var settingsBtn = document.getElementById('nav-settings');
+            var navBtn = document.createElement('button');
+            navBtn.className = 'nav-btn';
+            navBtn.id = 'nav-intel';
+            navBtn.setAttribute('aria-label', 'Intelligence Briefs');
+            navBtn.innerHTML = '<span class="nav-icon">◈</span><span class="nav-label">Intel</span>';
+            navBtn.addEventListener('click', function () { window.switchPage('intel'); });
+            if (settingsBtn && settingsBtn.parentNode) {
+                settingsBtn.parentNode.insertBefore(navBtn, settingsBtn);
+            }
+        }
+
+        // ── Wrap switchPage to update INTEL tab active states ───────────────
+        var _origSwitch = window.switchPage;
+        window.switchPage = function (name) {
+            _origSwitch && _origSwitch(name);
+            // Sync portal tabs across all bars
+            document.querySelectorAll('.portal-tab-bar .portal-tab').forEach(function (btn) {
+                var m = (btn.getAttribute('onclick') || '').match(/switchPage\('([^']+)'\)/);
+                if (m) btn.classList.toggle('active', m[1] === name);
+            });
+        };
+    }
+
+    // ── Stage definitions (order matters for rendering) ─────────────────────
+    var STAGE_DEFS = [
+        { id:'council',    label:'COUNCIL DELIBERATION' },
+        { id:'domain',     label:'DOMAIN AGENT' },
+        { id:'office',     label:'OFFICE AGENT' },
+        { id:'reflection', label:'REFLECTION' }
+    ];
+
+    function _resetTrace() {
+        var trace = document.getElementById('intel-trace');
+        if (!trace) return;
+        trace.innerHTML = '';
+        STAGE_DEFS.forEach(function (s) {
+            var el = document.createElement('div');
+            el.className = 'intel-stage';
+            el.id = 'intel-stage-' + s.id;
+            el.innerHTML =
+                '<div class="intel-stage-hd">' +
+                '  <div class="intel-stage-dot"></div>' +
+                '  <div class="intel-stage-label">' + s.label + '</div>' +
+                '</div>' +
+                '<div class="intel-stage-body" id="intel-sbody-' + s.id + '"></div>';
+            trace.appendChild(el);
+        });
+    }
+
+    function _setStageStatus(id, status) {
+        var el = document.getElementById('intel-stage-' + id);
+        if (!el) return;
+        el.classList.remove('is-active', 'is-done', 'is-skipped', 'is-error');
+        if (status) el.classList.add('is-' + status);
+    }
+
+    function _buildVoteContent(votes, consensusPct) {
+        var html = '<div class="intel-votes">';
+        (votes || []).forEach(function (v, i) {
+            var voteClass = (v.vote || 'abstain').toLowerCase();
+            if (['approve','reject','abstain','defer'].indexOf(voteClass) === -1) voteClass = 'abstain';
+            html += '<span class="intel-vote ' + voteClass + '" style="transition-delay:' + (i * 60) + 'ms">' +
+                (v.entityId || v.agent || 'Agent').replace(/-/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();}) +
+                ' · ' + (v.vote || '?').toUpperCase() +
+                (v.confidence ? ' ' + Math.round(v.confidence * 100) + '%' : '') +
+                '</span>';
+        });
+        html += '</div>';
+        html += '<div class="intel-consensus"><div class="intel-consensus-fill" id="intel-cons-fill"></div></div>';
+        return html;
+    }
+
+    function _onStage(raw) {
+        var evt;
+        try { evt = JSON.parse(raw); } catch (e) { return; }
+        var id = evt.id, status = evt.status, data = evt.data || {};
+
+        _setStageStatus(id, status === 'active' ? 'active' : status === 'done' ? 'done' : status === 'skipped' ? 'skipped' : status === 'error' ? 'error' : 'active');
+
+        if (status !== 'done') return;
+
+        var sbody = document.getElementById('intel-sbody-' + id);
+        if (!sbody) return;
+
+        if (id === 'council') {
+            var votes = data.votes || [];
+            var consensusPct = data.consensusLevel ? Math.round(data.consensusLevel * 100) : Math.round((votes.filter(function(v){return (v.vote||'').toLowerCase()==='approve';}).length / Math.max(votes.length,1)) * 100);
+            sbody.innerHTML = _buildVoteContent(votes, consensusPct);
+            // Stagger vote chips visible
+            setTimeout(function () {
+                sbody.querySelectorAll('.intel-vote').forEach(function (chip) { chip.classList.add('shown'); });
+            }, 50);
+            // Animate consensus bar
+            setTimeout(function () {
+                var fill = document.getElementById('intel-cons-fill');
+                if (fill) fill.style.width = Math.min(consensusPct, 100) + '%';
+            }, 100);
+            // Recommendation
+            if (data.recommendation) {
+                sbody.innerHTML += '<div class="intel-result" id="intel-recommendation"></div>';
+                _typewriter(document.getElementById('intel-recommendation'), data.recommendation, 12);
+            }
+        } else if (id === 'domain' || id === 'office') {
+            var reply = data.reply || data.result || data.summary || '';
+            if (reply) {
+                sbody.innerHTML = '<div class="intel-result">' + _esc(reply) + '</div>';
+            } else {
+                sbody.innerHTML = '<div style="color:var(--color-text-muted);font-size:.72rem">No output returned</div>';
+            }
+        } else if (id === 'reflection') {
+            var ref = data.reflection || data.reply || data.result || data.summary || '';
+            if (ref) {
+                sbody.innerHTML = '<div class="intel-result" id="intel-reflection"></div>';
+                _typewriter(document.getElementById('intel-reflection'), ref, 10);
+            }
+        }
+
+        // Scroll trace into view
+        var trace = document.getElementById('intel-trace');
+        if (trace) trace.scrollTop = trace.scrollHeight;
+    }
+
+    function _typewriter(el, text, delay) {
+        if (!el) return;
+        el.textContent = '';
+        var i = 0;
+        var t = setInterval(function () {
+            el.textContent += text[i];
+            i++;
+            if (i >= text.length) clearInterval(t);
+            var trace = document.getElementById('intel-trace');
+            if (trace) trace.scrollTop = trace.scrollHeight;
+        }, delay || 12);
+    }
+
+    function _esc(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function _runPreset(id) {
+        if (_running) return;
+        var preset = PRESETS.find(function (p) { return p.id === id; });
+        if (!preset) return;
+
+        _running = true;
+        _currentPreset = id;
+
+        // Visual: mark active card, disable others
+        PRESETS.forEach(function (p) {
+            var card = document.getElementById('intel-card-' + p.id);
+            if (card) { card.classList.toggle('active', p.id === id); card.classList.toggle('running', p.id !== id); }
+        });
+
+        var statusEl = document.getElementById('intel-trace-status');
+        if (statusEl) statusEl.innerHTML = '<span class="intel-spinner"></span>';
+
+        _resetTrace();
+        // Mark council as active immediately
+        _setStageStatus('council', 'active');
+
+        var headers = Object.assign({ 'Content-Type': 'application/json' }, _h());
+
+        fetch('/api/civilization/council/run', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ question: preset.q })
+        }).then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            var reader = resp.body.getReader();
+            var decoder = new TextDecoder();
+            var buf = '';
+
+            function _read() {
+                reader.read().then(function (chunk) {
+                    if (chunk.done) { _finish(); return; }
+                    buf += decoder.decode(chunk.value, { stream: true });
+                    var lines = buf.split('\n');
+                    buf = lines.pop(); // keep incomplete line
+                    var pending = {};
+                    lines.forEach(function (line) {
+                        line = line.trim();
+                        if (line.startsWith('event:')) { pending.event = line.slice(6).trim(); }
+                        if (line.startsWith('data:'))  {
+                            var raw = line.slice(5).trim();
+                            if (pending.event === 'stage') _onStage(raw);
+                            pending = {};
+                        }
+                    });
+                    _read();
+                }).catch(function () { _finish(); });
+            }
+            _read();
+        }).catch(function (err) {
+            _setStageStatus('council', 'error');
+            var sbody = document.getElementById('intel-sbody-council');
+            if (sbody) sbody.innerHTML = '<div style="color:var(--color-error,#ef4444);font-size:.78rem">' + _esc(err.message) + '</div>';
+            _finish();
+        });
+
+        function _finish() {
+            _running = false;
+            if (statusEl) statusEl.innerHTML = '';
+            PRESETS.forEach(function (p) {
+                var card = document.getElementById('intel-card-' + p.id);
+                if (card) { card.classList.remove('running'); }
+            });
+        }
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _bootstrap);
+    } else {
+        _bootstrap();
+    }
+
+})();
+</script>
 </body>
 </html>
