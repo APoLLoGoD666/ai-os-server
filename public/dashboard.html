@@ -29707,7 +29707,7 @@ var TOOLS=[{"name":"Zapier","slug":"zapier","color":"FF4A00","cat":"Automation",
             if (action === 'save')       _tlSave(slug);
             if (action === 'disconnect') _tlDisconnect(slug);
             if (action === 'test')       _tlTest(slug);
-            if (action === 'oauth')      window.location.href = '/api/oauth/' + slug + '/start';
+            if (action === 'oauth')      _tlMsg('OAuth connection coming soon — this will be available in a future update.', null);
         });
         modal.addEventListener('click', function(e){ if (e.target === modal) _hideModal(); });
         document.addEventListener('keydown', function(e){ if (e.key === 'Escape') _hideModal(); });

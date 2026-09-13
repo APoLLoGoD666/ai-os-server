@@ -20,6 +20,7 @@ const { DOMAIN_AGENTS: _DOMAIN_AGENTS, invokeDomainAgent: _invokeDomainAgent, de
 const agentLib = require('../../agent-system/agent-library');
 const { handleCommand } = require('../../lib/agent-command-handler');
 const { toolUseInputToCommand: _toolUseInputToCommand } = require('../../lib/agent-execution-utils');
+const _toolRegistry = require('../../lib/tool-registry');
 const { timeAgo } = require('../../lib/chat-context');
 const client = require('../../lib/clients').getAnthropicClient();
 const { HAIKU_MODEL } = require('../../config');
@@ -218,7 +219,7 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
         const { result: streamMsg } = await runtime.execute({
             client, model: HAIKU_MODEL, caller: 'chat_fallback', maxTokens: 500,
             system: getManifest(),
-            tools: TOOLS,
+            tools: [...TOOLS, ...await _toolRegistry.getConnectedSchemas()],
             messages: [{ role: 'user', content: prompt }],
         });
 
@@ -234,6 +235,22 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
                 setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: result.reply }), tags: ['conversation', 'chat', 'tool'], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
                 setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); require('../../lib/memory/skill-memory').recordExecution('chat', 'conversation', true, { source: 'chat' }).catch(() => {}); if ((result.reply||'').split(/\s+/).length > 20) { require('../../lib/memory/consolidation-engine').submit('episode', req.conversationId||`chat-${Date.now()}`, { objective:`Chat: ${userMessage.slice(0,120)}`, success:true, source:'chat_tool', reply:(result.reply||'').slice(0,200) }, 25).catch(()=>{}); require('../../lib/intelligence/knowledge-validator').submitLesson((result.reply||'').slice(0,400), { taskId:req.conversationId, sourceType:'observation' }).catch(()=>{}); } });
                 return res.status(result.ok ? 200 : 404).json(result);
+            } else if (toolUseBlock && toolUseBlock.name.includes('_')) {
+                const _extT0 = Date.now();
+                const _extName = toolUseBlock.name;
+                const _extParams = toolUseBlock.input || {};
+                let _extResult = null, _extErr = null;
+                try {
+                    _extResult = await _toolRegistry.execute(_extName, _extParams);
+                } catch (err) {
+                    _extErr = err.message;
+                }
+                const _extMs = Date.now() - _extT0;
+                const [_extSlug, ..._extAP] = _extName.split('_');
+                const { getSupabaseClient: _extSb } = require('../../lib/clients');
+                _extSb().from('tool_action_logs').insert({ slug: _extSlug, action: _extAP.join('_'), params: _extParams, result: _extErr ? null : _extResult, error: _extErr || null, duration_ms: _extMs, triggered_by: 'chat', human_id: req.identity?.humanId || null }).catch(() => {});
+                if (_extErr) return res.status(200).json({ ok: true, reply: `Tool error: ${_extErr}` });
+                return res.status(200).json({ ok: true, reply: JSON.stringify(_extResult) });
             }
         }
 

@@ -388,6 +388,7 @@ app.use(require('./src/routes/wiki'));
 app.use(require('./src/routes/admin'));
 app.use(require('./src/routes/setup'));
 app.use(require('./src/routes/governance-inline'));
+app.use(require('./src/routes/tool-actions'));
 app.use(require('./src/routes/chat'));
 
 app.use((req, res) => { const { CODES } = require('./lib/api-error'); res.status(404).json({ ok: false, error: CODES.NOT_FOUND, message: 'Route not found.', requestId: req.requestId || '' }); });
