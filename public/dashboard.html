@@ -22965,6 +22965,7 @@ window.apexFileDropHandler = function(e){
     var _tfTimer = null;
     window._actnCloseTaskFeed = function() {
         clearInterval(_tfTimer); _tfTimer = null;
+        if (window._daFeedTimer) { clearInterval(window._daFeedTimer); window._daFeedTimer = null; }
         var p = document.getElementById('taskFeedPanel'), o = document.getElementById('taskFeedOverlay');
         p && p.classList.remove('open'); o && o.classList.remove('open');
     };
@@ -22972,7 +22973,7 @@ window.apexFileDropHandler = function(e){
         var p = document.getElementById('taskFeedPanel'), o = document.getElementById('taskFeedOverlay');
         var gotoBtn = document.getElementById('tfGotoBtn');
         if (!p) return;
-        if (gotoBtn) gotoBtn.onclick = function() { _actnGotoDomainAgent(dSlug); _actnCloseTaskFeed(); };
+        if (gotoBtn) { gotoBtn.style.display = ''; gotoBtn.onclick = function() { _actnGotoDomainAgent(dSlug); _actnCloseTaskFeed(); }; }
         p.classList.add('open'); o && o.classList.add('open');
         _tfRefresh(taskId, dSlug);
         clearInterval(_tfTimer);
@@ -25766,6 +25767,7 @@ window.apexFileDropHandler = function(e){
                     '<span style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.04em;color:'+(isActive?'#34d399':'#27272a')+'">'+(isActive?'ACTIVE':'READY')+'</span>'+
                 '</div>';
             card.addEventListener('click', function(){ daSelectAgent(d.slug); });
+            card.addEventListener('dblclick', function(e){ e.stopPropagation(); _daShowAgentFeed(d.slug, d.name, d.color); });
             canvas.appendChild(card);
         });
         var brain = document.createElement('div');
@@ -25874,6 +25876,52 @@ window.apexFileDropHandler = function(e){
         daRenderCanvas();
     }
     window.daSelectAgent = daSelectAgent;
+
+    // Domain agent live feed (double-click a card)
+    function _daEsc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    window._daFeedTimer = null;
+    function _daShowAgentFeed(slug, agentName, color) {
+        if (window._actnCloseTaskFeed) window._actnCloseTaskFeed();
+        var p = document.getElementById('taskFeedPanel');
+        var o = document.getElementById('taskFeedOverlay');
+        var titleEl = document.getElementById('tfTitle');
+        var agentBar = document.getElementById('tfAgentBar');
+        var gotoBtn = document.getElementById('tfGotoBtn');
+        if (!p) return;
+        if (titleEl) titleEl.textContent = (agentName || (slug.charAt(0).toUpperCase()+slug.slice(1))) + ' — Activity';
+        if (agentBar) agentBar.innerHTML = '<span style="color:'+(color||'#7dd3fc')+'">' + slug.toUpperCase() + ' DOMAIN AGENT</span><span style="color:#555">double-click any card to refresh</span>';
+        if (gotoBtn) gotoBtn.style.display = 'none';
+        p.classList.add('open'); o && o.classList.add('open');
+        _daRefreshAgentFeed(slug, agentName);
+        window._daFeedTimer = setInterval(function() { _daRefreshAgentFeed(slug, agentName); }, 5000);
+    }
+    function _daRefreshAgentFeed(slug, agentName) {
+        fetch('/api/agents/activity?limit=50', { headers: {'x-app-key': window._appKey||''} })
+            .then(function(r){ return r.json(); })
+            .then(function(data) {
+                var runs = data.runs || [];
+                var feed = document.getElementById('tfFeed');
+                if (!feed) return;
+                var slugRoot = slug.split('-')[0];
+                var matched = runs.filter(function(r) {
+                    var n = (r.agent_name||'').toLowerCase().replace(/\s+/g,'-');
+                    return n === slug || n.indexOf(slug+'-') === 0 || n.indexOf(slugRoot+'-') === 0 || n === slugRoot;
+                });
+                if (!matched.length) {
+                    feed.innerHTML = '<div class="tf-empty">' + _daEsc(agentName||slug) + ' hasn\'t run recently — activity will appear here when it does.</div>';
+                    return;
+                }
+                feed.innerHTML = matched.slice(0, 15).map(function(r) {
+                    var text = (r.agent_summary || r.task_description || 'Ran a task').replace(/\n/g,' ').trim();
+                    var cls = r.success === false ? 'tf-err' : 'tf-ok';
+                    var ago = window._timeAgo ? window._timeAgo(r.created_at) : '';
+                    return '<div class="tf-row ' + cls + '">' +
+                        '<span class="tf-row-time">' + ago + '</span>' +
+                        '<span class="tf-row-text">' + _daEsc(text.slice(0,180)) + '</span>' +
+                    '</div>';
+                }).join('');
+            }).catch(function(){});
+    }
 
     window.daSend = function() {
         var inp = document.getElementById('daTaskInp');
