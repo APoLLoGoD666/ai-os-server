@@ -27123,6 +27123,592 @@ window.apexFileDropHandler = function(e){
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════
+     APEX TOPOLOGY — Living system map (test page)
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+#page-test.active {
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden;
+    background: #09090b;
+}
+.tp-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    flex-shrink: 0;
+}
+.tp-bar-title {
+    font: 700 11px/1 'JetBrains Mono', monospace;
+    letter-spacing: 0.12em;
+    color: rgba(232,232,232,0.45);
+}
+.tp-bar-title b { color: #9d90f5; }
+.tp-live {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: 700 9px/1 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    color: #22c55e;
+}
+.tp-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: tp-blink 2.4s ease-in-out infinite;
+}
+/* Outer viewport */
+.tp-outer {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+}
+.tp-outer:active { cursor: grabbing; }
+/* The transformable stage */
+.tp-stage {
+    position: absolute;
+    inset: 0;
+    transform-origin: center center;
+    transition: transform 320ms cubic-bezier(0,0,0.2,1);
+    will-change: transform;
+}
+/* SVG for connections */
+.tp-svg {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+    overflow: visible;
+}
+/* Node container */
+.tp-nodes {
+    position: absolute;
+    inset: 0;
+}
+/* Every node */
+.tp-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    animation: tp-enter 360ms ease both;
+}
+.tp-node:focus { outline: none; }
+/* Node inner card */
+.tp-nd {
+    background: #141418;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 10px 18px;
+    text-align: center;
+    white-space: nowrap;
+    position: relative;
+    transition: box-shadow 200ms, border-color 200ms, transform 180ms;
+}
+.tp-nd:hover {
+    transform: translateY(-2px);
+}
+.tp-nd-lbl {
+    font: 700 10px/1 'JetBrains Mono', monospace;
+    letter-spacing: 0.07em;
+    color: rgba(232,232,232,0.85);
+}
+.tp-nd-sub {
+    font: 400 8px/1 'JetBrains Mono', monospace;
+    letter-spacing: 0.04em;
+    color: rgba(232,232,232,0.28);
+    margin-top: 4px;
+}
+/* Council */
+.tp-node--council .tp-nd {
+    min-width: 152px;
+    padding: 14px 24px;
+    border-radius: 12px;
+    background: #12101c;
+    border-color: rgba(124,108,242,0.28);
+    box-shadow: 0 0 32px rgba(124,108,242,0.10), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.tp-node--council .tp-nd-lbl { color: #c4b8ff; font-size: 12px; }
+/* Actions */
+.tp-node--actions .tp-nd {
+    min-width: 110px;
+    background: #0f1a12;
+    border-color: rgba(52,211,153,0.2);
+}
+.tp-node--actions .tp-nd-lbl { color: #86efac; }
+/* Domain */
+.tp-node--domain .tp-nd {
+    min-width: 76px;
+    padding: 8px 14px;
+    cursor: pointer;
+}
+.tp-node--domain .tp-nd:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+}
+/* Office agents (tier 3) */
+.tp-node--office .tp-nd {
+    min-width: 62px;
+    padding: 6px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.tp-node--office .tp-nd-lbl { font-size: 9px; }
+/* Results */
+.tp-node--results .tp-nd {
+    min-width: 110px;
+    padding: 8px 20px;
+    background: #1a1508;
+    border-color: rgba(245,158,11,0.2);
+}
+.tp-node--results .tp-nd-lbl { color: #fcd34d; }
+/* Badge */
+.tp-badge {
+    position: absolute;
+    top: -7px; right: -7px;
+    min-width: 18px; height: 18px;
+    border-radius: 9px;
+    font: 700 9px/18px 'JetBrains Mono', monospace;
+    color: #0d0d0d;
+    text-align: center;
+    padding: 0 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+/* Expand chevron */
+.tp-chevron {
+    width: 14px; height: 14px;
+    border-radius: 7px;
+    margin: 5px auto 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 700;
+    color: rgba(0,0,0,0.65);
+    transition: opacity 180ms, transform 220ms;
+}
+/* HUD controls */
+.tp-hud {
+    position: absolute;
+    bottom: 18px; right: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 10;
+}
+.tp-hud-btn {
+    width: 32px; height: 32px;
+    background: rgba(18,18,22,0.92);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 6px;
+    color: rgba(232,232,232,0.45);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 300;
+    transition: background 150ms, color 150ms;
+}
+.tp-hud-btn:hover { background: rgba(124,108,242,0.18); color: #c4b8ff; }
+.tp-hud-btn:focus-visible { outline: 2px solid #7c6cf2; }
+/* Legend */
+.tp-legend {
+    position: absolute;
+    bottom: 18px; left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font: 400 8px/1.4 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+    color: rgba(232,232,232,0.28);
+    pointer-events: none;
+    z-index: 10;
+}
+.tp-legend-row { display: flex; align-items: center; gap: 6px; }
+.tp-legend-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+/* LOD: low detail at small zoom */
+.tp-lod-low .tp-nd-sub   { display: none !important; }
+.tp-lod-low .tp-nd       { padding: 4px 8px !important; min-width: 0 !important; border-radius: 4px !important; }
+.tp-lod-low .tp-badge    { display: none !important; }
+.tp-lod-low .tp-chevron  { display: none !important; }
+/* LOD: high detail at large zoom */
+.tp-lod-high .tp-nd      { padding: 16px 24px !important; }
+.tp-lod-high .tp-nd-lbl  { font-size: 11px !important; }
+/* SVG edge classes */
+.tp-edge { stroke-opacity: 0.22; }
+.tp-edge-active { stroke-opacity: 0.75; }
+.tp-edge-flow { animation: tp-dash 2s linear infinite; }
+/* Animations */
+@keyframes tp-dash  { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -36; } }
+@keyframes tp-enter { from { opacity: 0; transform: translate(-50%, calc(-50% - 6px)) scale(0.94); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes tp-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) {
+    .tp-edge-flow { animation: none; }
+    .tp-live-dot  { animation: none; }
+    .tp-stage     { transition: none; }
+    .tp-node      { animation: none; }
+    .tp-nd        { transition: none; }
+}
+</style>
+
+<script>
+/* APEX TOPOLOGY — Living system map */
+(function () {
+    'use strict';
+
+    // ── Tree data ───────────────────────────────────────────────────────────
+    // Tier y-positions as % of canvas height:
+    //   collapsed: no tier-3 → tiers 0/1/2/4 get more vertical breathing room
+    //   expanded:  tier-3 nodes visible → compress to fit
+    var _T = {
+        collapsed: [0.09, 0.26, 0.52, null, 0.82],
+        expanded:  [0.07, 0.21, 0.40, 0.62, 0.84],
+    };
+
+    var NODES = [
+        { id:'council',      label:'SUPREME COUNCIL', sub:'7 EXECUTIVES',      tier:0, color:'#7c6cf2', type:'council',  nav:'council' },
+        { id:'actions',      label:'ACTIONS',          sub:'PENDING APPROVALS', tier:1, color:'#34d399', type:'actions',  nav:'actions' },
+        { id:'dom-finance',  label:'FINANCE',    sub:'DOMAIN', tier:2, color:'#6366f1', slug:'finance',    nav:'domain-agents' },
+        { id:'dom-mktg',     label:'MARKETING',  sub:'DOMAIN', tier:2, color:'#a78bfa', slug:'marketing',  nav:'domain-agents' },
+        { id:'dom-ops',      label:'OPERATIONS', sub:'DOMAIN', tier:2, color:'#fbbf24', slug:'operations', nav:'domain-agents' },
+        { id:'dom-comms',    label:'COMMS',      sub:'DOMAIN', tier:2, color:'#2dd4bf', slug:'comms',      nav:'domain-agents' },
+        { id:'dom-strat',    label:'STRATEGY',   sub:'DOMAIN', tier:2, color:'#f97316', slug:'strategy',   nav:'domain-agents' },
+        { id:'dom-sys',      label:'SYSTEM',     sub:'DOMAIN', tier:2, color:'#06b6d4', slug:'system',     nav:'domain-agents' },
+        // Tier 3 — revealed when parent domain expanded
+        { id:'off-finance',  label:'FINANCE OFFICE',   sub:'AGENTS', tier:3, color:'#6366f1', parent:'dom-finance', nav:'agents' },
+        { id:'off-mktg',     label:'MARKETING OFFICE', sub:'AGENTS', tier:3, color:'#a78bfa', parent:'dom-mktg',    nav:'agents' },
+        { id:'off-ops',      label:'OPS OFFICE',       sub:'AGENTS', tier:3, color:'#fbbf24', parent:'dom-ops',     nav:'agents' },
+        { id:'off-sales',    label:'SALES OFFICE',     sub:'AGENTS', tier:3, color:'#34d399', parent:'dom-ops',     nav:'agents' },
+        { id:'off-delivery', label:'DELIVERY',         sub:'AGENTS', tier:3, color:'#38bdf8', parent:'dom-ops',     nav:'agents' },
+        { id:'off-comms',    label:'COMMS OFFICE',     sub:'AGENTS', tier:3, color:'#2dd4bf', parent:'dom-comms',   nav:'agents' },
+        // Tier 4
+        { id:'results',      label:'RESULTS', sub:'EXECUTION OUTPUT', tier:4, color:'#f59e0b', type:'results' },
+    ];
+
+    var EDGES = [
+        { a:'council',     b:'actions' },
+        { a:'actions',     b:'dom-finance' },
+        { a:'actions',     b:'dom-mktg' },
+        { a:'actions',     b:'dom-ops' },
+        { a:'actions',     b:'dom-comms' },
+        { a:'actions',     b:'dom-strat' },
+        { a:'actions',     b:'dom-sys' },
+        // Domain → office (conditional on expand)
+        { a:'dom-finance', b:'off-finance',  cond:'dom-finance' },
+        { a:'dom-mktg',    b:'off-mktg',     cond:'dom-mktg' },
+        { a:'dom-ops',     b:'off-ops',      cond:'dom-ops' },
+        { a:'dom-ops',     b:'off-sales',    cond:'dom-ops' },
+        { a:'dom-ops',     b:'off-delivery', cond:'dom-ops' },
+        { a:'dom-comms',   b:'off-comms',    cond:'dom-comms' },
+        // Office → results
+        { a:'off-finance',  b:'results', cond:'dom-finance' },
+        { a:'off-mktg',     b:'results', cond:'dom-mktg' },
+        { a:'off-ops',      b:'results', cond:'dom-ops' },
+        { a:'off-comms',    b:'results', cond:'dom-comms' },
+        // Direct domain → results (non-office domains)
+        { a:'dom-strat',   b:'results' },
+        { a:'dom-sys',     b:'results' },
+    ];
+
+    // ── State ───────────────────────────────────────────────────────────────
+    var _scale    = 1;
+    var _expanded = {};      // { domainId: bool }
+    var _active   = new Set(); // active edge keys 'a->b'
+    var _badges   = {};      // { nodeId: number | null }
+
+    // ── Bootstrap: create page + nav ────────────────────────────────────────
+    function _bootstrap() {
+        var pw = document.getElementById('pageWrap');
+        if (pw && !document.getElementById('page-test')) {
+            var pg = document.createElement('div');
+            pg.className = 'page';
+            pg.id = 'page-test';
+            pg.innerHTML =
+                '<div class="tp-bar">' +
+                    '<span class="tp-bar-title">APEX <b>TOPOLOGY</b></span>' +
+                    '<div class="tp-live"><div class="tp-live-dot"></div>LIVE</div>' +
+                '</div>' +
+                '<div class="tp-outer" id="tpOuter">' +
+                    '<div class="tp-stage" id="tpStage">' +
+                        '<svg class="tp-svg" id="tpSvg"></svg>' +
+                        '<div class="tp-nodes" id="tpNodes"></div>' +
+                    '</div>' +
+                    '<div class="tp-hud">' +
+                        '<button class="tp-hud-btn" onclick="window._tpZoom(0.15)" aria-label="Zoom in" title="Zoom in">+</button>' +
+                        '<button class="tp-hud-btn" onclick="window._tpZoom(-0.15)" aria-label="Zoom out" title="Zoom out">−</button>' +
+                        '<button class="tp-hud-btn" onclick="window._tpReset()" aria-label="Reset view" title="Reset" style="font-size:13px">⊙</button>' +
+                    '</div>' +
+                    '<div class="tp-legend">' +
+                        '<div class="tp-legend-row"><div class="tp-legend-dot" style="background:#7c6cf2"></div>Council</div>' +
+                        '<div class="tp-legend-row"><div class="tp-legend-dot" style="background:#34d399"></div>Actions</div>' +
+                        '<div class="tp-legend-row"><div class="tp-legend-dot" style="background:rgba(255,255,255,0.3)"></div>Domain — tap to expand</div>' +
+                    '</div>' +
+                '</div>';
+            pw.appendChild(pg);
+        }
+
+        // Nav button
+        var nav = document.getElementById('apexSideNav');
+        if (nav && !document.getElementById('nav-test')) {
+            var btn  = document.createElement('button');
+            btn.className = 'nav-btn';
+            btn.id = 'nav-test';
+            btn.innerHTML = '<span class="nav-icon" style="font-size:15px">⬡</span><span class="nav-label">Map</span>';
+            btn.addEventListener('click', function () { window.switchPage('test'); });
+            var settingsBtn = document.getElementById('nav-settings');
+            if (settingsBtn) nav.insertBefore(btn, settingsBtn);
+            else nav.appendChild(btn);
+        }
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+    function _n(id) { return NODES.find(function (x) { return x.id === id; }); }
+
+    function _hasTier3() { return Object.keys(_expanded).some(function (k) { return _expanded[k]; }); }
+
+    function _visibleNodes() {
+        var h3 = _hasTier3();
+        return NODES.filter(function (n) {
+            if (n.tier === 3) return n.parent && !!_expanded[n.parent];
+            return true; // 0,1,2,4 always shown
+        });
+    }
+
+    // ── Position calculation ─────────────────────────────────────────────────
+    function _calcPos(W, H) {
+        var tKey = _hasTier3() ? 'expanded' : 'collapsed';
+        var tiers = _T[tKey];
+        var byTier = {};
+        _visibleNodes().forEach(function (n) {
+            if (!byTier[n.tier]) byTier[n.tier] = [];
+            byTier[n.tier].push(n);
+        });
+        var pos = {};
+        Object.keys(byTier).forEach(function (t) {
+            var nodes = byTier[t];
+            var y = (tiers[t] || 0.5) * H;
+            var count = nodes.length;
+            nodes.forEach(function (n, i) {
+                pos[n.id] = { x: W * (i + 1) / (count + 1), y: y };
+            });
+        });
+        return pos;
+    }
+
+    // ── Render ───────────────────────────────────────────────────────────────
+    function _render() {
+        var outer = document.getElementById('tpOuter');
+        if (!outer) return;
+        var W = outer.clientWidth  || 800;
+        var H = outer.clientHeight || 500;
+        if (W < 20 || H < 20) return;
+
+        var svg    = document.getElementById('tpSvg');
+        var nodesC = document.getElementById('tpNodes');
+        if (!svg || !nodesC) return;
+
+        svg.setAttribute('width',   W);
+        svg.setAttribute('height',  H);
+        svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+        var pos = _calcPos(W, H);
+
+        // ── Edges ──────────────────────────────────────────────────────────
+        var svgInner = '<defs><marker id="tpArr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">' +
+            '<path d="M0,0.5 L0,5.5 L6.5,3 z" fill="rgba(255,255,255,0.14)"/></marker></defs>';
+
+        EDGES.forEach(function (e) {
+            if (e.cond && !_expanded[e.cond]) return;
+            var fp = pos[e.a], tp = pos[e.b];
+            if (!fp || !tp) return;
+            var fn = _n(e.a), tn = _n(e.b);
+            var fc = (fn && fn.color) || '#555';
+            var tc = (tn && tn.color) || '#555';
+            var isActive = _active.has(e.a + '->' + e.b);
+
+            var x1 = fp.x, y1 = fp.y + 18, x2 = tp.x, y2 = tp.y - 18;
+            var cy = (y1 + y2) / 2;
+            var d  = 'M' + x1 + ',' + y1 + ' C' + x1 + ',' + cy + ' ' + x2 + ',' + cy + ' ' + x2 + ',' + y2;
+            var gid = 'tg-' + e.a + '-' + e.b;
+
+            // Per-edge gradient
+            svgInner += '<defs><linearGradient id="' + gid + '" gradientUnits="userSpaceOnUse"' +
+                ' x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '">' +
+                '<stop offset="0%" stop-color="' + fc + '" stop-opacity="' + (isActive ? '0.7' : '0.45') + '"/>' +
+                '<stop offset="100%" stop-color="' + tc + '" stop-opacity="' + (isActive ? '0.7' : '0.45') + '"/>' +
+                '</linearGradient></defs>';
+
+            var cls = isActive ? 'tp-edge tp-edge-active tp-edge-flow' : 'tp-edge';
+            var sw  = isActive ? '1.5' : '1';
+            var da  = isActive ? 'stroke-dasharray="5 10"' : '';
+            svgInner += '<path d="' + d + '" fill="none" stroke="url(#' + gid + ')"' +
+                ' stroke-width="' + sw + '" class="' + cls + '" marker-end="url(#tpArr)" ' + da + '/>';
+        });
+
+        svg.innerHTML = svgInner;
+
+        // ── Nodes ──────────────────────────────────────────────────────────
+        var vis = _visibleNodes();
+        var nodesHtml = '';
+        vis.forEach(function (n, idx) {
+            var p = pos[n.id];
+            if (!p) return;
+
+            var typeClass = n.type || (n.tier === 2 ? 'domain' : n.tier === 3 ? 'office' : '');
+            var isExp = n.tier === 2 && !!_expanded[n.id];
+            var bdg = _badges[n.id] ? '<div class="tp-badge" style="background:' + n.color + '">' + _badges[n.id] + '</div>' : '';
+            var chevron = (n.tier === 2)
+                ? '<div class="tp-chevron" style="background:' + n.color + ';opacity:' + (isExp ? '1' : '0.45') + ';transform:rotate(' + (isExp ? '180' : '0') + 'deg)">▼</div>'
+                : '';
+            var expandAttr = n.tier === 2 ? ' data-tp-expand="' + n.id + '"' : '';
+            var navAttr    = n.nav && n.tier !== 2 ? ' data-tp-nav="' + n.nav + '"' : '';
+            var tab = (n.tier <= 1 || n.tier === 3 || n.tier === 4) ? '0' : '0';
+            var role = n.tier === 2 ? ' role="button" aria-expanded="' + isExp + '"' : '';
+            var delay = (n.tier * 0.07 + idx * 0.01).toFixed(2);
+
+            nodesHtml += '<div class="tp-node tp-node--' + typeClass + '" id="tpn-' + n.id + '"' +
+                ' style="left:' + p.x + 'px;top:' + p.y + 'px;animation-delay:' + delay + 's"' +
+                ' tabindex="' + tab + '"' + role + expandAttr + navAttr + '>' +
+                '<div class="tp-nd" style="border-color:' + n.color + '22">' +
+                bdg +
+                '<div class="tp-nd-lbl">' + n.label + '</div>' +
+                (n.sub ? '<div class="tp-nd-sub">' + n.sub + '</div>' : '') +
+                chevron +
+                '</div></div>';
+        });
+        nodesC.innerHTML = nodesHtml;
+
+        _applyLOD();
+    }
+
+    // ── LOD ─────────────────────────────────────────────────────────────────
+    function _applyLOD() {
+        var stage = document.getElementById('tpStage');
+        if (!stage) return;
+        stage.classList.toggle('tp-lod-low',  _scale < 0.60);
+        stage.classList.toggle('tp-lod-high', _scale > 1.40);
+    }
+
+    // ── Interaction (delegated) ──────────────────────────────────────────────
+    document.addEventListener('click', function (e) {
+        var expEl = e.target.closest('[data-tp-expand]');
+        if (expEl) {
+            var did = expEl.getAttribute('data-tp-expand');
+            _expanded[did] = !_expanded[did];
+            _render();
+            return;
+        }
+        var navEl = e.target.closest('[data-tp-nav]');
+        if (navEl && window.switchPage) {
+            window.switchPage(navEl.getAttribute('data-tp-nav'));
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        var el = document.activeElement;
+        if (!el) return;
+        var did = el.getAttribute && el.getAttribute('data-tp-expand');
+        if (did) { e.preventDefault(); _expanded[did] = !_expanded[did]; _render(); }
+    });
+
+    // ── Zoom ─────────────────────────────────────────────────────────────────
+    window._tpZoom = function (delta) {
+        _scale = Math.max(0.30, Math.min(2.6, _scale + delta));
+        var st = document.getElementById('tpStage');
+        if (st) st.style.transform = 'scale(' + _scale + ')';
+        _applyLOD();
+    };
+
+    window._tpReset = function () {
+        _scale = 1;
+        _expanded = {};
+        var st = document.getElementById('tpStage');
+        if (st) st.style.transform = 'scale(1)';
+        _render();
+    };
+
+    // Scroll-to-zoom (only when topology page is active)
+    window.addEventListener('wheel', function (e) {
+        if (window.activePage !== 'test') return;
+        if (!e.target.closest('#tpOuter')) return;
+        e.preventDefault();
+        window._tpZoom(e.deltaY > 0 ? -0.07 : 0.07);
+    }, { passive: false });
+
+    // Pinch-to-zoom (touch)
+    var _pinchDist = null;
+    window.addEventListener('touchstart', function (e) {
+        if (window.activePage !== 'test') return;
+        if (e.touches.length === 2) _pinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    }, { passive: true });
+    window.addEventListener('touchmove', function (e) {
+        if (window.activePage !== 'test' || e.touches.length !== 2 || _pinchDist === null) return;
+        var d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        window._tpZoom((d - _pinchDist) * 0.004);
+        _pinchDist = d;
+    }, { passive: true });
+
+    // ── Live data ────────────────────────────────────────────────────────────
+    async function _fetchLive() {
+        try {
+            var r = await fetch('/api/tasks').then(function (x) { return x.json(); });
+            if (r.ok && r.tasks) {
+                var pending = r.tasks.filter(function (t) {
+                    return ['pending','awaiting_approval','approval_required','pending_approval'].indexOf(t.status) !== -1;
+                });
+                _badges['actions'] = pending.length || null;
+
+                _active.clear();
+                var running = r.tasks.filter(function (t) { return t.status === 'in_progress'; });
+                if (running.length) _active.add('council->actions');
+            }
+        } catch {}
+        try {
+            var ar = await fetch('/api/agents/activity?limit=10').then(function (x) { return x.json(); });
+            if (ar.ok && ar.runs) {
+                ar.runs.forEach(function (run) {
+                    if (!run.domain) return;
+                    var domNode = NODES.find(function (n) { return n.tier === 2 && n.slug === run.domain; });
+                    if (domNode) _active.add('actions->' + domNode.id);
+                });
+            }
+        } catch {}
+        if (window.activePage === 'test') _render();
+    }
+
+    // ── switchPage hook ──────────────────────────────────────────────────────
+    var _sp = window.switchPage;
+    if (_sp) {
+        window.switchPage = function (name) {
+            _sp(name);
+            var nb = document.getElementById('nav-test');
+            if (nb) nb.classList.toggle('active', name === 'test');
+            if (name === 'test') {
+                setTimeout(function () { _render(); _fetchLive(); }, 60);
+            }
+        };
+    }
+
+    window.addEventListener('resize', function () {
+        if (window.activePage === 'test') _render();
+    });
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    _bootstrap();
+    setTimeout(function () {
+        if (window.activePage === 'test') { _render(); _fetchLive(); }
+        setInterval(function () { if (window.activePage === 'test') _fetchLive(); }, 30000);
+    }, 300);
+
+    window._tpRender = _render;
+
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
      APEX PHASE 3 — EXECUTION GRAPH UI
      Flow bar · Inspector rail · FOLLOW WORK · Provenance badges
      ═══════════════════════════════════════════════════════════ -->
