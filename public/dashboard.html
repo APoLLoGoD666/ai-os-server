@@ -27623,9 +27623,9 @@ window.apexFileDropHandler = function(e){
         }
     };
 
-    function _accordion(groups) {
+    function _accordion(groups, openAll) {
         return groups.map(function (g, i) {
-            var open = i === 0;
+            var open = openAll || (i === 0);
             return '<div>' +
                 '<div class="kg-group-hd' + (open ? ' open' : '') + '" onclick="window._kgToggleGroup(this)">' +
                     '<div class="kg-group-accent" style="background:' + g.color + '"></div>' +
@@ -27677,18 +27677,18 @@ window.apexFileDropHandler = function(e){
                     return _entityRow(a.name, a.category, _agentState(a.name, a.slug), a.color);
                 });
                 return { name: g.name, color: g.color, rows: rows };
-            }).filter(function (g) { return g.rows.length; }));
+            }).filter(function (g) { return g.rows.length; }), true);
 
         } else if (tierId === 'office') {
             var das2 = (window.DA_AGENTS || []).filter(function (da) { return (da.officeAgents||[]).length; });
             if (!das2.length) { body.innerHTML = '<div class="kg-runs-empty">NO DATA</div>'; return; }
             body.innerHTML = _accordion(das2.map(function (da) {
                 var rows = da.officeAgents.map(function (n) {
-                    var run = _liveRuns.find(function (r) { return r.agent_name === n; });
+                    var run = _liveRuns.find(function (r) { return (r.agent_name || '').toLowerCase() === n.toLowerCase(); });
                     return _entityRow(n, da.name, run ? _runState(run) : 'idle', da.color);
                 });
                 return { name: da.name + ' · ' + da.team.split(' ')[0], color: da.color, rows: rows };
-            }));
+            }), true);
 
         } else if (tierId === 'actions') {
             if (!_liveTasks.length) { body.innerHTML = '<div class="kg-runs-empty">NO TASKS</div>'; return; }
@@ -27893,15 +27893,26 @@ window.apexFileDropHandler = function(e){
     }
 
     // ── Domain agents right panel ─────────────────────────────────────────────
+    // Match a run to a domain agent — domain stored as category (BUSINESS) or slug (business)
+    function _daRunsFor(da) {
+        var slug = da.slug.toLowerCase();
+        var name = da.name.toLowerCase();
+        var cat  = (da.category || '').toLowerCase();
+        return _liveRuns.filter(function (r) {
+            var d  = (r.domain     || '').toLowerCase();
+            var an = (r.agent_name || '').toLowerCase();
+            return d === slug || d === name || d === cat || an === name || an === slug;
+        });
+    }
+
     function _renderDomainRight() {
         var body    = document.getElementById('kg-right-body');
         var statsEl = document.getElementById('kg-right-stats');
         if (!body) return;
-        var daSlugs = (window.DA_AGENTS || []).map(function (a) { return a.slug; });
-        var allRuns = _liveRuns.filter(function (r) { return r.domain && daSlugs.indexOf(r.domain) !== -1; });
+        var allRuns = (window.DA_AGENTS || []).reduce(function (acc, da) { return acc.concat(_daRunsFor(da)); }, []);
         _fillStats(statsEl, allRuns);
         var cards = (window.DA_AGENTS || []).map(function (da) {
-            var runs = _liveRuns.filter(function (r) { return r.domain === da.slug; });
+            var runs = _daRunsFor(da);
             var last = runs[0] ? _ago(runs[0].created_at) : 'No activity';
             return {
                 icon: _DI[da.id] || '◆',
@@ -27921,7 +27932,7 @@ window.apexFileDropHandler = function(e){
         var statsEl = document.getElementById('kg-right-stats');
         if (!body) return;
         var da   = (window.DA_AGENTS || []).find(function (a) { return a.slug === slug; });
-        var runs = _liveRuns.filter(function (r) { return r.domain === slug; }).slice(0, 60);
+        var runs = (da ? _daRunsFor(da) : _liveRuns.filter(function (r) { return (r.domain||'').toLowerCase() === slug; })).slice(0, 60);
         _fillStats(statsEl, runs);
         var col  = da ? da.color : '#7c6cf2';
         var name = da ? (da.name.charAt(0) + da.name.slice(1).toLowerCase()) : slug;
@@ -27935,12 +27946,12 @@ window.apexFileDropHandler = function(e){
         var statsEl = document.getElementById('kg-right-stats');
         if (!body) return;
         var allOA = [];
-        (window.DA_AGENTS || []).forEach(function (da) { allOA = allOA.concat(da.officeAgents || []); });
-        var allRuns = _liveRuns.filter(function (r) { return r.agent_name && allOA.indexOf(r.agent_name) !== -1; });
+        (window.DA_AGENTS || []).forEach(function (da) { allOA = allOA.concat((da.officeAgents || []).map(function(n){ return n.toLowerCase(); })); });
+        var allRuns = _liveRuns.filter(function (r) { return r.agent_name && allOA.indexOf(r.agent_name.toLowerCase()) !== -1; });
         _fillStats(statsEl, allRuns);
         var cards = (window.DA_AGENTS || []).filter(function (da) { return (da.officeAgents || []).length; }).map(function (da) {
-            var names = da.officeAgents || [];
-            var runs  = _liveRuns.filter(function (r) { return r.agent_name && names.indexOf(r.agent_name) !== -1; });
+            var names = (da.officeAgents || []).map(function(n){ return n.toLowerCase(); });
+            var runs  = _liveRuns.filter(function (r) { return r.agent_name && names.indexOf(r.agent_name.toLowerCase()) !== -1; });
             var last  = runs[0] ? _ago(runs[0].created_at) : 'No activity';
             return {
                 icon: _DI[da.id] || '◆',
@@ -27960,8 +27971,8 @@ window.apexFileDropHandler = function(e){
         var statsEl = document.getElementById('kg-right-stats');
         if (!body) return;
         var da    = (window.DA_AGENTS || []).find(function (a) { return a.id === daId; });
-        var names = da ? (da.officeAgents || []) : [];
-        var runs  = _liveRuns.filter(function (r) { return r.agent_name && names.indexOf(r.agent_name) !== -1; }).slice(0, 60);
+        var names = (da ? (da.officeAgents || []) : []).map(function(n){ return n.toLowerCase(); });
+        var runs  = _liveRuns.filter(function (r) { return r.agent_name && names.indexOf(r.agent_name.toLowerCase()) !== -1; }).slice(0, 60);
         _fillStats(statsEl, runs);
         var col  = da ? da.color : '#7c6cf2';
         var name = da ? (da.name.charAt(0) + da.name.slice(1).toLowerCase()) : daId;
@@ -28021,7 +28032,11 @@ window.apexFileDropHandler = function(e){
         return age < 300 ? 'working' : age < 3600 ? 'ready' : 'idle';
     }
     function _agentState(name, category) {
-        var recent = _liveRuns.find(function (r) { return r.agent_name === name || (r.domain||'').toLowerCase() === (category||'').toLowerCase(); });
+        var nl = (name||'').toLowerCase(), cl = (category||'').toLowerCase();
+        var recent = _liveRuns.find(function (r) {
+            var an = (r.agent_name||'').toLowerCase(), d = (r.domain||'').toLowerCase();
+            return an === nl || d === cl || d === nl;
+        });
         if (!recent) return 'idle';
         var age = (Date.now() - new Date(recent.created_at).getTime()) / 1000;
         return age < 120 ? 'working' : age < 3600 ? 'ready' : 'idle';
