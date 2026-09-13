@@ -10,6 +10,71 @@ const { getSupabaseClient } = require('../lib/clients');
 const { Registry } = require('../lib/registry/kernel');
 
 function _sb() { return getSupabaseClient(); }
+
+// Fetch live Supabase data for a domain slug so council-dispatched agents get ground truth
+async function _fetchLiveData(slug) {
+  const sb = _sb();
+  const lines = [];
+  try {
+    if (slug === 'finance') {
+      const [txRes, budRes, invRes] = await Promise.all([
+        sb.from('apex_transactions').select('created_at,description,amount,type,category').order('created_at', { ascending: false }).limit(25),
+        sb.from('apex_budgets').select('category,amount,period').limit(50),
+        sb.from('apex_invoices').select('title,amount,status,due_date,client').in('status', ['unpaid','overdue','pending']).limit(10),
+      ]);
+      lines.push('=== LIVE FINANCE DATA ===');
+      if (budRes.data?.length) {
+        lines.push('\nBUDGETS:');
+        budRes.data.forEach(b => lines.push(`  ${b.category}: £${b.amount} (${b.period || 'monthly'})`));
+      }
+      if (txRes.data?.length) {
+        const income  = txRes.data.filter(t => t.type === 'income').reduce((s, t) => s + (t.amount || 0), 0);
+        const expense = txRes.data.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount || 0), 0);
+        lines.push(`\nRECENT TRANSACTIONS (last ${txRes.data.length}):`);
+        lines.push(`  Total income: £${income.toFixed(2)} | Total expense: £${expense.toFixed(2)} | Net: £${(income - expense).toFixed(2)}`);
+        txRes.data.slice(0, 15).forEach(t => lines.push(`  [${(t.created_at || '').slice(0,10)}] ${t.type?.toUpperCase()} £${t.amount} — ${t.description || '?'} (${t.category || '?'})`));
+      } else {
+        lines.push('\nTRANSACTIONS: No records found.');
+      }
+      if (invRes.data?.length) {
+        lines.push('\nOPEN INVOICES:');
+        invRes.data.forEach(i => lines.push(`  ${i.title || 'Invoice'} — £${i.amount} | ${i.status?.toUpperCase()} | Due: ${i.due_date || 'n/a'} | Client: ${i.client || '?'}`));
+      }
+      lines.push('=== END FINANCE DATA ===');
+
+    } else if (slug === 'system') {
+      const [runsRes, tasksRes] = await Promise.all([
+        sb.from('apex_agent_runs').select('agent_name,success,duration_ms,cost_usd,created_at').order('created_at', { ascending: false }).limit(15),
+        sb.from('apex_tasks').select('status').limit(200),
+      ]);
+      lines.push('=== LIVE SYSTEM DATA ===');
+      if (runsRes.data?.length) {
+        const ok = runsRes.data.filter(r => r.success).length;
+        lines.push(`RECENT AGENT RUNS (${runsRes.data.length}): ${ok} success / ${runsRes.data.length - ok} failed`);
+        runsRes.data.slice(0, 10).forEach(r => lines.push(`  [${(r.created_at || '').slice(0,10)}] ${r.agent_name || '?'} — ${r.success ? '✓' : '✗'} ${r.duration_ms || '?'}ms`));
+      }
+      if (tasksRes.data?.length) {
+        const counts = tasksRes.data.reduce((a, t) => { a[t.status] = (a[t.status] || 0) + 1; return a; }, {});
+        lines.push(`TASKS: ${JSON.stringify(counts)}`);
+      }
+      lines.push(`SERVER: uptime=${Math.round(process.uptime())}s rss=${Math.round(process.memoryUsage().rss / 1048576)}MB`);
+      lines.push('=== END SYSTEM DATA ===');
+
+    } else if (slug === 'business') {
+      const { data: tasks } = await sb.from('apex_tasks').select('title,status,created_at').order('created_at', { ascending: false }).limit(20);
+      lines.push('=== LIVE BUSINESS DATA ===');
+      if (tasks?.length) {
+        lines.push(`RECENT TASKS (${tasks.length}):`);
+        tasks.forEach(t => lines.push(`  [${t.status?.toUpperCase()}] ${t.title || '?'}`));
+      }
+      lines.push('=== END BUSINESS DATA ===');
+    }
+  } catch (e) {
+    lines.push(`[Live data unavailable: ${e.message}]`);
+  }
+  return lines.join('\n');
+}
+
 function _health()    { return require('../lib/intelligence/civilization-health-engine'); }
 function _gig()       { return require('../lib/intelligence/global-intelligence-engine'); }
 function _opp()       { return require('../lib/intelligence/opportunity-engine'); }
@@ -202,8 +267,15 @@ router.post('/civilization/council/run', _auth, async (req, res) => {
     if (dispatch && dispatch.slug && dispatch.action) {
       emit('stage', { id: 'domain', label: `${dispatch.slug.toUpperCase()} agent processing…`, status: 'active', data: { slug: dispatch.slug } });
 
+      // Pre-fetch live Supabase data for the dispatched domain so agents work
+      // from ground truth rather than hallucinating from system-prompt defaults
+      const liveData = await _fetchLiveData(dispatch.slug).catch(() => '');
+      const actionWithData = liveData
+        ? `${liveData}\n\n---\nYour task: ${dispatch.action}`
+        : dispatch.action;
+
       const domainResult = await require('../agent-system/domain-agents').invokeDomainAgent(
-        dispatch.slug, dispatch.action, { council: false }
+        dispatch.slug, actionWithData, { council: false }
       );
       domainReply = domainResult.reply || '';
 
