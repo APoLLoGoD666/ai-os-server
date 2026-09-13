@@ -7508,6 +7508,27 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
 .more-sheet-btn.active { background: rgba(0,212,255,0.08); border-color: rgba(0,212,255,0.3); color: #00d4ff; }
 .more-sheet-icon { font-size: 18px; line-height: 1; }
 .more-sheet-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+/* Task live feed drawer */
+#taskFeedOverlay{display:none;position:fixed;inset:0;z-index:2099;background:rgba(0,0,0,0.55)}
+#taskFeedOverlay.open{display:block}
+#taskFeedPanel{display:none;position:fixed;left:0;right:0;bottom:0;z-index:2100;background:#111;border-radius:20px 20px 0 0;border-top:1px solid rgba(255,255,255,0.08);box-shadow:0 -8px 40px rgba(0,0,0,0.7);max-height:72vh;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+#taskFeedPanel.open{display:flex}
+.tf-header{display:flex;align-items:center;gap:10px;padding:16px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0}
+.tf-live-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;animation:tfpulse 1.5s ease-in-out infinite}
+@keyframes tfpulse{0%,100%{opacity:1}50%{opacity:0.2}}
+.tf-title{font-size:13px;font-weight:600;color:#e8e8e8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tf-goto{font-size:10px;font-weight:700;letter-spacing:.08em;color:#00d4ff;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);border-radius:6px;padding:5px 10px;cursor:pointer;flex-shrink:0}
+.tf-close{width:28px;height:28px;border-radius:50%;background:#222;border:none;cursor:pointer;color:#666;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1}
+.tf-agent-bar{display:flex;gap:12px;align-items:center;padding:8px 16px;background:rgba(255,255,255,0.02);font-size:10px;font-weight:700;letter-spacing:.1em;color:#555;flex-shrink:0;flex-wrap:wrap;min-height:32px}
+.tf-feed{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:0;min-height:80px}
+.tf-row{display:flex;gap:10px;align-items:baseline;font-size:11px;line-height:1.6;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.tf-row:last-child{border-bottom:none}
+.tf-row-time{color:#444;flex-shrink:0;font-family:monospace;font-size:10px;min-width:54px}
+.tf-row-text{color:#888;flex:1;word-break:break-word}
+.tf-row.tf-ok .tf-row-text{color:#4ade80}
+.tf-row.tf-err .tf-row-text{color:#f87171}
+.tf-row.tf-agent .tf-row-text{color:#7dd3fc}
+.tf-empty{color:#444;font-size:12px;text-align:center;padding:28px 0}
 /* Reduced-motion: overflow sheet fade instead of slide */
 @media (max-width: 899px) and (prefers-reduced-motion: reduce) {
     .more-sheet {
@@ -21421,6 +21442,19 @@ window.apexFileDropHandler = function(e){
     </div>
 </div>
 
+<!-- ══ TASK LIVE FEED DRAWER ══ -->
+<div id="taskFeedOverlay" onclick="_actnCloseTaskFeed && _actnCloseTaskFeed()"></div>
+<div id="taskFeedPanel" role="dialog" aria-modal="true" aria-label="Task live feed">
+    <div class="tf-header">
+        <div class="tf-live-dot" aria-hidden="true"></div>
+        <div class="tf-title" id="tfTitle">Running…</div>
+        <button class="tf-goto" id="tfGotoBtn" aria-label="Go to agent page">GO TO AGENT →</button>
+        <button class="tf-close" onclick="_actnCloseTaskFeed()" aria-label="Close">✕</button>
+    </div>
+    <div class="tf-agent-bar" id="tfAgentBar"></div>
+    <div class="tf-feed" id="tfFeed"><div class="tf-empty">Loading…</div></div>
+</div>
+
 <script>
 /* ── Mobile enhancements: More Sheet, PTT, orb hold, page name ── */
 (function() {
@@ -22909,7 +22943,7 @@ window.apexFileDropHandler = function(e){
                     var officeInfo = (meta.execution && meta.execution.office && meta.execution.office.agent)
                         ? '→ ' + meta.execution.office.agent.replace(/-/g,' ').toUpperCase() : '';
                     return '<div class="actn-card" style="cursor:pointer;border-left:3px solid ' + dotColor + '40"' +
-                        (dSlug ? ' onclick="_actnGotoDomainAgent(\'' + dSlug + '\')" title="View ' + agentLabel + '"' : '') + '>' +
+                        (dSlug ? ' ondblclick="_actnShowTaskFeed(\'' + t.id + '\',\'' + dSlug + '\')" title="Double-click: live feed"' : '') + '>' +
                         '<div class="actn-card-header">' +
                             '<span class="actn-status-dot" aria-hidden="true"></span>' +
                             '<span class="actn-card-title" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + taskTitle + '</span>' +
@@ -22926,6 +22960,73 @@ window.apexFileDropHandler = function(e){
             });
     }
     window._actnLoadInFlight = _actnLoadInFlight;
+
+    // ── Task live feed drawer ──
+    var _tfTimer = null;
+    window._actnCloseTaskFeed = function() {
+        clearInterval(_tfTimer); _tfTimer = null;
+        var p = document.getElementById('taskFeedPanel'), o = document.getElementById('taskFeedOverlay');
+        p && p.classList.remove('open'); o && o.classList.remove('open');
+    };
+    window._actnShowTaskFeed = function(taskId, dSlug) {
+        var p = document.getElementById('taskFeedPanel'), o = document.getElementById('taskFeedOverlay');
+        var gotoBtn = document.getElementById('tfGotoBtn');
+        if (!p) return;
+        if (gotoBtn) gotoBtn.onclick = function() { _actnGotoDomainAgent(dSlug); _actnCloseTaskFeed(); };
+        p.classList.add('open'); o && o.classList.add('open');
+        _tfRefresh(taskId, dSlug);
+        clearInterval(_tfTimer);
+        _tfTimer = setInterval(function() { _tfRefresh(taskId, dSlug); }, 5000);
+    };
+    function _tfRefresh(taskId, dSlug) {
+        Promise.all([
+            fetch('/api/tasks', { headers: _h() }).then(function(r){ return r.json(); }),
+            fetch('/api/agents/activity?limit=50', { headers: _h() }).then(function(r){ return r.json(); })
+        ]).then(function(res) {
+            var allTasks = (res[0].tasks || res[0] || []);
+            var task = Array.isArray(allTasks) ? allTasks.find(function(t){ return t.id === taskId; }) : null;
+            var runs = res[1].runs || [];
+            var titleEl = document.getElementById('tfTitle');
+            var agentBar = document.getElementById('tfAgentBar');
+            var feed = document.getElementById('tfFeed');
+            if (!feed) return;
+            if (task && titleEl) titleEl.textContent = task.title || taskId;
+            if (agentBar && task) {
+                var meta = task.metadata || {};
+                var da = (meta.dispatch && meta.dispatch.slug) ? meta.dispatch.slug.replace(/-/g,' ').toUpperCase() + ' AGENT' : (dSlug ? dSlug.toUpperCase() + ' AGENT' : '');
+                var oa = (meta.execution && meta.execution.office && meta.execution.office.agent) ? '→ ' + meta.execution.office.agent.replace(/-/g,' ').toUpperCase() : '';
+                agentBar.innerHTML = (da ? '<span style="color:#7dd3fc">' + da + '</span>' : '') + (oa ? '<span style="color:#4ade80">' + oa + '</span>' : '');
+            }
+            var entries = [];
+            var slugRoot = dSlug ? dSlug.split('-')[0] : '';
+            runs.forEach(function(r) {
+                var slug = (r.agent_name||'').toLowerCase().replace(/\s+/g,'-');
+                if (dSlug && (slug === dSlug || slug.indexOf(dSlug) === 0 || slug.indexOf(slugRoot) === 0)) {
+                    entries.push({
+                        time: r.created_at,
+                        text: (r.agent_summary || r.task_description || r.agent_name || '').replace(/\n/g,' ').slice(0,140),
+                        cls: r.success === false ? 'tf-err' : 'tf-agent'
+                    });
+                }
+            });
+            if (task) {
+                var m = task.metadata || {};
+                if (m.execution) {
+                    if (m.execution.office && m.execution.office.reply)
+                        entries.push({ time: m.execution.timestamp || task.updated_at, text: m.execution.office.reply.slice(0,200), cls:'tf-ok' });
+                    if (m.execution.reply)
+                        entries.push({ time: m.execution.timestamp || task.updated_at, text: m.execution.reply.slice(0,200), cls:'tf-agent' });
+                }
+            }
+            entries.sort(function(a,b){ return new Date(b.time)-new Date(a.time); });
+            if (!entries.length) { feed.innerHTML = '<div class="tf-empty">Agent initialising — check back shortly</div>'; return; }
+            feed.innerHTML = entries.slice(0,15).map(function(e){
+                return '<div class="tf-row ' + e.cls + '">' +
+                    '<span class="tf-row-time">' + _timeAgo(e.time) + '</span>' +
+                    '<span class="tf-row-text">' + _actnEscape(e.text) + '</span></div>';
+            }).join('');
+        }).catch(function(){});
+    }
 
     // Recent Actions.
     function _actnLoadRecent() {
@@ -25327,15 +25428,19 @@ window.apexFileDropHandler = function(e){
                 else if (st2 === 'pending' || st2 === 'awaiting_approval' || st2 === 'pending_approval') _ds[deptId].next++;
                 else if (st2 === 'done' || st2 === 'completed') _ds[deptId].done++;
             });
-            window._aoDeptStats = _ds;
-            // Update any cards already in the DOM
+            // Merge NEXT from tasks but preserve DOING/DONE from last activity fetch
+            var _existing = window._aoDeptStats || {};
             DEPTS.forEach(function(d) {
-                var s = _ds[d.id];
+                if (!_existing[d.id]) _existing[d.id] = {doing:0, next:0, done:0};
+                _existing[d.id].next = (_ds[d.id] || {}).next || 0;
+            });
+            window._aoDeptStats = _existing;
+            // Update only the NEXT spans — DOING/DONE updated by activity fetch block below
+            DEPTS.forEach(function(d) {
+                var s = _existing[d.id];
                 var card = document.querySelector('.ao-card[data-dept-id="' + d.id + '"]');
                 if (!card) return;
-                var dn = card.querySelector('.ao-doing-num'); if (dn) dn.textContent = s.doing || '—';
-                var nn = card.querySelector('.ao-next-num');  if (nn) nn.textContent = s.next  || '—';
-                var dn2 = card.querySelector('.ao-done-num'); if (dn2) dn2.textContent = s.done || '—';
+                var nn = card.querySelector('.ao-next-num'); if (nn) nn.textContent = s.next || '—';
             });
             aoUpdateCounts();
             aoRenderTasks();

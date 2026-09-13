@@ -118,7 +118,7 @@ router.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
         setImmediate(async () => {
             try {
                 const { invokeDomainAgent } = require('../../agent-system/domain-agents');
-                const result = await invokeDomainAgent(meta.dispatch.slug, meta.dispatch.action, { maxTokens: 1500, humanId: task.human_id || null });
+                const result = await invokeDomainAgent(meta.dispatch.slug, meta.dispatch.action, { maxTokens: 1500, humanId: task.human_id || null, council: true });
                 const delegation = result.delegation || null;
                 let officeResult = null;
                 if (delegation && delegation.slug && delegation.task) {
