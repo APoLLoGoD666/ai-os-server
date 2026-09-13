@@ -27471,29 +27471,6 @@ window.apexFileDropHandler = function(e){
 
     // ── Bootstrap page ────────────────────────────────────────────────────────
 
-    function _showModal(slug) {
-        var tool = TOOLS.find(function(t){ return t.slug === slug; });
-        var meta = TOOL_META[slug] || {};
-        if (!tool) return;
-        var bd = document.getElementById('tl-modal-bd');
-        if (!bd) return;
-        var accentGlow = 'rgba(' + [parseInt(tool.color.slice(0,2),16),parseInt(tool.color.slice(2,4),16),parseInt(tool.color.slice(4,6),16)].join(',') + ',0.9)';
-        bd.style.setProperty('--tl-modal-accent', accentGlow);
-        document.getElementById('tl-m-icon').innerHTML = _iconSvg(tool.path, tool.color);
-        document.getElementById('tl-m-name').textContent = tool.name;
-        document.getElementById('tl-m-cat').textContent  = tool.cat;
-        document.getElementById('tl-m-desc').textContent = meta.use || '';
-        document.getElementById('tl-m-access').textContent = meta.access || '';
-        var capsEl = document.getElementById('tl-m-caps');
-        capsEl.innerHTML = (meta.can||[]).map(function(c){ return '<li>' + _esc(c) + '</li>'; }).join('');
-        bd.classList.add('visible');
-        document.body.style.overflow = 'hidden';
-    }
-    function _hideModal() {
-        var bd = document.getElementById('tl-modal-bd');
-        if (bd) { bd.classList.remove('visible'); }
-        document.body.style.overflow = '';
-    }
     function _bootstrap() {
         var pw = document.getElementById('pageWrap');
         if (!pw || document.getElementById('page-test')) return;
@@ -27531,45 +27508,6 @@ window.apexFileDropHandler = function(e){
             '</div>';
 
         pw.appendChild(pg);
-        // Modal
-        var modal = document.createElement('div');
-        modal.id = 'tl-modal-bd';
-        modal.className = 'tl-modal-backdrop';
-        modal.innerHTML = '<div class="tl-modal">' +
-            '<div class="tl-modal-head">' +
-                '<div class="tl-modal-icon" id="tl-m-icon"></div>' +
-                '<div class="tl-modal-title">' +
-                    '<div class="tl-modal-name" id="tl-m-name"></div>' +
-                    '<div class="tl-modal-cat"  id="tl-m-cat"></div>' +
-                '</div>' +
-                '<button class="tl-modal-close" id="tl-m-close" aria-label="Close">&#x2715;</button>' +
-            '</div>' +
-            '<div class="tl-modal-divider" style="margin-top:18px"></div>' +
-            '<div class="tl-modal-body">' +
-                '<div class="tl-modal-section">' +
-                    '<div class="tl-modal-label">How APEX uses this</div>' +
-                    '<div class="tl-modal-desc" id="tl-m-desc"></div>' +
-                '</div>' +
-                '<div class="tl-modal-section">' +
-                    '<div class="tl-modal-label">Access required</div>' +
-                    '<div class="tl-modal-access" id="tl-m-access"></div>' +
-                '</div>' +
-                '<div class="tl-modal-section">' +
-                    '<div class="tl-modal-label">Capabilities</div>' +
-                    '<ul class="tl-modal-caps" id="tl-m-caps"></ul>' +
-                '</div>' +
-            '</div>' +
-        '</div>';
-        document.body.appendChild(modal);
-        document.getElementById('tl-m-close').addEventListener('click', _hideModal);
-        modal.addEventListener('click', function(e){ if (e.target === modal) _hideModal(); });
-        document.addEventListener('keydown', function(e){ if (e.key === 'Escape') _hideModal(); });
-        // Delegated click on cards
-        pg.addEventListener('click', function(e) {
-            var card = e.target.closest('.tl-card');
-            if (card && card.dataset.slug) _showModal(card.dataset.slug);
-        });
-
         _buildPipeline();
     }
 
@@ -29432,6 +29370,30 @@ var TOOLS=[{"name":"Zapier","slug":"zapier","color":"FF4A00","cat":"Automation",
         wrap.innerHTML = html;
     }
 
+    function _showModal(slug) {
+        var tool = TOOLS.find(function(t){ return t.slug === slug; });
+        var meta = TOOL_META[slug] || {};
+        if (!tool) return;
+        var bd = document.getElementById('tl-modal-bd');
+        if (!bd) return;
+        var r = parseInt(tool.color.slice(0,2),16), g = parseInt(tool.color.slice(2,4),16), b = parseInt(tool.color.slice(4,6),16);
+        bd.style.setProperty('--tl-modal-accent', 'rgba(' + r + ',' + g + ',' + b + ',0.9)');
+        document.getElementById('tl-m-icon').innerHTML = _iconSvg(tool.path, tool.color);
+        document.getElementById('tl-m-name').textContent = tool.name;
+        document.getElementById('tl-m-cat').textContent  = tool.cat;
+        document.getElementById('tl-m-desc').textContent = meta.use || '';
+        document.getElementById('tl-m-access').textContent = meta.access || '';
+        var capsEl = document.getElementById('tl-m-caps');
+        capsEl.innerHTML = (meta.can||[]).map(function(c){ return '<li>' + _esc(c) + '</li>'; }).join('');
+        bd.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+    }
+    function _hideModal() {
+        var bd = document.getElementById('tl-modal-bd');
+        if (bd) bd.classList.remove('visible');
+        document.body.style.overflow = '';
+    }
+
     function _bootstrap() {
         var pw = document.getElementById('pageWrap');
         if (!pw || document.getElementById('page-tools')) return;
@@ -29448,6 +29410,44 @@ var TOOLS=[{"name":"Zapier","slug":"zapier","color":"FF4A00","cat":"Automation",
             '</div>' +
             '<div class="tl-grid-wrap"><div id="tl-grid"></div></div>';
         pw.appendChild(pg);
+        var modal = document.createElement('div');
+        modal.id = 'tl-modal-bd';
+        modal.className = 'tl-modal-backdrop';
+        modal.innerHTML =
+            '<div class="tl-modal">' +
+                '<div class="tl-modal-head">' +
+                    '<div class="tl-modal-icon" id="tl-m-icon"></div>' +
+                    '<div class="tl-modal-title">' +
+                        '<div class="tl-modal-name" id="tl-m-name"></div>' +
+                        '<div class="tl-modal-cat"  id="tl-m-cat"></div>' +
+                    '</div>' +
+                    '<button class="tl-modal-close" id="tl-m-close" aria-label="Close">&#x2715;<\/button>' +
+                '</div>' +
+                '<div class="tl-modal-divider" style="margin-top:18px"></div>' +
+                '<div class="tl-modal-body">' +
+                    '<div class="tl-modal-section">' +
+                        '<div class="tl-modal-label">How APEX uses this<\/div>' +
+                        '<div class="tl-modal-desc" id="tl-m-desc"><\/div>' +
+                    '<\/div>' +
+                    '<div class="tl-modal-section">' +
+                        '<div class="tl-modal-label">Access required<\/div>' +
+                        '<div class="tl-modal-access" id="tl-m-access"><\/div>' +
+                    '<\/div>' +
+                    '<div class="tl-modal-section">' +
+                        '<div class="tl-modal-label">Capabilities<\/div>' +
+                        '<ul class="tl-modal-caps" id="tl-m-caps"><\/ul>' +
+                    '<\/div>' +
+                '<\/div>' +
+            '<\/div>';
+        document.body.appendChild(modal);
+        document.getElementById('tl-m-close').addEventListener('click', _hideModal);
+        modal.addEventListener('click', function(e){ if (e.target === modal) _hideModal(); });
+        document.addEventListener('keydown', function(e){ if (e.key === 'Escape') _hideModal(); });
+        pg.addEventListener('click', function(e) {
+            var card = e.target.closest('.tl-card');
+            if (card && card.dataset.slug) _showModal(card.dataset.slug);
+        });
+
         var catsEl = document.getElementById('tl-cats');
         ALL_CATS.forEach(function (cat) {
             var btn = document.createElement('button');
