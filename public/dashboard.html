@@ -9383,7 +9383,8 @@ header.topbar { grid-area: topbar !important; }
             <!-- ══ PAGE: OVERVIEW ══ -->
             <style>
 /* ══ COMMAND CENTER ══════════════════════════════════════════════════════════ */
-#page-overview{display:flex!important;flex-direction:column!important;height:100%!important;overflow:hidden!important;background:#090909!important}
+#page-overview{display:flex!important;flex-direction:column!important;height:100%!important;overflow:hidden!important;background:#090909!important;padding:0!important;gap:0!important}
+#today-surface,#ovr-pipeline,#ovr-modal-bg,#apx-wrap{display:none!important}
 .cmd-bar{display:flex;align-items:center;height:44px;min-height:44px;padding:0 20px;background:#0e0e0e;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;gap:0;z-index:2;position:relative}
 .cmd-bar-left{display:flex;align-items:center;gap:8px;min-width:160px}
 .cmd-bar-clock{font:700 14px/1 'JetBrains Mono',monospace;letter-spacing:.04em;color:#e8e8e8}
@@ -10083,6 +10084,7 @@ if(pipe){
                 (function(){
                 var page=document.getElementById('page-overview');
                 if(!page)return;
+                if(page.querySelector('.cmd-bar'))return; // Command Center active — skip
                 var NW=122,NH=46;
                 var C={w:'#f3f7fb',b:'#5b9eff',g:'#3fd29a',gold:'#efb45a',p:'#7c6fff',pk:'#ec7fa3',s:'#8893a0',c:'#38bdf8',v:'#a78bfa'};
                 var NODES=[
