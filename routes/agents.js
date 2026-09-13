@@ -116,15 +116,19 @@ router.post('/agents/seed-office', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// GET /api/agents/activity?limit=20  — recent agent run log
+// GET /api/agents/activity?limit=20&source_task_id=TASK-xxx  — recent agent run log
+// source_task_id filter: returns only authoritative runs for that apex_tasks row
 router.get('/agents/activity', _auth, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 20, 200);
-        const { data, error } = await _sbSync()
+        const sourceTaskId = req.query.source_task_id || null;
+        let q = _sbSync()
             .from('apex_agent_runs')
-            .select('task_id,agent_name,domain,task_description,success,duration_ms,model_used,token_count,agent_summary,created_at')
+            .select('task_id,source_task_id,agent_name,domain,task_description,success,duration_ms,model_used,token_count,agent_summary,created_at')
             .order('created_at', { ascending: false })
             .limit(limit);
+        if (sourceTaskId) q = q.eq('source_task_id', sourceTaskId);
+        const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, runs: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
