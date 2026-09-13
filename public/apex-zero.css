@@ -154,14 +154,14 @@ html, body {
     display: none;
   }
 
-  .bottom-nav {
+  .bottom-nav:not(#apexSideNav) {
     height:     var(--mobnav-h) !important;
     background: var(--void) !important;
     border-top: 1px solid rgba(244,244,245,0.08) !important;
   }
 
-  .bottom-nav button,
-  .bottom-nav [role="tab"] {
+  .bottom-nav:not(#apexSideNav) button,
+  .bottom-nav:not(#apexSideNav) [role="tab"] {
     flex:            1 !important;
     height:          var(--mobnav-h) !important;
     flex-direction:  column !important;
@@ -177,10 +177,10 @@ html, body {
     padding:         0 !important;
   }
 
-  .bottom-nav button.active,
-  .bottom-nav button[aria-selected="true"],
-  .bottom-nav [role="tab"].active,
-  .bottom-nav [role="tab"][aria-selected="true"] {
+  .bottom-nav:not(#apexSideNav) button.active,
+  .bottom-nav:not(#apexSideNav) button[aria-selected="true"],
+  .bottom-nav:not(#apexSideNav) [role="tab"].active,
+  .bottom-nav:not(#apexSideNav) [role="tab"][aria-selected="true"] {
     color:      var(--signal) !important;
     box-shadow: none !important;
   }

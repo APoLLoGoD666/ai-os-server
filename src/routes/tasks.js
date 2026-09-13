@@ -119,20 +119,33 @@ router.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
             try {
                 const { invokeDomainAgent } = require('../../agent-system/domain-agents');
                 const result = await invokeDomainAgent(meta.dispatch.slug, meta.dispatch.action, { maxTokens: 1500, humanId: task.human_id || null });
+                const delegation = result.delegation || null;
+                let officeResult = null;
+                if (delegation && delegation.slug && delegation.task) {
+                    try {
+                        const agentLib = require('../../agent-system/agent-library');
+                        officeResult = await agentLib.invokeAgent(delegation.slug, delegation.task);
+                    } catch (oe) { officeResult = { reply: '[office agent error: ' + oe.message + ']' }; }
+                }
                 const updatedMeta = {
                     ...meta,
                     execution: {
-                        agent:     meta.dispatch.slug,
-                        reply:     result.reply.slice(0, 2000),
-                        timestamp: new Date().toISOString(),
+                        agent:      meta.dispatch.slug,
+                        reply:      result.reply.slice(0, 2000),
+                        delegation,
+                        office:     officeResult ? { agent: delegation.slug, reply: (officeResult.reply || '').slice(0, 1000) } : null,
+                        timestamp:  new Date().toISOString(),
                     },
                 };
                 await sbAdmin.from('apex_tasks')
                     .update({ status: 'done', metadata: updatedMeta, updated_at: new Date().toISOString() })
                     .eq('id', taskId);
+                const notifMsg = officeResult
+                    ? `[${meta.dispatch.slug.toUpperCase()}] ${result.reply.slice(0, 150)}\n→ [${delegation.slug.toUpperCase()}] ${(officeResult.reply || '').slice(0, 150)}`
+                    : `[${meta.dispatch.slug.toUpperCase()} AGENT] ${result.reply.slice(0, 300)}`;
                 await sbAdmin.from('apex_notifications').insert({
                     id:       `notif-${Date.now()}`,
-                    message:  `[${meta.dispatch.slug.toUpperCase()} AGENT] ${result.reply.slice(0, 300)}`,
+                    message:  notifMsg,
                     type:     'info',
                     human_id: task.human_id || null,
                 }).catch(() => {});

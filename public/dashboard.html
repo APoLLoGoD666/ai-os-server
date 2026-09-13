@@ -7405,8 +7405,10 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
 
 /* ══ Phase E — GAP-25 Mobile 5-Tab Navigation ════════════════════ */
 @media (max-width: 899px) {
-    /* Override "hide entire nav" rule — render as horizontal tab bar */
-    .bottom-nav {
+    /* Override "hide entire nav" rule — render as horizontal tab bar.
+       :not(#apexSideNav) ensures the desktop sidebar is NEVER affected by this rule,
+       even if a narrow viewport or browser zoom triggers this breakpoint. */
+    .bottom-nav:not(#apexSideNav) {
         display: flex !important;
         flex-direction: row !important;
         position: fixed !important;
@@ -24948,6 +24950,7 @@ window.apexFileDropHandler = function(e){
             card.style.cssText = 'left:' + cardL + 'px;top:' + cardT + 'px;';
 
             var chevron = window._aoExpandedIds[d.id] ? '▲' : '▼';
+            var _ds = (window._aoDeptStats || {})[d.id] || {};
 
             card.innerHTML =
                 '<div class="ao-card-name" style="color:' + d.color + '">' +
@@ -24957,9 +24960,9 @@ window.apexFileDropHandler = function(e){
                 '<div class="ao-card-count">' + d.agents + '</div>' +
                 '<div class="ao-card-agents">AGENTS</div>' +
                 '<div class="ao-doing-row" style="margin-top:8px">' +
-                    'DOING <span class="ao-doing-num">—</span>' +
-                    '&nbsp; NEXT <span class="ao-next-num">—</span>' +
-                    '&nbsp; DONE <span class="ao-done-num">—</span>' +
+                    'DOING <span class="ao-doing-num">' + (_ds.doing || '—') + '</span>' +
+                    '&nbsp; NEXT <span class="ao-next-num">' + (_ds.next || '—') + '</span>' +
+                    '&nbsp; DONE <span class="ao-done-num">' + (_ds.done || '—') + '</span>' +
                 '</div>' +
                 '<div class="ao-card-toggle"><span>' + d.agents + ' AGENTS</span><span class="ao-card-chevron">' + chevron + '</span></div>' +
                 '<div class="ao-card-roster"><div style="padding-top:4px" id="aoRoster-' + d.id + '"></div></div>';
@@ -25236,6 +25239,38 @@ window.apexFileDropHandler = function(e){
                     return { status:st, title:t.description || t.title || '—', tags:(t.tags||[]).join(' · '), age:'' };
                 });
             }
+            // Map tasks → per-dept DOING/NEXT/DONE counts
+            var _ds = {};
+            DEPTS.forEach(function(d){ _ds[d.id] = {doing:0, next:0, done:0}; });
+            raw.forEach(function(t) {
+                var deptId = null;
+                var dispSlug = (t.metadata && t.metadata.dispatch && t.metadata.dispatch.slug) || '';
+                if (dispSlug) {
+                    for (var i = 0; i < DEPTS.length; i++) {
+                        if (dispSlug === DEPTS[i].id || dispSlug.indexOf(DEPTS[i].id) === 0) { deptId = DEPTS[i].id; break; }
+                    }
+                }
+                if (!deptId && Array.isArray(t.tags)) {
+                    for (var j = 0; j < DEPTS.length; j++) {
+                        if (t.tags.indexOf(DEPTS[j].id) !== -1 || t.tags.indexOf(DEPTS[j].category) !== -1) { deptId = DEPTS[j].id; break; }
+                    }
+                }
+                if (!deptId) return;
+                var st2 = (t.status || '').toLowerCase();
+                if (st2 === 'in_progress' || st2 === 'running') _ds[deptId].doing++;
+                else if (st2 === 'pending' || st2 === 'awaiting_approval' || st2 === 'pending_approval') _ds[deptId].next++;
+                else if (st2 === 'done' || st2 === 'completed') _ds[deptId].done++;
+            });
+            window._aoDeptStats = _ds;
+            // Update any cards already in the DOM
+            DEPTS.forEach(function(d) {
+                var s = _ds[d.id];
+                var card = document.querySelector('.ao-card[data-dept-id="' + d.id + '"]');
+                if (!card) return;
+                var dn = card.querySelector('.ao-doing-num'); if (dn) dn.textContent = s.doing || '—';
+                var nn = card.querySelector('.ao-next-num');  if (nn) nn.textContent = s.next  || '—';
+                var dn2 = card.querySelector('.ao-done-num'); if (dn2) dn2.textContent = s.done || '—';
+            });
             aoUpdateCounts();
             aoRenderTasks();
         } catch(e) { window._aoTasksLoaded = true; aoRenderTasks(); }
@@ -26574,58 +26609,6 @@ window.apexFileDropHandler = function(e){
 })();
 </script>
 
-<script>
-/* ── Layout guardian — ensures desktop/mobile layout is always in sync with actual
-   viewport width. Runs immediately on load and on every resize. Prevents the
-   "mobile nav at bottom, topbar gone" flash caused by CSS cascade timing issues. */
-(function() {
-    var BREAKPOINT = 900;
-    var _app = document.getElementById('main-content');
-    var _nav = document.getElementById('apexSideNav');
-    var _bar = document.querySelector('.topbar');
-
-    function _applyLayout() {
-        if (!_app) return;
-        var w = window.innerWidth;
-        if (w >= BREAKPOINT) {
-            // Desktop: clear any inline styles set by previous mobile run
-            _app.style.removeProperty('display');
-            _app.style.removeProperty('flex-direction');
-            if (_nav) {
-                _nav.style.removeProperty('position');
-                _nav.style.removeProperty('bottom');
-                _nav.style.removeProperty('left');
-                _nav.style.removeProperty('right');
-                _nav.style.removeProperty('width');
-                _nav.style.removeProperty('height');
-            }
-            if (_bar) _bar.style.removeProperty('flex-shrink');
-        } else {
-            // Mobile: reinforce flex column so topbar is always the first item
-            _app.style.display = 'flex';
-            _app.style.flexDirection = 'column';
-            if (_bar) _bar.style.flexShrink = '0';
-        }
-    }
-
-    // Run immediately (synchronous, before first paint where possible)
-    _applyLayout();
-
-    // Re-run on resize to catch window resize and orientation change
-    var _rt;
-    window.addEventListener('resize', function() {
-        clearTimeout(_rt);
-        _rt = setTimeout(_applyLayout, 60);
-    });
-
-    // One extra pass after DOM is fully ready in case layout shifted
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', _applyLayout);
-    } else {
-        setTimeout(_applyLayout, 0);
-    }
-})();
-</script>
 
 <!-- ── Apex Activity Feed ── -->
 <script>
