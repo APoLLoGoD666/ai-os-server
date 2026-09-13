@@ -9381,8 +9381,249 @@ header.topbar { grid-area: topbar !important; }
             </div>
 
             <!-- ══ PAGE: OVERVIEW ══ -->
+            <style>
+/* ══ COMMAND CENTER ══════════════════════════════════════════════════════════ */
+#page-overview{display:flex!important;flex-direction:column!important;height:100%!important;overflow:hidden!important;background:#090909!important}
+.cmd-bar{display:flex;align-items:center;height:44px;min-height:44px;padding:0 20px;background:#0e0e0e;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;gap:0;z-index:2;position:relative}
+.cmd-bar-left{display:flex;align-items:center;gap:8px;min-width:160px}
+.cmd-bar-clock{font:700 14px/1 'JetBrains Mono',monospace;letter-spacing:.04em;color:#e8e8e8}
+.cmd-bar-sep{color:#252525;font-size:14px;margin:0 2px}
+.cmd-bar-phase{font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;transition:color .6s}
+.cmd-bar-center{display:flex;align-items:center;flex:1;justify-content:center}
+.cmd-stat{display:flex;align-items:center;gap:6px;padding:0 14px;cursor:default}
+.cmd-stat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:background .5s}
+.cmd-stat-val{font:700 14px/1 'JetBrains Mono',monospace;color:#d8d8d8;letter-spacing:.02em;transition:color .4s}
+.cmd-stat-key{font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:.15em;color:#3a3a3a;text-transform:uppercase}
+.cmd-stat--alert.has-items .cmd-stat-val{color:#f59e0b}
+.cmd-stat-rule{width:1px;height:20px;background:rgba(255,255,255,0.05)}
+.cmd-bar-right{display:flex;align-items:center;gap:6px;min-width:160px;justify-content:flex-end}
+.cmd-live-pip{width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;animation:cmdlive 2.4s ease-in-out infinite}
+.cmd-live-txt{font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.18em;color:#22c55e}
+@keyframes cmdlive{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,.3)}50%{opacity:.6;box-shadow:0 0 0 5px rgba(34,197,94,0)}}
+.cmd-grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.35fr 1fr;overflow:hidden}
+.cmd-col{overflow-y:auto;overflow-x:hidden;padding:16px 14px 20px;border-right:1px solid rgba(255,255,255,0.05);scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.07) transparent}
+.cmd-col:last-child{border-right:none}
+.cmd-col::-webkit-scrollbar{width:3px}
+.cmd-col::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);border-radius:2px}
+.cmd-col-hdr{padding-bottom:14px;margin-bottom:14px}
+.cmd-col-hdr--thinking{border-bottom:1px solid rgba(124,108,242,.2)}
+.cmd-col-hdr--doing{border-bottom:1px solid rgba(0,212,255,.18)}
+.cmd-col-hdr--needs{border-bottom:1px solid rgba(245,158,11,.18)}
+.cmd-col-hdr-top{display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.cmd-col-icon{font-size:13px;line-height:1}
+.cmd-col-name{font:700 11px/1 'JetBrains Mono',monospace;letter-spacing:.2em}
+.cmd-col-hdr--thinking .cmd-col-name{color:#9d90f5}
+.cmd-col-hdr--doing .cmd-col-name{color:#22d3ee}
+.cmd-col-hdr--needs .cmd-col-name{color:#fbbf24}
+.cmd-col-hdr--thinking .cmd-col-icon{color:#9d90f5}
+.cmd-col-hdr--doing .cmd-col-icon{color:#22d3ee}
+.cmd-col-hdr--needs .cmd-col-icon{color:#fbbf24}
+.cmd-col-sub{font:400 9px/1.4 'JetBrains Mono',monospace;color:#383838;letter-spacing:.04em;padding-left:20px}
+.cmd-section{margin-bottom:18px}
+.cmd-section-key{font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:.18em;color:#383838;text-transform:uppercase;margin-bottom:8px}
+.cmd-feed{display:flex;flex-direction:column;gap:4px}
+.cmd-fi{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.05);border-radius:8px;transition:background 150ms}
+.cmd-fi:hover{background:rgba(255,255,255,.033)}
+.cmd-fi--council{border-left:2px solid rgba(124,108,242,.55)}
+.cmd-fi--agent{border-left:2px solid rgba(0,212,255,.4)}
+.cmd-fi--task{border-left:2px solid rgba(0,212,255,.55)}
+.cmd-fi--ok{border-left:2px solid rgba(34,197,94,.4)}
+.cmd-fi--err{border-left:2px solid rgba(239,68,68,.4)}
+.cmd-fi-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.cmd-fi-body{flex:1;min-width:0}
+.cmd-fi-title{font:500 11px/1.45 'Inter',sans-serif;color:rgba(232,244,255,.8);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cmd-fi-meta{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap}
+.cmd-fi-agent{font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:.07em;color:#484848;text-transform:uppercase}
+.cmd-fi-time{font:400 8px/1 'JetBrains Mono',monospace;color:#303030}
+.cmd-badge{font:700 7px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:2px 5px;border-radius:3px;text-transform:uppercase}
+.cmd-badge--council{background:rgba(124,108,242,.1);color:#9d90f5;border:1px solid rgba(124,108,242,.25)}
+.cmd-badge--running{background:rgba(0,212,255,.07);color:#22d3ee;border:1px solid rgba(0,212,255,.2)}
+.cmd-badge--ok{background:rgba(34,197,94,.07);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.cmd-badge--err{background:rgba(239,68,68,.07);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.cmd-badge--amber{background:rgba(245,158,11,.08);color:#fbbf24;border:1px solid rgba(245,158,11,.22)}
+.cmd-skel{height:50px;background:linear-gradient(90deg,rgba(255,255,255,.015) 25%,rgba(255,255,255,.035) 50%,rgba(255,255,255,.015) 75%);background-size:200% 100%;border-radius:8px;animation:cmdskel 1.8s ease-in-out infinite;margin-bottom:4px}
+.cmd-skel--s{height:34px}
+@keyframes cmdskel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.cmd-empty{font:400 10px/1.6 'JetBrains Mono',monospace;color:#303030;text-align:center;padding:18px 0}
+.cmd-dept-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:4px}
+.cmd-dept-card{background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.055);border-radius:9px;padding:10px 11px;cursor:pointer;transition:background 150ms,border-color 150ms}
+.cmd-dept-card:hover{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.1)}
+.cmd-dept-top{display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.cmd-dept-pip{width:5px;height:5px;border-radius:50%;flex-shrink:0;transition:box-shadow .4s}
+.cmd-dept-nm{font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;flex:1}
+.cmd-dept-nums{display:flex;align-items:baseline;gap:3px}
+.cmd-dept-n{font:700 15px/1 'JetBrains Mono',monospace;color:#c0c0c0;min-width:18px;text-align:center}
+.cmd-dept-sl{font:400 8px/1 'JetBrains Mono',monospace;color:#242424}
+.cmd-dept-lbl{font:400 7px/1 'JetBrains Mono',monospace;letter-spacing:.06em;color:#2e2e2e;margin-top:3px;text-transform:uppercase}
+.cmd-approvals{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.cmd-appr{background:rgba(245,158,11,.035);border:1px solid rgba(245,158,11,.12);border-radius:10px;padding:11px 12px}
+.cmd-appr--council{background:rgba(124,108,242,.03);border-color:rgba(124,108,242,.15)}
+.cmd-appr-hdr{display:flex;align-items:flex-start;gap:7px;margin-bottom:7px}
+.cmd-appr-title{font:500 11px/1.4 'Inter',sans-serif;color:rgba(232,244,255,.85);flex:1;min-width:0}
+.cmd-appr-rec{font:400 9px/1.5 'Inter',sans-serif;color:rgba(232,244,255,.35);margin-bottom:9px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cmd-appr-btns{display:flex;gap:5px}
+.cmd-appr-btn{flex:1;height:30px;border-radius:6px;border:1px solid;font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:.12em;cursor:pointer;transition:background 140ms}
+.cmd-appr-btn--ok{background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.25);color:#4ade80}
+.cmd-appr-btn--ok:hover{background:rgba(34,197,94,.15)}
+.cmd-appr-btn--rej{background:rgba(239,68,68,.05);border-color:rgba(239,68,68,.18);color:#f87171}
+.cmd-appr-btn--rej:hover{background:rgba(239,68,68,.12)}
+.cmd-phase-block{padding-top:14px;border-top:1px solid rgba(255,255,255,.05);margin-top:8px}
+.cmd-phase-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.cmd-phase-nm{font:700 11px/1 'JetBrains Mono',monospace;letter-spacing:.1em}
+.cmd-phase-pct{font:700 11px/1 'JetBrains Mono',monospace;color:#484848}
+.cmd-phase-bar-wrap{height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;margin-bottom:5px}
+.cmd-phase-bar{height:100%;border-radius:2px;transition:width 1.2s ease}
+.cmd-phase-next{font:400 8px/1 'JetBrains Mono',monospace;color:#303030;margin-bottom:8px}
+.cmd-phase-pri{display:flex;flex-direction:column;gap:5px}
+.cmd-phase-pri-item{font:400 9px/1.45 'Inter',sans-serif;color:#484848;padding-left:10px;position:relative}
+.cmd-phase-pri-item::before{content:'·';position:absolute;left:0;color:#383838}
+.cmd-stream-wrap{flex-shrink:0;height:124px;border-top:1px solid rgba(255,255,255,.07);background:#0a0a0a;display:flex;flex-direction:column}
+.cmd-stream-hdr{display:flex;align-items:center;gap:7px;padding:7px 16px 5px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.04)}
+.cmd-stream-pip{width:5px;height:5px;border-radius:50%;background:#22d3ee;flex-shrink:0;animation:cmdlive 2.4s ease-in-out infinite}
+.cmd-stream-label{font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:.2em;color:#383838;text-transform:uppercase}
+.cmd-stream-hint{font:400 8px/1 'JetBrains Mono',monospace;color:#222}
+.cmd-stream{flex:1;overflow-y:auto;padding:4px 14px 6px;display:flex;flex-direction:column;gap:1px;scrollbar-width:none}
+.cmd-stream::-webkit-scrollbar{display:none}
+.cmd-si{display:flex;align-items:baseline;gap:7px;padding:2px 4px;border-radius:4px}
+.cmd-si:hover{background:rgba(255,255,255,.02)}
+.cmd-si-time{font:400 8px/1 'JetBrains Mono',monospace;color:#2a2a2a;flex-shrink:0;min-width:26px}
+.cmd-si-tag{font:700 7px/1 'JetBrains Mono',monospace;letter-spacing:.07em;flex-shrink:0;min-width:56px;text-transform:uppercase}
+.cmd-si-tag--council{color:#9d90f5}
+.cmd-si-tag--domain{color:#22d3ee}
+.cmd-si-tag--office{color:#4ade80}
+.cmd-si-tag--task{color:#fbbf24}
+.cmd-si-tag--error{color:#f87171}
+.cmd-si-text{font:400 9px/1 'Inter',sans-serif;color:#383838;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmd-si-text--new{color:#666}
+@media(max-width:899px){
+    #page-overview{overflow-y:auto!important}
+    .cmd-grid{grid-template-columns:1fr!important;overflow:visible!important}
+    .cmd-col{border-right:none!important;border-bottom:1px solid rgba(255,255,255,.05)}
+    .cmd-stream-wrap{height:auto;min-height:150px}
+}
+</style>
             <div class="page" id="page-overview">
-                <!-- APEX MIND — Live 3D System Visualization -->
+                <!-- STATUS BAR -->
+                <div class="cmd-bar">
+                    <div class="cmd-bar-left">
+                        <span class="cmd-bar-clock" id="cmdClock">--:--</span>
+                        <span class="cmd-bar-sep">·</span>
+                        <span class="cmd-bar-phase" id="cmdPhaseName">—</span>
+                    </div>
+                    <div class="cmd-bar-center">
+                        <div class="cmd-stat">
+                            <span class="cmd-stat-dot" id="cmdHealthDot" style="background:#333"></span>
+                            <span class="cmd-stat-val" id="cmdHealthVal">—</span>
+                            <span class="cmd-stat-key">HEALTH</span>
+                        </div>
+                        <div class="cmd-stat-rule"></div>
+                        <div class="cmd-stat">
+                            <span class="cmd-stat-val" id="cmdRunning">—</span>
+                            <span class="cmd-stat-key">RUNNING</span>
+                        </div>
+                        <div class="cmd-stat-rule"></div>
+                        <div class="cmd-stat cmd-stat--alert" id="cmdNeedsYouStat">
+                            <span class="cmd-stat-val" id="cmdNeedsYou">—</span>
+                            <span class="cmd-stat-key">NEED YOU</span>
+                        </div>
+                        <div class="cmd-stat-rule"></div>
+                        <div class="cmd-stat">
+                            <span class="cmd-stat-val" id="cmdAgentCount">—</span>
+                            <span class="cmd-stat-key">AGENT RUNS</span>
+                        </div>
+                    </div>
+                    <div class="cmd-bar-right">
+                        <span class="cmd-live-pip"></span>
+                        <span class="cmd-live-txt">LIVE</span>
+                    </div>
+                </div>
+
+                <!-- THREE-COLUMN GRID -->
+                <div class="cmd-grid">
+
+                    <!-- COL 1: THINKING -->
+                    <div class="cmd-col" id="cmdColThinking">
+                        <div class="cmd-col-hdr cmd-col-hdr--thinking">
+                            <div class="cmd-col-hdr-top">
+                                <span class="cmd-col-icon">◎</span>
+                                <span class="cmd-col-name">THINKING</span>
+                            </div>
+                            <div class="cmd-col-sub">What APEX is reasoning about right now</div>
+                        </div>
+                        <div class="cmd-section">
+                            <div class="cmd-section-key">COUNCIL ACTIVITY</div>
+                            <div id="cmdCouncil" class="cmd-feed">
+                                <div class="cmd-skel"></div>
+                                <div class="cmd-skel cmd-skel--s"></div>
+                            </div>
+                        </div>
+                        <div class="cmd-section">
+                            <div class="cmd-section-key">DOMAIN AGENTS</div>
+                            <div id="cmdDomainRuns" class="cmd-feed">
+                                <div class="cmd-skel"></div>
+                                <div class="cmd-skel cmd-skel--s"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COL 2: DOING -->
+                    <div class="cmd-col" id="cmdColDoing">
+                        <div class="cmd-col-hdr cmd-col-hdr--doing">
+                            <div class="cmd-col-hdr-top">
+                                <span class="cmd-col-icon">◈</span>
+                                <span class="cmd-col-name">DOING</span>
+                            </div>
+                            <div class="cmd-col-sub">Active work across all departments</div>
+                        </div>
+                        <div class="cmd-section">
+                            <div class="cmd-section-key">DEPARTMENT PULSE</div>
+                            <div id="cmdDepts" class="cmd-dept-grid">
+                                <div class="cmd-skel" style="height:72px;border-radius:9px"></div>
+                                <div class="cmd-skel" style="height:72px;border-radius:9px"></div>
+                                <div class="cmd-skel" style="height:72px;border-radius:9px"></div>
+                                <div class="cmd-skel" style="height:72px;border-radius:9px"></div>
+                                <div class="cmd-skel" style="height:72px;border-radius:9px"></div>
+                                <div class="cmd-skel" style="height:72px;border-radius:9px"></div>
+                            </div>
+                        </div>
+                        <div class="cmd-section">
+                            <div class="cmd-section-key">IN FLIGHT</div>
+                            <div id="cmdInFlight" class="cmd-feed">
+                                <div class="cmd-skel"></div>
+                                <div class="cmd-skel cmd-skel--s"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COL 3: NEEDS YOU -->
+                    <div class="cmd-col" id="cmdColNeeds">
+                        <div class="cmd-col-hdr cmd-col-hdr--needs">
+                            <div class="cmd-col-hdr-top">
+                                <span class="cmd-col-icon">◉</span>
+                                <span class="cmd-col-name">NEEDS YOU</span>
+                            </div>
+                            <div class="cmd-col-sub">Decisions waiting for your approval</div>
+                        </div>
+                        <div id="cmdApprovals" class="cmd-approvals">
+                            <div class="cmd-skel" style="height:80px;border-radius:10px"></div>
+                            <div class="cmd-skel" style="height:80px;border-radius:10px"></div>
+                        </div>
+                        <div class="cmd-phase-block" id="cmdPhaseBlock"></div>
+                    </div>
+
+                </div><!-- .cmd-grid -->
+
+                <!-- THOUGHT STREAM -->
+                <div class="cmd-stream-wrap">
+                    <div class="cmd-stream-hdr">
+                        <span class="cmd-stream-pip"></span>
+                        <span class="cmd-stream-label">THOUGHT STREAM</span>
+                        <span class="cmd-stream-hint">Real-time activity across all agents</span>
+                    </div>
+                    <div class="cmd-stream" id="cmdStream">
+                        <div class="cmd-si"><span class="cmd-si-text">Waiting for system activity…</span></div>
+                    </div>
+                </div>
 
                 <!-- Governance Pipeline -->
                 <div id="ovr-pipeline" style="position:relative;padding:32px 30px 36px">
@@ -17229,6 +17470,261 @@ function initGovernanceMap(d) {
         if (execStack) execStack.innerHTML = execs.map(function(e){ return execNode(e); }).join('');
     };
 }
+
+// ══ COMMAND CENTER — Overview ══════════════════════════════════════════════
+var _cmdEsc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+var _cmdH   = function(){ var k=window._appKey||window.APP_KEY||''; return k?{'x-app-key':k}:{}; };
+var _CMD_DOMAIN_SLUGS = ['business','finance','comms','system','civilisation','file','health','uni'];
+var _CMD_DEPT_MAP = {
+    'marketing':  {name:'MARKETING',  color:'#a78bfa'},
+    'comms':      {name:'COMMS',      color:'#2dd4bf'},
+    'operations': {name:'OPS',        color:'#60a5fa'},
+    'sales':      {name:'SALES',      color:'#34d399'},
+    'delivery':   {name:'DELIVERY',   color:'#fb923c'},
+    'finance':    {name:'FINANCE',    color:'#818cf8'}
+};
+var _CMD_DEPT_PFX = {
+    'marketing-':'marketing','comms-':'comms','ops-':'operations',
+    'sales-':'sales','delivery-':'delivery','finance-':'finance',
+    'marketing':'marketing','comms':'comms','finance':'finance'
+};
+var _CMD_PHASES = [
+    {s:0,e:6,  n:'Deep Rest',    col:'#374151',pri:['System maintenance window','Protect sleep — minimal activity','Low-priority monitoring only']},
+    {s:6,e:10, n:'Morning',      col:'#efb45a',pri:['Review APEX briefing','Set your top 3 goals','High-focus strategic work']},
+    {s:10,e:13,n:'Peak Output',  col:'#3fd29a',pri:['Ship work — execute hard tasks','Protect deep focus window','Avoid distractions']},
+    {s:13,e:16,n:'Afternoon',    col:'#5b9eff',pri:['Meetings · collaboration · review','Check agent runs & activity','Clear communications backlog']},
+    {s:16,e:19,n:'Closing Loops',col:'#7c6fff',pri:['Clear blockers from today','Log completed work','Review finance & pipeline']},
+    {s:19,e:22,n:'Reflection',   col:'#ec7fa3',pri:['Review day outcomes vs goals','Commit key memories','Prepare priorities for tomorrow']},
+    {s:22,e:24,n:'Wind Down',    col:'#4a5568',pri:['Low-priority review only','Avoid new commitments','Protect sleep']}
+];
+function _cmdPhase(h){ return _CMD_PHASES.find(function(p){return h>=p.s&&h<p.e;})||_CMD_PHASES[0]; }
+function _cmdTick(){
+    var now=new Date(),h=now.getHours(),m=now.getMinutes();
+    var hh=h%12||12,mm=m<10?'0'+m:String(m),ap=h<12?'AM':'PM';
+    var clk=document.getElementById('cmdClock'); if(clk)clk.textContent=hh+':'+mm+' '+ap;
+    var phase=_cmdPhase(h);
+    var pnEl=document.getElementById('cmdPhaseName'); if(pnEl){pnEl.textContent=phase.n;pnEl.style.color=phase.col;}
+    var dayPct=Math.round((h*60+m)/1440*100);
+    var next=_CMD_PHASES[(_CMD_PHASES.indexOf(phase)+1)%_CMD_PHASES.length];
+    var minLeft=next.s*60-(h*60+m); if(minLeft<0)minLeft+=1440;
+    var ntStr=minLeft>=60?Math.floor(minLeft/60)+'h '+(minLeft%60)+'m':minLeft+'m';
+    var pb=document.getElementById('cmdPhaseBlock');
+    if(pb)pb.innerHTML=
+        '<div class="cmd-section-key">DAY PHASE</div>'+
+        '<div class="cmd-phase-row">'+
+            '<span class="cmd-phase-nm" style="color:'+phase.col+'">'+_cmdEsc(phase.n)+'</span>'+
+            '<span class="cmd-phase-pct">'+dayPct+'%</span>'+
+        '</div>'+
+        '<div class="cmd-phase-bar-wrap"><div class="cmd-phase-bar" style="width:'+dayPct+'%;background:'+phase.col+'"></div></div>'+
+        '<div class="cmd-phase-next">'+_cmdEsc(next.n)+' in '+_cmdEsc(ntStr)+'</div>'+
+        '<div class="cmd-phase-pri">'+phase.pri.map(function(p){return '<div class="cmd-phase-pri-item">'+_cmdEsc(p)+'</div>';}).join('')+'</div>';
+}
+function _cmdHas(arr,val){ for(var i=0;i<arr.length;i++)if(arr[i]===val)return true;return false; }
+function _cmdAgo(ts){ return window._timeAgo?window._timeAgo(ts):''; }
+
+function _cmdRenderThinking(tasks,runs){
+    var councilEl=document.getElementById('cmdCouncil');
+    if(councilEl){
+        var ct=tasks.filter(function(t){
+            return t.metadata&&(t.metadata.type==='council_dispatch'||t.metadata.type==='council_recommendation');
+        }).slice(0,5);
+        if(!ct.length){councilEl.innerHTML='<div class="cmd-empty">No council activity yet</div>';}
+        else{councilEl.innerHTML=ct.map(function(t){
+            var m=t.metadata||{},sl=(m.dispatch&&m.dispatch.slug)||'',rc=(m.recommendation||'').slice(0,90);
+            var isPend=_cmdHas(['awaiting_approval','pending_approval'],t.status);
+            var dotCol=isPend?'#fbbf24':t.status==='done'||t.status==='completed'?'#4ade80':'#484848';
+            var badge=isPend?'<span class="cmd-badge cmd-badge--amber">PENDING</span>':
+                (t.status==='done'||t.status==='completed')?'<span class="cmd-badge cmd-badge--ok">DONE</span>':'';
+            return '<div class="cmd-fi cmd-fi--council">'+
+                '<span class="cmd-fi-dot" style="background:'+dotCol+'"></span>'+
+                '<div class="cmd-fi-body">'+
+                    '<div class="cmd-fi-title">'+_cmdEsc(t.title||'Council decision')+'</div>'+
+                    (rc?'<div style="font:400 9px/1.35 \'Inter\',sans-serif;color:#484848;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_cmdEsc(rc)+'</div>':'')+
+                    '<div class="cmd-fi-meta">'+(sl?'<span class="cmd-fi-agent">'+_cmdEsc(sl)+'</span>':'')+badge+'<span class="cmd-fi-time">'+_cmdAgo(t.updated_at||t.created_at)+'</span></div>'+
+                '</div></div>';
+        }).join('');}
+    }
+    var drEl=document.getElementById('cmdDomainRuns');
+    if(drEl){
+        var dr=runs.filter(function(r){
+            var sl=(r.agent_name||'').toLowerCase().replace(/\s+/g,'-');
+            return _CMD_DOMAIN_SLUGS.some(function(ds){return sl===ds||sl.indexOf(ds+'-')===0;});
+        }).slice(0,6);
+        if(!dr.length){drEl.innerHTML='<div class="cmd-empty">No domain agent runs recently</div>';}
+        else{drEl.innerHTML=dr.map(function(r){
+            var txt=(r.agent_summary||r.task_description||'Ran a task').replace(/\n/g,' ').slice(0,100);
+            var dc=r.success===false?'#ef4444':'#22d3ee';
+            var badge=r.success===false?'<span class="cmd-badge cmd-badge--err">ERROR</span>':'<span class="cmd-badge cmd-badge--running">RAN</span>';
+            return '<div class="cmd-fi cmd-fi--agent">'+
+                '<span class="cmd-fi-dot" style="background:'+dc+'"></span>'+
+                '<div class="cmd-fi-body">'+
+                    '<div class="cmd-fi-title">'+_cmdEsc(txt)+'</div>'+
+                    '<div class="cmd-fi-meta"><span class="cmd-fi-agent">'+_cmdEsc((r.agent_name||'').slice(0,22))+'</span>'+badge+'<span class="cmd-fi-time">'+_cmdAgo(r.created_at)+'</span></div>'+
+                '</div></div>';
+        }).join('');}
+    }
+}
+
+function _cmdRenderDoing(tasks,runs){
+    var deptsEl=document.getElementById('cmdDepts');
+    if(deptsEl){
+        var now=Date.now(),stats={};
+        Object.keys(_CMD_DEPT_MAP).forEach(function(k){stats[k]={doing:0,next:0,done:0};});
+        runs.forEach(function(r){
+            var sl=(r.agent_name||'').toLowerCase().replace(/\s+/g,'-'),deptId=null;
+            var keys=Object.keys(_CMD_DEPT_PFX);
+            for(var i=0;i<keys.length;i++){if(sl.indexOf(keys[i])===0){deptId=_CMD_DEPT_PFX[keys[i]];break;}}
+            if(!deptId)return;
+            var age=now-new Date(r.created_at).getTime();
+            if(age<30*60*1000)stats[deptId].doing++;
+            else if(age<24*60*60*1000)stats[deptId].done++;
+        });
+        tasks.forEach(function(t){
+            var disp=(t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug)||'';
+            if(!disp)return;
+            var deptId=null;
+            Object.keys(_CMD_DEPT_MAP).forEach(function(k){if(disp===k||disp.indexOf(k)===0)deptId=k;});
+            if(!deptId)return;
+            if(_cmdHas(['awaiting_approval','pending_approval','approval_required'],t.status))stats[deptId].next++;
+        });
+        deptsEl.innerHTML=Object.keys(_CMD_DEPT_MAP).map(function(id){
+            var d=_CMD_DEPT_MAP[id],s=stats[id];
+            var active=s.doing>0;
+            return '<div class="cmd-dept-card" onclick="window.switchPage&&window.switchPage(\'agents\')" title="Open '+d.name+' department">'+
+                '<div class="cmd-dept-top">'+
+                    '<span class="cmd-dept-pip" style="background:'+d.color+';'+(active?'box-shadow:0 0 7px '+d.color+'55':'opacity:.35')+'"></span>'+
+                    '<span class="cmd-dept-nm" style="color:'+d.color+(active?'':'88')+'">'+d.name+'</span>'+
+                '</div>'+
+                '<div class="cmd-dept-nums">'+
+                    '<span class="cmd-dept-n" style="'+(active?'color:#e0e0e0':'')+'">'+( s.doing||'—')+'</span>'+
+                    '<span class="cmd-dept-sl">/</span>'+
+                    '<span class="cmd-dept-n" style="color:#606060">'+( s.next||'—')+'</span>'+
+                    '<span class="cmd-dept-sl">/</span>'+
+                    '<span class="cmd-dept-n" style="color:#404040">'+( s.done||'—')+'</span>'+
+                '</div>'+
+                '<div class="cmd-dept-lbl">DOING / NEXT / DONE</div>'+
+            '</div>';
+        }).join('');
+    }
+    var ifEl=document.getElementById('cmdInFlight');
+    if(ifEl){
+        var inf=tasks.filter(function(t){return t.status==='in_progress';});
+        if(!inf.length){ifEl.innerHTML='<div class="cmd-empty">Nothing running right now</div>';}
+        else{ifEl.innerHTML=inf.slice(0,6).map(function(t){
+            var m=t.metadata||{},sl=(m.dispatch&&m.dispatch.slug)||'';
+            return '<div class="cmd-fi cmd-fi--task">'+
+                '<span class="cmd-fi-dot" style="background:#22d3ee;animation:cmdlive 2s ease-in-out infinite"></span>'+
+                '<div class="cmd-fi-body">'+
+                    '<div class="cmd-fi-title">'+_cmdEsc(t.title||'Task')+'</div>'+
+                    '<div class="cmd-fi-meta">'+(sl?'<span class="cmd-fi-agent">'+_cmdEsc(sl)+'</span>':'')+
+                    '<span class="cmd-badge cmd-badge--running">RUNNING</span>'+
+                    '<span class="cmd-fi-time">'+_cmdAgo(t.updated_at||t.created_at)+'</span></div>'+
+                '</div></div>';
+        }).join('');}
+    }
+}
+
+function _cmdRenderNeeds(needsApproval){
+    var el=document.getElementById('cmdApprovals');
+    if(!el)return;
+    if(!needsApproval.length){
+        el.innerHTML='<div class="cmd-empty" style="padding:28px 0">All caught up.<br><span style="color:#242424">Nothing needs your attention right now.</span></div>';
+        return;
+    }
+    el.innerHTML=needsApproval.slice(0,5).map(function(t){
+        var isC=t.metadata&&(t.metadata.type==='council_dispatch'||t.metadata.type==='council_recommendation');
+        var rec=isC&&t.metadata.recommendation?t.metadata.recommendation.slice(0,110):'';
+        var badge=isC?'<span class="cmd-badge cmd-badge--council">COUNCIL</span>':'';
+        return '<div class="cmd-appr'+(isC?' cmd-appr--council':'')+'">'+
+            '<div class="cmd-appr-hdr"><div class="cmd-appr-title">'+_cmdEsc(t.title||'Task')+'</div>'+badge+'</div>'+
+            (rec?'<div class="cmd-appr-rec">'+_cmdEsc(rec)+'</div>':'')+
+            '<div class="cmd-appr-btns">'+
+                '<button class="cmd-appr-btn cmd-appr-btn--ok"  data-actn-appr="'+_cmdEsc(String(t.id))+'">APPROVE</button>'+
+                '<button class="cmd-appr-btn cmd-appr-btn--rej" data-actn-reject-init="'+_cmdEsc(String(t.id))+'">REJECT</button>'+
+            '</div></div>';
+    }).join('');
+    if(needsApproval.length>5){
+        el.innerHTML+='<button type="button" onclick="window.switchPage&&window.switchPage(\'actions\')" style="width:100%;background:none;border:1px solid rgba(255,255,255,.07);border-radius:8px;color:#484848;font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.12em;padding:9px;cursor:pointer;margin-top:2px">+'+(needsApproval.length-5)+' MORE IN ACTIONS ›</button>';
+    }
+}
+
+function _cmdRenderStream(runs,tasks){
+    var el=document.getElementById('cmdStream');
+    if(!el)return;
+    var now=Date.now(),entries=[];
+    runs.slice(0,30).forEach(function(r){
+        var sl=(r.agent_name||'').toLowerCase().replace(/\s+/g,'-');
+        var isDomain=_CMD_DOMAIN_SLUGS.some(function(ds){return sl===ds||sl.indexOf(ds+'-')===0;});
+        entries.push({
+            time:r.created_at,
+            tag:isDomain?'DOMAIN':'OFFICE',
+            tagCls:isDomain?'domain':'office',
+            text:(r.agent_summary||r.task_description||r.agent_name||'Ran a task').replace(/\n/g,' ').trim().slice(0,110),
+            fresh:(now-new Date(r.created_at).getTime())<5*60*1000
+        });
+    });
+    tasks.filter(function(t){return t.metadata&&(t.metadata.type==='council_dispatch'||t.metadata.type==='council_recommendation');}).slice(0,6).forEach(function(t){
+        entries.push({time:t.created_at,tag:'COUNCIL',tagCls:'council',text:(t.title||'Council decision').slice(0,110),fresh:(now-new Date(t.created_at).getTime())<10*60*1000});
+    });
+    tasks.filter(function(t){return t.status==='in_progress';}).slice(0,4).forEach(function(t){
+        entries.push({time:t.updated_at||t.created_at,tag:'TASK',tagCls:'task',text:(t.title||'Running').slice(0,110),fresh:true});
+    });
+    entries.sort(function(a,b){return new Date(b.time)-new Date(a.time);});
+    if(!entries.length){el.innerHTML='<div class="cmd-si"><span class="cmd-si-text">Waiting for system activity…</span></div>';return;}
+    el.innerHTML=entries.slice(0,28).map(function(e){
+        return '<div class="cmd-si">'+
+            '<span class="cmd-si-time">'+_cmdAgo(e.time)+'</span>'+
+            '<span class="cmd-si-tag cmd-si-tag--'+e.tagCls+'">'+e.tag+'</span>'+
+            '<span class="cmd-si-text'+(e.fresh?' cmd-si-text--new':'')+'">'+_cmdEsc(e.text)+'</span>'+
+        '</div>';
+    }).join('');
+    el.scrollTop=0;
+}
+
+async function initOverviewPage(){
+    var pageEl=document.getElementById('page-overview');
+    if(!pageEl||!pageEl.classList.contains('active'))return;
+    _cmdTick();
+    var results=await Promise.allSettled([
+        fetch('/api/tasks',{credentials:'same-origin',headers:_cmdH()}).then(function(r){return r.json();}),
+        fetch('/api/agents/activity?limit=50',{headers:_cmdH()}).then(function(r){return r.json();})
+    ]);
+    var tData=results[0].status==='fulfilled'?results[0].value:null;
+    var aData=results[1].status==='fulfilled'?results[1].value:null;
+    var tasks=tData?(Array.isArray(tData)?tData:(tData.tasks||[])): [];
+    var runs=aData?(aData.runs||[]): [];
+    if(!Array.isArray(tasks))tasks=[];
+    if(!Array.isArray(runs))runs=[];
+    var inf=tasks.filter(function(t){return t.status==='in_progress';});
+    var needs=tasks.filter(function(t){return _cmdHas(['awaiting_approval','pending_approval','approval_required'],t.status);});
+    // Status bar
+    var rvEl=document.getElementById('cmdRunning'); if(rvEl)rvEl.textContent=inf.length||'0';
+    var nyEl=document.getElementById('cmdNeedsYou'); if(nyEl)nyEl.textContent=needs.length||'0';
+    var nySt=document.getElementById('cmdNeedsYouStat'); if(nySt)nySt.classList.toggle('has-items',needs.length>0);
+    var acEl=document.getElementById('cmdAgentCount'); if(acEl)acEl.textContent=runs.length||'—';
+    if(runs.length){
+        var ok=runs.filter(function(r){return r.success!==false;}).length;
+        var pct=Math.round(ok/runs.length*100);
+        var hc=pct>=80?'#22c55e':pct>=60?'#f59e0b':'#ef4444';
+        var hdEl=document.getElementById('cmdHealthDot'); if(hdEl)hdEl.style.background=hc;
+        var hvEl=document.getElementById('cmdHealthVal'); if(hvEl){hvEl.textContent=pct+'%';hvEl.style.color=hc;}
+    }
+    _cmdRenderThinking(tasks,runs);
+    _cmdRenderDoing(tasks,runs);
+    _cmdRenderNeeds(needs);
+    _cmdRenderStream(runs,tasks);
+}
+
+// ── Tick every 60s ──
+(function(){
+    _cmdTick();
+    var tid=setInterval(function(){
+        _cmdTick();
+        var pg=document.getElementById('page-overview');
+        if(pg&&pg.classList.contains('active'))initOverviewPage();
+    },60000);
+    if(window._apexIntervals)window._apexIntervals.push(tid);
+})();
 
 function _tdEsc(s) {
     return String(s || '').replace(/[&<>"']/g, function(c) {
