@@ -11578,6 +11578,7 @@ if(pipe){
                     <button class="portal-tab" onclick="window.switchPage('actions')">ACTIONS</button>
                     <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
                     <button class="portal-tab active" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
+                    <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
                 </div>
                 <!-- Main layout: canvas + task panel -->
                 <div class="ao-main">
@@ -11662,6 +11663,7 @@ if(pipe){
                     <button class="portal-tab" onclick="window.switchPage('actions')">ACTIONS</button>
                     <button class="portal-tab active" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
+                    <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
                 </div>
                 <div class="ao-main">
                     <div class="ao-canvas" id="daCanvas">
@@ -11761,6 +11763,7 @@ if(pipe){
                     <button class="portal-tab active" onclick="window.switchPage('actions')">ACTIONS</button>
                     <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
+                    <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
                 </div>
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
@@ -12097,6 +12100,7 @@ if(pipe){
                     <button class="portal-tab" onclick="window.switchPage('actions')">ACTIONS</button>
                     <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
+                    <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
                 </div>
                 <div class="ec-main">
                     <div class="ec-chamber" id="ecChamber" aria-label="Council chamber">
@@ -27123,7 +27127,7 @@ window.apexFileDropHandler = function(e){
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════
-     APEX TOPOLOGY — Living system map (test page)
+     APEX TOPOLOGY v2 — Living system map
      ═══════════════════════════════════════════════════════════ -->
 <style>
 #page-test.active {
@@ -27131,35 +27135,8 @@ window.apexFileDropHandler = function(e){
     flex-direction: column;
     overflow: hidden;
     background: #09090b;
-}
-.tp-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    flex-shrink: 0;
-}
-.tp-bar-title {
-    font: 700 11px/1 'JetBrains Mono', monospace;
-    letter-spacing: 0.12em;
-    color: rgba(232,232,232,0.45);
-}
-.tp-bar-title b { color: #9d90f5; }
-.tp-live {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font: 700 9px/1 'JetBrains Mono', monospace;
-    letter-spacing: 0.08em;
-    color: #22c55e;
-}
-.tp-live-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #22c55e;
-    animation: tp-blink 2.4s ease-in-out infinite;
+    background-image: radial-gradient(rgba(255,255,255,0.028) 1px, transparent 1px);
+    background-size: 28px 28px;
 }
 /* Outer viewport */
 .tp-outer {
@@ -27330,41 +27307,65 @@ window.apexFileDropHandler = function(e){
 .tp-legend-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 /* LOD: low detail at small zoom */
 .tp-lod-low .tp-nd-sub   { display: none !important; }
-.tp-lod-low .tp-nd       { padding: 4px 8px !important; min-width: 0 !important; border-radius: 4px !important; }
+.tp-lod-low .tp-nd       { padding: 3px 7px !important; min-width: 0 !important; border-radius: 4px !important; }
 .tp-lod-low .tp-badge    { display: none !important; }
 .tp-lod-low .tp-chevron  { display: none !important; }
 /* LOD: high detail at large zoom */
-.tp-lod-high .tp-nd      { padding: 16px 24px !important; }
-.tp-lod-high .tp-nd-lbl  { font-size: 11px !important; }
+.tp-lod-high .tp-nd      { padding: 16px 26px !important; }
+.tp-lod-high .tp-nd-lbl  { font-size: 12px !important; }
 /* SVG edge classes */
-.tp-edge { stroke-opacity: 0.22; }
-.tp-edge-active { stroke-opacity: 0.75; }
-.tp-edge-flow { animation: tp-dash 2s linear infinite; }
+.tp-edge        { stroke-opacity: 0.22; }
+.tp-edge-active { stroke-opacity: 0.80; }
+.tp-edge-flow   { animation: tp-dash 1.8s linear infinite; }
+/* Placed nodes (existed before re-render): skip entrance animation */
+.tp-node--placed { animation: none !important; opacity: 1 !important; }
+/* Active node pulse */
+.tp-node--pulse .tp-nd {
+    animation: tp-pulse-glow 2.2s ease-in-out infinite;
+}
+/* Tooltip */
+.tp-tooltip {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    background: #1e1e24;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 7px 11px;
+    font: 400 11px/1.5 system-ui, sans-serif;
+    color: rgba(232,232,232,0.75);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 50;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    margin-top: -4px;
+}
+.tp-tooltip b { color: #e8e8e8; font-weight: 600; }
+/* Outer grab cursor */
+.tp-outer { cursor: grab; }
 /* Animations */
-@keyframes tp-dash  { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -36; } }
-@keyframes tp-enter { from { opacity: 0; transform: translate(-50%, calc(-50% - 6px)) scale(0.94); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
-@keyframes tp-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes tp-dash       { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -28; } }
+@keyframes tp-enter      { from { opacity: 0; transform: translate(-50%, calc(-50% - 8px)) scale(0.93); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes tp-blink      { 0%,100% { opacity: 1; } 50% { opacity: 0.22; } }
+@keyframes tp-pulse-glow { 0%,100% { box-shadow: 0 0 0 0 var(--tp-glow, transparent); } 50% { box-shadow: 0 0 14px 2px var(--tp-glow, transparent); } }
 @media (prefers-reduced-motion: reduce) {
-    .tp-edge-flow { animation: none; }
-    .tp-live-dot  { animation: none; }
-    .tp-stage     { transition: none; }
-    .tp-node      { animation: none; }
-    .tp-nd        { transition: none; }
+    .tp-edge-flow     { animation: none; }
+    .tp-live-dot      { animation: none; }
+    .tp-stage         { transition: none; }
+    .tp-node          { animation: none; }
+    .tp-nd            { transition: none; }
+    .tp-node--pulse .tp-nd { animation: none; }
 }
 </style>
 
 <script>
-/* APEX TOPOLOGY — Living system map */
+/* APEX TOPOLOGY v2 — Living system map */
 (function () {
     'use strict';
 
     // ── Tree data ───────────────────────────────────────────────────────────
-    // Tier y-positions as % of canvas height:
-    //   collapsed: no tier-3 → tiers 0/1/2/4 get more vertical breathing room
-    //   expanded:  tier-3 nodes visible → compress to fit
     var _T = {
-        collapsed: [0.09, 0.26, 0.52, null, 0.82],
-        expanded:  [0.07, 0.21, 0.40, 0.62, 0.84],
+        collapsed: [0.09, 0.26, 0.52, null, 0.84],
+        expanded:  [0.07, 0.21, 0.40, 0.62, 0.85],
     };
 
     var NODES = [
@@ -27418,7 +27419,7 @@ window.apexFileDropHandler = function(e){
     var _active   = new Set(); // active edge keys 'a->b'
     var _badges   = {};      // { nodeId: number | null }
 
-    // ── Bootstrap: create page + nav ────────────────────────────────────────
+    // ── Bootstrap: create page (portal tab bar included; no sidebar button) ──
     function _bootstrap() {
         var pw = document.getElementById('pageWrap');
         if (pw && !document.getElementById('page-test')) {
@@ -27426,9 +27427,12 @@ window.apexFileDropHandler = function(e){
             pg.className = 'page';
             pg.id = 'page-test';
             pg.innerHTML =
-                '<div class="tp-bar">' +
-                    '<span class="tp-bar-title">APEX <b>TOPOLOGY</b></span>' +
-                    '<div class="tp-live"><div class="tp-live-dot"></div>LIVE</div>' +
+                '<div class="portal-tab-bar">' +
+                    '<button class="portal-tab" onclick="window.switchPage(\'council\')">COUNCIL</button>' +
+                    '<button class="portal-tab" onclick="window.switchPage(\'actions\')">ACTIONS</button>' +
+                    '<button class="portal-tab" onclick="window.switchPage(\'domain-agents\')">DOMAIN AGENTS</button>' +
+                    '<button class="portal-tab" onclick="window.switchPage(\'agents\')">OFFICE AGENTS</button>' +
+                    '<button class="portal-tab active" onclick="window.switchPage(\'test\')">MAP</button>' +
                 '</div>' +
                 '<div class="tp-outer" id="tpOuter">' +
                     '<div class="tp-stage" id="tpStage">' +
@@ -27443,23 +27447,11 @@ window.apexFileDropHandler = function(e){
                     '<div class="tp-legend">' +
                         '<div class="tp-legend-row"><div class="tp-legend-dot" style="background:#7c6cf2"></div>Council</div>' +
                         '<div class="tp-legend-row"><div class="tp-legend-dot" style="background:#34d399"></div>Actions</div>' +
-                        '<div class="tp-legend-row"><div class="tp-legend-dot" style="background:rgba(255,255,255,0.3)"></div>Domain — tap to expand</div>' +
+                        '<div class="tp-legend-row"><div class="tp-legend-dot" style="background:rgba(255,255,255,0.3)"></div>Domain — click to expand</div>' +
                     '</div>' +
+                    '<div id="tpTooltip" class="tp-tooltip" style="display:none"></div>' +
                 '</div>';
             pw.appendChild(pg);
-        }
-
-        // Nav button
-        var nav = document.getElementById('apexSideNav');
-        if (nav && !document.getElementById('nav-test')) {
-            var btn  = document.createElement('button');
-            btn.className = 'nav-btn';
-            btn.id = 'nav-test';
-            btn.innerHTML = '<span class="nav-icon" style="font-size:15px">⬡</span><span class="nav-label">Map</span>';
-            btn.addEventListener('click', function () { window.switchPage('test'); });
-            var settingsBtn = document.getElementById('nav-settings');
-            if (settingsBtn) nav.insertBefore(btn, settingsBtn);
-            else nav.appendChild(btn);
         }
     }
 
@@ -27516,8 +27508,12 @@ window.apexFileDropHandler = function(e){
         var pos = _calcPos(W, H);
 
         // ── Edges ──────────────────────────────────────────────────────────
-        var svgInner = '<defs><marker id="tpArr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">' +
-            '<path d="M0,0.5 L0,5.5 L6.5,3 z" fill="rgba(255,255,255,0.14)"/></marker></defs>';
+        var svgInner = '<defs>' +
+            '<marker id="tpArr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">' +
+            '<path d="M0,0.5 L0,5.5 L6.5,3 z" fill="rgba(255,255,255,0.16)"/></marker>' +
+            '<filter id="tpGlow"><feGaussianBlur stdDeviation="2.5" result="blur"/>' +
+            '<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
+            '</defs>';
 
         EDGES.forEach(function (e) {
             if (e.cond && !_expanded[e.cond]) return;
@@ -27528,57 +27524,98 @@ window.apexFileDropHandler = function(e){
             var tc = (tn && tn.color) || '#555';
             var isActive = _active.has(e.a + '->' + e.b);
 
-            var x1 = fp.x, y1 = fp.y + 18, x2 = tp.x, y2 = tp.y - 18;
+            var x1 = fp.x, y1 = fp.y + 20, x2 = tp.x, y2 = tp.y - 20;
             var cy = (y1 + y2) / 2;
             var d  = 'M' + x1 + ',' + y1 + ' C' + x1 + ',' + cy + ' ' + x2 + ',' + cy + ' ' + x2 + ',' + y2;
             var gid = 'tg-' + e.a + '-' + e.b;
 
-            // Per-edge gradient
             svgInner += '<defs><linearGradient id="' + gid + '" gradientUnits="userSpaceOnUse"' +
                 ' x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '">' +
-                '<stop offset="0%" stop-color="' + fc + '" stop-opacity="' + (isActive ? '0.7' : '0.45') + '"/>' +
-                '<stop offset="100%" stop-color="' + tc + '" stop-opacity="' + (isActive ? '0.7' : '0.45') + '"/>' +
+                '<stop offset="0%" stop-color="' + fc + '" stop-opacity="' + (isActive ? '0.8' : '0.4') + '"/>' +
+                '<stop offset="100%" stop-color="' + tc + '" stop-opacity="' + (isActive ? '0.8' : '0.4') + '"/>' +
                 '</linearGradient></defs>';
 
+            // Glow layer under active edges
+            if (isActive) {
+                svgInner += '<path d="' + d + '" fill="none" stroke="' + fc + '"' +
+                    ' stroke-width="4" stroke-opacity="0.12" filter="url(#tpGlow)"/>';
+            }
+
             var cls = isActive ? 'tp-edge tp-edge-active tp-edge-flow' : 'tp-edge';
-            var sw  = isActive ? '1.5' : '1';
-            var da  = isActive ? 'stroke-dasharray="5 10"' : '';
+            var sw  = isActive ? '1.8' : '1';
+            var da  = isActive ? 'stroke-dasharray="5 9"' : '';
             svgInner += '<path d="' + d + '" fill="none" stroke="url(#' + gid + ')"' +
                 ' stroke-width="' + sw + '" class="' + cls + '" marker-end="url(#tpArr)" ' + da + '/>';
         });
 
         svg.innerHTML = svgInner;
 
-        // ── Nodes ──────────────────────────────────────────────────────────
+        // ── Nodes: FLIP update-in-place ────────────────────────────────────
         var vis = _visibleNodes();
+
+        // Record current positions before change (FIRST)
+        var oldRects = {};
+        Array.from(nodesC.querySelectorAll('[id^="tpn-"]')).forEach(function (el) {
+            var r = el.getBoundingClientRect();
+            oldRects[el.id.slice(4)] = { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+        });
+
+        // Build new HTML (LAST)
         var nodesHtml = '';
         vis.forEach(function (n, idx) {
             var p = pos[n.id];
             if (!p) return;
-
             var typeClass = n.type || (n.tier === 2 ? 'domain' : n.tier === 3 ? 'office' : '');
-            var isExp = n.tier === 2 && !!_expanded[n.id];
-            var bdg = _badges[n.id] ? '<div class="tp-badge" style="background:' + n.color + '">' + _badges[n.id] + '</div>' : '';
-            var chevron = (n.tier === 2)
-                ? '<div class="tp-chevron" style="background:' + n.color + ';opacity:' + (isExp ? '1' : '0.45') + ';transform:rotate(' + (isExp ? '180' : '0') + 'deg)">▼</div>'
+            var isExp  = n.tier === 2 && !!_expanded[n.id];
+            var isAct  = _active.has('actions->' + n.id) || (n.id === 'council' && _active.size > 0) || (n.id === 'actions' && _active.size > 0);
+            var pulse  = isAct ? ' tp-node--pulse' : '';
+            var bdg    = _badges[n.id] ? '<div class="tp-badge" style="background:' + n.color + '">' + _badges[n.id] + '</div>' : '';
+            var chev   = n.tier === 2
+                ? '<div class="tp-chevron" style="background:' + n.color + ';opacity:' + (isExp ? '1' : '0.42') + ';transform:rotate(' + (isExp ? '180' : '0') + 'deg)">▼</div>'
                 : '';
-            var expandAttr = n.tier === 2 ? ' data-tp-expand="' + n.id + '"' : '';
-            var navAttr    = n.nav && n.tier !== 2 ? ' data-tp-nav="' + n.nav + '"' : '';
-            var tab = (n.tier <= 1 || n.tier === 3 || n.tier === 4) ? '0' : '0';
-            var role = n.tier === 2 ? ' role="button" aria-expanded="' + isExp + '"' : '';
-            var delay = (n.tier * 0.07 + idx * 0.01).toFixed(2);
+            var expAttr = n.tier === 2 ? ' data-tp-expand="' + n.id + '"' : '';
+            var navAttr = n.nav && n.tier !== 2 ? ' data-tp-nav="' + n.nav + '"' : '';
+            var isNew   = !oldRects[n.id];
+            var delay   = isNew ? (n.tier * 0.06 + idx * 0.012).toFixed(3) : '0';
+            var animCls = isNew ? '' : ' tp-node--placed';  // placed nodes skip entrance anim
+            var role    = n.tier === 2 ? ' role="button" aria-expanded="' + isExp + '"' : '';
 
-            nodesHtml += '<div class="tp-node tp-node--' + typeClass + '" id="tpn-' + n.id + '"' +
-                ' style="left:' + p.x + 'px;top:' + p.y + 'px;animation-delay:' + delay + 's"' +
-                ' tabindex="' + tab + '"' + role + expandAttr + navAttr + '>' +
-                '<div class="tp-nd" style="border-color:' + n.color + '22">' +
+            nodesHtml += '<div class="tp-node tp-node--' + typeClass + pulse + animCls + '" id="tpn-' + n.id + '"' +
+                ' style="left:' + p.x + 'px;top:' + p.y + 'px;' + (isNew ? 'animation-delay:' + delay + 's' : '') + '"' +
+                ' tabindex="0"' + role + expAttr + navAttr +
+                ' data-tp-id="' + n.id + '" data-tp-label="' + n.label + '">' +
+                '<div class="tp-nd" style="border-color:' + n.color + '28;' + (isAct ? '--tp-glow:' + n.color + ';' : '') + '">' +
                 bdg +
                 '<div class="tp-nd-lbl">' + n.label + '</div>' +
                 (n.sub ? '<div class="tp-nd-sub">' + n.sub + '</div>' : '') +
-                chevron +
+                chev +
                 '</div></div>';
         });
+
         nodesC.innerHTML = nodesHtml;
+
+        // FLIP: animate moved nodes from old to new position
+        vis.forEach(function (n) {
+            if (!oldRects[n.id]) return; // new node — entrance anim handles it
+            var el = document.getElementById('tpn-' + n.id);
+            if (!el) return;
+            var r  = el.getBoundingClientRect();
+            var dx = oldRects[n.id].cx - (r.left + r.width  / 2);
+            var dy = oldRects[n.id].cy - (r.top  + r.height / 2);
+            if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+            el.style.transition = 'none';
+            el.style.transform  = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    el.style.transition = 'transform 300ms cubic-bezier(0,0,0.2,1)';
+                    el.style.transform  = 'translate(-50%, -50%)';
+                    el.addEventListener('transitionend', function () {
+                        el.style.transition = '';
+                        el.style.transform  = '';
+                    }, { once: true });
+                });
+            });
+        });
 
         _applyLOD();
     }
@@ -27591,10 +27628,40 @@ window.apexFileDropHandler = function(e){
         stage.classList.toggle('tp-lod-high', _scale > 1.40);
     }
 
+    // ── Tooltip ──────────────────────────────────────────────────────────────
+    function _showTooltip(nodeId, anchorEl) {
+        var tip = document.getElementById('tpTooltip');
+        if (!tip) return;
+        var n = _n(nodeId);
+        if (!n) return;
+        var lines = [n.label];
+        if (n.tier === 0) lines.push('Click to open Council');
+        else if (n.tier === 1) {
+            lines.push('Pending: ' + (_badges['actions'] || 0));
+            lines.push('Click to open Actions');
+        }
+        else if (n.tier === 2) {
+            lines.push(_expanded[n.id] ? 'Click to collapse' : 'Click to expand agents');
+        }
+        else if (n.tier === 3) lines.push('Click to open Agents');
+        tip.innerHTML = lines.map(function (l, i) { return i === 0 ? '<b>' + l + '</b>' : l; }).join('<br>');
+        tip.style.display = 'block';
+        var r = anchorEl.getBoundingClientRect();
+        var outerR = document.getElementById('tpOuter').getBoundingClientRect();
+        tip.style.left = (r.left - outerR.left + r.width / 2) + 'px';
+        tip.style.top  = (r.top  - outerR.top  - 8) + 'px';
+    }
+    function _hideTooltip() {
+        var tip = document.getElementById('tpTooltip');
+        if (tip) tip.style.display = 'none';
+    }
+
     // ── Interaction (delegated) ──────────────────────────────────────────────
     document.addEventListener('click', function (e) {
+        if (window.activePage !== 'test') return;
         var expEl = e.target.closest('[data-tp-expand]');
         if (expEl) {
+            _hideTooltip();
             var did = expEl.getAttribute('data-tp-expand');
             _expanded[did] = !_expanded[did];
             _render();
@@ -27607,6 +27674,7 @@ window.apexFileDropHandler = function(e){
     });
 
     document.addEventListener('keydown', function (e) {
+        if (window.activePage !== 'test') return;
         if (e.key !== 'Enter' && e.key !== ' ') return;
         var el = document.activeElement;
         if (!el) return;
@@ -27614,23 +27682,83 @@ window.apexFileDropHandler = function(e){
         if (did) { e.preventDefault(); _expanded[did] = !_expanded[did]; _render(); }
     });
 
+    // Tooltip on mouseenter/mouseleave
+    document.addEventListener('mouseover', function (e) {
+        if (window.activePage !== 'test') return;
+        var nd = e.target.closest('[data-tp-id]');
+        if (nd) _showTooltip(nd.getAttribute('data-tp-id'), nd);
+    });
+    document.addEventListener('mouseout', function (e) {
+        if (!e.target.closest || !e.target.closest('[data-tp-id]')) return;
+        var rel = e.relatedTarget;
+        if (rel && rel.closest && rel.closest('[data-tp-id]')) return;
+        _hideTooltip();
+    });
+
+    // ── Pan (drag) ────────────────────────────────────────────────────────────
+    var _panX = 0, _panY = 0, _dragging = false;
+    var _dragSX = 0, _dragSY = 0, _panSX = 0, _panSY = 0;
+
+    function _applyTransform() {
+        var st = document.getElementById('tpStage');
+        if (st) st.style.transform = 'translate(' + _panX + 'px,' + _panY + 'px) scale(' + _scale + ')';
+    }
+
+    document.addEventListener('mousedown', function (e) {
+        if (window.activePage !== 'test') return;
+        var outer = document.getElementById('tpOuter');
+        if (!outer || !outer.contains(e.target)) return;
+        if (e.target.closest('[data-tp-expand],[data-tp-nav],.tp-hud-btn,.portal-tab')) return;
+        _dragging = true;
+        _dragSX = e.clientX; _dragSY = e.clientY;
+        _panSX  = _panX;     _panSY  = _panY;
+        outer.style.cursor = 'grabbing';
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (!_dragging) return;
+        _panX = _panSX + (e.clientX - _dragSX);
+        _panY = _panSY + (e.clientY - _dragSY);
+        _applyTransform();
+    });
+    document.addEventListener('mouseup', function () {
+        if (_dragging) {
+            _dragging = false;
+            var outer = document.getElementById('tpOuter');
+            if (outer) outer.style.cursor = '';
+        }
+    });
+
+    // Touch pan (single finger)
+    var _touchPan = null;
+    document.addEventListener('touchstart', function (e) {
+        if (window.activePage !== 'test') return;
+        if (e.touches.length === 1 && !e.target.closest('[data-tp-expand],[data-tp-nav],.tp-hud-btn,.portal-tab')) {
+            _touchPan = { sx: e.touches[0].clientX, sy: e.touches[0].clientY, px: _panX, py: _panY };
+        }
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+        if (!_touchPan || e.touches.length !== 1) return;
+        _panX = _touchPan.px + (e.touches[0].clientX - _touchPan.sx);
+        _panY = _touchPan.py + (e.touches[0].clientY - _touchPan.sy);
+        _applyTransform();
+    }, { passive: true });
+    document.addEventListener('touchend', function () { _touchPan = null; }, { passive: true });
+
     // ── Zoom ─────────────────────────────────────────────────────────────────
     window._tpZoom = function (delta) {
-        _scale = Math.max(0.30, Math.min(2.6, _scale + delta));
-        var st = document.getElementById('tpStage');
-        if (st) st.style.transform = 'scale(' + _scale + ')';
+        _scale = Math.max(0.28, Math.min(2.8, _scale + delta));
+        _applyTransform();
         _applyLOD();
     };
 
     window._tpReset = function () {
-        _scale = 1;
-        _expanded = {};
-        var st = document.getElementById('tpStage');
-        if (st) st.style.transform = 'scale(1)';
+        _scale = 1; _panX = 0; _panY = 0; _expanded = {};
+        _applyTransform();
         _render();
     };
 
-    // Scroll-to-zoom (only when topology page is active)
+    // Scroll-to-zoom
     window.addEventListener('wheel', function (e) {
         if (window.activePage !== 'test') return;
         if (!e.target.closest('#tpOuter')) return;
@@ -27638,11 +27766,12 @@ window.apexFileDropHandler = function(e){
         window._tpZoom(e.deltaY > 0 ? -0.07 : 0.07);
     }, { passive: false });
 
-    // Pinch-to-zoom (touch)
+    // Pinch-to-zoom
     var _pinchDist = null;
     window.addEventListener('touchstart', function (e) {
-        if (window.activePage !== 'test') return;
-        if (e.touches.length === 2) _pinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        if (window.activePage !== 'test' || e.touches.length !== 2) return;
+        _pinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        _touchPan = null;
     }, { passive: true });
     window.addEventListener('touchmove', function (e) {
         if (window.activePage !== 'test' || e.touches.length !== 2 || _pinchDist === null) return;
@@ -27684,10 +27813,8 @@ window.apexFileDropHandler = function(e){
     if (_sp) {
         window.switchPage = function (name) {
             _sp(name);
-            var nb = document.getElementById('nav-test');
-            if (nb) nb.classList.toggle('active', name === 'test');
             if (name === 'test') {
-                setTimeout(function () { _render(); _fetchLive(); }, 60);
+                setTimeout(function () { _panX = 0; _panY = 0; _applyTransform(); _render(); _fetchLive(); }, 60);
             }
         };
     }
