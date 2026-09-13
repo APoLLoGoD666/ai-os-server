@@ -27836,65 +27836,158 @@ window.apexFileDropHandler = function(e){
 
     window._renderCouncilRightGrid = function () { _renderCouncilRight(); };
 
-    // ── Right panel: recent runs ──────────────────────────────────────────────
-    function _renderRight(tierId) {
-        if (tierId === 'council') { _renderCouncilRight(); return; }
+    // ── Shared run helpers ────────────────────────────────────────────────────
+    var _DI = { business:'◈', marketing:'◬', comms:'⬡', system:'▲', file:'▶', finance:'◉', health:'◎', uni:'○', civilisation:'⊕' };
 
-        var body    = document.getElementById('kg-right-body');
-        var statsEl = document.getElementById('kg-right-stats');
-        if (!body) return;
+    function _fillStats(statsEl, runs) {
+        if (!statsEl) return;
+        if (!runs.length) { statsEl.style.display = 'none'; return; }
+        var ok  = runs.filter(function (r) { return r.success !== false; }).length;
+        var pct = Math.round(ok / runs.length * 100);
+        var drs = runs.filter(function (r) { return r.duration_ms; });
+        var avg = drs.length ? Math.round(drs.reduce(function (s, r) { return s + r.duration_ms; }, 0) / drs.length) : 0;
+        var pc  = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
+        statsEl.style.display = 'flex';
+        statsEl.innerHTML =
+            '<div class="kg-right-stat"><span class="kg-right-stat-n">' + runs.length + '</span><span class="kg-right-stat-l">RUNS</span></div>' +
+            '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:' + pc + '">' + pct + '%</span><span class="kg-right-stat-l">SUCCESS</span></div>' +
+            '<div class="kg-right-stat"><span class="kg-right-stat-n">' + (avg ? _dur(avg) : '—') + '</span><span class="kg-right-stat-l">AVG DUR</span></div>';
+    }
 
-        // Filter runs per tier
-        var runs;
-        if (tierId === 'domain') {
-            var daSlugs = (window.DA_AGENTS || []).map(function (a) { return a.slug; });
-            runs = _liveRuns.filter(function (r) { return r.domain && daSlugs.indexOf(r.domain) !== -1; }).slice(0, 60);
-        } else if (tierId === 'office') {
-            var oaNames = [];
-            (window.DA_AGENTS || []).forEach(function (da) { oaNames = oaNames.concat(da.officeAgents || []); });
-            runs = _liveRuns.filter(function (r) { return r.agent_name && oaNames.indexOf(r.agent_name) !== -1; }).slice(0, 60);
-        } else {
-            runs = _liveRuns.slice(0, 60);
-        }
-
-        // Stats strip
-        if (statsEl) {
-            if (runs.length) {
-                var okCount  = runs.filter(function (r) { return r.success !== false; }).length;
-                var pct      = Math.round(okCount / runs.length * 100);
-                var durs     = runs.filter(function (r) { return r.duration_ms; });
-                var avgDur   = durs.length ? Math.round(durs.reduce(function (s, r) { return s + r.duration_ms; }, 0) / durs.length) : 0;
-                var pctColor = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
-                statsEl.style.display = 'flex';
-                statsEl.innerHTML =
-                    '<div class="kg-right-stat"><span class="kg-right-stat-n">' + runs.length + '</span><span class="kg-right-stat-l">RUNS</span></div>' +
-                    '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:' + pctColor + '">' + pct + '%</span><span class="kg-right-stat-l">SUCCESS</span></div>' +
-                    '<div class="kg-right-stat"><span class="kg-right-stat-n">' + (avgDur ? _dur(avgDur) : '—') + '</span><span class="kg-right-stat-l">AVG DUR</span></div>';
-            } else {
-                statsEl.style.display = 'none';
-            }
-        }
-
-        if (!runs.length) { body.innerHTML = '<div class="kg-runs-empty">NO RUNS YET</div>'; return; }
-
-        // Group by recency
-        var now  = Date.now();
-        var grps = [
-            { label:'TODAY',     runs:[] },
-            { label:'THIS WEEK', runs:[] },
-            { label:'OLDER',     runs:[] },
-        ];
+    function _groupedRuns(runs) {
+        if (!runs.length) return '<div class="kg-runs-empty">No activity yet</div>';
+        var now = Date.now();
+        var grps = [{ label:'Today', runs:[] }, { label:'This week', runs:[] }, { label:'Older', runs:[] }];
         runs.forEach(function (r) {
             var t = new Date(r.created_at).getTime();
             if      (t >= now - 86400000)   grps[0].runs.push(r);
             else if (t >= now - 7*86400000) grps[1].runs.push(r);
             else                            grps[2].runs.push(r);
         });
-
-        body.innerHTML = grps.filter(function (g) { return g.runs.length; }).map(function (g) {
+        return grps.filter(function (g) { return g.runs.length; }).map(function (g) {
             return '<div class="kg-time-hd"><span>' + g.label + '</span><span class="kg-time-hd-count">' + g.runs.length + '</span></div>' +
                 g.runs.map(function (r) { return _runCard(r); }).join('');
         }).join('');
+    }
+
+    function _detailBack(backFn, parentLabel, childLabel, childColor) {
+        return '<div class="kg-detail-back" onclick="' + backFn + '()">' +
+            '<span class="kg-detail-back-arr">‹</span>' +
+            '<span class="kg-detail-back-lbl">' + parentLabel + '</span>' +
+            '<span class="kg-detail-back-sep">·</span>' +
+            '<span class="kg-detail-back-name" style="color:' + childColor + '">' + childLabel + '</span>' +
+        '</div>';
+    }
+
+    function _navCards(cards) {
+        return '<div class="kg-nav-grid">' + cards.map(function (c) {
+            return '<div class="kg-nav-card" style="--nc:' + c.color + ';--nc-glow:' + c.glow + '" onclick="' + c.fn + '">' +
+                '<div class="kg-nav-card-icon">' + c.icon + '</div>' +
+                '<div class="kg-nav-card-body">' +
+                    '<div class="kg-nav-card-label">' + _esc(c.label) + '</div>' +
+                    '<div class="kg-nav-card-sub">' + _esc(c.sub) + '</div>' +
+                '</div>' +
+                '<div class="kg-nav-card-n">' + c.n + '</div>' +
+            '</div>';
+        }).join('') + '</div>';
+    }
+
+    // ── Domain agents right panel ─────────────────────────────────────────────
+    function _renderDomainRight() {
+        var body    = document.getElementById('kg-right-body');
+        var statsEl = document.getElementById('kg-right-stats');
+        if (!body) return;
+        var daSlugs = (window.DA_AGENTS || []).map(function (a) { return a.slug; });
+        var allRuns = _liveRuns.filter(function (r) { return r.domain && daSlugs.indexOf(r.domain) !== -1; });
+        _fillStats(statsEl, allRuns);
+        var cards = (window.DA_AGENTS || []).map(function (da) {
+            var runs = _liveRuns.filter(function (r) { return r.domain === da.slug; });
+            var last = runs[0] ? _ago(runs[0].created_at) : 'No activity';
+            return {
+                icon: _DI[da.id] || '◆',
+                label: da.name.charAt(0) + da.name.slice(1).toLowerCase(),
+                sub: last,
+                n: runs.length,
+                color: da.color,
+                glow: 'rgba(' + _hexToRgb(da.color) + ',0.18)',
+                fn: 'window._kgDomainDetail(\'' + da.slug + '\')',
+            };
+        });
+        body.innerHTML = _navCards(cards);
+    }
+
+    window._kgDomainDetail = function (slug) {
+        var body    = document.getElementById('kg-right-body');
+        var statsEl = document.getElementById('kg-right-stats');
+        if (!body) return;
+        var da   = (window.DA_AGENTS || []).find(function (a) { return a.slug === slug; });
+        var runs = _liveRuns.filter(function (r) { return r.domain === slug; }).slice(0, 60);
+        _fillStats(statsEl, runs);
+        var col  = da ? da.color : '#7c6cf2';
+        var name = da ? (da.name.charAt(0) + da.name.slice(1).toLowerCase()) : slug;
+        body.innerHTML = _detailBack('window._renderDomainRightGrid', 'Domain Agents', name, col) + _groupedRuns(runs);
+    };
+    window._renderDomainRightGrid = function () { _renderDomainRight(); };
+
+    // ── Office agents right panel ─────────────────────────────────────────────
+    function _renderOfficeRight() {
+        var body    = document.getElementById('kg-right-body');
+        var statsEl = document.getElementById('kg-right-stats');
+        if (!body) return;
+        var allOA = [];
+        (window.DA_AGENTS || []).forEach(function (da) { allOA = allOA.concat(da.officeAgents || []); });
+        var allRuns = _liveRuns.filter(function (r) { return r.agent_name && allOA.indexOf(r.agent_name) !== -1; });
+        _fillStats(statsEl, allRuns);
+        var cards = (window.DA_AGENTS || []).filter(function (da) { return (da.officeAgents || []).length; }).map(function (da) {
+            var names = da.officeAgents || [];
+            var runs  = _liveRuns.filter(function (r) { return r.agent_name && names.indexOf(r.agent_name) !== -1; });
+            var last  = runs[0] ? _ago(runs[0].created_at) : 'No activity';
+            return {
+                icon: _DI[da.id] || '◆',
+                label: da.name.charAt(0) + da.name.slice(1).toLowerCase(),
+                sub: names.length + ' agents · ' + last,
+                n: runs.length,
+                color: da.color,
+                glow: 'rgba(' + _hexToRgb(da.color) + ',0.18)',
+                fn: 'window._kgOfficeDetail(\'' + da.id + '\')',
+            };
+        });
+        body.innerHTML = _navCards(cards);
+    }
+
+    window._kgOfficeDetail = function (daId) {
+        var body    = document.getElementById('kg-right-body');
+        var statsEl = document.getElementById('kg-right-stats');
+        if (!body) return;
+        var da    = (window.DA_AGENTS || []).find(function (a) { return a.id === daId; });
+        var names = da ? (da.officeAgents || []) : [];
+        var runs  = _liveRuns.filter(function (r) { return r.agent_name && names.indexOf(r.agent_name) !== -1; }).slice(0, 60);
+        _fillStats(statsEl, runs);
+        var col  = da ? da.color : '#7c6cf2';
+        var name = da ? (da.name.charAt(0) + da.name.slice(1).toLowerCase()) : daId;
+        body.innerHTML = _detailBack('window._renderOfficeRightGrid', 'Office Agents', name, col) + _groupedRuns(runs);
+    };
+    window._renderOfficeRightGrid = function () { _renderOfficeRight(); };
+
+    // ── hex → rgb helper for glow ─────────────────────────────────────────────
+    function _hexToRgb(hex) {
+        var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+        return isNaN(r) ? '124,108,242' : r+','+g+','+b;
+    }
+
+    // ── Right panel: dispatch ──────────────────────────────────────────────────
+    function _renderRight(tierId) {
+        if (tierId === 'council') { _renderCouncilRight(); return; }
+        if (tierId === 'domain')  { _renderDomainRight();  return; }
+        if (tierId === 'office')  { _renderOfficeRight();  return; }
+
+        var body    = document.getElementById('kg-right-body');
+        var statsEl = document.getElementById('kg-right-stats');
+        if (!body) return;
+        var runs = _liveRuns.slice(0, 60);
+        _fillStats(statsEl, runs);
+        if (!runs.length) { body.innerHTML = '<div class="kg-runs-empty">No activity yet</div>'; return; }
+        body.innerHTML = _groupedRuns(runs);
     }
 
     function _runCard(r) {
