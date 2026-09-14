@@ -27607,6 +27607,31 @@ window.apexFileDropHandler = function(e){
   .kg-nav-card { transition:none !important; }
 }
 
+/* ── Task & deliberation detail popup ── */
+.kg-td-status { display:inline-flex; align-items:center; gap:5px; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.12em; padding:4px 9px; border-radius:3px; border-width:1px; border-style:solid; }
+.kg-td-meta-row { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 0; }
+.kg-td-meta-chip { font:400 10px/1.4 'JetBrains Mono',monospace; color:rgba(255,255,255,0.38); padding:3px 8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:3px; }
+.kg-td-reply {
+  font:400 12px/1.8 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.72);
+  white-space:pre-wrap; word-break:break-word;
+  background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);
+  border-radius:8px; padding:14px 16px; max-height:42vh; overflow-y:auto;
+}
+.kg-td-reply::-webkit-scrollbar { width:3px; } .kg-td-reply::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.12); border-radius:2px; }
+.kg-td-vote-list { display:flex; flex-direction:column; gap:6px; }
+.kg-td-vote-row { display:flex; gap:10px; align-items:flex-start; padding:8px 10px; border-radius:6px; background:rgba(255,255,255,0.03); }
+.kg-td-vote-entity { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; min-width:36px; padding-top:2px; }
+.kg-td-vote-text { font:400 11px/1.6 system-ui,sans-serif; color:rgba(255,255,255,0.6); flex:1; }
+.kg-td-vote-badge { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.08em; padding:3px 7px; border-radius:3px; flex-shrink:0; margin-top:1px; }
+.kg-td-vote-badge.approve { background:rgba(34,197,94,0.12); color:#22c55e; }
+.kg-td-vote-badge.reject  { background:rgba(239,68,68,0.12);  color:#ef4444; }
+.kg-td-vote-badge.abstain { background:rgba(113,113,122,0.12); color:#71717a; }
+.kg-out-feed-card { cursor:pointer; transition:background 150ms; }
+.kg-out-feed-card:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; border-radius:6px; }
+.kg-delib { cursor:pointer; transition:background 150ms; }
+.kg-delib:hover { background:rgba(255,255,255,0.025); }
+.kg-delib:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; border-radius:4px; }
+
 /* ── Info popup overlay ── */
 .kg-info-overlay {
   position:fixed; inset:0; z-index:10000;
@@ -27811,6 +27836,135 @@ window.apexFileDropHandler = function(e){
     window._kgCloseInfo = function() {
         var overlay = document.getElementById('kg-info-overlay');
         if (overlay) overlay.classList.remove('visible');
+    };
+
+    // ── Task detail popup (output + action cards) ─────────────────────────────
+    window._kgTaskDetail = function(taskId) {
+        var t = (_liveTasks || []).find(function(x){ return x.id === taskId; });
+        if (!t) return;
+        var isDone  = t.status === 'completed' || t.status === 'done';
+        var isFail  = t.status === 'failed';
+        var isPend  = t.status === 'awaiting_approval' || t.status === 'approval_required';
+        var isAct   = t.status === 'in_progress';
+        var stColor = isDone ? '#22c55e' : isFail ? '#ef4444' : isPend ? '#a78bfa' : isAct ? '#f59e0b' : '#71717a';
+        var stLabel = isDone ? 'DONE' : isFail ? 'FAILED' : isPend ? 'AWAITING APPROVAL' : isAct ? 'IN PROGRESS' : (t.status||'').toUpperCase();
+        var stIcon  = isDone ? '✓' : isFail ? '✕' : isPend ? '◈' : isAct ? '▶' : '·';
+        var slug    = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug||'').toLowerCase();
+        var col     = slug ? _domainColor(slug) : stColor;
+        var exec    = t.metadata && t.metadata.execution || null;
+        var reply   = exec ? String(exec.reply || exec.result || exec.output || '').trim() : '';
+        var rec     = t.metadata && t.metadata.recommendation ? String(t.metadata.recommendation).trim() : '';
+        var officeAgent = exec && exec.office ? exec.office.agent : null;
+        var pri     = t.metadata && t.metadata.priority ? String(t.metadata.priority.tier || t.metadata.priority) : '';
+        var deliberationId = t.metadata && t.metadata.deliberationId || null;
+
+        var meta = [];
+        if (slug)        meta.push(slug.toUpperCase() + ' DOMAIN');
+        if (officeAgent) meta.push('via ' + officeAgent);
+        if (pri)         meta.push(pri.toUpperCase() + ' PRIORITY');
+        if (t.created_at) meta.push('created ' + _ago(t.created_at));
+        if (t.updated_at && t.updated_at !== t.created_at) meta.push('updated ' + _ago(t.updated_at));
+        if (deliberationId) meta.push('council: ' + String(deliberationId).slice(0,12));
+
+        var html =
+            '<div class="kg-info-modal-hd">' +
+                '<div class="kg-info-modal-icon">' + stIcon + '</div>' +
+                '<div class="kg-info-modal-titles">' +
+                    '<div class="kg-td-status" style="color:' + stColor + ';border-color:' + stColor + '44;background:' + stColor + '11;margin-bottom:8px">' + stLabel + '</div>' +
+                    '<div class="kg-info-modal-title" style="color:#fff;font-size:14px">' + _esc(t.title || t.id || '—') + '</div>' +
+                '</div>' +
+                '<button class="kg-info-modal-close" onclick="window._kgCloseInfo()" aria-label="Close">×</button>' +
+            '</div>' +
+            '<div class="kg-info-modal-accent" style="background:linear-gradient(90deg,' + col + ',transparent)"></div>' +
+            '<div class="kg-info-modal-body">';
+
+        if (meta.length) {
+            html += '<div><div class="kg-info-section-hd">Details</div>' +
+                '<div class="kg-td-meta-row">' + meta.map(function(m){ return '<span class="kg-td-meta-chip">'+_esc(m)+'</span>'; }).join('') + '</div>' +
+                '</div>';
+        }
+
+        var body = reply || rec;
+        if (body) {
+            html += '<div><div class="kg-info-section-hd">' + (reply ? 'Agent Response' : 'Council Recommendation') + '</div>' +
+                '<div class="kg-td-reply">' + _esc(body) + '</div>' +
+                '</div>';
+        }
+
+        html += '</div>';
+
+        var overlay = document.getElementById('kg-info-overlay');
+        var modal   = document.getElementById('kg-info-modal');
+        if (!overlay || !modal) return;
+        modal.innerHTML = html;
+        overlay.classList.add('visible');
+        requestAnimationFrame(function(){ var btn = modal.querySelector('.kg-info-modal-close'); if(btn) btn.focus(); });
+    };
+
+    // ── Deliberation detail popup (council cards) ────────────────────────────
+    window._kgDelibDetail = function(delibId) {
+        var d = (_councilDelibs || []).find(function(x){ return String(x.id) === String(delibId); });
+        if (!d) return;
+        var pct  = Math.round((d.consensus_level || 0) * 100);
+        var col  = pct >= 70 ? '#22c55e' : pct >= 40 ? '#f59e0b' : '#ef4444';
+        var stColor = d.status === 'resolved' ? '#22c55e' : d.status === 'deliberating' ? '#a78bfa' : d.status === 'escalated' ? '#f59e0b' : '#71717a';
+        var votes = d.executive_votes || d.discussion || [];
+
+        var votesHtml = '';
+        if (votes.length) {
+            var EXECS = ['CTO','CFO','COO','CSO','CIO','CGO'];
+            votesHtml = '<div><div class="kg-info-section-hd">Executive Votes</div><div class="kg-td-vote-list">' +
+                EXECS.map(function(ex) {
+                    var v  = votes.find(function(vt){ return (vt.entity_id||vt.entity||'').toUpperCase() === ex; });
+                    if (!v) return '';
+                    var vs  = String(v.vote || v.decision || '');
+                    var jus = String(v.justification || v.reasoning || v.analysis || '').trim();
+                    var cls = /approve|yes|proceed|go|accept/i.test(vs) ? 'approve' : /reject|no|hold|deny|stop|block/i.test(vs) ? 'reject' : 'abstain';
+                    return '<div class="kg-td-vote-row">' +
+                        '<div class="kg-td-vote-entity">' + ex + '</div>' +
+                        '<div class="kg-td-vote-text">' + _esc((jus||vs).slice(0,200)) + '</div>' +
+                        '<div class="kg-td-vote-badge ' + cls + '">' + cls.toUpperCase() + '</div>' +
+                    '</div>';
+                }).filter(Boolean).join('') +
+            '</div></div>';
+        }
+
+        var html =
+            '<div class="kg-info-modal-hd">' +
+                '<div class="kg-info-modal-icon">⬡</div>' +
+                '<div class="kg-info-modal-titles">' +
+                    '<div class="kg-td-status" style="color:' + stColor + ';border-color:' + stColor + '44;background:' + stColor + '11;margin-bottom:8px">' + (d.status||'resolved').toUpperCase() + ' · ' + pct + '% CONSENSUS</div>' +
+                    '<div class="kg-info-modal-title" style="color:#fff;font-size:13px">' + _esc(d.question || '—') + '</div>' +
+                '</div>' +
+                '<button class="kg-info-modal-close" onclick="window._kgCloseInfo()" aria-label="Close">×</button>' +
+            '</div>' +
+            '<div class="kg-info-modal-accent" style="background:linear-gradient(90deg,' + col + ',transparent)"></div>' +
+            '<div class="kg-info-modal-body">';
+
+        var meta = [];
+        if (d.created_at) meta.push('convened ' + _ago(d.created_at));
+        if (d.resolved_at) meta.push('resolved ' + _ago(d.resolved_at));
+        if (d.participants && d.participants.length) meta.push(d.participants.length + ' participants');
+        if (meta.length) {
+            html += '<div><div class="kg-info-section-hd">Session</div>' +
+                '<div class="kg-td-meta-row">' + meta.map(function(m){ return '<span class="kg-td-meta-chip">'+_esc(m)+'</span>'; }).join('') + '</div>' +
+                '</div>';
+        }
+
+        if (d.final_recommendation) {
+            html += '<div><div class="kg-info-section-hd">Final Recommendation</div>' +
+                '<div class="kg-td-reply">' + _esc(String(d.final_recommendation).trim()) + '</div>' +
+                '</div>';
+        }
+
+        html += votesHtml + '</div>';
+
+        var overlay = document.getElementById('kg-info-overlay');
+        var modal   = document.getElementById('kg-info-modal');
+        if (!overlay || !modal) return;
+        modal.innerHTML = html;
+        overlay.classList.add('visible');
+        requestAnimationFrame(function(){ var btn = modal.querySelector('.kg-info-modal-close'); if(btn) btn.focus(); });
     };
 
     function _ago(ts) {
@@ -28474,7 +28628,8 @@ window.apexFileDropHandler = function(e){
             var cls = /approve|yes|proceed|go|accept/i.test(vs) ? 'approve' : /reject|no|hold|deny|stop|block/i.test(vs) ? 'reject' : 'abstain';
             return '<div class="kg-vote-pip ' + cls + '" aria-label="' + ex + ': ' + _esc(vs.slice(0,20) || 'abstain') + '">' + ex.slice(0,2) + '</div>';
         }).join('');
-        return '<div class="kg-delib">' +
+        var did = JSON.stringify(String(d.id || ''));
+        return '<div class="kg-delib" tabindex="0" role="button" aria-label="Deliberation: '+_esc((d.question||'').slice(0,60))+'" onclick="window._kgDelibDetail('+did+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgDelibDetail('+did+')}">' +
             '<div class="kg-delib-q">' + _esc((d.question || '').slice(0, 140)) + '</div>' +
             '<div class="kg-delib-meta">' +
                 '<span class="kg-delib-chip ' + (d.status||'resolved') + '">' + (d.status||'resolved').toUpperCase() + '</span>' +
@@ -28958,7 +29113,8 @@ window.apexFileDropHandler = function(e){
             var isDone = t.status==='completed'||t.status==='done';
             var slug   = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
             var col    = slug ? _domainColor(slug) : '#52525b';
-            return '<div class="kg-out-feed-card '+(isDone?'done':'failed')+'">' +
+            var tid    = JSON.stringify(String(t.id));
+            return '<div class="kg-out-feed-card '+(isDone?'done':'failed')+'" tabindex="0" role="button" aria-label="'+_esc((t.title||t.id||'—').slice(0,60))+'" onclick="window._kgTaskDetail('+tid+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgTaskDetail('+tid+')}">' +
                 '<div class="kg-out-feed-icon" style="color:'+(isDone?'#22c55e':'#ef4444')+'">'+(isDone?'✓':'✕')+'</div>' +
                 '<div class="kg-out-feed-body">' +
                     '<div class="kg-out-feed-title">'+_esc((t.title||t.id||'—').slice(0,52))+'</div>' +
@@ -29087,8 +29243,9 @@ window.apexFileDropHandler = function(e){
                     var slug   = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
                     var col    = slug ? _domainColor(slug) : '#52525b';
                     var exec   = (t.metadata&&t.metadata.execution)||null;
-                    var reply  = exec ? String(exec.reply||'').trim() : '';
-                    return '<div class="kg-out-feed-card '+(isDone?'done':'failed')+'" style="padding:10px 14px">' +
+                    var reply  = exec ? String(exec.reply||exec.result||exec.output||'').trim() : '';
+                    var tid    = JSON.stringify(String(t.id));
+                    return '<div class="kg-out-feed-card '+(isDone?'done':'failed')+'" style="padding:10px 14px" tabindex="0" role="button" aria-label="'+_esc((t.title||t.id||'—').slice(0,60))+'" onclick="window._kgTaskDetail('+tid+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgTaskDetail('+tid+')}">' +
                         '<div class="kg-out-feed-icon" style="color:'+(isDone?'#22c55e':'#ef4444')+'">'+(isDone?'✓':'✕')+'</div>' +
                         '<div class="kg-out-feed-body">' +
                             '<div class="kg-out-feed-title">'+_esc((t.title||t.id||'—').slice(0,60))+'</div>' +

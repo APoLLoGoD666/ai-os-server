@@ -440,6 +440,81 @@ test('info modal renders sections and chips for node-domain', async ({ page }) =
     await expect(page.locator('.kg-info-chip').first()).toBeVisible();
 });
 
+// ── 34. Output cards have onclick wired to _kgTaskDetail ──────────────────────
+test('output feed cards have _kgTaskDetail onclick attribute', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    await page.evaluate((tasks) => {
+        if (window._kgApplyGlows) window._kgApplyGlows([], tasks, []);
+    }, MOCK_TASKS);
+    await clickNode(page, '#kg-node-output');
+    await page.waitForTimeout(300);
+    // Verify cards in left panel have the onclick wired up
+    const cards = page.locator('#kg-left-body .kg-out-feed-card');
+    const count = await cards.count();
+    if (count > 0) {
+        const onclick = await cards.first().getAttribute('onclick');
+        expect(onclick).toContain('_kgTaskDetail');
+        const role = await cards.first().getAttribute('role');
+        expect(role).toBe('button');
+    }
+});
+
+// ── 35. _kgTaskDetail shows title and status for a known task ─────────────────
+test('_kgTaskDetail renders correct title and status', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    await page.evaluate((tasks) => {
+        if (window._kgApplyGlows) window._kgApplyGlows([], tasks, []);
+    }, MOCK_TASKS);
+    await page.waitForTimeout(200);
+    await page.evaluate(() => { window._kgTaskDetail('t1'); });
+    await page.waitForTimeout(150);
+    await expect(page.locator('#kg-info-overlay')).toHaveClass(/visible/);
+    const title = await page.locator('.kg-info-modal-title').textContent();
+    expect(title).toContain('Analyse Q3 Revenue');
+    const status = await page.locator('.kg-td-status').textContent();
+    expect(status).toMatch(/DONE|COMPLETED/i);
+    await page.evaluate(() => window._kgCloseInfo());
+});
+
+// ── 36. _kgDelibDetail shows question and status for a known deliberation ──────
+test('_kgDelibDetail renders correct question and status', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    await page.evaluate((delibs) => {
+        if (window._kgApplyGlows) window._kgApplyGlows([], [], delibs);
+    }, MOCK_DELIBS);
+    await page.waitForTimeout(200);
+    await page.evaluate(() => { window._kgDelibDetail('d2'); });
+    await page.waitForTimeout(150);
+    await expect(page.locator('#kg-info-overlay')).toHaveClass(/visible/);
+    const title = await page.locator('.kg-info-modal-title').textContent();
+    expect(title).toContain('Archive old logs');
+    await page.evaluate(() => window._kgCloseInfo());
+});
+
+// ── 37. Council deliberation cards have onclick ────────────────────────────────
+test('council deliberation cards are clickable', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    await clickNode(page, '#kg-node-council');
+    await page.waitForTimeout(200);
+    // Navigate to resolved deliberations
+    await page.evaluate(() => {
+        if (typeof window._kgCouncilDetail === 'function') window._kgCouncilDetail('resolved');
+    });
+    await page.waitForTimeout(200);
+    const delib = page.locator('#kg-right-body .kg-delib').first();
+    const attached = await delib.isVisible().catch(() => false);
+    if (attached) {
+        const role = await delib.getAttribute('role');
+        expect(role).toBe('button');
+        const onclick = await delib.getAttribute('onclick');
+        expect(onclick).toContain('_kgDelibDetail');
+    }
+});
+
 // ── 33. Click outside modal closes it ────────────────────────────────────────
 test('clicking the overlay backdrop closes the info modal', async ({ page }) => {
     await setup(page);
