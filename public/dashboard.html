@@ -27608,7 +27608,7 @@ window.apexFileDropHandler = function(e){
 }
 
 /* ── Last-updated footer ── */
-.kg-last-updated { position:absolute; bottom:8px; right:12px; font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.18); pointer-events:none; z-index:3; }
+.kg-last-updated { position:absolute; bottom:8px; right:12px; font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.32); pointer-events:none; z-index:3; }
 
 /* ── Loading skeleton ── */
 .kg-loading { display:flex; align-items:center; justify-content:center; gap:8px; height:80px; font:500 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; text-transform:uppercase; }
@@ -27864,8 +27864,8 @@ window.apexFileDropHandler = function(e){
         if (ltEl) ltEl.textContent = tier ? tier.label : id.toUpperCase();
         if (rtEl) rtEl.textContent = 'RECENT RUNS';
         if (acEl && tier) acEl.style.background = 'linear-gradient(90deg,' + tier.color + ',transparent)';
-        var _daCountM = (window.DA_AGENTS||[]).length || 9;
-        var _oaCountM = (window.DA_AGENTS||[]).reduce(function(s,a){return s+(a.officeAgents||[]).length;},0) || 33;
+        var _daCountM = (window.DA_AGENTS||[]).length;
+        var _oaCountM = (window.DA_AGENTS||[]).reduce(function(s,a){return s+(a.officeAgents||[]).length;},0);
         var _todayRunsM = _liveRuns.filter(function(r){return (Date.now()-new Date(r.created_at).getTime())<86400000;});
         var _META = {
             input:   { label:'PIPELINE ENTRY POINT', stat: _todayRunsM.length ? _todayRunsM.length+' RUNS TODAY' : '6 CHANNELS' },
@@ -27981,7 +27981,14 @@ window.apexFileDropHandler = function(e){
         if (!body) return;
 
         if (tierId === 'input') {
-            body.innerHTML = _accordion([{ name:'INPUT CHANNELS', color:'#22d3ee', rows: _INPUT_TYPES.map(function(t) { return _entityRow(t.label, t.desc, 'ready', '#22d3ee'); }) }], false);
+            var _now3lp = Date.now();
+            body.innerHTML = _accordion([{ name:'INPUT CHANNELS', color:'#22d3ee', rows: _INPUT_TYPES.map(function(t) {
+                var chRuns = _liveRuns.filter(function(r){ return t.srcMatch(r); });
+                var state = chRuns.some(function(r){ return (_now3lp - new Date(r.created_at).getTime()) < 120000; }) ? 'working'
+                           : chRuns.some(function(r){ return (_now3lp - new Date(r.created_at).getTime()) < 3600000; }) ? 'ready' : 'idle';
+                var roleStr = chRuns.length ? chRuns.length + ' runs · ' + t.desc : t.desc;
+                return _entityRow(t.label, roleStr, state, '#22d3ee');
+            }) }], false);
 
         } else if (tierId === 'council') {
             var ceo = COUNCIL_ENTITIES[0];
@@ -28202,6 +28209,7 @@ window.apexFileDropHandler = function(e){
             '<div class="kg-task-btns">' +
                 '<button class="kg-act-btn approve" onclick="window._kgApprove(' + tid + ',this)" aria-label="Approve task">✓ APPROVE</button>' +
                 '<button class="kg-act-btn reject"  onclick="window._kgRejectPrompt(' + tid + ')" aria-label="Reject task">✕ REJECT</button>' +
+                '<button class="kg-act-btn" style="flex:none;min-width:0;padding:6px 8px;border-color:rgba(124,108,242,0.3);color:rgba(124,108,242,0.7)" data-apex-follow="' + sid + '" aria-label="Trace task execution">◈</button>' +
             '</div>' +
             '<div class="kg-task-reject-area" id="kg-reject-' + sid + '">' +
                 '<textarea class="kg-task-reject-inp" rows="2" placeholder="Reason (optional)…" aria-label="Rejection reason"></textarea>' +
@@ -28587,7 +28595,7 @@ window.apexFileDropHandler = function(e){
         statsEl.innerHTML =
             '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#22d3ee">' + filtered.length + '</span><span class="kg-right-stat-l">INPUTS</span></div>' +
             '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:' + pc + '">' + pct + '%</span><span class="kg-right-stat-l">SUCCESS</span></div>' +
-            '<div class="kg-right-stat"><span class="kg-right-stat-n">6</span><span class="kg-right-stat-l">CHANNELS</span></div>';
+            '<div class="kg-right-stat"><span class="kg-right-stat-n">' + _INPUT_TYPES.length + '</span><span class="kg-right-stat-l">CHANNELS</span></div>';
         var filterBar = '<div class="kg-input-filter">' +
             ['all','live','recent'].map(function (f) {
                 return '<button class="kg-input-filter-btn' + (_inputFilter === f ? ' active' : '') + '" ' +
@@ -28595,7 +28603,6 @@ window.apexFileDropHandler = function(e){
                     f.toUpperCase() + '</button>';
             }).join('') + '</div>';
         var total = filtered.length;
-        var perType = Math.floor(total / _INPUT_TYPES.length) || 0;
         var cards = _INPUT_TYPES.map(function (t, idx) {
             var runs = filtered.filter(function (r) { return t.srcMatch(r); });
             var cnt  = runs.length || (idx === 0 ? total : 0);
@@ -29075,6 +29082,30 @@ window.apexFileDropHandler = function(e){
             var domainSubEl = document.querySelector('#kg-node-domain .kg-node-sub');
             if (domainSubEl) domainSubEl.textContent = inProgressDomain.length > 0 ? inProgressDomain.length + ' ROUTING' : 'DISPATCH';
 
+            // INPUT: today's run count + notification badge
+            var inputCntEl = document.getElementById('kg-count-input');
+            if (inputCntEl) inputCntEl.textContent = _liveRuns.filter(function(r){return (now2-new Date(r.created_at).getTime())<86400000;}).length || '—';
+            var inputSubEl = document.querySelector('#kg-node-input .kg-node-sub');
+            if (inputSubEl) {
+                var unread = _liveNotifs.filter(function(n){return !n.read_at && !n.read;}).length;
+                inputSubEl.textContent = unread > 0 ? unread + ' UNREAD' : 'REQUEST';
+            }
+
+            // COUNCIL: active deliberation count (not hardcoded 7)
+            var councilCntEl = document.getElementById('kg-count-council');
+            var liveDelibs2 = (_councilDelibs||[]).filter(function(d){return d.status==='deliberating';}).length;
+            var pendingAppr2 = _liveTasks.filter(function(t){return t.status==='awaiting_approval'||t.status==='approval_required';}).length;
+            if (councilCntEl) councilCntEl.textContent = liveDelibs2 || pendingAppr2 || '—';
+            var councilSubEl = document.querySelector('#kg-node-council .kg-node-sub');
+            if (councilSubEl) councilSubEl.textContent = liveDelibs2 > 0 ? 'DELIBERATING' : pendingAppr2 > 0 ? pendingAppr2+' PENDING' : 'DELIBERATION';
+
+            // CODING: last engineering run time
+            var codingSubEl = document.querySelector('#kg-node-coding .kg-node-sub');
+            if (codingSubEl) {
+                var lastCodeRun = _liveRuns.find(function(r){var d=(r.domain||'').toLowerCase();return d==='engineering'||d==='coding'||d==='code';});
+                codingSubEl.textContent = lastCodeRun ? _ago(lastCodeRun.created_at) : 'STAGES';
+            }
+
             // CODING: working if engineering/coding runs in last 5 min
             var codingNode = document.getElementById('kg-node-coding');
             if (codingNode) {
@@ -29327,7 +29358,7 @@ window.apexFileDropHandler = function(e){
         });
     };
 
-    window._tpRender = function () {};
+
     window._kgFetchLive = _fetchLive;
 
     // Test helper: inject data directly and apply all glow states without fetch
@@ -29342,8 +29373,8 @@ window.apexFileDropHandler = function(e){
         var hasLiveDelib = _councilDelibs.some(function (d) { return d.status === 'deliberating'; });
         _setNodeGlow('council', hasLiveDelib ? 'is-deliberating' : '');
         var pendingCnt = _liveTasks.filter(function (t) { return t.status === 'awaiting_approval' || t.status === 'approval_required'; }).length;
-        var hasPending = pendingCnt > 0 || _liveTasks.some(function (t) { return t.status === 'pending' || t.status === 'in_progress'; });
-        _setNodeGlow('actions', hasPending ? 'is-alerting' : '');
+        var hasInProgressG = _liveTasks.some(function(t){ return t.status === 'in_progress'; });
+        _setNodeGlow('actions', pendingCnt > 0 ? 'is-alerting' : (hasInProgressG ? 'is-working' : ''));
         var acEl = document.getElementById('kg-count-actions');
         if (acEl) acEl.textContent = pendingCnt > 0 ? pendingCnt : '—';
         var completed = _liveTasks.filter(function (t) { return t.status === 'completed' || t.status === 'done'; });
@@ -29708,9 +29739,11 @@ window.apexFileDropHandler = function(e){
         if (body) body.innerHTML = '<div class="apex-insp-loading">Tracing execution…</div>';
 
         try {
-            var taskResp = await fetch('/api/tasks').then(function (r) { return r.json(); });
-            var task = null;
-            if (taskResp.ok && taskResp.tasks) task = taskResp.tasks.find(function (t) { return t.id === taskId; }) || null;
+            var task = _liveTasks.find(function(t){ return String(t.id) === String(taskId); }) || null;
+            if (!task) {
+                var taskResp = await fetch('/api/tasks?limit=200', { headers: _h() }).then(function(r){return r.json();});
+                if (taskResp.tasks) task = taskResp.tasks.find(function(t){return String(t.id)===String(taskId);})||null;
+            }
 
             var runsResp = await fetch('/api/agents/activity?source_task_id=' + encodeURIComponent(taskId) + '&limit=50').then(function (r) { return r.json(); });
             var runs = (runsResp.ok && runsResp.runs) ? runsResp.runs : [];
@@ -29732,12 +29765,10 @@ window.apexFileDropHandler = function(e){
         var body = document.getElementById('apex-insp-body');
         if (body) body.innerHTML = '<div class="apex-insp-loading">Tracing from deliberation…</div>';
         try {
-            var taskResp = await fetch('/api/tasks').then(function (r) { return r.json(); });
-            var matched = null;
-            if (taskResp.ok && taskResp.tasks) {
-                matched = taskResp.tasks.find(function (t) {
-                    return (t.metadata || {}).deliberationId === deliberationId;
-                }) || null;
+            var matched = _liveTasks.find(function(t){return (t.metadata||{}).deliberationId===deliberationId;}) || null;
+            if (!matched) {
+                var taskResp = await fetch('/api/tasks?limit=200', { headers: _h() }).then(function(r){return r.json();});
+                if (taskResp.tasks) matched = taskResp.tasks.find(function(t){return (t.metadata||{}).deliberationId===deliberationId;})||null;
             }
             if (matched) {
                 await window._apexFollowWork(matched.id, deliberationId);
