@@ -27973,12 +27973,22 @@ window.apexFileDropHandler = function(e){
                 { name:'KNOWLEDGE',      color:'#38bdf8', ids:['file','health','uni'] },
                 { name:'GOVERNANCE',     color:'#e879f9', ids:['civilisation'] },
             ];
-            body.innerHTML = _accordion(_DG.map(function (g) {
+            var _dgGroups = _DG.map(function (g) {
                 var rows = das.filter(function (a) { return g.ids.indexOf(a.id) !== -1; }).map(function (a) {
                     return _entityRow(a.name, a.category, _agentState(a.name, a.slug), a.color);
                 });
                 return { name: g.name, color: g.color, rows: rows };
-            }).filter(function (g) { return g.rows.length; }), true);
+            }).filter(function (g) { return g.rows.length; });
+            var _inFlight = _liveTasks.filter(function(t){ return t.status==='in_progress'; });
+            if (_inFlight.length) {
+                var _flightRows = _inFlight.slice(0,12).map(function(t){
+                    var slug = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
+                    var col = slug ? _domainColor(slug) : '#f59e0b';
+                    return _entityRow((t.title||t.id||'—').slice(0,40), (slug ? slug.toUpperCase() : 'PROCESSING') + ' · ' + _ago(t.created_at), 'working', col);
+                });
+                _dgGroups.unshift({ name:'IN FLIGHT', color:'#f59e0b', rows: _flightRows });
+            }
+            body.innerHTML = _accordion(_dgGroups, true);
 
         } else if (tierId === 'office') {
             var das2 = (window.DA_AGENTS || []).filter(function (da) { return (da.officeAgents||[]).length; });
@@ -28527,7 +28537,7 @@ window.apexFileDropHandler = function(e){
         var groups = [];
         if (completed.length) groups.push({ name:'COMPLETED', color:'#22c55e', rows: completed.slice(0,20).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38), t.updated_at ? _ago(t.updated_at) : '', 'ready', '#22c55e'); }) });
         if (failed.length)    groups.push({ name:'FAILED',    color:'#ef4444', rows: failed.slice(0,10).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38), t.updated_at ? _ago(t.updated_at) : '', 'error', '#ef4444'); }) });
-        body.innerHTML = _accordion(groups, false);
+        body.innerHTML = _accordion(groups, true);
     }
 
     // ── Output right panel (recent completed runs) ─────────────────────────────
