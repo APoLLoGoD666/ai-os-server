@@ -28024,12 +28024,17 @@ window.apexFileDropHandler = function(e){
 
             var _dgGroups = [];
 
-            // IN FLIGHT — tasks currently processing (status in_progress)
+            // IN FLIGHT — domain agent name is the headline, task title is the sub
             var _inFlight = _liveTasks.filter(function(t){ return t.status==='in_progress'; });
             if (_inFlight.length) {
                 _dgGroups.push({ name:'IN FLIGHT', color:'#f59e0b', open:true, rows: _inFlight.slice(0,12).map(function(t){
                     var slug = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
-                    return _entityRow((t.title||t.id||'—').slice(0,40), (slug ? slug.toUpperCase()+' · ' : '') + _ago(t.created_at), 'working', slug ? _domainColor(slug) : '#f59e0b');
+                    var exec = t.metadata&&t.metadata.execution;
+                    var officeAgent = exec&&exec.office ? exec.office.agent : null;
+                    var agentLabel = slug ? slug.toUpperCase() + ' AGENT' : 'ROUTING…';
+                    if (officeAgent) agentLabel += '  →  ' + officeAgent.toUpperCase().slice(0,16);
+                    var taskLabel = (t.title||t.id||'—').slice(0,38) + ' · ' + _ago(t.created_at);
+                    return _entityRow(agentLabel, taskLabel, 'working', slug ? _domainColor(slug) : '#f59e0b');
                 })});
             }
 
@@ -28469,6 +28474,16 @@ window.apexFileDropHandler = function(e){
         });
     }
 
+    // Match tasks to a domain agent via dispatch metadata (primary routing source)
+    function _daTasksFor(da) {
+        var slug = da.slug.toLowerCase();
+        var name = da.name.toLowerCase();
+        return _liveTasks.filter(function (t) {
+            var d = (t.metadata && t.metadata.dispatch && t.metadata.dispatch.slug || '').toLowerCase();
+            return d === slug || d === name;
+        });
+    }
+
     function _renderDomainRight() {
         var body    = document.getElementById('kg-right-body');
         var statsEl = document.getElementById('kg-right-stats');
@@ -28476,15 +28491,28 @@ window.apexFileDropHandler = function(e){
         var allRuns = (window.DA_AGENTS || []).reduce(function (acc, da) { return acc.concat(_daRunsFor(da)); }, []);
         _fillStats(statsEl, allRuns);
         var cards = (window.DA_AGENTS || []).map(function (da) {
-            var runs = _daRunsFor(da);
-            var last = runs[0] ? _ago(runs[0].created_at) : 'No activity';
+            var runs     = _daRunsFor(da);
+            var tasks    = _daTasksFor(da);
+            var inFlight = tasks.filter(function (t) { return t.status === 'in_progress'; });
+            var done     = tasks.filter(function (t) { return t.status === 'done' || t.status === 'completed'; });
+            var total    = runs.length + done.length;
+            var sub;
+            if (inFlight.length) {
+                sub = inFlight.length + ' ROUTING NOW';
+            } else if (runs[0]) {
+                sub = _ago(runs[0].created_at);
+            } else if (tasks[0]) {
+                sub = _ago(tasks[0].updated_at || tasks[0].created_at);
+            } else {
+                sub = 'No activity';
+            }
             return {
                 icon: _DI[da.id] || '◆',
                 label: da.name.charAt(0) + da.name.slice(1).toLowerCase(),
-                sub: last,
-                n: runs.length,
+                sub: sub,
+                n: total || tasks.length,
                 color: da.color,
-                glow: 'rgba(' + _hexToRgb(da.color) + ',0.18)',
+                glow: inFlight.length ? 'rgba(' + _hexToRgb(da.color) + ',0.35)' : 'rgba(' + _hexToRgb(da.color) + ',0.18)',
                 fn: 'window._kgDomainDetail(\'' + da.slug + '\')',
             };
         });
@@ -28495,12 +28523,52 @@ window.apexFileDropHandler = function(e){
         var body    = document.getElementById('kg-right-body');
         var statsEl = document.getElementById('kg-right-stats');
         if (!body) return;
-        var da   = (window.DA_AGENTS || []).find(function (a) { return a.slug === slug; });
-        var runs = (da ? _daRunsFor(da) : _liveRuns.filter(function (r) { return (r.domain||'').toLowerCase() === slug; })).slice(0, 60);
+        var da    = (window.DA_AGENTS || []).find(function (a) { return a.slug === slug; });
+        var runs  = (da ? _daRunsFor(da) : _liveRuns.filter(function (r) { return (r.domain||'').toLowerCase() === slug; })).slice(0, 60);
+        var tasks = da ? _daTasksFor(da) : _liveTasks.filter(function (t) { return (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug||'').toLowerCase() === slug; });
+        var inFlight  = tasks.filter(function (t) { return t.status === 'in_progress'; });
+        var recentDone = tasks.filter(function (t) { return t.status === 'done' || t.status === 'completed'; })
+            .sort(function (a, b) { return new Date(b.updated_at) - new Date(a.updated_at); }).slice(0, 10);
         _fillStats(statsEl, runs);
         var col  = da ? da.color : '#7c6cf2';
         var name = da ? (da.name.charAt(0) + da.name.slice(1).toLowerCase()) : slug;
-        body.innerHTML = _detailBack('window._renderDomainRightGrid', 'Domain Agents', name, col) + _groupedRuns(runs);
+
+        var inFlightHtml = '';
+        if (inFlight.length) {
+            inFlightHtml = '<div class="kg-time-hd"><span style="color:' + col + '">IN FLIGHT</span><span class="kg-time-hd-count">' + inFlight.length + '</span></div>' +
+                '<div class="kg-oa-list">' + inFlight.map(function (t) {
+                    var ea = t.metadata && t.metadata.execution && t.metadata.execution.office ? t.metadata.execution.office.agent : null;
+                    return '<div class="kg-oa-row">' +
+                        '<div class="kg-oa-dot" style="background:' + col + ';box-shadow:0 0 6px ' + col + '"></div>' +
+                        '<div class="kg-oa-info">' +
+                            '<div class="kg-oa-name">' + _esc((t.title||t.id||'—').slice(0,40)) + '</div>' +
+                            '<div class="kg-oa-last">' + (ea ? 'Executing via ' + ea : 'Routing…') + ' · ' + _ago(t.created_at) + '</div>' +
+                        '</div>' +
+                        '<span class="kg-oa-badge" style="color:' + col + '">ACTIVE</span>' +
+                    '</div>';
+                }).join('') + '</div>';
+        }
+
+        var recentHtml = '';
+        if (recentDone.length) {
+            recentHtml = '<div class="kg-time-hd" style="margin-top:10px"><span>Recent Tasks</span><span class="kg-time-hd-count">' + recentDone.length + '</span></div>' +
+                '<div class="kg-oa-list">' + recentDone.map(function (t) {
+                    var ea = t.metadata && t.metadata.execution && t.metadata.execution.office ? t.metadata.execution.office.agent : null;
+                    return '<div class="kg-oa-row">' +
+                        '<div class="kg-oa-dot" style="background:#22c55e"></div>' +
+                        '<div class="kg-oa-info">' +
+                            '<div class="kg-oa-name">' + _esc((t.title||t.id||'—').slice(0,40)) + '</div>' +
+                            '<div class="kg-oa-last">' + (ea ? 'by ' + ea : 'completed') + ' · ' + _ago(t.updated_at||t.created_at) + '</div>' +
+                        '</div>' +
+                        '<span class="kg-oa-badge" style="color:#22c55e">DONE</span>' +
+                    '</div>';
+                }).join('') + '</div>';
+        }
+
+        var noData = !inFlight.length && !recentDone.length && !runs.length;
+        body.innerHTML = _detailBack('window._renderDomainRightGrid', 'Domain Agents', name, col) +
+            inFlightHtml + recentHtml +
+            (runs.length ? _groupedRuns(runs) : (noData ? '<div class="kg-runs-empty">No activity yet</div>' : ''));
     };
     window._renderDomainRightGrid = function () { _renderDomainRight(); };
 
@@ -28514,16 +28582,32 @@ window.apexFileDropHandler = function(e){
         var allRuns = _liveRuns.filter(function (r) { return r.agent_name && allOA.indexOf(r.agent_name.toLowerCase()) !== -1; });
         _fillStats(statsEl, allRuns);
         var cards = (window.DA_AGENTS || []).filter(function (da) { return (da.officeAgents || []).length; }).map(function (da) {
-            var names = (da.officeAgents || []).map(function(n){ return n.toLowerCase(); });
-            var runs  = _liveRuns.filter(function (r) { return r.agent_name && names.indexOf(r.agent_name.toLowerCase()) !== -1; });
-            var last  = runs[0] ? _ago(runs[0].created_at) : 'No activity';
+            var names     = (da.officeAgents || []).map(function(n){ return n.toLowerCase(); });
+            var runs      = _liveRuns.filter(function (r) { return r.agent_name && names.indexOf(r.agent_name.toLowerCase()) !== -1; });
+            var execTasks = _liveTasks.filter(function (t) {
+                var ea = (t.metadata&&t.metadata.execution&&t.metadata.execution.office ? t.metadata.execution.office.agent : '').toLowerCase();
+                return names.indexOf(ea) !== -1;
+            });
+            var inFlight  = execTasks.filter(function (t) { return t.status === 'in_progress'; });
+            var done      = execTasks.filter(function (t) { return t.status === 'done' || t.status === 'completed'; });
+            var total     = runs.length + done.length;
+            var sub;
+            if (inFlight.length) {
+                sub = inFlight.length + ' EXECUTING NOW';
+            } else if (runs[0]) {
+                sub = _ago(runs[0].created_at);
+            } else if (execTasks[0]) {
+                sub = _ago(execTasks[0].updated_at || execTasks[0].created_at);
+            } else {
+                sub = 'No activity';
+            }
             return {
                 icon: _DI[da.id] || '◆',
                 label: da.name.charAt(0) + da.name.slice(1).toLowerCase(),
-                sub: names.length + ' agents · ' + last,
-                n: runs.length,
+                sub: names.length + ' agents · ' + sub,
+                n: total,
                 color: da.color,
-                glow: 'rgba(' + _hexToRgb(da.color) + ',0.18)',
+                glow: inFlight.length ? 'rgba(' + _hexToRgb(da.color) + ',0.35)' : 'rgba(' + _hexToRgb(da.color) + ',0.18)',
                 fn: 'window._kgOfficeDetail(\'' + da.id + '\')',
             };
         });
@@ -28534,20 +28618,27 @@ window.apexFileDropHandler = function(e){
         var body    = document.getElementById('kg-right-body');
         var statsEl = document.getElementById('kg-right-stats');
         if (!body) return;
-        var da    = (window.DA_AGENTS || []).find(function (a) { return a.id === daId; });
+        var da      = (window.DA_AGENTS || []).find(function (a) { return a.id === daId; });
         var oaNames = da ? (da.officeAgents || []) : [];
         var namesLc = oaNames.map(function(n){ return n.toLowerCase(); });
-        var runs  = _liveRuns.filter(function (r) { return r.agent_name && namesLc.indexOf(r.agent_name.toLowerCase()) !== -1; }).slice(0, 60);
+        var runs    = _liveRuns.filter(function (r) { return r.agent_name && namesLc.indexOf(r.agent_name.toLowerCase()) !== -1; }).slice(0, 60);
         _fillStats(statsEl, runs);
-        var col  = da ? da.color : '#7c6cf2';
+        var col   = da ? da.color : '#7c6cf2';
         var label = da ? (da.name.charAt(0) + da.name.slice(1).toLowerCase()) : daId;
 
-        // Agent roster — one card per office agent
+        // Agent roster — one row per office agent, state derived from tasks first then runs
         var agentRows = oaNames.map(function (n) {
-            var lastRun = _liveRuns.find(function (r) { return (r.agent_name||'').toLowerCase() === n.toLowerCase(); });
-            var state = lastRun ? _runState(lastRun) : 'idle';
-            var lastTime = lastRun ? _ago(lastRun.created_at) : 'No runs';
-            var dot = state === 'working' ? col : state === 'ready' ? col : '#3f3f46';
+            var nl = n.toLowerCase();
+            var activeTask = _liveTasks.find(function (t) {
+                return t.status === 'in_progress' &&
+                    (t.metadata&&t.metadata.execution&&t.metadata.execution.office ? t.metadata.execution.office.agent : '').toLowerCase() === nl;
+            });
+            var lastRun  = _liveRuns.find(function (r) { return (r.agent_name||'').toLowerCase() === nl; });
+            var state    = activeTask ? 'working' : (lastRun ? _runState(lastRun) : 'idle');
+            var lastTime = activeTask
+                ? 'Executing: ' + _esc((activeTask.title||activeTask.id||'task').slice(0,30)) + ' · ' + _ago(activeTask.created_at)
+                : (lastRun ? _ago(lastRun.created_at) : 'No runs');
+            var dot  = state !== 'idle' ? col : '#3f3f46';
             var glow = state !== 'idle' ? 'box-shadow:0 0 5px ' + col : '';
             return '<div class="kg-oa-row">' +
                 '<div class="kg-oa-dot" style="background:' + dot + ';' + glow + '"></div>' +
@@ -28976,6 +29067,14 @@ window.apexFileDropHandler = function(e){
     }
     function _agentState(name, category) {
         var nl = (name||'').toLowerCase(), cl = (category||'').toLowerCase();
+        // Check in-progress tasks first — dispatch slug or office agent match
+        var activeTask = _liveTasks.find(function (t) {
+            if (t.status !== 'in_progress') return false;
+            var slug = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug||'').toLowerCase();
+            var ea   = (t.metadata&&t.metadata.execution&&t.metadata.execution.office ? t.metadata.execution.office.agent : '').toLowerCase();
+            return slug === nl || slug === cl || ea === nl;
+        });
+        if (activeTask) return 'working';
         var recent = _liveRuns.find(function (r) {
             var an = (r.agent_name||'').toLowerCase(), d = (r.domain||'').toLowerCase();
             return an === nl || d === cl || d === nl;
