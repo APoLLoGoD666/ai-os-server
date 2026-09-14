@@ -8056,7 +8056,11 @@ header.topbar { grid-area: topbar !important; }
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Command</span>
         </button>
-        <button class="nav-btn" id="nav-portal" aria-label="Agency Overview">
+        <button class="nav-btn" id="nav-intel" aria-label="Briefing">
+            <span class="nav-icon">◎</span>
+            <span class="nav-label">Briefing</span>
+        </button>
+        <button class="nav-btn" id="nav-test" aria-label="Overview">
             <span class="nav-icon">◬</span>
             <span class="nav-label">Overview</span>
         </button>
@@ -11579,7 +11583,7 @@ if(pipe){
                 </div>
                 <!-- Portal tab bar — shared across council / office / domain -->
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
+                    <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
                     <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
                 </div>
                 <!-- Main layout: canvas + task panel -->
@@ -11661,7 +11665,7 @@ if(pipe){
                     </div>
                 </div>
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
+                    <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
                     <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
                 </div>
                 <div class="ao-main">
@@ -11758,7 +11762,7 @@ if(pipe){
             <!-- ══ PAGE: ACTIONS (V-11-H canonical surface) ══ -->
             <div class="page" id="page-actions">
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
+                    <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
                     <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
                 </div>
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
@@ -12092,7 +12096,7 @@ if(pipe){
                     </div>
                 </div>
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
+                    <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
                     <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
                 </div>
                 <div class="ec-main">
@@ -12278,7 +12282,7 @@ if(pipe){
     // V-11-F F-7: 'operation' removed (merged into business)
     // V-11-F F-9: civilisation/reality moved out of LIFE & WORK swipe sequence to end (SYSTEM → Advanced)
     // V-11-H H-18: 'agents' / 'approvals' / 'activity' consolidated into 'actions' (positioned after 'intelligence' per Section 32).
-    var pages = ['overview','domains', 'command', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'domain-agents', 'portal', 'memory', 'council', 'governance', 'civilisation', 'reality', 'settings', 'tools'];
+    var pages = ['overview','domains', 'command', 'intel', 'test', 'system', 'finance', 'communication', 'business', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'domain-agents', 'portal', 'memory', 'council', 'governance', 'civilisation', 'reality', 'settings', 'tools'];
     var activePage = 'overview';
 
     var pageMeta = {
@@ -12301,6 +12305,8 @@ if(pipe){
         agents:        { title:'Agents',        sub:'The Office · Departments · Pipeline' },
         'domain-agents': { title:'Domain Agents',  sub:'Core · Council Dispatch · Direct Routing' },
         portal:          { title:'Overview',        sub:'Council · Office Agents · Domain Agents' },
+        test:            { title:'Overview',        sub:'Agent Pipeline · Live Intelligence' },
+        intel:           { title:'Briefing',        sub:'Intelligence · Analysis · Insights' },
         knowledge:     { title:'Knowledge',     sub:'Facts · Evidence · Gaps · Coverage' },
         intelligence:  { title:'Intelligence',  sub:'Briefing · Opportunities · Health' },
         memory:        { title:'Memory',        sub:'Episodic · Semantic · Health' },
@@ -28053,7 +28059,7 @@ window.apexFileDropHandler = function(e){
 
         pg.innerHTML =
             '<div class="portal-tab-bar">' +
-                '<button class="portal-tab active" onclick="window.switchPage(\'test\')">MAP</button>' +
+                '<button class="portal-tab active" onclick="window.switchPage(\'test\')">OVERVIEW</button>' +
                 '<button class="portal-tab" onclick="window.switchPage(\'intel\')">INTEL</button>' +
             '</div>' +
             '<div class="kg-wrap">' +
@@ -30449,7 +30455,7 @@ window.apexFileDropHandler = function(e){
         // Portal tab bar (INTEL active)
         pg.innerHTML =
             '<div class="portal-tab-bar">' +
-            '  <button class="portal-tab" onclick="window.switchPage(\'test\')">MAP</button>' +
+            '  <button class="portal-tab" onclick="window.switchPage(\'test\')">OVERVIEW</button>' +
             '  <button class="portal-tab active" onclick="window.switchPage(\'intel\')">INTEL</button>' +
             '</div>' +
             '<div class="intel-body">' +
