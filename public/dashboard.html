@@ -27908,7 +27908,7 @@ window.apexFileDropHandler = function(e){
 
     function _accordion(groups, openAll) {
         return groups.map(function (g, i) {
-            var open = !!openAll;
+            var open = g.open !== undefined ? !!g.open : !!openAll;
             var bodyId = 'kg-acc-' + i + '-' + Math.random().toString(36).slice(2,6);
             return '<div>' +
                 '<div class="kg-group-hd' + (open ? ' open' : '') + '" ' +
@@ -27986,9 +27986,9 @@ window.apexFileDropHandler = function(e){
                     var col = slug ? _domainColor(slug) : '#f59e0b';
                     return _entityRow((t.title||t.id||'—').slice(0,40), (slug ? slug.toUpperCase() : 'PROCESSING') + ' · ' + _ago(t.created_at), 'working', col);
                 });
-                _dgGroups.unshift({ name:'IN FLIGHT', color:'#f59e0b', rows: _flightRows });
+                _dgGroups.unshift({ name:'IN FLIGHT', color:'#f59e0b', rows: _flightRows, open: true });
             }
-            body.innerHTML = _accordion(_dgGroups, true);
+            body.innerHTML = _accordion(_dgGroups, false);
 
         } else if (tierId === 'office') {
             var das2 = (window.DA_AGENTS || []).filter(function (da) { return (da.officeAgents||[]).length; });
@@ -27999,7 +27999,7 @@ window.apexFileDropHandler = function(e){
                     return _entityRow(n, da.name, run ? _runState(run) : 'idle', da.color);
                 });
                 return { name: da.name + ' · ' + da.team.split(' ')[0], color: da.color, rows: rows };
-            }), true);
+            }), false);
 
         } else if (tierId === 'actions') {
             var _awTasks  = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'; });
