@@ -27458,6 +27458,49 @@ window.apexFileDropHandler = function(e){
 .kg-input-card-n { font:700 18px/1 'JetBrains Mono',monospace; flex-shrink:0; color:#22d3ee; }
 .kg-input-live-dot { width:5px; height:5px; border-radius:50%; background:#22d3ee; box-shadow:0 0 6px #22d3ee; animation:kg-blink 0.8s ease-in-out infinite; flex-shrink:0; }
 
+/* ── Task action cards (ACTIONS left panel) ── */
+.kg-task-card { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
+.kg-task-card:last-child { border-bottom:none; }
+.kg-task-hd { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
+.kg-task-pri { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.08em; padding:2px 5px; border-radius:3px; flex-shrink:0; }
+.kg-task-pri.critical  { background:rgba(239,68,68,0.15);  color:#ef4444; }
+.kg-task-pri.urgent    { background:rgba(245,158,11,0.15); color:#f59e0b; }
+.kg-task-pri.important { background:rgba(34,211,238,0.12); color:#22d3ee; }
+.kg-task-pri.standard  { background:rgba(124,108,242,0.12);color:#7c6cf2; }
+.kg-task-time { font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.3); margin-left:auto; flex-shrink:0; }
+.kg-task-title { font:600 12px/1.3 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.85); margin-bottom:4px; }
+.kg-task-desc  { font:400 10px/1.4 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.4); margin-bottom:6px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.kg-task-warn  { font:600 9px/1 'JetBrains Mono',monospace; color:#f59e0b; margin-bottom:6px; letter-spacing:.04em; }
+.kg-task-btns  { display:flex; gap:5px; }
+.kg-act-btn { flex:1; padding:6px 8px; border-radius:4px; border:1px solid; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.08em; cursor:pointer; transition:all 150ms; min-height:28px; background:transparent; }
+.kg-act-btn.approve { border-color:rgba(34,197,94,0.35); color:#22c55e; }
+.kg-act-btn.approve:hover { background:rgba(34,197,94,0.12); border-color:#22c55e; }
+.kg-act-btn.reject  { border-color:rgba(239,68,68,0.25); color:#ef4444; }
+.kg-act-btn.reject:hover  { background:rgba(239,68,68,0.1); border-color:#ef4444; }
+.kg-act-btn:disabled { opacity:.4; cursor:default; }
+.kg-task-reject-area { margin-top:6px; display:none; }
+.kg-task-reject-area.open { display:block; }
+.kg-task-reject-inp { width:100%; box-sizing:border-box; background:rgba(255,255,255,0.04); border:1px solid rgba(239,68,68,0.25); border-radius:4px; color:rgba(255,255,255,0.8); font:400 10px/1.4 system-ui,sans-serif; padding:6px 8px; resize:none; margin-bottom:5px; }
+.kg-task-reject-inp::placeholder { color:rgba(255,255,255,0.2); }
+/* ── Notification cards ── */
+.kg-notif-hd { padding:8px 12px 4px; font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:rgba(255,255,255,0.22); }
+.kg-notif-card { display:flex; align-items:flex-start; gap:9px; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.03); }
+.kg-notif-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.1); flex-shrink:0; margin-top:4px; }
+.kg-notif-card.unread .kg-notif-dot { background:#22d3ee; box-shadow:0 0 5px #22d3ee; }
+.kg-notif-body { flex:1; min-width:0; }
+.kg-notif-msg  { font:400 11px/1.4 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.75); margin-bottom:2px; }
+.kg-notif-meta { font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.25); }
+/* ── Convene form (COUNCIL left panel) ── */
+.kg-convene { padding:10px 12px 14px; border-top:1px solid rgba(255,255,255,0.06); margin-top:6px; }
+.kg-convene-lbl { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:rgba(255,255,255,0.22); margin-bottom:7px; }
+.kg-convene-inp { width:100%; box-sizing:border-box; background:rgba(255,255,255,0.04); border:1px solid rgba(167,139,250,0.2); border-radius:5px; color:rgba(255,255,255,0.8); font:400 11px/1.5 system-ui,sans-serif; padding:8px 10px; resize:none; transition:border-color 150ms; }
+.kg-convene-inp:focus { outline:none; border-color:rgba(167,139,250,0.5); }
+.kg-convene-inp::placeholder { color:rgba(255,255,255,0.18); }
+.kg-convene-btn { margin-top:6px; width:100%; padding:7px 10px; border-radius:5px; border:1px solid rgba(167,139,250,0.3); background:rgba(167,139,250,0.07); color:#a78bfa; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; cursor:pointer; transition:all 150ms; min-height:30px; }
+.kg-convene-btn:hover { background:rgba(167,139,250,0.15); border-color:#a78bfa; }
+.kg-convene-btn:disabled { opacity:.45; cursor:default; }
+.kg-convene-status { margin-top:5px; font:400 10px/1.3 system-ui,sans-serif; color:rgba(167,139,250,0.7); min-height:14px; }
+
 /* ── Output panel ── */
 .kg-output-hd { padding:10px 14px 8px; border-bottom:1px solid rgba(255,255,255,0.04); flex-shrink:0; }
 .kg-output-label { font:600 8px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:#6b7280; text-transform:uppercase; }
@@ -27525,6 +27568,7 @@ window.apexFileDropHandler = function(e){
     ];
 
     var _inputFilter = 'all';
+    var _liveNotifs = [];
 
     var COUNCIL_ENTITIES = [
         { id:'ceo', name:'CEO', role:'Chief Executive Officer',    color:'#a78bfa' },
@@ -27835,6 +27879,10 @@ window.apexFileDropHandler = function(e){
             var execRows = COUNCIL_ENTITIES.slice(1).map(function (e) {
                 return _entityRow(e.name, e.role, _councilState(e.id), e.color);
             });
+            var liveDelibs = (_councilDelibs || []).filter(function(d){ return d.status === 'deliberating'; });
+            var liveHtml = liveDelibs.length ? liveDelibs.map(function(d){
+                return '<div class="kg-live-card"><div class="kg-live-dot"></div><div><div class="kg-live-label">DELIBERATING</div><div class="kg-live-q">' + _esc((d.question||'').slice(0,100)) + '</div></div></div>';
+            }).join('') : '';
             body.innerHTML =
                 '<div class="kg-pinned">' +
                     '<div class="kg-pinned-icon">⬡</div>' +
@@ -27844,7 +27892,14 @@ window.apexFileDropHandler = function(e){
                     '</div>' +
                     '<span class="kg-pinned-badge">' + ceoDot.toUpperCase() + '</span>' +
                 '</div>' +
-                _accordion([{ name:'EXECUTIVE COUNCIL', color:'#7c6cf2', rows: execRows }]);
+                (liveHtml ? '<div style="padding:0 12px 6px">' + liveHtml + '</div>' : '') +
+                _accordion([{ name:'EXECUTIVE COUNCIL', color:'#7c6cf2', rows: execRows }]) +
+                '<div class="kg-convene">' +
+                    '<div class="kg-convene-lbl">CONVENE DELIBERATION</div>' +
+                    '<textarea class="kg-convene-inp" id="kg-convene-inp" rows="3" placeholder="Submit a question to the council…" aria-label="Question for council"></textarea>' +
+                    '<button class="kg-convene-btn" onclick="window._kgConvene(this)" aria-label="Submit deliberation">◈ CONVENE →</button>' +
+                    '<div class="kg-convene-status" id="kg-convene-status" aria-live="polite"></div>' +
+                '</div>';
 
         } else if (tierId === 'domain') {
             var das = (window.DA_AGENTS || []);
@@ -27876,23 +27931,48 @@ window.apexFileDropHandler = function(e){
 
         } else if (tierId === 'actions') {
             if (!_liveTasks.length) { body.innerHTML = '<div class="kg-runs-empty">NO TASKS</div>'; return; }
-            var _AG = [
-                { name:'ACTIVE',           color:'#22c55e', statuses:['in_progress'] },
-                { name:'AWAITING APPROVAL',color:'#7c6cf2', statuses:['awaiting_approval','approval_required'] },
-                { name:'QUEUED',           color:'#f59e0b', statuses:['pending'] },
-                { name:'RESOLVED',         color:'#52525b', statuses:['completed','done','failed'] },
-            ];
             var stMap = { completed:'ready', done:'ready', failed:'error', in_progress:'working', pending:'idle', awaiting_approval:'idle', approval_required:'idle' };
-            body.innerHTML = _accordion(_AG.map(function (g) {
-                var rows = _liveTasks.filter(function (t) { return g.statuses.indexOf(t.status) !== -1; }).slice(0,20).map(function (t) {
-                    return _entityRow((t.title||t.id||'?').slice(0,38), t.status.replace(/_/g,' ').toUpperCase(), stMap[t.status]||'idle', g.color);
-                });
-                return { name: g.name, color: g.color, rows: rows };
-            }).filter(function (g) { return g.rows.length; }));
+            var _awTasks  = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'; });
+            var _actTasks = _liveTasks.filter(function(t){ return t.status==='in_progress'; });
+            var _qTasks   = _liveTasks.filter(function(t){ return t.status==='pending'; });
+            var _resTasks = _liveTasks.filter(function(t){ return t.status==='completed'||t.status==='done'||t.status==='failed'; });
+            var _taskGroups = [];
+            if (_awTasks.length)  _taskGroups.push({ name:'AWAITING APPROVAL', color:'#7c6cf2', rows:_awTasks.slice(0,10).map(function(t){ return _taskCard(t); }) });
+            if (_actTasks.length) _taskGroups.push({ name:'ACTIVE',            color:'#22c55e', rows:_actTasks.slice(0,15).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38),'IN PROGRESS','working','#22c55e'); }) });
+            if (_qTasks.length)   _taskGroups.push({ name:'QUEUED',            color:'#f59e0b', rows:_qTasks.slice(0,15).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38),'PENDING','idle','#f59e0b'); }) });
+            if (_resTasks.length) _taskGroups.push({ name:'RESOLVED',          color:'#52525b', rows:_resTasks.slice(0,15).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38),stMap[t.status]||'idle',stMap[t.status]||'idle','#52525b'); }) });
+            body.innerHTML = _taskGroups.length ? _accordion(_taskGroups) : '<div class="kg-runs-empty">NO TASKS</div>';
 
         } else if (tierId === 'output') {
             _renderOutputLeft();
         }
+    }
+
+    function _taskCard(t) {
+        var priRaw = (t.metadata && t.metadata.priority) ? (t.metadata.priority.tier || t.metadata.priority) : 'standard';
+        if (typeof priRaw === 'object') priRaw = 'standard';
+        var pri = String(priRaw).toLowerCase().split(' ')[0];
+        if (['critical','urgent','important'].indexOf(pri) === -1) pri = 'standard';
+        var rec = (t.metadata && t.metadata.recommendation) ? t.metadata.recommendation : (t.description || '');
+        var irrev = !!(t.metadata && (t.metadata.irreversible === true || t.metadata.reversible === false));
+        var tid = JSON.stringify(String(t.id));
+        return '<div class="kg-task-card" id="kg-tc-' + _esc(String(t.id)) + '">' +
+            '<div class="kg-task-hd">' +
+                '<span class="kg-task-pri ' + pri + '">' + pri.toUpperCase() + '</span>' +
+                '<span class="kg-task-time">' + _ago(t.created_at) + '</span>' +
+            '</div>' +
+            '<div class="kg-task-title">' + _esc((t.title || t.id || '—').slice(0, 80)) + '</div>' +
+            (rec ? '<div class="kg-task-desc">' + _esc(rec.slice(0, 160)) + '</div>' : '') +
+            (irrev ? '<div class="kg-task-warn">⚠ CANNOT BE UNDONE</div>' : '') +
+            '<div class="kg-task-btns">' +
+                '<button class="kg-act-btn approve" onclick="window._kgApprove(' + tid + ',this)" aria-label="Approve">✓ APPROVE</button>' +
+                '<button class="kg-act-btn reject"  onclick="window._kgRejectPrompt(' + tid + ',this)" aria-label="Reject">✕ REJECT</button>' +
+            '</div>' +
+            '<div class="kg-task-reject-area" id="kg-reject-' + _esc(String(t.id)) + '">' +
+                '<textarea class="kg-task-reject-inp" rows="2" placeholder="Reason (optional)…"></textarea>' +
+                '<button class="kg-act-btn reject" style="width:100%;margin-top:0" onclick="window._kgRejectConfirm(' + tid + ',this)">CONFIRM REJECT</button>' +
+            '</div>' +
+        '</div>';
     }
 
     function _entityRow(name, role, state, color) {
@@ -28296,8 +28376,56 @@ window.apexFileDropHandler = function(e){
         return isNaN(r) ? '124,108,242' : r+','+g+','+b;
     }
 
+    // ── Actions right panel ───────────────────────────────────────────────────
+    function _renderActionsRight() {
+        var body    = document.getElementById('kg-right-body');
+        var statsEl = document.getElementById('kg-right-stats');
+        if (!body) return;
+        var pending = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'; });
+        var running = _liveTasks.filter(function(t){ return t.status==='in_progress'; });
+        var notifs  = (_liveNotifs || []).slice(0, 25);
+        var unread  = notifs.filter(function(n){ return !n.read_at; });
+        if (statsEl) {
+            statsEl.style.display = 'flex';
+            statsEl.innerHTML =
+                '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#7c6cf2">' + pending.length + '</span><span class="kg-right-stat-l">PENDING</span></div>' +
+                '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#22c55e">' + running.length + '</span><span class="kg-right-stat-l">RUNNING</span></div>' +
+                '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#22d3ee">' + unread.length + '</span><span class="kg-right-stat-l">UNREAD</span></div>';
+        }
+        var html = '';
+        if (running.length) {
+            html += '<div class="kg-notif-hd">IN PROGRESS</div>';
+            html += running.slice(0, 8).map(function(t) {
+                var domain = t.metadata && t.metadata.dispatch ? (t.metadata.dispatch.slug || '') : '';
+                var agent  = t.metadata && t.metadata.execution && t.metadata.execution.office ? (t.metadata.execution.office.agent || '') : '';
+                var col    = domain ? _domainColor(domain.toLowerCase()) : '#22c55e';
+                return '<div class="kg-notif-card">' +
+                    '<div class="kg-notif-dot" style="background:#22c55e;box-shadow:0 0 5px #22c55e"></div>' +
+                    '<div class="kg-notif-body">' +
+                        '<div class="kg-notif-msg">' + _esc((t.title || t.id || '—').slice(0, 80)) + '</div>' +
+                        '<div class="kg-notif-meta">' + (domain ? domain.toUpperCase() + (agent ? ' → ' + agent : '') + ' · ' : '') + _ago(t.created_at) + '</div>' +
+                    '</div></div>';
+            }).join('');
+        }
+        if (notifs.length) {
+            html += '<div class="kg-notif-hd">NOTIFICATIONS</div>';
+            html += notifs.map(function(n) {
+                var isUnread = !n.read_at;
+                return '<div class="kg-notif-card' + (isUnread ? ' unread' : '') + '">' +
+                    '<div class="kg-notif-dot"></div>' +
+                    '<div class="kg-notif-body">' +
+                        '<div class="kg-notif-msg">' + _esc((n.message || n.title || 'Notification').slice(0, 100)) + '</div>' +
+                        '<div class="kg-notif-meta">' + (n.type ? n.type.replace(/_/g,' ').toUpperCase() + ' · ' : '') + _ago(n.created_at) + '</div>' +
+                    '</div></div>';
+            }).join('');
+        }
+        if (!html) html = '<div class="kg-runs-empty">All clear</div>';
+        body.innerHTML = html;
+    }
+
     // ── Right panel: dispatch ──────────────────────────────────────────────────
     function _renderRight(tierId) {
+        if (tierId === 'actions')  { _renderActionsRight();  return; }
         if (tierId === 'input')   { _renderInputRight();  return; }
         if (tierId === 'council') { _renderCouncilRight(); return; }
         if (tierId === 'domain')  { _renderDomainRight();  return; }
@@ -28378,6 +28506,7 @@ window.apexFileDropHandler = function(e){
             fetch('/api/agents/activity?limit=100', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
             fetch('/api/tasks?limit=50', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
             fetch('/api/civilization/council/history?limit=30', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
+            fetch('/api/notifications', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
         ]).then(function (res) {
             var anyErr = res[0]._err || res[1]._err || res[2]._err;
             var tsEl = document.getElementById('kg-last-updated');
@@ -28385,6 +28514,7 @@ window.apexFileDropHandler = function(e){
             _liveRuns      = (res[0].runs  || []);
             _liveTasks     = (res[1].tasks || res[1] || []);
             _councilDelibs = (res[2].deliberations || []);
+            _liveNotifs = Array.isArray(res[3]) ? res[3] : (res[3] && res[3].notifications ? res[3].notifications : []);
             if (!Array.isArray(_liveTasks)) _liveTasks = [];
 
             // Update node counts + live states
@@ -28495,6 +28625,73 @@ window.apexFileDropHandler = function(e){
         if (window.activePage === 'test') _fetchLive();
         setInterval(function () { if (window.activePage === 'test') _fetchLive(); }, 15000);
     }, 400);
+
+    window._kgApprove = function (taskId, btn) {
+        if (btn) { btn.disabled = true; btn.textContent = '…'; }
+        fetch('/api/tasks/approve', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type':'application/json' }, _h()),
+            body: JSON.stringify({ taskId: taskId, approved: true })
+        }).then(function (r) { return r.json(); }).then(function () {
+            var card = document.getElementById('kg-tc-' + taskId);
+            if (card) {
+                card.style.opacity = '0.4';
+                card.style.pointerEvents = 'none';
+                var btns = card.querySelector('.kg-task-btns');
+                if (btns) btns.innerHTML = '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;color:#22c55e;letter-spacing:.08em">✓ APPROVED</span>';
+            }
+            setTimeout(function () { if (_activeTier === 'actions') _renderLeft('actions'); _fetchLive(); }, 1800);
+        }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = '✓ APPROVE'; } });
+    };
+
+    window._kgRejectPrompt = function (taskId) {
+        var area = document.getElementById('kg-reject-' + taskId);
+        if (area) area.classList.toggle('open');
+    };
+
+    window._kgRejectConfirm = function (taskId, btn) {
+        var area = document.getElementById('kg-reject-' + taskId);
+        var inp  = area ? area.querySelector('textarea') : null;
+        var reason = inp ? inp.value.trim() : '';
+        if (btn) { btn.disabled = true; btn.textContent = '…'; }
+        fetch('/api/tasks/approve', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type':'application/json' }, _h()),
+            body: JSON.stringify({ taskId: taskId, approved: false, reason: reason })
+        }).then(function (r) { return r.json(); }).then(function () {
+            var card = document.getElementById('kg-tc-' + taskId);
+            if (card) {
+                card.style.opacity = '0.4';
+                card.style.pointerEvents = 'none';
+                var btns = card.querySelector('.kg-task-btns');
+                if (btns) btns.innerHTML = '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;color:#ef4444;letter-spacing:.08em">✕ REJECTED</span>';
+            }
+            setTimeout(function () { if (_activeTier === 'actions') _renderLeft('actions'); _fetchLive(); }, 1800);
+        }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = 'CONFIRM REJECT'; } });
+    };
+
+    window._kgConvene = function (btn) {
+        var inp    = document.getElementById('kg-convene-inp');
+        var status = document.getElementById('kg-convene-status');
+        if (!inp || !inp.value.trim()) return;
+        var q = inp.value.trim();
+        if (btn) { btn.disabled = true; btn.textContent = '⬡ DELIBERATING…'; }
+        if (status) status.textContent = 'Submitting to council…';
+        fetch('/api/civilization/council/run', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type':'application/json' }, _h()),
+            body: JSON.stringify({ question: q })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            if (btn) { btn.disabled = false; btn.textContent = '◈ CONVENE →'; }
+            if (inp) inp.value = '';
+            if (status) status.textContent = d.ok !== false ? '✓ Deliberation started' : (d.error || 'Submitted to council');
+            setTimeout(function () { if (status) status.textContent = ''; }, 5000);
+            _fetchLive();
+        }).catch(function () {
+            if (btn) { btn.disabled = false; btn.textContent = '◈ CONVENE →'; }
+            if (status) status.textContent = 'Connection error — try again';
+        });
+    };
 
     window._tpRender = function () {};
     window._kgFetchLive = _fetchLive;
