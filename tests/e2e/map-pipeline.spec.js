@@ -91,7 +91,7 @@ test('all nodes show correct labels', async ({ page }) => {
     await setup(page);
     await goToMap(page);
     for (const label of ['INPUT','COUNCIL','ACTIONS','DOMAIN AGENTS','OFFICE AGENTS','OUTPUT','CODING PIPELINE']) {
-        await expect(page.locator('#kg-pipeline').getByText(label, { exact:true })).toBeVisible();
+        await expect(page.locator('#kg-pipeline .kg-node-label').getByText(label, { exact:true })).toBeVisible();
     }
 });
 
@@ -310,23 +310,26 @@ test('DOMAIN AGENTS node opens right panel', async ({ page }) => {
     await expect(page.locator('#kg-right-title')).toHaveText('RECENT RUNS');
 });
 
-// ── 24. Council/Input/Coding accordions open by default ───────────────────────
-test('council accordion opens expanded by default', async ({ page }) => {
+// ── 24. Council accordion starts collapsed by default ─────────────────────────
+test('council accordion starts collapsed by default', async ({ page }) => {
     await setup(page);
     await goToMap(page);
     await clickNode(page, '#kg-node-council');
     await page.waitForSelector('#kg-left-body .kg-group-body', { timeout:5000, state:'attached' });
     const h = await page.locator('#kg-left-body .kg-group-body').first().evaluate(el => el.style.height);
-    expect(h).toBe('auto');
+    expect(h).toBe('0px');
 });
 
-// ── 25. Accordion collapses on click when open ────────────────────────────────
+// ── 25. Accordion expands on click then collapses on second click ──────────────
 test('clicking open accordion header collapses it', async ({ page }) => {
     await setup(page);
     await goToMap(page);
     await clickNode(page, '#kg-node-council');
     await page.waitForSelector('#kg-left-body .kg-group-hd', { timeout:5000 });
-    // Header starts open — click once to collapse
+    // Header starts collapsed — click once to open
+    await page.evaluate(() => { var hd = document.querySelector('#kg-left-body .kg-group-hd'); if(hd) hd.click(); });
+    await page.waitForTimeout(250);
+    // Click again to collapse
     await page.evaluate(() => { var hd = document.querySelector('#kg-left-body .kg-group-hd'); if(hd) hd.click(); });
     await page.waitForTimeout(250);
     const hd = page.locator('#kg-left-body .kg-group-hd').first();

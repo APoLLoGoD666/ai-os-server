@@ -27547,6 +27547,50 @@ window.apexFileDropHandler = function(e){
 .kg-output-stat { font:700 22px/1 'JetBrains Mono',monospace; color:#f59e0b; margin-top:4px; }
 .kg-output-sub { font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.3); margin-top:3px; }
 
+/* ── Output Intelligence Panel ── */
+.kg-out-summary { display:flex; gap:0; border-bottom:1px solid rgba(255,255,255,0.05); flex-shrink:0; }
+.kg-out-stat-chip { flex:1; padding:10px 8px; text-align:center; border-right:1px solid rgba(255,255,255,0.05); }
+.kg-out-stat-chip:last-child { border-right:none; }
+.kg-out-stat-n { display:block; font:700 18px/1 'JetBrains Mono',monospace; color:#f59e0b; }
+.kg-out-stat-l { display:block; font:600 7px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:rgba(255,255,255,0.25); margin-top:4px; text-transform:uppercase; }
+.kg-out-sect-hd { padding:8px 12px 4px; font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:rgba(255,255,255,0.22); display:flex; justify-content:space-between; align-items:center; }
+.kg-out-feed-card { display:flex; gap:8px; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 150ms; }
+.kg-out-feed-card:hover { background:rgba(255,255,255,0.02); }
+.kg-out-feed-card.failed { border-left:2px solid rgba(239,68,68,0.4); }
+.kg-out-feed-card.done { border-left:2px solid rgba(34,197,94,0.3); }
+.kg-out-feed-icon { font-size:10px; flex-shrink:0; margin-top:2px; width:12px; text-align:center; }
+.kg-out-feed-body { flex:1; min-width:0; }
+.kg-out-feed-title { font:500 11px/1.3 system-ui,sans-serif; color:rgba(255,255,255,0.75); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+.kg-out-feed-route { display:flex; gap:5px; align-items:center; flex-wrap:wrap; margin-bottom:3px; }
+.kg-out-badge { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.08em; padding:2px 4px; border-radius:2px; background:rgba(255,255,255,0.05); }
+.kg-out-feed-time { font:400 8px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.2); margin-left:auto; flex-shrink:0; }
+.kg-out-feed-preview { font:400 9px/1.4 system-ui,sans-serif; color:rgba(255,255,255,0.3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; font-style:italic; }
+.kg-out-perf-row { display:flex; align-items:center; gap:8px; padding:5px 12px; }
+.kg-out-perf-name { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.08em; width:72px; flex-shrink:0; }
+.kg-out-perf-track { flex:1; height:3px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
+.kg-out-perf-fill { height:100%; border-radius:2px; }
+.kg-out-perf-cnt { font:700 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.35); width:24px; text-align:right; flex-shrink:0; }
+.kg-out-chart { display:flex; gap:2px; align-items:flex-end; height:44px; padding:0 12px; margin:4px 0 8px; }
+.kg-out-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+.kg-out-bar { width:100%; background:rgba(245,158,11,0.35); border-radius:1px 1px 0 0; min-height:2px; }
+.kg-out-bar.has-failed { background:linear-gradient(180deg,rgba(239,68,68,0.45),rgba(245,158,11,0.3)); }
+.kg-out-bar-lbl { font:400 7px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.13); white-space:nowrap; }
+.kg-out-domain-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:0 12px 8px; }
+.kg-out-domain-cell { background:rgba(255,255,255,0.03); border-radius:4px; padding:7px 8px; border:1px solid rgba(255,255,255,0.05); }
+.kg-out-domain-cell-name { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; margin-bottom:4px; }
+.kg-out-domain-cell-val { font:700 14px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.8); }
+.kg-out-domain-cell-sub { font:400 7px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.2); margin-top:2px; }
+.kg-out-exec-card { padding:9px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
+.kg-out-exec-card:hover { background:rgba(255,255,255,0.02); }
+.kg-out-exec-hdr { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+.kg-out-exec-agent { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.08em; }
+.kg-out-exec-ts { font:400 8px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.2); margin-left:auto; }
+.kg-out-exec-badge { font:700 7px/1 'JetBrains Mono',monospace; letter-spacing:.1em; padding:2px 5px; border-radius:2px; }
+.kg-out-exec-badge.done { background:rgba(34,197,94,0.12); color:#22c55e; }
+.kg-out-exec-badge.failed { background:rgba(239,68,68,0.12); color:#ef4444; }
+.kg-out-exec-title { font:400 10px/1.3 system-ui,sans-serif; color:rgba(255,255,255,0.58); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+.kg-out-exec-reply { font:400 9px/1.4 system-ui,sans-serif; color:rgba(255,255,255,0.27); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-style:italic; }
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   .kg-node-state.live, .kg-entity-dot.working, .kg-delib-chip.deliberating,
@@ -27826,7 +27870,7 @@ window.apexFileDropHandler = function(e){
             domain:  { label:'DOMAIN DISPATCH LAYER', stat:'9 DOMAINS' },
             office:  { label:'EXECUTION LAYER', stat:'33 AGENTS' },
             actions: { label:'TASK PIPELINE', stat:'' },
-            output:  { label:'FINAL RESULTS', stat:'' },
+            output:  { label:'RESULTS INTELLIGENCE', stat:'' },
         };
         if (metaEl && _META[id]) {
             var m = _META[id];
@@ -28549,13 +28593,84 @@ window.apexFileDropHandler = function(e){
     function _renderOutputLeft() {
         var body = document.getElementById('kg-left-body');
         if (!body) return;
-        var completed = _liveTasks.filter(function (t) { return t.status === 'completed' || t.status === 'done'; });
-        var failed    = _liveTasks.filter(function (t) { return t.status === 'failed'; });
-        if (!completed.length && !failed.length) { body.innerHTML = '<div class="kg-runs-empty">NO RESULTS YET</div>'; return; }
-        var groups = [];
-        if (completed.length) groups.push({ name:'COMPLETED', color:'#22c55e', rows: completed.slice(0,20).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38), t.updated_at ? _ago(t.updated_at) : '', 'ready', '#22c55e'); }) });
-        if (failed.length)    groups.push({ name:'FAILED',    color:'#ef4444', rows: failed.slice(0,10).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38), t.updated_at ? _ago(t.updated_at) : '', 'error', '#ef4444'); }) });
-        body.innerHTML = _accordion(groups, true);
+        var now = Date.now();
+        var done   = _liveTasks.filter(function(t){ return t.status==='completed'||t.status==='done'; });
+        var failed = _liveTasks.filter(function(t){ return t.status==='failed'; });
+        var all    = done.concat(failed).sort(function(a,b){ return new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at); });
+
+        if (!all.length) {
+            body.innerHTML =
+                '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;gap:10px;padding:32px 16px">' +
+                '<div style="font:700 32px/1 \'JetBrains Mono\',monospace;color:rgba(245,158,11,0.12)">◉</div>' +
+                '<div style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.2em;color:rgba(255,255,255,0.13)">AWAITING OUTPUT</div>' +
+                '<div style="font:400 8px/1.6 system-ui;color:rgba(255,255,255,0.08);text-align:center;max-width:160px">Results appear once tasks complete the pipeline</div>' +
+                '</div>';
+            return;
+        }
+
+        var today      = done.filter(function(t){ return t.updated_at&&(now-new Date(t.updated_at).getTime())<86400000; }).length;
+        var total      = all.length;
+        var successPct = total ? Math.round(done.length/total*100) : 0;
+        var pc         = successPct>=80?'#22c55e':successPct>=50?'#f59e0b':'#ef4444';
+
+        // Domain counts
+        var domainMap = {};
+        all.forEach(function(t){
+            var s = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : null;
+            if (!s) return;
+            if (!domainMap[s]) domainMap[s] = { done:0, fail:0 };
+            if (t.status==='failed') domainMap[s].fail++; else domainMap[s].done++;
+        });
+        var domainList = [];
+        for (var dk in domainMap) { domainList.push({ slug:dk, total:domainMap[dk].done+domainMap[dk].fail, done:domainMap[dk].done }); }
+        domainList.sort(function(a,b){ return b.total-a.total; });
+        var maxD = domainList[0] ? domainList[0].total : 1;
+
+        var html = '';
+
+        // Summary strip
+        html += '<div class="kg-out-summary">' +
+            '<div class="kg-out-stat-chip"><span class="kg-out-stat-n" style="color:#f59e0b">'+today+'</span><span class="kg-out-stat-l">TODAY</span></div>' +
+            '<div class="kg-out-stat-chip"><span class="kg-out-stat-n" style="color:'+pc+'">'+successPct+'%</span><span class="kg-out-stat-l">SUCCESS</span></div>' +
+            '<div class="kg-out-stat-chip"><span class="kg-out-stat-n">'+domainList.length+'</span><span class="kg-out-stat-l">DOMAINS</span></div>' +
+        '</div>';
+
+        // Result feed
+        html += '<div class="kg-out-sect-hd"><span>RESULT FEED</span><span style="color:rgba(255,255,255,0.15)">'+all.length+' TOTAL</span></div>';
+        html += all.slice(0,25).map(function(t){
+            var isDone  = t.status==='completed'||t.status==='done';
+            var slug    = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
+            var col     = slug ? _domainColor(slug) : '#52525b';
+            var exec    = (t.metadata&&t.metadata.execution) || null;
+            var office  = exec&&exec.office ? exec.office.agent : null;
+            var reply   = exec ? String(exec.reply||'').trim() : '';
+            var routeHtml = slug ? '<span class="kg-out-badge" style="color:'+col+'">'+slug.toUpperCase()+'</span>' : '';
+            if (office) routeHtml += '<span style="color:rgba(255,255,255,0.15);font-size:8px;margin:0 1px">→</span><span class="kg-out-badge" style="color:#38bdf8">'+_esc(office.toUpperCase().slice(0,14))+'</span>';
+            return '<div class="kg-out-feed-card '+(isDone?'done':'failed')+'">' +
+                '<div class="kg-out-feed-icon" style="color:'+(isDone?'#22c55e':'#ef4444')+'">'+(isDone?'✓':'✕')+'</div>' +
+                '<div class="kg-out-feed-body">' +
+                    '<div class="kg-out-feed-title">'+_esc((t.title||t.id||'—').slice(0,52))+'</div>' +
+                    '<div class="kg-out-feed-route">'+routeHtml+'<span class="kg-out-feed-time">'+_ago(t.updated_at||t.created_at)+'</span></div>' +
+                    (reply ? '<div class="kg-out-feed-preview">'+_esc(reply.slice(0,90))+'</div>' : '') +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        // Domain performance bars
+        if (domainList.length) {
+            html += '<div class="kg-out-sect-hd" style="margin-top:4px"><span>DOMAIN PERFORMANCE</span></div>';
+            html += domainList.slice(0,7).map(function(d){
+                var col = _domainColor(d.slug);
+                var pct = Math.round(d.total/maxD*100);
+                return '<div class="kg-out-perf-row">' +
+                    '<div class="kg-out-perf-name" style="color:'+col+'">'+d.slug.toUpperCase().slice(0,10)+'</div>' +
+                    '<div class="kg-out-perf-track"><div class="kg-out-perf-fill" style="width:'+pct+'%;background:'+col+'"></div></div>' +
+                    '<div class="kg-out-perf-cnt">'+d.total+'</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        body.innerHTML = html;
     }
 
     // ── Output right panel (recent completed runs) ─────────────────────────────
@@ -28563,20 +28678,100 @@ window.apexFileDropHandler = function(e){
         var body    = document.getElementById('kg-right-body');
         var statsEl = document.getElementById('kg-right-stats');
         if (!body) return;
-        var now4     = Date.now();
-        var done     = _liveTasks.filter(function (t) { return t.status === 'completed' || t.status === 'done'; });
-        var failed   = _liveTasks.filter(function (t) { return t.status === 'failed'; });
-        var total    = done.length + failed.length;
-        var pct      = total ? Math.round(done.length / total * 100) : 0;
-        var pc       = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
-        var recent   = _liveRuns.filter(function (r) { return r.success !== false; }).slice(0, 60);
-        statsEl.style.display = 'flex';
-        statsEl.innerHTML =
-            '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#f59e0b">' + total + '</span><span class="kg-right-stat-l">RESULTS</span></div>' +
-            '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:' + pc + '">' + pct + '%</span><span class="kg-right-stat-l">SUCCESS</span></div>' +
-            '<div class="kg-right-stat"><span class="kg-right-stat-n">' + done.length + '</span><span class="kg-right-stat-l">DONE</span></div>';
-        if (!recent.length) { body.innerHTML = '<div class="kg-runs-empty">NO OUTPUT YET</div>'; return; }
-        body.innerHTML = _groupedRuns(recent);
+        var now  = Date.now();
+        var done   = _liveTasks.filter(function(t){ return t.status==='completed'||t.status==='done'; });
+        var failed = _liveTasks.filter(function(t){ return t.status==='failed'; });
+        var all    = done.concat(failed).sort(function(a,b){ return new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at); });
+        var total  = all.length;
+        var successPct = total ? Math.round(done.length/total*100) : 0;
+        var pc = successPct>=80?'#22c55e':successPct>=50?'#f59e0b':'#ef4444';
+
+        if (statsEl) {
+            statsEl.style.display = 'flex';
+            statsEl.innerHTML =
+                '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#f59e0b">'+total+'</span><span class="kg-right-stat-l">RESULTS</span></div>' +
+                '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:'+pc+'">'+successPct+'%</span><span class="kg-right-stat-l">SUCCESS</span></div>' +
+                '<div class="kg-right-stat"><span class="kg-right-stat-n">'+done.length+'</span><span class="kg-right-stat-l">DONE</span></div>' +
+                '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#ef4444">'+failed.length+'</span><span class="kg-right-stat-l">FAILED</span></div>';
+        }
+
+        if (!all.length) { body.innerHTML = '<div class="kg-runs-empty">NO OUTPUT YET</div>'; return; }
+
+        var html = '';
+
+        // 24h completion chart — 12 x 2h buckets
+        var BUCKETS = 12, BUCKET_MS = 7200000;
+        var buckets = [];
+        for (var bi = 0; bi < BUCKETS; bi++) {
+            var bS = now - (BUCKETS - bi) * BUCKET_MS, bE = bS + BUCKET_MS;
+            var bd = 0, bf = 0;
+            all.forEach(function(t){ var ts = new Date(t.updated_at||t.created_at).getTime(); if (ts>=bS&&ts<bE){ if(t.status==='failed') bf++; else bd++; } });
+            buckets.push({ d:bd, f:bf, lbl: new Date(bS).getHours()+'h' });
+        }
+        var maxB = Math.max.apply(null, buckets.map(function(b){ return b.d+b.f; })) || 1;
+
+        html += '<div class="kg-out-sect-hd" style="padding-top:10px"><span>COMPLETIONS · 24H</span></div>';
+        html += '<div class="kg-out-chart">';
+        buckets.forEach(function(b){
+            var h = Math.round(((b.d+b.f)/maxB)*100);
+            html += '<div class="kg-out-bar-col">' +
+                '<div class="kg-out-bar'+(b.f?' has-failed':'')+'" style="height:'+h+'%"></div>' +
+                '<div class="kg-out-bar-lbl">'+b.lbl+'</div>' +
+            '</div>';
+        });
+        html += '</div>';
+
+        // Domain breakdown grid
+        var dMap = {};
+        all.forEach(function(t){
+            var s=(t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug)?t.metadata.dispatch.slug.toLowerCase():'direct';
+            if (!dMap[s]) dMap[s]={done:0,fail:0};
+            if(t.status==='failed') dMap[s].fail++; else dMap[s].done++;
+        });
+        var dList = [];
+        for (var ds in dMap) { dList.push({ slug:ds, done:dMap[ds].done, fail:dMap[ds].fail }); }
+        dList.sort(function(a,b){ return (b.done+b.fail)-(a.done+a.fail); });
+
+        if (dList.length) {
+            html += '<div class="kg-out-sect-hd"><span>DOMAIN BREAKDOWN</span></div>';
+            html += '<div class="kg-out-domain-grid">';
+            dList.slice(0,6).forEach(function(d){
+                var tot = d.done+d.fail;
+                var suc = tot ? Math.round(d.done/tot*100) : 0;
+                var col = _domainColor(d.slug);
+                html += '<div class="kg-out-domain-cell">' +
+                    '<div class="kg-out-domain-cell-name" style="color:'+col+'">'+d.slug.toUpperCase().slice(0,12)+'</div>' +
+                    '<div class="kg-out-domain-cell-val">'+tot+'</div>' +
+                    '<div class="kg-out-domain-cell-sub">'+suc+'% success</div>' +
+                '</div>';
+            });
+            html += '</div>';
+        }
+
+        // Execution log
+        html += '<div class="kg-out-sect-hd"><span>EXECUTION LOG</span><span style="color:rgba(255,255,255,0.15)">'+all.length+' ENTRIES</span></div>';
+        html += all.slice(0,20).map(function(t){
+            var isDone = t.status==='completed'||t.status==='done';
+            var slug   = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
+            var col    = slug ? _domainColor(slug) : '#52525b';
+            var exec   = (t.metadata&&t.metadata.execution)||null;
+            var office = exec&&exec.office ? exec.office.agent : null;
+            var reply  = exec ? String(exec.reply||'').trim() : '';
+            var ts     = t.updated_at||t.created_at;
+            var tsStr  = ts ? new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+            return '<div class="kg-out-exec-card">' +
+                '<div class="kg-out-exec-hdr">' +
+                    (slug ? '<span class="kg-out-exec-agent" style="color:'+col+'">'+slug.toUpperCase()+'</span>' : '') +
+                    (office ? '<span style="color:rgba(255,255,255,0.2);font-size:8px">→</span><span class="kg-out-exec-agent" style="color:#38bdf8">'+_esc(office.slice(0,14).toUpperCase())+'</span>' : '') +
+                    '<span class="kg-out-exec-ts">'+tsStr+'</span>' +
+                    '<span class="kg-out-exec-badge '+(isDone?'done':'failed')+'">'+(isDone?'DONE':'FAILED')+'</span>' +
+                '</div>' +
+                '<div class="kg-out-exec-title">'+_esc((t.title||t.id||'—').slice(0,65))+'</div>' +
+                (reply ? '<div class="kg-out-exec-reply">'+_esc(reply.slice(0,110))+'</div>' : '') +
+            '</div>';
+        }).join('');
+
+        body.innerHTML = html;
     }
 
     // ── hex → rgb helper for glow ─────────────────────────────────────────────
@@ -28875,6 +29070,18 @@ window.apexFileDropHandler = function(e){
                 _lastFingerprint = _fp;
                 _renderLeft(_activeTier);
                 _renderRight(_activeTier);
+            }
+
+            if (_activeTier === 'output') {
+                var _outMeta = document.getElementById('kg-left-meta');
+                if (_outMeta) {
+                    var _outDone = _liveTasks.filter(function(t){ return t.status==='done'||t.status==='completed'; });
+                    var _outFail = _liveTasks.filter(function(t){ return t.status==='failed'; });
+                    var _outTier = TIERS.find(function(t){ return t.id==='output'; });
+                    var _outStat = _outDone.length ? _outDone.length+' RESULTS' : 'NO OUTPUT';
+                    _outMeta.style.display = 'block';
+                    _outMeta.innerHTML = '<div class="kg-panel-meta-label">RESULTS INTELLIGENCE</div><div class="kg-panel-meta-stat" style="color:'+(_outTier?_outTier.color:'#f59e0b')+'">'+_outStat+'</div>';
+                }
             }
 
             // Keep ACTIONS meta stat live (meta is normally static after _selectTier)
