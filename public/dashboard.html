@@ -27628,7 +27628,8 @@ window.apexFileDropHandler = function(e){
     var _liveRuns      = [];
     var _liveTasks     = [];
     var _councilDelibs = [];
-    var _pollTimer   = null;
+    var _pollTimer     = null;
+    var _lastFingerprint = '';
 
     // ── Bootstrap page ────────────────────────────────────────────────────────
 
@@ -27997,7 +27998,9 @@ window.apexFileDropHandler = function(e){
             das.forEach(function(a){
                 var cat = a.category || 'OTHER';
                 if (!_catMap[cat]) _catMap[cat] = { name:cat, color:a.color, rows:[] };
-                _catMap[cat].rows.push(_entityRow(a.name, a.team || a.category, _agentState(a.name, a.slug), a.color));
+                // Use slug as primary label so it matches routing traces (e.g. CIVILISATION not GOVERNANCE)
+                var label = (a.slug || a.id).toUpperCase();
+                _catMap[cat].rows.push(_entityRow(label, a.team || a.category, _agentState(a.name, a.slug), a.color));
             });
             var _agentGroups = [];
             for (var _ck in _catMap) { _agentGroups.push(_catMap[_ck]); }
@@ -28866,8 +28869,10 @@ window.apexFileDropHandler = function(e){
             var outSubEl = document.querySelector('#kg-node-output .kg-node-sub');
             if (outSubEl) outSubEl.textContent = recentCompleted.length > 0 ? recentCompleted.length + ' DONE' : 'OUTPUT';
 
-            // Refresh open panels
-            if (_activeTier) {
+            // Refresh open panels only when data changed (prevents flicker on every tick)
+            var _fp = _liveTasks.map(function(t){ return t.id+t.status+(t.updated_at||''); }).join('|') + _liveRuns.length;
+            if (_activeTier && _fp !== _lastFingerprint) {
+                _lastFingerprint = _fp;
                 _renderLeft(_activeTier);
                 _renderRight(_activeTier);
             }
@@ -28914,13 +28919,13 @@ window.apexFileDropHandler = function(e){
     } else {
         _bootstrap();
     }
-    // Adaptive poll: 2s when tasks in_progress, 4s when recently done, 15s idle
+    // Adaptive poll: 5s when in_progress, 10s when recently done, 20s idle
     var _kgPollTimer = null;
     function _schedulePoll() {
         clearTimeout(_kgPollTimer);
-        var hasActive   = _liveTasks.some(function(t){ return t.status==='in_progress'; });
-        var recentDone  = _liveTasks.some(function(t){ return (t.status==='done'||t.status==='completed') && t.updated_at && (Date.now()-new Date(t.updated_at).getTime())<60000; });
-        var delay = hasActive ? 2000 : recentDone ? 4000 : 15000;
+        var hasActive  = _liveTasks.some(function(t){ return t.status==='in_progress'; });
+        var recentDone = _liveTasks.some(function(t){ return (t.status==='done'||t.status==='completed') && t.updated_at && (Date.now()-new Date(t.updated_at).getTime())<60000; });
+        var delay = hasActive ? 5000 : recentDone ? 10000 : 20000;
         _kgPollTimer = setTimeout(function(){ if(window.activePage==='test'){ _fetchLive(); } _schedulePoll(); }, delay);
     }
     setTimeout(function(){ if(window.activePage==='test') _fetchLive(); _schedulePoll(); }, 400);
