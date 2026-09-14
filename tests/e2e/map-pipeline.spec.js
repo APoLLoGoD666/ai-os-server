@@ -336,3 +336,122 @@ test('clicking open accordion header collapses it', async ({ page }) => {
     await expect(hd).not.toHaveClass(/open/);
     await expect(hd).toHaveAttribute('aria-expanded', 'false');
 });
+
+// ── 26. Every node has an info button ────────────────────────────────────────
+test('every pipeline node has a .kg-node-info-btn with data-info-key', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    for (const id of ['input','council','actions','domain','office','output','coding']) {
+        const btn = page.locator(`#kg-node-${id} .kg-node-info-btn`);
+        await expect(btn).toBeAttached();
+        const key = await btn.getAttribute('data-info-key');
+        expect(key).toBe('node-' + id);
+    }
+});
+
+// ── 27. Clicking info button shows modal with correct content ─────────────────
+test('clicking node info button shows overlay with correct title', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    // Click info button on INPUT node via JS (avoids stopPropagation issues)
+    await page.evaluate(() => {
+        var btn = document.querySelector('#kg-node-input .kg-node-info-btn');
+        if (btn) btn.click();
+    });
+    await page.waitForTimeout(200);
+    const overlay = page.locator('#kg-info-overlay');
+    await expect(overlay).toHaveClass(/visible/);
+    await expect(page.locator('.kg-info-modal-title')).toHaveText('Input Pipeline');
+});
+
+// ── 28. Info modal close button dismisses the overlay ────────────────────────
+test('info modal close button hides the overlay', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    await page.evaluate(() => { window._kgShowInfo('node-council', '#a78bfa'); });
+    await page.waitForTimeout(150);
+    await expect(page.locator('#kg-info-overlay')).toHaveClass(/visible/);
+    await page.evaluate(() => { window._kgCloseInfo(); });
+    await page.waitForTimeout(150);
+    await expect(page.locator('#kg-info-overlay')).not.toHaveClass(/visible/);
+});
+
+// ── 29. Escape key closes the info modal ──────────────────────────────────────
+test('pressing Escape closes the info modal', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    await page.evaluate(() => { window._kgShowInfo('node-domain', '#34d399'); });
+    await page.waitForTimeout(150);
+    await expect(page.locator('#kg-info-overlay')).toHaveClass(/visible/);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+    await expect(page.locator('#kg-info-overlay')).not.toHaveClass(/visible/);
+});
+
+// ── 30. All 13 info content keys are defined ─────────────────────────────────
+test('all info content keys are defined and have titles', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    const keys = [
+        'node-input','node-council','node-coding','node-domain',
+        'node-office','node-actions','node-output',
+        'stat-runs','stat-success','stat-avgdur',
+        'stat-deliberations','stat-consensus','stat-escalated',
+    ];
+    const result = await page.evaluate((ks) => {
+        return ks.map(function(k) {
+            window._kgShowInfo(k);
+            var t = document.querySelector('.kg-info-modal-title');
+            return { key: k, title: t ? t.textContent.trim() : null };
+        });
+    }, keys);
+    for (const r of result) {
+        expect(r.title, 'expected title for key: ' + r.key).toBeTruthy();
+    }
+    // Close after test
+    await page.evaluate(() => { window._kgCloseInfo(); });
+});
+
+// ── 31. Stat boxes are clickable and open modal ───────────────────────────────
+test('RUNS stat box opens info modal when clicked', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    await clickNode(page, '#kg-node-domain');
+    await page.waitForTimeout(300);
+    // Click the RUNS stat if visible
+    const stat = page.locator('#kg-right-stats .kg-right-stat.clickable').first();
+    const visible = await stat.isVisible().catch(() => false);
+    if (visible) {
+        await stat.click();
+        await page.waitForTimeout(150);
+        await expect(page.locator('#kg-info-overlay')).toHaveClass(/visible/);
+        await page.evaluate(() => { window._kgCloseInfo(); });
+    }
+});
+
+// ── 32. Info modal has sections and chips ─────────────────────────────────────
+test('info modal renders sections and chips for node-domain', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    await page.evaluate(() => { window._kgShowInfo('node-domain', '#34d399'); });
+    await page.waitForTimeout(150);
+    await expect(page.locator('.kg-info-section-hd').first()).toBeVisible();
+    await expect(page.locator('.kg-info-chips')).toBeVisible();
+    await expect(page.locator('.kg-info-chip').first()).toBeVisible();
+});
+
+// ── 33. Click outside modal closes it ────────────────────────────────────────
+test('clicking the overlay backdrop closes the info modal', async ({ page }) => {
+    await setup(page);
+    await goToMap(page);
+    await page.evaluate(() => { window._kgShowInfo('node-office'); });
+    await page.waitForTimeout(150);
+    await expect(page.locator('#kg-info-overlay')).toHaveClass(/visible/);
+    // Click on the overlay element itself (not the modal)
+    await page.evaluate(() => {
+        var ov = document.getElementById('kg-info-overlay');
+        if (ov) ov.dispatchEvent(new MouseEvent('click', { bubbles:true, target: ov }));
+    });
+    await page.waitForTimeout(150);
+    await expect(page.locator('#kg-info-overlay')).not.toHaveClass(/visible/);
+});

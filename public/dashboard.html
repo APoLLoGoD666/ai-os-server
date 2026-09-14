@@ -27607,6 +27607,74 @@ window.apexFileDropHandler = function(e){
   .kg-nav-card { transition:none !important; }
 }
 
+/* ── Info popup overlay ── */
+.kg-info-overlay {
+  position:fixed; inset:0; z-index:10000;
+  background:rgba(0,0,0,0.68); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 200ms ease;
+}
+.kg-info-overlay.visible { opacity:1; pointer-events:all; }
+.kg-info-modal {
+  background:rgba(11,11,17,0.98); border:1px solid rgba(255,255,255,0.1); border-radius:20px;
+  width:min(540px, calc(100vw - 32px)); max-height:82vh; overflow-y:auto; padding:0;
+  transform:translateY(18px) scale(0.96); transition:transform 220ms cubic-bezier(0,0,0.2,1);
+  box-shadow:0 40px 100px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.kg-info-overlay.visible .kg-info-modal { transform:translateY(0) scale(1); }
+.kg-info-modal-hd {
+  padding:24px 28px 20px; border-bottom:1px solid rgba(255,255,255,0.06);
+  display:flex; align-items:flex-start; gap:16px; position:relative;
+}
+.kg-info-modal-icon { font-size:32px; line-height:1; flex-shrink:0; margin-top:2px; }
+.kg-info-modal-titles { flex:1; min-width:0; }
+.kg-info-modal-title { font:700 16px/1.2 'JetBrains Mono',monospace; letter-spacing:.03em; margin-bottom:6px; }
+.kg-info-modal-tagline { font:400 12px/1.5 system-ui,sans-serif; color:rgba(255,255,255,0.42); }
+.kg-info-modal-close {
+  position:absolute; top:14px; right:14px; width:30px; height:30px; border-radius:50%;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); cursor:pointer;
+  color:rgba(255,255,255,0.4); font-size:16px; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  transition:background 150ms, color 150ms; flex-shrink:0;
+}
+.kg-info-modal-close:hover { background:rgba(255,255,255,0.12); color:#fff; }
+.kg-info-modal-close:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; }
+.kg-info-modal-accent { height:2px; margin:0; border:none; width:100%; display:block; }
+.kg-info-modal-body { padding:20px 28px 28px; display:flex; flex-direction:column; gap:18px; }
+.kg-info-section-hd {
+  font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.16em; text-transform:uppercase;
+  color:rgba(255,255,255,0.22); margin-bottom:8px;
+}
+.kg-info-section-body { font:400 13px/1.75 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.68); }
+.kg-info-section-body strong { color:rgba(255,255,255,0.92); font-weight:600; }
+.kg-info-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+.kg-info-chip {
+  font:600 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; text-transform:uppercase;
+  padding:5px 9px; border-radius:3px; background:rgba(255,255,255,0.04); border-width:1px; border-style:solid;
+}
+/* ⓘ button on node boxes */
+.kg-node-info-btn {
+  position:absolute; bottom:6px; right:6px; width:19px; height:19px; border-radius:50%;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); cursor:pointer;
+  color:rgba(255,255,255,0.32); font:700 10px/1 system-ui,sans-serif;
+  display:flex; align-items:center; justify-content:center; z-index:5;
+  transition:background 150ms, color 150ms, border-color 150ms; line-height:1;
+}
+.kg-node-info-btn:hover { background:rgba(124,108,242,0.22); border-color:rgba(124,108,242,0.55); color:#a78bfa; }
+.kg-node-info-btn:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; }
+/* Clickable stat boxes */
+.kg-right-stat.clickable { cursor:pointer; border-radius:6px; padding:6px 4px; transition:background 150ms; }
+.kg-right-stat.clickable:hover { background:rgba(255,255,255,0.05); }
+.kg-right-stat.clickable:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; border-radius:4px; }
+/* Clickable meta stat */
+.kg-panel-meta-stat.clickable {
+  cursor:pointer; text-decoration:underline dotted rgba(255,255,255,0.2);
+  text-underline-offset:3px; transition:text-decoration-color 150ms;
+}
+.kg-panel-meta-stat.clickable:hover { text-decoration-color:rgba(255,255,255,0.55); }
+.kg-panel-meta-stat.clickable:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; border-radius:2px; }
+@media (prefers-reduced-motion:reduce) { .kg-info-modal, .kg-info-overlay { transition:none !important; } }
+
 /* ── Last-updated footer ── */
 .kg-last-updated { position:absolute; bottom:8px; right:12px; font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.32); pointer-events:none; z-index:3; }
 
@@ -27631,6 +27699,120 @@ window.apexFileDropHandler = function(e){
     'use strict';
 
     function _h() { return typeof buildApiHeaders === 'function' ? buildApiHeaders() : { 'x-app-key': window._appKey || '' }; }
+
+    // ── Info popup content ────────────────────────────────────────────────────
+    var _INFO_CONTENT = {
+        'node-input':   { icon:'◎', color:'#a78bfa', title:'Input Pipeline', tagline:'Where every request enters the AI OS', sections:[
+            { heading:'What is this?', body:'The Input stage is where all work begins. Every message you type, voice command, scheduled task, or API call arrives here first — this is the door into the AI OS.' },
+            { heading:'Entry channels', chips:['Chat','Voice','Scheduled','Agent','API','Tool'] },
+            { heading:'What the count shows', body:'Agent runs triggered from this entry point today. A run starts the moment a request is accepted and handed downstream. Multiple channels can be active simultaneously — nothing queues.' },
+            { heading:'Good to know', body:'Requests are processed in parallel. The system never queues user messages — each one gets its own execution thread immediately.' },
+        ]},
+        'node-council': { icon:'⬡', color:'#a78bfa', title:'Executive Council', tagline:'7 AI executives deliberating every major decision', sections:[
+            { heading:'What is this?', body:'Your AI board of directors. Before anything significant is actioned, 7 executive entities debate the question, vote, and produce a formal recommendation with justification.' },
+            { heading:'The 7 entities', chips:['CTO','CFO','COO','CSO','CIO','CGO','CEO'] },
+            { heading:'How decisions work', body:'Each entity reviews the question, optionally queries live domain data, then votes with reasoning. The CEO synthesises all votes into the final recommendation. If consensus falls below 60%, the decision escalates directly to you.' },
+            { heading:'What the count shows', body:'Total deliberations held. The council convenes before any action that affects your data, finances, or external communications.' },
+        ]},
+        'node-coding':  { icon:'⌨', color:'#5b9eff', title:'Coding Pipeline', tagline:'8-stage automated development workflow', sections:[
+            { heading:'What is this?', body:'When a technical task is approved, it passes through 8 sequential stages — each handled by a specialist agent with its own quality gate before the work can advance.' },
+            { heading:'The 8 stages', chips:['Analysis','Architecture','Implementation','Testing','Review','Deployment','Monitoring','Documentation'] },
+            { heading:'Quality gates', body:'Code cannot advance to the next stage until the previous one passes its checks. This prevents broken work from reaching production — failures are caught early and cheaply.' },
+            { heading:'Good to know', body:'Only technical tasks route through here. Business, communication, or financial tasks skip this pipeline and go directly from Domain → Office.' },
+        ]},
+        'node-domain':  { icon:'◆', color:'#34d399', title:'Domain Dispatch Layer', tagline:'Intelligent routing to the right specialist', sections:[
+            { heading:'What is this?', body:'After the Council approves an action, Domain Dispatch assigns it to the most appropriate specialist. Each domain owns a distinct slice of your life and business — no overlap, no confusion.' },
+            { heading:'Active domains', chips:['Finance','Marketing','Business','Comms','System','File','Health','Uni','Civilisation'] },
+            { heading:'How routing works', body:'The system reads the task description and matches it against domain patterns. A budget question routes to Finance, a deployment to System, a client email to Comms — automatically, every time.' },
+            { heading:'What the count shows', body:'Total tasks successfully routed through this layer. Each entry records which domain received it and the exact timestamp.' },
+        ]},
+        'node-office':  { icon:'◉', color:'#64748b', title:'Office Agents', tagline:'The execution layer — specialists doing the actual work', sections:[
+            { heading:'What is this?', body:'Office Agents are the workers inside each domain. Once routing decides "this is a Finance task," the Finance domain\'s office agents take over — each specialised in a specific financial function such as invoicing, budgeting, or forecasting.' },
+            { heading:'Agent states', body:'<strong>WORKING</strong> — currently executing a task right now. <strong>READY</strong> — completed a run within the last hour, standing by. <strong>IDLE</strong> — no recent activity.' },
+            { heading:'What the count shows', body:'Total office agent slots configured across all domains. More agents = more granular specialisation. Each agent has a narrow, deep focus.' },
+            { heading:'Good to know', body:'Agents run in parallel. Multiple agents across different domains can execute simultaneously — the system is not sequential between domains.' },
+        ]},
+        'node-actions': { icon:'▶', color:'#7c6cf2', title:'Task Pipeline', tagline:'Your approval queue and live task tracker', sections:[
+            { heading:'What is this?', body:'The Actions node is your decision desk. Every significant proposed action — whether from the Council, an agent, or your inbox — surfaces here before being executed. You are always in the loop.' },
+            { heading:'Task states', body:'<strong>AWAITING APPROVAL</strong> — needs your decision right now. <strong>ACTIVE</strong> — running. <strong>QUEUED</strong> — scheduled. <strong>RESOLVED</strong> — completed or failed.' },
+            { heading:'Approval system', body:'Tasks show you the title, priority level, and context. Approve individually, bulk-approve all standard tasks, or reject with a reason. Rejections are logged and the relevant agent is notified.' },
+            { heading:'Status signals', body:'Red glow = tasks need your attention. Green glow = pipeline running autonomously and smoothly. No glow = system is clear.' },
+        ]},
+        'node-output':  { icon:'◎', color:'#f59e0b', title:'Output Intelligence', tagline:'Everything your AI OS has delivered', sections:[
+            { heading:'What is this?', body:'The Output stage is the destination for all completed work. Every agent action that produces a result — a document, decision, email draft, code change, or financial report — is recorded here permanently.' },
+            { heading:'Output categories', chips:['Deliverables','Decisions','Actions','Insights'] },
+            { heading:'How to navigate', body:'Filter by type to narrow results. Click any output card to see the full result, which agent produced it, when it ran, and the complete execution trace back through the pipeline.' },
+            { heading:'What the count shows', body:'Total outputs delivered. This is your AI OS\'s productivity metric — a cumulative record of everything it has ever done for you.' },
+        ]},
+        'stat-runs':         { icon:'▸', color:'#7c6cf2', title:'Total Runs', tagline:'Agent executions in the current view', sections:[
+            { heading:'What is a run?', body:'One complete agent execution from start to finish. Each time an agent receives a task, processes it, and returns a result — that is one run. The count shown applies to the agents currently visible in this panel.' },
+            { heading:'What it tells you', body:'Activity volume. High count = the system is busy and processing a lot. Low count = pipeline is quieter, or this agent group has a lighter workload right now.' },
+            { heading:'Good to know', body:'Runs include both successful and failed executions. A run that hit an error still counts — check the Success Rate alongside this number to understand quality, not just volume.' },
+        ]},
+        'stat-success':      { icon:'✓', color:'#22c55e', title:'Success Rate', tagline:'How reliably the agents are performing', sections:[
+            { heading:'What does it mean?', body:'Percentage of runs that completed without an error. <strong>Green (≥80%)</strong> — healthy. <strong>Amber (50–79%)</strong> — some failures worth investigating. <strong>Red (&lt;50%)</strong> — significant issues needing attention.' },
+            { heading:'What counts as success?', body:'An agent returned a result without throwing an error. It does not guarantee the output was perfect — just that execution completed cleanly. For output quality, review the individual run results.' },
+            { heading:'Good to know', body:'A sudden drop in success rate often signals an external dependency issue — a slow API, an expired credential, or a changed data format. Check recent failed runs for patterns.' },
+        ]},
+        'stat-avgdur':       { icon:'◷', color:'#f59e0b', title:'Average Duration', tagline:'How long each agent run takes on average', sections:[
+            { heading:'What does it measure?', body:'Mean execution time across all runs in this view — from the moment an agent receives a task to when it returns a result and closes the run.' },
+            { heading:'How to interpret it', body:'Faster is not always better — complex tasks legitimately take longer. Use this to spot anomalies: a sudden spike may mean an agent is hitting a slow API, processing large data, or stuck in a retry loop.' },
+            { heading:'Good to know', body:'Duration varies significantly by agent type. A deployment agent may run for minutes. A chat response agent should complete in seconds. Compare within the same agent group for meaningful signals.' },
+        ]},
+        'stat-deliberations':{ icon:'⬡', color:'#a78bfa', title:'Deliberations', tagline:'Total council sessions held', sections:[
+            { heading:'What does it count?', body:'Total number of times the Executive Council has convened to deliberate a question. Each deliberation involves all 7 entities voting and producing a formal recommendation.' },
+            { heading:'What it tells you', body:'Governance activity level. High count = the system is actively thinking before acting and routing significant decisions through the council process. Low count = quieter period or mostly routine work.' },
+            { heading:'Good to know', body:'Not every conversation triggers a deliberation — only those crossing a significance threshold. Routine task execution happens without convening the full council.' },
+        ]},
+        'stat-consensus':    { icon:'◎', color:'#a78bfa', title:'Consensus Rate', tagline:'How often the council reaches clear agreement', sections:[
+            { heading:'What does it measure?', body:'Average percentage of council entities that agree on a decision. Unanimous = 100%. A 4–3 split is roughly 57%.' },
+            { heading:'Thresholds', body:'<strong>≥80%</strong> — strong alignment, decision proceeds automatically. <strong>60–79%</strong> — acceptable, proceeds with a note. <strong>&lt;60%</strong> — insufficient, escalated to you for the final call.' },
+            { heading:'Good to know', body:'Low consensus is not a failure — it means the council is encountering genuinely complex or ambiguous situations. That is the system working as designed: surfacing hard decisions rather than guessing.' },
+        ]},
+        'stat-escalated':    { icon:'↑', color:'#ef4444', title:'Escalation Rate', tagline:'Decisions handed up to the founder', sections:[
+            { heading:'What does it measure?', body:'Percentage of deliberations where the council could not reach sufficient consensus and escalated to you for direct input rather than acting on a divided vote.' },
+            { heading:'How to read it', body:'<strong>Low escalation</strong> — the AI OS is operating confidently within clear parameters. <strong>High escalation</strong> — the system is encountering ambiguous territory and seeking your guidance regularly.' },
+            { heading:'Good to know', body:'Some escalation is healthy and expected — it means the system has appropriate humility about its limits. Zero escalation over a long period may mean the significance threshold needs tuning.' },
+        ]},
+    };
+
+    function _kgShowInfo(key, accentColor) {
+        var info = _INFO_CONTENT[key];
+        if (!info) return;
+        var col = accentColor || info.color || '#7c6cf2';
+        var sectHtml = (info.sections || []).map(function(s) {
+            var inner = '';
+            if (s.body)  inner += '<div class="kg-info-section-body">' + s.body + '</div>';
+            if (s.chips) inner += '<div class="kg-info-chips">' + s.chips.map(function(c){
+                return '<span class="kg-info-chip" style="border-color:' + col + '50;color:' + col + '">' + c + '</span>';
+            }).join('') + '</div>';
+            return '<div><div class="kg-info-section-hd">' + s.heading + '</div>' + inner + '</div>';
+        }).join('');
+        var html =
+            '<div class="kg-info-modal-hd">' +
+                '<div class="kg-info-modal-icon">' + info.icon + '</div>' +
+                '<div class="kg-info-modal-titles">' +
+                    '<div class="kg-info-modal-title" style="color:' + col + '">' + info.title + '</div>' +
+                    '<div class="kg-info-modal-tagline">' + info.tagline + '</div>' +
+                '</div>' +
+                '<button class="kg-info-modal-close" onclick="window._kgCloseInfo()" aria-label="Close info panel">×</button>' +
+            '</div>' +
+            '<div class="kg-info-modal-accent" style="background:linear-gradient(90deg,' + col + ',transparent)"></div>' +
+            '<div class="kg-info-modal-body">' + sectHtml + '</div>';
+        var overlay = document.getElementById('kg-info-overlay');
+        var modal   = document.getElementById('kg-info-modal');
+        if (!overlay || !modal) return;
+        modal.innerHTML = html;
+        overlay.classList.add('visible');
+        requestAnimationFrame(function() { var btn = modal.querySelector('.kg-info-modal-close'); if (btn) btn.focus(); });
+    }
+    window._kgShowInfo = _kgShowInfo;
+
+    window._kgCloseInfo = function() {
+        var overlay = document.getElementById('kg-info-overlay');
+        if (overlay) overlay.classList.remove('visible');
+    };
+
     function _ago(ts) {
         if (!ts) return '—';
         var s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
@@ -27716,6 +27898,20 @@ window.apexFileDropHandler = function(e){
 
         pw.appendChild(pg);
 
+        // Info overlay (injected once into body)
+        if (!document.getElementById('kg-info-overlay')) {
+            var infoOvl = document.createElement('div');
+            infoOvl.id = 'kg-info-overlay';
+            infoOvl.className = 'kg-info-overlay';
+            infoOvl.setAttribute('role', 'dialog');
+            infoOvl.setAttribute('aria-modal', 'true');
+            infoOvl.setAttribute('aria-label', 'Information panel');
+            infoOvl.innerHTML = '<div id="kg-info-modal" class="kg-info-modal"></div>';
+            infoOvl.addEventListener('click', function(e) { if (e.target === infoOvl) window._kgCloseInfo(); });
+            document.body.appendChild(infoOvl);
+            document.addEventListener('keydown', function(e) { if (e.key === 'Escape') window._kgCloseInfo(); });
+        }
+
         // Undo snackbar (injected once into body)
         if (!document.getElementById('kg-undo-toast')) {
             var toast = document.createElement('div');
@@ -27748,6 +27944,7 @@ window.apexFileDropHandler = function(e){
                     '<div class="kg-node-icon">' + tier.icon + '</div>' +
                     '<div class="kg-node-count" id="kg-count-' + tier.id + '" style="color:' + tier.color + '">' + tier.count + '</div>' +
                     '<div class="kg-node-sub" style="color:' + tier.color + '">' + tier.sub + '</div>' +
+                    '<button class="kg-node-info-btn" data-info-key="node-' + tier.id + '" title="Learn about ' + tier.label + '" aria-label="Info: ' + tier.label + '" onclick="event.stopPropagation();window._kgShowInfo(\'node-' + tier.id + '\',\'' + tier.color + '\')">i</button>' +
                 '</div>' +
                 '<div class="kg-node-label">' + tier.label + '</div>';
             node.addEventListener('click', function () { _selectTier(tier.id); });
@@ -27774,6 +27971,7 @@ window.apexFileDropHandler = function(e){
                         '<div class="kg-node-icon">⌨</div>' +
                         '<div class="kg-node-count" style="color:#5b9eff">8</div>' +
                         '<div class="kg-node-sub" style="color:#5b9eff">STAGES</div>' +
+                        '<button class="kg-node-info-btn" data-info-key="node-coding" title="Learn about the coding pipeline" aria-label="Info: Coding Pipeline" onclick="event.stopPropagation();window._kgShowInfo(\'node-coding\',\'#5b9eff\')">i</button>' +
                     '</div>' +
                     '<div class="kg-node-label">CODING PIPELINE</div>';
                 codeNode.setAttribute('tabindex', '0');
@@ -27885,7 +28083,10 @@ window.apexFileDropHandler = function(e){
                 stat = _liveTasks.length ? _liveTasks.length + ' TASKS' : '';
             }
             metaEl.style.display = 'block';
-            metaEl.innerHTML = '<div class="kg-panel-meta-label">' + m.label + '</div>' + (stat ? '<div class="kg-panel-meta-stat" style="color:' + (tier ? tier.color : '#fff') + '">' + stat + '</div>' : '');
+            var _mc = tier ? tier.color : '#7c6cf2';
+            var _mk = 'node-' + id;
+            metaEl.innerHTML = '<div class="kg-panel-meta-label">' + m.label + '</div>' +
+                (stat ? '<div class="kg-panel-meta-stat clickable" style="color:' + _mc + '" tabindex="0" role="button" aria-label="' + stat + ' — click for info" onclick="window._kgShowInfo(\'' + _mk + '\',\'' + _mc + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){window._kgShowInfo(\'' + _mk + '\',\'' + _mc + '\')}">' + stat + '</div>' : '');
         } else if (metaEl) { metaEl.style.display = 'none'; }
         var racEl = document.getElementById('kg-right-accent');
         if (racEl && tier) racEl.style.background = 'linear-gradient(270deg,' + tier.color + ',transparent)';
@@ -28294,10 +28495,11 @@ window.apexFileDropHandler = function(e){
             ? Math.round(resolved.reduce(function (s, d) { return s + (d.consensus_level || 0); }, 0) / resolved.length * 100) : null;
         var escRate = delibs.length ? Math.round(escalated.length / delibs.length * 100) : null;
         statsEl.style.display = 'flex';
+        function _csi(k,e){ return ' onclick="window._kgShowInfo(\''+k+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){window._kgShowInfo(\''+k+'\')}" tabindex="0" role="button" aria-label="'+e+' — click for info"'; }
         statsEl.innerHTML =
-            '<div class="kg-right-stat"><span class="kg-right-stat-n">' + delibs.length + '</span><span class="kg-right-stat-l">DELIBERATIONS</span></div>' +
-            '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#a78bfa">' + (avgC !== null ? avgC + '%' : '—') + '</span><span class="kg-right-stat-l">CONSENSUS</span></div>' +
-            '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:' + (escRate > 30 ? '#ef4444' : escRate > 10 ? '#f59e0b' : '#22c55e') + '">' + (escRate !== null ? escRate + '%' : '—') + '</span><span class="kg-right-stat-l">ESCALATED</span></div>';
+            '<div class="kg-right-stat clickable"'+_csi('stat-deliberations','Deliberations')+'><span class="kg-right-stat-n">' + delibs.length + '</span><span class="kg-right-stat-l">DELIBERATIONS</span></div>' +
+            '<div class="kg-right-stat clickable"'+_csi('stat-consensus','Consensus rate')+'><span class="kg-right-stat-n" style="color:#a78bfa">' + (avgC !== null ? avgC + '%' : '—') + '</span><span class="kg-right-stat-l">CONSENSUS</span></div>' +
+            '<div class="kg-right-stat clickable"'+_csi('stat-escalated','Escalation rate')+'><span class="kg-right-stat-n" style="color:' + (escRate > 30 ? '#ef4444' : escRate > 10 ? '#f59e0b' : '#22c55e') + '">' + (escRate !== null ? escRate + '%' : '—') + '</span><span class="kg-right-stat-l">ESCALATED</span></div>';
     }
 
     function _renderCouncilRight() {
@@ -28412,10 +28614,11 @@ window.apexFileDropHandler = function(e){
         var avg = drs.length ? Math.round(drs.reduce(function (s, r) { return s + r.duration_ms; }, 0) / drs.length) : 0;
         var pc  = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
         statsEl.style.display = 'flex';
+        function _si(k,e){ return ' onclick="window._kgShowInfo(\''+k+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){window._kgShowInfo(\''+k+'\')}" tabindex="0" role="button" aria-label="'+e+' — click for info"'; }
         statsEl.innerHTML =
-            '<div class="kg-right-stat"><span class="kg-right-stat-n">' + runs.length + '</span><span class="kg-right-stat-l">RUNS</span></div>' +
-            '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:' + pc + '">' + pct + '%</span><span class="kg-right-stat-l">SUCCESS</span></div>' +
-            '<div class="kg-right-stat"><span class="kg-right-stat-n">' + (avg ? _dur(avg) : '—') + '</span><span class="kg-right-stat-l">AVG DUR</span></div>';
+            '<div class="kg-right-stat clickable"'+_si('stat-runs','Runs')+'><span class="kg-right-stat-n">' + runs.length + '</span><span class="kg-right-stat-l">RUNS</span></div>' +
+            '<div class="kg-right-stat clickable"'+_si('stat-success','Success rate')+'><span class="kg-right-stat-n" style="color:' + pc + '">' + pct + '%</span><span class="kg-right-stat-l">SUCCESS</span></div>' +
+            '<div class="kg-right-stat clickable"'+_si('stat-avgdur','Average duration')+'><span class="kg-right-stat-n">' + (avg ? _dur(avg) : '—') + '</span><span class="kg-right-stat-l">AVG DUR</span></div>';
     }
 
     function _groupedRuns(runs) {
