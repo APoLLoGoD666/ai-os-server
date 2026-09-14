@@ -28893,10 +28893,10 @@ window.apexFileDropHandler = function(e){
         var inp  = area ? area.querySelector('textarea') : null;
         var reason = inp ? inp.value.trim() : '';
         if (btn) { btn.disabled = true; btn.textContent = '…'; }
-        fetch('/api/tasks/approve', {
+        fetch('/api/tasks/reject', {
             method: 'POST',
             headers: Object.assign({ 'Content-Type':'application/json' }, _h()),
-            body: JSON.stringify({ taskId: taskId, approved: false, reason: reason })
+            body: JSON.stringify({ taskId: taskId, reason: reason })
         }).then(function (r) { return r.json(); }).then(function () {
             _kgRecordDecision(taskId, title, 'rejected');
             _kgShowUndo(taskId, title, 'rejected');
