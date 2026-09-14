@@ -27966,28 +27966,43 @@ window.apexFileDropHandler = function(e){
         } else if (tierId === 'domain') {
             var das = (window.DA_AGENTS || []);
             if (!das.length) { body.innerHTML = '<div class="kg-runs-empty">NO DATA</div>'; return; }
-            var _DG = [
-                { name:'REVENUE',        color:'#34d399', ids:['business','finance','marketing'] },
-                { name:'COMMUNICATIONS', color:'#2dd4bf', ids:['comms'] },
-                { name:'OPERATIONS',     color:'#64748b', ids:['system'] },
-                { name:'KNOWLEDGE',      color:'#38bdf8', ids:['file','health','uni'] },
-                { name:'GOVERNANCE',     color:'#e879f9', ids:['civilisation'] },
-            ];
-            var _dgGroups = _DG.map(function (g) {
-                var rows = das.filter(function (a) { return g.ids.indexOf(a.id) !== -1; }).map(function (a) {
-                    return _entityRow(a.name, a.category, _agentState(a.name, a.slug), a.color);
-                });
-                return { name: g.name, color: g.color, rows: rows };
-            }).filter(function (g) { return g.rows.length; });
+
+            var _dgGroups = [];
+
+            // IN FLIGHT — tasks currently processing (status in_progress)
             var _inFlight = _liveTasks.filter(function(t){ return t.status==='in_progress'; });
             if (_inFlight.length) {
-                var _flightRows = _inFlight.slice(0,12).map(function(t){
+                _dgGroups.push({ name:'IN FLIGHT', color:'#f59e0b', open:true, rows: _inFlight.slice(0,12).map(function(t){
                     var slug = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
-                    var col = slug ? _domainColor(slug) : '#f59e0b';
-                    return _entityRow((t.title||t.id||'—').slice(0,40), (slug ? slug.toUpperCase() : 'PROCESSING') + ' · ' + _ago(t.created_at), 'working', col);
-                });
-                _dgGroups.unshift({ name:'IN FLIGHT', color:'#f59e0b', rows: _flightRows, open: true });
+                    return _entityRow((t.title||t.id||'—').slice(0,40), (slug ? slug.toUpperCase()+' · ' : '') + _ago(t.created_at), 'working', slug ? _domainColor(slug) : '#f59e0b');
+                })});
             }
+
+            // RECENTLY ROUTED — tasks that went through dispatch in last 24h (catches fast completions)
+            var _now24 = Date.now();
+            var _routed = _liveTasks.filter(function(t){
+                return (t.status==='done'||t.status==='completed') &&
+                       t.metadata && t.metadata.dispatch && t.metadata.dispatch.slug &&
+                       t.updated_at && (_now24 - new Date(t.updated_at).getTime()) < 86400000;
+            }).sort(function(a,b){ return new Date(b.updated_at)-new Date(a.updated_at); });
+            if (_routed.length) {
+                _dgGroups.push({ name:'RECENTLY ROUTED', color:'#22c55e', open:true, rows: _routed.slice(0,15).map(function(t){
+                    var slug = t.metadata.dispatch.slug.toLowerCase();
+                    return _entityRow((t.title||t.id||'—').slice(0,40), slug.toUpperCase() + ' · ' + _ago(t.updated_at), 'ready', _domainColor(slug));
+                })});
+            }
+
+            // DOMAIN AGENTS — built dynamically from all DA_AGENTS, grouped by category
+            var _catMap = {};
+            das.forEach(function(a){
+                var cat = a.category || 'OTHER';
+                if (!_catMap[cat]) _catMap[cat] = { name:cat, color:a.color, rows:[] };
+                _catMap[cat].rows.push(_entityRow(a.name, a.team || a.category, _agentState(a.name, a.slug), a.color));
+            });
+            var _agentGroups = [];
+            for (var _ck in _catMap) { _agentGroups.push(_catMap[_ck]); }
+            _agentGroups.forEach(function(g){ _dgGroups.push(g); });
+
             body.innerHTML = _accordion(_dgGroups, false);
 
         } else if (tierId === 'office') {
