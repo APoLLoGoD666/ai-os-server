@@ -27178,7 +27178,7 @@ window.apexFileDropHandler = function(e){
      ═══════════════════════════════════════════════════════════ -->
 <style>
 /* ── APEX Knowledge Graph ── */
-#page-test { overflow:hidden !important; padding:0 !important; gap:0 !important; background:#080810 !important; }
+#page-test { overflow:auto !important; padding:0 !important; gap:0 !important; background:#080810 !important; }
 #page-test.active { display:flex !important; flex-direction:column; }
 
 .kg-wrap { flex:1; display:flex; overflow:hidden; min-height:0; position:relative; }
@@ -27228,8 +27228,8 @@ window.apexFileDropHandler = function(e){
 }
 .kg-node-icon { font-size:28px; opacity:.7; line-height:1; }
 .kg-node-count { font:700 28px/1 'JetBrains Mono',monospace; color:#fff; }
-.kg-node-sub { font:700 7px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:var(--kc); opacity:.8; text-transform:uppercase; }
-.kg-node-label { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:rgba(255,255,255,0.35); text-transform:uppercase; transition:color 200ms; }
+.kg-node-sub { font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:var(--kc); opacity:.9; text-transform:uppercase; }
+.kg-node-label { font:700 11px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:rgba(255,255,255,0.6); text-transform:uppercase; transition:color 200ms; }
 .kg-node-state { position:absolute; top:8px; right:8px; width:6px; height:6px; border-radius:50%; background:#52525b; }
 .kg-node-state.live { background:#22c55e; box-shadow:0 0 8px #22c55e; animation:kg-blink 2s ease-in-out infinite; }
 
@@ -27244,12 +27244,12 @@ window.apexFileDropHandler = function(e){
   animation:kg-flow 2.5s linear infinite;
 }
 @keyframes kg-flow { to { left:200%; } }
-.kg-conn-arrow { font-size:8px; color:rgba(124,108,242,0.4); letter-spacing:0; }
+.kg-conn-arrow { font-size:12px; color:rgba(124,108,242,0.7); letter-spacing:0; }
 .kg-node-row { display:flex; flex-direction:row; align-items:flex-start; gap:0; }
 .kg-branch-conn { width:20px; border-top:1px dashed rgba(91,158,255,0.3); flex-shrink:0; margin-top:68px; }
 #kg-node-coding .kg-node-box { border-style:dashed !important; border-color:rgba(91,158,255,0.22) !important; }
 .kg-node:focus-visible .kg-node-box { outline:2px solid var(--kc); outline-offset:3px; }
-.kg-conn-label { font:600 6px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:rgba(124,108,242,0.25); text-transform:uppercase; }
+.kg-conn-label { font:600 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:rgba(124,108,242,0.55); text-transform:uppercase; }
 
 /* ── Side panels ── */
 .kg-panel {
@@ -27265,8 +27265,8 @@ window.apexFileDropHandler = function(e){
   padding:16px 16px 12px; display:flex; align-items:center; justify-content:space-between;
   border-bottom:1px solid rgba(255,255,255,0.05); flex-shrink:0;
 }
-.kg-panel-title { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:#fff; text-transform:uppercase; }
-.kg-panel-close { width:24px; height:24px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); background:transparent; color:rgba(255,255,255,0.3); cursor:pointer; font-size:10px; display:flex; align-items:center; justify-content:center; transition:background 150ms; }
+.kg-panel-title { font:700 11px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:#fff; text-transform:uppercase; }
+.kg-panel-close { width:44px; height:44px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); background:transparent; color:rgba(255,255,255,0.5); cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; transition:background 150ms; }
 .kg-panel-close:hover { background:rgba(255,255,255,0.06); color:#fff; }
 .kg-panel-body { flex:1; overflow-y:auto; padding:0; min-height:0; scrollbar-width:thin; scrollbar-color:rgba(124,108,242,0.2) transparent; }
 
@@ -27280,8 +27280,8 @@ window.apexFileDropHandler = function(e){
 .kg-entity-dot.error   { background:#ef4444; }
 .kg-entity-info { flex:1; min-width:0; }
 .kg-entity-name { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.07em; color:rgba(255,255,255,0.8); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.kg-entity-role { font:500 7px/1 'JetBrains Mono',monospace; letter-spacing:.06em; color:#52525b; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.kg-entity-badge { font:700 7px/1 'JetBrains Mono',monospace; letter-spacing:.06em; padding:2px 6px; border-radius:3px; flex-shrink:0; }
+.kg-entity-role { font:500 8px/1 'JetBrains Mono',monospace; letter-spacing:.06em; color:#71717a; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kg-entity-badge { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.06em; padding:2px 6px; border-radius:3px; flex-shrink:0; }
 .kg-entity-badge.idle    { color:#52525b; border:1px solid #27272a; }
 .kg-entity-badge.ready   { color:#7c6cf2; border:1px solid rgba(124,108,242,0.3); }
 .kg-entity-badge.working { color:#22c55e; border:1px solid rgba(34,197,94,0.3); background:rgba(34,197,94,0.06); }
@@ -27294,12 +27294,12 @@ window.apexFileDropHandler = function(e){
 .kg-run-name { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.06em; color:rgba(255,255,255,0.7); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .kg-run-time { font:500 7px/1 'JetBrains Mono',monospace; color:#52525b; flex-shrink:0; }
 .kg-run-task { font:400 8px/1.5 'JetBrains Mono',monospace; color:rgba(255,255,255,0.35); overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-.kg-runs-empty { display:flex; align-items:center; justify-content:center; height:80px; font:500 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#27272a; text-transform:uppercase; }
+.kg-runs-empty { display:flex; align-items:center; justify-content:center; height:80px; font:500 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; text-transform:uppercase; }
 
 /* ── Panel accent bar ── */
 .kg-panel-accent { height:2px; flex-shrink:0; transition:background 300ms; }
 .kg-panel-meta { padding:10px 16px 8px; border-bottom:1px solid rgba(255,255,255,0.04); flex-shrink:0; }
-.kg-panel-meta-label { font:600 7px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:#52525b; text-transform:uppercase; }
+.kg-panel-meta-label { font:600 8px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:#6b7280; text-transform:uppercase; }
 .kg-panel-meta-stat { font:700 18px/1 'JetBrains Mono',monospace; color:#fff; margin-top:4px; }
 
 /* ── CEO / pinned entity card ── */
@@ -27326,7 +27326,7 @@ window.apexFileDropHandler = function(e){
 .kg-group-accent { width:2px; height:12px; border-radius:1px; flex-shrink:0; }
 .kg-group-name { font:700 7px/1 'JetBrains Mono',monospace; letter-spacing:.13em; color:rgba(255,255,255,0.4); text-transform:uppercase; flex:1; transition:color 150ms; }
 .kg-group-hd.open .kg-group-name { color:rgba(255,255,255,0.7); }
-.kg-group-count { font:600 7px/1 'JetBrains Mono',monospace; padding:2px 5px; border-radius:3px; border:1px solid #27272a; color:#52525b; flex-shrink:0; }
+.kg-group-count { font:600 7px/1 'JetBrains Mono',monospace; padding:2px 5px; border-radius:3px; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.4); flex-shrink:0; }
 .kg-group-arrow { font-size:8px; color:#3f3f46; transition:transform 220ms cubic-bezier(0,0,0.2,1); flex-shrink:0; }
 .kg-group-hd.open .kg-group-arrow { transform:rotate(90deg); color:#7c6cf2; }
 .kg-group-body { overflow:hidden; transition:height 220ms cubic-bezier(0,0,0.2,1); }
@@ -27336,7 +27336,7 @@ window.apexFileDropHandler = function(e){
 .kg-right-stat { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
 .kg-right-stat + .kg-right-stat { border-left:1px solid rgba(255,255,255,0.04); }
 .kg-right-stat-n { font:700 14px/1 'JetBrains Mono',monospace; color:#fff; }
-.kg-right-stat-l { font:500 6px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#3f3f46; text-transform:uppercase; }
+.kg-right-stat-l { font:500 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#71717a; text-transform:uppercase; }
 
 /* ── Run cards ── */
 .kg-run-card { display:flex; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 120ms; cursor:default; }
@@ -27355,7 +27355,7 @@ window.apexFileDropHandler = function(e){
 .kg-run-card-task { font:400 11px/1.5 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.4); overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 
 /* ── Time group header ── */
-.kg-time-hd { padding:8px 14px 6px; font:600 10px/1 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.2); border-bottom:1px solid rgba(255,255,255,0.03); position:sticky; top:0; background:rgba(10,10,18,0.97); z-index:1; display:flex; justify-content:space-between; align-items:center; }
+.kg-time-hd { padding:8px 14px 6px; font:600 10px/1 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.45); border-bottom:1px solid rgba(255,255,255,0.03); position:sticky; top:0; background:rgba(10,10,18,0.97); z-index:1; display:flex; justify-content:space-between; align-items:center; }
 .kg-time-hd-count { color:rgba(255,255,255,0.12); font:400 10px/1 system-ui,-apple-system,sans-serif; }
 
 /* ── Council nav card grid ── */
@@ -27398,10 +27398,10 @@ window.apexFileDropHandler = function(e){
 /* Deliberation card */
 .kg-delib { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 120ms; }
 .kg-delib:hover { background:rgba(255,255,255,0.02); }
-.kg-delib-q { font:500 8px/1.5 'JetBrains Mono',monospace; color:rgba(255,255,255,0.7); margin-bottom:6px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.kg-delib-q { font:500 11px/1.5 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.7); margin-bottom:6px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .kg-delib-meta { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-.kg-delib-time { font:500 6px/1 'JetBrains Mono',monospace; color:#52525b; }
-.kg-delib-chip { font:700 6px/1 'JetBrains Mono',monospace; padding:2px 5px; border-radius:3px; letter-spacing:.05em; border:1px solid; }
+.kg-delib-time { font:500 8px/1 'JetBrains Mono',monospace; color:#71717a; }
+.kg-delib-chip { font:700 8px/1 'JetBrains Mono',monospace; padding:2px 5px; border-radius:3px; letter-spacing:.05em; border:1px solid; }
 .kg-delib-chip.resolved    { color:#22c55e; border-color:rgba(34,197,94,0.25); }
 .kg-delib-chip.escalated   { color:#f59e0b; border-color:rgba(245,158,11,0.25); }
 .kg-delib-chip.deliberating { color:#a78bfa; border-color:rgba(167,139,250,0.25); animation:kg-blink 1.5s ease-in-out infinite; }
@@ -27409,20 +27409,20 @@ window.apexFileDropHandler = function(e){
 .kg-consensus { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
 .kg-consensus-track { flex:1; height:2px; background:#1a1a2e; border-radius:1px; overflow:hidden; }
 .kg-consensus-fill { height:100%; border-radius:1px; }
-.kg-consensus-pct { font:700 7px/1 'JetBrains Mono',monospace; flex-shrink:0; width:26px; text-align:right; }
+.kg-consensus-pct { font:700 9px/1 'JetBrains Mono',monospace; flex-shrink:0; width:26px; text-align:right; }
 /* Vote pips */
 .kg-votes { display:flex; gap:3px; margin-top:5px; }
-.kg-vote-pip { width:20px; height:14px; border-radius:2px; display:flex; align-items:center; justify-content:center; font:700 5px/1 'JetBrains Mono',monospace; border:1px solid rgba(255,255,255,0.06); }
+.kg-vote-pip { width:24px; height:18px; border-radius:2px; display:flex; align-items:center; justify-content:center; font:700 7px/1 'JetBrains Mono',monospace; border:1px solid rgba(255,255,255,0.06); }
 .kg-vote-pip.approve { border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.08); color:#22c55e; }
 .kg-vote-pip.reject  { border-color:rgba(239,68,68,0.3);  background:rgba(239,68,68,0.08);  color:#ef4444; }
 .kg-vote-pip.abstain { border-color:#27272a; color:#3f3f46; }
 /* Recommendation preview */
-.kg-delib-rec { font:400 7px/1.6 'JetBrains Mono',monospace; color:rgba(255,255,255,0.22); margin-top:5px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.kg-delib-rec { font:400 9px/1.6 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.5); margin-top:5px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 /* Awaiting approval card */
 .kg-approval-card { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.03); border-left:2px solid rgba(124,108,242,0.35); transition:background 120ms; }
 .kg-approval-card:hover { background:rgba(124,108,242,0.03); }
 .kg-approval-title { font:700 8px/1.4 'JetBrains Mono',monospace; color:rgba(255,255,255,0.75); margin-bottom:4px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-.kg-approval-sub { font:500 6px/1 'JetBrains Mono',monospace; color:#52525b; }
+.kg-approval-sub { font:500 8px/1 'JetBrains Mono',monospace; color:#71717a; }
 /* Live pulsing card */
 .kg-live-card { margin:10px 12px 4px; padding:10px 12px; border-radius:8px; border:1px solid rgba(167,139,250,0.2); background:rgba(167,139,250,0.04); display:flex; align-items:flex-start; gap:10px; }
 .kg-live-dot { width:8px; height:8px; border-radius:50%; background:#a78bfa; box-shadow:0 0 10px #a78bfa; animation:kg-blink 1.2s ease-in-out infinite; flex-shrink:0; margin-top:1px; }
@@ -27432,6 +27432,38 @@ window.apexFileDropHandler = function(e){
 /* ── Scan line overlay ── */
 @keyframes kg-scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
 .kg-scan { position:absolute; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(124,108,242,0.15),transparent); pointer-events:none; animation:kg-scan 8s linear infinite; top:0; }
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .kg-node-state.live, .kg-entity-dot.working, .kg-delib-chip.deliberating,
+  .kg-nav-card.is-live .kg-nav-card-n, .kg-live-dot { animation:none !important; }
+  .kg-conn-line::after { animation:none !important; }
+  .kg-canvas::after { animation:none !important; }
+  .kg-scan { animation:none !important; }
+  .kg-node:hover { transform:none !important; }
+  .kg-node { transition:none !important; }
+  .kg-group-body { transition:none !important; }
+  .kg-panel { transition:none !important; }
+  .kg-nav-card { transition:none !important; }
+}
+
+/* ── Last-updated footer ── */
+.kg-last-updated { position:absolute; bottom:8px; right:12px; font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.18); pointer-events:none; z-index:3; }
+
+/* ── Loading skeleton ── */
+.kg-loading { display:flex; align-items:center; justify-content:center; gap:8px; height:80px; font:500 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; text-transform:uppercase; }
+.kg-loading::before { content:''; width:8px; height:8px; border-radius:50%; border:1px solid #7c6cf2; border-top-color:transparent; animation:kg-spin 0.8s linear infinite; }
+@keyframes kg-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .kg-loading::before { animation:none; } }
+
+/* ── Mobile panel overlay ── */
+@media (max-width:700px) {
+  .kg-panel.open { position:fixed; top:0; bottom:0; z-index:100; width:85vw !important; max-width:320px; }
+  .kg-panel.left.open { left:0; }
+  .kg-panel.open:not(.left) { right:0; }
+  .kg-wrap { overflow:hidden; }
+  #page-test { overflow:hidden !important; }
+}
 </style>
 <script>
 /* APEX KNOWLEDGE GRAPH */
@@ -27494,21 +27526,22 @@ window.apexFileDropHandler = function(e){
                 '<button class="portal-tab" onclick="window.switchPage(\'intel\')">INTEL</button>' +
             '</div>' +
             '<div class="kg-wrap">' +
-                '<div class="kg-panel left" id="kg-left">' +
+                '<div class="kg-panel left" id="kg-left" role="region" aria-label="Entity detail panel">' +
                     '<div class="kg-panel-accent" id="kg-left-accent"></div>' +
-                    '<div class="kg-panel-hd"><span class="kg-panel-title" id="kg-left-title">—</span><button class="kg-panel-close" onclick="window._kgCloseLeft()">✕</button></div>' +
+                    '<div class="kg-panel-hd"><span class="kg-panel-title" id="kg-left-title">—</span><button class="kg-panel-close" onclick="window._kgCloseLeft()" aria-label="Close entity panel">✕</button></div>' +
                     '<div class="kg-panel-meta" id="kg-left-meta" style="display:none"></div>' +
-                    '<div class="kg-panel-body" id="kg-left-body"></div>' +
+                    '<div class="kg-panel-body" id="kg-left-body" aria-live="polite" aria-atomic="false"></div>' +
                 '</div>' +
-                '<div class="kg-canvas" id="kg-canvas">' +
-                    '<div class="kg-scan"></div>' +
-                    '<div class="kg-pipeline" id="kg-pipeline"></div>' +
+                '<div class="kg-canvas" id="kg-canvas" role="main" aria-label="Agent pipeline">' +
+                    '<div class="kg-scan" aria-hidden="true"></div>' +
+                    '<div class="kg-pipeline" id="kg-pipeline" role="list" aria-label="Pipeline stages"></div>' +
+                    '<div class="kg-last-updated" id="kg-last-updated" aria-live="polite" aria-atomic="true"></div>' +
                 '</div>' +
-                '<div class="kg-panel" id="kg-right">' +
+                '<div class="kg-panel" id="kg-right" role="region" aria-label="Activity panel">' +
                     '<div class="kg-panel-accent" id="kg-right-accent"></div>' +
-                    '<div class="kg-panel-hd"><span class="kg-panel-title" id="kg-right-title">RECENT RUNS</span><button class="kg-panel-close" onclick="window._kgCloseRight()">✕</button></div>' +
+                    '<div class="kg-panel-hd"><span class="kg-panel-title" id="kg-right-title">RECENT RUNS</span><button class="kg-panel-close" onclick="window._kgCloseRight()" aria-label="Close activity panel">✕</button></div>' +
                     '<div class="kg-right-stats" id="kg-right-stats" style="display:none"></div>' +
-                    '<div class="kg-panel-body" id="kg-right-body"></div>' +
+                    '<div class="kg-panel-body" id="kg-right-body" aria-live="polite" aria-atomic="false"></div>' +
                 '</div>' +
             '</div>';
 
@@ -27539,6 +27572,7 @@ window.apexFileDropHandler = function(e){
             node.addEventListener('click', function () { _selectTier(tier.id); });
             node.setAttribute('tabindex', '0');
             node.setAttribute('role', 'button');
+            node.setAttribute('aria-pressed', 'false');
             node.setAttribute('aria-label', tier.sub + ' ' + tier.label + ', ' + (tier.count === '—' ? 'count pending' : tier.count + ' items'));
             node.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _selectTier(tier.id); } });
             container.appendChild(node);
@@ -27609,7 +27643,7 @@ window.apexFileDropHandler = function(e){
         // Update node active states
         TIERS.forEach(function (t) {
             var n = document.getElementById('kg-node-' + t.id);
-            if (n) n.classList.toggle('active', t.id === id);
+            if (n) { n.classList.toggle('active', t.id === id); n.setAttribute('aria-pressed', t.id === id ? 'true' : 'false'); }
         });
         // Open both panels
         var left  = document.getElementById('kg-left');
@@ -27664,6 +27698,11 @@ window.apexFileDropHandler = function(e){
     window._kgCloseLeft = function () {
         var p = document.getElementById('kg-left');
         if (p) p.classList.remove('open');
+        _activeTier = null;
+        TIERS.forEach(function (t) {
+            var n = document.getElementById('kg-node-' + t.id);
+            if (n) { n.classList.remove('active'); n.setAttribute('aria-pressed', 'false'); }
+        });
         _scalePipeline(false);
     };
     window._kgCloseRight = function () {
@@ -27672,7 +27711,7 @@ window.apexFileDropHandler = function(e){
         _activeTier = null;
         TIERS.forEach(function (t) {
             var n = document.getElementById('kg-node-' + t.id);
-            if (n) n.classList.remove('active');
+            if (n) { n.classList.remove('active'); n.setAttribute('aria-pressed', 'false'); }
         });
         _scalePipeline(false);
     };
@@ -27685,8 +27724,10 @@ window.apexFileDropHandler = function(e){
             body.style.height = body.scrollHeight + 'px';
             requestAnimationFrame(function () { requestAnimationFrame(function () { body.style.height = '0'; }); });
             hd.classList.remove('open');
+            hd.setAttribute('aria-expanded', 'false');
         } else {
             hd.classList.add('open');
+            hd.setAttribute('aria-expanded', 'true');
             body.style.height = body.scrollHeight + 'px';
             body.addEventListener('transitionend', function once() {
                 body.style.height = 'auto';
@@ -27698,14 +27739,18 @@ window.apexFileDropHandler = function(e){
     function _accordion(groups, openAll) {
         return groups.map(function (g, i) {
             var open = openAll || (i === 0);
+            var bodyId = 'kg-acc-' + i + '-' + Math.random().toString(36).slice(2,6);
             return '<div>' +
-                '<div class="kg-group-hd' + (open ? ' open' : '') + '" onclick="window._kgToggleGroup(this)">' +
+                '<div class="kg-group-hd' + (open ? ' open' : '') + '" ' +
+                    'onclick="window._kgToggleGroup(this)" ' +
+                    'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgToggleGroup(this)}" ' +
+                    'tabindex="0" role="button" aria-expanded="' + (open ? 'true' : 'false') + '" aria-controls="' + bodyId + '">' +
                     '<div class="kg-group-accent" style="background:' + g.color + '"></div>' +
                     '<span class="kg-group-name">' + _esc(g.name) + '</span>' +
                     '<span class="kg-group-count">' + g.rows.length + '</span>' +
-                    '<span class="kg-group-arrow">›</span>' +
+                    '<span class="kg-group-arrow" aria-hidden="true">›</span>' +
                 '</div>' +
-                '<div class="kg-group-body" style="height:' + (open ? 'auto' : '0') + '">' +
+                '<div class="kg-group-body" id="' + bodyId + '" role="region" aria-label="' + _esc(g.name) + '" style="height:' + (open ? 'auto' : '0') + '">' +
                     g.rows.join('') +
                 '</div>' +
             '</div>';
@@ -27812,7 +27857,7 @@ window.apexFileDropHandler = function(e){
             var v = votes.find(function (vt) { return (vt.entity_id || vt.entity || '').toUpperCase() === ex; });
             var vs = v ? String(v.vote || '') : '';
             var cls = /approve|yes|proceed|go|accept/i.test(vs) ? 'approve' : /reject|no|hold|deny|stop|block/i.test(vs) ? 'reject' : 'abstain';
-            return '<div class="kg-vote-pip ' + cls + '" title="' + ex + ': ' + _esc(vs.slice(0,20)) + '">' + ex.slice(0,2) + '</div>';
+            return '<div class="kg-vote-pip ' + cls + '" aria-label="' + ex + ': ' + _esc(vs.slice(0,20) || 'abstain') + '">' + ex.slice(0,2) + '</div>';
         }).join('');
         return '<div class="kg-delib">' +
             '<div class="kg-delib-q">' + _esc((d.question || '').slice(0, 140)) + '</div>' +
@@ -27821,8 +27866,8 @@ window.apexFileDropHandler = function(e){
                 '<span class="kg-delib-time">' + _ago(d.resolved_at || d.created_at) + '</span>' +
             '</div>' +
             '<div class="kg-consensus">' +
-                '<div class="kg-consensus-track"><div class="kg-consensus-fill" style="width:' + pct + '%;background:' + cc + '"></div></div>' +
-                '<span class="kg-consensus-pct" style="color:' + cc + '">' + pct + '%</span>' +
+                '<div class="kg-consensus-track" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100" aria-label="Consensus ' + pct + '%"><div class="kg-consensus-fill" style="width:' + pct + '%;background:' + cc + '"></div></div>' +
+                '<span class="kg-consensus-pct" style="color:' + cc + '" aria-hidden="true">' + pct + '%</span>' +
             '</div>' +
             '<div class="kg-votes">' + pips + '</div>' +
             (d.final_recommendation ? '<div class="kg-delib-rec">' + _esc(d.final_recommendation.slice(0, 120)) + '</div>' : '') +
@@ -27861,13 +27906,15 @@ window.apexFileDropHandler = function(e){
             CARDS.map(function (c) {
                 return '<div class="kg-nav-card' + (c.blink ? ' is-live' : '') + '" ' +
                     'style="--nc:' + c.color + ';--nc-glow:' + c.glow + '" ' +
-                    'onclick="window._kgCouncilDetail(\'' + c.key + '\')">' +
-                    '<div class="kg-nav-card-icon">' + c.icon + '</div>' +
+                    'onclick="window._kgCouncilDetail(\'' + c.key + '\')" ' +
+                    'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgCouncilDetail(\'' + c.key + '\')}" ' +
+                    'tabindex="0" role="button" aria-label="' + _esc(c.label) + ': ' + c.n + ' items">' +
+                    '<div class="kg-nav-card-icon" aria-hidden="true">' + c.icon + '</div>' +
                     '<div class="kg-nav-card-body">' +
                         '<div class="kg-nav-card-label">' + c.label + '</div>' +
                         '<div class="kg-nav-card-sub">' + c.sub + '</div>' +
                     '</div>' +
-                    '<div class="kg-nav-card-n">' + c.n + '</div>' +
+                    '<div class="kg-nav-card-n" aria-hidden="true">' + c.n + '</div>' +
                 '</div>';
             }).join('') +
         '</div>';
@@ -27885,10 +27932,12 @@ window.apexFileDropHandler = function(e){
         };
         var s = DEFS[key];
         if (!s) return;
-        var back = '<div class="kg-detail-back" onclick="window._renderCouncilRightGrid()">' +
-            '<span class="kg-detail-back-arr">‹</span>' +
+        var back = '<div class="kg-detail-back" onclick="window._renderCouncilRightGrid()" ' +
+            'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._renderCouncilRightGrid()}" ' +
+            'tabindex="0" role="button" aria-label="Back to Council">' +
+            '<span class="kg-detail-back-arr" aria-hidden="true">‹</span>' +
             '<span class="kg-detail-back-lbl">COUNCIL</span>' +
-            '<span class="kg-detail-back-sep">·</span>' +
+            '<span class="kg-detail-back-sep" aria-hidden="true">·</span>' +
             '<span class="kg-detail-back-name" style="color:' + s.color + '">' + s.label + '</span>' +
         '</div>';
         var items = '';
@@ -27954,23 +28003,28 @@ window.apexFileDropHandler = function(e){
     }
 
     function _detailBack(backFn, parentLabel, childLabel, childColor) {
-        return '<div class="kg-detail-back" onclick="' + backFn + '()">' +
-            '<span class="kg-detail-back-arr">‹</span>' +
+        return '<div class="kg-detail-back" onclick="' + backFn + '()" ' +
+            'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();(' + backFn + ')()}" ' +
+            'tabindex="0" role="button" aria-label="Back to ' + _esc(parentLabel) + '">' +
+            '<span class="kg-detail-back-arr" aria-hidden="true">‹</span>' +
             '<span class="kg-detail-back-lbl">' + parentLabel + '</span>' +
-            '<span class="kg-detail-back-sep">·</span>' +
+            '<span class="kg-detail-back-sep" aria-hidden="true">·</span>' +
             '<span class="kg-detail-back-name" style="color:' + childColor + '">' + childLabel + '</span>' +
         '</div>';
     }
 
     function _navCards(cards) {
         return '<div class="kg-nav-grid">' + cards.map(function (c) {
-            return '<div class="kg-nav-card" style="--nc:' + c.color + ';--nc-glow:' + c.glow + '" onclick="' + c.fn + '">' +
-                '<div class="kg-nav-card-icon">' + c.icon + '</div>' +
+            return '<div class="kg-nav-card" style="--nc:' + c.color + ';--nc-glow:' + c.glow + '" ' +
+                'onclick="' + c.fn + '" ' +
+                'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();(' + c.fn + ')}" ' +
+                'tabindex="0" role="button" aria-label="' + _esc(c.label) + ': ' + c.n + ' items">' +
+                '<div class="kg-nav-card-icon" aria-hidden="true">' + c.icon + '</div>' +
                 '<div class="kg-nav-card-body">' +
                     '<div class="kg-nav-card-label">' + _esc(c.label) + '</div>' +
                     '<div class="kg-nav-card-sub">' + _esc(c.sub) + '</div>' +
                 '</div>' +
-                '<div class="kg-nav-card-n">' + c.n + '</div>' +
+                '<div class="kg-nav-card-n" aria-hidden="true">' + c.n + '</div>' +
             '</div>';
         }).join('') + '</div>';
     }
@@ -28158,11 +28212,17 @@ window.apexFileDropHandler = function(e){
 
     // ── Live data fetch ───────────────────────────────────────────────────────
     function _fetchLive() {
+        if (document.hidden) return;
+        var body = document.getElementById('kg-right-body');
+        var leftBody = document.getElementById('kg-left-body');
         Promise.all([
-            fetch('/api/agents/activity?limit=100', { headers: _h() }).then(function (r) { return r.json(); }).catch(function () { return {}; }),
-            fetch('/api/tasks?limit=50', { headers: _h() }).then(function (r) { return r.json(); }).catch(function () { return {}; }),
-            fetch('/api/civilization/council/history?limit=30', { headers: _h() }).then(function (r) { return r.json(); }).catch(function () { return {}; }),
+            fetch('/api/agents/activity?limit=100', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
+            fetch('/api/tasks?limit=50', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
+            fetch('/api/civilization/council/history?limit=30', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
         ]).then(function (res) {
+            var anyErr = res[0]._err || res[1]._err || res[2]._err;
+            var tsEl = document.getElementById('kg-last-updated');
+            if (tsEl) tsEl.textContent = anyErr ? '⚠ data unavailable' : 'updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
             _liveRuns      = (res[0].runs  || []);
             _liveTasks     = (res[1].tasks || res[1] || []);
             _councilDelibs = (res[2].deliberations || []);
@@ -28208,6 +28268,8 @@ window.apexFileDropHandler = function(e){
     window.switchPage = function (name) {
         if (_sp) _sp(name);
         if (name === 'test') {
+            var rb = document.getElementById('kg-right-body');
+            if (rb && !rb.children.length) rb.innerHTML = '<div class="kg-loading">LOADING</div>';
             setTimeout(_fetchLive, 60);
         }
     };
@@ -28215,7 +28277,11 @@ window.apexFileDropHandler = function(e){
     window.addEventListener('resize', function () {
         if (window.activePage === 'test') {
             _buildPipeline();
-            if (_activeTier) _scalePipeline(true);
+            if (_activeTier) {
+                var n = document.getElementById('kg-node-' + _activeTier);
+                if (n) { n.classList.add('active'); n.setAttribute('aria-pressed', 'true'); }
+                _scalePipeline(true);
+            }
         }
     });
 
