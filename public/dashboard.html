@@ -27864,11 +27864,14 @@ window.apexFileDropHandler = function(e){
         if (ltEl) ltEl.textContent = tier ? tier.label : id.toUpperCase();
         if (rtEl) rtEl.textContent = 'RECENT RUNS';
         if (acEl && tier) acEl.style.background = 'linear-gradient(90deg,' + tier.color + ',transparent)';
+        var _daCountM = (window.DA_AGENTS||[]).length || 9;
+        var _oaCountM = (window.DA_AGENTS||[]).reduce(function(s,a){return s+(a.officeAgents||[]).length;},0) || 33;
+        var _todayRunsM = _liveRuns.filter(function(r){return (Date.now()-new Date(r.created_at).getTime())<86400000;});
         var _META = {
-            input:   { label:'PIPELINE ENTRY POINT', stat:'6 CHANNELS' },
+            input:   { label:'PIPELINE ENTRY POINT', stat: _todayRunsM.length ? _todayRunsM.length+' RUNS TODAY' : '6 CHANNELS' },
             council: { label:'DELIBERATION CHAMBER', stat:'7 ENTITIES' },
-            domain:  { label:'DOMAIN DISPATCH LAYER', stat:'9 DOMAINS' },
-            office:  { label:'EXECUTION LAYER', stat:'33 AGENTS' },
+            domain:  { label:'DOMAIN DISPATCH LAYER', stat:_daCountM+' DOMAINS' },
+            office:  { label:'EXECUTION LAYER', stat:_oaCountM+' AGENTS' },
             actions: { label:'TASK PIPELINE', stat:'' },
             output:  { label:'RESULTS INTELLIGENCE', stat:'' },
         };
@@ -28128,7 +28131,10 @@ window.apexFileDropHandler = function(e){
                     '<span class="kg-group-count">' + _qTasks.length + '</span>' +
                 '</div>' +
                 '<div class="kg-group-body" style="height:0">' +
-                    _qTasks.slice(0,15).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38),'PENDING','idle','#f59e0b'); }).join('') +
+                    _qTasks.slice(0,15).map(function(t){
+                        var slug = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toUpperCase().slice(0,12) : 'QUEUED';
+                        return _entityRow((t.title||t.id||'?').slice(0,38), slug, 'idle','#f59e0b');
+                    }).join('') +
                 '</div>';
             }
 
@@ -28139,7 +28145,10 @@ window.apexFileDropHandler = function(e){
                     '<span class="kg-group-count">' + _resTasks.length + '</span>' +
                 '</div>' +
                 '<div class="kg-group-body" style="height:0">' +
-                    _resTasks.slice(0,15).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38),stMap[t.status]||'idle',stMap[t.status]||'idle','#52525b'); }).join('') +
+                    _resTasks.slice(0,15).map(function(t){
+                        var isDone = t.status==='completed'||t.status==='done';
+                        return _entityRow((t.title||t.id||'?').slice(0,38), _ago(t.updated_at||t.created_at), isDone?'ready':'error', isDone?'#22c55e':'#ef4444');
+                    }).join('') +
                 '</div>';
             }
 
@@ -28337,11 +28346,29 @@ window.apexFileDropHandler = function(e){
             items = '<div class="kg-runs-empty">NONE</div>';
         } else if (s.type === 'pending') {
             items = s.items.slice(0, 15).map(function (t) {
-                var rec = t.metadata && t.metadata.recommendation ? t.metadata.recommendation : '';
-                return '<div class="kg-approval-card">' +
-                    '<div class="kg-approval-title">' + _esc((t.title || t.id || '—').slice(0, 80)) + '</div>' +
-                    (rec ? '<div class="kg-delib-rec">' + _esc(rec.slice(0, 100)) + '</div>' : '') +
-                    '<div class="kg-approval-sub">' + _ago(t.created_at || t.updated_at) + '</div>' +
+                var rec = t.metadata && t.metadata.recommendation ? t.metadata.recommendation : (t.description || '');
+                var rawId = String(t.id).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+                var tid = "'" + rawId + "'";
+                var sid = _esc(String(t.id));
+                var priRaw = (t.metadata&&t.metadata.priority) ? (t.metadata.priority.tier||t.metadata.priority) : 'standard';
+                var pri = String(typeof priRaw==='object'?'standard':priRaw).toLowerCase().split(' ')[0];
+                if (['critical','urgent','important'].indexOf(pri)===-1) pri='standard';
+                var priColors = {critical:'#ef4444',urgent:'#f59e0b',important:'#22d3ee',standard:'#7c6cf2'};
+                return '<div class="kg-approval-card" id="kg-tc-' + sid + '">' +
+                    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">' +
+                        '<span class="kg-task-pri ' + pri + '">' + pri.toUpperCase() + '</span>' +
+                        '<span class="kg-task-time">' + _ago(t.created_at||t.updated_at) + '</span>' +
+                    '</div>' +
+                    '<div class="kg-approval-title">' + _esc((t.title||t.id||'—').slice(0,80)) + '</div>' +
+                    (rec ? '<div class="kg-delib-rec">' + _esc(rec.slice(0,120)) + '</div>' : '') +
+                    '<div class="kg-task-btns" style="margin-top:8px">' +
+                        '<button class="kg-act-btn approve" onclick="window._kgApprove('+tid+',this)" aria-label="Approve">✓ APPROVE</button>' +
+                        '<button class="kg-act-btn reject" onclick="window._kgRejectPrompt('+tid+')" aria-label="Reject">✕ REJECT</button>' +
+                    '</div>' +
+                    '<div class="kg-task-reject-area" id="kg-reject-' + sid + '">' +
+                        '<textarea class="kg-task-reject-inp" rows="2" placeholder="Reason (optional)…"></textarea>' +
+                        '<button class="kg-act-btn reject" style="width:100%;margin-top:0;flex:none" onclick="window._kgRejectConfirm('+tid+',this)">CONFIRM REJECT</button>' +
+                    '</div>' +
                 '</div>';
             }).join('');
         } else if (s.type === 'live') {
@@ -28972,24 +28999,21 @@ window.apexFileDropHandler = function(e){
         var body = document.getElementById('kg-right-body');
         var leftBody = document.getElementById('kg-left-body');
         Promise.all([
-            fetch('/api/agents/activity?limit=100', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
-            fetch('/api/tasks?limit=50', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
-            fetch('/api/civilization/council/history?limit=30', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
-            fetch('/api/notifications', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true }; }),
+            fetch('/api/agents/activity?limit=150', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'runs' }; }),
+            fetch('/api/tasks?limit=200', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'tasks' }; }),
+            fetch('/api/civilization/council/history?limit=30', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'council' }; }),
+            fetch('/api/notifications', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'notifs' }; }),
         ]).then(function (res) {
-            var anyErr = res[0]._err || res[1]._err || res[2]._err;
+            var errSrcs = [res[0],res[1],res[2]].filter(function(r){return r._err;}).map(function(r){return r._src;});
             var tsEl = document.getElementById('kg-last-updated');
-            if (tsEl) tsEl.textContent = anyErr ? '⚠ data unavailable' : 'updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-            _liveRuns      = (res[0].runs  || []);
-            _liveTasks     = (res[1].tasks || res[1] || []);
-            _councilDelibs = (res[2].deliberations || []);
+            if (tsEl) tsEl.textContent = errSrcs.length ? '⚠ ' + errSrcs.join(', ') + ' unavailable' : 'updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+            if (!res[0]._err) _liveRuns  = (res[0].runs  || []);
+            if (!res[1]._err) _liveTasks = Array.isArray(res[1]) ? res[1] : (res[1].tasks || []);
+            if (!res[2]._err) _councilDelibs = (res[2].deliberations || []);
             _liveNotifs = Array.isArray(res[3]) ? res[3] : (res[3] && res[3].notifications ? res[3].notifications : []);
             if (!Array.isArray(_liveTasks)) _liveTasks = [];
 
             // Update node counts + live states
-            var pending = _liveTasks.filter(function (t) { return t.status === 'pending' || t.status === 'in_progress' || t.status === 'awaiting_approval'; }).length;
-            var cntEl = document.getElementById('kg-count-actions');
-            if (cntEl) cntEl.textContent = _liveTasks.length || '—';
 
             var officeCount = (window.DA_AGENTS || []).reduce(function (s, a) { return s + (a.officeAgents || []).length; }, 0);
             var offCntEl = document.getElementById('kg-count-office');
@@ -29030,10 +29054,10 @@ window.apexFileDropHandler = function(e){
             var hasLiveDelib = _councilDelibs.some(function (d) { return d.status === 'deliberating'; });
             _setNodeGlow('council', hasLiveDelib ? 'is-deliberating' : '');
 
-            // ACTIONS: alert-flash when tasks need attention + update count badge
+            // ACTIONS: alert-flash for approval-needed; working pulse for in-progress
             var pendingCount = _liveTasks.filter(function (t) { return t.status === 'awaiting_approval' || t.status === 'approval_required'; }).length;
-            var hasPending = pendingCount > 0 || _liveTasks.some(function (t) { return t.status === 'pending' || t.status === 'in_progress'; });
-            _setNodeGlow('actions', hasPending ? 'is-alerting' : '');
+            var hasInProgress = _liveTasks.some(function(t){ return t.status === 'in_progress'; });
+            _setNodeGlow('actions', pendingCount > 0 ? 'is-alerting' : (hasInProgress ? 'is-working' : ''));
             var actCountEl = document.getElementById('kg-count-actions');
             if (actCountEl) {
                 actCountEl.textContent = pendingCount > 0 ? pendingCount : (_liveTasks.filter(function(t){return t.status==='in_progress';}).length || '—');
@@ -29097,11 +29121,22 @@ window.apexFileDropHandler = function(e){
             if (_activeTier === 'actions') {
                 var _actMeta = document.getElementById('kg-left-meta');
                 if (_actMeta) {
-                    var _ap2 = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'||t.status==='pending'||t.status==='in_progress'; }).length;
+                    var _awAp2 = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'; }).length;
+                    var _rpAp2 = _liveTasks.filter(function(t){ return t.status==='in_progress'; }).length;
                     var _actTier = TIERS.find(function(t){ return t.id==='actions'; });
-                    var _actStat = _ap2 > 0 ? _ap2 + ' ACTIVE' : 'PIPELINE CLEAR';
+                    var _actStat = _awAp2 > 0 ? _awAp2 + ' AWAITING' : _rpAp2 > 0 ? _rpAp2 + ' RUNNING' : 'PIPELINE CLEAR';
+                    var _actCol  = _awAp2 > 0 ? '#ef4444' : (_rpAp2 > 0 ? '#22c55e' : (_actTier ? _actTier.color : '#7c6cf2'));
                     _actMeta.style.display = 'block';
-                    _actMeta.innerHTML = '<div class="kg-panel-meta-label">TASK PIPELINE</div><div class="kg-panel-meta-stat" style="color:' + (_actTier ? _actTier.color : '#7c6cf2') + '">' + _actStat + '</div>';
+                    _actMeta.innerHTML = '<div class="kg-panel-meta-label">TASK PIPELINE</div><div class="kg-panel-meta-stat" style="color:' + _actCol + '">' + _actStat + '</div>';
+                }
+            }
+            if (_activeTier === 'input') {
+                var _inMeta = document.getElementById('kg-left-meta');
+                if (_inMeta) {
+                    var _inRunsT = _liveRuns.filter(function(r){return (Date.now()-new Date(r.created_at).getTime())<86400000;});
+                    var _inTierT = TIERS.find(function(t){return t.id==='input';});
+                    _inMeta.style.display = 'block';
+                    _inMeta.innerHTML = '<div class="kg-panel-meta-label">PIPELINE ENTRY POINT</div><div class="kg-panel-meta-stat" style="color:'+(_inTierT?_inTierT.color:'#22d3ee')+'">'+(_inRunsT.length?_inRunsT.length+' RUNS TODAY':'6 CHANNELS')+'</div>';
                 }
             }
         });
@@ -29188,7 +29223,13 @@ window.apexFileDropHandler = function(e){
             method: 'POST',
             headers: Object.assign({ 'Content-Type':'application/json' }, _h()),
             body: JSON.stringify({ taskId: taskId, approved: true })
-        }).then(function (r) { return r.json(); }).then(function () {
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            if (d && d.ok === false) {
+                if (btn) { btn.disabled = false; btn.textContent = '✓ APPROVE'; }
+                var s = document.getElementById('kg-convene-status');
+                if (s) { s.textContent = 'Error: ' + (d.error || 'approval failed'); setTimeout(function(){ s.textContent=''; }, 4000); }
+                return;
+            }
             _kgRecordDecision(taskId, title, 'approved');
             _kgShowUndo(taskId, title, 'approved');
             _kgAutoAdvance(taskId);
@@ -29211,7 +29252,11 @@ window.apexFileDropHandler = function(e){
             method: 'POST',
             headers: Object.assign({ 'Content-Type':'application/json' }, _h()),
             body: JSON.stringify({ taskId: taskId, reason: reason })
-        }).then(function (r) { return r.json(); }).then(function () {
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            if (d && d.ok === false) {
+                if (btn) { btn.disabled = false; btn.textContent = 'CONFIRM REJECT'; }
+                return;
+            }
             _kgRecordDecision(taskId, title, 'rejected');
             _kgShowUndo(taskId, title, 'rejected');
             _kgAutoAdvance(taskId);
@@ -29238,14 +29283,25 @@ window.apexFileDropHandler = function(e){
         var awTasks = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'; });
         if (!awTasks.length) return;
         var bar = document.getElementById('kg-bulk-bar');
-        if (bar) { var b = bar.querySelector('.kg-bulk-btn'); if(b){ b.disabled=true; b.textContent='…'; } }
+        if (bar) { var b = bar.querySelector('.kg-bulk-btn'); if(b){ b.disabled=true; b.textContent='APPROVING…'; } }
         var tasks = awTasks.slice(0,10);
-        Promise.all(tasks.map(function(t){
+        var settled = tasks.map(function(t){
             return fetch('/api/tasks/approve', {
                 method:'POST', headers:Object.assign({'Content-Type':'application/json'},_h()),
                 body:JSON.stringify({taskId:t.id, approved:true})
-            }).then(function(r){return r.json();}).then(function(){ _kgRecordDecision(t.id, t.title||String(t.id), 'approved'); });
-        })).then(function(){ _renderLeft('actions'); _renderActionsRight(); _fetchLive(); });
+            }).then(function(r){return r.json();}).then(function(d){
+                if (d && d.ok === false) throw new Error(d.error||'failed');
+                _kgRecordDecision(t.id, t.title||String(t.id), 'approved');
+                return 'ok';
+            }).catch(function(){ return 'fail'; });
+        });
+        Promise.all(settled).then(function(results){
+            var ok   = results.filter(function(r){return r==='ok';}).length;
+            var fail = results.filter(function(r){return r==='fail';}).length;
+            if (bar) { var b2=bar.querySelector('.kg-bulk-btn'); if(b2){b2.disabled=false;b2.textContent='✓ APPROVE ALL';} }
+            _kgShowUndo('bulk', ok+' approved'+(fail?' · '+fail+' failed':''), 'approved');
+            _renderLeft('actions'); _renderActionsRight(); _fetchLive();
+        });
     };
 
     window._kgConvene = function (btn) {
