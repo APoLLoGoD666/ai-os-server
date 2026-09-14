@@ -11579,11 +11579,8 @@ if(pipe){
                 </div>
                 <!-- Portal tab bar — shared across council / office / domain -->
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
-                    <button class="portal-tab" onclick="window.switchPage('actions')">ACTIONS</button>
-                    <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
-                    <button class="portal-tab active" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
+                    <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
                 </div>
                 <!-- Main layout: canvas + task panel -->
                 <div class="ao-main">
@@ -11664,11 +11661,8 @@ if(pipe){
                     </div>
                 </div>
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
-                    <button class="portal-tab" onclick="window.switchPage('actions')">ACTIONS</button>
-                    <button class="portal-tab active" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
-                    <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
+                    <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
                 </div>
                 <div class="ao-main">
                     <div class="ao-canvas" id="daCanvas">
@@ -11764,11 +11758,8 @@ if(pipe){
             <!-- ══ PAGE: ACTIONS (V-11-H canonical surface) ══ -->
             <div class="page" id="page-actions">
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('council')">COUNCIL</button>
-                    <button class="portal-tab active" onclick="window.switchPage('actions')">ACTIONS</button>
-                    <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
-                    <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
+                    <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
                 </div>
                 <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
                     <div>
@@ -12101,11 +12092,8 @@ if(pipe){
                     </div>
                 </div>
                 <div class="portal-tab-bar">
-                    <button class="portal-tab active" onclick="window.switchPage('council')">COUNCIL</button>
-                    <button class="portal-tab" onclick="window.switchPage('actions')">ACTIONS</button>
-                    <button class="portal-tab" onclick="window.switchPage('domain-agents')">DOMAIN AGENTS</button>
-                    <button class="portal-tab" onclick="window.switchPage('agents')">OFFICE AGENTS</button>
                     <button class="portal-tab" onclick="window.switchPage('test')">MAP</button>
+                    <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
                 </div>
                 <div class="ec-main">
                     <div class="ec-chamber" id="ecChamber" aria-label="Council chamber">
@@ -28065,10 +28053,6 @@ window.apexFileDropHandler = function(e){
 
         pg.innerHTML =
             '<div class="portal-tab-bar">' +
-                '<button class="portal-tab" onclick="window.switchPage(\'council\')">COUNCIL</button>' +
-                '<button class="portal-tab" onclick="window.switchPage(\'actions\')">ACTIONS</button>' +
-                '<button class="portal-tab" onclick="window.switchPage(\'domain-agents\')">DOMAIN AGENTS</button>' +
-                '<button class="portal-tab" onclick="window.switchPage(\'agents\')">OFFICE AGENTS</button>' +
                 '<button class="portal-tab active" onclick="window.switchPage(\'test\')">MAP</button>' +
                 '<button class="portal-tab" onclick="window.switchPage(\'intel\')">INTEL</button>' +
             '</div>' +
@@ -30465,10 +30449,6 @@ window.apexFileDropHandler = function(e){
         // Portal tab bar (INTEL active)
         pg.innerHTML =
             '<div class="portal-tab-bar">' +
-            '  <button class="portal-tab" onclick="window.switchPage(\'council\')">COUNCIL</button>' +
-            '  <button class="portal-tab" onclick="window.switchPage(\'actions\')">ACTIONS</button>' +
-            '  <button class="portal-tab" onclick="window.switchPage(\'domain-agents\')">DOMAIN AGENTS</button>' +
-            '  <button class="portal-tab" onclick="window.switchPage(\'agents\')">OFFICE AGENTS</button>' +
             '  <button class="portal-tab" onclick="window.switchPage(\'test\')">MAP</button>' +
             '  <button class="portal-tab active" onclick="window.switchPage(\'intel\')">INTEL</button>' +
             '</div>' +
