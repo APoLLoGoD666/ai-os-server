@@ -27339,7 +27339,9 @@ window.apexFileDropHandler = function(e){
 .kg-right-stat-l { font:500 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#71717a; text-transform:uppercase; }
 
 /* ── Run cards ── */
-.kg-run-card { display:flex; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 120ms; cursor:default; }
+.kg-run-card { display:flex; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 120ms; cursor:pointer; }
+.kg-run-card:hover { background:rgba(255,255,255,0.025); }
+.kg-run-card:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; }
 .kg-run-card:hover { background:rgba(255,255,255,0.02); }
 .kg-run-card-bar { width:3px; flex-shrink:0; border-radius:0 2px 2px 0; }
 .kg-run-card-body { flex:1; padding:10px 12px; min-width:0; }
@@ -27959,6 +27961,46 @@ window.apexFileDropHandler = function(e){
 
         html += votesHtml + '</div>';
 
+        var overlay = document.getElementById('kg-info-overlay');
+        var modal   = document.getElementById('kg-info-modal');
+        if (!overlay || !modal) return;
+        modal.innerHTML = html;
+        overlay.classList.add('visible');
+        requestAnimationFrame(function(){ var btn = modal.querySelector('.kg-info-modal-close'); if(btn) btn.focus(); });
+    };
+
+    // ── Agent run detail popup ────────────────────────────────────────────────
+    window._kgRunDetail = function(runId) {
+        var r = (_liveRuns || []).find(function(x){ return String(x.id) === String(runId); });
+        if (!r) return;
+        var ok    = r.success !== false;
+        var col   = _domainColor((r.domain || '').toLowerCase());
+        var stCol = ok ? '#22c55e' : '#ef4444';
+        var task  = (r.task_description || (typeof r.agent_summary === 'string' ? r.agent_summary : '') || '').trim();
+        var reply = String(r.reply || r.result || r.output || r.response || '').trim();
+        var dur   = r.duration_ms ? _dur(r.duration_ms) : null;
+        var meta  = [];
+        if (r.agent_name) meta.push(r.agent_name);
+        if (r.domain)     meta.push(r.domain.toUpperCase() + ' DOMAIN');
+        if (dur)          meta.push(dur + ' duration');
+        if (r.created_at) meta.push(_ago(r.created_at));
+        var body = reply || task;
+        var html =
+            '<div class="kg-info-modal-hd">' +
+                '<div class="kg-info-modal-icon">' + (ok ? '✓' : '✕') + '</div>' +
+                '<div class="kg-info-modal-titles">' +
+                    '<div class="kg-td-status" style="color:' + stCol + ';border-color:' + stCol + '44;background:' + stCol + '11;margin-bottom:8px">' + (ok ? 'SUCCESS' : 'FAILED') + '</div>' +
+                    '<div class="kg-info-modal-title" style="color:#fff;font-size:14px">' + _esc(r.agent_name || r.domain || 'Agent Run') + '</div>' +
+                    '<div class="kg-info-modal-tagline">' + _esc((task||'Agent execution').slice(0,100)) + '</div>' +
+                '</div>' +
+                '<button class="kg-info-modal-close" onclick="window._kgCloseInfo()" aria-label="Close">×</button>' +
+            '</div>' +
+            '<div class="kg-info-modal-accent" style="background:linear-gradient(90deg,' + stCol + ',transparent)"></div>' +
+            '<div class="kg-info-modal-body">' +
+            (meta.length ? '<div><div class="kg-info-section-hd">Run Details</div><div class="kg-td-meta-row">' + meta.map(function(m){ return '<span class="kg-td-meta-chip">'+_esc(m)+'</span>'; }).join('') + '</div></div>' : '') +
+            (body ? '<div><div class="kg-info-section-hd">' + (reply ? 'Agent Response' : 'Task Description') + '</div><div class="kg-td-reply">' + _esc(body) + '</div></div>'
+                  : '<div class="kg-info-section-body" style="color:rgba(255,255,255,0.3);font-style:italic">No response data stored for this run.</div>') +
+            '</div>';
         var overlay = document.getElementById('kg-info-overlay');
         var modal   = document.getElementById('kg-info-modal');
         if (!overlay || !modal) return;
@@ -28628,7 +28670,7 @@ window.apexFileDropHandler = function(e){
             var cls = /approve|yes|proceed|go|accept/i.test(vs) ? 'approve' : /reject|no|hold|deny|stop|block/i.test(vs) ? 'reject' : 'abstain';
             return '<div class="kg-vote-pip ' + cls + '" aria-label="' + ex + ': ' + _esc(vs.slice(0,20) || 'abstain') + '">' + ex.slice(0,2) + '</div>';
         }).join('');
-        var did = JSON.stringify(String(d.id || ''));
+        var did = '\'' + String(d.id || '').replace(/'/g, "\\'") + '\'';
         return '<div class="kg-delib" tabindex="0" role="button" aria-label="Deliberation: '+_esc((d.question||'').slice(0,60))+'" onclick="window._kgDelibDetail('+did+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgDelibDetail('+did+')}">' +
             '<div class="kg-delib-q">' + _esc((d.question || '').slice(0, 140)) + '</div>' +
             '<div class="kg-delib-meta">' +
@@ -29054,11 +29096,15 @@ window.apexFileDropHandler = function(e){
         var total = filtered.length;
         var cards = _INPUT_TYPES.map(function (t, idx) {
             var runs = filtered.filter(function (r) { return t.srcMatch(r); });
+            // For chat (idx=0), fall back to total when no source field is set
             var cnt  = runs.length || (idx === 0 ? total : 0);
-            var lastRun = runs[0] || filtered[0];
+            var lastRun  = runs[0] || (idx === 0 ? filtered[0] : null);
             var lastTime = lastRun ? _ago(lastRun.created_at) : 'No activity';
-            var isLive   = runs.some(function (r) { return (now3 - new Date(r.created_at).getTime()) < 120000; }) || (idx === 0 && (now3 - (filtered[0] ? new Date(filtered[0].created_at).getTime() : Infinity)) < 120000);
-            return '<div class="kg-input-card' + (isLive ? ' is-live' : '') + '" data-channel="' + t.key + '">' +
+            var isLive   = runs.some(function (r) { return (now3 - new Date(r.created_at).getTime()) < 120000; }) || (idx === 0 && filtered[0] && (now3 - new Date(filtered[0].created_at).getTime()) < 120000);
+            var displayRuns = runs.length ? runs : (idx === 0 ? filtered : []);
+            var runIds = displayRuns.slice(0,30).map(function(r){ return '\'' + String(r.id||'').replace(/'/g,"\\'") + '\''; }).join(',');
+            var onclick = 'window._kgInputChannelDetail(\'' + t.key + '\',[' + runIds + '],\'' + t.label + '\')';
+            return '<div class="kg-input-card' + (isLive ? ' is-live' : '') + '" data-channel="' + t.key + '" tabindex="0" role="button" aria-label="' + _esc(t.label) + ': ' + cnt + ' runs" onclick="' + onclick + '" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();' + onclick + '}">' +
                 (isLive ? '<div class="kg-input-live-dot"></div>' : '<div class="kg-input-card-icon">' + t.icon + '</div>') +
                 '<div class="kg-input-card-body">' +
                     '<div class="kg-input-card-label">' + t.label + '</div>' +
@@ -29071,6 +29117,21 @@ window.apexFileDropHandler = function(e){
         body.innerHTML = filterBar + '<div class="kg-input-cards">' + cards + '</div>';
     }
     window._kgInputFilter = function (f) { _inputFilter = f; _renderInputRight(); };
+
+    window._kgInputChannelDetail = function (channelKey, runIds, label) {
+        var body = document.getElementById('kg-right-body');
+        if (!body) return;
+        var runs = runIds && runIds.length
+            ? runIds.map(function(id){ return (_liveRuns||[]).find(function(r){ return String(r.id)===String(id); }); }).filter(Boolean)
+            : _liveRuns.slice(0,40);
+        var col = '#22d3ee';
+        body.innerHTML =
+            _detailBack('window._renderInputRight', 'Input Pipeline', label||channelKey, col) +
+            (runs.length
+                ? '<div class="kg-time-hd"><span>' + (label||channelKey) + '</span><span class="kg-time-hd-count">' + runs.length + '</span></div>' +
+                  runs.map(_runCard).join('')
+                : '<div class="kg-runs-empty">No runs recorded for this channel yet.<br><span style="color:rgba(255,255,255,0.18);font-size:10px">Runs appear once agents process requests via this input type.</span></div>');
+    };
 
     // ── Output left panel (completed task list) ────────────────────────────────
     function _renderOutputLeft() {
@@ -29113,7 +29174,7 @@ window.apexFileDropHandler = function(e){
             var isDone = t.status==='completed'||t.status==='done';
             var slug   = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
             var col    = slug ? _domainColor(slug) : '#52525b';
-            var tid    = JSON.stringify(String(t.id));
+            var tid    = '\'' + String(t.id).replace(/'/g, "\\'") + '\'';
             return '<div class="kg-out-feed-card '+(isDone?'done':'failed')+'" tabindex="0" role="button" aria-label="'+_esc((t.title||t.id||'—').slice(0,60))+'" onclick="window._kgTaskDetail('+tid+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgTaskDetail('+tid+')}">' +
                 '<div class="kg-out-feed-icon" style="color:'+(isDone?'#22c55e':'#ef4444')+'">'+(isDone?'✓':'✕')+'</div>' +
                 '<div class="kg-out-feed-body">' +
@@ -29244,7 +29305,7 @@ window.apexFileDropHandler = function(e){
                     var col    = slug ? _domainColor(slug) : '#52525b';
                     var exec   = (t.metadata&&t.metadata.execution)||null;
                     var reply  = exec ? String(exec.reply||exec.result||exec.output||'').trim() : '';
-                    var tid    = JSON.stringify(String(t.id));
+                    var tid    = '\'' + String(t.id).replace(/'/g, "\\'") + '\'';
                     return '<div class="kg-out-feed-card '+(isDone?'done':'failed')+'" style="padding:10px 14px" tabindex="0" role="button" aria-label="'+_esc((t.title||t.id||'—').slice(0,60))+'" onclick="window._kgTaskDetail('+tid+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgTaskDetail('+tid+')}">' +
                         '<div class="kg-out-feed-icon" style="color:'+(isDone?'#22c55e':'#ef4444')+'">'+(isDone?'✓':'✕')+'</div>' +
                         '<div class="kg-out-feed-body">' +
@@ -29401,7 +29462,8 @@ window.apexFileDropHandler = function(e){
         var task   = (r.task_description || (typeof r.agent_summary === 'string' ? r.agent_summary : '') || '').trim();
         var domain = r.domain ? r.domain.charAt(0).toUpperCase() + r.domain.slice(1).toLowerCase() : '';
         var dur    = r.duration_ms ? _dur(r.duration_ms) : '';
-        return '<div class="kg-run-card">' +
+        var rid    = '\'' + String(r.id || '').replace(/'/g, "\\'") + '\'';
+        return '<div class="kg-run-card" tabindex="0" role="button" aria-label="' + _esc((r.agent_name||domain||'Run') + ' · ' + (task||'').slice(0,40)) + '" onclick="window._kgRunDetail(' + rid + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgRunDetail(' + rid + ')}">' +
             '<div class="kg-run-card-bar" style="background:' + col + '"></div>' +
             '<div class="kg-run-card-body">' +
                 '<div class="kg-run-card-hd">' +
