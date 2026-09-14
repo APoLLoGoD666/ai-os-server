@@ -124,7 +124,7 @@ router.get('/agents/activity', _auth, async (req, res) => {
         const sourceTaskId = req.query.source_task_id || null;
         let q = _sbSync()
             .from('apex_agent_runs')
-            .select('task_id,source_task_id,agent_name,domain,task_description,success,duration_ms,model_used,token_count,agent_summary,created_at')
+            .select('id,task_id,source_task_id,agent_name,domain,task_description,objective,success,duration_ms,model_used,token_count,agent_summary,created_at')
             .order('created_at', { ascending: false })
             .limit(limit);
         if (sourceTaskId) q = q.eq('source_task_id', sourceTaskId);
