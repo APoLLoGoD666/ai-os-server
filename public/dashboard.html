@@ -28593,7 +28593,7 @@ window.apexFileDropHandler = function(e){
     function _renderOutputLeft() {
         var body = document.getElementById('kg-left-body');
         if (!body) return;
-        var now = Date.now();
+        var now    = Date.now();
         var done   = _liveTasks.filter(function(t){ return t.status==='completed'||t.status==='done'; });
         var failed = _liveTasks.filter(function(t){ return t.status==='failed'; });
         var all    = done.concat(failed).sort(function(a,b){ return new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at); });
@@ -28612,79 +28612,56 @@ window.apexFileDropHandler = function(e){
         var total      = all.length;
         var successPct = total ? Math.round(done.length/total*100) : 0;
         var pc         = successPct>=80?'#22c55e':successPct>=50?'#f59e0b':'#ef4444';
-
-        // Domain counts
-        var domainMap = {};
-        all.forEach(function(t){
-            var s = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : null;
-            if (!s) return;
-            if (!domainMap[s]) domainMap[s] = { done:0, fail:0 };
-            if (t.status==='failed') domainMap[s].fail++; else domainMap[s].done++;
-        });
-        var domainList = [];
-        for (var dk in domainMap) { domainList.push({ slug:dk, total:domainMap[dk].done+domainMap[dk].fail, done:domainMap[dk].done }); }
-        domainList.sort(function(a,b){ return b.total-a.total; });
-        var maxD = domainList[0] ? domainList[0].total : 1;
+        var domainSet  = {};
+        all.forEach(function(t){ var s=(t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug); if(s) domainSet[s.toLowerCase()]=1; });
+        var domainCount = Object.keys(domainSet).length;
 
         var html = '';
-
         // Summary strip
         html += '<div class="kg-out-summary">' +
             '<div class="kg-out-stat-chip"><span class="kg-out-stat-n" style="color:#f59e0b">'+today+'</span><span class="kg-out-stat-l">TODAY</span></div>' +
             '<div class="kg-out-stat-chip"><span class="kg-out-stat-n" style="color:'+pc+'">'+successPct+'%</span><span class="kg-out-stat-l">SUCCESS</span></div>' +
-            '<div class="kg-out-stat-chip"><span class="kg-out-stat-n">'+domainList.length+'</span><span class="kg-out-stat-l">DOMAINS</span></div>' +
+            '<div class="kg-out-stat-chip"><span class="kg-out-stat-n">'+domainCount+'</span><span class="kg-out-stat-l">DOMAINS</span></div>' +
         '</div>';
 
-        // Result feed
-        html += '<div class="kg-out-sect-hd"><span>RESULT FEED</span><span style="color:rgba(255,255,255,0.15)">'+all.length+' TOTAL</span></div>';
-        html += all.slice(0,25).map(function(t){
-            var isDone  = t.status==='completed'||t.status==='done';
-            var slug    = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
-            var col     = slug ? _domainColor(slug) : '#52525b';
-            var exec    = (t.metadata&&t.metadata.execution) || null;
-            var office  = exec&&exec.office ? exec.office.agent : null;
-            var reply   = exec ? String(exec.reply||'').trim() : '';
-            var routeHtml = slug ? '<span class="kg-out-badge" style="color:'+col+'">'+slug.toUpperCase()+'</span>' : '';
-            if (office) routeHtml += '<span style="color:rgba(255,255,255,0.15);font-size:8px;margin:0 1px">→</span><span class="kg-out-badge" style="color:#38bdf8">'+_esc(office.toUpperCase().slice(0,14))+'</span>';
+        // Recent 5 results only
+        html += '<div class="kg-out-sect-hd"><span>RECENT RESULTS</span><span style="color:rgba(255,255,255,0.15)">'+total+' TOTAL</span></div>';
+        html += all.slice(0,5).map(function(t){
+            var isDone = t.status==='completed'||t.status==='done';
+            var slug   = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
+            var col    = slug ? _domainColor(slug) : '#52525b';
             return '<div class="kg-out-feed-card '+(isDone?'done':'failed')+'">' +
                 '<div class="kg-out-feed-icon" style="color:'+(isDone?'#22c55e':'#ef4444')+'">'+(isDone?'✓':'✕')+'</div>' +
                 '<div class="kg-out-feed-body">' +
                     '<div class="kg-out-feed-title">'+_esc((t.title||t.id||'—').slice(0,52))+'</div>' +
-                    '<div class="kg-out-feed-route">'+routeHtml+'<span class="kg-out-feed-time">'+_ago(t.updated_at||t.created_at)+'</span></div>' +
-                    (reply ? '<div class="kg-out-feed-preview">'+_esc(reply.slice(0,90))+'</div>' : '') +
+                    '<div class="kg-out-feed-route">' +
+                        (slug ? '<span class="kg-out-badge" style="color:'+col+'">'+slug.toUpperCase()+'</span>' : '') +
+                        '<span class="kg-out-feed-time">'+_ago(t.updated_at||t.created_at)+'</span>' +
+                    '</div>' +
                 '</div>' +
             '</div>';
         }).join('');
-
-        // Domain performance bars
-        if (domainList.length) {
-            html += '<div class="kg-out-sect-hd" style="margin-top:4px"><span>DOMAIN PERFORMANCE</span></div>';
-            html += domainList.slice(0,7).map(function(d){
-                var col = _domainColor(d.slug);
-                var pct = Math.round(d.total/maxD*100);
-                return '<div class="kg-out-perf-row">' +
-                    '<div class="kg-out-perf-name" style="color:'+col+'">'+d.slug.toUpperCase().slice(0,10)+'</div>' +
-                    '<div class="kg-out-perf-track"><div class="kg-out-perf-fill" style="width:'+pct+'%;background:'+col+'"></div></div>' +
-                    '<div class="kg-out-perf-cnt">'+d.total+'</div>' +
-                '</div>';
-            }).join('');
+        if (total > 5) {
+            html += '<div style="padding:8px 14px;font:400 10px/1 system-ui;color:rgba(255,255,255,0.2);text-align:center">+ '+(total-5)+' more — browse in right panel</div>';
         }
 
         body.innerHTML = html;
     }
 
-    // ── Output right panel (recent completed runs) ─────────────────────────────
+    // ── Output right panel — nav card grid (like council) ─────────────────────
     function _renderOutputRight() {
         var body    = document.getElementById('kg-right-body');
         var statsEl = document.getElementById('kg-right-stats');
         if (!body) return;
-        var now  = Date.now();
         var done   = _liveTasks.filter(function(t){ return t.status==='completed'||t.status==='done'; });
         var failed = _liveTasks.filter(function(t){ return t.status==='failed'; });
         var all    = done.concat(failed).sort(function(a,b){ return new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at); });
         var total  = all.length;
         var successPct = total ? Math.round(done.length/total*100) : 0;
         var pc = successPct>=80?'#22c55e':successPct>=50?'#f59e0b':'#ef4444';
+        var domainSet = {};
+        all.forEach(function(t){ var s=(t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug); if(s) domainSet[s.toLowerCase()]=1; });
+        var domainCount = Object.keys(domainSet).length;
 
         if (statsEl) {
             statsEl.style.display = 'flex';
@@ -28695,84 +28672,116 @@ window.apexFileDropHandler = function(e){
                 '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#ef4444">'+failed.length+'</span><span class="kg-right-stat-l">FAILED</span></div>';
         }
 
-        if (!all.length) { body.innerHTML = '<div class="kg-runs-empty">NO OUTPUT YET</div>'; return; }
+        var CARDS = [
+            { key:'all',    icon:'◉', n:total,        label:'All Results',  sub:'Complete history',       color:'#f59e0b', glow:'rgba(245,158,11,0.18)',  blink:false },
+            { key:'done',   icon:'✓', n:done.length,  label:'Done',         sub:'Completed successfully', color:'#22c55e', glow:'rgba(34,197,94,0.18)',   blink:false },
+            { key:'failed', icon:'✕', n:failed.length,label:'Failed',       sub:'Errored or blocked',     color:'#ef4444', glow:'rgba(239,68,68,0.18)',   blink:failed.length>0 },
+            { key:'domain', icon:'◬', n:domainCount,  label:'By Domain',    sub:'Per-agent breakdown',    color:'#2dd4bf', glow:'rgba(45,212,191,0.18)',  blink:false },
+        ];
 
-        var html = '';
-
-        // 24h completion chart — 12 x 2h buckets
-        var BUCKETS = 12, BUCKET_MS = 7200000;
-        var buckets = [];
-        for (var bi = 0; bi < BUCKETS; bi++) {
-            var bS = now - (BUCKETS - bi) * BUCKET_MS, bE = bS + BUCKET_MS;
-            var bd = 0, bf = 0;
-            all.forEach(function(t){ var ts = new Date(t.updated_at||t.created_at).getTime(); if (ts>=bS&&ts<bE){ if(t.status==='failed') bf++; else bd++; } });
-            buckets.push({ d:bd, f:bf, lbl: new Date(bS).getHours()+'h' });
-        }
-        var maxB = Math.max.apply(null, buckets.map(function(b){ return b.d+b.f; })) || 1;
-
-        html += '<div class="kg-out-sect-hd" style="padding-top:10px"><span>COMPLETIONS · 24H</span></div>';
-        html += '<div class="kg-out-chart">';
-        buckets.forEach(function(b){
-            var h = Math.round(((b.d+b.f)/maxB)*100);
-            html += '<div class="kg-out-bar-col">' +
-                '<div class="kg-out-bar'+(b.f?' has-failed':'')+'" style="height:'+h+'%"></div>' +
-                '<div class="kg-out-bar-lbl">'+b.lbl+'</div>' +
-            '</div>';
-        });
-        html += '</div>';
-
-        // Domain breakdown grid
-        var dMap = {};
-        all.forEach(function(t){
-            var s=(t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug)?t.metadata.dispatch.slug.toLowerCase():'direct';
-            if (!dMap[s]) dMap[s]={done:0,fail:0};
-            if(t.status==='failed') dMap[s].fail++; else dMap[s].done++;
-        });
-        var dList = [];
-        for (var ds in dMap) { dList.push({ slug:ds, done:dMap[ds].done, fail:dMap[ds].fail }); }
-        dList.sort(function(a,b){ return (b.done+b.fail)-(a.done+a.fail); });
-
-        if (dList.length) {
-            html += '<div class="kg-out-sect-hd"><span>DOMAIN BREAKDOWN</span></div>';
-            html += '<div class="kg-out-domain-grid">';
-            dList.slice(0,6).forEach(function(d){
-                var tot = d.done+d.fail;
-                var suc = tot ? Math.round(d.done/tot*100) : 0;
-                var col = _domainColor(d.slug);
-                html += '<div class="kg-out-domain-cell">' +
-                    '<div class="kg-out-domain-cell-name" style="color:'+col+'">'+d.slug.toUpperCase().slice(0,12)+'</div>' +
-                    '<div class="kg-out-domain-cell-val">'+tot+'</div>' +
-                    '<div class="kg-out-domain-cell-sub">'+suc+'% success</div>' +
+        body.innerHTML = '<div class="kg-nav-grid">' +
+            CARDS.map(function(c){
+                return '<div class="kg-nav-card'+(c.blink?' is-live':'')+'" ' +
+                    'style="--nc:'+c.color+';--nc-glow:'+c.glow+'" ' +
+                    'onclick="window._kgOutputDetail(\''+c.key+'\')" ' +
+                    'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgOutputDetail(\''+c.key+'\')}" ' +
+                    'tabindex="0" role="button" aria-label="'+_esc(c.label)+': '+c.n+' items">' +
+                    '<div class="kg-nav-card-icon" aria-hidden="true">'+c.icon+'</div>' +
+                    '<div class="kg-nav-card-body">' +
+                        '<div class="kg-nav-card-label">'+c.label+'</div>' +
+                        '<div class="kg-nav-card-sub">'+c.sub+'</div>' +
+                    '</div>' +
+                    '<div class="kg-nav-card-n" aria-hidden="true">'+c.n+'</div>' +
                 '</div>';
+            }).join('') +
+        '</div>';
+    }
+
+    window._kgOutputDetail = function(key) {
+        var body = document.getElementById('kg-right-body');
+        if (!body) return;
+        var done   = _liveTasks.filter(function(t){ return t.status==='completed'||t.status==='done'; });
+        var failed = _liveTasks.filter(function(t){ return t.status==='failed'; });
+        var all    = done.concat(failed).sort(function(a,b){ return new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at); });
+        var DEFS = {
+            all:    { label:'ALL RESULTS', color:'#f59e0b', items:all },
+            done:   { label:'DONE',        color:'#22c55e', items:done.sort(function(a,b){ return new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at); }) },
+            failed: { label:'FAILED',      color:'#ef4444', items:failed.sort(function(a,b){ return new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at); }) },
+            domain: { label:'BY DOMAIN',   color:'#2dd4bf', items:null },
+        };
+        var s = DEFS[key];
+        if (!s) return;
+
+        var back = '<div class="kg-detail-back" onclick="window._kgOutputGrid()" ' +
+            'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgOutputGrid()}" ' +
+            'tabindex="0" role="button" aria-label="Back to Output">' +
+            '<span class="kg-detail-back-arr" aria-hidden="true">‹</span>' +
+            '<span class="kg-detail-back-lbl">OUTPUT</span>' +
+            '<span class="kg-detail-back-sep" aria-hidden="true">·</span>' +
+            '<span class="kg-detail-back-name" style="color:'+s.color+'">'+s.label+'</span>' +
+        '</div>';
+
+        var content = '';
+        if (key === 'domain') {
+            var dMap = {};
+            all.forEach(function(t){
+                var slug = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug)?t.metadata.dispatch.slug.toLowerCase():'direct';
+                if (!dMap[slug]) dMap[slug]={done:0,fail:0};
+                if(t.status==='failed') dMap[slug].fail++; else dMap[slug].done++;
             });
-            html += '</div>';
+            var dList = [];
+            for (var ds in dMap) { dList.push({ slug:ds, done:dMap[ds].done, fail:dMap[ds].fail }); }
+            dList.sort(function(a,b){ return (b.done+b.fail)-(a.done+a.fail); });
+            var maxD = dList[0] ? dList[0].done+dList[0].fail : 1;
+            if (!dList.length) {
+                content = '<div class="kg-runs-empty">NO DOMAIN DATA YET</div>';
+            } else {
+                content = '<div style="padding:8px 12px 4px">' + dList.map(function(d){
+                    var tot = d.done+d.fail;
+                    var suc = tot ? Math.round(d.done/tot*100) : 0;
+                    var col = _domainColor(d.slug);
+                    var pct = Math.round(tot/maxD*100);
+                    return '<div class="kg-out-perf-row" style="padding:8px 0">' +
+                        '<div class="kg-out-perf-name" style="color:'+col+';width:80px">'+d.slug.toUpperCase().slice(0,10)+'</div>' +
+                        '<div class="kg-out-perf-track" style="flex:1"><div class="kg-out-perf-fill" style="width:'+pct+'%;background:'+col+'"></div></div>' +
+                        '<div style="font:400 10px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.4);width:30px;text-align:right">'+tot+'</div>' +
+                        '<div style="font:400 9px/1 system-ui;color:rgba(255,255,255,0.25);width:52px;text-align:right">'+suc+'% ok</div>' +
+                    '</div>';
+                }).join('') + '</div>';
+            }
+        } else {
+            var list = s.items || [];
+            if (!list.length) {
+                content = '<div class="kg-runs-empty">NONE</div>';
+            } else {
+                content = list.slice(0,20).map(function(t){
+                    var isDone = t.status==='completed'||t.status==='done';
+                    var slug   = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
+                    var col    = slug ? _domainColor(slug) : '#52525b';
+                    var exec   = (t.metadata&&t.metadata.execution)||null;
+                    var reply  = exec ? String(exec.reply||'').trim() : '';
+                    return '<div class="kg-out-feed-card '+(isDone?'done':'failed')+'" style="padding:10px 14px">' +
+                        '<div class="kg-out-feed-icon" style="color:'+(isDone?'#22c55e':'#ef4444')+'">'+(isDone?'✓':'✕')+'</div>' +
+                        '<div class="kg-out-feed-body">' +
+                            '<div class="kg-out-feed-title">'+_esc((t.title||t.id||'—').slice(0,60))+'</div>' +
+                            '<div class="kg-out-feed-route">' +
+                                (slug ? '<span class="kg-out-badge" style="color:'+col+'">'+slug.toUpperCase()+'</span>' : '') +
+                                '<span class="kg-out-feed-time">'+_ago(t.updated_at||t.created_at)+'</span>' +
+                            '</div>' +
+                            (reply ? '<div class="kg-out-feed-preview">'+_esc(reply.slice(0,100))+'</div>' : '') +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+                if (list.length > 20) {
+                    content += '<div style="padding:10px 14px;font:400 10px/1 system-ui;color:rgba(255,255,255,0.2);text-align:center">Showing 20 of '+list.length+'</div>';
+                }
+            }
         }
 
-        // Execution log
-        html += '<div class="kg-out-sect-hd"><span>EXECUTION LOG</span><span style="color:rgba(255,255,255,0.15)">'+all.length+' ENTRIES</span></div>';
-        html += all.slice(0,20).map(function(t){
-            var isDone = t.status==='completed'||t.status==='done';
-            var slug   = (t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug) ? t.metadata.dispatch.slug.toLowerCase() : '';
-            var col    = slug ? _domainColor(slug) : '#52525b';
-            var exec   = (t.metadata&&t.metadata.execution)||null;
-            var office = exec&&exec.office ? exec.office.agent : null;
-            var reply  = exec ? String(exec.reply||'').trim() : '';
-            var ts     = t.updated_at||t.created_at;
-            var tsStr  = ts ? new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
-            return '<div class="kg-out-exec-card">' +
-                '<div class="kg-out-exec-hdr">' +
-                    (slug ? '<span class="kg-out-exec-agent" style="color:'+col+'">'+slug.toUpperCase()+'</span>' : '') +
-                    (office ? '<span style="color:rgba(255,255,255,0.2);font-size:8px">→</span><span class="kg-out-exec-agent" style="color:#38bdf8">'+_esc(office.slice(0,14).toUpperCase())+'</span>' : '') +
-                    '<span class="kg-out-exec-ts">'+tsStr+'</span>' +
-                    '<span class="kg-out-exec-badge '+(isDone?'done':'failed')+'">'+(isDone?'DONE':'FAILED')+'</span>' +
-                '</div>' +
-                '<div class="kg-out-exec-title">'+_esc((t.title||t.id||'—').slice(0,65))+'</div>' +
-                (reply ? '<div class="kg-out-exec-reply">'+_esc(reply.slice(0,110))+'</div>' : '') +
-            '</div>';
-        }).join('');
+        body.innerHTML = back + '<div style="overflow-y:auto;flex:1">'+content+'</div>';
+    };
 
-        body.innerHTML = html;
-    }
+    window._kgOutputGrid = function() { _renderOutputRight(); };
 
     // ── hex → rgb helper for glow ─────────────────────────────────────────────
     function _hexToRgb(hex) {
