@@ -27245,7 +27245,10 @@ window.apexFileDropHandler = function(e){
 }
 @keyframes kg-flow { to { left:200%; } }
 .kg-conn-arrow { font-size:8px; color:rgba(124,108,242,0.4); letter-spacing:0; }
-.kg-node-row { display:flex; flex-direction:row; align-items:center; gap:12px; }
+.kg-node-row { display:flex; flex-direction:row; align-items:flex-start; gap:0; }
+.kg-branch-conn { width:20px; border-top:1px dashed rgba(91,158,255,0.3); flex-shrink:0; margin-top:68px; }
+#kg-node-coding .kg-node-box { border-style:dashed !important; border-color:rgba(91,158,255,0.22) !important; }
+.kg-node:focus-visible .kg-node-box { outline:2px solid var(--kc); outline-offset:3px; }
 .kg-conn-label { font:600 6px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:rgba(124,108,242,0.25); text-transform:uppercase; }
 
 /* ── Side panels ── */
@@ -27448,7 +27451,7 @@ window.apexFileDropHandler = function(e){
     function _dur(ms) { if (!ms) return ''; if (ms < 1000) return ms + 'ms'; return (ms/1000).toFixed(1)+'s'; }
 
     var TIERS = [
-        { id:'input',    label:'INPUT',          icon:'→', color:'#22d3ee', glow:'rgba(34,211,238,0.2)', count:'—', sub:'REQUEST' },
+        { id:'input',    label:'INPUT',          icon:'◎', color:'#22d3ee', glow:'rgba(34,211,238,0.2)', count:'—', sub:'REQUEST' },
         { id:'council',  label:'COUNCIL',        icon:'⬡', color:'#a78bfa', glow:'rgba(167,139,250,0.2)', count:7,  sub:'DELIBERATION' },
         { id:'actions',  label:'ACTIONS',        icon:'◈', color:'#7c6cf2', glow:'rgba(124,108,242,0.2)', count:'—', sub:'PIPELINE' },
         { id:'domain',   label:'DOMAIN AGENTS',  icon:'◬', color:'#2dd4bf', glow:'rgba(45,212,191,0.2)', count:9,  sub:'DISPATCH' },
@@ -27534,6 +27537,10 @@ window.apexFileDropHandler = function(e){
                 '</div>' +
                 '<div class="kg-node-label">' + tier.label + '</div>';
             node.addEventListener('click', function () { _selectTier(tier.id); });
+            node.setAttribute('tabindex', '0');
+            node.setAttribute('role', 'button');
+            node.setAttribute('aria-label', tier.sub + ' ' + tier.label + ', ' + (tier.count === '—' ? 'count pending' : tier.count + ' items'));
+            node.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _selectTier(tier.id); } });
             container.appendChild(node);
 
             // Wrap domain node with sibling coding-pipeline node
@@ -27549,11 +27556,15 @@ window.apexFileDropHandler = function(e){
                 codeNode.innerHTML =
                     '<div class="kg-node-box">' +
                         '<div class="kg-node-state"></div>' +
-                        '<div class="kg-node-icon">⟨/⟩</div>' +
+                        '<div class="kg-node-icon">⌨</div>' +
                         '<div class="kg-node-count" style="color:#5b9eff">8</div>' +
                         '<div class="kg-node-sub" style="color:#5b9eff">STAGES</div>' +
                     '</div>' +
                     '<div class="kg-node-label">CODING PIPELINE</div>';
+                codeNode.setAttribute('tabindex', '0');
+                codeNode.setAttribute('role', 'button');
+                codeNode.setAttribute('aria-label', 'Coding Pipeline: 8 stages');
+                codeNode.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); codeNode.click(); } });
                 codeNode.addEventListener('click', function () {
                     var left = document.getElementById('kg-left');
                     var ltEl = document.getElementById('kg-left-title');
@@ -27570,6 +27581,10 @@ window.apexFileDropHandler = function(e){
                     }
                     _scalePipeline(true);
                 });
+                var branchConn = document.createElement('div');
+                branchConn.className = 'kg-branch-conn';
+                branchConn.setAttribute('aria-hidden', 'true');
+                row.appendChild(branchConn);
                 row.appendChild(codeNode);
                 container.appendChild(row);
             } else {
