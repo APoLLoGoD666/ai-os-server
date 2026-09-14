@@ -27599,7 +27599,25 @@ window.apexFileDropHandler = function(e){
                 codeNode.setAttribute('role', 'button');
                 codeNode.setAttribute('aria-label', 'Coding Pipeline: 8 stages');
                 codeNode.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); codeNode.click(); } });
+                codeNode.setAttribute('aria-pressed', 'false');
                 codeNode.addEventListener('click', function () {
+                    if (codeNode.classList.contains('active')) {
+                        codeNode.classList.remove('active');
+                        codeNode.setAttribute('aria-pressed', 'false');
+                        _activeTier = null;
+                        var lp = document.getElementById('kg-left');
+                        if (lp) lp.classList.remove('open');
+                        _scalePipeline(false);
+                        return;
+                    }
+                    // Deactivate all tier nodes
+                    TIERS.forEach(function (t) {
+                        var n = document.getElementById('kg-node-' + t.id);
+                        if (n) { n.classList.remove('active'); n.setAttribute('aria-pressed', 'false'); }
+                    });
+                    _activeTier = null;
+                    codeNode.classList.add('active');
+                    codeNode.setAttribute('aria-pressed', 'true');
                     var left = document.getElementById('kg-left');
                     var ltEl = document.getElementById('kg-left-title');
                     var acEl = document.getElementById('kg-left-accent');
@@ -27611,7 +27629,7 @@ window.apexFileDropHandler = function(e){
                     if (metaEl) { metaEl.style.display = 'block'; metaEl.innerHTML = '<div class="kg-panel-meta-label">8-STAGE EXECUTION LOOP</div><div class="kg-panel-meta-stat" style="color:#5b9eff">8 STAGES</div>'; }
                     if (body) {
                         var stages = ['Architect','Developer','Reviewer','Validator','Tester','Committer','Reflector','Orchestrator'];
-                        body.innerHTML = _accordion([{ name:'PIPELINE STAGES', color:'#5b9eff', rows: stages.map(function(s,i) { return _entityRow(String(i+1).padStart(2,'0') + ' · ' + s, 'coding stage', 'ready', '#5b9eff'); }) }], true);
+                        body.innerHTML = _accordion([{ name:'PIPELINE STAGES', color:'#5b9eff', rows: stages.map(function(s,i) { return _entityRow(String(i+1).padStart(2,'0') + ' · ' + s, 'coding stage', 'ready', '#5b9eff'); }) }], false);
                     }
                     _scalePipeline(true);
                 });
@@ -27708,6 +27726,8 @@ window.apexFileDropHandler = function(e){
             var n = document.getElementById('kg-node-' + t.id);
             if (n) { n.classList.remove('active'); n.setAttribute('aria-pressed', 'false'); }
         });
+        var cn = document.getElementById('kg-node-coding');
+        if (cn) { cn.classList.remove('active'); cn.setAttribute('aria-pressed', 'false'); }
         _scalePipeline(false);
     };
     window._kgCloseRight = function () {
@@ -27718,6 +27738,8 @@ window.apexFileDropHandler = function(e){
             var n = document.getElementById('kg-node-' + t.id);
             if (n) { n.classList.remove('active'); n.setAttribute('aria-pressed', 'false'); }
         });
+        var cn = document.getElementById('kg-node-coding');
+        if (cn) { cn.classList.remove('active'); cn.setAttribute('aria-pressed', 'false'); }
         _scalePipeline(false);
     };
 
