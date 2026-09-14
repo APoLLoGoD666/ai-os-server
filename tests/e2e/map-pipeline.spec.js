@@ -530,3 +530,72 @@ test('clicking the overlay backdrop closes the info modal', async ({ page }) => 
     await page.waitForTimeout(150);
     await expect(page.locator('#kg-info-overlay')).not.toHaveClass(/visible/);
 });
+
+// ══ MOBILE LAYOUT TESTS (375×812 — iPhone SE viewport) ═══════════════════════
+
+const MOBILE = { width: 375, height: 812 };
+
+async function setupMobile(page) {
+    await page.setViewportSize(MOBILE);
+    await setup(page);
+    await goToMap(page);
+}
+
+// ── 34. Bottom nav visible on mobile ─────────────────────────────────────────
+test('mobile: bottom nav is visible and fixed at bottom', async ({ page }) => {
+    await setupMobile(page);
+    const nav = page.locator('#apexSideNav');
+    await expect(nav).toBeVisible();
+    const pos = await nav.evaluate(el => {
+        const s = window.getComputedStyle(el);
+        return { position: s.position, bottom: s.bottom, flexDir: s.flexDirection };
+    });
+    expect(pos.position).toBe('fixed');
+    expect(pos.bottom).toBe('0px');
+    expect(pos.flexDir).toBe('row');
+});
+
+// ── 35. Four primary nav buttons visible in bottom bar ───────────────────────
+test('mobile: Today, Command, Briefing, Overview buttons visible in bottom nav', async ({ page }) => {
+    await setupMobile(page);
+    for (const id of ['nav-overview', 'nav-command', 'nav-intel', 'nav-test']) {
+        await expect(page.locator('#' + id)).toBeVisible();
+    }
+});
+
+// ── 36. Secondary nav items hidden from bottom bar ───────────────────────────
+test('mobile: domains and system nav buttons hidden from bottom bar', async ({ page }) => {
+    await setupMobile(page);
+    await expect(page.locator('#nav-domains')).toBeHidden();
+    await expect(page.locator('#nav-system')).toBeHidden();
+});
+
+// ── 37. Pipeline canvas is scrollable on mobile ───────────────────────────────
+test('mobile: kg-wrap has overflow-x auto enabling pipeline scroll', async ({ page }) => {
+    await setupMobile(page);
+    const overflow = await page.locator('.kg-wrap').evaluate(el => window.getComputedStyle(el).overflowX);
+    expect(overflow).toBe('auto');
+});
+
+// ── 38. Topbar visible and not overflowing ────────────────────────────────────
+test('mobile: topbar visible and within viewport width', async ({ page }) => {
+    await setupMobile(page);
+    const topbar = page.locator('.topbar');
+    await expect(topbar).toBeVisible();
+    const box = await topbar.boundingBox();
+    expect(box).toBeTruthy();
+    expect(box.width).toBeLessThanOrEqual(MOBILE.width + 1);
+});
+
+// ── 39. No horizontal scroll on body ─────────────────────────────────────────
+test('mobile: body does not have horizontal overflow', async ({ page }) => {
+    await setupMobile(page);
+    const scrollWidth = await page.evaluate(() => document.body.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(MOBILE.width + 4);
+});
+
+// ── 40. Hamburger menu toggle visible on mobile ───────────────────────────────
+test('mobile: hamburger menu toggle is visible', async ({ page }) => {
+    await setupMobile(page);
+    await expect(page.locator('#mobileNavToggle')).toBeVisible();
+});
