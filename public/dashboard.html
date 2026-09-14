@@ -28623,7 +28623,38 @@ window.apexFileDropHandler = function(e){
             }).join('');
         }
 
-        if (running.length) {
+        // Live routing trace: tasks currently in pipeline (in_progress or recently done via dispatch)
+        var routingNow = now - 120000;
+        var traceTasks = _liveTasks.filter(function(t){
+            return (t.status==='in_progress' || ((t.status==='done'||t.status==='completed') && t.updated_at && new Date(t.updated_at).getTime() > routingNow)) && t.metadata && t.metadata.dispatch && t.metadata.dispatch.slug;
+        }).sort(function(a,b){ return new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at); });
+
+        if (traceTasks.length) {
+            html += '<div class="kg-hist-hd" style="color:#7c6cf2">◈ PIPELINE FLOW</div>';
+            html += traceTasks.slice(0,8).map(function(t){
+                var domain = t.metadata.dispatch.slug.toLowerCase();
+                var col = _domainColor(domain);
+                var exec = t.metadata.execution || null;
+                var officeAgent = exec && exec.office ? exec.office.agent : null;
+                var isDone = t.status==='done'||t.status==='completed';
+                // Build stage trail: APPROVED → DOMAIN → [OFFICE] → DONE
+                var stages = [
+                    '<span style="color:#7c6cf2">APPROVED</span>',
+                    '<span style="color:'+col+'">'+domain.toUpperCase()+'</span>',
+                ];
+                if (officeAgent) stages.push('<span style="color:#38bdf8">'+_esc(officeAgent.toUpperCase().slice(0,12))+'</span>');
+                if (isDone) stages.push('<span style="color:#22c55e">✓ DONE</span>');
+                else stages.push('<span style="color:#f59e0b;animation:kg-shimmer 1s ease-in-out infinite">PROCESSING…</span>');
+                return '<div class="kg-hist-item">' +
+                    '<div class="kg-hist-icon" style="color:'+col+'">'+(isDone?'✓':'▶')+'</div>' +
+                    '<div class="kg-hist-body">' +
+                        '<div class="kg-hist-title">' + _esc((t.title||t.id||'—').slice(0,65)) + '</div>' +
+                        '<div class="kg-hist-meta" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">' + stages.join('<span style="color:#444;margin:0 2px">→</span>') + '<span style="color:#555;margin-left:4px">' + _ago(t.updated_at||t.created_at) + '</span></div>' +
+                    '</div></div>';
+            }).join('');
+        }
+
+        if (running.length && !traceTasks.length) {
             html += '<div class="kg-hist-hd">IN PROGRESS</div>';
             html += running.slice(0, 8).map(function(t) {
                 var domain = t.metadata && t.metadata.dispatch ? (t.metadata.dispatch.slug || '') : '';
@@ -28803,9 +28834,15 @@ window.apexFileDropHandler = function(e){
             var actSubEl = document.querySelector('#kg-node-actions .kg-node-sub');
             if (actSubEl) actSubEl.textContent = pendingCount > 0 ? (pendingCount === 1 ? '1 AWAITING' : pendingCount + ' AWAITING') : 'PIPELINE';
 
-            // DOMAIN: working if domain-mapped runs in last 5 min
+            // DOMAIN: glow from liveRuns OR in_progress task dispatches OR recent done dispatches
             var recentDomain = _liveRuns.some(function (r) { return (now2 - new Date(r.created_at).getTime()) < 300000 && !!(window.DA_AGENTS || []).find(function (a) { return a.name === r.agent_name; }); });
-            _setNodeGlow('domain', recentDomain ? 'is-working' : '');
+            var inProgressDomain = _liveTasks.filter(function(t){ return t.status==='in_progress' && t.metadata && t.metadata.dispatch && t.metadata.dispatch.slug; });
+            var recentRoutedDomain = _liveTasks.some(function(t){ return (t.status==='done'||t.status==='completed') && t.metadata&&t.metadata.dispatch&&t.metadata.dispatch.slug && t.updated_at && (now2-new Date(t.updated_at).getTime())<120000; });
+            _setNodeGlow('domain', (recentDomain || inProgressDomain.length || recentRoutedDomain) ? 'is-working' : '');
+            var domainCntEl2 = document.getElementById('kg-count-domain');
+            if (domainCntEl2) domainCntEl2.textContent = inProgressDomain.length || ((window.DA_AGENTS||[]).length || '—');
+            var domainSubEl = document.querySelector('#kg-node-domain .kg-node-sub');
+            if (domainSubEl) domainSubEl.textContent = inProgressDomain.length > 0 ? inProgressDomain.length + ' ROUTING' : 'DISPATCH';
 
             // CODING: working if engineering/coding runs in last 5 min
             var codingNode = document.getElementById('kg-node-coding');
@@ -28815,13 +28852,19 @@ window.apexFileDropHandler = function(e){
                 if (hasCoding) codingNode.classList.add('is-working');
             }
 
-            // OFFICE: working if office agent runs in last 5 min
+            // OFFICE: working from liveRuns OR recent tasks with office delegation
             var recentOffice = _liveRuns.some(function (r) { return (now2 - new Date(r.created_at).getTime()) < 300000 && r.agent_name && allOANames.indexOf(r.agent_name.toLowerCase()) !== -1; });
-            _setNodeGlow('office', recentOffice ? 'is-working' : '');
+            var recentOfficeTask = _liveTasks.some(function(t){ return (t.status==='done'||t.status==='completed') && t.metadata&&t.metadata.execution&&t.metadata.execution.office && t.updated_at && (now2-new Date(t.updated_at).getTime())<120000; });
+            _setNodeGlow('office', (recentOffice || recentOfficeTask) ? 'is-working' : '');
 
             // OUTPUT: working if completed tasks < 5 min ago
             var recentOutput = completed.some(function (t) { return t.updated_at && (now2 - new Date(t.updated_at).getTime()) < 300000; }) || _liveRuns.some(function (r) { return r.success !== false && (now2 - new Date(r.created_at).getTime()) < 300000; });
             _setNodeGlow('output', recentOutput ? 'is-working' : '');
+            var recentCompleted = completed.filter(function(t){ return t.updated_at && (now2-new Date(t.updated_at).getTime())<3600000; });
+            var outCntEl2 = document.getElementById('kg-count-output');
+            if (outCntEl2) outCntEl2.textContent = recentCompleted.length || '—';
+            var outSubEl = document.querySelector('#kg-node-output .kg-node-sub');
+            if (outSubEl) outSubEl.textContent = recentCompleted.length > 0 ? recentCompleted.length + ' DONE' : 'OUTPUT';
 
             // Refresh open panels
             if (_activeTier) {
@@ -28871,10 +28914,16 @@ window.apexFileDropHandler = function(e){
     } else {
         _bootstrap();
     }
-    setTimeout(function () {
-        if (window.activePage === 'test') _fetchLive();
-        setInterval(function () { if (window.activePage === 'test') _fetchLive(); }, 15000);
-    }, 400);
+    // Adaptive poll: 2s when tasks in_progress, 4s when recently done, 15s idle
+    var _kgPollTimer = null;
+    function _schedulePoll() {
+        clearTimeout(_kgPollTimer);
+        var hasActive   = _liveTasks.some(function(t){ return t.status==='in_progress'; });
+        var recentDone  = _liveTasks.some(function(t){ return (t.status==='done'||t.status==='completed') && t.updated_at && (Date.now()-new Date(t.updated_at).getTime())<60000; });
+        var delay = hasActive ? 2000 : recentDone ? 4000 : 15000;
+        _kgPollTimer = setTimeout(function(){ if(window.activePage==='test'){ _fetchLive(); } _schedulePoll(); }, delay);
+    }
+    setTimeout(function(){ if(window.activePage==='test') _fetchLive(); _schedulePoll(); }, 400);
 
     function _kgShowUndo(taskId, title, action) {
         var toast = document.getElementById('kg-undo-toast');
