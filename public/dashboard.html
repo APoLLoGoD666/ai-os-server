@@ -27639,6 +27639,11 @@ window.apexFileDropHandler = function(e){
 
     // ── Select a tier ─────────────────────────────────────────────────────────
     function _selectTier(id) {
+        if (_activeTier === id) {
+            window._kgCloseLeft();
+            window._kgCloseRight();
+            return;
+        }
         _activeTier = id;
         // Update node active states
         TIERS.forEach(function (t) {
@@ -27738,7 +27743,7 @@ window.apexFileDropHandler = function(e){
 
     function _accordion(groups, openAll) {
         return groups.map(function (g, i) {
-            var open = openAll || (i === 0);
+            var open = false;
             var bodyId = 'kg-acc-' + i + '-' + Math.random().toString(36).slice(2,6);
             return '<div>' +
                 '<div class="kg-group-hd' + (open ? ' open' : '') + '" ' +
