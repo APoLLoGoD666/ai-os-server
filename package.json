@@ -49,6 +49,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "electron": "^42.3.0",
     "simple-icons": "^13.21.0"
   },
