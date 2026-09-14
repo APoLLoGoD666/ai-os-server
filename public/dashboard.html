@@ -28080,7 +28080,8 @@ window.apexFileDropHandler = function(e){
         if (['critical','urgent','important'].indexOf(pri) === -1) pri = 'standard';
         var rec = (t.metadata && t.metadata.recommendation) ? t.metadata.recommendation : (t.description || '');
         var irrev = !!(t.metadata && (t.metadata.irreversible === true || t.metadata.reversible === false));
-        var tid = JSON.stringify(String(t.id));
+        var rawId = String(t.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        var tid = "'" + rawId + "'";
         var sid = _esc(String(t.id));
         var agentSlug = (t.metadata && t.metadata.dispatch && t.metadata.dispatch.slug) ? t.metadata.dispatch.slug : '';
         var agentLabel = agentSlug ? agentSlug.replace(/-/g,' ').toUpperCase().slice(0,10) : '';
