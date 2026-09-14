@@ -27765,7 +27765,7 @@ window.apexFileDropHandler = function(e){
                     if (metaEl) { metaEl.style.display = 'block'; metaEl.innerHTML = '<div class="kg-panel-meta-label">8-STAGE EXECUTION LOOP</div><div class="kg-panel-meta-stat" style="color:#5b9eff">8 STAGES</div>'; }
                     if (body) {
                         var stages = ['Architect','Developer','Reviewer','Validator','Tester','Committer','Reflector','Orchestrator'];
-                        body.innerHTML = _accordion([{ name:'PIPELINE STAGES', color:'#5b9eff', rows: stages.map(function(s,i) { return _entityRow(String(i+1).padStart(2,'0') + ' · ' + s, 'coding stage', 'ready', '#5b9eff'); }) }], false);
+                        body.innerHTML = _accordion([{ name:'PIPELINE STAGES', color:'#5b9eff', rows: stages.map(function(s,i) { return _entityRow(String(i+1).padStart(2,'0') + ' · ' + s, 'coding stage', 'ready', '#5b9eff'); }) }], true);
                     }
                     _scalePipeline(true);
                 });
@@ -27902,7 +27902,7 @@ window.apexFileDropHandler = function(e){
 
     function _accordion(groups, openAll) {
         return groups.map(function (g, i) {
-            var open = false;
+            var open = !!openAll;
             var bodyId = 'kg-acc-' + i + '-' + Math.random().toString(36).slice(2,6);
             return '<div>' +
                 '<div class="kg-group-hd' + (open ? ' open' : '') + '" ' +
@@ -27927,7 +27927,7 @@ window.apexFileDropHandler = function(e){
         if (!body) return;
 
         if (tierId === 'input') {
-            body.innerHTML = _accordion([{ name:'INPUT CHANNELS', color:'#22d3ee', rows: _INPUT_TYPES.map(function(t) { return _entityRow(t.label, t.desc, 'ready', '#22d3ee'); }) }], false);
+            body.innerHTML = _accordion([{ name:'INPUT CHANNELS', color:'#22d3ee', rows: _INPUT_TYPES.map(function(t) { return _entityRow(t.label, t.desc, 'ready', '#22d3ee'); }) }], true);
 
         } else if (tierId === 'council') {
             var ceo = COUNCIL_ENTITIES[0];
@@ -27949,7 +27949,7 @@ window.apexFileDropHandler = function(e){
                     '<span class="kg-pinned-badge">' + ceoDot.toUpperCase() + '</span>' +
                 '</div>' +
                 (liveHtml ? '<div style="padding:0 12px 6px">' + liveHtml + '</div>' : '') +
-                _accordion([{ name:'EXECUTIVE COUNCIL', color:'#7c6cf2', rows: execRows }]) +
+                _accordion([{ name:'EXECUTIVE COUNCIL', color:'#7c6cf2', rows: execRows }], true) +
                 '<div class="kg-convene">' +
                     '<div class="kg-convene-lbl">CONVENE DELIBERATION</div>' +
                     '<textarea class="kg-convene-inp" id="kg-convene-inp" rows="3" placeholder="Submit a question to the council…" aria-label="Question for council"></textarea>' +

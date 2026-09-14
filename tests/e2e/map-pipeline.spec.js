@@ -310,25 +310,26 @@ test('DOMAIN AGENTS node opens right panel', async ({ page }) => {
     await expect(page.locator('#kg-right-title')).toHaveText('RECENT RUNS');
 });
 
-// ── 24. Accordions start collapsed ────────────────────────────────────────────
-test('accordion groups start collapsed (height=0)', async ({ page }) => {
+// ── 24. Council/Input/Coding accordions open by default ───────────────────────
+test('council accordion opens expanded by default', async ({ page }) => {
     await setup(page);
     await goToMap(page);
     await clickNode(page, '#kg-node-council');
     await page.waitForSelector('#kg-left-body .kg-group-body', { timeout:5000, state:'attached' });
     const h = await page.locator('#kg-left-body .kg-group-body').first().evaluate(el => el.style.height);
-    expect(h).toBe('0px');
+    expect(h).toBe('auto');
 });
 
-// ── 25. Accordion expands on click ────────────────────────────────────────────
-test('clicking accordion header expands its body and sets aria-expanded=true', async ({ page }) => {
+// ── 25. Accordion collapses on click when open ────────────────────────────────
+test('clicking open accordion header collapses it', async ({ page }) => {
     await setup(page);
     await goToMap(page);
     await clickNode(page, '#kg-node-council');
     await page.waitForSelector('#kg-left-body .kg-group-hd', { timeout:5000 });
-    const hd = page.locator('#kg-left-body .kg-group-hd').first();
+    // Header starts open — click once to collapse
     await page.evaluate(() => { var hd = document.querySelector('#kg-left-body .kg-group-hd'); if(hd) hd.click(); });
-    await page.waitForTimeout(150);
-    await expect(hd).toHaveClass(/open/);
-    await expect(hd).toHaveAttribute('aria-expanded', 'true');
+    await page.waitForTimeout(250);
+    const hd = page.locator('#kg-left-body .kg-group-hd').first();
+    await expect(hd).not.toHaveClass(/open/);
+    await expect(hd).toHaveAttribute('aria-expanded', 'false');
 });
