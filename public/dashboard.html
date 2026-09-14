@@ -27245,8 +27245,7 @@ window.apexFileDropHandler = function(e){
 }
 @keyframes kg-flow { to { left:200%; } }
 .kg-conn-arrow { font-size:8px; color:rgba(124,108,242,0.4); letter-spacing:0; }
-.kg-node-row { display:flex; flex-direction:column; align-items:center; gap:10px; }
-.kg-code-branch { background:rgba(12,12,20,0.9); border:1px solid rgba(91,158,255,0.12); border-radius:12px; padding:10px 12px; width:136px; backdrop-filter:blur(12px); }
+.kg-node-row { display:flex; flex-direction:row; align-items:center; gap:12px; }
 .kg-conn-label { font:600 6px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:rgba(124,108,242,0.25); text-transform:uppercase; }
 
 /* ── Side panels ── */
@@ -27537,23 +27536,41 @@ window.apexFileDropHandler = function(e){
             node.addEventListener('click', function () { _selectTier(tier.id); });
             container.appendChild(node);
 
-            // Wrap domain node with coding-pipeline branch
+            // Wrap domain node with sibling coding-pipeline node
             if (tier.id === 'domain') {
                 var row = document.createElement('div');
                 row.className = 'kg-node-row';
                 row.appendChild(node);
-                var branch = document.createElement('div');
-                branch.className = 'kg-code-branch';
-                var stages = ['Architect','Developer','Reviewer','Validator','Tester','Committer','Reflector','Orchestrator'];
-                branch.innerHTML =
-                    '<div style="font:700 7px/1 \'JetBrains Mono\',monospace;letter-spacing:.14em;color:#5b9eff;opacity:.8;margin-bottom:8px">CODING PIPELINE</div>' +
-                    stages.map(function(s,i){
-                        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
-                            '<span style="font:700 7px/1 \'JetBrains Mono\',monospace;color:#5b9eff;opacity:.45;min-width:12px">' + String(i+1).padStart(2,'0') + '</span>' +
-                            '<span style="font:500 9px/1 \'Inter\',sans-serif;color:rgba(200,215,230,0.75)">' + s + '</span>' +
-                        '</div>';
-                    }).join('');
-                row.appendChild(branch);
+                var codeNode = document.createElement('div');
+                codeNode.className = 'kg-node';
+                codeNode.id = 'kg-node-coding';
+                codeNode.style.setProperty('--kc', '#5b9eff');
+                codeNode.style.setProperty('--kc-glow', 'rgba(91,158,255,0.2)');
+                codeNode.innerHTML =
+                    '<div class="kg-node-box">' +
+                        '<div class="kg-node-state"></div>' +
+                        '<div class="kg-node-icon">⟨/⟩</div>' +
+                        '<div class="kg-node-count" style="color:#5b9eff">8</div>' +
+                        '<div class="kg-node-sub" style="color:#5b9eff">STAGES</div>' +
+                    '</div>' +
+                    '<div class="kg-node-label">CODING PIPELINE</div>';
+                codeNode.addEventListener('click', function () {
+                    var left = document.getElementById('kg-left');
+                    var ltEl = document.getElementById('kg-left-title');
+                    var acEl = document.getElementById('kg-left-accent');
+                    var metaEl = document.getElementById('kg-left-meta');
+                    var body = document.getElementById('kg-left-body');
+                    if (left) left.classList.add('open');
+                    if (ltEl) ltEl.textContent = 'CODING PIPELINE';
+                    if (acEl) acEl.style.background = 'linear-gradient(90deg,#5b9eff,transparent)';
+                    if (metaEl) { metaEl.style.display = 'block'; metaEl.innerHTML = '<div class="kg-panel-meta-label">8-STAGE EXECUTION LOOP</div><div class="kg-panel-meta-stat" style="color:#5b9eff">8 STAGES</div>'; }
+                    if (body) {
+                        var stages = ['Architect','Developer','Reviewer','Validator','Tester','Committer','Reflector','Orchestrator'];
+                        body.innerHTML = _accordion([{ name:'PIPELINE STAGES', color:'#5b9eff', rows: stages.map(function(s,i) { return _entityRow(String(i+1).padStart(2,'0') + ' · ' + s, 'coding stage', 'ready', '#5b9eff'); }) }], true);
+                    }
+                    _scalePipeline(true);
+                });
+                row.appendChild(codeNode);
                 container.appendChild(row);
             } else {
                 container.appendChild(node);
