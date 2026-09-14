@@ -599,3 +599,40 @@ test('mobile: hamburger menu toggle is visible', async ({ page }) => {
     await setupMobile(page);
     await expect(page.locator('#mobileNavToggle')).toBeVisible();
 });
+
+// ── 41. Nav icons are ≥20px on mobile ────────────────────────────────────────
+test('mobile: nav icon font-size is at least 20px', async ({ page }) => {
+    await setupMobile(page);
+    const size = await page.locator('#apexSideNav .nav-icon').first().evaluate(el => parseFloat(window.getComputedStyle(el).fontSize));
+    expect(size).toBeGreaterThanOrEqual(20);
+});
+
+// ── 42. Nav labels are ≥10px on mobile ───────────────────────────────────────
+test('mobile: nav label font-size is at least 10px', async ({ page }) => {
+    await setupMobile(page);
+    const size = await page.locator('#apexSideNav .nav-label').first().evaluate(el => parseFloat(window.getComputedStyle(el).fontSize));
+    expect(size).toBeGreaterThanOrEqual(10);
+});
+
+// ── 43. Send and mic buttons are ≥44px touch targets ─────────────────────────
+test('mobile: send-btn and mic-btn meet 44px touch target', async ({ page }) => {
+    await setupMobile(page);
+    const sendH = await page.locator('.input-zone .send-btn').first().evaluate(el => parseFloat(window.getComputedStyle(el).height));
+    expect(sendH).toBeGreaterThanOrEqual(44);
+    const micH = await page.locator('#micBtn').evaluate(el => parseFloat(window.getComputedStyle(el).height));
+    expect(micH).toBeGreaterThanOrEqual(44);
+});
+
+// ── 44. Chat input has font-size ≥16px (prevents iOS zoom) ───────────────────
+test('mobile: chat-input font-size prevents iOS zoom', async ({ page }) => {
+    await setupMobile(page);
+    const size = await page.locator('#chatInput').evaluate(el => parseFloat(window.getComputedStyle(el).fontSize));
+    expect(size).toBeGreaterThanOrEqual(16);
+});
+
+// ── 45. Noisy input controls hidden on mobile ─────────────────────────────────
+test('mobile: clear-chat and auto-listen hidden on mobile', async ({ page }) => {
+    await setupMobile(page);
+    await expect(page.locator('.clear-chat-btn')).toBeHidden();
+    await expect(page.locator('.auto-listen-btn')).toBeHidden();
+});
