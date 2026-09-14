@@ -27459,30 +27459,70 @@ window.apexFileDropHandler = function(e){
 .kg-input-live-dot { width:5px; height:5px; border-radius:50%; background:#22d3ee; box-shadow:0 0 6px #22d3ee; animation:kg-blink 0.8s ease-in-out infinite; flex-shrink:0; }
 
 /* ── Task action cards (ACTIONS left panel) ── */
-.kg-task-card { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
+.kg-task-card { position:relative; padding:10px 12px 10px 16px; border-bottom:1px solid rgba(255,255,255,0.04); transition:background 150ms; }
+.kg-task-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:0 2px 2px 0; background:rgba(124,108,242,0.4); }
+.kg-task-card.pri-critical::before  { background:#ef4444; box-shadow:0 0 8px rgba(239,68,68,0.5); }
+.kg-task-card.pri-urgent::before    { background:#f59e0b; box-shadow:0 0 8px rgba(245,158,11,0.4); }
+.kg-task-card.pri-important::before { background:#22d3ee; }
+.kg-task-card.pri-standard::before  { background:rgba(124,108,242,0.4); }
+.kg-task-card.is-focus { background:rgba(255,255,255,0.025); }
+.kg-task-card.pri-critical.is-focus { background:rgba(239,68,68,0.06); }
+.kg-task-card.is-irrev { background-image:repeating-linear-gradient(135deg,rgba(245,158,11,0.04) 0px,rgba(245,158,11,0.04) 1px,transparent 1px,transparent 8px); }
+.kg-task-card.is-preview { padding:7px 12px 7px 16px; }
 .kg-task-card:last-child { border-bottom:none; }
 .kg-task-hd { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
 .kg-task-pri { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.08em; padding:2px 5px; border-radius:3px; flex-shrink:0; }
-.kg-task-pri.critical  { background:rgba(239,68,68,0.15);  color:#ef4444; }
-.kg-task-pri.urgent    { background:rgba(245,158,11,0.15); color:#f59e0b; }
-.kg-task-pri.important { background:rgba(34,211,238,0.12); color:#22d3ee; }
-.kg-task-pri.standard  { background:rgba(124,108,242,0.12);color:#7c6cf2; }
+.kg-task-pri.critical  { background:rgba(239,68,68,0.18);  color:#ef4444; }
+.kg-task-pri.urgent    { background:rgba(245,158,11,0.18); color:#f59e0b; }
+.kg-task-pri.important { background:rgba(34,211,238,0.14); color:#22d3ee; }
+.kg-task-pri.standard  { background:rgba(124,108,242,0.14);color:#a78bfa; }
+.kg-task-agent { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.06em; padding:2px 5px; border-radius:3px; flex-shrink:0; opacity:.85; }
+.kg-task-blocking { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.06em; padding:2px 6px; border-radius:3px; background:rgba(239,68,68,0.18); color:#ef4444; border:1px solid rgba(239,68,68,0.3); animation:kg-blink 1.2s ease-in-out infinite; }
 .kg-task-time { font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.3); margin-left:auto; flex-shrink:0; }
-.kg-task-title { font:600 12px/1.3 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.85); margin-bottom:4px; }
-.kg-task-desc  { font:400 10px/1.4 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.4); margin-bottom:6px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.kg-task-title { font:600 12px/1.3 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.88); margin-bottom:4px; }
+.kg-task-card.pri-critical .kg-task-title { font-size:13px; }
+.kg-task-card.is-preview .kg-task-title { font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:0; }
+.kg-task-desc  { font:400 10px/1.4 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.42); margin-bottom:6px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .kg-task-warn  { font:600 9px/1 'JetBrains Mono',monospace; color:#f59e0b; margin-bottom:6px; letter-spacing:.04em; }
-.kg-task-btns  { display:flex; gap:5px; }
-.kg-act-btn { flex:1; padding:6px 8px; border-radius:4px; border:1px solid; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.08em; cursor:pointer; transition:all 150ms; min-height:28px; background:transparent; }
-.kg-act-btn.approve { border-color:rgba(34,197,94,0.35); color:#22c55e; }
+.kg-task-progress { height:2px; background:rgba(34,197,94,0.15); border-radius:1px; margin-bottom:7px; overflow:hidden; }
+.kg-task-progress-fill { height:100%; background:#22c55e; border-radius:1px; background:linear-gradient(90deg,#22c55e,#34d399,#22c55e); background-size:200% 100%; animation:kg-shimmer 1.4s ease-in-out infinite; }
+@keyframes kg-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.kg-task-btns  { display:flex; gap:5px; align-items:center; }
+.kg-act-btn { flex:1; padding:6px 8px; border-radius:4px; border:1px solid; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.08em; cursor:pointer; transition:all 150ms; min-height:30px; background:transparent; }
+.kg-act-btn.approve { border-color:rgba(34,197,94,0.35); color:#22c55e; flex:2; }
 .kg-act-btn.approve:hover { background:rgba(34,197,94,0.12); border-color:#22c55e; }
-.kg-act-btn.reject  { border-color:rgba(239,68,68,0.25); color:#ef4444; }
-.kg-act-btn.reject:hover  { background:rgba(239,68,68,0.1); border-color:#ef4444; }
+.kg-act-btn.reject  { border-color:rgba(239,68,68,0.22); color:rgba(239,68,68,0.7); flex:1; }
+.kg-act-btn.reject:hover  { background:rgba(239,68,68,0.09); border-color:rgba(239,68,68,0.6); color:#ef4444; }
 .kg-act-btn:disabled { opacity:.4; cursor:default; }
+.kg-kbd { font:700 8px/1 'JetBrains Mono',monospace; padding:1px 4px; border-radius:3px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.35); margin-left:4px; }
 .kg-task-reject-area { margin-top:6px; display:none; }
 .kg-task-reject-area.open { display:block; }
 .kg-task-reject-inp { width:100%; box-sizing:border-box; background:rgba(255,255,255,0.04); border:1px solid rgba(239,68,68,0.25); border-radius:4px; color:rgba(255,255,255,0.8); font:400 10px/1.4 system-ui,sans-serif; padding:6px 8px; resize:none; margin-bottom:5px; }
 .kg-task-reject-inp::placeholder { color:rgba(255,255,255,0.2); }
-/* ── Notification cards ── */
+.kg-task-checkbox { width:14px; height:14px; border-radius:3px; border:1px solid rgba(255,255,255,0.18); background:transparent; cursor:pointer; flex-shrink:0; accent-color:#7c6cf2; margin-right:2px; }
+/* ── All-clear state ── */
+.kg-all-clear { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:32px 16px; }
+.kg-all-clear-dot { width:10px; height:10px; border-radius:50%; background:#22c55e; box-shadow:0 0 12px #22c55e; animation:kg-blink 2.5s ease-in-out infinite; }
+.kg-all-clear-lbl { font:600 10px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:rgba(34,197,94,0.7); }
+.kg-all-clear-sub { font:400 10px/1.3 system-ui,sans-serif; color:rgba(255,255,255,0.25); text-align:center; }
+/* ── Bulk approve bar ── */
+.kg-bulk-bar { position:sticky; bottom:0; padding:8px 12px; background:rgba(26,26,26,0.96); backdrop-filter:blur(8px); border-top:1px solid rgba(124,108,242,0.2); display:none; align-items:center; gap:8px; }
+.kg-bulk-bar.visible { display:flex; }
+.kg-bulk-lbl { font:400 10px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.5); flex:1; }
+.kg-bulk-btn { padding:5px 10px; border-radius:4px; border:1px solid rgba(34,197,94,0.4); background:rgba(34,197,94,0.1); color:#22c55e; font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.08em; cursor:pointer; transition:all 150ms; }
+.kg-bulk-btn:hover { background:rgba(34,197,94,0.18); }
+/* ── Undo snackbar ── */
+.kg-undo-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(60px); background:rgba(26,26,26,0.96); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 16px; display:flex; align-items:center; gap:12px; font:400 11px/1 system-ui,sans-serif; color:rgba(255,255,255,0.8); z-index:9900; transition:transform 250ms cubic-bezier(0,0,0.2,1); pointer-events:none; white-space:nowrap; }
+.kg-undo-toast.visible { transform:translateX(-50%) translateY(0); pointer-events:auto; }
+.kg-undo-btn { font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.08em; color:#a78bfa; background:none; border:none; cursor:pointer; padding:0; }
+/* ── Decision history (right panel) ── */
+.kg-hist-hd { padding:8px 12px 4px; font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:rgba(255,255,255,0.22); }
+.kg-hist-item { display:flex; align-items:flex-start; gap:8px; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.03); }
+.kg-hist-icon { font:700 10px/1 monospace; flex-shrink:0; margin-top:2px; }
+.kg-hist-body { flex:1; min-width:0; }
+.kg-hist-title { font:400 11px/1.4 system-ui,sans-serif; color:rgba(255,255,255,0.72); margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.kg-hist-meta { font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.25); }
+/* ── Notification cards (kept for non-actions panels) ── */
 .kg-notif-hd { padding:8px 12px 4px; font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:rgba(255,255,255,0.22); }
 .kg-notif-card { display:flex; align-items:flex-start; gap:9px; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.03); }
 .kg-notif-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.1); flex-shrink:0; margin-top:4px; }
@@ -27569,6 +27609,10 @@ window.apexFileDropHandler = function(e){
 
     var _inputFilter = 'all';
     var _liveNotifs = [];
+    var _kgDecisionHistory = [];
+    var _kgUndoTimer = null;
+    var _kgPendingUndo = null;
+    var _kgSelectedTasks = {};
 
     var COUNCIL_ENTITIES = [
         { id:'ceo', name:'CEO', role:'Chief Executive Officer',    color:'#a78bfa' },
@@ -27626,6 +27670,44 @@ window.apexFileDropHandler = function(e){
             '</div>';
 
         pw.appendChild(pg);
+
+        // Undo snackbar (injected once into body)
+        if (!document.getElementById('kg-undo-toast')) {
+            var toast = document.createElement('div');
+            toast.id = 'kg-undo-toast';
+            toast.className = 'kg-undo-toast';
+            toast.setAttribute('role', 'status');
+            toast.setAttribute('aria-live', 'polite');
+            toast.innerHTML = '<span id="kg-undo-toast-msg"></span><button class="kg-undo-btn" onclick="window._kgUndoDecision()" aria-label="Undo last decision">UNDO</button>';
+            document.body.appendChild(toast);
+        }
+
+        // Keyboard shortcuts for ACTIONS panel
+        document.addEventListener('keydown', function(e) {
+            if (_activeTier !== 'actions') return;
+            var tag = (e.target.tagName || '').toLowerCase();
+            if (tag === 'textarea' || tag === 'input' || e.target.isContentEditable) return;
+            var focusCard = document.querySelector('#kg-left-body .kg-task-card.is-focus');
+            if (!focusCard) return;
+            var idStr = focusCard.id.replace('kg-tc-', '');
+            if (e.key === 'a' || e.key === 'A') {
+                e.preventDefault();
+                var appBtn = focusCard.querySelector('.kg-act-btn.approve');
+                if (appBtn && !appBtn.disabled) window._kgApprove(idStr, appBtn);
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                window._kgRejectPrompt(idStr);
+                var ta = document.getElementById('kg-reject-' + idStr);
+                if (ta) { var inp = ta.querySelector('textarea'); if (inp) setTimeout(function(){ inp.focus(); }, 50); }
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                var awCards = Array.from(document.querySelectorAll('#kg-left-body .kg-task-card'));
+                var idx = awCards.indexOf(focusCard);
+                var next = awCards[idx + 1];
+                if (next) { var nid = next.id.replace('kg-tc-',''); window._kgFocusCard(nid); }
+            }
+        });
+
         _buildPipeline();
     }
 
@@ -27930,25 +28012,94 @@ window.apexFileDropHandler = function(e){
             }), true);
 
         } else if (tierId === 'actions') {
-            if (!_liveTasks.length) { body.innerHTML = '<div class="kg-runs-empty">NO TASKS</div>'; return; }
-            var stMap = { completed:'ready', done:'ready', failed:'error', in_progress:'working', pending:'idle', awaiting_approval:'idle', approval_required:'idle' };
             var _awTasks  = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'; });
             var _actTasks = _liveTasks.filter(function(t){ return t.status==='in_progress'; });
             var _qTasks   = _liveTasks.filter(function(t){ return t.status==='pending'; });
             var _resTasks = _liveTasks.filter(function(t){ return t.status==='completed'||t.status==='done'||t.status==='failed'; });
-            var _taskGroups = [];
-            if (_awTasks.length)  _taskGroups.push({ name:'AWAITING APPROVAL', color:'#7c6cf2', rows:_awTasks.slice(0,10).map(function(t){ return _taskCard(t); }) });
-            if (_actTasks.length) _taskGroups.push({ name:'ACTIVE',            color:'#22c55e', rows:_actTasks.slice(0,15).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38),'IN PROGRESS','working','#22c55e'); }) });
-            if (_qTasks.length)   _taskGroups.push({ name:'QUEUED',            color:'#f59e0b', rows:_qTasks.slice(0,15).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38),'PENDING','idle','#f59e0b'); }) });
-            if (_resTasks.length) _taskGroups.push({ name:'RESOLVED',          color:'#52525b', rows:_resTasks.slice(0,15).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38),stMap[t.status]||'idle',stMap[t.status]||'idle','#52525b'); }) });
-            body.innerHTML = _taskGroups.length ? _accordion(_taskGroups) : '<div class="kg-runs-empty">NO TASKS</div>';
+
+            if (!_awTasks.length && !_actTasks.length && !_qTasks.length) {
+                body.innerHTML = '<div class="kg-all-clear">' +
+                    '<div class="kg-all-clear-dot"></div>' +
+                    '<div class="kg-all-clear-lbl">SYSTEM CLEAR</div>' +
+                    '<div class="kg-all-clear-sub">Operating autonomously<br>No decisions required</div>' +
+                '</div>';
+                return;
+            }
+
+            var priWeight = { critical:0, urgent:1, important:2, standard:3 };
+            _awTasks = _awTasks.slice().sort(function(a,b){
+                var pa = a.metadata&&a.metadata.priority ? String(a.metadata.priority.tier||a.metadata.priority).toLowerCase().split(' ')[0] : 'standard';
+                var pb = b.metadata&&b.metadata.priority ? String(b.metadata.priority.tier||b.metadata.priority).toLowerCase().split(' ')[0] : 'standard';
+                return (priWeight[pa]||3) - (priWeight[pb]||3);
+            });
+
+            var awHtml = '';
+            if (_awTasks.length) {
+                awHtml += '<div class="kg-group-hd open" aria-expanded="true" style="--gc:#7c6cf2">' +
+                    '<span class="kg-group-name" style="color:#7c6cf2">AWAITING APPROVAL</span>' +
+                    '<span class="kg-group-count">' + _awTasks.length + '</span>' +
+                '</div>' +
+                '<div class="kg-group-body" style="height:auto">' +
+                    _awTasks.slice(0,10).map(function(t,i){ return _taskCard(t, i===0); }).join('') +
+                    (_awTasks.length > 1 ?
+                        '<div class="kg-bulk-bar' + (Object.keys(_kgSelectedTasks).length ? ' visible' : '') + '" id="kg-bulk-bar">' +
+                        '<span class="kg-bulk-lbl" id="kg-bulk-lbl">Select tasks to bulk approve</span>' +
+                        '<button class="kg-bulk-btn" onclick="window._kgBulkApprove()" aria-label="Bulk approve selected">✓ APPROVE ALL</button>' +
+                        '</div>' : '') +
+                '</div>';
+            }
+
+            var actHtml = '';
+            if (_actTasks.length) {
+                actHtml = '<div class="kg-group-hd" aria-expanded="false" style="--gc:#22c55e">' +
+                    '<span class="kg-group-name" style="color:#22c55e">ACTIVE</span>' +
+                    '<span class="kg-group-count">' + _actTasks.length + '</span>' +
+                '</div>' +
+                '<div class="kg-group-body" style="height:0">' +
+                    _actTasks.slice(0,15).map(function(t){
+                        return '<div class="kg-task-card">' +
+                            '<div class="kg-task-hd">' +
+                                '<span class="kg-task-title" style="margin-bottom:0;flex:1">' + _esc((t.title||t.id||'—').slice(0,60)) + '</span>' +
+                                '<span class="kg-task-time">' + _ago(t.created_at) + '</span>' +
+                            '</div>' +
+                            '<div class="kg-task-progress"><div class="kg-task-progress-fill"></div></div>' +
+                        '</div>';
+                    }).join('') +
+                '</div>';
+            }
+
+            var stMap = { completed:'ready', done:'ready', failed:'error' };
+            var qHtml = '';
+            if (_qTasks.length) {
+                qHtml = '<div class="kg-group-hd" aria-expanded="false" style="--gc:#f59e0b">' +
+                    '<span class="kg-group-name" style="color:#f59e0b">QUEUED</span>' +
+                    '<span class="kg-group-count">' + _qTasks.length + '</span>' +
+                '</div>' +
+                '<div class="kg-group-body" style="height:0">' +
+                    _qTasks.slice(0,15).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38),'PENDING','idle','#f59e0b'); }).join('') +
+                '</div>';
+            }
+
+            var resHtml = '';
+            if (_resTasks.length) {
+                resHtml = '<div class="kg-group-hd" aria-expanded="false" style="--gc:#52525b">' +
+                    '<span class="kg-group-name" style="color:#888">RESOLVED</span>' +
+                    '<span class="kg-group-count">' + _resTasks.length + '</span>' +
+                '</div>' +
+                '<div class="kg-group-body" style="height:0">' +
+                    _resTasks.slice(0,15).map(function(t){ return _entityRow((t.title||t.id||'?').slice(0,38),stMap[t.status]||'idle',stMap[t.status]||'idle','#52525b'); }).join('') +
+                '</div>';
+            }
+
+            body.innerHTML = '<div class="kg-accordion">' + awHtml + actHtml + qHtml + resHtml + '</div>';
+            _reAttachAccordion(body);
 
         } else if (tierId === 'output') {
             _renderOutputLeft();
         }
     }
 
-    function _taskCard(t) {
+    function _taskCard(t, isFocus) {
         var priRaw = (t.metadata && t.metadata.priority) ? (t.metadata.priority.tier || t.metadata.priority) : 'standard';
         if (typeof priRaw === 'object') priRaw = 'standard';
         var pri = String(priRaw).toLowerCase().split(' ')[0];
@@ -27956,23 +28107,72 @@ window.apexFileDropHandler = function(e){
         var rec = (t.metadata && t.metadata.recommendation) ? t.metadata.recommendation : (t.description || '');
         var irrev = !!(t.metadata && (t.metadata.irreversible === true || t.metadata.reversible === false));
         var tid = JSON.stringify(String(t.id));
-        return '<div class="kg-task-card" id="kg-tc-' + _esc(String(t.id)) + '">' +
+        var sid = _esc(String(t.id));
+        var agentSlug = (t.metadata && t.metadata.dispatch && t.metadata.dispatch.slug) ? t.metadata.dispatch.slug : '';
+        var agentLabel = agentSlug ? agentSlug.replace(/-/g,' ').toUpperCase().slice(0,10) : '';
+        var agentColor = agentSlug ? _domainColor(agentSlug.toLowerCase()) : '#7c6cf2';
+        var ageMs = t.created_at ? (Date.now() - new Date(t.created_at).getTime()) : 0;
+        var isBlocking = ageMs > 1800000; // 30 min
+        var priColors = { critical:'#ef4444', urgent:'#f59e0b', important:'#22d3ee', standard:'#7c6cf2' };
+
+        if (!isFocus) {
+            return '<div class="kg-task-card pri-' + pri + ' is-preview" id="kg-tc-' + sid + '" ' +
+                'onclick="window._kgFocusCard(' + tid + ')" style="cursor:pointer">' +
+                '<div style="display:flex;align-items:center;gap:6px;">' +
+                    '<span class="kg-task-pri ' + pri + '">' + pri.toUpperCase() + '</span>' +
+                    (agentLabel ? '<span class="kg-task-agent" style="background:' + agentColor + '22;color:' + agentColor + '">' + agentLabel + '</span>' : '') +
+                    '<span class="kg-task-title" style="flex:1;margin-bottom:0">' + _esc((t.title || t.id || '—').slice(0, 60)) + '</span>' +
+                    '<span class="kg-task-time">' + _ago(t.created_at) + '</span>' +
+                '</div>' +
+            '</div>';
+        }
+
+        return '<div class="kg-task-card pri-' + pri + ' is-focus' + (irrev ? ' is-irrev' : '') + '" id="kg-tc-' + sid + '">' +
             '<div class="kg-task-hd">' +
                 '<span class="kg-task-pri ' + pri + '">' + pri.toUpperCase() + '</span>' +
+                (agentLabel ? '<span class="kg-task-agent" style="background:' + agentColor + '22;color:' + agentColor + '">' + agentLabel + '</span>' : '') +
+                (isBlocking ? '<span class="kg-task-blocking">⚡ BLOCKING</span>' : '') +
                 '<span class="kg-task-time">' + _ago(t.created_at) + '</span>' +
             '</div>' +
             '<div class="kg-task-title">' + _esc((t.title || t.id || '—').slice(0, 80)) + '</div>' +
             (rec ? '<div class="kg-task-desc">' + _esc(rec.slice(0, 160)) + '</div>' : '') +
-            (irrev ? '<div class="kg-task-warn">⚠ CANNOT BE UNDONE</div>' : '') +
+            (irrev ? '<div class="kg-task-warn">⚠ IRREVERSIBLE — cannot be undone</div>' : '') +
             '<div class="kg-task-btns">' +
-                '<button class="kg-act-btn approve" onclick="window._kgApprove(' + tid + ',this)" aria-label="Approve">✓ APPROVE</button>' +
-                '<button class="kg-act-btn reject"  onclick="window._kgRejectPrompt(' + tid + ',this)" aria-label="Reject">✕ REJECT</button>' +
+                '<button class="kg-act-btn approve" onclick="window._kgApprove(' + tid + ',this)" aria-label="Approve task">✓ APPROVE<span class="kg-kbd">A</span></button>' +
+                '<button class="kg-act-btn reject"  onclick="window._kgRejectPrompt(' + tid + ')" aria-label="Reject task">✕ REJECT<span class="kg-kbd">R</span></button>' +
             '</div>' +
-            '<div class="kg-task-reject-area" id="kg-reject-' + _esc(String(t.id)) + '">' +
-                '<textarea class="kg-task-reject-inp" rows="2" placeholder="Reason (optional)…"></textarea>' +
-                '<button class="kg-act-btn reject" style="width:100%;margin-top:0" onclick="window._kgRejectConfirm(' + tid + ',this)">CONFIRM REJECT</button>' +
+            '<div class="kg-task-reject-area" id="kg-reject-' + sid + '">' +
+                '<textarea class="kg-task-reject-inp" rows="2" placeholder="Reason (optional)…" aria-label="Rejection reason"></textarea>' +
+                '<button class="kg-act-btn reject" style="width:100%;margin-top:0;flex:none" onclick="window._kgRejectConfirm(' + tid + ',this)">CONFIRM REJECT</button>' +
             '</div>' +
         '</div>';
+    }
+
+    function _reAttachAccordion(container) {
+        var headers = container.querySelectorAll('.kg-group-hd');
+        headers.forEach(function(hd) {
+            if (hd._kgBound) return;
+            hd._kgBound = true;
+            var body = hd.nextElementSibling;
+            if (!body || !body.classList.contains('kg-group-body')) return;
+            hd.style.cursor = 'pointer';
+            hd.tabIndex = 0;
+            hd.addEventListener('click', function() {
+                var open = hd.classList.contains('open');
+                if (open) {
+                    hd.classList.remove('open');
+                    hd.setAttribute('aria-expanded', 'false');
+                    body.style.height = body.scrollHeight + 'px';
+                    requestAnimationFrame(function(){ body.style.height = '0px'; });
+                } else {
+                    hd.classList.add('open');
+                    hd.setAttribute('aria-expanded', 'true');
+                    body.style.height = body.scrollHeight + 'px';
+                    body.addEventListener('transitionend', function onEnd(){ body.style.height = 'auto'; body.removeEventListener('transitionend', onEnd); }, { once: true });
+                }
+            });
+            hd.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); hd.click(); } });
+        });
     }
 
     function _entityRow(name, role, state, color) {
@@ -28381,45 +28581,70 @@ window.apexFileDropHandler = function(e){
         var body    = document.getElementById('kg-right-body');
         var statsEl = document.getElementById('kg-right-stats');
         if (!body) return;
-        var pending = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'; });
-        var running = _liveTasks.filter(function(t){ return t.status==='in_progress'; });
-        var notifs  = (_liveNotifs || []).slice(0, 25);
-        var unread  = notifs.filter(function(n){ return !n.read_at; });
+        var now = Date.now();
+        var pending   = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'; });
+        var running   = _liveTasks.filter(function(t){ return t.status==='in_progress'; });
+        var completed = _liveTasks.filter(function(t){ return (t.status==='completed'||t.status==='done') && t.updated_at && (now-new Date(t.updated_at).getTime())<86400000; });
+        var blocking  = pending.filter(function(t){ return t.created_at && (now-new Date(t.created_at).getTime())>1800000; });
+
+        var avgApproval = null;
+        if (_kgDecisionHistory.length > 1) {
+            var diffs = [];
+            for (var i=1; i<_kgDecisionHistory.length; i++) diffs.push(_kgDecisionHistory[i].ts - _kgDecisionHistory[i-1].ts);
+            avgApproval = Math.round(diffs.reduce(function(a,b){return a+b;},0) / diffs.length / 60000);
+        }
+
         if (statsEl) {
             statsEl.style.display = 'flex';
             statsEl.innerHTML =
                 '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#7c6cf2">' + pending.length + '</span><span class="kg-right-stat-l">PENDING</span></div>' +
-                '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#22c55e">' + running.length + '</span><span class="kg-right-stat-l">RUNNING</span></div>' +
-                '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#22d3ee">' + unread.length + '</span><span class="kg-right-stat-l">UNREAD</span></div>';
+                '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#22c55e">' + completed.length + '</span><span class="kg-right-stat-l">DONE 24H</span></div>' +
+                '<div class="kg-right-stat"><span class="kg-right-stat-n" style="color:#f59e0b">' + (avgApproval !== null ? avgApproval+'m' : '—') + '</span><span class="kg-right-stat-l">AVG REVIEW</span></div>';
         }
+
         var html = '';
+
+        if (blocking.length) {
+            html += '<div class="kg-hist-hd" style="color:#ef4444">⚡ BLOCKING APPROVAL</div>';
+            html += blocking.map(function(t) {
+                var wait = Math.round((now - new Date(t.created_at).getTime()) / 60000);
+                return '<div class="kg-hist-item">' +
+                    '<div class="kg-hist-icon" style="color:#ef4444">▲</div>' +
+                    '<div class="kg-hist-body">' +
+                        '<div class="kg-hist-title">' + _esc((t.title||t.id||'—').slice(0,70)) + '</div>' +
+                        '<div class="kg-hist-meta">Waiting ' + wait + 'm — downstream may be stalled</div>' +
+                    '</div></div>';
+            }).join('');
+        }
+
         if (running.length) {
-            html += '<div class="kg-notif-hd">IN PROGRESS</div>';
+            html += '<div class="kg-hist-hd">IN PROGRESS</div>';
             html += running.slice(0, 8).map(function(t) {
                 var domain = t.metadata && t.metadata.dispatch ? (t.metadata.dispatch.slug || '') : '';
-                var agent  = t.metadata && t.metadata.execution && t.metadata.execution.office ? (t.metadata.execution.office.agent || '') : '';
-                var col    = domain ? _domainColor(domain.toLowerCase()) : '#22c55e';
-                return '<div class="kg-notif-card">' +
-                    '<div class="kg-notif-dot" style="background:#22c55e;box-shadow:0 0 5px #22c55e"></div>' +
-                    '<div class="kg-notif-body">' +
-                        '<div class="kg-notif-msg">' + _esc((t.title || t.id || '—').slice(0, 80)) + '</div>' +
-                        '<div class="kg-notif-meta">' + (domain ? domain.toUpperCase() + (agent ? ' → ' + agent : '') + ' · ' : '') + _ago(t.created_at) + '</div>' +
+                var col = domain ? _domainColor(domain.toLowerCase()) : '#22c55e';
+                return '<div class="kg-hist-item">' +
+                    '<div class="kg-hist-icon" style="color:#22c55e">▶</div>' +
+                    '<div class="kg-hist-body">' +
+                        '<div class="kg-hist-title">' + _esc((t.title||t.id||'—').slice(0,70)) + '</div>' +
+                        '<div class="kg-hist-meta">' + (domain ? domain.toUpperCase()+' · ' : '') + _ago(t.created_at) + '</div>' +
                     '</div></div>';
             }).join('');
         }
-        if (notifs.length) {
-            html += '<div class="kg-notif-hd">NOTIFICATIONS</div>';
-            html += notifs.map(function(n) {
-                var isUnread = !n.read_at;
-                return '<div class="kg-notif-card' + (isUnread ? ' unread' : '') + '">' +
-                    '<div class="kg-notif-dot"></div>' +
-                    '<div class="kg-notif-body">' +
-                        '<div class="kg-notif-msg">' + _esc((n.message || n.title || 'Notification').slice(0, 100)) + '</div>' +
-                        '<div class="kg-notif-meta">' + (n.type ? n.type.replace(/_/g,' ').toUpperCase() + ' · ' : '') + _ago(n.created_at) + '</div>' +
+
+        if (_kgDecisionHistory.length) {
+            html += '<div class="kg-hist-hd">YOUR DECISIONS</div>';
+            html += _kgDecisionHistory.slice().reverse().slice(0, 12).map(function(d) {
+                var isApprove = d.action === 'approved';
+                return '<div class="kg-hist-item">' +
+                    '<div class="kg-hist-icon" style="color:' + (isApprove ? '#22c55e' : '#ef4444') + '">' + (isApprove ? '✓' : '✕') + '</div>' +
+                    '<div class="kg-hist-body">' +
+                        '<div class="kg-hist-title">' + _esc((d.title||d.taskId||'—').slice(0,70)) + '</div>' +
+                        '<div class="kg-hist-meta">' + (isApprove ? 'Approved' : 'Rejected') + ' · ' + _ago(new Date(d.ts).toISOString()) + '</div>' +
                     '</div></div>';
             }).join('');
         }
-        if (!html) html = '<div class="kg-runs-empty">All clear</div>';
+
+        if (!html) html = '<div class="kg-runs-empty">No activity yet</div>';
         body.innerHTML = html;
     }
 
@@ -28561,9 +28786,16 @@ window.apexFileDropHandler = function(e){
             var hasLiveDelib = _councilDelibs.some(function (d) { return d.status === 'deliberating'; });
             _setNodeGlow('council', hasLiveDelib ? 'is-deliberating' : '');
 
-            // ACTIONS: alert-flash when tasks need attention
-            var hasPending = _liveTasks.some(function (t) { return t.status === 'pending' || t.status === 'in_progress' || t.status === 'awaiting_approval' || t.status === 'approval_required'; });
+            // ACTIONS: alert-flash when tasks need attention + update count badge
+            var pendingCount = _liveTasks.filter(function (t) { return t.status === 'awaiting_approval' || t.status === 'approval_required'; }).length;
+            var hasPending = pendingCount > 0 || _liveTasks.some(function (t) { return t.status === 'pending' || t.status === 'in_progress'; });
             _setNodeGlow('actions', hasPending ? 'is-alerting' : '');
+            var actCountEl = document.getElementById('kg-count-actions');
+            if (actCountEl) {
+                actCountEl.textContent = pendingCount > 0 ? pendingCount : (_liveTasks.filter(function(t){return t.status==='in_progress';}).length || '—');
+            }
+            var actSubEl = document.querySelector('#kg-node-actions .kg-node-sub');
+            if (actSubEl) actSubEl.textContent = pendingCount > 0 ? (pendingCount === 1 ? '1 AWAITING' : pendingCount + ' AWAITING') : 'PIPELINE';
 
             // DOMAIN: working if domain-mapped runs in last 5 min
             var recentDomain = _liveRuns.some(function (r) { return (now2 - new Date(r.created_at).getTime()) < 300000 && !!(window.DA_AGENTS || []).find(function (a) { return a.name === r.agent_name; }); });
@@ -28626,21 +28858,52 @@ window.apexFileDropHandler = function(e){
         setInterval(function () { if (window.activePage === 'test') _fetchLive(); }, 15000);
     }, 400);
 
+    function _kgShowUndo(taskId, title, action) {
+        var toast = document.getElementById('kg-undo-toast');
+        if (!toast) return;
+        if (_kgUndoTimer) { clearTimeout(_kgUndoTimer); _kgUndoTimer = null; }
+        toast.querySelector('#kg-undo-toast-msg').textContent = (action === 'approved' ? '✓ Approved' : '✕ Rejected') + ': ' + (title||taskId).slice(0,30);
+        toast.classList.add('visible');
+        _kgPendingUndo = { taskId: taskId, action: action };
+        _kgUndoTimer = setTimeout(function() {
+            toast.classList.remove('visible');
+            _kgPendingUndo = null;
+        }, 5000);
+    }
+
+    function _kgDismissUndo() {
+        var toast = document.getElementById('kg-undo-toast');
+        if (toast) toast.classList.remove('visible');
+        if (_kgUndoTimer) { clearTimeout(_kgUndoTimer); _kgUndoTimer = null; }
+        _kgPendingUndo = null;
+    }
+
+    function _kgRecordDecision(taskId, title, action) {
+        _kgDecisionHistory.push({ taskId: taskId, title: title, action: action, ts: Date.now() });
+        if (_kgDecisionHistory.length > 50) _kgDecisionHistory.shift();
+    }
+
+    function _kgAutoAdvance(doneTaskId) {
+        var awTasks = _liveTasks.filter(function(t){ return (t.status==='awaiting_approval'||t.status==='approval_required') && String(t.id) !== String(doneTaskId); });
+        if (!awTasks.length) { setTimeout(function(){ if(_activeTier==='actions'){ _renderLeft('actions'); _renderActionsRight(); } _fetchLive(); }, 900); return; }
+        var card = document.getElementById('kg-tc-' + doneTaskId);
+        if (card) { card.style.transition='opacity 300ms,transform 300ms'; card.style.opacity='0'; card.style.transform='translateX(-12px)'; }
+        setTimeout(function() { if(_activeTier==='actions'){ _renderLeft('actions'); _renderActionsRight(); } }, 400);
+        setTimeout(_fetchLive, 1600);
+    }
+
     window._kgApprove = function (taskId, btn) {
+        var task = _liveTasks.find(function(t){ return String(t.id)===String(taskId); });
+        var title = task ? (task.title || String(taskId)) : String(taskId);
         if (btn) { btn.disabled = true; btn.textContent = '…'; }
         fetch('/api/tasks/approve', {
             method: 'POST',
             headers: Object.assign({ 'Content-Type':'application/json' }, _h()),
             body: JSON.stringify({ taskId: taskId, approved: true })
         }).then(function (r) { return r.json(); }).then(function () {
-            var card = document.getElementById('kg-tc-' + taskId);
-            if (card) {
-                card.style.opacity = '0.4';
-                card.style.pointerEvents = 'none';
-                var btns = card.querySelector('.kg-task-btns');
-                if (btns) btns.innerHTML = '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;color:#22c55e;letter-spacing:.08em">✓ APPROVED</span>';
-            }
-            setTimeout(function () { if (_activeTier === 'actions') _renderLeft('actions'); _fetchLive(); }, 1800);
+            _kgRecordDecision(taskId, title, 'approved');
+            _kgShowUndo(taskId, title, 'approved');
+            _kgAutoAdvance(taskId);
         }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = '✓ APPROVE'; } });
     };
 
@@ -28650,6 +28913,8 @@ window.apexFileDropHandler = function(e){
     };
 
     window._kgRejectConfirm = function (taskId, btn) {
+        var task = _liveTasks.find(function(t){ return String(t.id)===String(taskId); });
+        var title = task ? (task.title || String(taskId)) : String(taskId);
         var area = document.getElementById('kg-reject-' + taskId);
         var inp  = area ? area.querySelector('textarea') : null;
         var reason = inp ? inp.value.trim() : '';
@@ -28659,15 +28924,40 @@ window.apexFileDropHandler = function(e){
             headers: Object.assign({ 'Content-Type':'application/json' }, _h()),
             body: JSON.stringify({ taskId: taskId, approved: false, reason: reason })
         }).then(function (r) { return r.json(); }).then(function () {
-            var card = document.getElementById('kg-tc-' + taskId);
-            if (card) {
-                card.style.opacity = '0.4';
-                card.style.pointerEvents = 'none';
-                var btns = card.querySelector('.kg-task-btns');
-                if (btns) btns.innerHTML = '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;color:#ef4444;letter-spacing:.08em">✕ REJECTED</span>';
-            }
-            setTimeout(function () { if (_activeTier === 'actions') _renderLeft('actions'); _fetchLive(); }, 1800);
+            _kgRecordDecision(taskId, title, 'rejected');
+            _kgShowUndo(taskId, title, 'rejected');
+            _kgAutoAdvance(taskId);
         }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = 'CONFIRM REJECT'; } });
+    };
+
+    window._kgUndoDecision = function() {
+        _kgDismissUndo();
+        // Optimistic: re-render to show task again (full sync on next _fetchLive)
+        if (_activeTier === 'actions') { _renderLeft('actions'); _renderActionsRight(); }
+        setTimeout(_fetchLive, 400);
+    };
+
+    window._kgFocusCard = function(taskId) {
+        var awTasks = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'; });
+        var idx = awTasks.findIndex ? awTasks.findIndex(function(t){ return String(t.id)===String(taskId); }) : -1;
+        if (idx < 0) return;
+        awTasks.unshift(awTasks.splice(idx,1)[0]);
+        _liveTasks = awTasks.concat(_liveTasks.filter(function(t){ return t.status!=='awaiting_approval'&&t.status!=='approval_required'; }));
+        if (_activeTier === 'actions') _renderLeft('actions');
+    };
+
+    window._kgBulkApprove = function() {
+        var awTasks = _liveTasks.filter(function(t){ return t.status==='awaiting_approval'||t.status==='approval_required'; });
+        if (!awTasks.length) return;
+        var bar = document.getElementById('kg-bulk-bar');
+        if (bar) { var b = bar.querySelector('.kg-bulk-btn'); if(b){ b.disabled=true; b.textContent='…'; } }
+        var tasks = awTasks.slice(0,10);
+        Promise.all(tasks.map(function(t){
+            return fetch('/api/tasks/approve', {
+                method:'POST', headers:Object.assign({'Content-Type':'application/json'},_h()),
+                body:JSON.stringify({taskId:t.id, approved:true})
+            }).then(function(r){return r.json();}).then(function(){ _kgRecordDecision(t.id, t.title||String(t.id), 'approved'); });
+        })).then(function(){ _renderLeft('actions'); _renderActionsRight(); _fetchLive(); });
     };
 
     window._kgConvene = function (btn) {
@@ -28707,8 +28997,11 @@ window.apexFileDropHandler = function(e){
         _setNodeGlow('input', mostRecentAge < 45000 ? 'is-stimuli' : (mostRecentAge < 300000 ? 'is-working' : ''));
         var hasLiveDelib = _councilDelibs.some(function (d) { return d.status === 'deliberating'; });
         _setNodeGlow('council', hasLiveDelib ? 'is-deliberating' : '');
-        var hasPending = _liveTasks.some(function (t) { return t.status === 'pending' || t.status === 'in_progress' || t.status === 'awaiting_approval' || t.status === 'approval_required'; });
+        var pendingCnt = _liveTasks.filter(function (t) { return t.status === 'awaiting_approval' || t.status === 'approval_required'; }).length;
+        var hasPending = pendingCnt > 0 || _liveTasks.some(function (t) { return t.status === 'pending' || t.status === 'in_progress'; });
         _setNodeGlow('actions', hasPending ? 'is-alerting' : '');
+        var acEl = document.getElementById('kg-count-actions');
+        if (acEl) acEl.textContent = pendingCnt > 0 ? pendingCnt : '—';
         var completed = _liveTasks.filter(function (t) { return t.status === 'completed' || t.status === 'done'; });
         var recentOutput = completed.some(function (t) { return t.updated_at && (now2 - new Date(t.updated_at).getTime()) < 300000; }) ||
             _liveRuns.some(function (r) { return r.success !== false && (now2 - new Date(r.created_at).getTime()) < 300000; });
