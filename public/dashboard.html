@@ -28031,11 +28031,11 @@ window.apexFileDropHandler = function(e){
 
             var actHtml = '';
             if (_actTasks.length) {
-                actHtml = '<div class="kg-group-hd" aria-expanded="false" style="--gc:#22c55e">' +
+                actHtml = '<div class="kg-group-hd open" aria-expanded="true" style="--gc:#22c55e">' +
                     '<span class="kg-group-name" style="color:#22c55e">ACTIVE</span>' +
                     '<span class="kg-group-count">' + _actTasks.length + '</span>' +
                 '</div>' +
-                '<div class="kg-group-body" style="height:0">' +
+                '<div class="kg-group-body" style="height:auto">' +
                     _actTasks.slice(0,15).map(function(t){
                         return '<div class="kg-task-card">' +
                             '<div class="kg-task-hd">' +
