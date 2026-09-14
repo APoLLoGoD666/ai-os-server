@@ -27200,8 +27200,8 @@ window.apexFileDropHandler = function(e){
 }
 @keyframes kg-pulse { 0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)} 50%{opacity:1;transform:translate(-50%,-50%) scale(1.15)} }
 
-/* ── The 4-node pipeline row ── */
-.kg-pipeline { display:flex; align-items:center; gap:0; z-index:2; position:relative; padding:0 24px; transform-origin:center center; transition:transform 300ms cubic-bezier(0,0,0.2,1); }
+/* ── The pipeline (vertical) ── */
+.kg-pipeline { display:flex; flex-direction:column; align-items:center; gap:0; z-index:2; position:relative; padding:24px 0; transform-origin:center center; transition:transform 300ms cubic-bezier(0,0,0.2,1); }
 
 .kg-node {
   display:flex; flex-direction:column; align-items:center; gap:8px;
@@ -27236,15 +27236,18 @@ window.apexFileDropHandler = function(e){
 @keyframes kg-blink { 0%,100%{opacity:1} 50%{opacity:.35} }
 
 /* ── Connector ── */
-.kg-connector { display:flex; align-items:center; flex-direction:column; gap:4px; padding:0 8px; position:relative; }
-.kg-conn-line { width:60px; height:1px; background:linear-gradient(90deg, rgba(124,108,242,0.15), rgba(124,108,242,0.5), rgba(124,108,242,0.15)); position:relative; overflow:hidden; }
+.kg-connector { display:flex; align-items:center; flex-direction:column; gap:4px; padding:4px 0; position:relative; }
+.kg-conn-line { width:1px; height:36px; background:linear-gradient(180deg, rgba(124,108,242,0.15), rgba(124,108,242,0.5), rgba(124,108,242,0.15)); position:relative; overflow:hidden; }
 .kg-conn-line::after {
-  content:''; position:absolute; top:0; left:-100%; width:60%; height:100%;
-  background:linear-gradient(90deg, transparent, rgba(124,108,242,0.9), transparent);
-  animation:kg-flow 2.5s linear infinite;
+  content:''; position:absolute; top:-100%; left:0; width:100%; height:60%;
+  background:linear-gradient(180deg, transparent, rgba(124,108,242,0.9), transparent);
+  animation:kg-flow-v 2.5s linear infinite;
 }
 @keyframes kg-flow { to { left:200%; } }
-.kg-conn-arrow { font-size:8px; color:rgba(124,108,242,0.4); letter-spacing:0; }
+@keyframes kg-flow-v { to { top:200%; } }
+.kg-conn-arrow { font-size:10px; color:rgba(124,108,242,0.45); letter-spacing:0; }
+.kg-node-row { display:flex; align-items:center; gap:16px; }
+.kg-code-branch { background:rgba(12,12,20,0.9); border:1px solid rgba(91,158,255,0.12); border-radius:12px; padding:12px 14px; min-width:132px; backdrop-filter:blur(12px); }
 .kg-conn-label { font:600 6px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:rgba(124,108,242,0.25); text-transform:uppercase; }
 
 /* ── Side panels ── */
@@ -27447,7 +27450,8 @@ window.apexFileDropHandler = function(e){
     function _dur(ms) { if (!ms) return ''; if (ms < 1000) return ms + 'ms'; return (ms/1000).toFixed(1)+'s'; }
 
     var TIERS = [
-        { id:'council',  label:'COUNCIL',       icon:'⬡', color:'#a78bfa', glow:'rgba(167,139,250,0.2)', count:7,  sub:'DELIBERATION' },
+        { id:'input',    label:'INPUT',          icon:'→', color:'#22d3ee', glow:'rgba(34,211,238,0.2)', count:'—', sub:'REQUEST' },
+        { id:'council',  label:'COUNCIL',        icon:'⬡', color:'#a78bfa', glow:'rgba(167,139,250,0.2)', count:7,  sub:'DELIBERATION' },
         { id:'actions',  label:'ACTIONS',        icon:'◈', color:'#7c6cf2', glow:'rgba(124,108,242,0.2)', count:'—', sub:'PIPELINE' },
         { id:'domain',   label:'DOMAIN AGENTS',  icon:'◬', color:'#2dd4bf', glow:'rgba(45,212,191,0.2)', count:9,  sub:'DISPATCH' },
         { id:'office',   label:'OFFICE AGENTS',  icon:'▶', color:'#34d399', glow:'rgba(52,211,153,0.2)', count:'—', sub:'EXECUTION' },
@@ -27534,13 +27538,35 @@ window.apexFileDropHandler = function(e){
             node.addEventListener('click', function () { _selectTier(tier.id); });
             container.appendChild(node);
 
+            // Wrap domain node with coding-pipeline branch
+            if (tier.id === 'domain') {
+                var row = document.createElement('div');
+                row.className = 'kg-node-row';
+                row.appendChild(node);
+                var branch = document.createElement('div');
+                branch.className = 'kg-code-branch';
+                var stages = ['Architect','Developer','Reviewer','Validator','Tester','Committer','Reflector','Orchestrator'];
+                branch.innerHTML =
+                    '<div style="font:700 7px/1 \'JetBrains Mono\',monospace;letter-spacing:.14em;color:#5b9eff;opacity:.8;margin-bottom:8px">CODING PIPELINE</div>' +
+                    stages.map(function(s,i){
+                        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
+                            '<span style="font:700 7px/1 \'JetBrains Mono\',monospace;color:#5b9eff;opacity:.45;min-width:12px">' + String(i+1).padStart(2,'0') + '</span>' +
+                            '<span style="font:500 9px/1 \'Inter\',sans-serif;color:rgba(200,215,230,0.75)">' + s + '</span>' +
+                        '</div>';
+                    }).join('');
+                row.appendChild(branch);
+                container.appendChild(row);
+            } else {
+                container.appendChild(node);
+            }
+
             // Connector (not after last)
             if (i < TIERS.length - 1) {
                 var conn = document.createElement('div');
                 conn.className = 'kg-connector';
                 conn.innerHTML =
                     '<div class="kg-conn-line"></div>' +
-                    '<div class="kg-conn-arrow">›</div>';
+                    '<div class="kg-conn-arrow">↓</div>';
                 container.appendChild(conn);
             }
         });
@@ -27570,6 +27596,7 @@ window.apexFileDropHandler = function(e){
         if (rtEl) rtEl.textContent = 'RECENT RUNS';
         if (acEl && tier) acEl.style.background = 'linear-gradient(90deg,' + tier.color + ',transparent)';
         var _META = {
+            input:   { label:'PIPELINE ENTRY POINT', stat:'6 INPUT TYPES' },
             council: { label:'DELIBERATION CHAMBER', stat:'7 ENTITIES' },
             domain:  { label:'DOMAIN DISPATCH LAYER', stat:'9 DOMAINS' },
             office:  { label:'EXECUTION LAYER', stat:'33 AGENTS' },
@@ -27659,7 +27686,18 @@ window.apexFileDropHandler = function(e){
         var body = document.getElementById('kg-left-body');
         if (!body) return;
 
-        if (tierId === 'council') {
+        if (tierId === 'input') {
+            var inputTypes = [
+                { name:'Chat Input',      role:'Natural language · dashboard',  color:'#22d3ee' },
+                { name:'Voice Input',     role:'Speech-to-text · audio pipeline', color:'#22d3ee' },
+                { name:'Scheduled Task',  role:'Cron-triggered · autonomous',   color:'#22d3ee' },
+                { name:'Agent Request',   role:'Internal sub-task · spawned',   color:'#22d3ee' },
+                { name:'API Call',        role:'External service · webhook',    color:'#22d3ee' },
+                { name:'Tool Action',     role:'Connected tool · registry',     color:'#22d3ee' },
+            ];
+            body.innerHTML = _accordion([{ name:'INPUT CHANNELS', color:'#22d3ee', rows: inputTypes.map(function(t) { return _entityRow(t.name, t.role, 'ready', t.color); }) }], true);
+
+        } else if (tierId === 'council') {
             var ceo = COUNCIL_ENTITIES[0];
             var ceoDot = _councilState(ceo.id);
             var execRows = COUNCIL_ENTITIES.slice(1).map(function (e) {
