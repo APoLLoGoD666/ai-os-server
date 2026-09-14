@@ -27682,32 +27682,6 @@ window.apexFileDropHandler = function(e){
             document.body.appendChild(toast);
         }
 
-        // Keyboard shortcuts for ACTIONS panel
-        document.addEventListener('keydown', function(e) {
-            if (_activeTier !== 'actions') return;
-            var tag = (e.target.tagName || '').toLowerCase();
-            if (tag === 'textarea' || tag === 'input' || e.target.isContentEditable) return;
-            var focusCard = document.querySelector('#kg-left-body .kg-task-card.is-focus');
-            if (!focusCard) return;
-            var idStr = focusCard.id.replace('kg-tc-', '');
-            if (e.key === 'a' || e.key === 'A') {
-                e.preventDefault();
-                var appBtn = focusCard.querySelector('.kg-act-btn.approve');
-                if (appBtn && !appBtn.disabled) window._kgApprove(idStr, appBtn);
-            } else if (e.key === 'r' || e.key === 'R') {
-                e.preventDefault();
-                window._kgRejectPrompt(idStr);
-                var ta = document.getElementById('kg-reject-' + idStr);
-                if (ta) { var inp = ta.querySelector('textarea'); if (inp) setTimeout(function(){ inp.focus(); }, 50); }
-            } else if (e.key === 'Tab') {
-                e.preventDefault();
-                var awCards = Array.from(document.querySelectorAll('#kg-left-body .kg-task-card'));
-                var idx = awCards.indexOf(focusCard);
-                var next = awCards[idx + 1];
-                if (next) { var nid = next.id.replace('kg-tc-',''); window._kgFocusCard(nid); }
-            }
-        });
-
         _buildPipeline();
     }
 
@@ -28138,8 +28112,8 @@ window.apexFileDropHandler = function(e){
             (rec ? '<div class="kg-task-desc">' + _esc(rec.slice(0, 160)) + '</div>' : '') +
             (irrev ? '<div class="kg-task-warn">⚠ IRREVERSIBLE — cannot be undone</div>' : '') +
             '<div class="kg-task-btns">' +
-                '<button class="kg-act-btn approve" onclick="window._kgApprove(' + tid + ',this)" aria-label="Approve task">✓ APPROVE<span class="kg-kbd">A</span></button>' +
-                '<button class="kg-act-btn reject"  onclick="window._kgRejectPrompt(' + tid + ')" aria-label="Reject task">✕ REJECT<span class="kg-kbd">R</span></button>' +
+                '<button class="kg-act-btn approve" onclick="window._kgApprove(' + tid + ',this)" aria-label="Approve task">✓ APPROVE</button>' +
+                '<button class="kg-act-btn reject"  onclick="window._kgRejectPrompt(' + tid + ')" aria-label="Reject task">✕ REJECT</button>' +
             '</div>' +
             '<div class="kg-task-reject-area" id="kg-reject-' + sid + '">' +
                 '<textarea class="kg-task-reject-inp" rows="2" placeholder="Reason (optional)…" aria-label="Rejection reason"></textarea>' +
