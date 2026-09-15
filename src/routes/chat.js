@@ -212,8 +212,7 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
                 return res.status(200).json({ ok: true, reply: _cReply, response_mode: _cMode, stream_plan: _cPlan, pipeline_stage: 'COUNCIL', council: { deliberationId: _cResult.deliberationId } });
             } catch (e) {
                 if (res.headersSent) return;
-                console.warn('[Council] action routing failed:', e.message, e.stack);
-                return res.status(200).json({ ok: false, _debug: true, error: e.message, pipeline_stage: 'COUNCIL_ERROR' });
+                console.warn('[Council] action routing failed, falling through to domain agent:', e.message);
             }
         }
 
