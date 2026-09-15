@@ -28064,6 +28064,17 @@ window.apexFileDropHandler = function(e){
 
         pw.appendChild(pg);
 
+        // Mobile panel access buttons (hidden on desktop via CSS display:none default)
+        if (!document.getElementById('kg-mobile-panel-btns')) {
+            var mbtns = document.createElement('div');
+            mbtns.id = 'kg-mobile-panel-btns';
+            mbtns.style.display = 'none'; // CSS media query shows it on mobile
+            mbtns.innerHTML =
+                '<button class="kg-panel-open-btn" onclick="(function(){var t=window._activeTier||\'input\';var l=document.getElementById(\'kg-left\');if(l)l.classList.add(\'open\');})()" aria-label="Open entities panel">◁ ENTITIES</button>' +
+                '<button class="kg-panel-open-btn" onclick="(function(){var r=document.getElementById(\'kg-right\');if(r)r.classList.add(\'open\');})()" aria-label="Open activity panel">ACTIVITY ▷</button>';
+            pg.appendChild(mbtns);
+        }
+
         // Info overlay (injected once into body)
         if (!document.getElementById('kg-info-overlay')) {
             var infoOvl = document.createElement('div');
@@ -31709,12 +31720,23 @@ _loadConnections();
   }
   #apexSideNav .nav-btn.active::before { display: none !important; }
 
-  /* 10 ── Pipeline canvas: horizontal scroll within normal vertical page ── */
+  /* 10 ── Fix vertical scroll on pages blocked by ID-specificity overflow:hidden ── */
+  #page-test {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  #page-intel {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* 11 ── Pipeline canvas: horizontal scroll section ── */
   .kg-wrap {
     overflow-x: auto !important;
     overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     min-height: 260px !important;
+    flex-shrink: 0 !important;
   }
   .kg-canvas {
     overflow: visible !important;
@@ -31725,7 +31747,33 @@ _loadConnections();
     flex-shrink: 0 !important;
   }
   .kg-last-updated { display: none !important; }
-  /* Side panels: fixed slide-overs */
+
+  /* 12 ── Panel access buttons (visible on mobile only) ── */
+  #kg-mobile-panel-btns {
+    display: flex !important;
+    gap: 10px !important;
+    padding: 12px 16px !important;
+    flex-shrink: 0 !important;
+  }
+  .kg-panel-open-btn {
+    flex: 1 !important;
+    height: 44px !important;
+    border: 1px solid rgba(124,108,242,0.35) !important;
+    background: rgba(124,108,242,0.08) !important;
+    color: rgba(255,255,255,0.8) !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+  .kg-panel-open-btn:active {
+    background: rgba(124,108,242,0.2) !important;
+  }
+
+  /* 13 ── Side panels: fixed slide-overs from edges ── */
   .kg-panel.open {
     position: fixed !important;
     top: 0 !important;
