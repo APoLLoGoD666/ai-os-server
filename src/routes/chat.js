@@ -187,7 +187,7 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
 
         // ── GAP-1 FIX: action requests go through council → GATE before execution ──
         const _PIPELINE_ACTION_RE = /\b(build|create|implement|develop|write|code|fix|refactor|add|deploy|automate|send|schedule|book|organis|organiz|delete|rename|generate|draft|launch|start|make)\b/i;
-        const _isActionReq = _chatDomainAgent && _chatDomainSlug && !_isConversational
+        const _isActionReq = !_isConversational
             && _PIPELINE_ACTION_RE.test(userMessage) && userMessage.split(/\s+/).length >= 4;
 
         if (_isActionReq) {
