@@ -28038,12 +28038,12 @@ window.apexFileDropHandler = function(e){
     function _dur(ms) { if (!ms) return ''; if (ms < 1000) return ms + 'ms'; return (ms/1000).toFixed(1)+'s'; }
 
     var TIERS = [
-        { id:'input',    label:'INPUT',   color:'#22d3ee', glow:'rgba(34,211,238,0.2)' },
-        { id:'council',  label:'COUNCIL', color:'#a78bfa', glow:'rgba(167,139,250,0.2)' },
-        { id:'actions',  label:'GATE',    color:'#7c6cf2', glow:'rgba(124,108,242,0.2)' },
-        { id:'domain',   label:'DOMAIN',  color:'#2dd4bf', glow:'rgba(45,212,191,0.2)' },
-        { id:'office',   label:'OFFICE',  color:'#34d399', glow:'rgba(52,211,153,0.2)' },
-        { id:'output',   label:'OUTPUT',  color:'#f59e0b', glow:'rgba(245,158,11,0.2)' },
+        { id:'input',    label:'INPUT',   icon:'⊕', color:'#22d3ee', glow:'rgba(34,211,238,0.2)' },
+        { id:'council',  label:'COUNCIL', icon:'⬡', color:'#a78bfa', glow:'rgba(167,139,250,0.2)' },
+        { id:'actions',  label:'GATE',    icon:'◆', color:'#7c6cf2', glow:'rgba(124,108,242,0.2)' },
+        { id:'domain',   label:'DOMAIN',  icon:'⊞', color:'#2dd4bf', glow:'rgba(45,212,191,0.2)' },
+        { id:'office',   label:'OFFICE',  icon:'◈', color:'#34d399', glow:'rgba(52,211,153,0.2)' },
+        { id:'output',   label:'OUTPUT',  icon:'◉', color:'#f59e0b', glow:'rgba(245,158,11,0.2)' },
     ];
 
     var _inputFilter = 'all';
@@ -28171,6 +28171,7 @@ window.apexFileDropHandler = function(e){
             node.innerHTML =
                 '<div class="kg-node-box">' +
                     '<div class="kg-node-state" id="kg-state-' + tier.id + '"></div>' +
+                    '<div class="kg-node-icon" style="color:' + tier.color + '">' + tier.icon + '</div>' +
                     '<div class="kg-node-label">' + tier.label + '</div>' +
                 '</div>';
             node.addEventListener('click', function () { _selectTier(tier.id); });
@@ -28194,6 +28195,7 @@ window.apexFileDropHandler = function(e){
                 codeNode.innerHTML =
                     '<div class="kg-node-box">' +
                         '<div class="kg-node-state"></div>' +
+                        '<div class="kg-node-icon" style="color:#5b9eff">⌨</div>' +
                         '<div class="kg-node-label">CODE</div>' +
                     '</div>';
                 codeNode.setAttribute('tabindex', '0');
