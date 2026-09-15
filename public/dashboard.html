@@ -7945,6 +7945,13 @@ header.topbar { grid-area: topbar !important; }
     grid-area: unset !important;
     flex: 1 !important;
     min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  #pageWrap {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: 100% !important;
+    position: relative !important;
   }
 }
 </style>
@@ -28096,14 +28103,28 @@ window.apexFileDropHandler = function(e){
 
         pw.appendChild(pg);
 
-        // Mobile panel access buttons (hidden on desktop via CSS display:none default)
+        // Mobile panel access buttons (shown only on mobile via CSS)
         if (!document.getElementById('kg-mobile-panel-btns')) {
             var mbtns = document.createElement('div');
             mbtns.id = 'kg-mobile-panel-btns';
-            mbtns.style.display = 'none'; // CSS media query shows it on mobile
-            mbtns.innerHTML =
-                '<button class="kg-panel-open-btn" onclick="(function(){var t=window._activeTier||\'input\';var l=document.getElementById(\'kg-left\');if(l)l.classList.add(\'open\');})()" aria-label="Open entities panel">◁ ENTITIES</button>' +
-                '<button class="kg-panel-open-btn" onclick="(function(){var r=document.getElementById(\'kg-right\');if(r)r.classList.add(\'open\');})()" aria-label="Open activity panel">ACTIVITY ▷</button>';
+            var btnLeft = document.createElement('button');
+            btnLeft.className = 'kg-panel-open-btn';
+            btnLeft.setAttribute('aria-label', 'Open entities panel');
+            btnLeft.textContent = '◁  ENTITIES';
+            btnLeft.addEventListener('click', function () {
+                var l = document.getElementById('kg-left');
+                if (l) l.classList.add('open');
+            });
+            var btnRight = document.createElement('button');
+            btnRight.className = 'kg-panel-open-btn';
+            btnRight.setAttribute('aria-label', 'Open activity panel');
+            btnRight.textContent = 'ACTIVITY  ▷';
+            btnRight.addEventListener('click', function () {
+                var r = document.getElementById('kg-right');
+                if (r) r.classList.add('open');
+            });
+            mbtns.appendChild(btnLeft);
+            mbtns.appendChild(btnRight);
             pg.appendChild(mbtns);
         }
 
@@ -31752,57 +31773,69 @@ _loadConnections();
   }
   #apexSideNav .nav-btn.active::before { display: none !important; }
 
-  /* 10 ── Fix vertical scroll on pages blocked by ID-specificity overflow:hidden ── */
-  #page-test {
-    overflow-y: auto !important;
+  /* 10 ── Pages: natural-height block so content overflows and scrolls ── */
+  /* .page uses position:absolute+inset:0 with flex:1 children — nothing overflows.
+     On mobile, switch to position:relative+height:auto so vertical scroll works. */
+  #page-test, #page-intel {
+    position: relative !important;
+    inset: auto !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: visible !important;
     overflow-x: hidden !important;
+    display: block !important;
   }
-  #page-intel {
+  /* page-wrap must scroll, not clip */
+  #pageWrap {
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    position: relative !important;
+    height: 100% !important;
   }
 
-  /* 11 ── Pipeline canvas: horizontal scroll section ── */
+  /* 11 ── Pipeline canvas: natural height, scrolls horizontally ── */
   .kg-wrap {
+    display: block !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch !important;
-    min-height: 260px !important;
-    flex-shrink: 0 !important;
+    min-height: 280px !important;
+    width: 100% !important;
   }
   .kg-canvas {
-    overflow: visible !important;
+    display: inline-flex !important;
     min-width: max-content !important;
     padding: 20px 16px !important;
-    justify-content: flex-start !important;
     align-items: center !important;
-    flex-shrink: 0 !important;
+    min-height: 280px !important;
   }
   .kg-last-updated { display: none !important; }
 
-  /* 12 ── Panel access buttons (visible on mobile only) ── */
+  /* 12 ── Panel access buttons ── */
   #kg-mobile-panel-btns {
     display: flex !important;
     gap: 10px !important;
-    padding: 12px 16px !important;
-    flex-shrink: 0 !important;
+    padding: 12px 16px 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .kg-panel-open-btn {
     flex: 1 !important;
-    height: 44px !important;
-    border: 1px solid rgba(124,108,242,0.35) !important;
-    background: rgba(124,108,242,0.08) !important;
-    color: rgba(255,255,255,0.8) !important;
-    border-radius: 8px !important;
-    font-size: 12px !important;
+    height: 48px !important;
+    border: 1px solid rgba(124,108,242,0.4) !important;
+    background: rgba(124,108,242,0.1) !important;
+    color: rgba(255,255,255,0.85) !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
     font-weight: 700 !important;
-    letter-spacing: 0.08em !important;
+    letter-spacing: 0.06em !important;
     text-transform: uppercase !important;
     cursor: pointer !important;
     -webkit-tap-highlight-color: transparent !important;
   }
   .kg-panel-open-btn:active {
-    background: rgba(124,108,242,0.2) !important;
+    background: rgba(124,108,242,0.25) !important;
   }
 
   /* 13 ── Side panels: fixed slide-overs from edges ── */
@@ -31816,6 +31849,31 @@ _loadConnections();
   }
   .kg-panel.left.open { left: 0 !important; right: auto !important; }
   .kg-panel.open:not(.left) { right: 0 !important; left: auto !important; }
+
+  /* 14 ── Briefing: intel body natural height ── */
+  .intel-body {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .intel-presets {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    width: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+  .intel-trace-wrap {
+    overflow: visible !important;
+    padding: 12px !important;
+  }
+  #intel-trace {
+    overflow: visible !important;
+    min-height: auto !important;
+  }
 
   /* 12 ── Info modal fits mobile ── */
   .kg-info-modal {
