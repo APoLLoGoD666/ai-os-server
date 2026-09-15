@@ -1,0 +1,78 @@
+{
+  "physical": {
+    "description": "Entity's registered path exists on local filesystem",
+    "requires_path": true,
+    "scope": { "types": ["FILE", "SQL", "SEED_SCRIPT", "FOLDER", "DATABASE_FILE"] },
+    "validator": "file_exists"
+  },
+  "repository": {
+    "description": "Entity is tracked in the git repository",
+    "requires_path": true,
+    "scope": { "types": ["FILE", "SQL", "SEED_SCRIPT", "FOLDER", "DATABASE_FILE"] },
+    "validator": "git_tracked"
+  },
+  "runtime": {
+    "description": "Entity is loaded into the running Express process",
+    "requires_path": true,
+    "scope": {
+      "families": ["RNT", "RTE", "AUT", "GOV"],
+      "types":    ["FILE", "SERVICE", "ROUTE", "API", "MIDDLEWARE", "CONFIG"]
+    },
+    "validator": "file_search",
+    "sources": ["server.js", "routes/"],
+    "search": {
+      "target":   "path",
+      "patterns": ["require(", "import ", "router.use("]
+    },
+    "evidence": { "minimum": 1 }
+  },
+  "documentation": {
+    "description": "Entity is referenced by ENT-ID in architecture documentation",
+    "scope": { "families": ["GOV", "CIV", "CORE", "RNT", "RTE", "AUT"] },
+    "validator": "file_search",
+    "sources": ["docs/"],
+    "search": { "target": "id" },
+    "evidence": { "minimum": 1 }
+  },
+  "knowledge": {
+    "description": "Entity's source file is indexed in the graphify knowledge graph",
+    "requires_path": true,
+    "scope": {
+      "families": ["RNT", "RTE", "AUT", "GOV"],
+      "types":    ["FILE", "SQL"]
+    },
+    "validator": "graph_search",
+    "graph_file": "graphify-out/graph.json",
+    "search": { "target": "path" }
+  },
+  "dashboard": {
+    "description": "Entity is visible in dashboard.html",
+    "scope": { "families": ["GOV", "CIV", "EXEC"] },
+    "validator": "file_search",
+    "sources": ["dashboard.html"],
+    "search": { "target": "id" },
+    "evidence": { "minimum": 1 }
+  },
+  "monitoring": {
+    "description": "Entity is referenced in the telemetry and observability layer",
+    "scope": {
+      "families": ["RNT", "GOV", "AUT"],
+      "types":    ["TABLE", "SERVICE", "ROUTE", "API", "MIDDLEWARE"]
+    },
+    "validator": "file_search",
+    "sources": ["src/routes/telemetry/index.js", "docs/OBSERVABILITY-ATLAS.md"],
+    "search": { "target": "id_or_name" },
+    "evidence": { "minimum": 1 }
+  },
+  "memory": {
+    "description": "Entity is present in the episodic memory and vault",
+    "scope": {
+      "families": ["CIV", "GOV", "CORE", "EXEC"],
+      "types":    ["SERVICE", "TABLE", "MIDDLEWARE"]
+    },
+    "validator": "file_search",
+    "sources": ["VAULT:Claude-Memory"],
+    "search": { "target": "id_or_name" },
+    "evidence": { "minimum": 1 }
+  }
+}

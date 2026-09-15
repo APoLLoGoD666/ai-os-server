@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APEX — UX-16 SYSTEM / CONSTITUTIONAL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cinzel:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --apex-color-bg: #0a0a0f;
+  --apex-color-surface: #111118;
+  --apex-color-surface-raised: #1a1a24;
+  --apex-color-border: #2a2a3a;
+  --apex-color-border-subtle: #1e1e2a;
+  --apex-color-text-primary: #e8e8f0;
+  --apex-color-text-secondary: #9898b0;
+  --apex-color-text-muted: #5a5a70;
+  --apex-color-accent: #6b6bff;
+  --apex-color-accent-dim: #3d3d8a;
+  --apex-color-success: #22c55e;
+  --apex-color-warning: #f59e0b;
+  --apex-color-danger: #ef4444;
+  --apex-color-info: #3b82f6;
+  --apex-font-sans: 'Inter', system-ui, sans-serif;
+  --apex-font-display: 'Cinzel', serif;
+  --apex-font-mono: 'JetBrains Mono', monospace;
+  --apex-radius-sm: 4px;
+  --apex-radius-md: 8px;
+  --apex-radius-lg: 12px;
+  --apex-spacing-1: 4px;
+  --apex-spacing-2: 8px;
+  --apex-spacing-3: 12px;
+  --apex-spacing-4: 16px;
+  --apex-spacing-6: 24px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--apex-color-bg);color:var(--apex-color-text-primary);font-family:var(--apex-font-sans);font-size:13px;line-height:1.5}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 var(--apex-spacing-6);height:52px;border-bottom:1px solid var(--apex-color-border);flex-shrink:0;background:var(--apex-color-surface)}
+.header-title{font-family:var(--apex-font-display);font-size:14px;font-weight:600;letter-spacing:0.08em}
+.header-sub{font-size:11px;color:var(--apex-color-text-muted);letter-spacing:0.12em;margin-top:2px}
+.waveform{display:flex;align-items:flex-end;gap:3px;height:20px}
+.waveform-bar{width:3px;border-radius:2px 2px 0 0;background:var(--apex-color-accent);animation:wave 0.48s ease-in-out infinite alternate}
+@keyframes wave{from{transform:scaleY(0.3)}to{transform:scaleY(1)}}
+@media(prefers-reduced-motion:reduce){.waveform-bar{animation-duration:0s}}
+/* BODY */
+.body{display:flex;flex:1;overflow:hidden}
+/* LEFT PANEL */
+.panel-left{width:280px;border-right:1px solid var(--apex-color-border);display:flex;flex-direction:column;flex-shrink:0;background:var(--apex-color-surface);overflow-y:auto}
+/* CENTRE */
+.panel-centre{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.centre-content{flex:1;overflow-y:auto;padding:var(--apex-spacing-4)}
+/* RIGHT */
+.panel-right{width:300px;border-left:1px solid var(--apex-color-border);display:flex;flex-direction:column;flex-shrink:0;background:var(--apex-color-surface)}
+/* PANEL LABELS */
+.panel-label{font-size:10px;font-weight:600;letter-spacing:0.12em;color:var(--apex-color-text-muted);padding:var(--apex-spacing-3) var(--apex-spacing-4);border-bottom:1px solid var(--apex-color-border-subtle);text-transform:uppercase;flex-shrink:0}
+/* STATE CARDS */
+.state-section{padding:var(--apex-spacing-2);border-bottom:1px solid var(--apex-color-border-subtle)}
+.state-card{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-2)}
+.state-card-title{font-size:10px;font-weight:600;letter-spacing:0.1em;color:var(--apex-color-text-muted);text-transform:uppercase;margin-bottom:var(--apex-spacing-2)}
+.state-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.state-label{font-size:11px;color:var(--apex-color-text-secondary)}
+/* VERDICT BADGES */
+.verdict{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;letter-spacing:0.08em;text-transform:uppercase}
+.verdict-allow{background:#0a2a1a;border:1px solid #22c55e55;color:var(--apex-color-success)}
+.verdict-warn{background:#2a1a0a;border:1px solid #f59e0b55;color:var(--apex-color-warning)}
+.verdict-restrict{background:#2a1a0a;border:1px solid #f59e0b55;color:var(--apex-color-warning)}
+.verdict-deny{background:#2a0a0a;border:1px solid #ef444455;color:var(--apex-color-danger)}
+.verdict-blocked{background:#2a0a0a;border:1px solid #ef444455;color:var(--apex-color-danger)}
+.verdict-unknown{background:#1a1a2a;border:1px solid var(--apex-color-border);color:var(--apex-color-text-muted)}
+.verdict-pending{background:#1a1a2a;border:1px solid var(--apex-color-border);color:var(--apex-color-text-secondary)}
+/* GENERIC BADGE */
+.badge{display:inline-flex;align-items:center;font-size:9px;font-weight:600;padding:2px 6px;border-radius:10px;letter-spacing:0.06em;text-transform:uppercase}
+.badge-certified{background:#0a2a1a;color:var(--apex-color-success);border:1px solid #22c55e44}
+.badge-partial{background:#2a1a0a;color:var(--apex-color-warning);border:1px solid #f59e0b44}
+.badge-denied{background:#2a0a0a;color:var(--apex-color-danger);border:1px solid #ef444455}
+.badge-info{background:#0a1a2a;color:var(--apex-color-info);border:1px solid #3b82f644}
+.badge-system{background:#1a1a2a;color:var(--apex-color-text-secondary);border:1px solid var(--apex-color-border)}
+/* PERMISSION STATES */
+.perm-state{display:flex;align-items:center;gap:var(--apex-spacing-2);padding:6px var(--apex-spacing-3);border-radius:var(--apex-radius-sm);border:1px solid;margin-bottom:4px;font-size:11px;font-weight:500}
+.perm-permitted{background:#0a2a1a;border-color:#22c55e55;color:var(--apex-color-success)}
+.perm-blocked{background:#2a0a0a;border-color:#ef444455;color:var(--apex-color-danger)}
+.perm-approval{background:#2a1a0a;border-color:#f59e0b55;color:var(--apex-color-warning)}
+.perm-uncertain{background:#1a1a2a;border-color:var(--apex-color-border);color:var(--apex-color-text-muted)}
+.perm-failed{background:#2a0a0a;border-color:#ef444455;color:var(--apex-color-danger)}
+.perm-not-auth{background:#2a0a0a;border-color:#ef444455;color:var(--apex-color-danger)}
+/* CONTENT */
+.content-block{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);font-size:11px;color:var(--apex-color-text-secondary);line-height:1.6;margin-bottom:var(--apex-spacing-3)}
+.section{margin-bottom:var(--apex-spacing-3)}
+.section-label{font-size:10px;font-weight:600;letter-spacing:0.1em;color:var(--apex-color-text-muted);text-transform:uppercase;margin-bottom:var(--apex-spacing-2)}
+/* EXPLANATION CHAIN */
+.explain-chain{display:flex;flex-direction:column;gap:3px}
+.explain-step{display:flex;align-items:flex-start;gap:var(--apex-spacing-2);padding:6px var(--apex-spacing-3);border-radius:var(--apex-radius-sm);border:1px solid var(--apex-color-border);background:var(--apex-color-surface-raised)}
+.explain-step-num{width:20px;height:20px;border-radius:50%;background:var(--apex-color-accent-dim);color:var(--apex-color-accent);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.explain-step-label{font-size:9px;color:var(--apex-color-text-muted);font-weight:600;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.06em}
+.explain-step-value{font-size:11px;color:var(--apex-color-text-secondary)}
+/* AUDIT TRAIL */
+.audit-row{display:flex;gap:var(--apex-spacing-2);font-size:11px;padding:4px 0;border-bottom:1px solid var(--apex-color-border-subtle)}
+.audit-row:last-child{border-bottom:none}
+.audit-check{color:var(--apex-color-text-muted);width:120px;flex-shrink:0}
+.audit-result{color:var(--apex-color-text-secondary)}
+/* EVIDENCE BLOCK */
+.evidence-block{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);font-family:var(--apex-font-mono);font-size:10px}
+.evidence-row{display:flex;gap:var(--apex-spacing-2);padding:2px 0;color:var(--apex-color-text-secondary)}
+.evidence-key{color:var(--apex-color-text-muted);width:120px;flex-shrink:0}
+/* TABLES */
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--apex-color-border);color:var(--apex-color-text-muted);font-weight:600;font-size:10px;letter-spacing:0.06em;text-transform:uppercase}
+td{padding:6px 8px;border-bottom:1px solid var(--apex-color-border-subtle);color:var(--apex-color-text-secondary);vertical-align:top}
+tr:last-child td{border-bottom:none}
+/* WARNING/DANGER/SUCCESS BLOCKS */
+.warn-block{background:#2a1a0a;border:1px solid #f59e0b55;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-3)}
+.warn-block .warn-title{font-size:11px;font-weight:600;color:var(--apex-color-warning);margin-bottom:var(--apex-spacing-1)}
+.warn-block p{font-size:11px;color:#fcd34d;line-height:1.5}
+.danger-block{background:#2a0a0a;border:1px solid #ef444455;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-3)}
+.danger-block .danger-title{font-size:11px;font-weight:600;color:var(--apex-color-danger);margin-bottom:var(--apex-spacing-1)}
+.danger-block p{font-size:11px;color:#fca5a5;line-height:1.5}
+.success-block{background:#0a2a1a;border:1px solid #22c55e55;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-3)}
+.success-block p{font-size:11px;color:#86efac;line-height:1.5}
+.info-block{background:#0a1a2a;border:1px solid #3b82f655;border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3);margin-bottom:var(--apex-spacing-3)}
+.info-block p{font-size:11px;color:#93c5fd;line-height:1.5}
+/* GATE CHAIN */
+.gate-row{display:flex;align-items:center;gap:var(--apex-spacing-2);margin-bottom:6px}
+.gate-box{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-sm);padding:4px 8px;font-size:10px;text-align:center;min-width:60px}
+.gate-box.active{border-color:var(--apex-color-accent);background:var(--apex-color-accent-dim);color:var(--apex-color-text-primary)}
+.gate-arrow{color:var(--apex-color-text-muted);font-size:12px}
+/* PRINCIPLE LIST */
+.principle-item{display:flex;align-items:flex-start;gap:var(--apex-spacing-2);padding:4px 0;border-bottom:1px solid var(--apex-color-border-subtle)}
+.principle-id{font-family:var(--apex-font-mono);font-size:9px;color:var(--apex-color-accent);width:100px;flex-shrink:0}
+.principle-name{font-size:11px;color:var(--apex-color-text-secondary)}
+/* READINESS */
+.readiness-bar{height:6px;background:var(--apex-color-border);border-radius:3px;overflow:hidden;margin-top:var(--apex-spacing-1)}
+.readiness-fill{height:100%;border-radius:3px}
+/* SCENARIOS */
+.scenarios-list{flex:1;overflow-y:auto;padding:var(--apex-spacing-2)}
+.scenario-item{display:flex;gap:var(--apex-spacing-2);padding:5px var(--apex-spacing-2);border-radius:var(--apex-radius-sm);cursor:pointer;border:1px solid transparent;margin-bottom:1px;transition:background 0.1s}
+.scenario-item:hover{background:var(--apex-color-surface-raised)}
+.scenario-item.active{background:var(--apex-color-surface-raised);border-color:var(--apex-color-accent-dim)}
+.scenario-num{font-family:var(--apex-font-mono);font-size:9px;color:var(--apex-color-text-muted);width:20px;flex-shrink:0;padding-top:1px}
+.scenario-name{font-size:11px;color:var(--apex-color-text-secondary);line-height:1.4}
+/* DISCLOSURE */
+.disclosure-row{display:flex;align-items:center;gap:var(--apex-spacing-1);padding:var(--apex-spacing-2) var(--apex-spacing-4);border-bottom:1px solid var(--apex-color-border)}
+.dl-btn{padding:3px 8px;border-radius:var(--apex-radius-sm);border:1px solid var(--apex-color-border);background:transparent;color:var(--apex-color-text-muted);cursor:pointer;font-size:10px;font-weight:600;transition:all 0.15s}
+.dl-btn.active{background:var(--apex-color-accent);border-color:var(--apex-color-accent);color:#fff}
+/* CONSTITUTIONAL CHAIN */
+.const-chain{display:flex;flex-direction:column;gap:3px;padding:var(--apex-spacing-2) var(--apex-spacing-4)}
+.const-step{display:flex;align-items:center;gap:var(--apex-spacing-2);font-size:10px;padding:4px var(--apex-spacing-2);border-radius:var(--apex-radius-sm);border:1px solid var(--apex-color-border-subtle);color:var(--apex-color-text-muted)}
+.const-step.active-step{background:var(--apex-color-accent-dim);border-color:var(--apex-color-accent);color:var(--apex-color-text-primary)}
+.const-step-num{width:14px;height:14px;border-radius:50%;background:var(--apex-color-border);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600}
+.const-step.active-step .const-step-num{background:var(--apex-color-accent)}
+/* PLACEHOLDER */
+.placeholder{display:flex;align-items:center;justify-content:center;height:100%;color:var(--apex-color-text-muted);font-size:13px;font-style:italic}
+/* SCENARIO OUTPUT */
+.scenario-output{animation:fadeIn 0.15s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.scenario-title{font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--apex-color-accent);margin-bottom:var(--apex-spacing-4);text-transform:uppercase}
+/* BUTTONS */
+.btn{padding:6px 14px;border-radius:var(--apex-radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;border:1px solid}
+.btn-accent{background:var(--apex-color-accent);border-color:var(--apex-color-accent);color:#fff}
+.btn-outline-accent{background:transparent;border-color:var(--apex-color-accent);color:var(--apex-color-accent)}
+.btn-outline-danger{background:transparent;border-color:var(--apex-color-danger);color:var(--apex-color-danger)}
+.btn-secondary{background:transparent;border-color:var(--apex-color-border);color:var(--apex-color-text-secondary)}
+.btn-row{display:flex;gap:var(--apex-spacing-2);margin-top:var(--apex-spacing-3)}
+/* COMPARE */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--apex-spacing-3)}
+.compare-col{background:var(--apex-color-surface-raised);border:1px solid var(--apex-color-border);border-radius:var(--apex-radius-md);padding:var(--apex-spacing-3)}
+.compare-col-title{font-size:11px;font-weight:600;margin-bottom:var(--apex-spacing-2);color:var(--apex-color-text-primary)}
+.compare-col ul{list-style:none;padding:0}
+.compare-col li{font-size:11px;color:var(--apex-color-text-secondary);padding:2px 0;padding-left:12px;position:relative}
+.compare-col li::before{content:'—';position:absolute;left:0;color:var(--apex-color-text-muted)}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--apex-color-border);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header class="header" role="banner">
+  <div>
+    <div class="header-title">APEX — UX-16 SYSTEM / CONSTITUTIONAL</div>
+    <div class="header-sub">CONSTITUTIONAL GOVERNANCE PROTOTYPE</div>
+  </div>
+  <div class="waveform" aria-hidden="true" id="waveform"></div>
+</header>
+
+<!-- BODY -->
+<div class="body">
+
+  <!-- LEFT PANEL — system state -->
+  <aside class="panel-left" role="complementary" aria-label="System state">
+    <div class="panel-label">System State</div>
+
+    <div class="state-section">
+      <div class="state-card">
+        <div class="state-card-title">Constitutional</div>
+        <div class="state-row"><span class="state-label">Version</span><span class="badge badge-info" style="font-size:9px">APEX-CONSTITUTION-v1.0</span></div>
+        <div class="state-row"><span class="state-label">Gate verdict</span><span class="verdict verdict-allow">ALLOW</span></div>
+        <div class="state-row"><span class="state-label">Principles</span><span style="font-size:11px;color:var(--apex-color-success)">23 / 23</span></div>
+        <div class="state-row"><span class="state-label">Checks active</span><span style="font-size:11px;color:var(--apex-color-text-secondary)">5</span></div>
+      </div>
+      <div class="state-card">
+        <div class="state-card-title">Governance</div>
+        <div class="state-row"><span class="state-label">Readiness</span><span style="font-size:11px;color:var(--apex-color-success)">AUDIT READY</span></div>
+        <div class="state-row"><span class="state-label">Domains</span><span style="font-size:11px;color:var(--apex-color-text-secondary)">40 active</span></div>
+        <div class="state-row"><span class="state-label">Evidence blocks</span><span style="font-size:11px;color:var(--apex-color-text-secondary)">247</span></div>
+        <div class="state-row"><span class="state-label">Open incidents</span><span style="font-size:11px;color:var(--apex-color-success)">0</span></div>
+      </div>
+      <div class="state-card">
+        <div class="state-card-title">Authority</div>
+        <div class="state-row"><span class="state-label">Type</span><span style="font-size:11px;color:var(--apex-color-text-secondary)">OBSERVATION</span></div>
+        <div class="state-row"><span class="state-label">Granted by</span><span style="font-size:10px;color:var(--apex-color-text-muted);font-family:var(--apex-font-mono)">APEX-CONSTITUTION-v1.0</span></div>
+        <div class="state-row"><span class="state-label">Full delegation</span><span class="badge badge-system">T3-09+</span></div>
+      </div>
+      <div class="state-card">
+        <div class="state-card-title">Runtime</div>
+        <div class="state-row"><span class="state-label">Server</span><span class="verdict verdict-allow">RUNNING</span></div>
+        <div class="state-row"><span class="state-label">Execution class</span><span style="font-size:11px;color:var(--apex-color-text-secondary)">REFLEX</span></div>
+        <div class="state-row"><span class="state-label">Containment</span><span style="font-size:11px;color:var(--apex-color-success)">INACTIVE</span></div>
+        <div class="state-row"><span class="state-label">Degraded mode</span><span style="font-size:11px;color:var(--apex-color-success)">OFF</span></div>
+      </div>
+      <div class="state-card">
+        <div class="state-card-title">Certification</div>
+        <div class="state-row"><span class="state-label">Latest</span><span class="badge badge-certified">CERTIFIED</span></div>
+        <div class="state-row"><span class="state-label">Score</span><span style="font-size:11px;color:var(--apex-color-success)">1.00</span></div>
+        <div class="state-row"><span class="state-label">Expires</span><span style="font-size:11px;color:var(--apex-color-text-secondary)">2026-11-25</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CENTRE PANEL -->
+  <main class="panel-centre" role="main">
+    <div class="panel-label" id="centreLabel">Constitutional Detail Surface</div>
+    <div class="centre-content" aria-live="polite" role="region" aria-label="Constitutional detail" id="centrePanel">
+      <div class="placeholder">Select a scenario to inspect the constitutional model</div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="panel-right" role="complementary" aria-label="Scenarios">
+    <div class="panel-label">Disclosure Level</div>
+    <div class="disclosure-row">
+      <span style="font-size:10px;color:var(--apex-color-text-muted);margin-right:4px">LEVEL</span>
+      <button class="dl-btn" onclick="setDisclosure(0)" tabindex="0">L0</button>
+      <button class="dl-btn" onclick="setDisclosure(1)" tabindex="0">L1</button>
+      <button class="dl-btn active" onclick="setDisclosure(2)" tabindex="0">L2</button>
+      <button class="dl-btn" onclick="setDisclosure(3)" tabindex="0">L3</button>
+      <button class="dl-btn" onclick="setDisclosure(4)" tabindex="0">L4</button>
+    </div>
+    <div class="panel-label">Constitutional Chain</div>
+    <div class="const-chain" id="constChain"></div>
+    <div class="panel-label">Scenarios (40)</div>
+    <div class="scenarios-list" id="scenariosList"></div>
+  </aside>
+</div>
+</div>
+
+<script>
+// ── WAVEFORM ──────────────────────────────────────────────────────────────────
+const wf = document.getElementById('waveform');
+[5,12,18,9,15,7,11].forEach((h,i)=>{
+  const b=document.createElement('div'); b.className='waveform-bar';
+  b.style.cssText=`height:${h}px;animation-delay:${i*0.06}s`; wf.appendChild(b);
+});
+
+// ── CONSTITUTIONAL CHAIN ──────────────────────────────────────────────────────
+const CHAIN_STEPS = ['IDENTITY','OWNERSHIP','AUTHORITY','GOVERNANCE','EXECUTION','MEMORY'];
+let activeChainStep = -1;
+function renderChain(active) {
+  activeChainStep = active;
+  document.getElementById('constChain').innerHTML = CHAIN_STEPS.map((s,i)=>`
+    <div class="const-step ${i===active?'active-step':''}" role="listitem">
+      <div class="const-step-num">${i+1}</div><span>${s}</span>
+    </div>`).join('');
+}
+renderChain(-1);
+
+// ── SCENARIOS DATA ────────────────────────────────────────────────────────────
+const SCENARIOS = [
+  {n:1, label:'V-SYSTEM-01 System overview'},
+  {n:2, label:'V-SYSTEM-02 Constitutional status'},
+  {n:3, label:'V-SYSTEM-03 Governance status'},
+  {n:4, label:'V-SYSTEM-04 Authority status'},
+  {n:5, label:'V-SYSTEM-05 Runtime status'},
+  {n:6, label:'V-SYSTEM-06 Constitutional version'},
+  {n:7, label:'V-SYSTEM-07 Rule detail'},
+  {n:8, label:'V-SYSTEM-08 Permitted action'},
+  {n:9, label:'V-SYSTEM-09 Blocked action'},
+  {n:10,label:'V-SYSTEM-10 Approval required'},
+  {n:11,label:'V-SYSTEM-11 Insufficient information'},
+  {n:12,label:'V-SYSTEM-12 Uncertain state'},
+  {n:13,label:'V-SYSTEM-13 Failed state'},
+  {n:14,label:'V-SYSTEM-14 Not authorised'},
+  {n:15,label:'V-SYSTEM-15 Decision explanation'},
+  {n:16,label:'V-SYSTEM-16 Action explanation'},
+  {n:17,label:'V-SYSTEM-17 Approval relationship'},
+  {n:18,label:'V-SYSTEM-18 Agent authority'},
+  {n:19,label:'V-SYSTEM-19 Memory authority boundary'},
+  {n:20,label:'V-SYSTEM-20 Knowledge authority boundary'},
+  {n:21,label:'V-SYSTEM-21 Evidence relationship'},
+  {n:22,label:'V-SYSTEM-22 Constitutional record'},
+  {n:23,label:'V-SYSTEM-23 Provenance'},
+  {n:24,label:'V-SYSTEM-24 Audit entry'},
+  {n:25,label:'V-SYSTEM-25 Why blocked'},
+  {n:26,label:'V-SYSTEM-26 Why approval required'},
+  {n:27,label:'V-SYSTEM-27 What APEX executed'},
+  {n:28,label:'V-SYSTEM-28 What APEX did not execute'},
+  {n:29,label:'V-SYSTEM-29 System degradation'},
+  {n:30,label:'V-SYSTEM-30 Constitutional failure'},
+  {n:31,label:'V-SYSTEM-31 Governance conflict'},
+  {n:32,label:'V-SYSTEM-32 Evidence conflict'},
+  {n:33,label:'V-SYSTEM-33 L0 disclosure'},
+  {n:34,label:'V-SYSTEM-34 L1 disclosure'},
+  {n:35,label:'V-SYSTEM-35 L2 disclosure'},
+  {n:36,label:'V-SYSTEM-36 L3 disclosure'},
+  {n:37,label:'V-SYSTEM-37 L4 disclosure'},
+  {n:38,label:'V-SYSTEM-38 Voice constitutional query'},
+  {n:39,label:'V-SYSTEM-39 Cross-domain action'},
+  {n:40,label:'V-SYSTEM-40 One-Apex constitutional boundary'},
+];
+
+// ── RENDER SCENARIOS LIST ─────────────────────────────────────────────────────
+let activeN = null;
+function renderScenariosList() {
+  document.getElementById('scenariosList').innerHTML = SCENARIOS.map(s=>`
+    <div class="scenario-item ${activeN===s.n?'active':''}" onclick="loadScenario(${s.n})" tabindex="0" role="button" aria-label="Scenario ${s.n}">
+      <div class="scenario-num">${s.n}</div>
+      <div class="scenario-name">${s.label}</div>
+    </div>`).join('');
+}
+renderScenariosList();
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function verdict(cls, text) { return `<span class="verdict verdict-${cls}" role="status">${text}</span>`; }
+function badge(cls, text) { return `<span class="badge badge-${cls}">${text}</span>`; }
+function perm(cls, icon, text) { return `<div class="perm-state perm-${cls}" role="status"><span>${icon}</span><span>${text}</span></div>`; }
+function section(label, content) { return `<div class="section"><div class="section-label">${label}</div>${content}</div>`; }
+function explain(steps) {
+  return `<div class="explain-chain">${steps.map((s,i)=>`
+    <div class="explain-step">
+      <div class="explain-step-num">${i+1}</div>
+      <div><div class="explain-step-label">${s.label}</div><div class="explain-step-value">${s.value}</div></div>
+    </div>`).join('')}</div>`;
+}
+function auditTrail(rows) {
+  return `<div class="content-block" style="padding:0">${rows.map(r=>`
+    <div class="audit-row">
+      <div class="audit-check">${r.check}</div>
+      <div class="audit-result">${r.result}</div>
+    </div>`).join('')}</div>`;
+}
+function evidenceBlock(fields) {
+  return `<div class="evidence-block">${fields.map(f=>`
+    <div class="evidence-row"><div class="evidence-key">${f.k}</div><div>${f.v}</div></div>`).join('')}</div>`;
+}
+function gateChain(gates) {
+  const items = gates.map(g=>`<div class="gate-box ${g.active?'active':''}">${g.label}</div>`);
+  const row = [];
+  items.forEach((x,i)=>{ row.push(x); if(i<items.length-1) row.push('<div class="gate-arrow">→</div>'); });
+  return `<div class="gate-row">${row.join('')}</div>`;
+}
+
+// ── SCENARIO OUTPUTS ──────────────────────────────────────────────────────────
+function renderScenario(n) {
+  switch(n) {
+
+    case 1: renderChain(-1); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-01 — System Overview</div>
+        <div class="info-block"><p>APEX is a governed system. Constitutional correctness is not the same as server availability. Multiple state dimensions coexist.</p></div>
+        <table><thead><tr><th>Dimension</th><th>Status</th><th>Source</th></tr></thead><tbody>
+          <tr><td>Server health</td><td>${verdict('allow','RUNNING')}</td><td>lib/health/monitor.js</td></tr>
+          <tr><td>Constitutional state</td><td>${verdict('allow','ALLOW')}</td><td>lib/runtime/constitutional-gate.js</td></tr>
+          <tr><td>Governance state</td><td>${verdict('allow','AUDIT READY')}</td><td>lib/runtime-readiness.js</td></tr>
+          <tr><td>Runtime readiness</td><td><span style="color:var(--apex-color-success);font-size:11px">84/100</span></td><td>GET /api/governance/readiness</td></tr>
+          <tr><td>Certification</td><td>${badge('certified','CERTIFIED')}</td><td>certifications table</td></tr>
+          <tr><td>Active incidents</td><td><span style="color:var(--apex-color-success);font-size:11px">0</span></td><td>incidents table</td></tr>
+          <tr><td>Constitution modules</td><td><span style="font-size:11px;color:var(--apex-color-text-secondary)">5 active / 69 total</span></td><td>architecture-registry</td></tr>
+        </tbody></table>
+      </div>`;
+
+    case 2: renderChain(2); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-02 — Constitutional Status</div>
+        <div class="section"><div class="section-label">Current Constitution</div>
+          <div class="content-block">
+            <div style="font-size:12px;font-weight:600;margin-bottom:4px">APEX-CONSTITUTION-v1.0</div>
+            <div style="font-size:11px;color:var(--apex-color-text-muted)">23 principles · 7 categories · Static version (no increment mechanism observed)</div>
+          </div>
+        </div>
+        ${section('Gate Verdict', verdict('allow','ALLOW')+'&nbsp;&nbsp;<span style="font-size:11px;color:var(--apex-color-text-secondary)">All 5 checks passed within 400ms</span>')}
+        ${section('Principles by Category', '<table><thead><tr><th>Category</th><th>Count</th><th>Status</th></tr></thead><tbody>'+
+          [['AUTHORITY',4],['PRIVACY',4],['CERTIFICATION',4],['LEARNING',3],['HEALTH',4],['IDENTITY',3],['GOVERNANCE',1]]
+          .map(([c,n])=>`<tr><td>${c}</td><td>${n}</td><td><span style="color:var(--apex-color-success);font-size:11px">VERIFIED</span></td></tr>`).join('')+
+          '</tbody></table>')}
+      </div>`;
+
+    case 3: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-03 — Governance Status</div>
+        ${section('Governance Domains', '<div class="content-block"><span style="font-size:12px;font-weight:600">40 domains</span> — all fire-and-forget writes. Failed writes never crash callers.</div>')}
+        <table><thead><tr><th>Domain</th><th>Table</th><th>Status</th></tr></thead><tbody>
+          <tr><td>Execution graphs</td><td><code>execution_graphs</code></td><td>${badge('certified','ACTIVE')}</td></tr>
+          <tr><td>Certifications</td><td><code>certifications</code></td><td>${badge('certified','ACTIVE')}</td></tr>
+          <tr><td>Evidence chain</td><td><code>evidence_blocks</code></td><td>${badge('certified','ACTIVE')}</td></tr>
+          <tr><td>Policy decisions</td><td><code>policy_decisions</code></td><td>${badge('certified','ACTIVE')}</td></tr>
+          <tr><td>Incidents</td><td><code>incidents</code></td><td>${badge('certified','ACTIVE')}</td></tr>
+          <tr><td>OTel spans</td><td><code>otel_spans</code></td><td>${badge('certified','ACTIVE')}</td></tr>
+          <tr><td>Agent reputation</td><td><code>agent_reputation_events</code></td><td>${badge('certified','ACTIVE')}</td></tr>
+          <tr><td>Approvals</td><td><code>approvals</code></td><td>${badge('partial','PARTIAL')}</td></tr>
+          <tr><td>Constitutional records</td><td><code>constitutional_records</code></td><td>${badge('partial','PARTIAL')}</td></tr>
+        </tbody></table>
+        <div class="info-block" style="margin-top:12px"><p>Runtime readiness: 84/100 → AUDIT READY. Evidence is DB-only — no anticipated capability credit.</p></div>
+      </div>`;
+
+    case 4: renderChain(2); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-04 — Authority Status</div>
+        <div class="section"><div class="section-label">Authority Registry</div>
+          <div class="content-block">
+            <div style="margin-bottom:6px"><strong>Storage:</strong> Runtime-local (in-memory Map). Re-registered each server start.</div>
+            <div style="margin-bottom:6px"><strong>Granted by:</strong> <code>APEX-CONSTITUTION-v1.0</code></div>
+            <div><strong>Bootstrap authority type:</strong> <code>OBSERVATION</code> only (D6 §4.2)</div>
+          </div>
+        </div>
+        ${section('Authority Types', '<table><thead><tr><th>Type</th><th>Bootstrap</th><th>Full</th></tr></thead><tbody>'+
+          [['OBSERVATION','✓ Active','—'],['INTERPRETATION','—','T3-09+'],['DECISION','—','T3-09+'],['PROJECTION','—','T3-09+'],['AUDIT','—','T3-09+']]
+          .map(([t,b,f])=>`<tr><td><code>${t}</code></td><td style="color:var(--apex-color-success)">${b}</td><td style="color:var(--apex-color-text-muted)">${f}</td></tr>`).join('')+
+          '</tbody></table>')}
+        <div class="danger-block"><div class="danger-title">Full DelegationRecord — T3-09+ SCOPE</div>
+          <p>Full authority delegation (delegating_actor, recipient_actor, authorization_chain_ref, autonomy_band) is not implemented. Bootstrap grants are constitutionally honest about this limitation.</p>
+        </div>
+      </div>`;
+
+    case 5: renderChain(4); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-05 — Runtime Status</div>
+        ${gateChain([{label:'IDENTITY',active:true},{label:'OWNERSHIP',active:true},{label:'AUTHORITY',active:true},{label:'GOVERNANCE',active:true},{label:'EXEC →',active:false},{label:'MEMORY →',active:false}])}
+        <table style="margin-top:8px"><thead><tr><th>Component</th><th>Status</th><th>Note</th></tr></thead><tbody>
+          <tr><td>Kernel (4 gates)</td><td>${verdict('allow','WIRED')}</td><td>server.js:277</td></tr>
+          <tr><td>Constitutional gate</td><td>${verdict('allow','ACTIVE')}</td><td>5 checks, fail-closed</td></tr>
+          <tr><td>Watchdog</td><td>${verdict('allow','ACTIVE')}</td><td>30-min tick</td></tr>
+          <tr><td>Outbox relay</td><td>${verdict('allow','ACTIVE')}</td><td>services/init.js</td></tr>
+          <tr><td>Integrity crons</td><td>${verdict('allow','ACTIVE')}</td><td>services/init.js</td></tr>
+          <tr><td>Event bus</td><td>${verdict('allow','ACTIVE')}</td><td>AGENT_STARTED/COMPLETED</td></tr>
+          <tr><td>Containment</td><td>${verdict('allow','INACTIVE')}</td><td>lib/health/containment.js</td></tr>
+          <tr><td>Degraded mode</td><td>${verdict('allow','OFF')}</td><td>flags.degradedMode = false</td></tr>
+        </tbody></table>
+        <div class="section" style="margin-top:12px"><div class="section-label">Execution Context (this request)</div>
+          ${evidenceBlock([
+            {k:'requestId', v:'req-a7f2c3d9-...'}, {k:'executionClass', v:'REFLEX'}, {k:'authStatus', v:'AUTHENTICATED'},
+            {k:'constitution.verdict', v:'ALLOW'}, {k:'flags.constitutionBlocked', v:'false'}
+          ])}
+        </div>
+      </div>`;
+
+    case 6: renderChain(0); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-06 — Constitutional Version</div>
+        <div class="content-block">
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px">APEX-CONSTITUTION-v1.0</div>
+          <div style="font-size:11px;color:var(--apex-color-text-secondary);margin-bottom:4px">Referenced in: authority-registry.js, constitutional-gate.js, constitutional-store.js, spec.js</div>
+          <div style="font-size:11px;color:var(--apex-color-text-secondary)">No version increment mechanism observed. Constitution is static at v1.0.</div>
+        </div>
+        ${section('Constitutional Scope', evidenceBlock([
+          {k:'Principles', v:'23 (7 categories)'}, {k:'Gate checks', v:'5 (active)'},
+          {k:'Total constitution modules', v:'69'}, {k:'Active modules', v:'5'},
+          {k:'Dead/legacy modules', v:'64 (not wired)'},
+        ]))}
+        <div class="info-block"><p>Constitutional version is verified by <code>lib/constitution/spec.js verifyAll()</code> which runs behavioral + structural checks per principle. Not all 69 modules are wired.</p></div>
+      </div>`;
+
+    case 7: renderChain(0); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-07 — Rule Detail (P23)</div>
+        ${section('Constitutional Principle', '<div class="content-block"><div class="principle-item"><div class="principle-id">P23</div><div class="principle-name"><strong>GOVERNANCE</strong> — Layer 0 and 11 writes produce governance audit trail</div></div><div style="font-size:11px;color:var(--apex-color-text-secondary);margin-top:8px">When memory is stored to layer 0 (Founder) or layer 11 (Improvement Engine), <code>gov.appendEvidenceBlock()</code> is called, appending to the evidence hash chain.</div></div>')}
+        ${section('Verify Evidence', auditTrail([
+          {check:'check: behavioral', result:'storeMemory(layer 0) → appendEvidenceBlock() call detected'},
+          {check:'check: structural', result:'fingerprint: a3f2c1b0 (SHA-256 hash of source pattern)'},
+          {check:'pass', result:'true — principle verified'},
+        ]))}
+        ${section('Source', '<div class="content-block"><code>lib/memory/gateway.js</code> — condition: <code>layer === 0 || meta.layer === 11</code></div>')}
+      </div>`;
+
+    case 8: renderChain(4); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-08 — Permitted Action</div>
+        ${perm('permitted','✓','PERMITTED — Read documents from finance domain')}
+        ${explain([
+          {label:'Event', value:'Agent requests: list_documents (finance domain)'},
+          {label:'Context', value:'Autonomy level L2 — read-only actions auto-permitted'},
+          {label:'Applicable Rule', value:'isSafeAutoAction() → list_documents = READ type'},
+          {label:'Authority', value:'Agent has OBSERVATION authority — READ is within scope'},
+          {label:'Determination', value:'PERMIT — no approval required'},
+          {label:'Action', value:'list_documents executed'},
+          {label:'Outcome', value:'Documents returned. Governance: recordReputationEvent(success)'},
+        ])}
+      </div>`;
+
+    case 9: renderChain(2); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-09 — Blocked Action</div>
+        ${perm('blocked','⛔','BLOCKED — Constitutional gate DENY')}
+        <div class="danger-block"><div class="danger-title">Why Blocked</div>
+          <p>Constitutional gate check #2 (risk-monitor) returned CRITICAL risk. Risk identifier: <code>RISK_CRITICAL</code>. Fail-closed. Request denied.</p>
+        </div>
+        ${section('Audit Trail', auditTrail([
+          {check:'authority', result:'ALLOW (complianceStatus: COMPLIANT)'},
+          {check:'risk', result:'DENY — level: CRITICAL, score: 0.91, principlesAtRisk: [IDENTITY]'},
+          {check:'modification', result:'N/A — not a mod-path request'},
+          {check:'deception', result:'ALLOW — score: 0.02'},
+          {check:'confabulation', result:'ALLOW — severity: LOW'},
+        ]))}
+        ${section('Resolution', '<div class="content-block">The request cannot proceed. If this was unexpected, inspect the risk state. If APEX is in critical health, containment may have triggered elevated risk scoring. No action was executed.</div>')}
+      </div>`;
+
+    case 10: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-10 — Approval Required</div>
+        ${perm('approval','⚠','REQUIRES APPROVAL — delete_document (destructive)')}
+        ${explain([
+          {label:'Event', value:'Agent proposes: delete_document finance/q2-report.pdf'},
+          {label:'Context', value:'Autonomy level L3 — destructive actions always require approval'},
+          {label:'Applicable Rule', value:'isDestructiveAgentStepType(delete_document) = true → approval gate'},
+          {label:'Authority', value:'Agent does not have DECISION authority for irreversible actions'},
+          {label:'Determination', value:'APPROVAL REQUIRED — cannot auto-execute'},
+          {label:'Action / Non-Action', value:'Task set to waiting_approval status. User notified.'},
+          {label:'Outcome', value:'Awaiting user decision. Evidence: pgInsertApproval() called.'},
+        ])}
+        <div class="btn-row">
+          <button class="btn btn-accent" tabindex="0">APPROVE</button>
+          <button class="btn btn-outline-danger" tabindex="0">DECLINE</button>
+          <button class="btn btn-secondary" tabindex="0">INSPECT</button>
+        </div>
+      </div>`;
+
+    case 11: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-11 — Insufficient Information</div>
+        ${perm('uncertain','?','CANNOT DETERMINE — insufficient information')}
+        <div class="warn-block"><div class="warn-title">Insufficient Information</div>
+          <p>APEX cannot determine whether this action is permitted. The requested resource does not have an ownership record in the system. Governance cannot evaluate authority without ownership.</p>
+        </div>
+        ${section('What Is Missing', auditTrail([
+          {check:'identity', result:'RESOLVED — api_client (AGENT class)'},
+          {check:'ownership', result:'UNKNOWN — resource /external/acme-api not in ownership registry'},
+          {check:'authority', result:'CANNOT CHECK — ownership required'},
+          {check:'governance', result:'CANNOT CHECK — ownership required'},
+        ]))}
+        ${section('Next Step', '<div class="content-block">Add resource to ownership registry or request explicit user authorisation. APEX will not assume permission from silence.</div>')}
+      </div>`;
+
+    case 12: renderChain(-1); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-12 — Uncertain State</div>
+        ${perm('uncertain','~','UNCERTAIN — constitutional state cannot be determined')}
+        <div class="warn-block"><div class="warn-title">Uncertain Constitutional State</div>
+          <p>The constitutional gate evaluated but returned <code>verdict: null</code>. This may occur if the context object was not hydrated before evaluation. APEX will not fabricate certainty.</p>
+        </div>
+        ${section('Execution Context', evidenceBlock([
+          {k:'constitution.evaluated', v:'false'}, {k:'constitution.verdict', v:'null'},
+          {k:'flags.partialHydration', v:'true'}, {k:'constitution.risks', v:'[]'},
+        ]))}
+        <div class="info-block"><p>UNCERTAIN and UNKNOWN are valid states in APEX. They are surfaced explicitly rather than resolved to a default assumption.</p></div>
+      </div>`;
+
+    case 13: renderChain(4); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-13 — Failed State</div>
+        ${perm('failed','✗','FAILED — pipeline execution failure')}
+        <div class="danger-block"><div class="danger-title">Execution Failed</div>
+          <p>Pipeline task failed at VALIDATOR stage. Certification issued with score=0 (denied). Incident created. Root cause report written. Lessons linked.</p>
+        </div>
+        <table><thead><tr><th>Record</th><th>Value</th></tr></thead><tbody>
+          <tr><td>Certification status</td><td>${badge('denied','DENIED')}</td></tr>
+          <tr><td>Certification score</td><td><span style="color:var(--apex-color-danger)">0.00</span></td></tr>
+          <tr><td>Incident</td><td><span style="color:var(--apex-color-danger)">OPEN — severity: high</span></td></tr>
+          <tr><td>Risk score</td><td><span style="color:var(--apex-color-danger)">0.90 — critical</span></td></tr>
+          <tr><td>SLO: pipeline_success_rate</td><td><span style="color:var(--apex-color-danger)">MET: false</span></td></tr>
+        </tbody></table>
+        <div class="info-block" style="margin-top:12px"><p>Failure is never silently converted to success. All failure evidence is recorded in the governance tables.</p></div>
+      </div>`;
+
+    case 14: renderChain(2); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-14 — Not Authorised</div>
+        ${perm('not-auth','✗','NOT AUTHORISED — AUTHORITY_REJECTED')}
+        <div class="danger-block"><div class="danger-title">Not Authorised</div>
+          <p>The authority resistance check evaluated the instruction as non-compliant. Risk: <code>AUTHORITY_REJECTED</code>. Verdict: DENY. The request is not permitted by the constitutional gate.</p>
+        </div>
+        ${section('What This Means', '<div class="content-block"><ul style="list-style:none;padding:0">'+
+          ['NOT AUTHORISED ≠ server error','NOT AUTHORISED ≠ forbidden knowledge','NOT AUTHORISED = constitutional gate DENY','The request may be retried with appropriate authority','Memory cannot override this decision','Intelligence recommendation cannot override this decision'].map(x=>`<li style="font-size:11px;color:var(--apex-color-text-secondary);padding:2px 0;padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--apex-color-text-muted)">—</span>${x}</li>`).join('')+'</ul></div>')}
+      </div>`;
+
+    case 15: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-15 — Decision Explanation</div>
+        ${section('Decision States (never skip ahead)', '<div class="content-block">'+
+          ['INFORMATIONAL → no action authority','RECOMMENDATION → intelligence output only','PROPOSAL → agent proposes, no execution','APPROVAL REQUIRED → user must approve','AUTHORISED → approval granted','EXECUTING → action in progress','COMPLETED / FAILED']
+          .map((s,i)=>`<div style="font-size:11px;color:var(--apex-color-text-secondary);padding:2px 0;display:flex;gap:8px"><span style="color:var(--apex-color-text-muted);width:16px">${i+1}</span>${s}</div>`).join('')+'</div>')}
+        <div class="info-block"><p>A recommendation is never an authorised decision. A proposal is never an executed action. Each state requires independent evaluation.</p></div>
+      </div>`;
+
+    case 16: renderChain(4); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-16 — Action Explanation</div>
+        ${explain([
+          {label:'Proposal', value:'Create document: finance/q3-forecast.md'},
+          {label:'Approval', value:'User approved via POST /api/tasks/approve at 14:32:07'},
+          {label:'Execution', value:'create_document executed via executeApprovedAgentActions()'},
+          {label:'Governance Write', value:'pgLogAgentAction() called. agent_actions table updated.'},
+          {label:'Outcome', value:'Document created. status=applied. Evidence block appended.'},
+        ])}
+        ${section('Deviation DEV-16-01', '<div class="warn-block"><div class="warn-title">Note</div><p>POST /api/tasks/approve collapses APPROVED and EXECUTING states — they are not separately observable in the current production implementation.</p></div>')}
+      </div>`;
+
+    case 17: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-17 — Approval Relationship</div>
+        <table><thead><tr><th>Concept</th><th>Distinct from</th><th>Why</th></tr></thead><tbody>
+          <tr><td>PROPOSAL</td><td>Approval</td><td>Agent proposes; user has not yet decided</td></tr>
+          <tr><td>APPROVAL</td><td>Execution</td><td>User approved; action has not yet run</td></tr>
+          <tr><td>EXECUTION</td><td>Outcome</td><td>Action ran; result not yet recorded</td></tr>
+          <tr><td>STANDING APPROVAL</td><td>Blanket approval</td><td>Pattern-based; revocable; specific</td></tr>
+        </tbody></table>
+        ${section('Standing Approvals', '<div class="content-block">Standing approvals pre-authorise action patterns. They are NOT blanket permission. Each match is logged. All standing approvals are revocable via pgDisableStandingApproval().</div>')}
+        <div class="info-block"><p>Approval cannot be inferred from memory, knowledge, prior approvals, or agent recommendations. Each approval is independent.</p></div>
+      </div>`;
+
+    case 18: renderChain(2); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-18 — Agent Authority</div>
+        <div class="compare-grid">
+          <div class="compare-col"><div class="compare-col-title">AGENT CAPABILITY</div>
+            <ul><li>Can write files</li><li>Can call APIs</li><li>Can query databases</li><li>Can generate code</li><li>Can read any document</li></ul>
+          </div>
+          <div class="compare-col"><div class="compare-col-title">AGENT AUTHORITY</div>
+            <ul><li>OBSERVATION only (bootstrap)</li><li>Cannot self-authorise</li><li>Cannot escalate own authority</li><li>Destructive actions: always approval required</li><li>Cross-domain: requires approval</li></ul>
+          </div>
+        </div>
+        <div class="danger-block" style="margin-top:12px"><div class="danger-title">AGENTS CANNOT SELF-AUTHORISE</div>
+          <p>An agent may be capable of performing an action. It does not have authority to do so unless the task was approved at the appropriate autonomy level or a standing approval pattern matches.</p>
+        </div>
+      </div>`;
+
+    case 19: renderChain(5); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-19 — Memory Authority Boundary</div>
+        <div class="danger-block"><div class="danger-title">⛔ MEMORY CANNOT GRANT AUTHORITY</div>
+          <p>A memory item believing "user has admin access" does not grant admin access. Memory is not an authority source. Authority is exclusively granted via <code>lib/authority/authority-registry.js</code>.</p>
+        </div>
+        ${section('Memory Role in Constitutional Chain', explain([
+          {label:'Memory', value:'Informs context (getContext()) — raw material'},
+          {label:'Intelligence', value:'Synthesises context into recommendation — interpretation'},
+          {label:'Recommendation', value:'Presented to user — no execution authority'},
+          {label:'Authority', value:'Determined by authority-registry.js — not by memory'},
+          {label:'Execution', value:'Only after approval + authority check'},
+        ]))}
+      </div>`;
+
+    case 20: renderChain(5); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-20 — Knowledge Authority Boundary</div>
+        <div class="danger-block"><div class="danger-title">KNOWLEDGE CANNOT GRANT AUTHORITY</div>
+          <p>Knowledge can inform a decision. It cannot authorise execution. Even high-confidence, validated knowledge does not constitute authority to act.</p>
+        </div>
+        ${section('Knowledge-Gap Integration', '<div class="content-block">The Knowledge-Gap programme is COMPLETE and authoritative. If insufficient knowledge prevents constitutional determination, the actual boundary is shown — not fabricated certainty. Unknown, stale, conflicting or uncertain knowledge remains visible.</div>')}
+        <div class="info-block"><p>APEX will not escalate from "knowledge supports this" to "therefore execute this." The decision boundary requires explicit authorisation.</p></div>
+      </div>`;
+
+    case 21: renderChain(4); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-21 — Evidence Relationship</div>
+        ${section('Evidence Chain Architecture', evidenceBlock([
+          {k:'Chain ID', v:'main'}, {k:'Sequence', v:'247'}, {k:'Block hash', v:'SHA256(prevHash + contentHash + seq)'},
+          {k:'Content hash', v:'SHA256(canonical_payload)'}, {k:'Verifiable by', v:'Any auditor with canonical_payload'},
+          {k:'Storage', v:'evidence_blocks table (Supabase)'},
+        ]))}
+        ${section('Latest Block (seq 247)', '<div class="evidence-block"><div class="evidence-row"><div class="evidence-key">previous_hash</div><div>a3f2c1b0e4d5...</div></div><div class="evidence-row"><div class="evidence-key">content_hash</div><div>7b8c9d0e1f2a...</div></div><div class="evidence-row"><div class="evidence-key">block_hash</div><div>c4d5e6f7a8b9...</div></div><div class="evidence-row"><div class="evidence-key">created_at</div><div>2026-08-28T14:32:00Z</div></div></div>')}
+        <div class="info-block"><p>SHA256(canonical_payload) === content_hash — independently auditable without APEX cooperation.</p></div>
+      </div>`;
+
+    case 22: renderChain(0); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-22 — Constitutional Record</div>
+        ${section('Record (constitutional_records table)', evidenceBlock([
+          {k:'record_type', v:'ChangeRecord'}, {k:'runtime_id', v:'rt-2026-08-28-001'},
+          {k:'baseline', v:'APEX-CONSTITUTION-v1.0'}, {k:'wave', v:'3'},
+          {k:'structural_immutable', v:'false'}, {k:'created_at', v:'2026-08-28T14:32:00Z'},
+        ]))}
+        <div class="warn-block"><div class="warn-title">Partial Coverage</div>
+          <p>Constitutional records table is WIRED but not all constitutional events produce records. This is a known gap (DEV-16-04). Not all callers of constitutional-store.js are implemented.</p>
+        </div>
+      </div>`;
+
+    case 23: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-23 — Provenance</div>
+        ${section('What Provenance Means', '<div class="content-block">Provenance = the auditable basis for a constitutional determination. Every constitutional gate evaluation produces an auditTrail[]. Every evidence block stores canonical_payload verbatim. Every certification records the evidence that produced it.</div>')}
+        ${section('Constitutional Gate Audit Trail', auditTrail([
+          {check:'authority', result:'complianceStatus: COMPLIANT, provenanceWeight: 0.95'},
+          {check:'risk', result:'level: NOMINAL, score: 0.04'},
+          {check:'modification', result:'applicable: false (not a mod-path request)'},
+          {check:'deception', result:'deceptionScore: 0.01, category: NONE'},
+          {check:'confabulation', result:'severity: NONE, confabulated: false'},
+        ]))}
+        <div class="info-block"><p>Provenance is never fabricated. If a check fails, failOpen: true is recorded — not a fabricated pass result.</p></div>
+      </div>`;
+
+    case 24: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-24 — Audit Entry</div>
+        ${section('Forensic Query — Q4: Agent Decisions', '<div class="content-block">GET /api/governance/forensics/task-891 → Q4: Which agent made which decision and why?</div>')}
+        <table><thead><tr><th>Agent</th><th>Decision Type</th><th>Confidence</th><th>Duration</th></tr></thead><tbody>
+          <tr><td>RESEARCHER</td><td>analysis</td><td>0.82</td><td>4,120ms</td></tr>
+          <tr><td>ARCHITECT</td><td>analysis</td><td>0.91</td><td>7,340ms</td></tr>
+          <tr><td>DEVELOPER</td><td>implementation</td><td>—</td><td>12,800ms</td></tr>
+          <tr><td>REVIEWER</td><td>review</td><td>0.88</td><td>5,200ms</td></tr>
+          <tr><td>VALIDATOR</td><td>validation</td><td>0.94</td><td>3,100ms</td></tr>
+        </tbody></table>
+        ${section('Evidence Basis', '<div class="content-block">All 16 forensic questions answered from DB evidence alone. No implementation credit. No anticipated capability credit.</div>')}
+      </div>`;
+
+    case 25: renderChain(2); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-25 — Why Blocked</div>
+        ${perm('blocked','⛔','BLOCKED — RISK_CRITICAL')}
+        ${explain([
+          {label:'Event', value:'Request: POST /api/tasks/run (complex pipeline)'},
+          {label:'Context', value:'System health: critical — provider Anthropic unavailable (5 consecutive failures)'},
+          {label:'Applicable Rule', value:'risk-monitor: assessRisk() → P17 (Anomaly detection: PROVIDER_UNAVAILABLE = CRITICAL)'},
+          {label:'Authority', value:'DENY — CRITICAL risk overrides authority check'},
+          {label:'Determination', value:'BLOCKED — verdict: DENY, risks: [RISK_CRITICAL, PROVIDER_UNAVAILABLE]'},
+          {label:'Action / Non-Action', value:'Request rejected. No execution. Containment may activate.'},
+          {label:'Outcome', value:'User sees: BLOCKED — RISK_CRITICAL. Try again when provider is available.'},
+        ])}
+      </div>`;
+
+    case 26: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-26 — Why Approval Required</div>
+        ${perm('approval','⚠','REQUIRES APPROVAL')}
+        ${explain([
+          {label:'Event', value:'Agent step: rename_document (old_name → new_name)'},
+          {label:'Context', value:'Autonomy level L3 — rename_document classified as destructive (isDestructiveAgentStepType)'},
+          {label:'Applicable Rule', value:'Destructive actions always require approval regardless of autonomy level'},
+          {label:'Authority', value:'Agent has OBSERVATION authority — DECISION authority required for destructive write'},
+          {label:'Determination', value:'APPROVAL REQUIRED — task.status = waiting_approval'},
+          {label:'Action / Non-Action', value:'No rename executed. User notification sent.'},
+          {label:'Outcome', value:'Awaiting user decision. pgInsertApproval() called.'},
+        ])}
+      </div>`;
+
+    case 27: renderChain(4); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-27 — What APEX Executed</div>
+        ${section('Forensic Q5 + Q10', '<div class="content-block">GET /api/governance/forensics/task-892 answers: What files were modified? What is the full execution trace?</div>')}
+        <table><thead><tr><th>Stage</th><th>Action</th><th>Status</th><th>Duration</th></tr></thead><tbody>
+          <tr><td>RESEARCHER</td><td>read-only analysis</td><td>${badge('certified','COMPLETED')}</td><td>4,120ms</td></tr>
+          <tr><td>ARCHITECT</td><td>plan generation</td><td>${badge('certified','COMPLETED')}</td><td>7,340ms</td></tr>
+          <tr><td>DEVELOPER</td><td>create server/utils.js</td><td>${badge('certified','COMPLETED')}</td><td>12,800ms</td></tr>
+          <tr><td>REVIEWER</td><td>code review</td><td>${badge('certified','COMPLETED')}</td><td>5,200ms</td></tr>
+          <tr><td>VALIDATOR</td><td>test validation</td><td>${badge('certified','COMPLETED')}</td><td>3,100ms</td></tr>
+          <tr><td>COMMITTER</td><td>git commit + push</td><td>${badge('certified','COMPLETED')}</td><td>1,800ms</td></tr>
+        </tbody></table>
+        ${section('Files Modified', '<div class="content-block"><code>server/utils.js</code> (created) · <code>tests/utils.test.js</code> (created)</div>')}
+      </div>`;
+
+    case 28: renderChain(4); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-28 — What APEX Did NOT Execute</div>
+        ${section('Proposed But Not Executed', '<div class="warn-block"><div class="warn-title">Proposal Declined</div><p>Agent proposed: delete old config files. User declined approval. No execution. Status: declined. Evidence: task set to failed, agent_actions.status = declined.</p></div>')}
+        ${section('Why Not Executed', auditTrail([
+          {check:'Proposal made', result:'Agent proposed delete_document [config/legacy.json, config/old.env]'},
+          {check:'Approval requested', result:'POST /api/tasks/approve pending — user action required'},
+          {check:'User decision', result:'DECLINED — no approval given'},
+          {check:'Execution', result:'SKIPPED — no approved actions'},
+          {check:'Governance record', result:'task.status = failed, no agent_actions written'},
+        ]))}
+        <div class="info-block"><p>APEX does not execute declined proposals. The absence of execution is as important as the presence of execution. Both are recorded.</p></div>
+      </div>`;
+
+    case 29: renderChain(-1); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-29 — System Degradation</div>
+        ${perm('blocked','⚠','DEGRADED MODE — containment active')}
+        <div class="danger-block"><div class="danger-title">System Degradation Detected</div>
+          <p>Provider Anthropic unavailable for 8 consecutive requests. Health monitor status: CRITICAL. Containment activated via evaluateAndContain(). Provider override set. Degraded mode: ON.</p>
+        </div>
+        <table><thead><tr><th>Component</th><th>Status</th></tr></thead><tbody>
+          <tr><td>Anthropic provider</td><td>${verdict('deny','UNAVAILABLE')}</td></tr>
+          <tr><td>Google provider</td><td>${verdict('allow','ACTIVE — FAILOVER')}</td></tr>
+          <tr><td>flags.degradedMode</td><td><span style="color:var(--apex-color-danger)">true</span></td></tr>
+          <tr><td>Containment</td><td><span style="color:var(--apex-color-danger)">ACTIVE</span></td></tr>
+          <tr><td>Constitutional gate</td><td>${verdict('restrict','RESTRICT — elevated risk')}</td></tr>
+        </tbody></table>
+        <div class="info-block" style="margin-top:8px"><p>Degradation is not hidden. Constitutional state escalates automatically. Proactive notification triggered (UX-09).</p></div>
+      </div>`;
+
+    case 30: renderChain(0); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-30 — Constitutional Failure</div>
+        ${perm('blocked','⛔','CONSTITUTIONAL FAILURE — DENY (fail-closed)')}
+        <div class="danger-block"><div class="danger-title">Constitutional Gate Timeout</div>
+          <p>Constitutional gate exceeded 400ms timeout. Verdict: DENY. failedClosed: true. The system cannot proceed without constitutional clearance. Fail-closed is the safe default.</p>
+        </div>
+        ${section('Audit Trail', auditTrail([
+          {check:'authority', result:'ALLOW'},
+          {check:'risk', result:'TIMEOUT — exceeded 400ms deadline (TIMEOUT_RISK)'},
+          {check:'verdict', result:'DENY — failedClosed: true'},
+          {check:'action', result:'Request rejected. No execution.'},
+        ]))}
+        <div class="info-block"><p>Constitutional failure is a system-protective state. APEX fails closed, not open. This is by design (ARCH-14 INV-RT1).</p></div>
+      </div>`;
+
+    case 31: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-31 — Governance Conflict</div>
+        <div class="danger-block"><div class="danger-title">Policy Conflict Detected</div>
+          <p>Two active policies produced conflicting decisions for task #task-899. cost_gate (BLOCK) conflicts with retry_limit (ALLOW). Both decisions are recorded. The conflict is not silently resolved.</p>
+        </div>
+        <table><thead><tr><th>Policy</th><th>Rule Type</th><th>Decision</th><th>Reason</th></tr></thead><tbody>
+          <tr><td>Cost Gate</td><td>cost_gate</td><td>${badge('denied','BLOCK')}</td><td>$2.83 exceeds cap $2.50</td></tr>
+          <tr><td>Retry Limit</td><td>retry_limit</td><td>${badge('certified','ALLOW')}</td><td>2 attempts ≤ max 3</td></tr>
+        </tbody></table>
+        ${section('Resolution', '<div class="content-block">BLOCK takes precedence. Task halted. Both decisions recorded in policy_decisions table. Both policy_violations recorded for BLOCK decisions.</div>')}
+      </div>`;
+
+    case 32: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-32 — Evidence Conflict</div>
+        <div class="danger-block"><div class="danger-title">Evidence Conflict</div>
+          <p>Two evidence blocks contain conflicting data about the same commit. content_hash mismatch at sequence 241. APEX does not silently resolve this conflict.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="evidence-block"><div style="color:var(--apex-color-danger);font-size:10px;font-weight:600;margin-bottom:6px">BLOCK A (seq 241)</div><div class="evidence-row"><div class="evidence-key">content_hash</div><div>a3f2c1b0...</div></div><div class="evidence-row"><div class="evidence-key">commit_sha</div><div>abc123</div></div></div>
+          <div class="evidence-block"><div style="color:var(--apex-color-danger);font-size:10px;font-weight:600;margin-bottom:6px">BLOCK B (seq 241)</div><div class="evidence-row"><div class="evidence-key">content_hash</div><div>d4e5f6a7...</div></div><div class="evidence-row"><div class="evidence-key">commit_sha</div><div>abc123</div></div></div>
+        </div>
+        <div class="info-block" style="margin-top:12px"><p>Both blocks are retained. The conflict is surfaced for user review. Constitutional trust assessor may flag this for audit.</p></div>
+      </div>`;
+
+    case 33: renderChain(-1); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-33 — L0 Disclosure</div>
+        <div class="content-block" style="text-align:center;padding:24px">
+          <div style="font-size:16px;margin-bottom:8px">${verdict('allow','APEX IS RUNNING')}</div>
+          <div style="font-size:11px;color:var(--apex-color-text-muted)">All systems operational</div>
+        </div>
+        <div class="info-block"><p>L0: Simple system status only. No constitutional detail. No governance data. No evidence. Appropriate for normal operation when no material events are pending.</p></div>
+      </div>`;
+
+    case 34: renderChain(0); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-34 — L1 Disclosure</div>
+        <div class="content-block">
+          <div style="margin-bottom:8px">${verdict('allow','APEX IS RUNNING')}</div>
+          <div style="font-size:11px;color:var(--apex-color-text-secondary)"><strong>Governing basis:</strong> APEX-CONSTITUTION-v1.0 · 23 principles · All checks passing</div>
+        </div>
+        <div class="info-block"><p>L1: Relevant governing basis added. Shows which constitution applies and whether it is satisfied — without exposing full audit trail.</p></div>
+      </div>`;
+
+    case 35: renderChain(2); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-35 — L2 Disclosure</div>
+        <div class="content-block">
+          <div style="margin-bottom:8px">${verdict('allow','RUNNING')} ${badge('certified','CERTIFIED')}</div>
+          <div style="margin-bottom:4px"><strong>Constitution:</strong> APEX-CONSTITUTION-v1.0 · Gate: ALLOW (5/5 checks)</div>
+          <div style="margin-bottom:4px"><strong>Readiness:</strong> 84/100 — AUDIT READY</div>
+          <div><strong>Certification:</strong> score=1.00 · expires 2026-11-25</div>
+        </div>
+        <div class="info-block"><p>L2: Decision/action metadata. Shows constitutional outcome, readiness score, and certification. Appropriate for task context where governance is relevant.</p></div>
+      </div>`;
+
+    case 36: renderChain(3); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-36 — L3 Disclosure</div>
+        ${section('Evidence', evidenceBlock([
+          {k:'Latest block seq', v:'247'}, {k:'block_hash', v:'c4d5e6f7a8b9...'},
+          {k:'Certification ID', v:'cert-2026-08-28-014'}, {k:'Score', v:'1.00'},
+        ]))}
+        ${section('Constitutional Audit Trail', auditTrail([
+          {check:'authority', result:'ALLOW — COMPLIANT'},
+          {check:'risk', result:'ALLOW — NOMINAL (0.04)'},
+          {check:'deception', result:'ALLOW — score: 0.01'},
+          {check:'confabulation', result:'ALLOW — LOW'},
+        ]))}
+        <div class="info-block"><p>L3: Evidence and constitutional record. Full audit trail visible. Appropriate when user is actively reviewing a decision or evidence.</p></div>
+      </div>`;
+
+    case 37: renderChain(4); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-37 — L4 Disclosure</div>
+        ${section('Full Forensic Report (excerpt)', '<div class="content-block"><strong>16 Questions — task #task-892</strong><br><br>'+
+          'Q1: Initiated by api_client via HTTP POST /api/tasks/run · Q4: ARCHITECT decision_type=analysis confidence=0.91 · Q8: Certified (score=1.00, expires 2026-11-25) · Q15: Risk score=0.32 (medium) · Q16: Evidence blocks #244-247'
+          +'</div>')}
+        ${section('Raw Constitutional Gate Result', `${evidenceBlock([
+          {k:'verdict', v:'ALLOW'}, {k:'risks', v:'[]'}, {k:'riskScore', v:'0.04'},
+          {k:'evaluatedAt', v:'2026-08-28T14:32:07Z'}, {k:'durationMs', v:'38'},
+          {k:'auditTrail[0]', v:'{check:authority, status:COMPLIANT, weight:0.95}'},
+          {k:'auditTrail[1]', v:'{check:risk, level:NOMINAL, score:0.04}'},
+          {k:'auditTrail[2]', v:'{check:modification, applicable:false}'},
+          {k:'auditTrail[3]', v:'{check:deception, score:0.01, category:NONE}'},
+          {k:'auditTrail[4]', v:'{check:confabulation, severity:NONE, confabulated:false}'},
+        ])}`)}
+        <div class="info-block"><p>L4: Maximum detail. Private chain-of-thought is NOT exposed here. This shows the constitutional audit trail — the governing basis — not the model's internal reasoning.</p></div>
+      </div>`;
+
+    case 38: renderChain(2); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-38 — Voice Constitutional Query</div>
+        ${section('User Voice Query', '<div class="content-block" style="background:var(--apex-color-bg);border-color:var(--apex-color-accent)">"Why was that blocked?"</div>')}
+        ${section('APEX Voice Response (same canonical model)', '<div class="success-block"><p>That action was blocked by the constitutional gate. The risk monitor detected a critical risk — the primary AI provider is unavailable. APEX fails closed when it cannot verify system safety. No action was taken. The block will lift when the provider becomes available.</p></div>')}
+        <div class="info-block"><p>Voice uses the same constitutional model as the visual interface. No second governance explanation pathway. Private chain-of-thought is not exposed in either voice or visual response.</p></div>
+      </div>`;
+
+    case 39: renderChain(2); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-39 — Cross-Domain Action</div>
+        ${perm('approval','⚠','REQUIRES APPROVAL — cross-domain access')}
+        ${explain([
+          {label:'Event', value:'System agent requests episodic memory from finance domain'},
+          {label:'Context', value:'Memory item ep-204 scoped to finance domain'},
+          {label:'Applicable Rule', value:'Cross-domain access not pre-authorised (no standing approval match)'},
+          {label:'Authority', value:'System agent has OBSERVATION authority — finance domain memory requires explicit approval'},
+          {label:'Determination', value:'APPROVAL REQUIRED — cross-domain restriction'},
+          {label:'Action / Non-Action', value:'Access denied pending user decision. Item not returned to agent.'},
+          {label:'Outcome', value:'User presented with: ALLOW ONCE / STANDING APPROVAL / DENY'},
+        ])}
+        <div class="btn-row">
+          <button class="btn btn-outline-accent" tabindex="0">ALLOW ONCE</button>
+          <button class="btn btn-secondary" tabindex="0">STANDING APPROVAL</button>
+          <button class="btn btn-outline-danger" tabindex="0">DENY</button>
+        </div>
+      </div>`;
+
+    case 40: renderChain(-1); return `
+      <div class="scenario-output">
+        <div class="scenario-title">V-SYSTEM-40 — ONE APEX CONSTITUTIONAL BOUNDARY</div>
+        <div style="text-align:center;padding:24px 0">
+          <div style="font-family:var(--apex-font-display);font-size:18px;font-weight:600;color:var(--apex-color-text-primary);margin-bottom:8px;letter-spacing:0.06em">ONE APEX</div>
+          <div style="font-size:12px;color:var(--apex-color-text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:24px">ONE CONSTITUTION · ONE GOVERNANCE · ONE AUTHORITY</div>
+        </div>
+        <div class="compare-grid">
+          <div class="compare-col"><div class="compare-col-title">There is ONE</div>
+            <ul><li>Constitution (APEX-CONSTITUTION-v1.0)</li><li>Governance architecture (lib/governance.js)</li><li>Authority registry (authority-registry.js)</li><li>Execution boundary (agent-task-cycle.js)</li><li>Memory gateway (memory/gateway.js)</li><li>Evidence chain (evidence_blocks)</li><li>Certification standard (4-clause)</li></ul>
+          </div>
+          <div class="compare-col"><div class="compare-col-title">There is NOT a second</div>
+            <ul><li>Constitution</li><li>Governance engine</li><li>Authority system</li><li>Approval system</li><li>Audit system</li><li>Runtime registry</li><li>Constitutional store</li><li>Explanation engine</li></ul>
+          </div>
+        </div>
+      </div>`;
+
+    default: return `<div class="placeholder">Scenario ${n} not found</div>`;
+  }
+}
+
+// ── LOAD SCENARIO ─────────────────────────────────────────────────────────────
+function loadScenario(n) {
+  activeN = n;
+  renderScenariosList();
+  const s = SCENARIOS.find(x=>x.n===n);
+  document.getElementById('centreLabel').textContent = s ? s.label : 'Scenario '+n;
+  document.getElementById('centrePanel').innerHTML = renderScenario(n);
+  const items = document.querySelectorAll('.scenario-item');
+  items[n-1] && items[n-1].scrollIntoView({block:'nearest'});
+}
+
+// ── DISCLOSURE ────────────────────────────────────────────────────────────────
+function setDisclosure(l) {
+  document.querySelectorAll('.dl-btn').forEach((b,i)=>b.classList.toggle('active',i===l));
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────────
+const KEY_MAP = {
+  '1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'0':10,
+  'q':11,'w':12,'e':13,'r':14,'t':15,'y':16,'u':17,'i':18,'o':19,'p':20,
+  'a':21,'s':22,'d':23,'f':24,'g':25,'h':26,'j':27,'k':28,'l':29,
+  'z':30,'x':31,'c':32,'v':33,'b':34,'n':35,'m':36,'Q':37,'W':38,'E':39,'R':40,
+};
+document.addEventListener('keydown', e => {
+  if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT') return;
+  if(e.key==='Escape'){
+    activeN=null; renderScenariosList(); renderChain(-1);
+    document.getElementById('centreLabel').textContent='Constitutional Detail Surface';
+    document.getElementById('centrePanel').innerHTML='<div class="placeholder">Select a scenario to inspect the constitutional model</div>';
+    return;
+  }
+  const n = KEY_MAP[e.key];
+  if(n) loadScenario(n);
+});
+</script>
+</body>
+</html>

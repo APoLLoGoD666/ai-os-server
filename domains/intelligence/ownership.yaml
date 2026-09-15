@@ -1,0 +1,23 @@
+domain: Intelligence
+domain_id: DOM-000002
+capability: ai-reasoning
+runtime: agent-system/
+criticality: CRITICAL
+owner: Agent Orchestrator
+
+entity_id: DOM-000002
+
+dependencies:
+  - DOM-000003   # Registry — entity context for reasoning
+  - DOM-000004   # Memory — knowledge retrieval
+
+consumers:
+  - DOM-000007   # Interface invokes intelligence
+
+events_emitted:
+  - AGENT_ACTIVATED
+  - AGENT_COMPLETED
+
+events_consumed:
+  - ENTITY_CREATED
+  - DOMAIN_HEALTH_CHANGED

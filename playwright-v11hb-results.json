@@ -1,0 +1,543 @@
+{
+  "suite": "V-11-H-B",
+  "ts": "2026-09-02T00:39:27.862Z",
+  "pass": 79,
+  "fail": 10,
+  "total": 89,
+  "results": [
+    {
+      "id": "A1-a",
+      "desc": "Migration 092_actions_owner_scope.sql exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-b",
+      "desc": "Migration wrapped in transaction (BEGIN + COMMIT)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-c",
+      "desc": "Migration adds human_id to apex_tasks",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-d",
+      "desc": "Migration adds human_id to apex_notifications",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-e",
+      "desc": "Migration adds human_id to apex_agent_runs",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-f",
+      "desc": "Migration adds human_id to apex_timeline",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-g",
+      "desc": "Migration adds human_id to agent_actions",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-h",
+      "desc": "Migration adds human_id to standing_approvals",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-i",
+      "desc": "Uses IF NOT EXISTS for ADD COLUMN",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-j",
+      "desc": "Guards ad-hoc tables with DO $$ EXCEPTION",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-k",
+      "desc": "Index idx_apex_tasks_human_status defined",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-l",
+      "desc": "Index idx_apex_notif_human_read defined",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-m",
+      "desc": "Index idx_apex_runs_human defined",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-n",
+      "desc": "Index idx_apex_timeline_human defined",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-o",
+      "desc": "Index idx_agent_actions_human defined",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-p",
+      "desc": "Index idx_standing_human defined",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-q",
+      "desc": "Backfill UPDATE for apex_tasks",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-r",
+      "desc": "Backfill UPDATE for apex_notifications",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-s",
+      "desc": "Backfill UPDATE for apex_agent_runs",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-t",
+      "desc": "Backfill UPDATE for apex_timeline",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-u",
+      "desc": "Backfill UPDATE for agent_actions",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-v",
+      "desc": "Backfill UPDATE for standing_approvals",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-w",
+      "desc": "No DROP TABLE / DROP COLUMN in migration",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A2-a",
+      "desc": "lib/middleware.js declares requireOwnerScope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A2-b",
+      "desc": "lib/middleware.js exports requireOwnerScope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A2-c",
+      "desc": "Middleware returns 403 FORBIDDEN for non-owner",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A2-d",
+      "desc": "Middleware bypasses Master role",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A2-e",
+      "desc": "requireOwnerScope is a function at runtime",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A2-f",
+      "desc": "requireOwnerScope(\"tasks\") returns middleware",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A3-a",
+      "desc": "src/routes/actions.js exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A3-b",
+      "desc": "actions.js registers GET /api/actions/summary",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A3-c",
+      "desc": "actions.js uses requireAppAccess",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A3-d",
+      "desc": "actions.js has 15s TTL cache",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A3-e",
+      "desc": "actions.js returns 403 for User scope=all",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A3-f",
+      "desc": "actions.js scopes to human_id for non-master",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A3-g",
+      "desc": "actions.js exports an Express router",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A4-a",
+      "desc": "server.js imports src/routes/actions",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A5-a",
+      "desc": "telemetry/index.js NO LONGER registers /api/intelligence/agent-runs",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A5-b",
+      "desc": "telemetry/index.js contains H-B collision comment",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A5-c",
+      "desc": "routes/intelligence.js still registers /intelligence/agent-runs",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A5-d",
+      "desc": "routes/intelligence.js scopes agent-runs by human_id",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A6-a",
+      "desc": "tasks.js imports requireOwnerScope",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A6-b",
+      "desc": "tasks.js approve loads task before _runTask",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A6-c",
+      "desc": "tasks.js approve checks task.human_id",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A6-d",
+      "desc": "tasks.js reject checks ownership",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A6-e",
+      "desc": "tasks.js /add inserts human_id",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A6-f",
+      "desc": "tasks.js /run enforces ownership before update",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A6-g",
+      "desc": "tasks.js /undo scopes to caller when Master=false",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A6-h",
+      "desc": "tasks.js standing-approvals scopes by human_id",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A6-i",
+      "desc": "tasks.js GET /api/tasks passes ownerScope to _parseTasks",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A7-a",
+      "desc": "notifications.js GET /notifications scopes by human_id",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A7-b",
+      "desc": "notifications.js mark-read scopes to caller",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A7-c",
+      "desc": "notifications.js :id/read verifies ownership",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A7-d",
+      "desc": "notifications.js GET /api/notifications scoped",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A8-a",
+      "desc": "agent-tasks.js filters by created_by for Users",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A8-b",
+      "desc": "agent-tasks.js /agent-task/:id checks ownership",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A9-a",
+      "desc": "_parseTasks accepts ownerScope arg",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A9-b",
+      "desc": "_parseTasks applies human_id filter",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A10-pending_approvals",
+      "desc": "summary shape includes pending_approvals",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A10-in_progress",
+      "desc": "summary shape includes in_progress",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A10-completed_today",
+      "desc": "summary shape includes completed_today",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A10-failed_today",
+      "desc": "summary shape includes failed_today",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A10-notifications_unread",
+      "desc": "summary shape includes notifications_unread",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A10-needs_attention_count",
+      "desc": "summary shape includes needs_attention_count",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B0-a",
+      "desc": "Server reachable at http://localhost:3000",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B0-b",
+      "desc": "JWT_SECRET available for token synthesis",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B1-a",
+      "desc": "GET /api/actions/summary returns 200 for Master",
+      "status": "FAIL",
+      "detail": "status=404"
+    },
+    {
+      "id": "B1-b",
+      "desc": "Response has ok:true",
+      "status": "FAIL",
+      "detail": ""
+    },
+    {
+      "id": "B1-c",
+      "desc": "Response includes summary object",
+      "status": "FAIL",
+      "detail": ""
+    },
+    {
+      "id": "B1-d",
+      "desc": "Response includes scope",
+      "status": "FAIL",
+      "detail": ""
+    },
+    {
+      "id": "B1-e",
+      "desc": "Response includes generated_at",
+      "status": "FAIL",
+      "detail": ""
+    },
+    {
+      "id": "B1-f",
+      "desc": "Response includes cache_ttl_ms",
+      "status": "FAIL",
+      "detail": ""
+    },
+    {
+      "id": "B2-a",
+      "desc": "User scope=all returns 403",
+      "status": "FAIL",
+      "detail": "status=404"
+    },
+    {
+      "id": "B3-a",
+      "desc": "Master scope=all returns 200",
+      "status": "FAIL",
+      "detail": "status=404"
+    },
+    {
+      "id": "B4-a",
+      "desc": "Unauthenticated /api/actions/summary returns 401",
+      "status": "PASS",
+      "detail": "status=401"
+    },
+    {
+      "id": "B5-a",
+      "desc": "Unauth POST /api/tasks/approve returns 401",
+      "status": "PASS",
+      "detail": "status=401"
+    },
+    {
+      "id": "B6-a",
+      "desc": "Unauth POST /api/tasks/reject returns 401",
+      "status": "PASS",
+      "detail": "status=401"
+    },
+    {
+      "id": "B7-a",
+      "desc": "Auth POST /api/tasks/approve nonexistent returns 404",
+      "status": "PASS",
+      "detail": "status=404"
+    },
+    {
+      "id": "B8-a",
+      "desc": "GET /api/tasks for User returns 200",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B8-b",
+      "desc": "GET /api/tasks returns { pending: [] }",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B8-c",
+      "desc": "GET /api/tasks returns { inProgress: [] }",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B8-d",
+      "desc": "GET /api/tasks returns { completed: [] }",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B8-e",
+      "desc": "GET /api/tasks returns { failed: [] }",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B9-a",
+      "desc": "User GET /api/tasks?scope=all returns 403",
+      "status": "FAIL",
+      "detail": "status=200"
+    },
+    {
+      "id": "B10-a",
+      "desc": "GET /notifications User returns 200",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B10-b",
+      "desc": "GET /notifications returns notifications:[]",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B11-a",
+      "desc": "GET /api/intelligence/agent-runs User returns 200",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B11-b",
+      "desc": "agent-runs response includes runs array",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B12-a",
+      "desc": "User agent-runs?scope=all returns 403",
+      "status": "FAIL",
+      "detail": "status=200"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+domain: Interface
+domain_id: DOM-000007
+capability: interaction-surface
+runtime: public/dashboard.html
+criticality: HIGH
+owner: Interface Layer
+
+entity_id: DOM-000007
+
+dependencies:
+  - DOM-000002   # Intelligence — for reasoning
+  - DOM-000003   # Registry — for entity data
+  - DOM-000006   # Observability — health display
+
+consumers: []   # Interface is the leaf — nothing depends on it
+
+events_emitted:
+  - AGENT_ACTIVATED
+
+events_consumed:
+  - AGENT_COMPLETED
+  - DOMAIN_HEALTH_CHANGED

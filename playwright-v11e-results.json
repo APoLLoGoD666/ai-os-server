@@ -1,0 +1,426 @@
+{
+  "pass": 70,
+  "fail": 0,
+  "results": [
+    {
+      "id": "E-1-a",
+      "desc": "#chatLog element exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-1-b",
+      "desc": "#chatLog has no inline display:none",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-1-c",
+      "desc": "#chatLog computed display is not \"none\"",
+      "status": "PASS",
+      "detail": "flex"
+    },
+    {
+      "id": "E-1-d",
+      "desc": "#chatLog has role=\"log\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-1-e",
+      "desc": "#chatLog has aria-live=\"polite\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-a",
+      "desc": "No .cwid elements in #page-command",
+      "status": "PASS",
+      "detail": "count=0"
+    },
+    {
+      "id": "E-2-b",
+      "desc": "No #cmdSidebar in #page-command",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-c",
+      "desc": "No #cmdWidgetLayer in #page-command",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-d",
+      "desc": "No .cmd-split in #page-command",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-e",
+      "desc": "No .cmd-feed-col in #page-command",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-f",
+      "desc": "No #apexLivePill in #page-command",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-g",
+      "desc": "No #apexLiveTranscript in #page-command",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-h",
+      "desc": "No #cmdStrip in #page-command (E-4)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-i",
+      "desc": "#cmdThread present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-j",
+      "desc": "#chatLog present in #page-command",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-k",
+      "desc": "Activity section exists inside #page-system",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-2-l",
+      "desc": "#apexFeedBody lives inside #page-system",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-3-a",
+      "desc": "Charter absent from #page-command",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-3-b",
+      "desc": "Charter element present in DOM",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-3-c",
+      "desc": "Charter lives inside #page-governance",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-4-a",
+      "desc": "#cmdStrip absent from COMMAND",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-4-b",
+      "desc": "#cmdStat0 absent from COMMAND",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-5-a",
+      "desc": "#plasmaOrb has no data-fn=\"startVoice\"",
+      "status": "PASS",
+      "detail": "data-fn=null"
+    },
+    {
+      "id": "E-5-b",
+      "desc": "#plasmaOrb pointer-events: none",
+      "status": "PASS",
+      "detail": "pe=none"
+    },
+    {
+      "id": "E-5-c",
+      "desc": "#plasmaOrb opacity ≈ 0.15",
+      "status": "PASS",
+      "detail": "op=0.15"
+    },
+    {
+      "id": "E-5-d",
+      "desc": "Exactly one #waveform element in DOM",
+      "status": "PASS",
+      "detail": "count=1"
+    },
+    {
+      "id": "E-5-e",
+      "desc": "Exactly one #micBtn element in DOM",
+      "status": "PASS",
+      "detail": "count=1"
+    },
+    {
+      "id": "E-5-f",
+      "desc": "#plasmaOrbSubLabel removed",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-5-g",
+      "desc": "#plasmaOrb display:none on mobile viewport",
+      "status": "PASS",
+      "detail": "display=none"
+    },
+    {
+      "id": "E-6-a",
+      "desc": "History key uses per-identity namespacing",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-6-b",
+      "desc": "History hydrates when returning to COMMAND",
+      "status": "PASS",
+      "detail": "children=2"
+    },
+    {
+      "id": "E-6-c",
+      "desc": "Hydrated content includes user message",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-6-d",
+      "desc": "Hydrated content includes assistant reply",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-6-e",
+      "desc": "History FIFO caps at 100 entries",
+      "status": "PASS",
+      "detail": "len=100"
+    },
+    {
+      "id": "E-6-f",
+      "desc": "Newest entry is preserved after cap",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-6-g",
+      "desc": "No other-user history leaked into localStorage",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-7-a",
+      "desc": "Input zone HIDDEN on TODAY (default landing)",
+      "status": "PASS",
+      "detail": "display=none"
+    },
+    {
+      "id": "E-7-b",
+      "desc": "body lacks apex-cmd-active on TODAY",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-7-c",
+      "desc": "Input zone VISIBLE on COMMAND",
+      "status": "PASS",
+      "detail": "display=flex"
+    },
+    {
+      "id": "E-7-d",
+      "desc": "body has apex-cmd-active on COMMAND",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-7-e",
+      "desc": "Placeholder mentions voice",
+      "status": "PASS",
+      "detail": "Type or speak to APEX…"
+    },
+    {
+      "id": "E-7-f",
+      "desc": "#chatInput has aria-label",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-7-g",
+      "desc": "#micBtn has aria-label",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-7-h",
+      "desc": "#micBtn contains SVG icon (no emoji)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-7-i",
+      "desc": "Auto-listen chip is labeled \"Auto-listen\"",
+      "status": "PASS",
+      "detail": "Auto-listen"
+    },
+    {
+      "id": "E-7-j",
+      "desc": "Auto-listen chip has aria-pressed",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-a",
+      "desc": "Assistant reply renders as .apex-card",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-b",
+      "desc": "Card has archetype attribute",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-c",
+      "desc": "Card L0 summary visible",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-d",
+      "desc": "Card has confidence dot",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-e",
+      "desc": "Card has expand button",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-f",
+      "desc": "L1 initially hidden",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-g",
+      "desc": "Expand button starts aria-expanded=false",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-h",
+      "desc": "L1 reveals on expand click",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-i",
+      "desc": "aria-expanded=true after click",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-j",
+      "desc": "Thinking indicator inserts",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-k",
+      "desc": "Thinking indicator removes",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-l",
+      "desc": "clearChat shows toast",
+      "status": "PASS",
+      "detail": "Conversation cleared"
+    },
+    {
+      "id": "E-9-m",
+      "desc": "Approval card is present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-n",
+      "desc": "Approval card display != none",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-o",
+      "desc": "Approval card sits inside #cmdThread",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-p",
+      "desc": "Agent panel exists and visible for Master",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-9-q",
+      "desc": "Agent panel hidden for User",
+      "status": "PASS",
+      "detail": "display=none"
+    },
+    {
+      "id": "E-11-a",
+      "desc": "#cmdThread present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-11-b",
+      "desc": "#chatLog has role=\"log\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-11-c",
+      "desc": "#chatLog has aria-live=\"polite\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-11-d",
+      "desc": "V key triggers #micBtn click",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-11-e",
+      "desc": "Escape collapses expanded L1",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "REG-a",
+      "desc": "#command hash selects COMMAND on boot",
+      "status": "PASS",
+      "detail": "active=page-command"
+    },
+    {
+      "id": "REG-b",
+      "desc": "No console errors during load+init",
+      "status": "PASS",
+      "detail": "errors=0"
+    }
+  ]
+}
