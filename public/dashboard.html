@@ -27246,7 +27246,7 @@ window.apexFileDropHandler = function(e){
 .kg-node-icon { font-size:28px; opacity:.7; line-height:1; }
 .kg-node-count { font:700 28px/1 'JetBrains Mono',monospace; color:#fff; }
 .kg-node-sub { font:700 10px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:var(--kc); opacity:.9; text-transform:uppercase; }
-.kg-node-label { font:700 11px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:rgba(255,255,255,0.6); text-transform:uppercase; transition:color 200ms; }
+.kg-node-label { font:700 13px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:rgba(255,255,255,0.75); text-transform:uppercase; transition:color 200ms; }
 .kg-node-state { position:absolute; top:8px; right:8px; width:6px; height:6px; border-radius:50%; background:#52525b; }
 .kg-node-state.live { background:#22c55e; box-shadow:0 0 8px #22c55e; animation:kg-blink 2s ease-in-out infinite; }
 
@@ -28038,12 +28038,12 @@ window.apexFileDropHandler = function(e){
     function _dur(ms) { if (!ms) return ''; if (ms < 1000) return ms + 'ms'; return (ms/1000).toFixed(1)+'s'; }
 
     var TIERS = [
-        { id:'input',    label:'INPUT',          icon:'◎', color:'#22d3ee', glow:'rgba(34,211,238,0.2)', count:'—', sub:'REQUEST' },
-        { id:'council',  label:'COUNCIL',        icon:'⬡', color:'#a78bfa', glow:'rgba(167,139,250,0.2)', count:7,  sub:'DELIBERATION' },
-        { id:'actions',  label:'ACTIONS',        icon:'◈', color:'#7c6cf2', glow:'rgba(124,108,242,0.2)', count:'—', sub:'PIPELINE' },
-        { id:'domain',   label:'DOMAIN AGENTS',  icon:'◬', color:'#2dd4bf', glow:'rgba(45,212,191,0.2)', count:9,  sub:'DISPATCH' },
-        { id:'office',   label:'OFFICE AGENTS',  icon:'▶', color:'#34d399', glow:'rgba(52,211,153,0.2)', count:'—', sub:'EXECUTION' },
-        { id:'output',   label:'OUTPUT',          icon:'◉', color:'#f59e0b', glow:'rgba(245,158,11,0.2)',  count:'—', sub:'RESULTS' },
+        { id:'input',    label:'INPUT',   color:'#22d3ee', glow:'rgba(34,211,238,0.2)' },
+        { id:'council',  label:'COUNCIL', color:'#a78bfa', glow:'rgba(167,139,250,0.2)' },
+        { id:'actions',  label:'GATE',    color:'#7c6cf2', glow:'rgba(124,108,242,0.2)' },
+        { id:'domain',   label:'DOMAIN',  color:'#2dd4bf', glow:'rgba(45,212,191,0.2)' },
+        { id:'office',   label:'OFFICE',  color:'#34d399', glow:'rgba(52,211,153,0.2)' },
+        { id:'output',   label:'OUTPUT',  color:'#f59e0b', glow:'rgba(245,158,11,0.2)' },
     ];
 
     var _inputFilter = 'all';
@@ -28171,17 +28171,13 @@ window.apexFileDropHandler = function(e){
             node.innerHTML =
                 '<div class="kg-node-box">' +
                     '<div class="kg-node-state" id="kg-state-' + tier.id + '"></div>' +
-                    '<div class="kg-node-icon">' + tier.icon + '</div>' +
-                    '<div class="kg-node-count" id="kg-count-' + tier.id + '" style="color:' + tier.color + '">' + tier.count + '</div>' +
-                    '<div class="kg-node-sub" style="color:' + tier.color + '">' + tier.sub + '</div>' +
-                    '<button class="kg-node-info-btn" data-info-key="node-' + tier.id + '" title="Learn about ' + tier.label + '" aria-label="Info: ' + tier.label + '" onclick="event.stopPropagation();window._kgShowInfo(\'node-' + tier.id + '\',\'' + tier.color + '\')">i</button>' +
-                '</div>' +
-                '<div class="kg-node-label">' + tier.label + '</div>';
+                    '<div class="kg-node-label">' + tier.label + '</div>' +
+                '</div>';
             node.addEventListener('click', function () { _selectTier(tier.id); });
             node.setAttribute('tabindex', '0');
             node.setAttribute('role', 'button');
             node.setAttribute('aria-pressed', 'false');
-            node.setAttribute('aria-label', tier.sub + ' ' + tier.label + ', ' + (tier.count === '—' ? 'count pending' : tier.count + ' items'));
+            node.setAttribute('aria-label', tier.label);
             node.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _selectTier(tier.id); } });
             container.appendChild(node);
 
@@ -28198,15 +28194,11 @@ window.apexFileDropHandler = function(e){
                 codeNode.innerHTML =
                     '<div class="kg-node-box">' +
                         '<div class="kg-node-state"></div>' +
-                        '<div class="kg-node-icon">⌨</div>' +
-                        '<div class="kg-node-count" style="color:#5b9eff">8</div>' +
-                        '<div class="kg-node-sub" style="color:#5b9eff">STAGES</div>' +
-                        '<button class="kg-node-info-btn" data-info-key="node-coding" title="Learn about the coding pipeline" aria-label="Info: Coding Pipeline" onclick="event.stopPropagation();window._kgShowInfo(\'node-coding\',\'#5b9eff\')">i</button>' +
-                    '</div>' +
-                    '<div class="kg-node-label">CODING PIPELINE</div>';
+                        '<div class="kg-node-label">CODE</div>' +
+                    '</div>';
                 codeNode.setAttribute('tabindex', '0');
                 codeNode.setAttribute('role', 'button');
-                codeNode.setAttribute('aria-label', 'Coding Pipeline: 8 stages');
+                codeNode.setAttribute('aria-label', 'CODE');
                 codeNode.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); codeNode.click(); } });
                 codeNode.setAttribute('aria-pressed', 'false');
                 codeNode.addEventListener('click', function () {
