@@ -31627,7 +31627,7 @@ _loadConnections();
   .auto-listen-btn,
   #apexVoiceSelect { display: none !important; }
 
-  /* 7 ── Bottom tab bar ── */
+  /* 7 ── Bottom tab bar: scrollable, shows all pages ── */
   #apexSideNav {
     grid-area: unset !important;
     position: fixed !important;
@@ -31636,7 +31636,10 @@ _loadConnections();
     width: 100vw !important;
     flex-direction: row !important;
     align-items: stretch !important;
-    overflow: hidden !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
     border-right: none !important;
     border-top: 2px solid rgba(0,212,255,0.2) !important;
     background: #060810 !important;
@@ -31646,17 +31649,15 @@ _loadConnections();
     padding: 0 0 env(safe-area-inset-bottom, 0px) 0 !important;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.5) !important;
   }
+  #apexSideNav::-webkit-scrollbar { display: none !important; }
 
-  /* 8 ── Hide non-primary nav items ── */
+  /* 8 ── Hide only non-button divs (live-runs section) ── */
   #apexSideNav > div { display: none !important; }
-  #apexSideNav #nav-domains,
-  #apexSideNav #nav-system,
-  #apexSideNav #nav-tools,
-  #apexSideNav #nav-settings { display: none !important; }
 
-  /* 9 ── Nav buttons: big icons, legible labels ── */
+  /* 9 ── Nav buttons: fixed width so bar scrolls ── */
   #apexSideNav .nav-btn {
-    flex: 1 !important;
+    flex: 0 0 72px !important;
+    width: 72px !important;
     height: 64px !important;
     flex-direction: column !important;
     align-items: center !important;
@@ -31667,7 +31668,6 @@ _loadConnections();
     min-height: unset !important;
     color: rgba(255,255,255,0.55) !important;
     position: relative !important;
-    width: auto !important;
     -webkit-tap-highlight-color: transparent !important;
     transition: color 0.15s, background 0.15s !important;
   }
@@ -31679,7 +31679,7 @@ _loadConnections();
     background: rgba(255,255,255,0.06) !important;
   }
   #apexSideNav .nav-icon {
-    font-size: 22px !important;
+    font-size: 20px !important;
     opacity: 1 !important;
     width: auto !important;
     height: auto !important;
@@ -31694,7 +31694,7 @@ _loadConnections();
     white-space: nowrap !important;
     opacity: 0.9 !important;
   }
-  /* Active indicator: bottom bar (easier to see than top) */
+  /* Active indicator: glowing bottom bar */
   #apexSideNav .nav-btn.active::after {
     display: block !important;
     content: '' !important;
@@ -31709,19 +31709,12 @@ _loadConnections();
   }
   #apexSideNav .nav-btn.active::before { display: none !important; }
 
-  /* 10 ── Overview page: horizontal-only, no vertical scroll ── */
-  #page-test {
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 0 !important;
-  }
+  /* 10 ── Pipeline canvas: horizontal scroll within normal vertical page ── */
   .kg-wrap {
-    flex: 1 !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch !important;
-    min-height: 0 !important;
+    min-height: 260px !important;
   }
   .kg-canvas {
     overflow: visible !important;
@@ -31730,64 +31723,19 @@ _loadConnections();
     justify-content: flex-start !important;
     align-items: center !important;
     flex-shrink: 0 !important;
-    height: 100% !important;
   }
   .kg-last-updated { display: none !important; }
-  /* Side panels: slide-over, don't affect page height */
-  .kg-panel {
-    position: absolute !important;
+  /* Side panels: fixed slide-overs */
+  .kg-panel.open {
+    position: fixed !important;
     top: 0 !important;
-    bottom: 0 !important;
-    z-index: 100 !important;
-    width: 85vw !important;
-    max-width: 320px !important;
-    transform: translateX(-110%) !important;
-    transition: transform 0.25s cubic-bezier(0,0,0.2,1) !important;
-    height: 100% !important;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 1500 !important;
+    width: 88vw !important;
+    max-width: 340px !important;
   }
-  .kg-panel.left { left: 0 !important; right: auto !important; }
-  .kg-panel:not(.left) { right: 0 !important; left: auto !important; transform: translateX(110%) !important; }
-  .kg-panel.open { transform: translateX(0) !important; }
-
-  /* 11 ── Briefing page: horizontal presets row, trace fills rest ── */
-  #page-intel {
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 0 !important;
-  }
-  .intel-body {
-    flex: 1 !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    min-height: 0 !important;
-  }
-  .intel-presets {
-    width: auto !important;
-    flex-direction: row !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    flex-shrink: 0 !important;
-    flex-wrap: nowrap !important;
-    padding: 12px !important;
-    gap: 10px !important;
-    border-right: none !important;
-    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
-    max-height: 130px !important;
-  }
-  .intel-card {
-    min-width: 150px !important;
-    max-width: 180px !important;
-    flex-shrink: 0 !important;
-  }
-  .intel-trace-wrap {
-    flex: 1 !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    padding: 12px !important;
-    min-height: 0 !important;
-  }
+  .kg-panel.left.open { left: 0 !important; right: auto !important; }
+  .kg-panel.open:not(.left) { right: 0 !important; left: auto !important; }
 
   /* 12 ── Info modal fits mobile ── */
   .kg-info-modal {

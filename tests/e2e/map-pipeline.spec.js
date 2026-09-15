@@ -563,11 +563,11 @@ test('mobile: Today, Command, Briefing, Overview buttons visible in bottom nav',
     }
 });
 
-// ── 36. Secondary nav items hidden from bottom bar ───────────────────────────
-test('mobile: domains and system nav buttons hidden from bottom bar', async ({ page }) => {
+// ── 36. All nav buttons visible in scrollable bottom bar ─────────────────────
+test('mobile: domains and system nav buttons visible in scrollable bottom bar', async ({ page }) => {
     await setupMobile(page);
-    await expect(page.locator('#nav-domains')).toBeHidden();
-    await expect(page.locator('#nav-system')).toBeHidden();
+    await expect(page.locator('#nav-domains')).toBeVisible();
+    await expect(page.locator('#nav-system')).toBeVisible();
 });
 
 // ── 37. Pipeline canvas is scrollable on mobile ───────────────────────────────
@@ -654,12 +654,9 @@ test('pageWrap has no touchstart swipe listener (swipe disabled)', async ({ page
     expect(after).toBe(before);
 });
 
-// ── 47. Nav inactive buttons have sufficient contrast ─────────────────────────
-test('mobile: nav inactive buttons are at least 55% opacity', async ({ page }) => {
+// ── 47. Nav bar is horizontally scrollable ────────────────────────────────────
+test('mobile: bottom nav has overflow-x auto for scrolling', async ({ page }) => {
     await setupMobile(page);
-    const color = await page.locator('#apexSideNav .nav-btn').first().evaluate(el => window.getComputedStyle(el).color);
-    // color is rgba(r,g,b,a) — alpha should be > 0.5
-    const alphaMatch = color.match(/rgba\(\d+,\s*\d+,\s*\d+,\s*([\d.]+)\)/);
-    const alpha = alphaMatch ? parseFloat(alphaMatch[1]) : 1;
-    expect(alpha).toBeGreaterThan(0.5);
+    const overflow = await page.locator('#apexSideNav').evaluate(el => window.getComputedStyle(el).overflowX);
+    expect(overflow).toBe('auto');
 });
