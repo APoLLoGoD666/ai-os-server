@@ -7916,6 +7916,38 @@ header.topbar { grid-area: topbar !important; }
     overflow: hidden !important;
 }
 </style>
+<style id="apex-mobile-critical">
+/* Critical mobile reset — must be in <head> to prevent flash of desktop sidebar.
+   Minimal rules only: enough to set the correct layout before first paint.
+   Full mobile styles live in #apex-mobile at end of body. */
+@media (max-width: 768px) {
+  #main-content {
+    zoom: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100dvh !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow: hidden !important;
+  }
+  #apexSideNav {
+    grid-area: unset !important;
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    flex-direction: row !important;
+    height: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    width: 100vw !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-right: none !important;
+  }
+  .page-and-input {
+    grid-area: unset !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+}
+</style>
 </head>
 <body class="apex-role-master">
 <a class="skip-to-main" href="#main-content">Skip to main content</a>
