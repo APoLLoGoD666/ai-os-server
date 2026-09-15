@@ -406,8 +406,9 @@ async function invokeDomainAgent(slug, userMessage, { history = [], maxTokens = 
 
     const rawReply = response.content.find(b => b.type === 'text')?.text || '';
 
-    const escalateMatch = !council && rawReply.match(/\[ESCALATE:\s*(.+?)\][\s]*$/im);
-    const delegateMatch = !council && rawReply.match(/\[DELEGATE:\s*([^:\]\n]+?):\s*(.+?)\][\s]*$/im);
+    // ── GAP-8 FIX: removed end-of-string anchor so delegation works with trailing text ──
+    const escalateMatch = !council && rawReply.match(/\[ESCALATE:\s*(.+?)\]/im);
+    const delegateMatch = !council && rawReply.match(/\[DELEGATE:\s*([^:\]\n]+?):\s*(.+?)\]/im);
 
     let reply = rawReply;
     if (escalateMatch) reply = reply.replace(/\[ESCALATE:[\s\S]*$/im, '').trim();

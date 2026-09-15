@@ -27,6 +27,24 @@ router.post('/api/voice/pipeline', requireAppAccess, async (req, res) => {
             intent = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
         } catch {}
 
+        // ── GAP-6 FIX: action voice commands go through council → GATE ──────────
+        const _VOICE_ACTION_RE = /\b(build|create|implement|develop|write|code|fix|refactor|add|deploy|automate|send|schedule|book|organis|organiz|delete|rename|generate|draft|launch|start|make)\b/i;
+        const _isVoiceAction = _VOICE_ACTION_RE.test(transcript) && transcript.split(/\s+/).length >= 4;
+        if (_isVoiceAction) {
+            try {
+                const council = require('../../lib/executive/executive-council');
+                const cResult = await council.deliberate(transcript, { source: 'voice', sessionId });
+                const voiceAnswer = `Council has reviewed your request. ${(cResult.recommendation || '').slice(0, 200)} A task is now awaiting your approval at the GATE.`;
+                if (global._wsBroadcast) {
+                    global._wsBroadcast({ type: 'voice_response', sessionId, answer: voiceAnswer },
+                        meta => !sessionId || meta.sessionId === sessionId);
+                }
+                return res.json({ ok: true, transcript, intent: 'council', answer: voiceAnswer, pipeline_stage: 'COUNCIL', council: { deliberationId: cResult.deliberationId } });
+            } catch (e) {
+                console.warn('[Voice/Council] routing failed, falling through:', e.message);
+            }
+        }
+
         // 2. Fetch context based on intent
         let context = '';
         if (intent.intent === 'research' && _fc) {

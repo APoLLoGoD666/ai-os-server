@@ -16,6 +16,25 @@ function _ownerScopeFromReq(req) {
     };
 }
 
+// ── GAP-2 FIX: detect coding tasks that need the 8-stage pipeline vs domain agents ──
+function _needsCodePipeline(meta) {
+    const text = ((meta.dispatch?.action || '') + ' ' + (meta.recommendation || '')).toLowerCase();
+    const hasVerb = /\b(build|code|implement|develop|write|refactor|add (feature|route|endpoint|function)|fix (bug|error|issue)|create (api|route|endpoint|script|module|migration)|update (server|dashboard|dashboard\.html)|deploy)\b/.test(text);
+    const hasNoun = /\b(server\.js|dashboard\.html|server|api|endpoint|route|function|script|module|migration|schema|component|codebase)\b/.test(text);
+    return hasVerb && hasNoun;
+}
+
+// ── GAP-7 FIX: fire quality evaluation after task completes ──────────────────
+function _triggerQualityEval(task, execution) {
+    setImmediate(async () => {
+        try {
+            const council = require('../../lib/executive/executive-council');
+            const q = `Quality evaluation: Task "${(task.title || '').slice(0, 120)}" completed by ${execution.agent} agent. Outcome: "${(execution.reply || '').slice(0, 400)}". Was this correct, complete, and constitutionally aligned? Flag any quality issues or improvements needed.`;
+            await council.deliberate(q, { type: 'quality_evaluation', sourceTaskId: task.id, quality_check: true });
+        } catch (e) { console.warn('[Quality] evaluation failed:', e.message); }
+    });
+}
+
 // V-11-H-B1: scope=all requires role='master'; Users get 403.
 function _rejectScopeAllForNonMaster(req, res) {
     if (req.query?.scope === 'all' && req.identity?.role !== 'master') {
@@ -108,12 +127,21 @@ router.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
         return res.status(403).json({ ok: false, error: 'FORBIDDEN', message: 'Not the owner of this task' });
     }
 
-    // Council dispatch tasks: route to the domain agent instead of the auto-pipeline
+    // Council dispatch tasks: route to coding pipeline or domain agent
     const meta = task.metadata || {};
-    if (meta.type === 'council_dispatch' && meta.dispatch?.slug && meta.dispatch?.action) {
+    if ((meta.type === 'council_dispatch' || meta.type === 'council_decision') && meta.dispatch?.slug && meta.dispatch?.action) {
         await sbAdmin.from('apex_tasks')
             .update({ status: 'in_progress', updated_at: new Date().toISOString() })
             .eq('id', taskId);
+
+        // ── GAP-2 FIX: coding tasks go to the 8-stage pipeline ───────────────
+        if (_needsCodePipeline(meta)) {
+            res.json({ ok: true, status: 'running', taskId, pipeline: 'coding' });
+            _agentQueue.enqueue(taskId, () => _startAutoPipeline(taskId), { label: task.title || taskId });
+            return;
+        }
+
+        // Non-coding: domain agent → optional office agent delegation
         res.json({ ok: true, status: 'dispatching', taskId, agent: meta.dispatch.slug });
         setImmediate(async () => {
             try {
@@ -127,16 +155,14 @@ router.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
                         officeResult = await agentLib.invokeAgent(delegation.slug, delegation.task, { sourceTaskId: taskId });
                     } catch (oe) { officeResult = { reply: '[office agent error: ' + oe.message + ']' }; }
                 }
-                const updatedMeta = {
-                    ...meta,
-                    execution: {
-                        agent:      meta.dispatch.slug,
-                        reply:      result.reply.slice(0, 2000),
-                        delegation,
-                        office:     officeResult ? { agent: delegation.slug, reply: (officeResult.reply || '').slice(0, 1000) } : null,
-                        timestamp:  new Date().toISOString(),
-                    },
+                const execution = {
+                    agent:      meta.dispatch.slug,
+                    reply:      result.reply.slice(0, 2000),
+                    delegation,
+                    office:     officeResult ? { agent: delegation.slug, reply: (officeResult.reply || '').slice(0, 1000) } : null,
+                    timestamp:  new Date().toISOString(),
                 };
+                const updatedMeta = { ...meta, execution };
                 await sbAdmin.from('apex_tasks')
                     .update({ status: 'done', metadata: updatedMeta, updated_at: new Date().toISOString() })
                     .eq('id', taskId);
@@ -161,6 +187,8 @@ router.post('/api/tasks/approve', requireAppAccess, async (req, res) => {
                         );
                     } catch {}
                 }
+                // ── GAP-7 FIX: trigger quality evaluation after completion ────
+                _triggerQualityEval(task, execution);
             } catch (e) {
                 await sbAdmin.from('apex_tasks')
                     .update({ status: 'failed', metadata: { ...meta, execution_error: e.message }, updated_at: new Date().toISOString() })

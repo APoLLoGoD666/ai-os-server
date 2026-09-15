@@ -185,6 +185,37 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
             if (_chatSkillConf < 0.4) _chatDomainAgent = null;
         }
 
+        // ── GAP-1 FIX: action requests go through council → GATE before execution ──
+        const _PIPELINE_ACTION_RE = /\b(build|create|implement|develop|write|code|fix|refactor|add|deploy|automate|send|schedule|book|organis|organiz|delete|rename|generate|draft|launch|start|make)\b/i;
+        const _isActionReq = _chatDomainAgent && _chatDomainSlug && !_isConversational
+            && _PIPELINE_ACTION_RE.test(userMessage) && userMessage.split(/\s+/).length >= 4;
+
+        if (_isActionReq) {
+            try {
+                const _council = require('../../lib/executive/executive-council');
+                const _cResult = await _council.deliberate(userMessage, {
+                    source:      'chat',
+                    domain_hint: _chatDomainSlug,
+                    sessionId:   req.conversationId,
+                    humanId:     req.identity?.humanId || null,
+                });
+                clearTimeout(chatTimeout);
+                const _cRaw = `Council reviewed your request.\n\nRecommendation: ${(_cResult.recommendation || '').slice(0, 300)}\n\nA task is now awaiting your approval at the GATE.`;
+                const { reply: _cReply, mode: _cMode, intent: _cIntent } = _cogOrch.shape(userMessage, _cRaw, req.executionClass || 'EXECUTIVE', req.conversationId);
+                const _cSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
+                const _cPlan = _timingEng.buildStreamPlan(_cReply, _cIntent, req.executionClass || 'EXECUTIVE', _cSnap);
+                _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _cIntent, userMessage, reply: _cReply, mode: _cMode, executionClass: req.executionClass });
+                _eae.recordTransition({ sessionId: req.conversationId });
+                _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply: _cReply, intent: _cIntent, mode: _cMode });
+                setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: _cReply }), tags: ['conversation', 'chat', 'council', _chatDomainSlug], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+                setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); });
+                return res.status(200).json({ ok: true, reply: _cReply, response_mode: _cMode, stream_plan: _cPlan, pipeline_stage: 'COUNCIL', council: { deliberationId: _cResult.deliberationId } });
+            } catch (e) {
+                if (res.headersSent) return;
+                console.warn('[Council] action routing failed, falling through to domain agent:', e.message);
+            }
+        }
+
         // Route to domain agent when keyword match is confident
         if (_chatDomainAgent && _chatDomainSlug) {
             try {
