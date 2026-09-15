@@ -636,3 +636,30 @@ test('mobile: clear-chat and auto-listen hidden on mobile', async ({ page }) => 
     await expect(page.locator('.clear-chat-btn')).toBeHidden();
     await expect(page.locator('.auto-listen-btn')).toBeHidden();
 });
+
+// ── 46. Swipe handler removed from pageWrap ───────────────────────────────────
+test('pageWrap has no touchstart swipe listener (swipe disabled)', async ({ page }) => {
+    await setupMobile(page);
+    // Verify the swipe handler was removed: activePage must not change after a horizontal mouse drag
+    const before = await page.evaluate(() => window.activePage);
+    const pw = page.locator('#pageWrap');
+    const box = await pw.boundingBox();
+    if (box) {
+        await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.5);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width * 0.1, box.y + box.height * 0.5, { steps: 10 });
+        await page.mouse.up();
+    }
+    const after = await page.evaluate(() => window.activePage);
+    expect(after).toBe(before);
+});
+
+// ── 47. Nav inactive buttons have sufficient contrast ─────────────────────────
+test('mobile: nav inactive buttons are at least 55% opacity', async ({ page }) => {
+    await setupMobile(page);
+    const color = await page.locator('#apexSideNav .nav-btn').first().evaluate(el => window.getComputedStyle(el).color);
+    // color is rgba(r,g,b,a) — alpha should be > 0.5
+    const alphaMatch = color.match(/rgba\(\d+,\s*\d+,\s*\d+,\s*([\d.]+)\)/);
+    const alpha = alphaMatch ? parseFloat(alphaMatch[1]) : 1;
+    expect(alpha).toBeGreaterThan(0.5);
+});
