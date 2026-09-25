@@ -44,5 +44,26 @@ module.exports = {
                 PORT:         "3000"
             }
         }
+        ,{
+            name:    "apex-watcher",
+            script:  "watcher.js",
+            cwd:     path.resolve(__dirname),
+            instances:        1,
+            exec_mode:        "fork",
+            autorestart:      true,
+            watch:            false,
+            max_restarts:     5,
+            min_uptime:       "5s",
+            restart_delay:    5000,
+            error_file:      "logs/watcher-error.log",
+            out_file:        "logs/watcher-out.log",
+            log_date_format: "YYYY-MM-DD HH:mm:ss Z",
+            merge_logs:      true,
+            env: {
+                NODE_ENV:   "production",
+                LOCAL_MODE: "true",
+                PORT:       "3000"
+            }
+        }
     ]
 };

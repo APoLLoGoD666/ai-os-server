@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "apex-ai-os/adaptation-registry",
+  "title": "APEX Adaptation Registry",
+  "description": "Schema for adaptation-engine.js registry — persisted at System/Adaptations/adaptation-registry.json in the Obsidian vault. Written by runCycle(), read by getActiveAdaptations() and getRecommendationsFor().",
+  "type": "object",
+  "required": ["version", "generatedAt", "adaptations"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Registry schema version. Increment when shape changes.",
+      "example": "2.0"
+    },
+    "generatedAt": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Timestamp of the most recent runCycle() call that wrote this file."
+    },
+    "totalActive": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Cached count of active, non-expired adaptations for quick reads."
+    },
+    "adaptations": {
+      "type": "array",
+      "description": "All adaptations — active and expired. Expired ones are retained for audit history.",
+      "items": { "$ref": "#/definitions/Adaptation" }
+    }
+  },
+  "additionalProperties": false,
+
+  "definitions": {
+    "Adaptation": {
+      "type": "object",
+      "required": ["id", "type", "target", "action", "confidence", "createdAt", "expiresAt", "active", "appliedCount", "successCount"],
+      "additionalProperties": false,
+      "properties": {
+
+        "id": {
+          "type": "string",
+          "pattern": "^adp-(rou|pla|mod|ret)-[a-z0-9]+-[a-z0-9]+$",
+          "description": "Unique ID. Format: adp-{type_prefix}-{timestamp_base36}-{random3}. Prefix map: rou=routing, pla=planning, mod=model_tier, ret=retry_strategy."
+        },
+
+        "type": {
+          "type": "string",
+          "enum": ["routing", "planning", "model_tier", "retry_strategy"],
+          "description": "Category of adaptation. routing=tier/category decisions; planning=task structure; model_tier=specific model upgrades; retry_strategy=retry/delay config."
+        },
+
+        "target": {
+          "type": "string",
+          "description": "Scope of this adaptation. Three formats: 'category:{name}' (domain-scoped), 'stage:{STAGE}' (agent-stage scoped), 'global' (applies to all tasks).",
+          "examples": ["category:auth", "category:database", "stage:DEVELOPER", "stage:REVIEWER", "stage:COMMITTER", "global"]
+        },
+
+        "action": {
+          "type": "string",
+          "description": "Machine-readable action key. Consumed by orchestrator integration points. Convention: {verb}_{noun}_{qualifier}.",
+          "examples": [
+            "pre_escalate_developer",
+            "use_sonnet_for_moderate_tasks",
+            "split_large_tasks",
+            "escalate_auth_tier",
+            "maintain_api_routing",
+            "increase_committer_retries",
+            "routing_stable"
+          ]
+        },
+
+        "params": {
+          "type": "object",
+          "description": "Structured parameters for programmatic consumption by integration points.",
+          "additionalProperties": true,
+          "examples": [
+            { "stage": "DEVELOPER", "recommendedModel": "claude-sonnet-4-6", "applyAtComplexity": ["moderate"] },
+            { "maxFilesPerTask": 3, "maxStepsPerTask": 6, "splitParts": 2 },
+            { "category": "auth", "tierBump": 1, "reason": "45% failure rate in auth tasks" },
+            { "recommendedRetries": 3, "delayMs": 5000 }
+          ]
+        },
+
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "0 = no signal / insufficient data. 1 = strong, high-volume signal. Formula: volume(40%) + signal_strength(60%). Minimum 0.25 to persist. Signal strength = |rate - 0.5| × 2.5."
+        },
+
+        "evidence": {
+          "type": "object",
+          "description": "Raw metrics that produced this adaptation. Preserved for audit and debugging.",
+          "properties": {
+            "sampleSize":    { "type": "integer", "minimum": 0, "description": "Number of observations used." },
+            "failureCount":  { "type": "integer", "minimum": 0 },
+            "failureRate":   { "type": "number",  "minimum": 0, "maximum": 1 },
+            "successCount":  { "type": "integer", "minimum": 0 },
+            "successRate":   { "type": "number",  "minimum": 0, "maximum": 1 },
+            "avgLatencyMs":  { "type": "number",  "minimum": 0 },
+            "stageScore":    { "type": "number",  "minimum": 0, "maximum": 10 },
+            "source": {
+              "type": "string",
+              "enum": ["agent_reputation", "episodic_memory", "category_stats", "reflection_engine"],
+              "description": "Which data source produced this evidence."
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when this adaptation was first created."
+        },
+
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp after which this adaptation is considered stale. Currently 7 days from createdAt. If the pattern still holds at the next runCycle(), expiresAt is renewed. If not, the record is deactivated."
+        },
+
+        "active": {
+          "type": "boolean",
+          "description": "false = expired or superseded. Inactive records are kept for audit history but never returned by getActiveAdaptations()."
+        },
+
+        "appliedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many times this recommendation was acted on. Incremented by recordApplication()."
+        },
+
+        "successCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many applications of this adaptation led to a successful outcome. Provides feedback loop for measuring adaptation effectiveness."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX — UX-10 Personalisation & User Adaptation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Colors */
+  --apex-color-bg: #0a0e1a;
+  --apex-color-surface: #111827;
+  --apex-color-surface-2: #1a2235;
+  --apex-color-border: rgba(0,212,255,0.12);
+  --apex-color-primary: #00d4ff;
+  --apex-color-accent: #7c3aed;
+  --apex-color-success: #10b981;
+  --apex-color-warning: #f59e0b;
+  --apex-color-error: #ef4444;
+  --apex-color-text: #e6f4ff;
+  --apex-color-muted: rgba(230,244,255,0.45);
+  /* Typography */
+  --apex-font-ui: 'Inter', sans-serif;
+  --apex-font-brand: 'Cinzel', serif;
+  --apex-font-data: 'JetBrains Mono', monospace;
+  /* Spacing */
+  --apex-space-xs: 4px;
+  --apex-space-sm: 8px;
+  --apex-space-md: 16px;
+  --apex-space-lg: 24px;
+  --apex-space-xl: 32px;
+  /* Radius */
+  --apex-radius-sm: 4px;
+  --apex-radius-md: 8px;
+  --apex-radius-lg: 12px;
+  /* Transitions */
+  --apex-transition-fast: 150ms ease;
+  --apex-transition-std: 250ms ease;
+  --apex-transition-slow: 350ms ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--apex-color-bg);
+  color: var(--apex-color-text);
+  font-family: var(--apex-font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.apex-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--apex-space-md) var(--apex-space-xl);
+  background: var(--apex-color-surface);
+  border-bottom: 1px solid var(--apex-color-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.apex-wordmark {
+  font-family: var(--apex-font-brand);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--apex-color-primary);
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 20px rgba(0,212,255,0.4);
+}
+
+.apex-subtitle {
+  font-size: 12px;
+  color: var(--apex-color-muted);
+  font-family: var(--apex-font-data);
+  margin-top: 2px;
+}
+
+.phase-badge {
+  background: rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.3);
+  color: var(--apex-color-primary);
+  font-family: var(--apex-font-data);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--apex-radius-sm);
+  letter-spacing: 0.05em;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+}
+
+.global-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-sm);
+  font-size: 12px;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+}
+
+/* ── LAYOUT ── */
+.apex-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr 280px;
+  gap: 0;
+  height: calc(100vh - 61px);
+  overflow: hidden;
+}
+
+/* ── PANEL BASE ── */
+.panel {
+  background: var(--apex-color-surface);
+  border-right: 1px solid var(--apex-color-border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,212,255,0.2) transparent;
+}
+
+.panel:last-child { border-right: none; }
+
+.panel-header {
+  padding: var(--apex-space-md) var(--apex-space-md);
+  border-bottom: 1px solid var(--apex-color-border);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--apex-color-muted);
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  background: var(--apex-color-surface);
+  z-index: 10;
+}
+
+/* ── CATEGORY SECTIONS ── */
+.category-section {
+  border-bottom: 1px solid var(--apex-color-border);
+  transition: background var(--apex-transition-fast);
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  cursor: pointer;
+  transition: background var(--apex-transition-fast);
+  user-select: none;
+}
+
+.category-header:hover { background: var(--apex-color-surface-2); }
+
+.category-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--apex-color-text);
+  text-transform: capitalize;
+  display: flex;
+  align-items: center;
+  gap: var(--apex-space-xs);
+}
+
+.category-chevron {
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  transition: transform var(--apex-transition-fast);
+}
+
+.category-section.open .category-chevron { transform: rotate(180deg); }
+
+.category-prefs {
+  display: none;
+  padding: 0 var(--apex-space-md) var(--apex-space-sm);
+}
+
+.category-section.open .category-prefs { display: block; }
+
+/* ── PREFERENCE ROW ── */
+.pref-row {
+  padding: var(--apex-space-sm) 0;
+  border-bottom: 1px solid rgba(0,212,255,0.05);
+  cursor: pointer;
+  transition: background var(--apex-transition-fast);
+  border-radius: var(--apex-radius-sm);
+  padding-left: var(--apex-space-xs);
+  position: relative;
+}
+
+.pref-row:hover { background: rgba(0,212,255,0.04); }
+.pref-row.selected { background: rgba(0,212,255,0.08); border-left: 2px solid var(--apex-color-primary); }
+.pref-row:last-child { border-bottom: none; }
+
+.pref-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--apex-space-xs);
+}
+
+.pref-name {
+  font-family: var(--apex-font-data);
+  font-size: 11px;
+  color: var(--apex-color-text);
+}
+
+.pref-value {
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  margin-bottom: var(--apex-space-xs);
+}
+
+/* ── STATE BADGES ── */
+.state-badge {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: var(--apex-radius-sm);
+  letter-spacing: 0.06em;
+  transition: background var(--apex-transition-std), color var(--apex-transition-std);
+}
+
+.state-badge.explicit  { background: rgba(0,212,255,0.15); color: var(--apex-color-primary); border: 1px solid rgba(0,212,255,0.3); }
+.state-badge.confirmed { background: rgba(16,185,129,0.15); color: var(--apex-color-success); border: 1px solid rgba(16,185,129,0.3); }
+.state-badge.inferred  { background: rgba(124,58,237,0.15); color: var(--apex-color-accent); border: 1px solid rgba(124,58,237,0.3); }
+.state-badge.rejected  { background: rgba(239,68,68,0.15); color: var(--apex-color-error); border: 1px solid rgba(239,68,68,0.3); }
+.state-badge.stale     { background: rgba(245,158,11,0.15); color: var(--apex-color-warning); border: 1px solid rgba(245,158,11,0.3); }
+.state-badge.unknown   { background: rgba(230,244,255,0.06); color: var(--apex-color-muted); border: 1px solid rgba(230,244,255,0.1); }
+.state-badge.system-default { background: rgba(230,244,255,0.06); color: var(--apex-color-muted); border: 1px solid rgba(230,244,255,0.1); }
+
+/* ── CONFIDENCE BAR ── */
+.conf-bar-wrap {
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: var(--apex-space-xs);
+}
+
+.conf-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width var(--apex-transition-slow), background var(--apex-transition-std);
+}
+
+/* Confidence tier colours */
+.conf-bar.tier-low      { background: rgba(124,58,237,0.4); }
+.conf-bar.tier-medium   { background: rgba(124,58,237,0.75); }
+.conf-bar.tier-high     { background: #7c3aed; }
+.conf-bar.tier-explicit { background: var(--apex-color-primary); }
+
+/* ── TOGGLE SWITCH ── */
+.toggle-switch {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: rgba(255,255,255,0.1);
+  border-radius: 18px;
+  transition: background var(--apex-transition-std);
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 3px;
+  top: 3px;
+  background: var(--apex-color-muted);
+  border-radius: 50%;
+  transition: transform var(--apex-transition-std), background var(--apex-transition-std);
+}
+
+.toggle-switch input:checked + .toggle-slider { background: rgba(0,212,255,0.3); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(14px); background: var(--apex-color-primary); }
+.toggle-switch input:disabled + .toggle-slider { opacity: 0.4; cursor: not-allowed; }
+
+/* ── CENTER PANEL ── */
+.center-panel {
+  background: var(--apex-color-bg);
+  border-right: 1px solid var(--apex-color-border);
+  overflow-y: auto;
+  padding: var(--apex-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--apex-space-md);
+}
+
+/* ── PIPELINE ── */
+.pipeline-wrap {
+  background: var(--apex-color-surface);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-lg);
+  padding: var(--apex-space-md);
+}
+
+.pipeline-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--apex-color-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--apex-space-md);
+}
+
+.pipeline-nodes {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.pipeline-node {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.pipeline-node::after {
+  content: '→';
+  position: absolute;
+  right: -8px;
+  top: 10px;
+  color: var(--apex-color-border);
+  font-size: 12px;
+  z-index: 1;
+}
+
+.pipeline-node:last-child::after { display: none; }
+
+.node-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--apex-color-surface-2);
+  border: 2px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  transition: all var(--apex-transition-std);
+}
+
+.node-label {
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  color: var(--apex-color-muted);
+  transition: color var(--apex-transition-std);
+  white-space: nowrap;
+}
+
+.pipeline-node.active .node-dot {
+  background: rgba(0,212,255,0.15);
+  border-color: var(--apex-color-primary);
+  box-shadow: 0 0 12px rgba(0,212,255,0.4);
+}
+
+.pipeline-node.active .node-label { color: var(--apex-color-primary); }
+
+.pipeline-node.blocked .node-dot {
+  background: rgba(239,68,68,0.15);
+  border-color: var(--apex-color-error);
+  box-shadow: 0 0 12px rgba(239,68,68,0.4);
+}
+
+.pipeline-node.blocked .node-label { color: var(--apex-color-error); }
+
+.pipeline-node.done .node-dot {
+  background: rgba(16,185,129,0.15);
+  border-color: var(--apex-color-success);
+}
+
+.pipeline-node.done .node-label { color: var(--apex-color-success); }
+
+/* ── PREVIEW CARD ── */
+.preview-card {
+  background: var(--apex-color-surface);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-lg);
+  padding: var(--apex-space-md);
+  position: relative;
+  transition: border-color var(--apex-transition-std);
+}
+
+.preview-card.adapted { border-color: rgba(0,212,255,0.35); }
+
+.adapted-badge {
+  position: absolute;
+  top: var(--apex-space-sm);
+  right: var(--apex-space-sm);
+  background: rgba(0,212,255,0.12);
+  color: var(--apex-color-primary);
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid rgba(0,212,255,0.25);
+  letter-spacing: 0.06em;
+}
+
+.preview-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--apex-color-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--apex-space-md);
+}
+
+.preview-message {
+  background: var(--apex-color-surface-2);
+  border-radius: var(--apex-radius-md);
+  padding: var(--apex-space-md);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--apex-color-text);
+  border-left: 3px solid var(--apex-color-primary);
+  transition: all var(--apex-transition-std);
+  min-height: 60px;
+}
+
+.preview-meta {
+  margin-top: var(--apex-space-sm);
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  display: flex;
+  gap: var(--apex-space-md);
+  flex-wrap: wrap;
+}
+
+.preview-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--apex-color-primary);
+}
+
+/* ── ADAPTATION LOG ── */
+.log-wrap {
+  background: var(--apex-color-surface);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-lg);
+  padding: var(--apex-space-md);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.log-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--apex-color-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--apex-space-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.log-clear {
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--apex-color-muted);
+  transition: color var(--apex-transition-fast);
+}
+
+.log-clear:hover { color: var(--apex-color-error); }
+
+.log-entries { display: flex; flex-direction: column; gap: 4px; }
+
+.log-entry {
+  display: flex;
+  gap: var(--apex-space-sm);
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  padding: 4px 6px;
+  border-radius: var(--apex-radius-sm);
+  background: var(--apex-color-surface-2);
+  animation: slideIn var(--apex-transition-std) ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.log-time { color: var(--apex-color-muted); flex-shrink: 0; }
+.log-msg  { color: var(--apex-color-text); }
+.log-msg.warn  { color: var(--apex-color-warning); }
+.log-msg.error { color: var(--apex-color-error); }
+.log-msg.ok    { color: var(--apex-color-success); }
+.log-msg.info  { color: var(--apex-color-primary); }
+.log-empty { color: var(--apex-color-muted); font-size: 11px; text-align: center; padding: var(--apex-space-sm); }
+
+/* ── RIGHT PANEL ── */
+.right-panel {
+  padding: 0;
+}
+
+.scenario-grid {
+  padding: var(--apex-space-sm);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--apex-space-xs);
+}
+
+.scenario-btn {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  color: var(--apex-color-text);
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  padding: 6px 4px;
+  border-radius: var(--apex-radius-sm);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+  text-align: center;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+}
+
+.scenario-btn:hover {
+  background: rgba(0,212,255,0.08);
+  border-color: rgba(0,212,255,0.25);
+  color: var(--apex-color-primary);
+}
+
+.scenario-btn.running {
+  background: rgba(0,212,255,0.12);
+  border-color: rgba(0,212,255,0.4);
+  color: var(--apex-color-primary);
+  animation: pulse 1s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+.scenario-btn.done {
+  border-color: rgba(16,185,129,0.3);
+  color: var(--apex-color-success);
+}
+
+/* ── USER ACTIONS ── */
+.actions-section {
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  border-top: 1px solid var(--apex-color-border);
+}
+
+.actions-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--apex-color-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--apex-space-sm);
+}
+
+.action-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--apex-space-xs);
+  margin-bottom: var(--apex-space-sm);
+}
+
+.action-btn {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  color: var(--apex-color-muted);
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  padding: 6px 8px;
+  border-radius: var(--apex-radius-sm);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+  text-align: center;
+}
+
+.action-btn.accept:hover  { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: var(--apex-color-success); }
+.action-btn.reject:hover  { background: rgba(239,68,68,0.12);  border-color: rgba(239,68,68,0.3);  color: var(--apex-color-error); }
+.action-btn.edit:hover    { background: rgba(0,212,255,0.08);   border-color: rgba(0,212,255,0.25); color: var(--apex-color-primary); }
+.action-btn.reset-btn:hover { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3); color: var(--apex-color-warning); }
+.action-btn.disable-btn:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); color: var(--apex-color-error); }
+
+.selected-pref-label {
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  margin-bottom: var(--apex-space-sm);
+  padding: 4px 8px;
+  background: var(--apex-color-surface-2);
+  border-radius: var(--apex-radius-sm);
+  min-height: 24px;
+}
+
+/* ── CONFIDENCE SLIDER ── */
+.slider-section {
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  border-top: 1px solid var(--apex-color-border);
+}
+
+.slider-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--apex-color-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--apex-space-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slider-val {
+  font-family: var(--apex-font-data);
+  font-size: 11px;
+  color: var(--apex-color-primary);
+}
+
+input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.08);
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--apex-color-primary);
+  cursor: pointer;
+}
+
+/* ── TRANSPARENCY PANEL ── */
+.transparency-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--apex-color-surface);
+  border-top: 1px solid var(--apex-color-border);
+  z-index: 200;
+  transform: translateY(100%);
+  transition: transform var(--apex-transition-slow);
+  max-height: 50vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.transparency-panel.open { transform: translateY(0); }
+
+.tp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--apex-space-md);
+  border-bottom: 1px solid var(--apex-color-border);
+  flex-shrink: 0;
+}
+
+.tp-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--apex-color-text);
+  text-transform: uppercase;
+}
+
+.tp-actions {
+  display: flex;
+  gap: var(--apex-space-sm);
+  align-items: center;
+}
+
+.tp-btn {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  color: var(--apex-color-muted);
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: var(--apex-radius-sm);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+
+.tp-btn:hover { border-color: rgba(0,212,255,0.3); color: var(--apex-color-primary); }
+.tp-btn.danger:hover { border-color: rgba(239,68,68,0.3); color: var(--apex-color-error); }
+
+.tp-close {
+  background: none;
+  border: none;
+  color: var(--apex-color-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px;
+  transition: color var(--apex-transition-fast);
+}
+
+.tp-close:hover { color: var(--apex-color-text); }
+
+.tp-table-wrap {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.tp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--apex-font-data);
+  font-size: 11px;
+}
+
+.tp-table th {
+  text-align: left;
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  color: var(--apex-color-muted);
+  border-bottom: 1px solid var(--apex-color-border);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--apex-color-surface);
+  position: sticky;
+  top: 0;
+}
+
+.tp-table td {
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  border-bottom: 1px solid rgba(0,212,255,0.05);
+  color: var(--apex-color-text);
+}
+
+.tp-table tr:hover td { background: var(--apex-color-surface-2); }
+
+/* ── CONFIRM DIALOG ── */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,14,26,0.85);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--apex-transition-std);
+}
+
+.confirm-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.confirm-dialog {
+  background: var(--apex-color-surface);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-lg);
+  padding: var(--apex-space-xl);
+  max-width: 400px;
+  width: 90%;
+  transform: scale(0.95);
+  transition: transform var(--apex-transition-std);
+}
+
+.confirm-overlay.open .confirm-dialog { transform: scale(1); }
+
+.confirm-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--apex-color-text);
+  margin-bottom: var(--apex-space-sm);
+}
+
+.confirm-body {
+  font-size: 13px;
+  color: var(--apex-color-muted);
+  margin-bottom: var(--apex-space-lg);
+  line-height: 1.6;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--apex-space-sm);
+  justify-content: flex-end;
+}
+
+.confirm-cancel {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  color: var(--apex-color-muted);
+  font-family: var(--apex-font-ui);
+  font-size: 13px;
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  border-radius: var(--apex-radius-md);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+
+.confirm-cancel:hover { color: var(--apex-color-text); }
+
+.confirm-ok {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: var(--apex-color-error);
+  font-family: var(--apex-font-ui);
+  font-size: 13px;
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  border-radius: var(--apex-radius-md);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+
+.confirm-ok:hover { background: rgba(239,68,68,0.25); }
+
+/* ── KEYBOARD HINT ── */
+.kbd-hints {
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  border-top: 1px solid var(--apex-color-border);
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+  color: var(--apex-color-muted);
+  line-height: 1.8;
+}
+
+kbd {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-family: var(--apex-font-data);
+  font-size: 9px;
+}
+
+/* ── DISABLED CATEGORY ── */
+.category-section.disabled .category-name { color: var(--apex-color-muted); }
+.category-section.disabled .category-prefs { opacity: 0.4; pointer-events: none; }
+
+/* ── GLOBAL OFF BANNER ── */
+.global-off-banner {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: var(--apex-color-error);
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  border-radius: var(--apex-radius-md);
+  font-size: 12px;
+  text-align: center;
+  display: none;
+}
+
+.global-off-banner.visible { display: block; }
+
+/* ── EDIT FORM ── */
+.edit-form {
+  padding: var(--apex-space-sm) var(--apex-space-md);
+  border-top: 1px solid var(--apex-color-border);
+  display: none;
+}
+
+.edit-form.open { display: block; }
+
+.edit-input {
+  width: 100%;
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  color: var(--apex-color-text);
+  font-family: var(--apex-font-data);
+  font-size: 12px;
+  padding: var(--apex-space-sm);
+  border-radius: var(--apex-radius-sm);
+  outline: none;
+  transition: border-color var(--apex-transition-fast);
+  margin-bottom: var(--apex-space-sm);
+}
+
+.edit-input:focus { border-color: rgba(0,212,255,0.4); }
+
+.edit-submit {
+  background: rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.25);
+  color: var(--apex-color-primary);
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  padding: 4px 12px;
+  border-radius: var(--apex-radius-sm);
+  cursor: pointer;
+  transition: all var(--apex-transition-fast);
+}
+
+.edit-submit:hover { background: rgba(0,212,255,0.18); }
+
+/* ── DISCLOSURE CARDS ── */
+.disclosure-cards {
+  display: flex;
+  gap: var(--apex-space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--apex-space-sm);
+}
+
+.disc-card {
+  background: var(--apex-color-surface-2);
+  border: 1px solid var(--apex-color-border);
+  border-radius: var(--apex-radius-sm);
+  padding: 4px 8px;
+  font-family: var(--apex-font-data);
+  font-size: 10px;
+  color: var(--apex-color-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.disc-card.active {
+  border-color: rgba(0,212,255,0.3);
+  color: var(--apex-color-primary);
+  background: rgba(0,212,255,0.06);
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="apex-header">
+  <div>
+    <div class="apex-wordmark">APEX</div>
+    <div class="apex-subtitle">UX-10 — Personalisation & User Adaptation · Prototype</div>
+  </div>
+  <div class="header-controls">
+    <label class="global-toggle" aria-label="Toggle all personalisation">
+      <input type="checkbox" id="globalPersonalisationToggle" checked>
+      <span>All personalisation</span>
+    </label>
+    <span class="phase-badge">UX-10</span>
+  </div>
+</header>
+
+<!-- GLOBAL OFF BANNER -->
+<div class="global-off-banner" id="globalOffBanner">
+  Personalisation globally disabled — all system defaults active.
+  <button onclick="enableGlobalPersonalisation()" style="margin-left:12px;background:none;border:1px solid var(--apex-color-error);color:var(--apex-color-error);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;">Re-enable</button>
+</div>
+
+<!-- LAYOUT -->
+<div class="apex-layout">
+
+  <!-- COL 1: PREFERENCE PANEL -->
+  <div class="panel" id="prefPanel" aria-label="Preference panel">
+    <div class="panel-header">Preferences</div>
+    <!-- rendered by JS -->
+  </div>
+
+  <!-- COL 2: ADAPTATION PREVIEW -->
+  <div class="center-panel" id="centerPanel">
+
+    <!-- Pipeline -->
+    <div class="pipeline-wrap">
+      <div class="pipeline-title">Adaptation Pipeline</div>
+      <div class="pipeline-nodes" id="pipelineNodes">
+        <div class="pipeline-node" id="pipe-observe"    data-stage="observe">
+          <div class="node-dot">👁</div>
+          <div class="node-label">OBSERVE</div>
+        </div>
+        <div class="pipeline-node" id="pipe-evidence"   data-stage="evidence">
+          <div class="node-dot">📊</div>
+          <div class="node-label">EVIDENCE</div>
+        </div>
+        <div class="pipeline-node" id="pipe-confidence" data-stage="confidence">
+          <div class="node-dot">⚖</div>
+          <div class="node-label">CONFIDENCE</div>
+        </div>
+        <div class="pipeline-node" id="pipe-decision"   data-stage="decision">
+          <div class="node-dot">⚡</div>
+          <div class="node-label">DECISION</div>
+        </div>
+        <div class="pipeline-node" id="pipe-adapt"      data-stage="adapt">
+          <div class="node-dot">🔧</div>
+          <div class="node-label">ADAPT</div>
+        </div>
+        <div class="pipeline-node" id="pipe-ux"         data-stage="ux">
+          <div class="node-dot">✦</div>
+          <div class="node-label">UX</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-card" id="previewCard">
+      <div class="preview-label">Adapted UX Preview</div>
+      <div class="preview-message" id="previewMessage">
+        Run a scenario to see the adapted APEX response here. Adaptations are applied based on inferred and explicit user preferences.
+      </div>
+      <div class="preview-meta" id="previewMeta"></div>
+      <div class="disclosure-cards" id="disclosureCards"></div>
+    </div>
+
+    <!-- Adaptation Log -->
+    <div class="log-wrap">
+      <div class="log-title">
+        Adaptation Log
+        <button class="log-clear" onclick="clearLog()" aria-label="Clear log">Clear</button>
+      </div>
+      <div class="log-entries" id="logEntries">
+        <div class="log-empty">No adaptations yet — run a scenario.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- COL 3: CONTROL PANEL -->
+  <div class="panel right-panel" aria-label="Control panel">
+    <div class="panel-header">Scenarios</div>
+
+    <div class="scenario-grid" id="scenarioGrid">
+      <!-- rendered by JS -->
+    </div>
+
+    <!-- Selected pref -->
+    <div class="actions-section">
+      <div class="actions-label">User Actions</div>
+      <div class="selected-pref-label" id="selectedPrefLabel">No preference selected</div>
+      <div class="action-btns">
+        <button class="action-btn accept"    onclick="userAction('accept')"  aria-label="Accept preference">Accept</button>
+        <button class="action-btn reject"    onclick="userAction('reject')"  aria-label="Reject preference">Reject</button>
+        <button class="action-btn edit"      onclick="openEditForm()"        aria-label="Edit preference">Edit</button>
+        <button class="action-btn reset-btn" onclick="confirmReset()"        aria-label="Reset preferences">Reset</button>
+        <button class="action-btn disable-btn" onclick="disableSelectedCategory()" aria-label="Disable category" style="grid-column: span 2;">Disable Category</button>
+      </div>
+    </div>
+
+    <!-- Edit form -->
+    <div class="edit-form" id="editForm">
+      <div style="font-size:10px;color:var(--apex-color-muted);margin-bottom:6px;">Set value (becomes EXPLICIT):</div>
+      <input type="text" class="edit-input" id="editInput" placeholder="Enter value…" aria-label="Edit preference value">
+      <button class="edit-submit" onclick="submitEdit()">Apply (EXPLICIT)</button>
+    </div>
+
+    <!-- Confidence slider -->
+    <div class="slider-section">
+      <div class="slider-label">
+        Demo Confidence Override
+        <span class="slider-val" id="sliderVal">—</span>
+      </div>
+      <input type="range" id="confSlider" min="0" max="100" value="0" step="1"
+             oninput="onSliderChange(this.value)" aria-label="Confidence override slider">
+    </div>
+
+    <!-- Transparency -->
+    <div class="actions-section">
+      <button class="action-btn" onclick="toggleTransparencyPanel()" style="width:100%;grid-column:span 2;" aria-label="Toggle transparency panel">
+        Transparency Panel <kbd>T</kbd>
+      </button>
+    </div>
+
+    <!-- Keyboard hints -->
+    <div class="kbd-hints">
+      <kbd>1</kbd>–<kbd>9</kbd> scenarios 1–9<br>
+      <kbd>0</kbd><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>F</kbd> scenarios 10–15<br>
+      <kbd>T</kbd> transparency &nbsp; <kbd>X</kbd> reset &nbsp; <kbd>A</kbd> toggle all
+    </div>
+
+  </div>
+</div>
+
+<!-- TRANSPARENCY PANEL -->
+<div class="transparency-panel" id="transparencyPanel" aria-label="Transparency panel">
+  <div class="tp-header">
+    <div class="tp-title">Preference History — Full Transparency</div>
+    <div class="tp-actions">
+      <button class="tp-btn danger" onclick="clearAllInferred()" aria-label="Clear all inferred preferences">Clear all inferred</button>
+      <button class="tp-btn" onclick="exportPreferences()" aria-label="Export preferences">Export</button>
+      <button class="tp-close" onclick="toggleTransparencyPanel()" aria-label="Close transparency panel">✕</button>
+    </div>
+  </div>
+  <div class="tp-table-wrap">
+    <table class="tp-table">
+      <thead>
+        <tr>
+          <th>Preference</th>
+          <th>Category</th>
+          <th>State</th>
+          <th>Confidence</th>
+          <th>Evidence</th>
+          <th>Value</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody id="tpTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- CONFIRM DIALOG -->
+<div class="confirm-overlay" id="confirmOverlay" role="dialog" aria-modal="true">
+  <div class="confirm-dialog">
+    <div class="confirm-title" id="confirmTitle">Confirm Reset</div>
+    <div class="confirm-body"  id="confirmBody">All INFERRED and CONFIRMED preferences will be cleared. EXPLICIT preferences are preserved.</div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-ok"     id="confirmOkBtn" onclick="executeReset()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── CONSTANTS ──────────────────────────────────────────────────────────────────
+
+const PREF_STATE = {
+  EXPLICIT:  'explicit',
+  CONFIRMED: 'confirmed',
+  INFERRED:  'inferred',
+  REJECTED:  'rejected',
+  STALE:     'stale',
+  UNKNOWN:   'unknown'
+};
+
+const CONFIDENCE_TIER = {
+  LOW:      { min: 0.0,  max: 0.39, label: 'LOW',      adapt: false },
+  MEDIUM:   { min: 0.4,  max: 0.64, label: 'MEDIUM',   adapt: 'low-risk' },
+  HIGH:     { min: 0.65, max: 0.84, label: 'HIGH',     adapt: 'stable' },
+  EXPLICIT: { min: 0.85, max: 1.0,  label: 'EXPLICIT', adapt: 'full' }
+};
+
+const PIPELINE_STAGES = ['observe','evidence','confidence','decision','adapt','ux'];
+
+// ── STATE ──────────────────────────────────────────────────────────────────────
+
+let prefStore = {
+  communication: {
+    enabled: true,
+    prefs: {
+      verbosity:     { state: 'unknown', confidence: 0, value: 'standard', evidence: 0, source: 'system' },
+      toneFormality: { state: 'unknown', confidence: 0, value: 'balanced', evidence: 0, source: 'system' },
+      ttsProvider:   { state: 'unknown', confidence: 0, value: 'gemini',   evidence: 0, source: 'system' }
+    }
+  },
+  presentation: {
+    enabled: true,
+    prefs: {
+      disclosureLevel: { state: 'unknown', confidence: 0, value: 'L0', evidence: 0, source: 'system' },
+      cardDensity:     { state: 'unknown', confidence: 0, value: 'standard', evidence: 0, source: 'system' },
+      briefingDetail:  { state: 'unknown', confidence: 0, value: 'full', evidence: 0, source: 'system' }
+    }
+  },
+  attention: {
+    enabled: true,
+    prefs: {
+      notifyThreshold: { state: 'unknown', confidence: 0, value: 0.6, evidence: 0, source: 'system' },
+      interruptLevel:  { state: 'unknown', confidence: 0, value: 'L3', evidence: 0, source: 'system' }
+    }
+  },
+  interaction: {
+    enabled: true,
+    prefs: {
+      inputMode:       { state: 'unknown', confidence: 0, value: 'text', evidence: 0, source: 'system' },
+      confirmRequired: { state: 'unknown', confidence: 0, value: true,   evidence: 0, source: 'system' }
+    }
+  },
+  temporal: {
+    enabled: true,
+    prefs: {
+      activeHours:  { state: 'unknown', confidence: 0, value: '09:00-22:00', evidence: 0, source: 'system' },
+      sessionRecap: { state: 'unknown', confidence: 0, value: true,          evidence: 0, source: 'system' }
+    }
+  },
+  domain: {
+    enabled: true,
+    prefs: {
+      primaryDomain:  { state: 'unknown', confidence: 0, value: 'general',      evidence: 0, source: 'system' },
+      expertiseLevel: { state: 'unknown', confidence: 0, value: 'intermediate', evidence: 0, source: 'system' }
+    }
+  },
+  accessibility: {
+    enabled: true,
+    prefs: {
+      reduceMotion: { state: 'unknown', confidence: 0, value: false, evidence: 0, source: 'system' },
+      highContrast: { state: 'unknown', confidence: 0, value: false, evidence: 0, source: 'system' }
+    }
+  }
+};
+
+let pipelineStage   = null;
+let adaptationLog   = [];
+let selectedPref    = null; // { category, prefKey }
+let scenarioRunning = false;
+let globalPersonalisationOn = true;
+
+// ── UTILITIES ──────────────────────────────────────────────────────────────────
+
+function ts() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function fmtConf(c) { return (c * 100).toFixed(0) + '%'; }
+
+function confirmConfidenceTier(confidence) {
+  if (confidence >= 0.85) return 'EXPLICIT';
+  if (confidence >= 0.65) return 'HIGH';
+  if (confidence >= 0.40) return 'MEDIUM';
+  return 'LOW';
+}
+
+function tierClass(conf) {
+  const t = confirmConfidenceTier(conf);
+  return 'tier-' + t.toLowerCase();
+}
+
+// ── PIPELINE ───────────────────────────────────────────────────────────────────
+
+function clearPipeline() {
+  PIPELINE_STAGES.forEach(s => {
+    const el = document.getElementById('pipe-' + s);
+    if (el) { el.classList.remove('active','blocked','done'); }
+  });
+}
+
+async function setPipelineStage(stage, mode) {
+  clearPipeline();
+  const el = document.getElementById('pipe-' + stage);
+  if (el) {
+    el.classList.add(mode || 'active');
+    // mark all prior stages done
+    const idx = PIPELINE_STAGES.indexOf(stage);
+    for (let i = 0; i < idx; i++) {
+      const prev = document.getElementById('pipe-' + PIPELINE_STAGES[i]);
+      if (prev) prev.classList.add('done');
+    }
+  }
+  await sleep(400);
+}
+
+async function runFullPipeline(blockedAt) {
+  for (const stage of PIPELINE_STAGES) {
+    if (stage === blockedAt) {
+      await setPipelineStage(stage, 'blocked');
+      return;
+    }
+    await setPipelineStage(stage, 'active');
+    const el = document.getElementById('pipe-' + stage);
+    if (el) { el.classList.remove('active'); el.classList.add('done'); }
+    await sleep(100);
+  }
+}
+
+// ── LOG ────────────────────────────────────────────────────────────────────────
+
+function addAdaptationLog(msg, type) {
+  adaptationLog.unshift({ time: ts(), msg, type: type || 'default' });
+  if (adaptationLog.length > 100) adaptationLog.pop();
+  renderAdaptationLog();
+}
+
+function renderAdaptationLog() {
+  const el = document.getElementById('logEntries');
+  if (!adaptationLog.length) {
+    el.innerHTML = '<div class="log-empty">No adaptations yet — run a scenario.</div>';
+    return;
+  }
+  el.innerHTML = adaptationLog.map(e =>
+    `<div class="log-entry">
+      <span class="log-time">${e.time}</span>
+      <span class="log-msg ${e.type}">${e.msg}</span>
+    </div>`
+  ).join('');
+}
+
+function clearLog() { adaptationLog = []; renderAdaptationLog(); }
+
+// ── PREFERENCE INFERENCE ───────────────────────────────────────────────────────
+
+function inferPreference(category, prefKey, observation) {
+  const pref = prefStore[category].prefs[prefKey];
+  pref.confidence = Math.min(0.84, pref.confidence + 0.12);
+  pref.evidence++;
+  pref.value  = observation.value !== undefined ? observation.value : pref.value;
+  pref.source = observation.source || 'inferred';
+  if (pref.state === 'unknown' || pref.state === 'stale') pref.state = 'inferred';
+  renderPrefPanel();
+  checkAdaptationGate(category, prefKey);
+}
+
+function checkAdaptationGate(category, prefKey) {
+  const pref = prefStore[category].prefs[prefKey];
+  if (!prefStore[category].enabled) return;
+  if (!globalPersonalisationOn) return;
+  if (pref.state === 'rejected') return;
+  const tier = confirmConfidenceTier(pref.confidence);
+  if (tier === 'LOW') return;
+  applyAdaptation(category, prefKey, pref.value, `confidence:${tier}`);
+}
+
+function applyAdaptation(category, prefKey, newValue, reason) {
+  const pref = prefStore[category].prefs[prefKey];
+  pref.value = newValue;
+  addAdaptationLog(`${category}.${prefKey} → "${newValue}" [${reason}]`, 'ok');
+  console.log(`[APEX ADAPT] ${category}.${prefKey} = ${newValue} (${reason})`);
+}
+
+// ── USER ACTIONS ───────────────────────────────────────────────────────────────
+
+function userAction(action) {
+  if (!selectedPref) { addAdaptationLog('No preference selected for action.', 'warn'); return; }
+  const { category, prefKey } = selectedPref;
+  const pref = prefStore[category].prefs[prefKey];
+
+  if (action === 'accept') {
+    pref.state      = 'confirmed';
+    pref.confidence = Math.min(1.0, pref.confidence + 0.15);
+    pref.source     = 'user-confirmed';
+    addAdaptationLog(`${category}.${prefKey} ACCEPTED → CONFIRMED`, 'ok');
+    console.log(`[USER ACTION] accept: ${category}.${prefKey}`);
+  } else if (action === 'reject') {
+    pref.state      = 'rejected';
+    pref.source     = 'user-rejected';
+    addAdaptationLog(`${category}.${prefKey} REJECTED. Suppression: 90 days.`, 'error');
+    console.log(`[USER ACTION] reject: ${category}.${prefKey}`);
+  }
+  renderPrefPanel();
+  renderPreviewPanel();
+}
+
+function openEditForm() {
+  if (!selectedPref) { addAdaptationLog('Select a preference first.', 'warn'); return; }
+  const { category, prefKey } = selectedPref;
+  const pref = prefStore[category].prefs[prefKey];
+  document.getElementById('editInput').value = String(pref.value);
+  document.getElementById('editForm').classList.add('open');
+}
+
+function submitEdit() {
+  if (!selectedPref) return;
+  const { category, prefKey } = selectedPref;
+  const pref  = prefStore[category].prefs[prefKey];
+  const input = document.getElementById('editInput');
+  const val   = input.value.trim();
+  if (!val) return;
+  pref.value      = val;
+  pref.state      = 'explicit';
+  pref.confidence = 1.0;
+  pref.source     = 'user-explicit';
+  document.getElementById('editForm').classList.remove('open');
+  addAdaptationLog(`${category}.${prefKey} SET EXPLICIT → "${val}"`, 'info');
+  console.log(`[USER ACTION] edit: ${category}.${prefKey} = ${val}`);
+  renderPrefPanel();
+  renderPreviewPanel();
+}
+
+function disableSelectedCategory() {
+  if (!selectedPref) { addAdaptationLog('Select a preference to disable its category.', 'warn'); return; }
+  const { category } = selectedPref;
+  prefStore[category].enabled = false;
+  addAdaptationLog(`${category} personalisation disabled. System defaults active.`, 'warn');
+  renderPrefPanel();
+}
+
+function onSliderChange(val) {
+  document.getElementById('sliderVal').textContent = (val / 100).toFixed(2);
+  if (selectedPref) {
+    const { category, prefKey } = selectedPref;
+    const pref = prefStore[category].prefs[prefKey];
+    pref.confidence = val / 100;
+    if (pref.state === 'unknown') pref.state = 'inferred';
+    renderPrefPanel();
+    renderPreviewPanel();
+  }
+}
+
+// ── RESET ──────────────────────────────────────────────────────────────────────
+
+function confirmReset() {
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+}
+
+function executeReset() {
+  let cleared = 0, preserved = 0;
+  Object.entries(prefStore).forEach(([cat, catData]) => {
+    Object.entries(catData.prefs).forEach(([key, pref]) => {
+      if (pref.state === 'explicit') { preserved++; return; }
+      if (pref.state === 'inferred' || pref.state === 'confirmed' || pref.state === 'stale') {
+        pref.state      = 'unknown';
+        pref.confidence = 0;
+        pref.evidence   = 0;
+        pref.source     = 'system';
+        cleared++;
+      }
+    });
+  });
+  closeConfirm();
+  addAdaptationLog(`Reset complete. ${cleared} inferred cleared. ${preserved} explicit preserved.`, 'warn');
+  console.log(`[RESET] cleared=${cleared}, preserved=${preserved}`);
+  renderPrefPanel();
+  renderPreviewPanel();
+}
+
+// ── GLOBAL PERSONALISATION ─────────────────────────────────────────────────────
+
+function disableGlobalPersonalisation() {
+  globalPersonalisationOn = false;
+  document.getElementById('globalOffBanner').classList.add('visible');
+  addAdaptationLog('Personalisation disabled globally. All system defaults active.', 'error');
+  Object.entries(prefStore).forEach(([cat]) => {
+    prefStore[cat].enabled = false;
+  });
+  renderPrefPanel();
+  renderPreviewPanel();
+}
+
+function enableGlobalPersonalisation() {
+  globalPersonalisationOn = true;
+  document.getElementById('globalOffBanner').classList.remove('visible');
+  document.getElementById('globalPersonalisationToggle').checked = true;
+  addAdaptationLog('Personalisation re-enabled globally.', 'ok');
+  Object.entries(prefStore).forEach(([cat]) => {
+    prefStore[cat].enabled = true;
+  });
+  renderPrefPanel();
+  renderPreviewPanel();
+}
+
+// ── TRANSPARENCY PANEL ─────────────────────────────────────────────────────────
+
+function toggleTransparencyPanel() {
+  const panel = document.getElementById('transparencyPanel');
+  const isOpen = panel.classList.toggle('open');
+  if (isOpen) renderTransparencyTable();
+}
+
+function renderTransparencyTable() {
+  const body = document.getElementById('tpTableBody');
+  const rows = [];
+  Object.entries(prefStore).forEach(([cat, catData]) => {
+    Object.entries(catData.prefs).forEach(([key, pref]) => {
+      const tier = confirmConfidenceTier(pref.confidence);
+      rows.push(`<tr>
+        <td><span class="state-badge ${pref.state}">${key}</span></td>
+        <td>${cat}</td>
+        <td><span class="state-badge ${pref.state}">${pref.state.toUpperCase()}</span></td>
+        <td><span style="color:var(--apex-color-accent)">${fmtConf(pref.confidence)}</span> <span style="color:var(--apex-color-muted);font-size:9px;">${tier}</span></td>
+        <td>${pref.evidence}</td>
+        <td>${String(pref.value)}</td>
+        <td>${pref.source || 'system'}</td>
+      </tr>`);
+    });
+  });
+  body.innerHTML = rows.join('');
+}
+
+function clearAllInferred() {
+  let count = 0;
+  Object.entries(prefStore).forEach(([cat, catData]) => {
+    Object.entries(catData.prefs).forEach(([key, pref]) => {
+      if (pref.state === 'inferred') {
+        pref.state      = 'unknown';
+        pref.confidence = 0;
+        pref.evidence   = 0;
+        count++;
+      }
+    });
+  });
+  addAdaptationLog(`Cleared ${count} inferred preferences from transparency panel.`, 'warn');
+  renderPrefPanel();
+  renderTransparencyTable();
+}
+
+function exportPreferences() {
+  console.log('[APEX EXPORT] Preference Store:', JSON.parse(JSON.stringify(prefStore)));
+  addAdaptationLog('Preferences exported to console.', 'info');
+}
+
+// ── RENDER PREFERENCE PANEL ────────────────────────────────────────────────────
+
+function renderPrefPanel() {
+  const panel = document.getElementById('prefPanel');
+  const header = panel.querySelector('.panel-header');
+
+  const html = Object.entries(prefStore).map(([cat, catData]) => {
+    const isOpen     = panel.querySelector(`[data-cat="${cat}"]`)?.classList.contains('open') || false;
+    const isDisabled = !catData.enabled;
+    const prefsHtml  = Object.entries(catData.prefs).map(([key, pref]) => {
+      const tier    = tierClass(pref.confidence);
+      const barW    = (pref.confidence * 100).toFixed(1);
+      const isGlobalOff = !globalPersonalisationOn;
+      const badgeState  = isGlobalOff ? 'system-default' : pref.state;
+      const badgeLabel  = isGlobalOff ? 'SYSTEM DEFAULT' : pref.state.toUpperCase();
+      const isSelected  = selectedPref && selectedPref.category === cat && selectedPref.prefKey === key;
+      return `<div class="pref-row ${isSelected ? 'selected' : ''}"
+                   onclick="selectPref('${cat}','${key}')"
+                   aria-label="${cat} ${key} preference row">
+        <div class="pref-top">
+          <span class="pref-name">${key}</span>
+          <span class="state-badge ${badgeState}">${badgeLabel}</span>
+        </div>
+        <div class="pref-value">value: ${String(pref.value)} &nbsp;|&nbsp; evidence: ${pref.evidence}</div>
+        <div class="conf-bar-wrap">
+          <div class="conf-bar ${tier}" style="width:${barW}%"></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="category-section ${isOpen ? 'open' : ''} ${isDisabled ? 'disabled' : ''}" data-cat="${cat}">
+      <div class="category-header" onclick="toggleCategory('${cat}')" aria-expanded="${isOpen}" aria-label="${cat} category">
+        <div class="category-name">
+          ${cat}
+          ${isDisabled ? '<span class="state-badge rejected" style="font-size:8px;">OFF</span>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label class="toggle-switch" onclick="event.stopPropagation()" aria-label="Enable ${cat} personalisation">
+            <input type="checkbox" ${catData.enabled ? 'checked' : ''} onchange="setCategoryEnabled('${cat}', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="category-chevron">▼</span>
+        </div>
+      </div>
+      <div class="category-prefs">${prefsHtml}</div>
+    </div>`;
+  }).join('');
+
+  // preserve header
+  panel.innerHTML = '';
+  const h = document.createElement('div');
+  h.className = 'panel-header';
+  h.textContent = 'Preferences';
+  panel.appendChild(h);
+  panel.insertAdjacentHTML('beforeend', html);
+}
+
+function toggleCategory(cat) {
+  const el = document.querySelector(`[data-cat="${cat}"]`);
+  if (el) el.classList.toggle('open');
+}
+
+function setCategoryEnabled(cat, enabled) {
+  prefStore[cat].enabled = enabled;
+  if (!enabled) {
+    addAdaptationLog(`${cat} personalisation disabled. System defaults active.`, 'warn');
+  } else {
+    addAdaptationLog(`${cat} personalisation enabled.`, 'ok');
+  }
+  renderPrefPanel();
+  renderPreviewPanel();
+}
+
+function selectPref(category, prefKey) {
+  selectedPref = { category, prefKey };
+  const pref = prefStore[category].prefs[prefKey];
+  document.getElementById('selectedPrefLabel').textContent =
+    `${category}.${prefKey} [${pref.state.toUpperCase()}] conf:${fmtConf(pref.confidence)}`;
+  document.getElementById('confSlider').value = Math.round(pref.confidence * 100);
+  document.getElementById('sliderVal').textContent = pref.confidence.toFixed(2);
+  renderPrefPanel();
+}
+
+// ── RENDER PREVIEW PANEL ───────────────────────────────────────────────────────
+
+function renderPreviewPanel(opts) {
+  opts = opts || {};
+  const card    = document.getElementById('previewCard');
+  const msg     = document.getElementById('previewMessage');
+  const meta    = document.getElementById('previewMeta');
+  const discs   = document.getElementById('disclosureCards');
+
+  // Adapted badge
+  const existingBadge = card.querySelector('.adapted-badge');
+  if (existingBadge) existingBadge.remove();
+
+  if (opts.adapted) {
+    card.classList.add('adapted');
+    const badge = document.createElement('div');
+    badge.className = 'adapted-badge';
+    badge.textContent = 'ADAPTED';
+    card.appendChild(badge);
+  } else {
+    card.classList.remove('adapted');
+  }
+
+  if (opts.message) msg.innerHTML = opts.message;
+  if (opts.meta) {
+    meta.innerHTML = opts.meta.map(m =>
+      `<div class="preview-meta-item"><div class="meta-dot" style="background:${m.color || 'var(--apex-color-primary)'}"></div>${m.label}</div>`
+    ).join('');
+  } else {
+    meta.innerHTML = '';
+  }
+
+  if (opts.disclosureLevel) {
+    const levels = ['L0','L1','L2','L3','L4'];
+    discs.innerHTML = levels.map(l =>
+      `<div class="disc-card ${l === opts.disclosureLevel ? 'active' : ''}">${l}</div>`
+    ).join('');
+  } else {
+    discs.innerHTML = '';
+  }
+}
+
+// ── SCENARIO RENDERING ─────────────────────────────────────────────────────────
+
+const SCENARIOS = [
+  { id:'V-PERSONAL-01', label:'Brevity inferred', fn: scenario01 },
+  { id:'V-PERSONAL-02', label:'Explicit TTS',     fn: scenario02 },
+  { id:'V-PERSONAL-03', label:'Pref rejected',    fn: scenario03 },
+  { id:'V-PERSONAL-04', label:'LOW→HIGH journey', fn: scenario04 },
+  { id:'V-PERSONAL-05', label:'User edits pref',  fn: scenario05 },
+  { id:'V-PERSONAL-06', label:'Stale pref',       fn: scenario06 },
+  { id:'V-PERSONAL-07', label:'Category disabled',fn: scenario07 },
+  { id:'V-PERSONAL-08', label:'Guardrail block',  fn: scenario08 },
+  { id:'V-PERSONAL-09', label:'Voice correction', fn: scenario09 },
+  { id:'V-PERSONAL-10', label:'Domain expertise', fn: scenario10 },
+  { id:'V-PERSONAL-11', label:'Trait no UX map',  fn: scenario11 },
+  { id:'V-PERSONAL-12', label:'Session gap 7d',   fn: scenario12 },
+  { id:'V-PERSONAL-13', label:'Conflict resolve', fn: scenario13 },
+  { id:'V-PERSONAL-14', label:'RESET action',     fn: scenario14 },
+  { id:'V-PERSONAL-15', label:'Global pref off',  fn: scenario15 }
+];
+
+function renderScenarioGrid() {
+  const grid = document.getElementById('scenarioGrid');
+  grid.innerHTML = SCENARIOS.map((s, i) =>
+    `<button class="scenario-btn" id="sbtn-${i+1}"
+             onclick="runScenario(${i})"
+             aria-label="${s.id}: ${s.label}">${s.id.replace('V-PERSONAL-','')}: ${s.label}</button>`
+  ).join('');
+}
+
+async function runScenario(idx) {
+  if (scenarioRunning) return;
+  scenarioRunning = true;
+  const btn = document.getElementById(`sbtn-${idx+1}`);
+  btn.classList.add('running');
+  clearPipeline();
+  console.log(`[SCENARIO] Running ${SCENARIOS[idx].id}`);
+  try {
+    await SCENARIOS[idx].fn();
+    btn.classList.remove('running');
+    btn.classList.add('done');
+  } catch(e) {
+    console.error('[SCENARIO ERROR]', e);
+    btn.classList.remove('running');
+  }
+  scenarioRunning = false;
+}
+
+// ── SCENARIOS ──────────────────────────────────────────────────────────────────
+
+async function scenario01() {
+  addAdaptationLog('V-PERSONAL-01: Brevity preference — 5× briefing dismissal events', 'info');
+  const cat = 'communication', key = 'verbosity';
+  prefStore[cat].prefs[key] = { state:'unknown', confidence:0, value:'standard', evidence:0, source:'system' };
+
+  for (let i = 1; i <= 5; i++) {
+    await setPipelineStage('observe');
+    await setPipelineStage('evidence');
+    inferPreference(cat, key, { value: 'brief', source: 'dismissal-event' });
+    const conf = prefStore[cat].prefs[key].confidence;
+    const tier = confirmConfidenceTier(conf);
+    addAdaptationLog(`[${i}/5] verbosity evidence. conf=${fmtConf(conf)} tier=${tier}`, 'default');
+    await setPipelineStage('confidence');
+    await setPipelineStage('decision');
+
+    if (conf >= 0.40 && conf < 0.65) {
+      addAdaptationLog(`MEDIUM reached — low-risk adaptation applied`, 'ok');
+      await setPipelineStage('adapt');
+      await setPipelineStage('ux');
+      renderPreviewPanel({
+        adapted: true,
+        message: 'Here is your briefing. <b>[condensed]</b> Key points only. 3 items completed today.',
+        meta: [{ label:`verbosity: brief (conf:${fmtConf(conf)})`, color:'var(--apex-color-accent)' }]
+      });
+    } else if (conf >= 0.40) {
+      addAdaptationLog(`conf=${fmtConf(conf)} — adaptation stable, awaiting HIGH threshold`, 'warn');
+    } else {
+      await setPipelineStage('ux');
+    }
+    await sleep(300);
+  }
+  renderPrefPanel();
+}
+
+async function scenario02() {
+  addAdaptationLog('V-PERSONAL-02: Explicit TTS provider set', 'info');
+  const cat = 'communication', key = 'ttsProvider';
+  await setPipelineStage('observe');
+  await setPipelineStage('evidence');
+  await setPipelineStage('confidence');
+  await setPipelineStage('decision');
+  await setPipelineStage('adapt');
+  // Explicit user set
+  const pref = prefStore[cat].prefs[key];
+  pref.value      = 'elevenlabs';
+  pref.state      = 'explicit';
+  pref.confidence = 1.0;
+  pref.evidence   = 1;
+  pref.source     = 'user-explicit';
+  await setPipelineStage('ux');
+  renderPrefPanel();
+  renderPreviewPanel({
+    adapted: true,
+    message: 'TTS: <b style="color:var(--apex-color-primary)">ElevenLabs</b> <span style="color:var(--apex-color-muted);font-size:11px;">(EXPLICIT — never overridden)</span><br><br>Voice synthesis active. All audio output routed through ElevenLabs API.',
+    meta: [{ label:'ttsProvider: elevenlabs (EXPLICIT)', color:'var(--apex-color-primary)' }]
+  });
+  addAdaptationLog('ttsProvider = elevenlabs [EXPLICIT — confidence: 1.0]', 'info');
+}
+
+async function scenario03() {
+  addAdaptationLog('V-PERSONAL-03: Preference rejection flow', 'info');
+  const cat = 'attention', key = 'notifyThreshold';
+  prefStore[cat].prefs[key].state      = 'inferred';
+  prefStore[cat].prefs[key].confidence = 0.48;
+  prefStore[cat].prefs[key].value      = 0.4;
+  prefStore[cat].prefs[key].evidence   = 3;
+  prefStore[cat].prefs[key].source     = 'inferred';
+  renderPrefPanel();
+
+  await setPipelineStage('observe');
+  await setPipelineStage('evidence');
+  await setPipelineStage('confidence');
+  await setPipelineStage('decision');
+
+  addAdaptationLog('APEX suggests: notifyThreshold → 0.4 [INFERRED]', 'warn');
+  renderPreviewPanel({
+    adapted: false,
+    message: 'APEX suggests lowering your notification threshold to <b>0.4</b> based on observed dismissal patterns. Accept or Reject below.',
+    meta: [{ label:'notifyThreshold: 0.4 (INFERRED, conf:48%)', color:'var(--apex-color-accent)' }]
+  });
+  await sleep(600);
+
+  // Simulate user rejection
+  prefStore[cat].prefs[key].state  = 'rejected';
+  prefStore[cat].prefs[key].source = 'user-rejected';
+  renderPrefPanel();
+  addAdaptationLog('notifyThreshold REJECTED. Suppression: 90 days.', 'error');
+  addAdaptationLog('Further observations for notifyThreshold are blocked.', 'error');
+  renderPreviewPanel({
+    adapted: false,
+    message: 'notifyThreshold preference <b style="color:var(--apex-color-error)">REJECTED</b>. System default (0.6) restored. This preference will not be re-inferred for 90 days.',
+    meta: [{ label:'notifyThreshold: 0.6 (system default)', color:'var(--apex-color-error)' }]
+  });
+}
+
+async function scenario04() {
+  addAdaptationLog('V-PERSONAL-04: LOW → HIGH confidence journey', 'info');
+  const cat = 'domain', key = 'expertiseLevel';
+  prefStore[cat].prefs[key] = { state:'unknown', confidence:0, value:'intermediate', evidence:0, source:'system' };
+
+  const tiers = [];
+  for (let i = 1; i <= 6; i++) {
+    await setPipelineStage('observe');
+    await setPipelineStage('evidence');
+    inferPreference(cat, key, { value:'advanced', source:'behavior' });
+    const conf = prefStore[cat].prefs[key].confidence;
+    const tier = confirmConfidenceTier(conf);
+    tiers.push(tier);
+    await setPipelineStage('confidence');
+    await setPipelineStage('decision');
+
+    if (tier === 'LOW') {
+      addAdaptationLog(`[${i}/6] expertiseLevel conf=${fmtConf(conf)} — LOW, observe only`, 'default');
+    } else if (tier === 'MEDIUM') {
+      await setPipelineStage('adapt');
+      await setPipelineStage('ux');
+      addAdaptationLog(`[${i}/6] MEDIUM — adaptation applied (subtle)`, 'ok');
+      renderPreviewPanel({
+        adapted: true,
+        message: `Expertise detected: <b>Advanced</b> <span style="color:var(--apex-color-accent)">(MEDIUM confidence)</span><br>Showing expert-level context. Simplified tooltips hidden.`,
+        meta: [{ label:`expertiseLevel: advanced (conf:${fmtConf(conf)})`, color:'var(--apex-color-accent)' }]
+      });
+    } else if (tier === 'HIGH') {
+      await setPipelineStage('adapt');
+      await setPipelineStage('ux');
+      addAdaptationLog(`[${i}/6] HIGH — adaptation stable`, 'ok');
+      renderPreviewPanel({
+        adapted: true,
+        message: `Expertise level: <b style="color:var(--apex-color-primary)">Advanced</b> <span style="color:var(--apex-color-success)">(HIGH confidence — stable)</span><br>Expert-mode UX active. Full technical disclosure. No simplification.`,
+        meta: [{ label:`expertiseLevel: advanced (conf:${fmtConf(conf)}, HIGH)`, color:'#7c3aed' }]
+      });
+    }
+    await sleep(300);
+  }
+  renderPrefPanel();
+}
+
+async function scenario05() {
+  addAdaptationLog('V-PERSONAL-05: User edits disclosureLevel', 'info');
+  const cat = 'presentation', key = 'disclosureLevel';
+  await setPipelineStage('observe');
+  await setPipelineStage('evidence');
+  await setPipelineStage('confidence');
+  await setPipelineStage('decision');
+  await setPipelineStage('adapt');
+
+  const pref = prefStore[cat].prefs[key];
+  pref.value      = 'L2';
+  pref.state      = 'explicit';
+  pref.confidence = 0.95;
+  pref.evidence++;
+  pref.source     = 'user-explicit';
+  await setPipelineStage('ux');
+  renderPrefPanel();
+  addAdaptationLog('disclosureLevel SET EXPLICIT → L2 (confidence: 0.95)', 'info');
+  renderPreviewPanel({
+    adapted: true,
+    message: 'Disclosure level: <b style="color:var(--apex-color-primary)">L2</b> (EXPLICIT)<br>Showing: Summary + Key Evidence. Detailed methodology hidden.',
+    meta: [{ label:'disclosureLevel: L2 (EXPLICIT)', color:'var(--apex-color-primary)' }],
+    disclosureLevel: 'L2'
+  });
+}
+
+async function scenario06() {
+  addAdaptationLog('V-PERSONAL-06: Stale preference simulation', 'info');
+  const cat = 'communication', key = 'toneFormality';
+  const pref = prefStore[cat].prefs[key];
+  pref.state      = 'confirmed';
+  pref.confidence = 0.72;
+  pref.value      = 'formal';
+  pref.evidence   = 6;
+  pref.source     = 'user-confirmed';
+  renderPrefPanel();
+  addAdaptationLog('toneFormality was CONFIRMED (0.72) — formal', 'default');
+
+  await setPipelineStage('observe');
+  await sleep(500);
+  addAdaptationLog('Simulating 30-day elapsed session gap…', 'warn');
+  await sleep(400);
+
+  pref.state  = 'stale';
+  pref.source = 'stale-timeout';
+  renderPrefPanel();
+  await setPipelineStage('decision');
+  addAdaptationLog('toneFormality STALE. System default applied.', 'warn');
+  await setPipelineStage('ux');
+  renderPreviewPanel({
+    adapted: false,
+    message: 'Tone formality preference is <b style="color:var(--apex-color-warning)">STALE</b> (30 days elapsed).<br>Reverting to system default: <b>balanced</b>. Reconfirmation required.',
+    meta: [{ label:'toneFormality: balanced (system default — stale)', color:'var(--apex-color-warning)' }]
+  });
+}
+
+async function scenario07() {
+  addAdaptationLog('V-PERSONAL-07: Attention category disabled', 'info');
+  await setPipelineStage('observe');
+  await setPipelineStage('decision');
+
+  prefStore['attention'].enabled = false;
+  addAdaptationLog('Attention personalisation disabled. System defaults active.', 'warn');
+  renderPrefPanel();
+  await setPipelineStage('ux');
+  renderPreviewPanel({
+    adapted: false,
+    message: 'Attention personalisation <b style="color:var(--apex-color-warning)">DISABLED</b>.<br>All attention preferences reset to system defaults:<br>notifyThreshold: 0.6 | interruptLevel: L3',
+    meta: [{ label:'attention category: DISABLED', color:'var(--apex-color-warning)' }]
+  });
+}
+
+async function scenario08() {
+  addAdaptationLog('V-PERSONAL-08: Constitutional guardrail triggered', 'info');
+  await setPipelineStage('observe');
+  await setPipelineStage('evidence');
+  await setPipelineStage('confidence');
+  await setPipelineStage('decision', 'blocked');
+  addAdaptationLog('BLOCKED — Constitutional boundary. Cannot suppress L4 disclosure.', 'error');
+  addAdaptationLog('Attempt: personalise below L4 disclosure — REJECTED by guardrail.', 'error');
+  renderPreviewPanel({
+    adapted: false,
+    message: '<b style="color:var(--apex-color-error)">BLOCKED</b> — Constitutional boundary.<br><br>Preference requested: disclosure suppression below L4.<br>Decision: <b>CANNOT suppress L4 Constitutional disclosure.</b><br>No adaptation applied. Transparent refusal logged.',
+    meta: [{ label:'DECISION: BLOCKED (constitutional)', color:'var(--apex-color-error)' }]
+  });
+}
+
+async function scenario09() {
+  addAdaptationLog('V-PERSONAL-09: Voice correction feeds evidence', 'info');
+  const cat = 'communication', key = 'verbosity';
+  await setPipelineStage('observe');
+  addAdaptationLog('Voice state: SPEAKING — user interrupts: "be more concise"', 'default');
+  await setPipelineStage('evidence');
+  inferPreference(cat, key, { value:'brief', source:'voice-correction' });
+  const pref = prefStore[cat].prefs[key];
+  await setPipelineStage('confidence');
+  addAdaptationLog(`Voice correction → verbosity evidence recorded (conf:${fmtConf(pref.confidence)})`, 'ok');
+  await setPipelineStage('ux');
+  renderPreviewPanel({
+    adapted: pref.confidence >= 0.40,
+    message: 'Voice correction received: <b>"be more concise"</b><br>Source: voice-correction<br>verbosity evidence +1 → conf:' + fmtConf(pref.confidence),
+    meta: [{ label:'source: voice-correction', color:'var(--apex-color-accent)' }]
+  });
+  renderPrefPanel();
+}
+
+async function scenario10() {
+  addAdaptationLog('V-PERSONAL-10: Domain expertise inferred via L3 disclosure requests', 'info');
+  const cat = 'domain', key = 'expertiseLevel';
+  prefStore[cat].prefs[key] = { state:'unknown', confidence:0, value:'intermediate', evidence:0, source:'system' };
+
+  for (let i = 1; i <= 6; i++) {
+    await setPipelineStage('observe');
+    await setPipelineStage('evidence');
+    inferPreference(cat, key, { value:'advanced', source:'L3-request' });
+    const conf = prefStore[cat].prefs[key].confidence;
+    addAdaptationLog(`L3 Evidence disclosure request [${i}/6] — conf:${fmtConf(conf)}`, 'default');
+    await sleep(250);
+  }
+  const conf = prefStore[cat].prefs[key].confidence;
+  await setPipelineStage('confidence');
+  await setPipelineStage('decision');
+  await setPipelineStage('adapt');
+
+  // Also raise disclosure level
+  prefStore['presentation'].prefs['disclosureLevel'].value      = 'L2';
+  prefStore['presentation'].prefs['disclosureLevel'].state      = 'inferred';
+  prefStore['presentation'].prefs['disclosureLevel'].confidence = conf;
+  prefStore['presentation'].prefs['disclosureLevel'].source     = 'domain-infer';
+
+  await setPipelineStage('ux');
+  addAdaptationLog(`Domain expertise HIGH (${fmtConf(conf)}) — default disclosure raised to L2`, 'ok');
+  renderPrefPanel();
+  renderPreviewPanel({
+    adapted: true,
+    message: 'Domain expertise <b style="color:var(--apex-color-primary)">ADVANCED</b> confirmed via 6× L3 Evidence requests.<br>Default disclosure level raised to <b>L2</b>.',
+    meta: [{ label:`expertiseLevel: advanced (HIGH, ${fmtConf(conf)})`, color:'#7c3aed' }],
+    disclosureLevel: 'L2'
+  });
+}
+
+async function scenario11() {
+  addAdaptationLog('V-PERSONAL-11: Trait evolution — no UX mapping', 'info');
+  await setPipelineStage('observe');
+  await setPipelineStage('evidence');
+  await setPipelineStage('confidence');
+  await setPipelineStage('decision');
+  addAdaptationLog('founder trait risk_tolerance promoted (conf:0.70, HIGH)', 'default');
+  addAdaptationLog('Trait noted. Awaiting interaction evidence for UX mapping.', 'warn');
+  addAdaptationLog('Trait evolution received — UX adaptation pending evidence.', 'warn');
+  renderPreviewPanel({
+    adapted: false,
+    message: 'Trait <b>risk_tolerance</b> → <span style="color:#7c3aed">HIGH confidence (0.70)</span><br><br><b>DECISION:</b> Trait noted. No direct UX preference mapping found. Awaiting interaction evidence before adapting UX.',
+    meta: [{ label:'trait: risk_tolerance (HIGH, no UX map)', color:'#7c3aed' }]
+  });
+}
+
+async function scenario12() {
+  addAdaptationLog('V-PERSONAL-12: Session gap > 7 days', 'info');
+  const cat = 'temporal', key = 'sessionRecap';
+  const pref = prefStore[cat].prefs[key];
+  pref.state      = 'confirmed';
+  pref.confidence = 0.75;
+  pref.value      = true;
+  pref.evidence   = 5;
+  pref.source     = 'user-confirmed';
+  renderPrefPanel();
+  addAdaptationLog('sessionRecap CONFIRMED (0.75) — session gap: 8 days simulated', 'default');
+
+  await setPipelineStage('observe');
+  await setPipelineStage('evidence');
+  addAdaptationLog('Gap 8 days < 30 days — CONFIRMED state preserved (not stale)', 'ok');
+  await setPipelineStage('confidence');
+  await setPipelineStage('decision');
+  await setPipelineStage('adapt');
+  await setPipelineStage('ux');
+
+  renderPreviewPanel({
+    adapted: true,
+    message: '<b>Welcome back.</b> 3 tasks completed, 2 lessons learned since your last session.<br><br>Session recap injected (sessionRecap: CONFIRMED, 0.75). Preference confirmed still valid after 8-day gap.',
+    meta: [{ label:'sessionRecap: true (CONFIRMED — gap < 30d)', color:'var(--apex-color-success)' }]
+  });
+}
+
+async function scenario13() {
+  addAdaptationLog('V-PERSONAL-13: Conflicting preferences — EXPLICIT overrides INFERRED', 'info');
+  const cat = 'presentation', key = 'briefingDetail';
+  const pref = prefStore[cat].prefs[key];
+  pref.state      = 'inferred';
+  pref.confidence = 0.55;
+  pref.value      = 'brief';
+  pref.evidence   = 4;
+  pref.source     = 'inferred';
+  renderPrefPanel();
+  addAdaptationLog('briefingDetail INFERRED: brief (conf:55%)', 'default');
+
+  await setPipelineStage('observe');
+  await setPipelineStage('evidence');
+  await setPipelineStage('confidence');
+  await setPipelineStage('decision');
+  addAdaptationLog('CONFLICT DETECTED: EXPLICIT "full" vs INFERRED "brief"', 'warn');
+  addAdaptationLog('Conflict resolved: EXPLICIT overrides INFERRED.', 'ok');
+  await setPipelineStage('adapt');
+
+  pref.state      = 'explicit';
+  pref.confidence = 0.95;
+  pref.value      = 'full';
+  pref.source     = 'user-explicit';
+  await setPipelineStage('ux');
+  renderPrefPanel();
+  renderPreviewPanel({
+    adapted: true,
+    message: 'Conflict resolved: <b style="color:var(--apex-color-primary)">EXPLICIT</b> "full" overrides <b style="color:var(--apex-color-accent)">INFERRED</b> "brief".<br>briefingDetail = <b>full</b> (EXPLICIT, conf:95%). INFERRED preference cleared.',
+    meta: [{ label:'briefingDetail: full (EXPLICIT wins)', color:'var(--apex-color-primary)' }]
+  });
+}
+
+async function scenario14() {
+  addAdaptationLog('V-PERSONAL-14: RESET action initiated', 'info');
+  // Show confirm overlay in-prototype
+  const overlay = document.getElementById('confirmOverlay');
+  document.getElementById('confirmTitle').textContent = 'Reset Preferences';
+  document.getElementById('confirmBody').textContent =
+    'All INFERRED and CONFIRMED preferences will be cleared. EXPLICIT preferences are preserved. This cannot be undone.';
+  overlay.classList.add('open');
+  addAdaptationLog('Confirm dialog shown — awaiting user decision', 'warn');
+  renderPreviewPanel({
+    adapted: false,
+    message: '<b style="color:var(--apex-color-warning)">RESET pending confirmation.</b><br>All INFERRED + CONFIRMED → UNKNOWN.<br>EXPLICIT preferences preserved.',
+    meta: [{ label:'awaiting confirmation', color:'var(--apex-color-warning)' }]
+  });
+}
+
+async function scenario15() {
+  addAdaptationLog('V-PERSONAL-15: Global personalisation disabled', 'info');
+  disableGlobalPersonalisation();
+  document.getElementById('globalPersonalisationToggle').checked = false;
+  await setPipelineStage('observe');
+  await setPipelineStage('ux');
+  renderPreviewPanel({
+    adapted: false,
+    message: 'Personalisation <b style="color:var(--apex-color-error)">GLOBALLY DISABLED</b>.<br>All system defaults active. All preference state badges show SYSTEM DEFAULT.<br>Use "Re-enable" banner to restore personalisation.',
+    meta: [{ label:'ALL CATEGORIES: SYSTEM DEFAULT', color:'var(--apex-color-error)' }]
+  });
+}
+
+// ── KEYBOARD SHORTCUTS ─────────────────────────────────────────────────────────
+
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT') return;
+  const keyMap = {
+    '1':0, '2':1, '3':2, '4':3, '5':4,
+    '6':5, '7':6, '8':7, '9':8,
+    '0':9, 'q':10,'Q':10,
+    'w':11,'W':11,
+    'e':12,'E':12,
+    'r':13,'R':13,
+    'f':14,'F':14
+  };
+  if (keyMap[e.key] !== undefined) {
+    runScenario(keyMap[e.key]);
+  } else if (e.key === 't' || e.key === 'T') {
+    toggleTransparencyPanel();
+  } else if (e.key === 'x' || e.key === 'X') {
+    confirmReset();
+  } else if (e.key === 'a' || e.key === 'A') {
+    const tog = document.getElementById('globalPersonalisationToggle');
+    tog.checked = !tog.checked;
+    if (!tog.checked) disableGlobalPersonalisation();
+    else enableGlobalPersonalisation();
+  } else if (e.key === 'Escape') {
+    closeConfirm();
+    document.getElementById('transparencyPanel').classList.remove('open');
+  }
+});
+
+document.getElementById('globalPersonalisationToggle').addEventListener('change', function() {
+  if (!this.checked) disableGlobalPersonalisation();
+  else enableGlobalPersonalisation();
+});
+
+// ── INIT ───────────────────────────────────────────────────────────────────────
+
+function init() {
+  renderScenarioGrid();
+  renderPrefPanel();
+  renderPreviewPanel();
+  // Open communication category by default
+  const commEl = document.querySelector('[data-cat="communication"]');
+  if (commEl) commEl.classList.add('open');
+  console.log('[APEX UX-10] Personalisation prototype initialised.');
+  console.log('[APEX UX-10] Keys 1-9, 0, Q, W, E, R, F = scenarios. T = transparency. X = reset. A = global toggle.');
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+{
+  "pass": 34,
+  "fail": 0,
+  "total": 34,
+  "results": [
+    {
+      "id": "G-P0-1a",
+      "desc": "Master GET /memory/episodic/recent returns ok",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "id": "G-P0-1b",
+      "desc": "User GET /memory/episodic/recent returns empty",
+      "status": "PASS",
+      "detail": "data.len=0"
+    },
+    {
+      "id": "G-P0-2",
+      "desc": "GET /intelligence/health returns {score, dimensions}",
+      "status": "PASS",
+      "detail": "status=200 shape={\"score\":true,\"dims\":true}"
+    },
+    {
+      "id": "G-P0-3a",
+      "desc": "Master briefing is NOT a stub",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "id": "G-P0-3b",
+      "desc": "User briefing returns stub:true",
+      "status": "PASS",
+      "detail": "stub=true status=200"
+    },
+    {
+      "id": "G-P0-4",
+      "desc": "Semantic search does NOT 400 on page load",
+      "status": "PASS",
+      "detail": "fails=0"
+    },
+    {
+      "id": "G-P0-4b",
+      "desc": "Semantic panel shows search prompt",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G-1-a",
+      "desc": "Briefing section has apex-master-only class",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G-1-b",
+      "desc": "Briefing section hidden for User via CSS",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G-1-c",
+      "desc": "Briefing content does NOT leak founder/empire strings",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G-2",
+      "desc": "Semantic panel initial state = empty with prompt",
+      "status": "PASS",
+      "detail": "state=empty"
+    },
+    {
+      "id": "G-3",
+      "desc": "Wrong-shape health response → empty state (not crash)",
+      "status": "PASS",
+      "detail": "state=empty"
+    },
+    {
+      "id": "G-4-a",
+      "desc": "Knowledge item renders confidence badge (High)",
+      "status": "PASS",
+      "detail": "html len=789"
+    },
+    {
+      "id": "G-4-b",
+      "desc": "Opportunity renders Priority: High badge (not \"Score: 87\")",
+      "status": "PASS",
+      "detail": "html len=851"
+    },
+    {
+      "id": "G-5",
+      "desc": "All 9 intelligence/memory/knowledge panels have data-apex-state",
+      "status": "PASS",
+      "detail": "withState=9/9"
+    },
+    {
+      "id": "G-6",
+      "desc": "#intLessonsPanel exists on Intelligence page",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G-7",
+      "desc": "Knowledge page renders 6 domain coverage rows",
+      "status": "PASS",
+      "detail": "rows=6"
+    },
+    {
+      "id": "G-8",
+      "desc": "Rendered DOM does not contain internal enum strings",
+      "status": "PASS",
+      "detail": "found=[]"
+    },
+    {
+      "id": "G-8-b",
+      "desc": "Pipeline boundary note removed from Intelligence DOM",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G-9",
+      "desc": "Opportunity card has evidence trigger",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G-10",
+      "desc": "voice-task-* renders as human phrase, not raw",
+      "status": "PASS",
+      "detail": "html len=482"
+    },
+    {
+      "id": "G-11",
+      "desc": "XSS payload in fact does not execute",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G-12",
+      "desc": "memory search input has NO oninput attribute",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G-13-a",
+      "desc": "All 3 refresh buttons have aria-label",
+      "status": "PASS",
+      "detail": "labelled=3/3"
+    },
+    {
+      "id": "G-13-b",
+      "desc": "Skeleton containers include aria-busy",
+      "status": "PASS",
+      "detail": "busy=6"
+    },
+    {
+      "id": "G-13-c",
+      "desc": "Major sections wrapped in role=\"region\"",
+      "status": "PASS",
+      "detail": "regions=10"
+    },
+    {
+      "id": "G-14",
+      "desc": "Intelligence panels use grid at 1280px",
+      "status": "PASS",
+      "detail": "display=grid"
+    },
+    {
+      "id": "G-15",
+      "desc": "WebSocket registrar exposed on window",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "REG-a",
+      "desc": "TODAY (#overview) renders as active on hash",
+      "status": "PASS",
+      "detail": "active=page-overview"
+    },
+    {
+      "id": "REG-b",
+      "desc": "COMMAND still renders",
+      "status": "PASS",
+      "detail": "active=page-command"
+    },
+    {
+      "id": "REG-c",
+      "desc": "COMMAND #chatLog visible",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "REG-d",
+      "desc": "Hash → intelligence navigates",
+      "status": "PASS",
+      "detail": "active=page-intelligence"
+    },
+    {
+      "id": "REG-e",
+      "desc": "Hash → memory navigates",
+      "status": "PASS",
+      "detail": "active=page-memory"
+    },
+    {
+      "id": "REG-f",
+      "desc": "No console errors across three pages",
+      "status": "PASS",
+      "detail": "clean"
+    }
+  ]
+}

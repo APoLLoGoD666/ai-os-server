@@ -1,0 +1,231 @@
+{
+  "suite": "V-11-C-API",
+  "date": "2026-08-31T23:08:43.730Z",
+  "pass": 37,
+  "fail": 0,
+  "total": 37,
+  "results": [
+    {
+      "id": "1-1",
+      "desc": "HTTP status 404",
+      "status": "PASS",
+      "detail": "404"
+    },
+    {
+      "id": "1-2",
+      "desc": "ok: false",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "1-3",
+      "desc": "error: NOT_FOUND",
+      "status": "PASS",
+      "detail": "NOT_FOUND"
+    },
+    {
+      "id": "1-4",
+      "desc": "message is a string",
+      "status": "PASS",
+      "detail": "Route not found."
+    },
+    {
+      "id": "1-5",
+      "desc": "requestId is a string",
+      "status": "PASS",
+      "detail": "mthunkjs-62unp"
+    },
+    {
+      "id": "2-1",
+      "desc": "_rlHandler factory exported",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "2-2",
+      "desc": "429 handler returns ok:false",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "2-3",
+      "desc": "429 handler returns error: RATE_LIMITED",
+      "status": "PASS",
+      "detail": "RATE_LIMITED"
+    },
+    {
+      "id": "2-4",
+      "desc": "429 handler echoes requestId",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "2-5",
+      "desc": "429 handler status 429",
+      "status": "PASS",
+      "detail": "429"
+    },
+    {
+      "id": "2-6",
+      "desc": "429 message is a string",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "2-7",
+      "desc": "apiLimiter is a middleware function",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "3-1",
+      "desc": "CODES.AUTHENTICATION_REQUIRED defined",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "3-2",
+      "desc": "CODES.RATE_LIMITED defined",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "3-3",
+      "desc": "CODES.DATABASE_UNAVAILABLE defined",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "3-4",
+      "desc": "safeMessage strips PG internal",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "3-5",
+      "desc": "safeMessage passes safe message",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "4-1",
+      "desc": "HTTP 200 or 500",
+      "status": "PASS",
+      "detail": "200"
+    },
+    {
+      "id": "4-2",
+      "desc": "has ok field",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "4-3",
+      "desc": "success: has briefing object",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "4-4",
+      "desc": "success: briefing.calendar present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "5-1",
+      "desc": "HTTP 200 or 500",
+      "status": "PASS",
+      "detail": "200"
+    },
+    {
+      "id": "5-2",
+      "desc": "has ok field",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "5-3",
+      "desc": "success: has inbox object",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "5-4",
+      "desc": "success: inbox.emails array",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "6-1",
+      "desc": "HTTP 200 or 500",
+      "status": "PASS",
+      "detail": "200"
+    },
+    {
+      "id": "6-2",
+      "desc": "has ok field",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "6-3",
+      "desc": "success: opportunities is array",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "6-4",
+      "desc": "success: no Supabase column error in response",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "7-1",
+      "desc": "Empty dataset returns ok:true (not error)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "7-2",
+      "desc": "Empty opportunities is array (not null)",
+      "status": "PASS",
+      "detail": "0"
+    },
+    {
+      "id": "8-1",
+      "desc": "HTTP 415 for wrong content-type",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "8-2",
+      "desc": "ok: false",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "8-3",
+      "desc": "has error field (not reply)",
+      "status": "PASS",
+      "detail": "VALIDATION_ERROR"
+    },
+    {
+      "id": "8-4",
+      "desc": "requestId present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "9-1",
+      "desc": "404 response has X-Request-ID header",
+      "status": "PASS",
+      "detail": "mthunubp-j4xkr"
+    },
+    {
+      "id": "9-2",
+      "desc": "404 body requestId matches X-Request-ID header",
+      "status": "PASS",
+      "detail": "body=mthunubp-j4xkr header=mthunubp-j4xkr"
+    }
+  ]
+}

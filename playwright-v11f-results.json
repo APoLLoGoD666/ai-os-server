@@ -1,0 +1,337 @@
+{
+  "pass": 55,
+  "fail": 0,
+  "total": 55,
+  "results": [
+    {
+      "id": "F-1-finance",
+      "desc": "L0 present on #page-finance",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "id": "F-1-communication",
+      "desc": "L0 present on #page-communication",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "id": "F-1-business",
+      "desc": "L0 present on #page-business",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "id": "F-1-health",
+      "desc": "L0 present on #page-health",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "id": "F-1-university",
+      "desc": "L0 present on #page-university",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "id": "F-1-research",
+      "desc": "L0 present on #page-research",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "id": "F-1-occult",
+      "desc": "L0 present on #page-occult",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "id": "F-3-a",
+      "desc": "Master reaches #page-occult via hash",
+      "status": "PASS",
+      "detail": "active=page-occult"
+    },
+    {
+      "id": "F-3-b",
+      "desc": "Master reaches #page-civilisation via hash",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-3-c",
+      "desc": "Master reaches #page-reality via hash",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-3-d",
+      "desc": "User attempting #occult lands on overview",
+      "status": "PASS",
+      "detail": "active=page-overview"
+    },
+    {
+      "id": "F-3-e",
+      "desc": "User attempting #civilisation lands on overview",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-3-f",
+      "desc": "User attempting #reality lands on overview",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-forbid-0",
+      "desc": "Removed vocabulary: \"FIN · FINANCE AGENT\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-forbid-1",
+      "desc": "Removed vocabulary: \"NET · COMMUNICATIONS\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-forbid-2",
+      "desc": "Removed vocabulary: \"BIZ · BUSINESS AGENT\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-forbid-3",
+      "desc": "Removed vocabulary: \"HLTH · HEALTH AGENT\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-forbid-4",
+      "desc": "Removed vocabulary: \"UNI · UNIVERSITY AGENT\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-forbid-5",
+      "desc": "Removed vocabulary: \"OCC · MINDFULNESS\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-forbid-6",
+      "desc": "Removed vocabulary: \"RESEARCH ENGINE\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-forbid-7",
+      "desc": "Removed vocabulary: \"CONSTITUTIONAL GATE\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-forbid-8",
+      "desc": "Removed vocabulary: \"RA · REALITY ARCHITECTURE\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-forbid-9",
+      "desc": "Removed vocabulary: \"EXECUTION ENGINE\"",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-fin",
+      "desc": "Finance header reads FINANCE",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-comm",
+      "desc": "Communication header reads COMMUNICATIONS",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-biz",
+      "desc": "Business header reads BUSINESS & WORK",
+      "status": "PASS",
+      "detail": "BUSINESS & WORK"
+    },
+    {
+      "id": "F-4-occ",
+      "desc": "Occult header reads SPECIALISED RESEARCH",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-civ",
+      "desc": "Civilisation header reads CIVILISATION",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-4-rea",
+      "desc": "Reality header reads REALITY MODEL",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-8-a",
+      "desc": "Pressing \"6\" no longer navigates to finance",
+      "status": "PASS",
+      "detail": "active=page-overview"
+    },
+    {
+      "id": "F-8-b",
+      "desc": "V key still bound (no console error on press)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-11-a",
+      "desc": "Emergency Access section present in DOM",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-11-b",
+      "desc": "Emergency Access visible for Master on #system",
+      "status": "PASS",
+      "detail": "display=block"
+    },
+    {
+      "id": "F-11-c",
+      "desc": "Emergency Access has all form fields",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-11-d",
+      "desc": "Empty submit shows validation error",
+      "status": "PASS",
+      "detail": "A user account is required."
+    },
+    {
+      "id": "F-11-e",
+      "desc": "Valid submit shows backend-gate pending message",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-11-f",
+      "desc": "User does NOT see Emergency Access (display:none via role gate)",
+      "status": "PASS",
+      "detail": "display=none"
+    },
+    {
+      "id": "F-2-fin-expenses",
+      "desc": "Finance expenses error → human message rendered",
+      "status": "PASS",
+      "detail": "Could not load recent expenses. Retry"
+    },
+    {
+      "id": "F-2-biz-crm",
+      "desc": "Business CRM error → human message",
+      "status": "PASS",
+      "detail": "Could not load client records. Retry"
+    },
+    {
+      "id": "F-2-biz-approvals",
+      "desc": "Business approvals error → human message",
+      "status": "PASS",
+      "detail": "Could not load pending approvals.Retry"
+    },
+    {
+      "id": "F-2-biz-tasks",
+      "desc": "Business tasks error → human message",
+      "status": "PASS",
+      "detail": "Could not load tasks.Retry"
+    },
+    {
+      "id": "F-2-biz-projects",
+      "desc": "Business projects error → human message",
+      "status": "PASS",
+      "detail": "Could not load projects.Retry"
+    },
+    {
+      "id": "F-7-a",
+      "desc": "nav-operation is hidden or absent",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-7-b",
+      "desc": "#page-operation is hidden (CSS display:none)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-7-c",
+      "desc": "Business page has Documents panel",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-7-d",
+      "desc": "Business page has Proposals panel",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-9-a",
+      "desc": "SYSTEM ADVANCED sub-group present",
+      "status": "PASS",
+      "detail": "groups=[\"TODAY\",\"COMMAND\",\"LIFE & WORK\",\"INTELLIGENCE\",\"ACTIONS\",\"SYSTEM\",\"ADVANCED\"]"
+    },
+    {
+      "id": "F-9-b",
+      "desc": "nav-civilisation appears after nav-system",
+      "status": "PASS",
+      "detail": "civ=17 sys=14 gov=16"
+    },
+    {
+      "id": "F-9-c",
+      "desc": "nav-reality appears after nav-system",
+      "status": "PASS",
+      "detail": "rea=18 sys=14 gov=16"
+    },
+    {
+      "id": "F-9-d",
+      "desc": "nav-civilisation NOT between finance and research (LIFE & WORK)",
+      "status": "PASS",
+      "detail": "civ=17 fin=2 res=7"
+    },
+    {
+      "id": "REG-a",
+      "desc": "TODAY (#overview) renders as active on hash",
+      "status": "PASS",
+      "detail": "active=page-overview"
+    },
+    {
+      "id": "REG-b",
+      "desc": "#finance switchPage still works",
+      "status": "PASS",
+      "detail": "active=page-finance"
+    },
+    {
+      "id": "REG-c",
+      "desc": "#command switchPage still works",
+      "status": "PASS",
+      "detail": "active=page-command"
+    },
+    {
+      "id": "REG-d",
+      "desc": "COMMAND still has visible #chatLog",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "REG-e",
+      "desc": "No console errors observed during navigation",
+      "status": "PASS",
+      "detail": "clean"
+    }
+  ]
+}

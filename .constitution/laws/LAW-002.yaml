@@ -1,0 +1,13 @@
+id: LAW-002
+name: Agent Code Boundary
+description: >
+  No agent may modify source code, environment variables, secrets, or GitHub
+  configuration without explicit human approval. Agents operate within declared
+  allowedAreas only.
+category: safety
+enforcement: blocking
+condition:
+  subjects: [system_agent, file_agent, uni_agent, finance_agent, business_agent]
+  forbidden_operations: [code.edit, env.write, secret.write, github.push]
+remedy: Request human approval via the approval workflow before proceeding.
+severity: CRITICAL

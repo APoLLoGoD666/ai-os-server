@@ -1,0 +1,33 @@
+id: DOM-000005
+name: Infrastructure
+criticality: CRITICAL
+autonomy_level: 1
+
+description: >
+  Render hosting, Supabase Postgres, GitHub, Express server, deployment
+  pipeline. The physical substrate on which the civilisation runs.
+
+invariants:
+  - property: status
+    must_be: ACTIVE
+    violation: critical
+
+  - property: owner
+    must_be_set: true
+    violation: advisory
+
+  - property: health_score
+    minimum: 60
+    consecutive_readings: 2
+    violation: critical
+
+vital_connections:
+  - DOM-000003   # Must remain reachable from registry
+
+ancestors:
+  - DOM-000001
+
+healing_domain: null   # Infrastructure is the substrate — it cannot be healed by another domain
+
+clock_baseline_ticks_per_hour: 3
+prediction_accuracy_target: 0.85

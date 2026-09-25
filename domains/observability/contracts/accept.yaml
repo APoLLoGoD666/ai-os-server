@@ -1,0 +1,46 @@
+domain: DOM-000006
+# Observability subscribes to all events — it is the civilisation's eyes.
+events:
+  - name: ENTITY_CREATED
+    from: DOM-000003
+    handler: src/handlers/record-event.js
+
+  - name: ENTITY_UPDATED
+    from: DOM-000003
+    handler: src/handlers/record-event.js
+
+  - name: EDGE_ADDED
+    from: DOM-000003
+    handler: src/handlers/record-event.js
+
+  - name: EDGE_REMOVED
+    from: DOM-000003
+    handler: src/handlers/record-event.js
+
+  - name: MIGRATION_ADDED
+    from: DOM-000003
+    handler: src/handlers/record-event.js
+
+  - name: SNAPSHOT_CREATED
+    from: DOM-000003
+    handler: src/handlers/record-event.js
+
+  - name: AGENT_ACTIVATED
+    from: DOM-000002
+    handler: src/handlers/record-event.js
+
+  - name: AGENT_COMPLETED
+    from: DOM-000002
+    handler: src/handlers/record-event.js
+
+  - name: GOVERNANCE_VIOLATION
+    from: DOM-000003
+    handler: src/handlers/governance-violation.js
+
+  - name: DECISION_RECORDED
+    from: DOM-000001
+    handler: src/handlers/record-event.js
+
+  - name: ARCHITECTURE_UPDATED
+    from: DOM-000003
+    handler: src/handlers/record-event.js

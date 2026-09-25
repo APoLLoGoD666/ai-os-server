@@ -1,0 +1,333 @@
+{
+  "suite": "V-11-H-B-C",
+  "ts": "2026-09-02T01:03:19.024Z",
+  "pass": 54,
+  "fail": 0,
+  "total": 54,
+  "results": [
+    {
+      "id": "A1-a",
+      "desc": "_appendNotif signature accepts humanId parameter",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-b",
+      "desc": "_appendTimeline signature accepts humanId parameter",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-c",
+      "desc": "pgLogAgentAction signature accepts humanId parameter",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-d",
+      "desc": "_runTask extracts human_id from task before use",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A1-e",
+      "desc": "_startAutoPipeline extracts human_id from task before use",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B1-a",
+      "desc": "_appendNotif INSERT includes human_id column",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B1-b",
+      "desc": "_appendTimeline INSERT includes human_id column",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B1-c",
+      "desc": "pgLogAgentAction INSERT includes human_id column",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B1-d",
+      "desc": "services/init.js apex_agent_runs INSERT includes human_id",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B1-e",
+      "desc": "orchestrator _auditLog looks up human_id from apex_tasks",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B1-f",
+      "desc": "orchestrator _auditLog includes human_id in baseRow",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "C1-a",
+      "desc": "All _appendNotif callers in auto-pipeline pass humanId (5/5)",
+      "status": "PASS",
+      "detail": "found 5 call sites"
+    },
+    {
+      "id": "C1-b",
+      "desc": "All _appendTimeline callers in auto-pipeline pass humanId (2/2)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "C1-c",
+      "desc": "AGENT_STARTED bus emit includes human_id in payload",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "C1-d",
+      "desc": "AGENT_COMPLETED bus emit includes human_id in payload",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "C1-e",
+      "desc": "agent-task-cycle pgLogAgentAction calls thread task.created_by (7/7)",
+      "status": "PASS",
+      "detail": "7 calls, 7 threading owner"
+    },
+    {
+      "id": "C1-f",
+      "desc": "agent-command-handler pgLogAgentAction calls thread userId (13/12)",
+      "status": "PASS",
+      "detail": "12 calls, 13 threading userId"
+    },
+    {
+      "id": "D1-a",
+      "desc": "Migration 092 exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D1-b",
+      "desc": "apex_tasks.human_id column type is TEXT NULL",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D1-c",
+      "desc": "apex_notifications.human_id column type is TEXT NULL",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D1-d",
+      "desc": "apex_agent_runs.human_id column type is TEXT NULL",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D1-e",
+      "desc": "apex_timeline.human_id column type is TEXT NULL",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D1-f",
+      "desc": "agent_actions.human_id column type is TEXT NULL",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D1-g",
+      "desc": "standing_approvals.human_id column type is TEXT NULL",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D1-h",
+      "desc": "Migration wrapped in BEGIN/COMMIT",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D1-i",
+      "desc": "Migration is idempotent (IF NOT EXISTS)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D1-j",
+      "desc": "Migration does NOT add CHECK constraint on human_id",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D1-k",
+      "desc": "Migration does NOT declare human_id NOT NULL",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-a",
+      "desc": "requireOwnerScope is declared in lib/middleware.js",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-b",
+      "desc": "requireOwnerScope is exported from lib/middleware.js",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-c",
+      "desc": "requireOwnerScope bypasses Master role",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-d",
+      "desc": "tasks.js /approve has ownership check before _runTask",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-e",
+      "desc": "tasks.js /reject has ownership check",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-f",
+      "desc": "tasks.js /undo has ownership check for non-master",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-g",
+      "desc": "tasks.js /reject propagates task owner to notification",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-h",
+      "desc": "tasks.js GET /api/tasks has owner filter logic",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-i",
+      "desc": "notifications.js GET /api/notifications has owner filter",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-j",
+      "desc": "notifications.js mark-read has owner filter",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-k",
+      "desc": "actions.js /api/actions/summary endpoint exists",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E1-l",
+      "desc": "telemetry/index.js does NOT re-register /api/intelligence/agent-runs (collision)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F1-a",
+      "desc": "Chain: apex_tasks.human_id extracted in _runTask",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F1-b",
+      "desc": "Chain: apex_tasks.human_id extracted in _startAutoPipeline",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F1-c",
+      "desc": "Chain: humanId flows into _appendNotif calls",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F1-d",
+      "desc": "Chain: humanId flows into _appendTimeline calls",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F1-e",
+      "desc": "No place in chain resets humanId to Master constant",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F1-f",
+      "desc": "_appendNotif default humanId is null (not Master constant)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F1-g",
+      "desc": "_appendTimeline default humanId is null (not Master constant)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F1-h",
+      "desc": "pgLogAgentAction default humanId is null (not Master constant)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G1-a",
+      "desc": "_appendNotif accepts optional humanId with null default (system callers)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G1-b",
+      "desc": "Comment documents legitimate NULL for system-initiated writes",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G1-c",
+      "desc": "runSingleScheduleOnce stamps task with APEX_HUMAN_ID (system-Master)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H1-a",
+      "desc": "Backfill statements present for all 6 tables",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H1-b",
+      "desc": "No DROP TABLE / DROP COLUMN introduced",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H1-c",
+      "desc": "Guarded ad-hoc tables (DO $$ EXCEPTION)",
+      "status": "PASS",
+      "detail": ""
+    }
+  ]
+}
