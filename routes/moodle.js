@@ -1,12 +1,15 @@
 'use strict';
-const router  = require('express').Router();
-const https   = require('https');
-const http    = require('http');
-const { URL } = require('url');
-const _auth   = require('../lib/app-auth');
+const router    = require('express').Router();
+const https     = require('https');
+const http      = require('http');
+const { URL }   = require('url');
+const _auth     = require('../lib/app-auth');
 const { getSupabaseClient } = require('../lib/clients');
-const fs      = require('fs');
-const path    = require('path');
+const fs        = require('fs');
+const path      = require('path');
+const pdfParse  = require('pdf-parse');
+const JSZip     = require('jszip');
+const Anthropic = require('@anthropic-ai/sdk');
 
 const sb = getSupabaseClient;
 
@@ -226,6 +229,225 @@ router.post('/moodle/sync', _auth, async (req, res) => {
         }
 
         res.json({ ok: true, courses_synced: courseList.length, assignments_synced: synced });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── File download + text extraction helpers ───────────────────────────────────
+
+function downloadBuffer(rawUrl) {
+    return new Promise((resolve, reject) => {
+        const token = process.env.MOODLE_TOKEN || '';
+        const separator = rawUrl.includes('?') ? '&' : '?';
+        const url = `${rawUrl}${separator}token=${token}`;
+
+        function doGet(target, redirects) {
+            if (redirects > 5) return reject(new Error('Too many redirects'));
+            const parsed = new URL(target);
+            const lib = parsed.protocol === 'https:' ? https : http;
+            lib.get(target, { headers: { 'User-Agent': 'APEX-AI/1.0' } }, res => {
+                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                    return doGet(res.headers.location, redirects + 1);
+                }
+                if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+                const chunks = [];
+                res.on('data', c => chunks.push(c));
+                res.on('end', () => resolve(Buffer.concat(chunks)));
+            }).on('error', reject);
+        }
+        doGet(url, 0);
+    });
+}
+
+async function extractText(buffer, filename) {
+    const ext = path.extname(filename).toLowerCase();
+    try {
+        if (ext === '.pdf') {
+            const data = await pdfParse(buffer);
+            return data.text || '';
+        }
+        if (ext === '.pptx' || ext === '.ppt') {
+            const zip = await JSZip.loadAsync(buffer);
+            const slideFiles = Object.keys(zip.files)
+                .filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+                .sort();
+            const texts = [];
+            for (const sf of slideFiles) {
+                const xml = await zip.files[sf].async('string');
+                const parts = xml.match(/<a:t[^>]*>([^<]+)<\/a:t>/g) || [];
+                const slideText = parts.map(p => p.replace(/<[^>]+>/g, '')).join(' ').trim();
+                if (slideText) texts.push(slideText);
+            }
+            return texts.join('\n\n');
+        }
+        if (ext === '.docx' || ext === '.doc') {
+            const zip = await JSZip.loadAsync(buffer);
+            const xmlFile = zip.files['word/document.xml'];
+            if (!xmlFile) return '';
+            const xml = await xmlFile.async('string');
+            const parts = xml.match(/<w:t[^>]*>([^<]+)<\/w:t>/g) || [];
+            return parts.map(p => p.replace(/<[^>]+>/g, '')).join(' ').trim();
+        }
+    } catch (e) {
+        console.warn('[moodle] extract failed for', filename, e.message);
+    }
+    return '';
+}
+
+const _ai = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+async function generateNotes(courseCode, filename, rawText) {
+    const trimmed = rawText.slice(0, 12000);
+    const msg = await _ai.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1500,
+        messages: [{
+            role: 'user',
+            content: `You are an academic study assistant helping a Business Finance student at BCU.
+
+Module: ${courseCode}
+Source file: ${filename}
+
+Below is the raw extracted text from the file. Produce structured study notes with these sections:
+## Key Concepts
+## Important Theories / Frameworks
+## Key Facts & Figures
+## Potential Exam / Essay Questions
+
+Be concise and precise. Only include content relevant to the module. Ignore admin text (referencing guides, navigation, headers/footers).
+
+---
+${trimmed}`,
+        }],
+    });
+    return msg.content[0]?.text || '';
+}
+
+// Skip files unlikely to contain study content
+const SKIP_KEYWORDS = ['referencing', 'harvard', 'template', 'guidance', 'timetable', 'calendar', 'attendance', 'welcome', 'introduction to moodle'];
+function isStudyFile(filename) {
+    const lower = filename.toLowerCase();
+    if (SKIP_KEYWORDS.some(k => lower.includes(k))) return false;
+    return /\.(pdf|pptx?|docx?)$/i.test(filename);
+}
+
+// ── GET /api/moodle/notes — list stored study notes ──────────────────────────
+router.get('/moodle/notes', _auth, async (req, res) => {
+    try {
+        const { data, error } = await sb().from('apex_documents')
+            .select('id,name,doc_type,content,created_at,updated_at')
+            .eq('doc_type', 'moodle_notes')
+            .order('updated_at', { ascending: false })
+            .limit(100);
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, notes: data || [] });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── GET /api/moodle/files — list available files without scanning ─────────────
+router.get('/moodle/files', _auth, async (req, res) => {
+    try {
+        const courses = await moodleCall('core_course_get_enrolled_courses_by_timeline_classification', {
+            classification: 'inprogress', limit: 20, offset: 0
+        });
+        const courseList = courses.courses || [];
+        const allFiles = [];
+        for (const course of courseList) {
+            const code = course.shortname?.match(/[A-Z]{2,4}\d{4}/)?.[0] || course.shortname;
+            const sections = await moodleCall('core_course_get_contents', { courseid: course.id });
+            for (const section of (sections || [])) {
+                for (const mod of (section.modules || [])) {
+                    for (const f of (mod.contents || [])) {
+                        if (!f.fileurl || !f.filename) continue;
+                        allFiles.push({
+                            course: code,
+                            section: section.name,
+                            module: mod.name,
+                            filename: f.filename,
+                            mimetype: f.mimetype,
+                            size_kb: Math.round((f.filesize || 0) / 1024),
+                            scannable: isStudyFile(f.filename) && (f.filesize || 0) < 15 * 1024 * 1024,
+                            url: f.fileurl,
+                        });
+                    }
+                }
+            }
+        }
+        res.json({ ok: true, files: allFiles });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── POST /api/moodle/scan-content — scan + AI-process module files ────────────
+// Body: { courseId? (number), module? (e.g. "FIN6034"), force? (re-scan existing) }
+router.post('/moodle/scan-content', _auth, async (req, res) => {
+    const { courseId, module: moduleFilter, force = false } = req.body || {};
+
+    try {
+        // 1. Get target courses
+        const enrolled = await moodleCall('core_course_get_enrolled_courses_by_timeline_classification', {
+            classification: 'inprogress', limit: 20, offset: 0
+        });
+        let courseList = enrolled.courses || [];
+        if (courseId) courseList = courseList.filter(c => c.id === parseInt(courseId));
+        if (moduleFilter) courseList = courseList.filter(c => c.shortname?.includes(moduleFilter));
+        if (!courseList.length) return res.json({ ok: true, message: 'No matching courses', processed: [] });
+
+        // 2. Check which notes already exist (skip unless force=true)
+        const { data: existing } = await sb().from('apex_documents')
+            .select('name').eq('doc_type', 'moodle_notes');
+        const existingNames = new Set((existing || []).map(e => e.name));
+
+        // 3. Respond immediately — scan runs in background, SSE-style progress via DB
+        const jobId = `moodle-scan-${Date.now()}`;
+        res.json({ ok: true, message: 'Scan started', job_id: jobId, courses: courseList.map(c => c.shortname) });
+
+        // 4. Background scan
+        setImmediate(async () => {
+            const results = [];
+            for (const course of courseList) {
+                const code = course.shortname?.match(/[A-Z]{2,4}\d{4}/)?.[0] || course.shortname;
+                let sections;
+                try { sections = await moodleCall('core_course_get_contents', { courseid: course.id }); }
+                catch (e) { console.warn('[moodle scan] contents failed for', code, e.message); continue; }
+
+                for (const section of (sections || [])) {
+                    for (const mod of (section.modules || [])) {
+                        for (const f of (mod.contents || [])) {
+                            if (!f.fileurl || !f.filename) continue;
+                            if (!isStudyFile(f.filename)) continue;
+                            if ((f.filesize || 0) > 15 * 1024 * 1024) continue;
+
+                            const docName = `${code} — ${f.filename}`;
+                            if (!force && existingNames.has(docName)) continue;
+
+                            try {
+                                console.log('[moodle scan] downloading', f.filename);
+                                const buf = await downloadBuffer(f.fileurl);
+                                const text = await extractText(buf, f.filename);
+                                if (!text || text.trim().length < 100) continue;
+
+                                console.log('[moodle scan] generating notes for', f.filename);
+                                const notes = await generateNotes(code, f.filename, text);
+                                if (!notes) continue;
+
+                                await sb().from('apex_documents').upsert({
+                                    name:     docName,
+                                    doc_type: 'moodle_notes',
+                                    content:  notes,
+                                    status:   'active',
+                                }, { onConflict: 'name' });
+
+                                results.push({ file: f.filename, course: code, status: 'done' });
+                                existingNames.add(docName);
+                            } catch (e) {
+                                console.warn('[moodle scan] failed for', f.filename, e.message);
+                                results.push({ file: f.filename, course: code, status: 'error', error: e.message });
+                            }
+                        }
+                    }
+                }
+            }
+            console.log('[moodle scan] complete —', results.length, 'files processed');
+        });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
