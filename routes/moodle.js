@@ -5,6 +5,8 @@ const http    = require('http');
 const { URL } = require('url');
 const _auth   = require('../lib/app-auth');
 const { getSupabaseClient } = require('../lib/clients');
+const fs      = require('fs');
+const path    = require('path');
 
 const sb = getSupabaseClient;
 
@@ -33,6 +35,73 @@ function moodleCall(wsfunction, params = {}) {
         }).on('error', reject);
     });
 }
+
+// ── POST /api/moodle/set-token — directly set a known token ─────────────────
+router.post('/moodle/set-token', _auth, async (req, res) => {
+    const { token } = req.body || {};
+    if (!token || typeof token !== 'string' || token.length < 10)
+        return res.status(400).json({ ok: false, error: 'token required' });
+
+    process.env.MOODLE_TOKEN = token.trim();
+
+    const envPath = path.join(__dirname, '..', '.env');
+    try {
+        let envText = fs.readFileSync(envPath, 'utf8');
+        if (/^MOODLE_TOKEN=/m.test(envText)) {
+            envText = envText.replace(/^MOODLE_TOKEN=.*/m, `MOODLE_TOKEN=${token.trim()}`);
+        } else {
+            envText += `\nMOODLE_TOKEN=${token.trim()}\n`;
+        }
+        fs.writeFileSync(envPath, envText, 'utf8');
+    } catch (_) {}
+
+    res.json({ ok: true, message: 'Moodle token saved. Integration is active.' });
+});
+
+// ── POST /api/moodle/authenticate — fetch token via username+password ────────
+router.post('/moodle/authenticate', _auth, async (req, res) => {
+    const { username, password } = req.body || {};
+    if (!username || !password)
+        return res.status(400).json({ ok: false, error: 'username and password required' });
+
+    const base = (process.env.MOODLE_URL || 'https://moodle.bcu.ac.uk').replace(/\/$/, '');
+    const qs = new URLSearchParams({ username, password, service: 'moodle_mobile_app' });
+    const tokenUrl = `${base}/login/token.php?${qs}`;
+
+    try {
+        const data = await new Promise((resolve, reject) => {
+            const parsed = new URL(tokenUrl);
+            const lib = parsed.protocol === 'https:' ? https : http;
+            lib.get(tokenUrl, r => {
+                let body = '';
+                r.on('data', c => body += c);
+                r.on('end', () => {
+                    try { resolve(JSON.parse(body)); } catch (e) { reject(new Error('Parse error')); }
+                });
+            }).on('error', reject);
+        });
+
+        if (data.error) return res.status(401).json({ ok: false, error: data.error });
+        if (!data.token) return res.status(500).json({ ok: false, error: 'No token returned' });
+
+        // Hot-patch running process
+        process.env.MOODLE_TOKEN = data.token;
+
+        // Persist to .env file so it survives local restarts
+        const envPath = path.join(__dirname, '..', '.env');
+        try {
+            let envText = fs.readFileSync(envPath, 'utf8');
+            if (/^MOODLE_TOKEN=/m.test(envText)) {
+                envText = envText.replace(/^MOODLE_TOKEN=.*/m, `MOODLE_TOKEN=${data.token}`);
+            } else {
+                envText += `\nMOODLE_TOKEN=${data.token}\n`;
+            }
+            fs.writeFileSync(envPath, envText, 'utf8');
+        } catch (_) {}
+
+        res.json({ ok: true, message: 'Moodle token saved. Integration is active.', token_preview: data.token.slice(0, 8) + '...' });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
 
 // ── GET /api/moodle/status — check connection ─────────────────────────────────
 router.get('/moodle/status', _auth, async (req, res) => {

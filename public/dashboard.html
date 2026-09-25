@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta name="apex-version" content="v10" />
@@ -2733,6 +2733,7 @@ html, body {
   .bottom-nav  { grid-area: sidebar; height: auto !important; flex-direction: column !important; padding: 12px 0 !important; }
   .page-and-input { grid-area: body; display: flex; flex-direction: column; min-height: 0; }
   #cal-rail { grid-area: cal !important; display: flex !important; }
+body:not(.show-cal-rail) #cal-rail { display: none !important; }
   .input-zone  { grid-area: chatbar; }
   .page        { padding: 16px; gap: 14px; }
 }
@@ -8131,6 +8132,7 @@ select:focus {
     position: relative !important;
 }
 #cal-rail { grid-area: cal !important; display: flex !important; }
+body:not(.show-cal-rail) #cal-rail { display: none !important; }
 header.topbar { grid-area: topbar !important; }
 #apexSideNav {
     grid-area: sidebar !important;
@@ -11209,7 +11211,8 @@ if(pipe){
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">MODULES &middot; ASSIGNMENTS &middot; FLASHCARDS &middot; STUDY</div>
                         <div class="lw-page-purpose" style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Your academic modules, assignments, and progress.</div>
                     </div>
-                    <div style="text-align:right">
+                    <div style="text-align:right;display:flex;gap:8px;align-items:center">
+                        <button class="ds-btn" id="moodleSyncBtn" onclick="moodleSync()">&#8635; Sync BCU</button>
                         <button class="ds-btn amber" data-fn="pomodoroToggle">&#9658; Start session</button>
                     </div>
                 </div>
@@ -12695,6 +12698,7 @@ if(pipe){
         if (btn)  btn.classList.add('active');
         activePage = name;
         window.activePage = name; // V-11-F F-15: expose active page for polling guards
+        document.body.classList.toggle('show-cal-rail', name === 'overview');
         var meta = pageMeta[name] || { title: name.toUpperCase(), sub: '' };
         var pgTitle = document.getElementById('topbar-pg-title');
         var pgSub   = document.getElementById('topbar-pg-sub');
@@ -20210,6 +20214,19 @@ function rateFlashcard(ease) {
     }
     _fcIndex++;
     if (_fcIndex >= _fcCards.length) { closeFlashcardSession(); } else { loadFlashcard(); }
+}
+
+function moodleSync() {
+    var btn = document.getElementById('moodleSyncBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
+    fetch('/api/moodle/sync', { method: 'POST', credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (typeof showToast === 'function') showToast(d.ok ? 'BCU sync complete' : (d.error || 'Sync failed'));
+            if (d.ok) { fetchUniModules(); fetchUniAssignments(); }
+        })
+        .catch(function() { if (typeof showToast === 'function') showToast('Sync failed'); })
+        .finally(function() { if (btn) { btn.disabled = false; btn.textContent = '↻ Sync BCU'; } });
 }
 
 function initUniversityPage() {
