@@ -280,6 +280,109 @@ router.get('/moodle/weekly-plan', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// ── GET /api/moodle/dashboard — full aggregated view for the uni page ─────────
+router.get('/moodle/dashboard', _auth, async (req, res) => {
+    try {
+        const enrolled = await moodleCall('core_course_get_enrolled_courses_by_timeline_classification', {
+            classification: 'inprogress', limit: 20, offset: 0
+        });
+        const courseList = (enrolled.courses || []).filter(c => c.shortname?.match(/[A-Z]{2,4}\d{4}/));
+
+        // Pre-load scanned notes once
+        const { data: allNotes } = await sb().from('apex_documents').select('name').eq('doc_type', 'moodle_notes');
+        const scannedSet = new Set((allNotes || []).map(n => {
+            const parts = n.name.split(' — ');
+            return parts.slice(1).join(' — ').toLowerCase();
+        }));
+
+        const modules = [];
+        const now = Date.now() / 1000;
+
+        for (const course of courseList) {
+            const code = course.shortname.match(/[A-Z]{2,4}\d{4}/)[0];
+
+            // Sections + files
+            let rawSections = [];
+            try { rawSections = await moodleCall('core_course_get_contents', { courseid: course.id }); } catch (_) {}
+            const sections = [];
+            let totalFiles = 0, scannedCount = 0;
+            for (const s of rawSections) {
+                const files = [];
+                for (const mod of (s.modules || [])) {
+                    for (const f of (mod.contents || [])) {
+                        if (!f.filename || !f.fileurl || !isStudyFile(f.filename)) continue;
+                        if ((f.filesize || 0) > 15 * 1024 * 1024) continue;
+                        const scanned = scannedSet.has(f.filename.toLowerCase());
+                        files.push({ name: f.filename, size_kb: Math.round((f.filesize || 0) / 1024), scanned, url: f.fileurl });
+                        totalFiles++;
+                        if (scanned) scannedCount++;
+                    }
+                }
+                if (files.length) sections.push({ name: s.name, files });
+            }
+
+            // Assignments
+            let assignments = [];
+            try {
+                const aData = await moodleCall('mod_assign_get_assignments', { 'courseids[0]': course.id });
+                for (const c of (aData.courses || [])) {
+                    for (const a of (c.assignments || [])) {
+                        const daysUntil = a.duedate ? Math.ceil((a.duedate - now) / 86400) : null;
+                        assignments.push({
+                            id: a.id, title: a.name,
+                            due_date: a.duedate ? new Date(a.duedate * 1000).toISOString().split('T')[0] : null,
+                            days_until: daysUntil,
+                            grade_scale: a.grade || 100,
+                            intro: a.intro ? a.intro.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 400) : null,
+                        });
+                    }
+                }
+                assignments.sort((a, b) => (a.days_until ?? 999) - (b.days_until ?? 999));
+            } catch (_) {}
+
+            // Announcements from news forum
+            let announcements = [];
+            try {
+                const forums = await moodleCall('mod_forum_get_forums_by_courses', { 'courseids[0]': course.id });
+                const news = (forums || []).find(f => f.type === 'news');
+                if (news) {
+                    const disc = await moodleCall('mod_forum_get_forum_discussions', { forumid: news.id, page: 0, perpage: 5 });
+                    announcements = (disc.discussions || []).map(d => ({
+                        subject: d.name,
+                        message: d.message ? d.message.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 300) : null,
+                        date: new Date(d.timemodified * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+                    }));
+                }
+            } catch (_) {}
+
+            // DB record for module id/progress
+            const { data: dbMod } = await sb().from('apex_university_modules').select('id,progress').eq('code', code).maybeSingle();
+
+            const cleanName = course.fullname
+                .replace(/&amp;/g, '&')
+                .replace(new RegExp(code + '\\s*'), '')
+                .replace(/ A S\d \d{4}\/\d+$/, '')
+                .trim();
+
+            modules.push({ code, name: cleanName, moodle_id: course.id, credits: 20, progress: dbMod?.progress || 0, sections, assignments, announcements, file_count: totalFiles, scanned_count: scannedCount });
+        }
+
+        const deadlines = [];
+        modules.forEach(m => m.assignments.forEach(a => {
+            if (a.due_date && (a.days_until === null || a.days_until >= 0))
+                deadlines.push({ ...a, module: m.code });
+        }));
+        deadlines.sort((a, b) => (a.days_until ?? 999) - (b.days_until ?? 999));
+
+        const knowledgeGaps = [];
+        modules.forEach(m => m.sections.forEach(s => s.files.forEach(f => {
+            if (!f.scanned) knowledgeGaps.push({ module: m.code, section: s.name, file: f.name, size_kb: f.size_kb });
+        })));
+
+        res.json({ ok: true, modules, deadlines, knowledge_gaps: knowledgeGaps, last_synced: new Date().toISOString() });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // ── File download + text extraction helpers ───────────────────────────────────
 
 function downloadBuffer(rawUrl) {
