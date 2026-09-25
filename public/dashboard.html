@@ -2061,6 +2061,10 @@ html, body {
 
     #cal-rail { display: flex; }
 
+    body:not(.show-cal-rail) .app {
+        grid-template-columns: 200px 1fr !important;
+    }
+
     .bottom-nav {
         border-right: 1px solid rgba(0,212,255,0.07);
         padding-top: 8px;
@@ -11210,9 +11214,9 @@ if(pipe){
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:10px">BCU &middot; BSc BUSINESS FINANCE &middot; YEAR 3 &middot; SEMESTER 1 &middot; 2026/7</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                        <span id="uni-scan-status" style="font-size:10px;color:var(--color-accent)"></span>
                         <span id="uni-sync-ts" style="font-size:10px;color:var(--text-mute)"></span>
                         <button class="ds-btn xs" id="moodleSyncBtn" onclick="moodleSync()">&#8635; Sync</button>
-                        <button class="ds-btn xs purple" id="moodleScanBtn" onclick="moodleScanContent({})">&#9670; Scan All</button>
                     </div>
                 </div>
 
@@ -11222,50 +11226,29 @@ if(pipe){
                 <!-- Module cards -->
                 <div id="uni-module-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px"></div>
 
-                <!-- Main two-column grid -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+                <!-- Assessments — full width, priority info -->
+                <div class="ds-panel" style="margin-bottom:16px">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">Assessments</span></div>
+                    </div>
+                    <div id="uni-assignments-panel"></div>
+                </div>
 
-                    <!-- LEFT: Module content / weekly sections -->
-                    <div class="ds-panel" style="min-height:320px">
+                <!-- Two-column: Module Content | Announcements -->
+                <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:16px">
+                    <div class="ds-panel" style="min-height:280px">
                         <div class="ds-panel-header" style="flex-wrap:wrap;gap:6px">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Module Content</span>
-                            </div>
+                            <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Module Content</span></div>
                             <div id="uni-module-tabs" style="display:flex;gap:4px;flex-wrap:wrap"></div>
                         </div>
                         <div id="uni-sections-list" style="padding-top:4px"></div>
                     </div>
-
-                    <!-- RIGHT: Assignments + Announcements -->
-                    <div style="display:flex;flex-direction:column;gap:12px">
-                        <div class="ds-panel">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">Assessments</span></div>
-                            </div>
-                            <div id="uni-assignments-panel"></div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">Announcements</span></div>
                         </div>
-                        <div class="ds-panel" id="uni-announce-panel">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">Announcements</span></div>
-                            </div>
-                            <div id="uni-announce-list"><div class="skel skel-row skel-wide"></div></div>
-                        </div>
+                        <div id="uni-announce-list"><div class="skel skel-row skel-wide"></div></div>
                     </div>
-                </div>
-
-                <!-- Knowledge gaps full width -->
-                <div class="ds-panel" id="uni-gaps-panel" style="margin-bottom:16px;display:none">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left">
-                            <span class="ds-dot red"></span>
-                            <span class="t-label">Knowledge Gaps <span id="uni-gaps-count" style="color:var(--color-error);margin-left:4px"></span></span>
-                        </div>
-                        <div class="ds-panel-header-right">
-                            <button class="ds-btn xs" onclick="moodleScanContent({})">&#9670; Scan All Gaps</button>
-                        </div>
-                    </div>
-                    <div id="uni-gaps-list" style="display:flex;flex-direction:column;gap:4px"></div>
                 </div>
 
                 <!-- Study notes full width -->
@@ -20260,21 +20243,18 @@ function renderModuleCards(modules) {
     if (!el) return;
     el.innerHTML = modules.map(function(m) {
         var scannedPct = m.file_count ? Math.round(m.scanned_count / m.file_count * 100) : 0;
-        var assignCount = (m.assignments || []).filter(function(a) { return a.days_until === null || a.days_until >= 0; }).length;
-        var gapCount = m.file_count - m.scanned_count;
-        return '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;cursor:pointer;transition:border-color 150ms" class="uni-mod-tab" data-code="' + m.code + '" onclick="renderSections(\'' + m.code + '\')">'
+        var nextDeadline = (m.assignments || []).filter(function(a) { return a.days_until !== null && a.days_until >= 0; })
+            .sort(function(a, b) { return a.days_until - b.days_until; })[0];
+        return '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;cursor:pointer;transition:border-color 150ms" onclick="renderSections(\'' + m.code + '\')">'
             + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
             + '<span style="font:800 11px/1 var(--font-mono);letter-spacing:.12em;color:#0d0d0d;background:var(--amber);padding:3px 8px;border-radius:4px">' + m.code + '</span>'
-            + (assignCount ? '<span style="font-size:9px;background:rgba(239,68,68,0.15);color:var(--color-error);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:2px 7px;font-weight:700">' + assignCount + ' DUE</span>' : '<span style="font-size:9px;color:var(--text-mute)">no deadlines</span>')
+            + (nextDeadline ? '<span style="font-size:9px;color:' + (nextDeadline.days_until<=14?'var(--color-error)':'var(--color-warning)') + ';font-weight:700">' + nextDeadline.days_until + 'd</span>' : '')
             + '</div>'
-            + '<div style="font:600 13px/1.4 var(--font-body);color:var(--text);margin-bottom:4px">' + m.name + '</div>'
-            + '<div style="font-size:10px;color:var(--text-mute);margin-bottom:10px">' + m.credits + ' credits</div>'
-            + '<div style="display:flex;gap:3px;margin-bottom:6px">'
-            + '<div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px"><div style="height:100%;width:' + scannedPct + '%;background:var(--color-accent);border-radius:2px;transition:width 600ms"></div></div>'
-            + '</div>'
+            + '<div style="font:600 13px/1.4 var(--font-body);color:var(--text);margin-bottom:10px">' + m.name + '</div>'
+            + '<div style="height:3px;background:rgba(255,255,255,0.07);border-radius:2px;margin-bottom:6px"><div style="height:100%;width:' + scannedPct + '%;background:var(--color-accent);border-radius:2px;transition:width 600ms"></div></div>'
             + '<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-mute)">'
-            + '<span>' + m.scanned_count + '/' + m.file_count + ' files scanned</span>'
-            + (gapCount > 0 ? '<span style="color:var(--color-warning)">' + gapCount + ' gaps</span>' : '<span style="color:var(--color-success)">&#10003; complete</span>')
+            + '<span>' + m.scanned_count + '/' + m.file_count + ' scanned</span>'
+            + '<span>' + m.credits + ' credits</span>'
             + '</div>'
             + '</div>';
     }).join('');
@@ -20386,22 +20366,19 @@ function renderAnnouncements(modules) {
 }
 
 function renderKnowledgeGaps(gaps) {
-    var panel = document.getElementById('uni-gaps-panel');
-    var el = document.getElementById('uni-gaps-list');
-    var countEl = document.getElementById('uni-gaps-count');
-    if (!panel || !el) return;
-    if (!gaps.length) { panel.style.display = 'none'; return; }
-    panel.style.display = 'block';
-    if (countEl) countEl.textContent = gaps.length + ' unscanned file' + (gaps.length===1?'':'s');
-    el.innerHTML = gaps.map(function(g) {
-        return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)">'
-            + '<span style="font:700 9px/1 var(--font-mono);color:#0d0d0d;background:rgba(245,158,11,0.8);padding:2px 5px;border-radius:3px;flex-shrink:0">' + g.module + '</span>'
-            + '<span style="font-size:11px;color:var(--text-mute);flex-shrink:0;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + g.section + '</span>'
-            + '<span style="font-size:11px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + g.file.replace(/\.[^.]+$/, '') + '</span>'
-            + '<span style="font-size:9px;color:var(--text-mute);flex-shrink:0">' + g.size_kb + 'kb</span>'
-            + '<button class="ds-btn xs uni-study-btn" data-module="' + g.module + '" style="font-size:9px;flex-shrink:0">Scan</button>'
-            + '</div>';
-    }).join('');
+    // Auto-scan silently — no panel shown
+    if (!gaps.length) return;
+    var statusEl = document.getElementById('uni-scan-status');
+    if (statusEl) statusEl.textContent = 'AI scanning ' + gaps.length + ' files…';
+    fetch('/api/moodle/scan-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({})
+    }).then(function(r) { return r.json(); }).then(function() {
+        if (statusEl) statusEl.textContent = 'Scan running in background';
+        setTimeout(function() { if (statusEl) statusEl.textContent = ''; }, 8000);
+    }).catch(function() { if (statusEl) statusEl.textContent = ''; });
 }
 
 function loadMoodleNotes() {
