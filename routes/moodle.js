@@ -201,7 +201,12 @@ router.post('/moodle/sync', _auth, async (req, res) => {
                 .eq('code', code).eq('current', true);
         }
 
-        // 2. Sync upcoming assignments → apex_university_assignments
+        // 2. Build code → module_id map from DB
+        const { data: modRows } = await sb().from('apex_university_modules').select('id,code');
+        const moduleIdMap = {};
+        for (const row of (modRows || [])) { if (row.code) moduleIdMap[row.code] = row.id; }
+
+        // 3. Sync upcoming assignments → apex_university_assignments
         const courseIds = courseList.map(c => c.id);
         let synced = 0;
         if (courseIds.length) {
@@ -214,21 +219,64 @@ router.post('/moodle/sync', _auth, async (req, res) => {
                 for (const a of (course.assignments || [])) {
                     if (!a.duedate || a.duedate < now) continue;
                     const code = course.shortname?.match(/[A-Z]{2,4}\d{4}/)?.[0] || course.shortname;
+                    const moduleId = moduleIdMap[code];
+                    if (!moduleId) continue;
                     const dueDate = new Date(a.duedate * 1000).toISOString().split('T')[0];
-                    // Upsert by moodle_id to avoid duplicates
-                    await sb().from('apex_university_assignments').upsert({
-                        module:   code,
-                        title:    a.name,
-                        due_date: dueDate,
-                        completed: false,
+                    await sb().from('apex_university_assignments').insert({
+                        module_id:   moduleId,
+                        title:       a.name,
+                        due_date:    dueDate,
+                        completed:   false,
                         description: a.intro ? a.intro.replace(/<[^>]*>/g, '').slice(0, 300) : null,
-                    }, { onConflict: 'module,title' }).select();
+                        human_id:    '00000000-0000-4000-8000-000000000001',
+                    }).select();
                     synced++;
                 }
             }
         }
 
         res.json({ ok: true, courses_synced: courseList.length, assignments_synced: synced });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── GET /api/moodle/weekly-plan — course sections with study files ─────────
+router.get('/moodle/weekly-plan', _auth, async (req, res) => {
+    try {
+        const enrolled = await moodleCall('core_course_get_enrolled_courses_by_timeline_classification', {
+            classification: 'inprogress', limit: 20, offset: 0
+        });
+        const courseList = enrolled.courses || [];
+        const plan = [];
+
+        for (const course of courseList) {
+            const code = course.shortname?.match(/[A-Z]{2,4}\d{4}/)?.[0] || course.shortname;
+            let contents;
+            try { contents = await moodleCall('core_course_get_contents', { courseid: course.id }); }
+            catch (e) { continue; }
+
+            const sections = [];
+            for (const section of (contents || [])) {
+                const scannableFiles = [];
+                for (const mod of (section.modules || [])) {
+                    for (const f of (mod.contents || [])) {
+                        if (!f.fileurl || !f.filename) continue;
+                        if (isStudyFile(f.filename)) {
+                            scannableFiles.push({ filename: f.filename, fileurl: f.fileurl, filesize: f.filesize || 0 });
+                        }
+                    }
+                }
+                if (!scannableFiles.length) continue;
+                sections.push({
+                    name:             section.name || '',
+                    summary:          section.summary ? section.summary.replace(/<[^>]*>/g, '').slice(0, 200) : '',
+                    file_count:       scannableFiles.length,
+                    scannable_files:  scannableFiles,
+                });
+            }
+            if (sections.length) plan.push({ code, fullname: course.fullname, sections });
+        }
+
+        res.json({ ok: true, plan });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 

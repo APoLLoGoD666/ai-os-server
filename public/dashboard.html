@@ -11350,6 +11350,13 @@ if(pipe){
                     <div id="uni-notes-list" style="display:flex;flex-direction:column;gap:8px;max-height:520px;overflow-y:auto;padding-right:4px"></div>
                 </div>
 
+                <div class="ds-panel" id="uni-weekly-panel" style="margin-top:16px">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Weekly Schedule</span></div>
+                    </div>
+                    <div id="uni-weekly-list" style="display:flex;flex-direction:column;gap:8px"></div>
+                </div>
+
                 <!-- Flashcard modal (hidden) -->
                 <div id="uni-fc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;align-items:center;justify-content:center">
                     <div style="width:440px;background:var(--surface);border:1px solid var(--border-cyan);border-radius:14px;padding:24px">
@@ -20100,9 +20107,14 @@ function fetchUniModules() {
         _uniL0Update(mods.length);
         if (!panel) return;
         if (!mods.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No modules yet</div>'; return; }
-        panel.innerHTML = mods.map(function(m){
+        panel.innerHTML = mods.map(function(m) {
             var pct = m.progress || 0;
-            return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:600;color:var(--text)">'+(m.name||'Module')+'</span><span class="t-mono" style="color:var(--amber)">'+(m.grade||'—')+'</span></div><div class="ds-bar amber"><div class="ds-bar-fill" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--text-mute);margin-top:2px">'+pct+'% complete</div></div>';
+            return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)">'
+                + '<span style="font:700 10px/1 var(--font-mono);letter-spacing:.1em;color:#0d0d0d;background:var(--amber);padding:3px 6px;border-radius:4px;white-space:nowrap">' + (m.code||'') + '</span>'
+                + '<div style="flex:1"><div style="font:600 13px/1.3 var(--font-body);color:var(--text)">' + (m.name||'') + '</div>'
+                + '<div style="font-size:10px;color:var(--text-mute);margin-top:2px">' + (m.credits||20) + ' credits · Year ' + (m.year||3) + '</div></div>'
+                + '<div style="text-align:right"><div class="ds-bar amber" style="width:80px"><div class="ds-bar-fill" style="width:' + pct + '%"></div></div>'
+                + '<div style="font-size:10px;color:var(--text-mute);margin-top:2px">' + pct + '%</div></div></div>';
         }).join('');
     }).catch(function(err){ // V-11-F F-2/F-5
         var panel = document.getElementById('uniModulesPanelB');
@@ -20123,12 +20135,15 @@ function fetchUniAssignments() {
         var dueThisWeek = asgns.filter(function(a){ var dd = new Date(a.due_date); return dd>=now && dd<=weekEnd; });
         if (statEl) statEl.textContent = dueThisWeek.length;
         if (!tb) return;
-        if (!asgns.length) { tb.innerHTML = '<tr><td colspan="3" style="padding:12px;text-align:center;color:var(--text-faint);font-style:italic">No assignments</td></tr>'; return; }
-        tb.innerHTML = asgns.slice(0,8).map(function(a){
-            var due = a.due_date ? new Date(a.due_date).toLocaleDateString() : '—';
-            var st = a.status||'pending';
-            var badgeCol = st==='submitted'?'green':st==='overdue'?'red':'amber';
-            return '<tr><td style="font-weight:600">'+(a.title||'Assignment')+'</td><td class="t-mono" style="font-size:10px">'+due+'</td><td><span class="ds-badge '+badgeCol+'" style="font-size:9px">'+st+'</span></td></tr>';
+        if (!asgns.length) { tb.innerHTML = '<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--text-faint);font-style:italic">No assignments due — check back after week 1</td></tr>'; return; }
+        tb.innerHTML = asgns.slice(0,10).map(function(a) {
+            var due = a.due_date ? new Date(a.due_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '—';
+            var isPast = a.due_date && new Date(a.due_date) < new Date();
+            var badgeCol = a.completed ? 'green' : isPast ? 'red' : 'amber';
+            var status = a.completed ? 'submitted' : isPast ? 'overdue' : 'pending';
+            return '<tr><td style="font-weight:600;font-size:12px">' + (a.title||'') + '</td>'
+                + '<td class="t-mono" style="font-size:10px;white-space:nowrap">' + due + '</td>'
+                + '<td><span class="ds-badge ' + badgeCol + '" style="font-size:9px">' + status + '</span></td></tr>';
         }).join('');
     }).catch(function(err){ // V-11-F F-2/F-5
         var tb = document.getElementById('uniAssignmentsTbodyB');
@@ -20244,10 +20259,11 @@ function moodleSync() {
         .finally(function() { if (btn) { btn.disabled = false; btn.textContent = '↻ Sync BCU'; } });
 }
 
-function moodleScanContent() {
+function moodleScanContent(opts) {
     var btn = document.getElementById('moodleScanBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
-    fetch('/api/moodle/scan-content', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: '{}' })
+    var body = opts ? JSON.stringify(opts) : '{}';
+    fetch('/api/moodle/scan-content', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: body })
         .then(function(r) { return r.json(); })
         .then(function(d) {
             if (typeof showToast === 'function') showToast(d.ok ? 'Scanning BCU files in background — notes ready in ~2 min' : (d.error || 'Scan failed'));
@@ -20300,11 +20316,44 @@ document.addEventListener('click', function(e) {
 });
 
 function initUniversityPage() {
+    // Show cached data immediately
     fetchUniModules();
     fetchUniAssignments();
     fetchUniFlashcards();
     fetchUniReadingList();
     updateUniPomoRing();
+    fetchWeeklyPlan();
+    loadMoodleNotes();
+    // Then sync silently and refresh
+    fetch('/api/moodle/sync', { method: 'POST', credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (d.ok) { fetchUniModules(); fetchUniAssignments(); } })
+        .catch(function() {});
+}
+
+function fetchWeeklyPlan() {
+    var list = document.getElementById('uni-weekly-list');
+    if (!list) return;
+    list.innerHTML = '<div class="skel skel-row skel-wide"></div>';
+    fetch('/api/moodle/weekly-plan', { credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var plan = d.plan || [];
+            if (!plan.length) { list.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:12px">No weekly content available</div>'; return; }
+            var rows = [];
+            plan.forEach(function(course) {
+                (course.sections || []).forEach(function(sec) {
+                    rows.push('<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">'
+                        + '<span style="font:700 10px/1 var(--font-mono);letter-spacing:.08em;color:#0d0d0d;background:var(--amber);padding:2px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0">' + course.code + '</span>'
+                        + '<span style="flex:1;font-size:12px;color:var(--text)">' + (sec.name||'') + '</span>'
+                        + '<span style="font-size:10px;color:var(--text-mute);flex-shrink:0">' + sec.file_count + ' file' + (sec.file_count===1?'':'s') + '</span>'
+                        + '<button class="ds-btn xs" onclick="moodleScanContent({module:'' + course.code + ''})" style="flex-shrink:0">Study</button>'
+                        + '</div>');
+                });
+            });
+            list.innerHTML = rows.join('');
+        })
+        .catch(function() { list.innerHTML = '<div style="color:var(--text-faint);padding:12px">Could not load weekly plan.</div>'; });
 }
 
 // Sync ring when pomodoro ticks
