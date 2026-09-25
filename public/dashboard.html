@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta name="apex-version" content="v10" />
@@ -7,6 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>APEX AI OS</title>
     <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
     <meta name="theme-color" content="#06101f">
     <meta name="apple-mobile-web-app-title" content="APEX">
     <meta name="description" content="APEX AI OS — Personal intelligent agent operating system">
@@ -75,6 +78,7 @@ body.apex-role-user #page-university { display: none !important; }
 .apex-state-dot.loading   { background:rgba(94,106,210,0.5); animation:apex-dot-pulse 1.2s ease-in-out infinite; }
 .apex-state-dot.forbidden { background:rgba(242,242,242,0.1); }
 @keyframes apex-dot-pulse { 0%,100%{opacity:0.35}50%{opacity:1} }
+@keyframes kgp-pulse { 0%,100%{opacity:.4}50%{opacity:.7} }
 
 /* True empty — data absent, not an error */
 .apex-empty { font-size:11px; color:var(--muted2); font-style:italic; padding:4px 0; }
@@ -267,8 +271,7 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
         grid-template-columns: 1fr;
     }
 }
-/* Hide TODAY Needs You section when content resolves to the empty state */
-#today-section-needs:has(.td-empty-today) { display: none; }
+/* today-section-needs always visible — approvals live inside the same card */
 @media (min-width: 1024px) {
     #page-memory .mem-panels,
     #page-knowledge .kn-panels {
@@ -466,6 +469,54 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
 }
 .actn-show-more-btn:hover { border-color:rgba(255,255,255,0.2); color:rgba(232,244,255,0.7); }
 
+/* Gate: filter pills, sort, batch, all-clear, rules panel */
+.actn-filter-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 12px;border-top:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(255,255,255,0.01)}
+.actn-filter-pills{display:flex;gap:5px;flex-wrap:wrap}
+.actn-filter-pill{background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:99px;padding:4px 11px;font:700 10px/1 Inter,sans-serif;letter-spacing:0.06em;color:rgba(232,244,255,0.38);cursor:pointer;transition:background 120ms,color 120ms,border-color 120ms;min-height:28px}
+.actn-filter-pill:hover{background:rgba(255,255,255,0.06);color:rgba(232,244,255,0.7)}
+.actn-filter-pill.active{background:rgba(0,212,255,0.1);border-color:rgba(0,212,255,0.35);color:#00d4ff}
+.actn-pill-ct{font-size:9px;opacity:0.65;margin-left:4px}
+.actn-sort-sel{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(232,244,255,0.5);font-size:10px;padding:4px 8px;cursor:pointer;min-height:28px;outline:none}
+.actn-sort-sel:focus{border-color:rgba(0,212,255,0.4)}
+.actn-batch-bar{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(0,212,255,0.05);border-top:1px solid rgba(0,212,255,0.1)}
+.actn-batch-bar-ct{font:500 11px/1 Inter,sans-serif;color:rgba(232,244,255,0.5);flex:1}
+.actn-all-clear{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:10px;text-align:center}
+.actn-all-clear-icon{font-size:36px}
+.actn-all-clear-title{font:800 14px/1 Inter,sans-serif;letter-spacing:0.12em;text-transform:uppercase;color:#22c55e}
+.actn-all-clear-sub{font:400 11px/1.5 Inter,sans-serif;color:rgba(232,244,255,0.32)}
+.actn-card2.actn-batch-on{padding-left:10px}
+.actn-batch-chk{width:16px;height:16px;cursor:pointer;accent-color:#00d4ff;flex-shrink:0;margin-right:6px;vertical-align:middle}
+.actn-rules-panel{position:fixed;top:0;right:0;bottom:0;width:300px;max-width:90vw;background:rgba(8,10,20,0.98);border-left:1px solid rgba(0,212,255,0.15);z-index:310;display:flex;flex-direction:column;overflow-y:auto;transform:translateX(100%);transition:transform 200ms cubic-bezier(0,0,0.2,1)}
+.actn-rules-panel.open{transform:translateX(0)}
+.actn-rules-inner{padding:24px}
+.actn-rules-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.actn-rules-hdr span{font:700 11px/1 'JetBrains Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;color:#e8f4ff}
+.actn-rules-hdr button{background:none;border:none;color:rgba(232,244,255,0.45);font-size:18px;cursor:pointer;min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center}
+.actn-rules-hdr button:hover{color:#e8f4ff}
+.actn-rules-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:309}
+.actn-rule-row{padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.actn-rule-row:last-child{border-bottom:none}
+@media (prefers-reduced-motion:reduce){.actn-rules-panel{transition:none}}
+
+/* Gate: card + overall refinements */
+.actn-card2{padding:11px 13px!important;gap:6px!important}
+.actn-card2-top{gap:6px!important;align-items:center}
+.actn-card2-type{font-size:9px!important;letter-spacing:0.08em!important}
+.actn-card2-title{font-size:12px!important;line-height:1.35!important}
+.actn-card2-desc{font-size:11px!important;-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+.actn-card2-btns{gap:6px!important;margin-top:0!important}
+.actn-card-btn{min-height:32px!important;padding:0 11px!important;font-size:10px!important;border-radius:5px!important}
+/* P4 system detail toggle */
+.actn-sys-toggle{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 12px;cursor:pointer;border:1px dashed rgba(255,255,255,0.07);border-radius:8px;color:rgba(232,244,255,0.22);font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:0.14em;text-transform:uppercase;transition:border-color 150ms,color 150ms;user-select:none;grid-column:1/-1}
+.actn-sys-toggle:hover{border-color:rgba(255,255,255,0.14);color:rgba(232,244,255,0.5)}
+.actn-sys-body{display:none;flex-direction:column;gap:12px;grid-column:1/-1}
+.actn-sys-body.open{display:flex}
+/* Desktop: pending approval spans full width */
+@media (min-width:1024px){
+    #actnPendingPanel{grid-column:1/-1}
+    #actnRulesPanel,#actnRulesBackdrop{grid-column:unset}
+}
+
 .actn-stub {
     padding: 40px 20px;
     text-align: center;
@@ -547,6 +598,72 @@ body.apex-role-unknown #apex-user-display { color:rgba(242,242,242,0.15)!importa
     }
     .actn-undo-banner { bottom: 60px; padding: 12px 14px; font-size: 12px; }
 }
+
+/* ═══ Gate 2.0 — Command Center ══════════════════════════════════════════ */
+.gate-cmd-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.07);flex-wrap:wrap}
+.gate-stat-row{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.gate-stat{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:7px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.015);transition:border-color 150ms,background 150ms;cursor:default}
+.gate-stat.live{background:rgba(255,255,255,0.04)}
+.gate-stat-dot{width:7px;height:7px;border-radius:50%;background:#333;flex-shrink:0}
+.gate-stat-num{font:700 18px/1 'JetBrains Mono',monospace;color:rgba(232,244,255,0.18);min-width:18px;text-align:center;transition:color 150ms}
+.gate-stat-label{font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:rgba(232,244,255,0.22)}
+.gate-layout{display:flex;flex-direction:column;gap:16px;margin-top:18px}
+@media (min-width:1024px){.gate-layout{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}}
+.gate-main{display:flex;flex-direction:column;gap:0;min-width:0}
+.gate-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);margin-bottom:14px;flex-wrap:wrap}
+.gate-queue{display:flex;flex-direction:column;gap:0}
+.gate-tier-hdr{display:flex;align-items:center;gap:8px;padding:14px 0 7px;margin-bottom:2px}
+.gate-tier-hdr:first-child{padding-top:2px}
+.gate-tier-line{flex:1;height:1px;opacity:.5}
+.gate-tier-name{font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.12em}
+.gate-tier-ct{font:500 9px/1 'JetBrains Mono',monospace;color:rgba(232,244,255,0.18);background:rgba(255,255,255,0.04);padding:2px 7px;border-radius:3px;border:1px solid rgba(255,255,255,0.06)}
+.gate-card{background:rgba(12,14,22,0.98);border:1px solid rgba(255,255,255,0.07);border-left:3px solid transparent;border-radius:8px;margin-bottom:7px;transition:border-color 150ms,box-shadow 150ms}
+.gate-card:hover{border-color:rgba(255,255,255,0.12);box-shadow:0 2px 14px rgba(0,0,0,0.35)}
+.gate-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:9px}
+.gate-card-top{display:flex;align-items:center;gap:7px}
+.gate-card-chip{font:800 9px/1 Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:4px;flex-shrink:0}
+.gate-card-type{font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.07em;color:rgba(232,244,255,0.3);text-transform:uppercase;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gate-card-time{font:400 10px/1 Inter,sans-serif;color:rgba(232,244,255,0.18);flex-shrink:0}
+.gate-card-title{font:600 13px/1.4 Inter,sans-serif;color:rgba(232,244,255,0.93)}
+.gate-card-desc{font:400 12px/1.55 Inter,sans-serif;color:rgba(232,244,255,0.5);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.gate-card-tags{display:flex;gap:6px;flex-wrap:wrap}
+.gate-card-tag{font:600 9px/1 'JetBrains Mono',monospace;letter-spacing:.05em;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.04);color:rgba(232,244,255,0.32);border:1px solid rgba(255,255,255,0.07)}
+.gate-card-tag.warn{background:rgba(255,77,109,0.08);color:#ff4d6d;border-color:rgba(255,77,109,0.2)}
+.gate-card-btns{display:flex;gap:8px;padding-top:2px}
+.gate-btn-approve{flex:1;min-height:38px;border-radius:7px;border:1px solid rgba(34,197,94,0.25);background:rgba(34,197,94,0.12);color:#22c55e;font:700 11px/1 Inter,sans-serif;letter-spacing:.06em;cursor:pointer;transition:background 120ms}
+.gate-btn-approve:hover{background:rgba(34,197,94,0.22)}
+.gate-btn-reject{min-height:38px;padding:0 16px;border-radius:7px;border:1px solid rgba(255,77,109,0.15);background:rgba(255,77,109,0.05);color:rgba(255,77,109,0.65);font:600 11px/1 Inter,sans-serif;cursor:pointer;transition:all 120ms;flex-shrink:0}
+.gate-btn-reject:hover{border-color:rgba(255,77,109,0.3);color:#ff4d6d;background:rgba(255,77,109,0.1)}
+.gate-all-clear{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 20px;gap:14px;text-align:center}
+.gate-all-clear-ring{width:52px;height:52px;border-radius:50%;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;color:#22c55e}
+.gate-all-clear-title{font:800 12px/1 Inter,sans-serif;letter-spacing:.15em;text-transform:uppercase;color:#22c55e}
+.gate-all-clear-sub{font:400 11px/1.5 Inter,sans-serif;color:rgba(232,244,255,0.25)}
+.gate-rail{display:flex;flex-direction:column;gap:12px;min-width:0}
+.gate-rail-panel{background:rgba(10,12,20,0.98);border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden}
+.gate-rail-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.gate-rail-hdr-left{font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:rgba(232,244,255,0.38);display:flex;align-items:center;gap:7px}
+.gate-rail-ct{font:500 10px/1 'JetBrains Mono',monospace;color:rgba(232,244,255,0.25)}
+.gate-rail-list{display:flex;flex-direction:column;max-height:220px;overflow-y:auto}
+.gate-rail-item{display:flex;align-items:flex-start;gap:9px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.gate-rail-item:last-child{border-bottom:none}
+.gate-rail-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.gate-rail-text{flex:1;min-width:0}
+.gate-rail-title{font:500 11px/1.4 Inter,sans-serif;color:rgba(232,244,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gate-rail-sub{font:400 10px/1.3 Inter,sans-serif;color:rgba(232,244,255,0.27);margin-top:2px}
+.gate-batch-bar{display:flex;align-items:center;gap:10px;padding:9px 14px;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.12);border-radius:8px;margin-bottom:10px}
+.gate-batch-ct{font:500 11px/1 Inter,sans-serif;color:rgba(232,244,255,0.45);flex:1}
+@media (prefers-reduced-motion:reduce){.gate-stat,.gate-card{transition:none}}
+/* Gate sub-tabs */
+.gate-tab-nav{display:flex;gap:0;margin-top:16px;border-bottom:1px solid rgba(255,255,255,0.07);overflow-x:auto;scrollbar-width:none}
+.gate-tab-nav::-webkit-scrollbar{display:none}
+.gate-tab-btn{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 18px;font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:rgba(232,244,255,0.3);cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:6px;flex-shrink:0;min-height:40px}
+.gate-tab-btn.active{border-bottom-color:#7c6cf2;color:#e8f4ff}
+.gate-tab-btn:hover:not(.active){color:rgba(232,244,255,0.6)}
+.gate-tab-badge{font:700 9px/1 'JetBrains Mono',monospace;background:rgba(124,108,242,0.2);color:#a78bfa;border-radius:99px;padding:2px 7px;border:1px solid rgba(124,108,242,0.3)}
+.gate-tab-pane{display:none;padding-top:16px}
+.gate-tab-pane.active{display:block}
+.gate-tab-pane .gate-rail-panel{margin-bottom:12px}
+.gate-tab-pane .gate-rail-list{max-height:none}
 
 /* ── Agents Office sub-tabs ────────────────────────────────────────────── */
 .office-tab-nav { display:flex; gap:0; margin-top:18px; border-bottom:1px solid rgba(255,255,255,0.07); overflow-x:auto; scrollbar-width:none; position:sticky; top:0; z-index:10; background:#000; padding-top:4px; }
@@ -1819,11 +1936,130 @@ html, body {
 
 .nav-label { font-size: 8px; font-weight: 700; letter-spacing: 0.14em; }
 
+/* ── Right Calendar Rail ─────────────────────────────────────────── */
+#cal-rail {
+    display: none;
+    flex-direction: column;
+    background: rgba(6,8,14,0.98);
+    border-left: 1px solid rgba(94,106,210,0.12);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    overflow: hidden;
+    height: 100%;
+}
+#cal-rail-hdr {
+    padding: 22px 16px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.045);
+    flex-shrink: 0;
+}
+#cal-rail-title {
+    font: 700 8px/1 'JetBrains Mono', monospace;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: rgba(99,102,241,0.55);
+}
+#cal-rail-subtitle {
+    display: block;
+    font: 300 11px/1.3 'Inter', system-ui, sans-serif;
+    color: rgba(232,244,255,0.3);
+    margin-top: 5px;
+    letter-spacing: .01em;
+}
+#cal-rail-body {
+    flex: 1;
+    overflow-y: scroll;
+    padding: 6px 0 32px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99,102,241,0.18) transparent;
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+}
+#cal-rail-body::-webkit-scrollbar { width: 3px; }
+#cal-rail-body::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.25); border-radius: 2px; }
+/* Day block */
+.cr-day-block { padding-bottom: 2px; scroll-snap-align: start; }
+.cr-day-hdr {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 14px 10px;
+}
+.cr-day-meta { display: flex; flex-direction: column; gap: 2px; }
+.cr-day-name {
+    font: 700 7.5px/1 'JetBrains Mono', monospace;
+    letter-spacing: .18em; text-transform: uppercase;
+    color: rgba(148,163,184,0.75);
+}
+.cr-day-block.is-today .cr-day-name { color: rgba(99,102,241,0.9); }
+.cr-day-num {
+    font: 200 28px/1 'Inter', system-ui, sans-serif;
+    color: rgba(215,226,240,0.65);
+    letter-spacing: -.02em;
+}
+.cr-day-block.is-today .cr-day-num { color: rgba(99,102,241,0.85); }
+.cr-day-month {
+    font: 500 7px/1 'JetBrains Mono', monospace;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(148,163,184,0.6);
+}
+.cr-day-block.is-today .cr-day-month { color: rgba(99,102,241,0.7); }
+.cr-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    margin: 0 14px 4px;
+}
+.cr-day-block.is-today .cr-divider { background: rgba(99,102,241,0.25); }
+/* Events */
+.cr-event {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 5px 14px 5px 16px;
+    transition: background .12s;
+    border-radius: 4px; margin: 0 4px;
+}
+.cr-event:hover { background: rgba(255,255,255,0.03); }
+.cr-dot { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+.cr-body { flex: 1; min-width: 0; }
+.cr-title { font: 400 11px/1.35 'Inter', system-ui, sans-serif; color: rgba(215,226,240,0.65); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr-time { font: 500 8.5px/1 'JetBrains Mono', monospace; color: rgba(99,102,241,0.38); margin-top: 2px; letter-spacing: .04em; }
+.cr-day-empty { padding: 2px 16px 8px; font: 400 8px/1 'JetBrains Mono', monospace; color: rgba(148,163,184,0.3); letter-spacing: .06em; }
+.cr-empty { padding: 16px 14px; font: 500 9px/1 'JetBrains Mono', monospace; letter-spacing: .07em; text-transform: uppercase; color: rgba(148,163,184,0.35); }
+/* Month view */
+.cr-mo-block { padding-bottom: 6px; }
+.cr-mo-hdr { font: 700 7.5px/1 'JetBrains Mono', monospace; letter-spacing: .15em; color: rgba(99,102,241,0.85); padding: 18px 14px 8px; text-transform: uppercase; }
+.cr-mo-divider { height: 1px; background: rgba(99,102,241,0.15); margin: 0 14px 6px; }
+.cr-mo-event { display: flex; align-items: baseline; gap: 8px; padding: 4px 14px; }
+.cr-mo-day { font: 600 9px/1 'JetBrains Mono', monospace; color: rgba(99,102,241,0.75); width: 18px; flex-shrink: 0; }
+.cr-mo-title { font: 400 11px/1.3 'Inter', sans-serif; color: rgba(215,226,240,0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 7-day view */
+.cr-7-block { padding-bottom: 4px; }
+.cr-7-hdr { display: flex; align-items: baseline; justify-content: space-between; padding: 14px 14px 7px; }
+.cr-7-name { font: 600 11px/1 'Inter', sans-serif; color: rgba(215,226,240,0.3); }
+.cr-7-block.is-today .cr-7-name { color: rgba(99,102,241,0.65); }
+.cr-7-date { font: 500 8px/1 'JetBrains Mono', monospace; color: rgba(148,163,184,0.5); letter-spacing: .08em; }
+.cr-7-event { display: flex; align-items: baseline; gap: 8px; padding: 4px 14px; }
+.cr-7-time { font: 600 9px/1 'JetBrains Mono', monospace; color: rgba(99,102,241,0.38); width: 32px; flex-shrink: 0; }
+.cr-7-title { font: 400 11px/1.3 'Inter', sans-serif; color: rgba(215,226,240,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Day / hours view */
+.cr-day-title { font: 700 7px/1 'JetBrains Mono', monospace; letter-spacing: .16em; color: rgba(99,102,241,0.45); padding: 14px 14px 10px; text-transform: uppercase; }
+.cr-hr-allday { font: 400 10px/1 'Inter', sans-serif; color: rgba(215,226,240,0.5); background: rgba(99,102,241,0.06); border-left: 2px solid rgba(99,102,241,0.3); padding: 5px 10px; margin: 0 14px 4px; border-radius: 0 4px 4px 0; }
+.cr-hr-row { display: flex; align-items: center; gap: 6px; padding: 4px 14px; min-height: 26px; flex-wrap: wrap; }
+.cr-hr-row.is-past { opacity: 0.45; }
+.cr-hr-label { font: 500 8px/1 'JetBrains Mono', monospace; color: rgba(148,163,184,0.55); width: 28px; flex-shrink: 0; letter-spacing: .04em; }
+.cr-hr-row.is-now .cr-hr-label { color: rgba(99,102,241,0.9); font-weight: 700; }
+.cr-hr-line { flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
+.cr-hr-row.is-now .cr-hr-line { background: rgba(99,102,241,0.3); }
+.cr-hr-event { font: 400 10px/1.2 'Inter', sans-serif; color: rgba(215,226,240,0.7); background: rgba(99,102,241,0.1); border-left: 2px solid rgba(99,102,241,0.4); padding: 3px 7px; border-radius: 0 4px 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 155px; margin-top: 2px; width: 100%; }
+/* Zoom controls */
+.cr-zoom-ctrl { display: flex; align-items: center; gap: 5px; margin-left: auto; }
+.cr-zoom-btn { background: none; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; color: rgba(215,226,240,0.35); font-size: 14px; line-height: 1; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color .15s, color .15s; padding: 0; flex-shrink: 0; }
+.cr-zoom-btn:hover { border-color: rgba(99,102,241,0.4); color: rgba(99,102,241,0.7); }
+#cal-zoom-label { font: 600 7px/1 'JetBrains Mono', monospace; letter-spacing: .1em; color: rgba(148,163,184,0.6); width: 34px; text-align: center; }
+
 /* Desktop sidebar */
 @media (min-width: 900px) {
     .app {
-        grid-template-columns: 200px 1fr;
+        grid-template-columns: 200px 1fr 240px;
     }
+
+    #cal-rail { display: flex; }
 
     .bottom-nav {
         border-right: 1px solid rgba(0,212,255,0.07);
@@ -2483,12 +2719,12 @@ html, body {
   .app {
     display: grid !important;
     grid-template-rows: var(--topbar-h) var(--ticker-h) 1fr var(--chatbar-h) !important;
-    grid-template-columns: var(--sidebar-w) 1fr !important;
+    grid-template-columns: var(--sidebar-w) 1fr 240px !important;
     grid-template-areas:
-      "topbar  topbar"
-      "ticker  ticker"
-      "sidebar body"
-      "chatbar chatbar" !important;
+      "topbar  topbar  topbar"
+      "ticker  ticker  ticker"
+      "sidebar body    cal"
+      "chatbar chatbar chatbar" !important;
     width: 100% !important;
     height: 100vh !important;
   }
@@ -2496,6 +2732,7 @@ html, body {
   .ticker-bar  { grid-area: ticker; }
   .bottom-nav  { grid-area: sidebar; height: auto !important; flex-direction: column !important; padding: 12px 0 !important; }
   .page-and-input { grid-area: body; display: flex; flex-direction: column; min-height: 0; }
+  #cal-rail { grid-area: cal !important; display: flex !important; }
   .input-zone  { grid-area: chatbar; }
   .page        { padding: 16px; gap: 14px; }
 }
@@ -3923,8 +4160,8 @@ body::before {
   .app {
     display: grid !important;
     grid-template-rows: var(--v12-top) 1fr !important;
-    grid-template-columns: var(--v12-nav) 1fr !important;
-    grid-template-areas: "topbar topbar" "sidenav content" !important;
+    grid-template-columns: var(--v12-nav) 1fr 240px !important;
+    grid-template-areas: "topbar topbar topbar" "sidenav content cal" !important;
     overflow: hidden !important;
   }
   .topbar          { grid-area: topbar   !important; }
@@ -4970,9 +5207,9 @@ body::before, body::after { display: none!important; }
 @media (min-width: 900px) {
   .app {
     display: grid!important;
-    grid-template-columns: 200px 1fr!important;
+    grid-template-columns: 200px 1fr 240px!important;
     grid-template-rows: 48px 1fr!important;
-    grid-template-areas: "topbar topbar" "sidenav content"!important;
+    grid-template-areas: "topbar topbar topbar" "sidenav content cal"!important;
   }
   .topbar         { grid-area: topbar!important; }
   .bottom-nav     { grid-area: sidenav!important; }
@@ -7884,15 +8121,16 @@ select:focus {
 #main-content {
     zoom: 1.15;
     display: grid !important;
-    grid-template-columns: var(--sidebar-w, 200px) 1fr !important;
+    grid-template-columns: var(--sidebar-w, 200px) 1fr 240px !important;
     grid-template-rows: var(--topbar-h, 48px) 1fr !important;
-    grid-template-areas: "topbar topbar" "sidebar body" !important;
+    grid-template-areas: "topbar topbar topbar" "sidebar body cal" !important;
     height: calc(100dvh / 1.15) !important;
     width:  calc(100vw  / 1.15) !important;
     max-width: calc(100vw / 1.15) !important;
     overflow: hidden !important;
     position: relative !important;
 }
+#cal-rail { grid-area: cal !important; display: flex !important; }
 header.topbar { grid-area: topbar !important; }
 #apexSideNav {
     grid-area: sidebar !important;
@@ -8112,12 +8350,6 @@ header.topbar { grid-area: topbar !important; }
             <span class="nav-label">System</span>
             <span class="ds-notif-badge cyan" id="navIntelBadge" style="display:none">5</span>
         </button>
-        <!-- SIDEBAR LIVE RUNS -->
-        <div id="sidebarLive">
-            <div class="sl-hd"><span class="sl-pulse"></span>LIVE RUNS</div>
-            <div id="sidebarRunList"><div class="sl-empty">—</div></div>
-        </div>
-
         <!-- TOOLS + SETTINGS (bottom) -->
         <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0"></div>
         <button class="nav-btn" id="nav-tools" aria-label="Tools">
@@ -10505,46 +10737,104 @@ if(pipe){
                 })();
                 </script>
                 <style>#ovr-pipeline,#ovr-modal-bg,#apx-wrap{display:none!important}
-/* V-11-D1: TODAY surface */
-#today-surface{padding:0 0 32px}
-.td-greeting{padding:22px 24px 20px}
-.td-greeting-day{font:700 22px/1.2 'Inter',sans-serif;color:#f3f7fb;letter-spacing:-0.01em}
-.td-greeting-line{font:500 10px/1 'JetBrains Mono',monospace;letter-spacing:2.5px;color:#8893a0;text-transform:uppercase;margin-top:10px}
-.td-section{padding:0 24px 22px}
-.td-section-hdr{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:12px}
-.td-section-label{font:700 9px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#636d7a;text-transform:uppercase;flex:1}
-.td-item{display:flex;align-items:flex-start;gap:11px;padding:16px 18px;background:#0d1424;border-radius:10px;margin-bottom:8px;border-left:3px solid transparent;cursor:pointer;transition:background 120ms}
+/* V-13: TODAY — Premium Command Briefing */
+#today-time-context{display:none!important}
+#today-surface{padding:32px 32px 48px;display:flex;flex-direction:column;gap:24px}
+.td-hero{display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:24px;position:relative}
+.td-hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,rgba(124,108,242,0.4),rgba(34,211,238,0.25),rgba(255,255,255,0))}
+.td-hero-left{}
+.td-hero-date{font:300 30px/1.1 'Inter',system-ui,sans-serif;color:rgba(255,255,255,0.82);letter-spacing:-0.025em}
+.td-hero-sub{font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:.18em;color:rgba(255,255,255,0.18);text-transform:uppercase;margin-top:10px}
+.td-hero-right{text-align:right;flex-shrink:0;padding-left:32px}
+.td-hero-pct{font:200 52px/1 'Inter',system-ui,sans-serif;color:rgba(96,165,250,0.4);letter-spacing:-0.04em;line-height:1}
+.td-hero-pct-lbl{font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:.18em;color:rgba(255,255,255,0.14);text-transform:uppercase;margin-top:7px}
+.td-bar-wrap{height:1px;background:rgba(255,255,255,0.05);border-radius:1px;position:relative;margin-top:-8px}
+.td-bar-fill{height:100%;background:linear-gradient(90deg,rgba(129,140,248,0.6),rgba(56,189,248,0.6));border-radius:1px;box-shadow:0 0 6px rgba(56,189,248,0.25);position:relative;transition:width 1.2s cubic-bezier(0.4,0,0.2,1)}
+.td-bar-fill::after{content:'';position:absolute;right:-1px;top:-2px;width:1px;height:5px;background:#38bdf8;box-shadow:0 0 4px rgba(56,189,248,0.6);border-radius:1px}
+.td-body-wrap{display:flex;gap:16px;align-items:flex-start}
+.td-main-col{flex:1;min-width:0}
+.td-cal-sidebar{width:260px;flex-shrink:0;background:rgba(10,10,18,0.8);border:1px solid rgba(255,255,255,0.065);border-top:1.5px solid rgba(99,102,241,0.45);border-radius:16px;backdrop-filter:blur(24px);position:sticky;top:16px;height:calc(100vh - 140px);display:flex;flex-direction:column;overflow:hidden}
+.td-cal-sidebar-hdr{display:flex;align-items:center;gap:8px;padding:14px 16px 10px;border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0}
+.td-cal-sidebar-hdr .td-card-hdr-dot{background:rgba(99,102,241,0.55)}
+.td-cal-sidebar-hdr .td-card-label{color:rgba(215,226,240,0.6)}
+.td-cal-sidebar .td-cal-body{flex:1;max-height:none;overflow-y:auto;padding:6px 0 12px}
+.td-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;align-items:start}
+.td-grid-left,.td-grid-right{display:flex;flex-direction:column;gap:14px}
+.td-card{background:rgba(10,10,18,0.8);border:1px solid rgba(255,255,255,0.065);border-radius:16px;backdrop-filter:blur(24px);overflow:hidden;transition:border-color 250ms ease,box-shadow 250ms ease}
+.td-card:hover{border-color:rgba(255,255,255,0.11);box-shadow:0 4px 32px rgba(0,0,0,0.35)}
+.td-card-hdr{display:flex;align-items:center;gap:9px;padding:14px 18px 12px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.td-card-hdr-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.td-card-label{font:700 8px/1 'JetBrains Mono',monospace;letter-spacing:.2em;text-transform:uppercase;flex:1}
+.td-card-count{font:500 8px/1 'JetBrains Mono',monospace;letter-spacing:.05em;opacity:0.3}
+.td-card-body{padding:12px 16px 16px}
+/* Card accents — unified cool spectrum: indigo → sky → cyan → lavender */
+.td-card-purple{border-top:1.5px solid rgba(129,140,248,0.45)}
+.td-card-purple .td-card-hdr-dot{background:#818cf8;box-shadow:0 0 7px rgba(129,140,248,0.5)}
+.td-card-purple .td-card-label{color:rgba(165,180,252,0.75)}
+.td-card-cyan{border-top:1.5px solid rgba(56,189,248,0.45)}
+.td-card-cyan .td-card-hdr-dot{background:#38bdf8;box-shadow:0 0 7px rgba(56,189,248,0.5)}
+.td-card-cyan .td-card-label{color:rgba(125,211,252,0.75)}
+.td-card-teal{border-top:1.5px solid rgba(34,211,238,0.45)}
+.td-card-teal .td-card-hdr-dot{background:#22d3ee;box-shadow:0 0 7px rgba(34,211,238,0.5)}
+.td-card-teal .td-card-label{color:rgba(103,232,249,0.75)}
+.td-card-amber{border-top:1.5px solid rgba(99,102,241,0.45)}
+.td-card-amber .td-card-hdr-dot{background:#6366f1;box-shadow:0 0 7px rgba(99,102,241,0.5)}
+.td-card-amber .td-card-label{color:rgba(165,180,252,0.75)}
+/* Calendar scrollable body */
+.td-cal-body{max-height:420px;overflow-y:auto;padding:4px 0;scrollbar-width:none}
+.td-cal-body::-webkit-scrollbar{display:none}
+.td-cal-day{padding:2px 16px 10px}
+.td-cal-day-hdr{display:flex;align-items:center;gap:8px;padding:10px 0 7px;font:700 7.5px/1 'JetBrains Mono',monospace;letter-spacing:.15em;text-transform:uppercase;color:#242e3c}
+.td-cal-day-hdr.is-today{color:rgba(56,189,248,0.55)}
+.td-cal-day-hdr::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.04)}
+.td-cal-no-events{font:400 9px/1 'JetBrains Mono',monospace;color:#1e2733;letter-spacing:.06em;text-transform:uppercase;padding:2px 0 4px}
+.td-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:4px;border-left:2px solid transparent;cursor:pointer;transition:background 200ms ease}
 .td-item:last-of-type{margin-bottom:0}
-.td-item:hover{background:#111828}
-.td-item.attn-urgent{border-left-color:#ec7fa3}
-.td-item.attn-noteworthy{border-left-color:#efb45a}
-.td-item.attn-normal{border-left-color:rgba(91,158,255,0.4)}
+.td-item:hover{background:rgba(255,255,255,0.04)}
+.td-item.attn-urgent{border-left-color:rgba(248,113,113,0.4)}
+.td-item.attn-noteworthy{border-left-color:rgba(129,140,248,0.4)}
+.td-item.attn-normal{border-left-color:rgba(96,165,250,0.25)}
 .td-item-body{flex:1;min-width:0}
-.td-item-title{font:600 13px/1.2 'Inter',sans-serif;color:#eaeff5}
-.td-item-sub{font:500 10px/1.4 'JetBrains Mono',monospace;color:#8893a0;margin-top:4px}
-.td-attn-dot{width:5px;height:5px;border-radius:1px;flex:0 0 5px;margin-top:6px}
-.td-attn-dot.urgent{background:#ec7fa3}
-.td-attn-dot.noteworthy{background:#efb45a}
-.td-attn-dot.normal{background:rgba(91,158,255,0.55)}
-.td-more{font:600 10px/1 'JetBrains Mono',monospace;color:#5b9eff;letter-spacing:0.5px;cursor:pointer;padding:10px 15px;display:block;text-align:right}
-.td-noticed-card{background:#0d1424;border-radius:10px;overflow:hidden}
-.td-noticed-row{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 120ms}
+.td-item-title{font:400 12.5px/1.4 'Inter',sans-serif;color:rgba(220,230,242,0.88);letter-spacing:-0.01em}
+.td-item-sub{font:400 9px/1.5 'JetBrains Mono',monospace;color:#3d4554;margin-top:3px;letter-spacing:.04em}
+.td-attn-dot{width:4px;height:4px;border-radius:1px;flex:0 0 4px;margin-top:8px;opacity:0.7}
+.td-attn-dot.urgent{background:rgba(248,113,113,0.7)}
+.td-attn-dot.noteworthy{background:rgba(129,140,248,0.7)}
+.td-attn-dot.normal{background:rgba(96,165,250,0.5)}
+.td-more{font:500 9px/1 'JetBrains Mono',monospace;color:rgba(56,189,248,0.4);letter-spacing:.1em;cursor:pointer;padding:10px 12px 0;display:block;text-align:right;transition:color 200ms ease}
+.td-more:hover{color:rgba(56,189,248,0.8)}
+.td-noticed-card{background:transparent}
+.td-noticed-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.035);transition:background 200ms ease}
 .td-noticed-row:last-child{border-bottom:none}
-.td-noticed-row:hover{background:rgba(255,255,255,0.03)}
-.td-noticed-lbl{font:500 12px/1 'Inter',sans-serif;color:#c7d2dd;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.td-noticed-val{font:600 10px/1 'JetBrains Mono',monospace;flex:0 0 auto}
-.td-portal-arrow{font:600 13px/1 'JetBrains Mono',monospace;color:#5b9eff;opacity:0.35;flex-shrink:0;transition:opacity 150ms}
-.td-noticed-row:hover .td-portal-arrow,.td-item:hover .td-portal-arrow{opacity:1}
-.td-empty-today{font:500 12px/1.6 'Inter',sans-serif;color:#636d7a;padding:18px 15px;background:rgba(255,255,255,0.02);border-radius:8px;text-align:center}
-.td-legacy-sep{display:flex;align-items:center;gap:10px;padding:4px 24px 20px;opacity:0.35}
-.td-legacy-sep::before,.td-legacy-sep::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.1)}
-.td-legacy-sep-text{font:500 8px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;text-transform:uppercase;white-space:nowrap}
+.td-noticed-row:hover{background:rgba(255,255,255,0.025)}
+.td-noticed-lbl{font:400 11.5px/1 'Inter',sans-serif;color:rgba(199,210,221,0.85);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.01em}
+.td-noticed-val{font:500 9px/1 'JetBrains Mono',monospace;flex:0 0 auto;opacity:0.6}
+.td-portal-arrow{font:400 11px/1 'Inter',sans-serif;color:#5b9eff;opacity:0.2;flex-shrink:0;transition:opacity 200ms ease}
+.td-noticed-row:hover .td-portal-arrow,.td-item:hover .td-portal-arrow{opacity:0.7}
+.td-empty-today{font:400 10px/1.8 'JetBrains Mono',monospace;letter-spacing:.08em;color:#242b35;padding:20px 12px;text-align:center;text-transform:uppercase}
+.td-row{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;margin-bottom:3px;transition:background 180ms ease}
+.td-row:last-child{margin-bottom:0}
+.td-row.cl{cursor:pointer}.td-row.cl:hover{background:rgba(255,255,255,0.04)}
+.td-row-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.td-row-body{flex:1;min-width:0}
+.td-row-title{font:400 13px/1.35 'Inter',sans-serif;color:rgba(215,226,240,0.88);letter-spacing:-0.012em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-row-meta{font:400 8.5px/1 'JetBrains Mono',monospace;letter-spacing:.07em;color:#2e3a4a;margin-top:3px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-row-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.td-row-val{font:500 9px/1 'JetBrains Mono',monospace;color:rgba(255,255,255,0.2)}
+.td-badge{font:600 7px/1 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;border-radius:4px;padding:3px 7px;border:1px solid;white-space:nowrap}
+.td-badge-overdue{color:rgba(248,113,113,0.65);border-color:rgba(248,113,113,0.18);background:rgba(248,113,113,0.05)}
+.td-badge-today{color:rgba(56,189,248,0.7);border-color:rgba(56,189,248,0.2);background:rgba(56,189,248,0.06)}
+.td-badge-soon{color:rgba(167,139,250,0.6);border-color:rgba(167,139,250,0.16);background:rgba(167,139,250,0.04)}
+.td-badge-progress{color:rgba(52,211,153,0.65);border-color:rgba(52,211,153,0.18);background:rgba(52,211,153,0.05)}
+#today-section-needs .actn-card-btn{flex:0 0 auto!important;padding:4px 13px!important;min-height:26px!important;height:26px!important;font:600 8.5px/1 'JetBrains Mono',monospace!important;letter-spacing:.09em!important;border-radius:5px!important}
+#today-section-needs .actn-card-btn.approve{background:rgba(56,189,248,0.06)!important;border-color:rgba(56,189,248,0.18)!important;color:rgba(56,189,248,0.65)!important}
+#today-section-needs .actn-card-btn.reject{background:rgba(248,113,113,0.05)!important;border-color:rgba(248,113,113,0.14)!important;color:rgba(248,113,113,0.5)!important}
 @media(max-width:640px){
-  .td-greeting{padding:16px 16px 14px}
-  .td-greeting-day{font-size:19px}
-  .td-greeting-line{font-size:9px}
-  .td-section{padding:0 16px 18px}
-  .td-legacy-sep{padding:4px 16px 16px}
+  #today-surface{padding:20px 16px 32px;gap:16px}
+  .td-hero-date{font-size:22px}
+  .td-hero-pct{font-size:36px}
+  #cal-rail { display: none !important; }
+  .td-grid{grid-template-columns:1fr}
 }
 /* ── Apex Orchestration Visualizer ─────────────────────────────── */
 @keyframes apex-node-flash{0%,100%{opacity:1;transform:scale(1)}40%{opacity:.45;transform:scale(0.97)}65%{opacity:1;transform:scale(1.02)}}
@@ -10610,30 +10900,54 @@ if(pipe){
 .aaf-empty{font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:.05em;color:#3f3f46}
 .aaf-run-badge{font:700 7px/1 'JetBrains Mono',monospace;letter-spacing:.04em;pointer-events:none}
                 </style>
-                <!-- ── TODAY: D1 human-first surface ── -->
+                <!-- ── TODAY: Command Briefing ── -->
                 <div id="today-surface">
-                    <div class="td-greeting">
-                        <div class="td-greeting-day" id="ovr-greeting"></div>
-                        <div class="td-greeting-line">What matters now</div>
+                    <div class="td-hero">
+                        <div class="td-hero-left">
+                            <div class="td-hero-date" id="ovr-greeting"></div>
+                            <div class="td-hero-sub">Apex Intelligence &middot; Command Briefing</div>
+                        </div>
+                        <div class="td-hero-right">
+                            <div class="td-hero-pct" id="td-day-pct-label">—</div>
+                            <div class="td-hero-pct-lbl">day elapsed</div>
+                        </div>
+                    </div>
+                    <div class="td-bar-wrap">
+                        <div class="td-bar-fill" id="td-day-bar" style="width:0%"></div>
                     </div>
                     <div id="today-time-context"></div>
-                    <div class="td-section" id="today-section-priorities">
-                        <div class="td-section-hdr"><span class="td-section-label">Important Today</span></div>
-                        <div id="today-priorities-panel"></div>
-                    </div>
-                    <div class="td-section" id="today-section-needs">
-                        <div class="td-section-hdr"><span class="td-section-label">Needs You</span></div>
-                        <div id="today-needs-panel"></div>
-                        <!-- V-11-H H-15: TODAY ACTIONS integration. Pending approvals section, hidden until populated. -->
-                        <div id="today-actions-pending" data-apex-state="empty" style="margin-top:12px"></div>
-                    </div>
-                    <div class="td-section" id="today-section-noticed">
-                        <div class="td-section-hdr"><span class="td-section-label">APEX Noticed</span></div>
-                        <div id="today-noticed-panel"></div>
-                    </div>
-                    <div class="td-section" id="today-section-schedule">
-                        <div class="td-section-hdr"><span class="td-section-label">Today</span></div>
-                        <div id="today-active-panel"></div>
+                    <div class="td-grid">
+                        <div class="td-grid-left">
+                            <div class="td-card td-card-purple" id="today-section-priorities">
+                                <div class="td-card-hdr">
+                                    <div class="td-card-hdr-dot"></div>
+                                    <span class="td-card-label">Important Today</span>
+                                    <span class="td-card-count" id="td-priorities-count"></span>
+                                </div>
+                                <div class="td-card-body" id="today-priorities-panel"></div>
+                            </div>
+                            <div class="td-card td-card-cyan" id="today-section-needs">
+                                <div class="td-card-hdr" onclick="switchPage('actions')" style="cursor:pointer" title="Open Gate — Approval Queue">
+                                    <div class="td-card-hdr-dot"></div>
+                                    <span class="td-card-label">Needs You</span>
+                                    <span class="td-card-count" id="td-needs-count"></span>
+                                    <span style="margin-left:auto;font:500 10px/1 'JetBrains Mono',monospace;color:rgba(34,211,238,0.4);letter-spacing:.05em">Gate ›</span>
+                                </div>
+                                <div class="td-card-body">
+                                    <div id="today-needs-panel"></div>
+                                    <div id="today-actions-pending" data-apex-state="empty" style="margin-top:6px"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="td-grid-right">
+                            <div class="td-card td-card-teal" id="today-section-noticed">
+                                <div class="td-card-hdr">
+                                    <div class="td-card-hdr-dot"></div>
+                                    <span class="td-card-label">APEX Noticed</span>
+                                </div>
+                                <div class="td-card-body" id="today-noticed-panel"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div id="ovr-pipeline" style="display:none"></div>
@@ -11800,134 +12114,130 @@ if(pipe){
 
             <!-- ══ PAGE: ACTIONS (V-11-H canonical surface) ══ -->
             <div class="page" id="page-actions">
-                <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
-                    <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
-                </div>
-                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                <div class="gate-cmd-bar">
                     <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">ACTIONS</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">DECISIONS · IN-FLIGHT · HISTORY · NOTIFICATIONS</div>
+                        <div class="ds-page-title" style="letter-spacing:7px">GATE</div>
+                        <div style="font:500 10px/1 'JetBrains Mono',monospace;letter-spacing:2.5px;color:#8893a0;margin-top:10px">APPROVAL QUEUE</div>
                     </div>
-                    <button class="ds-btn cyan" data-fn="actionsRefresh" aria-label="Refresh actions">↻ Refresh</button>
+                    <div class="gate-stat-row" id="gateStatRow">
+                        <div class="gate-stat" id="gateStatCrit"><div class="gate-stat-dot" style="background:#ff4444"></div><span class="gate-stat-num" id="gateCtCrit">—</span><span class="gate-stat-label">CRITICAL</span></div>
+                        <div class="gate-stat" id="gateStatUrg"><div class="gate-stat-dot" style="background:#ff9500"></div><span class="gate-stat-num" id="gateCtUrg">—</span><span class="gate-stat-label">URGENT</span></div>
+                        <div class="gate-stat" id="gateStatImp"><div class="gate-stat-dot" style="background:#7c6cf2"></div><span class="gate-stat-num" id="gateCtImp">—</span><span class="gate-stat-label">IMPORTANT</span></div>
+                        <div class="gate-stat" id="gateStatStd"><div class="gate-stat-dot" style="background:#4a5568"></div><span class="gate-stat-num" id="gateCtStd">—</span><span class="gate-stat-label">STANDARD</span></div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <button class="ds-btn xs" id="actnBatchToggleBtn" data-fn="actnToggleBatch">Batch</button>
+                        <button class="ds-btn xs" data-fn="actnToggleRules" aria-label="Standing rules">Rules</button>
+                        <button class="ds-btn cyan xs" data-fn="actionsRefresh" aria-label="Refresh">↻</button>
+                    </div>
                 </div>
-                <!-- V-11-H stub — shown to non-Master users until backend gate H-B1 lands. -->
+                <!-- Stub (non-master users) -->
                 <div id="actnStubPanel" class="apex-user-only actn-stub" style="display:none">
                     APEX is preparing your Actions view — available once your account is fully activated.
                 </div>
+                <!-- Master surface -->
                 <div id="actnMasterSurface">
-                    <div class="actn-panels" style="display:flex;flex-direction:column;gap:16px;margin-top:18px">
-                        <!-- H-2: Pending approvals -->
-                        <section role="region" aria-label="Pending Approvals" class="ds-panel" id="actnPendingPanel" data-apex-state="loading">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot amber pulse"></span>
-                                    <span class="t-label">Pending Approvals</span>
-                                </div>
-                                <span id="actnPendingCount" style="font-size:10px;color:#8893a0">—</span>
+                    <!-- Gate sub-tabs -->
+                    <nav class="gate-tab-nav" id="gateTabNav" role="tablist">
+                        <button class="gate-tab-btn active" data-gate-tab="queue" role="tab" aria-selected="true">QUEUE<span class="gate-tab-badge" id="gateQueueBadge" style="display:none"></span></button>
+                        <button class="gate-tab-btn" data-gate-tab="active" role="tab" aria-selected="false">ACTIVE<span class="gate-tab-badge" id="gateActiveBadge" style="display:none"></span></button>
+                        <button class="gate-tab-btn" data-gate-tab="log" role="tab" aria-selected="false">LOG</button>
+                        <button class="gate-tab-btn" data-gate-tab="system" role="tab" aria-selected="false">SYSTEM</button>
+                    </nav>
+                    <!-- QUEUE: pending approvals -->
+                    <div class="gate-tab-pane active" id="gateTabQueue" role="tabpanel">
+                        <div class="gate-filter-bar">
+                            <div class="actn-filter-pills" id="actnFilterPills">
+                                <button class="actn-filter-pill active" data-actn-filter="all">All<span class="actn-pill-ct" id="actnPillAll"></span></button>
+                                <button class="actn-filter-pill" data-actn-filter="0">Critical<span class="actn-pill-ct" id="actnPillCrit"></span></button>
+                                <button class="actn-filter-pill" data-actn-filter="1">Urgent<span class="actn-pill-ct" id="actnPillUrg"></span></button>
+                                <button class="actn-filter-pill" data-actn-filter="2">Important<span class="actn-pill-ct" id="actnPillImp"></span></button>
+                                <button class="actn-filter-pill" data-actn-filter="3">Standard<span class="actn-pill-ct" id="actnPillStd"></span></button>
                             </div>
-                            <div id="actnPendingList" style="display:flex;flex-direction:column;gap:8px;padding:10px;max-height:480px;overflow-y:auto" aria-busy="true"></div>
+                            <select id="actnSortSel" class="actn-sort-sel" aria-label="Sort approvals">
+                                <option value="priority">↑ Priority</option>
+                                <option value="newest">Newest</option>
+                                <option value="oldest">Oldest</option>
+                            </select>
+                        </div>
+                        <div id="actnBatchBar" class="gate-batch-bar" style="display:none">
+                            <span id="actnBatchSelCount" class="gate-batch-ct">0 selected</span>
+                            <button class="actn-card-btn approve" data-fn="actnBatchApprove">Approve All</button>
+                            <button class="actn-card-btn reject" data-fn="actnBatchReject">Reject All</button>
+                            <button class="ds-btn xs" data-fn="actnCancelBatch" style="color:rgba(232,244,255,0.5)">Cancel</button>
+                        </div>
+                        <section role="region" aria-label="Pending Approvals" id="actnPendingPanel" data-apex-state="loading">
+                            <span id="actnPendingCount" style="display:none" aria-live="polite"></span>
+                            <div id="actnPendingList" class="gate-queue" aria-busy="true"></div>
                         </section>
-                        <!-- H-12: In-flight tasks -->
-                        <section role="region" aria-label="In-flight tasks" class="ds-panel" id="actnInFlightPanel" data-apex-state="loading">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="actn-status-dot"></span>
-                                    <span class="t-label">What APEX Is Doing</span>
-                                </div>
-                                <span id="actnInFlightCount" style="font-size:10px;color:#8893a0">—</span>
+                    </div>
+                    <!-- ACTIVE: in-flight tasks -->
+                    <div class="gate-tab-pane" id="gateTabActive" role="tabpanel">
+                        <section class="gate-rail-panel" role="region" aria-label="In-flight tasks" id="actnInFlightPanel" data-apex-state="loading">
+                            <div class="gate-rail-hdr">
+                                <span class="gate-rail-hdr-left"><span class="actn-status-dot" aria-hidden="true"></span>IN FLIGHT</span>
+                                <span id="actnInFlightCount" class="gate-rail-ct">—</span>
                             </div>
-                            <div id="actnInFlightList" style="display:flex;flex-direction:column;gap:8px;padding:10px" aria-busy="true"></div>
+                            <div id="actnInFlightList" class="gate-rail-list" aria-busy="true"></div>
                         </section>
-                        <!-- Recent Actions -->
-                        <section role="region" aria-label="Recent Actions" class="ds-panel" id="actnRecentPanel" data-apex-state="loading">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot cyan"></span>
-                                    <span class="t-label">Recent Actions</span>
-                                </div>
+                    </div>
+                    <!-- LOG: recent + notifications -->
+                    <div class="gate-tab-pane" id="gateTabLog" role="tabpanel">
+                        <section class="gate-rail-panel" role="region" aria-label="Recent Actions" id="actnRecentPanel" data-apex-state="loading">
+                            <div class="gate-rail-hdr">
+                                <span class="gate-rail-hdr-left">RECENT ACTIONS</span>
+                                <span class="gate-rail-ct">completed</span>
                             </div>
-                            <div id="actnRecentList" style="display:flex;flex-direction:column;gap:6px;padding:10px;max-height:280px;overflow-y:auto" aria-busy="true"></div>
+                            <div id="actnRecentList" class="gate-rail-list" aria-busy="true"></div>
                         </section>
-                        <!-- H-10: Notifications -->
-                        <section role="region" aria-label="Notifications" class="ds-panel" id="actnNotifPanel" data-apex-state="loading">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot amber"></span>
-                                    <span class="t-label">Notifications</span>
-                                </div>
-                                <span id="actnNotifCount" style="font-size:10px;color:#8893a0">—</span>
+                        <section class="gate-rail-panel" role="region" aria-label="Notifications" id="actnNotifPanel" data-apex-state="loading">
+                            <div class="gate-rail-hdr">
+                                <span class="gate-rail-hdr-left">ALERTS</span>
+                                <span id="actnNotifCount" class="gate-rail-ct">—</span>
                             </div>
-                            <div id="actnNotifList" style="display:flex;flex-direction:column;gap:6px;padding:10px;max-height:280px;overflow-y:auto" aria-busy="true"></div>
+                            <div id="actnNotifList" class="gate-rail-list" aria-busy="true"></div>
                         </section>
-                        <!-- Agent runs (mini log) -->
+                    </div>
+                    <!-- SYSTEM: agent runs + standing + features + self-check + live feed + capabilities -->
+                    <div class="gate-tab-pane" id="gateTabSystem" role="tabpanel" style="display:flex;flex-direction:column;gap:12px;padding-top:16px">
                         <section role="region" aria-label="Agent Runs" class="ds-panel" id="actnRunsPanel" data-apex-state="loading">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot cyan"></span>
-                                    <span class="t-label">Recent Agent Runs</span>
-                                </div>
-                                <span style="font-size:10px;color:#8893a0">Pipeline execution audit</span>
-                            </div>
+                            <div class="ds-panel-header"><div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Recent Agent Runs</span></div><span style="font-size:10px;color:#8893a0">Pipeline execution audit</span></div>
                             <div id="actnRunsList" style="display:flex;flex-direction:column;gap:6px;padding:10px;max-height:280px;overflow-y:auto" aria-busy="true"></div>
                         </section>
-                        <!-- H-11: Standing approvals -->
                         <section role="region" aria-label="Standing Approvals" class="ds-panel apex-master-only" id="actnStandingPanel" data-apex-state="loading">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot amber"></span>
-                                    <span class="t-label">Standing Approvals</span>
-                                </div>
-                            </div>
+                            <div class="ds-panel-header"><div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">Standing Approvals</span></div></div>
                             <div id="actnStandingList" style="display:flex;flex-direction:column;gap:6px;padding:10px" aria-busy="true"></div>
                         </section>
-                        <!-- H-11: Master feature-approvals -->
                         <section role="region" aria-label="Feature Approvals" class="ds-panel apex-master-only" id="actnPermPanel" data-apex-state="loading">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot amber"></span>
-                                    <span class="t-label">Feature Approvals</span>
-                                </div>
-                            </div>
+                            <div class="ds-panel-header"><div class="ds-panel-header-left"><span class="ds-dot amber"></span><span class="t-label">Feature Approvals</span></div></div>
                             <div id="actnPermList" style="display:flex;flex-direction:column;gap:8px;padding:10px" aria-busy="true"></div>
                         </section>
-                        <!-- Self-check (Master only) -->
                         <section role="region" aria-label="System Self-Check" class="ds-panel apex-master-only" id="actnSelfCheckPanel" data-apex-state="loading">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot cyan"></span>
-                                    <span class="t-label">System Self-Check</span>
-                                </div>
-                            </div>
+                            <div class="ds-panel-header"><div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">System Self-Check</span></div></div>
                             <div id="actnSelfCheckList" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px" aria-busy="true"></div>
                         </section>
-                        <!-- Live feed (view-only, migrated from activity) -->
                         <section role="region" aria-label="Live Feed" class="ds-panel apex-master-only" id="actnLiveFeedPanel" data-apex-state="loading">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot green"></span>
-                                    <span class="t-label">Live Feed</span>
-                                </div>
-                                <span id="actnLiveFeedCount" style="font-size:10px;color:#8893a0">—</span>
-                            </div>
+                            <div class="ds-panel-header"><div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">Live Feed</span></div><span id="actnLiveFeedCount" style="font-size:10px;color:#8893a0">—</span></div>
                             <div id="actnLiveFeedList" style="display:flex;flex-direction:column;gap:6px;padding:10px;max-height:240px;overflow-y:auto" aria-busy="true"></div>
                         </section>
-                        <!-- Agent capabilities (Master only) -->
                         <section role="region" aria-label="Agent Capabilities" class="ds-panel apex-master-only" id="actnCapPanel" data-apex-state="loading">
-                            <div class="ds-panel-header">
-                                <div class="ds-panel-header-left">
-                                    <span class="ds-dot cyan"></span>
-                                    <span class="t-label">Agent Capabilities</span>
-                                </div>
-                            </div>
+                            <div class="ds-panel-header"><div class="ds-panel-header-left"><span class="ds-dot cyan"></span><span class="t-label">Agent Capabilities</span></div></div>
                             <div id="actnCapList" style="display:flex;flex-direction:column;gap:6px;padding:10px" aria-busy="true"></div>
                         </section>
                     </div>
-                    <!-- Plain-language lifecycle note (V-11-H H-9). -->
-                    <div style="padding:10px 12px;margin-top:16px;background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.1);border-radius:8px;font-size:10px;color:#8893a0;line-height:1.5">
-                        Every action APEX takes waits for your approval, unless a standing rule allows it, and every action can be inspected after it runs.
+                    <!-- Standing rules slide-in (outside tabs, always mounted) -->
+                    <div id="actnRulesPanel" class="actn-rules-panel" role="complementary" aria-label="Standing rules">
+                        <div class="actn-rules-inner">
+                            <div class="actn-rules-hdr">
+                                <span>Standing Rules</span>
+                                <button data-fn="actnToggleRules" aria-label="Close">✕</button>
+                            </div>
+                            <div style="font:400 11px/1.5 Inter,sans-serif;color:rgba(232,244,255,0.38);margin-bottom:16px">Auto-approve patterns bypass manual review</div>
+                            <div id="actnRulesListPanel"></div>
+                        </div>
                     </div>
-                </div>
+                    <div id="actnRulesBackdrop" class="actn-rules-backdrop" style="display:none" data-fn="actnToggleRules" aria-hidden="true"></div>
+                </div><!-- /actnMasterSurface -->
 
             </div><!-- #page-actions -->
 
@@ -12313,6 +12623,22 @@ if(pipe){
         </div>
 
     </div><!-- .page-and-input -->
+
+    <!-- ══ RIGHT CALENDAR RAIL ══ -->
+    <div id="cal-rail">
+        <div id="cal-rail-hdr">
+            <div>
+                <div id="cal-rail-title">Schedule</div>
+                <span id="cal-rail-subtitle"></span>
+            </div>
+            <div class="cr-zoom-ctrl">
+                <button class="cr-zoom-btn" id="cal-zoom-out" onclick="window._crZoomOut()" aria-label="Zoom out">−</button>
+                <span id="cal-zoom-label">14 DAY</span>
+                <button class="cr-zoom-btn" id="cal-zoom-in" onclick="window._crZoomIn()" aria-label="Zoom in">+</button>
+            </div>
+        </div>
+        <div id="cal-rail-body"><div class="cr-empty">Loading…</div></div>
+    </div>
 
 </div><!-- .app -->
 
@@ -16707,9 +17033,6 @@ function toggleHelpOverlay() {
             else { refreshMetrics(); refreshRecentRuns(); }
             return;
         }
-        if (e.key === 'R' && e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (confirm('Run next pipeline feature?')) masterRunNext(); return; }
-        if (e.key === 'a' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('actions'); return; } // V-11-H H-14: reverted to canonical ACTIONS destination.
-        if (e.key === 'n' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); switchPage('system'); return; }
         if (e.key === '/' && !e.shiftKey) { e.preventDefault(); var ci = document.getElementById('chatInput'); if (ci) ci.focus(); return; }
     });
 })();
@@ -17340,6 +17663,9 @@ async function initOverviewPage() {
     if (greetEl) greetEl.textContent =
         (h<12?'Good morning':h<18?'Good afternoon':'Good evening')
         +' · '+new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+    var _now = new Date(), _dayMins = _now.getHours()*60+_now.getMinutes(), _dayPct = Math.round(_dayMins/14.4);
+    var _barEl = document.getElementById('td-day-bar'); if (_barEl) setTimeout(function(){ _barEl.style.width = _dayPct+'%'; }, 80);
+    var _pctEl = document.getElementById('td-day-pct-label'); if (_pctEl) _pctEl.textContent = _dayPct+'%';
 
     var pageEl = document.getElementById('page-overview');
     if (!pageEl || !pageEl.classList.contains('active')) return;
@@ -17353,14 +17679,16 @@ async function initOverviewPage() {
     if (activeEl  && activeEl.getAttribute('data-apex-state')  !== 'ready') window.setState(activeEl,  'loading');
 
     var results = await Promise.allSettled([
-        fetch('/api/briefing/priority-inbox',{credentials:'same-origin'}).then(function(r){return r.json();}),
-        fetch('/api/briefing/today',          {credentials:'same-origin'}).then(function(r){return r.json();}),
-        fetch('/api/tasks',                   {credentials:'same-origin'}).then(function(r){return r.json();})
+        fetch('/api/briefing/priority-inbox',  {credentials:'same-origin'}).then(function(r){return r.json();}),
+        fetch('/api/briefing/today',           {credentials:'same-origin'}).then(function(r){return r.json();}),
+        fetch('/api/tasks',                    {credentials:'same-origin'}).then(function(r){return r.json();}),
+        fetch('/api/briefing/calendar-week',   {credentials:'same-origin'}).then(function(r){return r.json();})
     ]);
 
-    var inboxJ = results[0].status==='fulfilled' ? results[0].value : null;
-    var briefJ = results[1].status==='fulfilled' ? results[1].value : null;
-    var tasksJ = results[2].status==='fulfilled' ? results[2].value : null;
+    var inboxJ   = results[0].status==='fulfilled' ? results[0].value : null;
+    var briefJ   = results[1].status==='fulfilled' ? results[1].value : null;
+    var tasksJ   = results[2].status==='fulfilled' ? results[2].value : null;
+    var calWeekJ = results[3].status==='fulfilled' ? results[3].value : null;
     var inbox  = inboxJ&&inboxJ.ok  ? inboxJ.inbox    : null;
     var brief  = briefJ&&briefJ.ok  ? briefJ.briefing : null;
     var _allTasks = (tasksJ && Array.isArray(tasksJ.tasks||tasksJ)) ? (tasksJ.tasks||tasksJ) : [];
@@ -17372,17 +17700,20 @@ async function initOverviewPage() {
         if (!_todayTasks.length) {
             prEl.innerHTML = '<div class="td-empty-today">No pending tasks — you\'re clear for now.</div>';
         } else {
-            var _prHtml = '<div class="td-noticed-card">';
+            var _prHtml = '';
             _todayTasks.forEach(function(t) {
-                var dot = t.status==='in_progress' ? '#3fd29a' : 'rgba(255,255,255,0.2)';
-                var badge = t.status==='in_progress' ? '<span style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:0.5px;color:#3fd29a;flex-shrink:0">IN PROGRESS</span>' : '';
-                _prHtml += '<div class="td-noticed-row">'
-                    +'<span style="width:5px;height:5px;border-radius:50%;flex:0 0 5px;background:'+dot+'"></span>'
-                    +'<span class="td-noticed-lbl">'+_tdEsc(t.title||'Task')+'</span>'
-                    +badge
+                var inProg = t.status === 'in_progress';
+                var dotCol = inProg ? 'rgba(52,211,153,0.7)' : 'rgba(129,140,248,0.35)';
+                var badge  = inProg ? '<span class="td-badge td-badge-progress">IN PROGRESS</span>' : '';
+                _prHtml += '<div class="td-row">'
+                    +'<span class="td-row-dot" style="background:'+dotCol+'"></span>'
+                    +'<div class="td-row-body">'
+                    +'<div class="td-row-title">'+_tdEsc(t.title||'Task')+'</div>'
+                    +'<div class="td-row-meta">'+_tdEsc(t.status||'pending')+'</div>'
+                    +'</div>'
+                    +'<div class="td-row-right">'+badge+'</div>'
                     +'</div>';
             });
-            _prHtml += '</div>';
             prEl.innerHTML = _prHtml;
         }
     }
@@ -17424,60 +17755,192 @@ async function initOverviewPage() {
             if (rows.length===0) {
                 window.setState(noticedEl,'empty',{message:'Nothing notable right now.'});
             } else {
-                var noticeHtml = '<div class="td-noticed-card">'
-                    +rows.map(function(r){
-                        var oc = r.dest?' onclick="switchPage(\''+_tdEsc(r.dest)+'\')" role="button" tabindex="0"':'';
-                        return '<div class="td-noticed-row"'+oc+'>'
-                            +'<span class="td-noticed-lbl">'+_tdEsc(r.lbl)+'</span>'
-                            +'<span style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
-                            +'<span class="td-noticed-val" style="color:'+r.color+'">'+_tdEsc(r.val)+'</span>'
-                            +(r.dest?'<span class="td-portal-arrow" aria-hidden="true">&#8594;</span>':'')
-                            +'</span></div>';
-                    }).join('')
-                    +'</div>';
+                var noticeHtml = rows.map(function(r){
+                    var cl = r.dest ? ' cl' : '';
+                    var oc = r.dest ? ' onclick="switchPage(\''+_tdEsc(r.dest)+'\')"' : '';
+                    return '<div class="td-row'+cl+'"'+oc+'>'
+                        +'<span class="td-row-dot" style="background:'+r.color+';opacity:0.6;box-shadow:0 0 5px '+r.color+'40"></span>'
+                        +'<div class="td-row-body"><div class="td-row-title">'+_tdEsc(r.lbl)+'</div></div>'
+                        +'<div class="td-row-right">'
+                        +'<span style="font:500 11px/1 \'JetBrains Mono\',monospace;color:'+r.color+';opacity:0.85">'+_tdEsc(r.val)+'</span>'
+                        +(r.dest?'<span style="font:400 11px/1 Inter,sans-serif;color:rgba(56,189,248,0.25)">›</span>':'')
+                        +'</div></div>';
+                }).join('');
                 window.setState(noticedEl,'ready',{html:noticeHtml});
             }
         }
     }
 
-    // ── C. TODAY'S SCHEDULE ──
-    if (activeEl) {
-        if (!briefJ) {
-            window.setState(activeEl,'failed',{message:"APEX couldn't load today's schedule.",retryFn:'initOverviewPage'});
-        } else if (!brief) {
-            window.setState(activeEl,'failed',{message:"APEX couldn't load today's schedule.",retryFn:'initOverviewPage'});
-        } else {
-            var cal     = brief.calendar && brief.calendar.events || [];
-            var assigns = brief.assignments || [];
-            if (cal.length===0 && assigns.length===0) {
-                window.setState(activeEl,'empty',{message:'Nothing scheduled today.'});
-            } else {
-                var _sNow = (function(){var n=new Date();return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');})();
-                var schedHtml = '<div class="td-noticed-card">';
-                cal.filter(function(ev){return !ev.start_time||ev.start_time.slice(0,5)>=_sNow;}).slice(0,5).forEach(function(ev){
-                    var t = ev.start_time ? ev.start_time.slice(0,5) : '';
-                    schedHtml += '<div class="td-noticed-row" onclick="switchPage(\'communication\')" role="button" tabindex="0">'
-                        +'<span class="td-noticed-lbl">'+_tdEsc(ev.title)+(ev.location?' · '+_tdEsc(ev.location):'')+'</span>'
-                        +'<span style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
-                        +(t?'<span class="td-noticed-val" style="color:#5b9eff">'+t+'</span>':'')
-                        +'<span class="td-portal-arrow" aria-hidden="true">&#8594;</span>'
-                        +'</span></div>';
-                });
-                assigns.slice(0,3).forEach(function(a){
-                    schedHtml += '<div class="td-noticed-row">'
-                        +'<span class="td-noticed-lbl">Due: '+_tdEsc(a.title||'Assignment')+'</span>'
-                        +(a.due_date?'<span class="td-noticed-val" style="color:#efb45a;flex-shrink:0">'+a.due_date.slice(0,10)+'</span>':'')
-                        +'</div>';
-                });
-                schedHtml += '</div>';
-                window.setState(activeEl,'ready',{html:schedHtml});
-            }
-        }
-    }
+    // ── C. 14-DAY CALENDAR → cal-rail ──
+    window._renderCalRail(calWeekJ);
 
     // ── V-11-H H-15: TODAY ACTIONS integration ──
     if (typeof window._v11hLoadTodayActions === 'function') window._v11hLoadTodayActions();
 }
+
+// ── Right Calendar Rail — zoom-aware renderer ──
+var _crZoom = 1; // 0=months-overview  1=calendar+24h(default)  2=today-only
+var _crData = null;
+var _crZoomLabels = ['MONTHS', 'CALENDAR', 'TODAY'];
+
+function _crEsc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function _crBuildMap(evts) {
+    var m = {};
+    (evts||[]).forEach(function(ev) {
+        var d = (ev.event_date||'').slice(0,10);
+        if (!d) return;
+        if (!m[d]) m[d] = [];
+        m[d].push(ev);
+    });
+    return m;
+}
+
+window._renderCalRail = function(d) {
+    _crData = d;
+    var sub = document.getElementById('cal-rail-subtitle');
+    if (sub) sub.textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
+    _crDraw(false);
+};
+
+window._crZoomIn = function() { if (_crZoom >= 2) return; _crZoom++; _crDraw('in'); };
+window._crZoomOut = function() { if (_crZoom <= 0) return; _crZoom--; _crDraw('out'); };
+
+function _crDraw(dir) {
+    var rail = document.getElementById('cal-rail-body');
+    if (!rail) return;
+    var lbl = document.getElementById('cal-zoom-label');
+    if (lbl) lbl.textContent = _crZoomLabels[_crZoom];
+    var btnOut = document.getElementById('cal-zoom-out');
+    var btnIn  = document.getElementById('cal-zoom-in');
+    if (btnOut) btnOut.style.opacity = _crZoom === 0 ? '0.22' : '1';
+    if (btnIn)  btnIn.style.opacity  = _crZoom === 2 ? '0.22' : '1';
+    if (!dir) { _crFill(rail); return; }
+    var scaleFrom = dir === 'in' ? 'scale(0.95)' : 'scale(1.05)';
+    rail.style.cssText = 'opacity:0;transform:'+scaleFrom+';transition:none;flex:1;overflow-y:scroll;padding:6px 0 32px;scrollbar-width:thin;scrollbar-color:rgba(99,102,241,0.18) transparent;scroll-snap-type:y mandatory';
+    setTimeout(function() {
+        _crFill(rail);
+        rail.style.cssText = 'opacity:1;transform:scale(1);transition:opacity .22s ease,transform .22s ease;flex:1;overflow-y:scroll;padding:6px 0 32px;scrollbar-width:thin;scrollbar-color:rgba(99,102,241,0.18) transparent;scroll-snap-type:y mandatory';
+    }, 55);
+}
+
+function _crFill(rail) {
+    var evts = _crData && _crData.ok ? (_crData.events||[]) : [];
+    var map = _crBuildMap(evts);
+    var renders = [_crMonthsOverview, _crCalendar, _crTodayHours];
+    rail.innerHTML = renders[_crZoom](map);
+}
+
+// ── Level 0: 12-month compact overview ──
+function _crMonthsOverview(map) {
+    var today = new Date(); var html = '';
+    for (var m = 0; m < 12; m++) {
+        var mDate = new Date(today.getFullYear(), today.getMonth() + m, 1);
+        var moKey = mDate.toISOString().slice(0,7);
+        var moLabel = mDate.toLocaleDateString('en-GB', { month:'long', year:'numeric' });
+        var moEvts = [];
+        Object.keys(map).forEach(function(d) { if (d.slice(0,7)===moKey) moEvts = moEvts.concat(map[d]); });
+        html += '<div class="cr-mo-block"><div class="cr-mo-hdr">'+_crEsc(moLabel)+'</div><div class="cr-mo-divider"></div>';
+        if (moEvts.length) {
+            moEvts.forEach(function(ev) {
+                html += '<div class="cr-mo-event"><span class="cr-mo-day">'+(ev.event_date||'').slice(8,10)+'</span><span class="cr-mo-title">'+_crEsc(ev.title||'Event')+'</span></div>';
+            });
+        } else { html += '<div class="cr-day-empty">No events</div>'; }
+        html += '</div>';
+    }
+    return html;
+}
+
+// ── Level 1 (default): All months → days → 24h continuous scroll ──
+function _crCalendar(map) {
+    var today = new Date();
+    var todayStr = today.toISOString().split('T')[0];
+    var nowH = today.getHours() + today.getMinutes()/60;
+    var html = '';
+    for (var m = 0; m < 12; m++) {
+        var mDate = new Date(today.getFullYear(), today.getMonth() + m, 1);
+        var mEnd  = new Date(today.getFullYear(), today.getMonth() + m + 1, 0).getDate();
+        html += '<div class="cr-mo-block"><div class="cr-mo-hdr">'+mDate.toLocaleDateString('en-GB',{month:'long',year:'numeric'})+'</div><div class="cr-mo-divider"></div></div>';
+        var startDay = (m === 0) ? today.getDate() : 1;
+        for (var dd = startDay; dd <= mEnd; dd++) {
+            var dayDate = new Date(today.getFullYear(), today.getMonth() + m, dd);
+            var dStr = dayDate.toISOString().split('T')[0];
+            var isT = dStr === todayStr;
+            var dayName = isT ? 'Today' : dayDate.toLocaleDateString('en-GB',{weekday:'short'}).toUpperCase();
+            var dayEvts = map[dStr] || [];
+            // Build hour map
+            var hMap = {};
+            dayEvts.forEach(function(ev) {
+                if (!ev.start_time) return;
+                var h = parseInt(ev.start_time.slice(0,2),10);
+                hMap[h] = hMap[h]||[]; hMap[h].push(ev);
+            });
+            html += '<div class="cr-day-block'+(isT?' is-today':'')+'"><div class="cr-day-hdr"><div class="cr-day-meta">'
+                +'<div class="cr-day-name">'+dayName+'</div>'
+                +'<div class="cr-day-num">'+dd+'</div>'
+                +'<div class="cr-day-month">'+dayDate.toLocaleDateString('en-GB',{month:'short'}).toUpperCase()+'</div>'
+                +'</div></div><div class="cr-divider"></div>';
+            // 24 hour rows
+            for (var h = 0; h < 24; h++) {
+                var isPast = isT && h < nowH - 0.5;
+                var isNow  = isT && Math.abs(h - nowH) < 0.75;
+                var hEvts  = hMap[h] || [];
+                html += '<div class="cr-hr-row'+(isNow?' is-now':'')+(isPast?' is-past':'')+'"><span class="cr-hr-label">'+String(h).padStart(2,'0')+'</span><div class="cr-hr-line'+(isNow?' is-now':'')+'"></div>';
+                hEvts.forEach(function(ev) { html += '<span class="cr-hr-event">'+_crEsc(ev.title||'')+'</span>'; });
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+    }
+    return html;
+}
+
+// ── Level 2 (zoom in): Today only, full 24h detail ──
+function _crTodayHours(map) {
+    var today = new Date();
+    var todayStr = today.toISOString().split('T')[0];
+    var tomorrowDate = new Date(); tomorrowDate.setDate(today.getDate()+1);
+    var tmStr = tomorrowDate.toISOString().split('T')[0];
+    var nowH = today.getHours() + today.getMinutes()/60;
+    var hMap = {}; var allDay = [];
+    (map[todayStr]||[]).forEach(function(ev) {
+        if (!ev.start_time) { allDay.push(ev); return; }
+        var h = parseInt(ev.start_time.slice(0,2),10);
+        hMap[h] = hMap[h]||[]; hMap[h].push(ev);
+    });
+    var html = '<div class="cr-day-title">'+today.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).toUpperCase()+'</div>';
+    allDay.forEach(function(ev) { html += '<div class="cr-hr-allday">'+_crEsc(ev.title||'Event')+'</div>'; });
+    for (var h = 0; h < 24; h++) {
+        var isPast = h < nowH - 0.5;
+        var isNow  = Math.abs(h - nowH) < 0.75;
+        var hEvts  = hMap[h] || [];
+        html += '<div class="cr-hr-row'+(isNow?' is-now':'')+(isPast?' is-past':'')+'"><span class="cr-hr-label">'+String(h).padStart(2,'0')+':00</span><div class="cr-hr-line'+(isNow?' is-now':'')+'"></div>';
+        hEvts.forEach(function(ev) {
+            var t = ev.start_time ? ev.start_time.slice(0,5) : '';
+            html += '<div class="cr-hr-event" style="padding:4px 8px;font-size:10.5px">'+_crEsc(ev.title||'')+(ev.location?' <span style="opacity:.5">· '+_crEsc(ev.location)+'</span>':'')+'</div>';
+        });
+        html += '</div>';
+    }
+    // Tomorrow preview
+    var tmEvts = map[tmStr] || [];
+    if (tmEvts.length) {
+        html += '<div class="cr-day-title" style="margin-top:16px">'+tomorrowDate.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'}).toUpperCase()+'</div>';
+        tmEvts.forEach(function(ev) {
+            var t = ev.start_time?ev.start_time.slice(0,5):'—';
+            html += '<div class="cr-7-event"><span class="cr-7-time">'+t+'</span><span class="cr-7-title">'+_crEsc(ev.title||'Event')+'</span></div>';
+        });
+    }
+    return html;
+}
+
+// Bootstrap — fetch on load, independent of Today page
+(function() {
+    _crZoom = 1; // ensure default is 14-day regardless of hoisting
+    fetch('/api/briefing/calendar-week', { credentials:'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { window._renderCalRail(d); })
+        .catch(function() { window._renderCalRail(null); });
+})();
 
 // V-11-H H-15: Load pending approvals into TODAY.
 window._v11hLoadTodayActions = function() {
@@ -19409,7 +19872,7 @@ function loadBizRoster() {
                     + '<div style="width:36px;height:36px;border-radius:8px;background:rgba(236,127,163,0.15);display:flex;align-items:center;justify-content:center;font:700 13px/1 Inter,sans-serif;color:#ec7fa3;letter-spacing:0.05em">' + initials + '</div>'
                     + '<div style="flex:1"><div style="font:600 14px/1.3 Inter,sans-serif;color:#eaeff5;letter-spacing:0.03em">' + biz.name + '</div>'
                     + (biz.type ? '<div style="font:400 10px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.35);margin-top:5px;letter-spacing:0.08em;text-transform:uppercase">' + biz.type + '</div>' : '')
-                    + (biz.description ? '<div style="font:400 11px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.4);margin-top:7px">' + biz.description.slice(0,80) + (biz.description.length>80?'…':'') + '</div>' : '')
+                    + (biz.description ? '<div style="font:400 11px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.4);margin-top:7px">' + biz.description + (biz.description.length>80?'…':'') + '</div>' : '')
                     + '</div>'
                     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto">'
                     + '<span style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.2)">' + created + '</span>'
@@ -20020,7 +20483,7 @@ function fetchOccEntries() {
         if (!entries.length) { panel.innerHTML = '<div style="color:var(--text-faint);font-style:italic">No research entries yet.</div>'; return; }
         panel.innerHTML = entries.map(function(e){
             var dt = e.created_at ? new Date(e.created_at).toLocaleDateString() : '—';
-            var preview = (e.entry_text||'').slice(0,80) + ((e.entry_text||'').length>80?'…':'');
+            var preview = (e.entry_text||'') + ((e.entry_text||'').length>80?'…':'');
             return '<div style="padding:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px"><div style="font-size:10px;color:var(--text-mute);margin-bottom:3px">'+dt+'</div><div style="font-size:12px;color:var(--text-mid)">'+preview+'</div></div>';
         }).join('');
     }).catch(function(err){ // V-11-F F-2/F-5
@@ -21191,7 +21654,7 @@ function _updateTopbarAgents(){
         window.sendChatCommand=function(){
             var inp=document.getElementById('chatInput');
             var msg=inp?inp.value.trim():'';
-            if(msg)window.apexFeedPush('CHAT',msg.slice(0,80)+(msg.length>80?'…':''),'voice');
+            if(msg)window.apexFeedPush('CHAT',msg+(msg.length>80?'…':''),'voice');
             return _orig.apply(this,arguments);
         };
     }
@@ -22762,6 +23225,10 @@ window.apexFileDropHandler = function(e){
 
     var _actnPollTimer = null;
     var _actnRejectExpanded = {};  // taskId → true (reject textarea visible)
+    var _actnAllPending    = [];   // full unfiltered pending list
+    var _actnActiveFilter  = 'all'; // 'all' or tier number as string '0','1','2','3'
+    var _actnBatchMode     = false;
+    var _actnBatchSel      = new Set();
 
     // V-11-H helper: setState() targets the inner list (whose innerHTML is safe to replace),
     // and mirrors the state attribute onto the panel/section for the H-5 contract.
@@ -22806,14 +23273,14 @@ window.apexFileDropHandler = function(e){
     };
 
     // Smart-diff hash — skip re-render when the pending list hasn't changed.
-    var _actnLastPendingHash = '';
+    // null sentinel ensures first render always runs (empty string would match initial hash).
+    var _actnLastPendingHash = null;
 
     function _actnLoadPending() {
         var panel = document.getElementById('actnPendingPanel');
         var list  = document.getElementById('actnPendingList');
         var count = document.getElementById('actnPendingCount');
         if (!panel || !list) return;
-        // Show loading skeleton only on first load (no existing content).
         if (!list.children.length) _actnSetState(list, panel, 'loading');
         fetch('/api/tasks', { headers: _h() })
             .then(function(r) { return r.json(); })
@@ -22822,44 +23289,18 @@ window.apexFileDropHandler = function(e){
                 var pending = (Array.isArray(tasks) ? tasks : []).filter(function(t) {
                     return t.status === 'awaiting_approval' || t.status === 'pending_approval' || t.status === 'approval_required';
                 });
-                pending.sort(function(a, b) {
-                    var pa = window._apexActionPriority(a).tier;
-                    var pb = window._apexActionPriority(b).tier;
-                    if (pa !== pb) return pa - pb;
-                    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-                });
                 // Always update badge + count.
                 var badge = document.getElementById('navActionsBadge');
                 if (badge) { badge.textContent = pending.length || ''; badge.style.display = pending.length ? '' : 'none'; }
+                var qBadge = document.getElementById('gateQueueBadge');
+                if (qBadge) { qBadge.textContent = pending.length || ''; qBadge.style.display = pending.length ? '' : 'none'; }
                 if (count) count.textContent = pending.length ? pending.length + ' pending' : 'caught up';
                 // Smart diff — skip re-render if list is identical.
                 var newHash = pending.map(function(t) { return t.id + ':' + t.status; }).join('|');
                 if (newHash === _actnLastPendingHash && list.children.length > 0) return;
                 _actnLastPendingHash = newHash;
-                if (!pending.length) {
-                    _actnSetState(list, panel, 'empty', { message: 'No pending approvals — you\'re caught up.' });
-                    return;
-                }
-                // Top 5 visible, rest behind "Show more".
-                var MAX_SHOW = 5;
-                var visible = pending.slice(0, MAX_SHOW);
-                var hidden  = pending.slice(MAX_SHOW);
-                list.removeAttribute('aria-busy');
-                list.innerHTML = visible.map(_actnRenderPendingCard).join('');
-                if (hidden.length) {
-                    var btn = document.createElement('button');
-                    btn.className = 'actn-show-more-btn';
-                    btn.textContent = 'Show ' + hidden.length + ' more';
-                    btn.onclick = function() {
-                        hidden.forEach(function(t) {
-                            var tmp = document.createElement('div');
-                            tmp.innerHTML = _actnRenderPendingCard(t);
-                            list.insertBefore(tmp.firstChild, btn);
-                        });
-                        btn.remove();
-                    };
-                    list.appendChild(btn);
-                }
+                _actnAllPending = pending;
+                _actnRenderFiltered();
                 panel.setAttribute('data-apex-state', 'ready');
             })
             .catch(function() {
@@ -22868,49 +23309,163 @@ window.apexFileDropHandler = function(e){
     }
     window._actnLoadPending = _actnLoadPending;
 
+    // Update the command-bar stat counters.
+    function _actnUpdateStatsBar(counts) {
+        var cfg = [
+            { id: 'gateStatCrit', numId: 'gateCtCrit', key: '0', color: '#ff4444' },
+            { id: 'gateStatUrg',  numId: 'gateCtUrg',  key: '1', color: '#ff9500' },
+            { id: 'gateStatImp',  numId: 'gateCtImp',  key: '2', color: '#7c6cf2' },
+            { id: 'gateStatStd',  numId: 'gateCtStd',  key: '3', color: '#4a5568' }
+        ];
+        cfg.forEach(function(c) {
+            var el = document.getElementById(c.id);
+            var numEl = document.getElementById(c.numId);
+            var ct = counts[c.key] || 0;
+            if (numEl) numEl.textContent = ct;
+            if (el) {
+                if (ct > 0) {
+                    el.classList.add('live');
+                    el.style.borderColor = c.color.replace(')', ',0.35)').replace('rgb','rgba');
+                    var dot = el.querySelector('.gate-stat-dot');
+                    if (dot) { dot.style.boxShadow = '0 0 7px ' + c.color; dot.style.background = c.color; }
+                    if (numEl) numEl.style.color = c.color;
+                } else {
+                    el.classList.remove('live');
+                    el.style.borderColor = '';
+                    var dot2 = el.querySelector('.gate-stat-dot');
+                    if (dot2) { dot2.style.boxShadow = ''; }
+                    if (numEl) numEl.style.color = '';
+                }
+            }
+        });
+    }
+
+    function _actnRenderFiltered() {
+        var panel = document.getElementById('actnPendingPanel');
+        var list  = document.getElementById('actnPendingList');
+        if (!list) return;
+        var tasks = _actnAllPending.slice();
+        // Update pill counts + stats bar
+        var counts = { all: tasks.length, '0': 0, '1': 0, '2': 0, '3': 0 };
+        tasks.forEach(function(t) { var tier = String(window._apexActionPriority(t).tier); if (counts[tier] !== undefined) counts[tier]++; });
+        var pillMap = { all: 'actnPillAll', '0': 'actnPillCrit', '1': 'actnPillUrg', '2': 'actnPillImp', '3': 'actnPillStd' };
+        Object.keys(pillMap).forEach(function(k) { var el = document.getElementById(pillMap[k]); if (el) el.textContent = counts[k] ? ' ' + counts[k] : ''; });
+        _actnUpdateStatsBar(counts);
+        // Apply filter
+        if (_actnActiveFilter !== 'all') tasks = tasks.filter(function(t) { return String(window._apexActionPriority(t).tier) === _actnActiveFilter; });
+        // Apply sort
+        var sortSel = document.getElementById('actnSortSel');
+        var sort = sortSel ? sortSel.value : 'priority';
+        if (sort === 'newest') {
+            tasks.sort(function(a, b) { return new Date(b.created_at || 0) - new Date(a.created_at || 0); });
+        } else if (sort === 'oldest') {
+            tasks.sort(function(a, b) { return new Date(a.created_at || 0) - new Date(b.created_at || 0); });
+        } else {
+            tasks.sort(function(a, b) {
+                var pa = window._apexActionPriority(a).tier, pb = window._apexActionPriority(b).tier;
+                if (pa !== pb) return pa - pb;
+                return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+            });
+        }
+        if (!tasks.length) {
+            if (!_actnAllPending.length) {
+                list.innerHTML = '<div class="gate-all-clear">' +
+                    '<div class="gate-all-clear-ring">✓</div>' +
+                    '<div class="gate-all-clear-title">All Clear</div>' +
+                    '<div class="gate-all-clear-sub">No pending approvals · you\'re caught up</div>' +
+                '</div>';
+            } else {
+                list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:rgba(232,244,255,0.35)">No ' + _actnActiveFilter + '-tier approvals</div>';
+            }
+            list.removeAttribute('aria-busy');
+            if (panel) panel.setAttribute('data-apex-state', 'ready');
+            return;
+        }
+        list.removeAttribute('aria-busy');
+        // When showing all with priority sort, group by tier with section headers
+        var useTierGroups = (_actnActiveFilter === 'all' && sort === 'priority');
+        if (useTierGroups) {
+            var tierDefs = [
+                { key: '0', label: 'CRITICAL', color: '#ff4444' },
+                { key: '1', label: 'URGENT',   color: '#ff9500' },
+                { key: '2', label: 'IMPORTANT',color: '#7c6cf2' },
+                { key: '3', label: 'STANDARD', color: '#4a5568' }
+            ];
+            var html = '';
+            var totalShown = 0;
+            var MAX_SHOW = 8;
+            tierDefs.forEach(function(tier) {
+                var tierTasks = tasks.filter(function(t) { return String(window._apexActionPriority(t).tier) === tier.key; });
+                if (!tierTasks.length) return;
+                html += '<div class="gate-tier-hdr"><div class="gate-tier-line" style="background:' + tier.color + '"></div>' +
+                    '<span class="gate-tier-name" style="color:' + tier.color + '">' + tier.label + '</span>' +
+                    '<span class="gate-tier-ct">' + tierTasks.length + '</span>' +
+                    '<div class="gate-tier-line" style="background:' + tier.color + '"></div></div>';
+                tierTasks.slice(0, MAX_SHOW).forEach(function(t) { html += _actnRenderPendingCard(t); totalShown++; });
+                if (tierTasks.length > MAX_SHOW) {
+                    html += '<div style="padding:6px 0 10px;text-align:center;font:500 10px/1 Inter,sans-serif;color:rgba(232,244,255,0.3);cursor:pointer" onclick="(function(el){var tier=\'' + tier.key + '\';_actnActiveFilter=tier;document.querySelectorAll(\'.actn-filter-pill\').forEach(function(p){p.classList.toggle(\'active\',p.dataset.actnFilter===tier)});_actnRenderFiltered()})(this)">+ ' + (tierTasks.length - MAX_SHOW) + ' more — click to filter</div>';
+                }
+            });
+            list.innerHTML = html;
+        } else {
+            var MAX_SHOW2 = 8;
+            var visible = tasks.slice(0, MAX_SHOW2), hidden2 = tasks.slice(MAX_SHOW2);
+            list.innerHTML = visible.map(_actnRenderPendingCard).join('');
+            if (hidden2.length) {
+                var btn = document.createElement('button');
+                btn.className = 'actn-show-more-btn';
+                btn.textContent = 'Show ' + hidden2.length + ' more';
+                btn.onclick = function() {
+                    hidden2.forEach(function(t) {
+                        var tmp = document.createElement('div');
+                        tmp.innerHTML = _actnRenderPendingCard(t);
+                        list.insertBefore(tmp.firstChild, btn);
+                    });
+                    btn.remove();
+                };
+                list.appendChild(btn);
+            }
+        }
+        if (panel) panel.setAttribute('data-apex-state', 'ready');
+    }
+
     function _actnRenderPendingCard(t) {
-        var id        = String(t.id);
-        var isCouncil = (id.startsWith('COUNCIL-') || String((t.metadata||{}).type||'').startsWith('council'));
-        var isInbox   = id.startsWith('INBOX-');
-        var typeLabel = isCouncil ? 'Council Decision' : isInbox ? 'Inbox Note' : (t.task_type || t.type || 'Task');
-        var priority  = window._apexActionPriority(t);
-        var info      = window._apexActionInfo(t);
-        var meta      = t.metadata || {};
-        // Title: use t.title for council/inbox tasks, fall back to task_type
-        var title     = _actnEscape(String(t.title || typeLabel).slice(0, 120));
-        // Description: recommendation or body, only shown if different from title
-        var rawDesc   = t.description || meta.recommendation || meta.body || '';
-        var desc      = rawDesc && rawDesc !== t.title ? _actnEscape(String(rawDesc).slice(0, 180)) + (rawDesc.length > 180 ? '…' : '') : '';
-        // Meta line: origin + time ago
-        var timeStr   = (t.created_at || t.updated_at) ? ' · ' + _timeAgo(t.created_at || t.updated_at) : '';
-        var metaLine  = _actnEscape(info.origin) + timeStr;
-        var irrevWarn = info.reversibility === 'no'
-            ? '<div style="font:600 11px/1.4 Inter,sans-serif;color:#ff4d6d;padding:2px 0">⚠ Cannot be undone</div>' : '';
-        return '<div class="actn-card2" style="border-left:3px solid ' + priority.color + '" data-actn-task-id="' + _actnEscape(id) + '">' +
-            '<div class="actn-card2-top">' +
-                '<span class="actn-card2-type">' + _actnEscape(typeLabel) + '</span>' +
-                '<span class="actn-priority-chip" style="background:' + priority.color + ';border-radius:4px;font-size:10px;padding:2px 7px;font-weight:700;letter-spacing:0.07em">' + priority.label + '</span>' +
-            '</div>' +
-            '<div class="actn-card2-title">' + title + '</div>' +
-            (desc ? '<div class="actn-card2-desc">' + desc + '</div>' : '') +
-            irrevWarn +
-            '<div class="actn-card2-meta">' + metaLine + '</div>' +
-            '<div class="actn-card2-btns">' +
-                '<button class="actn-card-btn approve" data-actn-appr="' + _actnEscape(id) + '" aria-label="Approve">Approve</button>' +
-                '<button class="actn-card-btn reject"  data-actn-reject-init="' + _actnEscape(id) + '" aria-label="Reject">Reject</button>' +
-                '<button class="apex-follow-btn" data-apex-follow="' + _actnEscape(id) + '" aria-label="Follow this work through APEX">FOLLOW</button>' +
-            '</div>' +
-            '<div class="actn-reject-reason" data-actn-reject-panel="' + _actnEscape(id) + '" style="display:none">' +
-                '<label style="font-size:11px;color:rgba(232,244,255,0.6)">Reason (optional — helps APEX improve)</label>' +
-                '<textarea maxlength="280" placeholder="e.g. Wrong priority, too expensive, not needed now"></textarea>' +
-                '<div class="actn-reject-actions">' +
-                    '<button class="actn-card-btn reject" data-actn-reject-confirm="' + _actnEscape(id) + '">Confirm</button>' +
-                    '<button class="actn-card-btn" style="background:rgba(255,255,255,0.05);color:rgba(232,244,255,0.7);border-color:rgba(255,255,255,0.1)" data-actn-reject-cancel="' + _actnEscape(id) + '">Cancel</button>' +
+        var id       = String(t.id);
+        var meta     = t.metadata || {};
+        var dSlug    = (meta.dispatch && meta.dispatch.slug) || '';
+        var dc       = (_DOMAIN_COLORS && _DOMAIN_COLORS[dSlug]) || '#7c6cf2';
+        var dName    = dSlug ? (dSlug.charAt(0).toUpperCase() + dSlug.slice(1).replace(/-/g, ' ')) : 'Apex';
+        var dIcon    = dSlug ? dSlug.slice(0, 2).toUpperCase() : 'AP';
+        var priority = window._apexActionPriority(t);
+        var c        = priority.color;
+        var raw      = String(t.title || t.task_type || t.type || 'Task').replace(/[^\x20-\x7E]/g, '').trim();
+        var title    = _actnEscape(raw.length > 72 ? raw.slice(0, 70) + '…' : raw);
+        var batchChk = _actnBatchMode
+            ? '<input type="checkbox" class="actn-batch-chk" data-actn-batch-id="' + _actnEscape(id) + '"' + (_actnBatchSel.has(id) ? ' checked' : '') + ' aria-label="Select">'
+            : '';
+        return '<div class="gate-card' + (_actnBatchMode ? ' actn-batch-on' : '') + '" data-actn-task-id="' + _actnEscape(id) + '" style="border-left:3px solid ' + c + '">' +
+            '<div class="gate-card-body">' +
+                '<div style="display:flex;align-items:center;gap:7px">' +
+                    batchChk +
+                    '<span style="width:20px;height:20px;border-radius:4px;background:' + dc + '20;border:1px solid ' + dc + '40;display:inline-flex;align-items:center;justify-content:center;font:700 8px/1 monospace;color:' + dc + ';flex-shrink:0">' + dIcon + '</span>' +
+                    '<span style="font:500 11px/1 Inter,sans-serif;color:rgba(232,244,255,0.32)">' + _actnEscape(dName) + '</span>' +
+                '</div>' +
+                '<div style="font:500 13px/1.45 Inter,sans-serif;color:rgba(232,244,255,0.88);padding:1px 0 2px">' + title + '</div>' +
+                '<div style="display:flex;gap:8px">' +
+                    '<button class="gate-btn-reject" data-actn-reject-init="' + _actnEscape(id) + '" aria-label="Deny">Deny</button>' +
+                    '<button class="gate-btn-approve" data-actn-appr="' + _actnEscape(id) + '" aria-label="Approve">Approve</button>' +
+                '</div>' +
+                '<div class="actn-reject-reason" data-actn-reject-panel="' + _actnEscape(id) + '" style="display:none">' +
+                    '<label style="font-size:11px;color:rgba(232,244,255,0.55)">Reason (optional)</label>' +
+                    '<textarea maxlength="280" placeholder="Why?"></textarea>' +
+                    '<div class="actn-reject-actions">' +
+                        '<button class="actn-card-btn reject" data-actn-reject-confirm="' + _actnEscape(id) + '">Confirm deny</button>' +
+                        '<button class="actn-card-btn" style="background:rgba(255,255,255,0.04);color:rgba(232,244,255,0.55);border-color:rgba(255,255,255,0.08)" data-actn-reject-cancel="' + _actnEscape(id) + '">Cancel</button>' +
+                    '</div>' +
                 '</div>' +
             '</div>' +
         '</div>';
     }
-
     // Domain agent → dept colour map (mirrors DEPTS array on agents page)
     var _DOMAIN_COLORS = {
         marketing:'#a78bfa', finance:'#6366f1', comms:'#2dd4bf',
@@ -22957,6 +23512,8 @@ window.apexFileDropHandler = function(e){
                 var tasks = d.tasks || d || [];
                 var inFlight = (Array.isArray(tasks) ? tasks : []).filter(function(t) { return t.status === 'in_progress'; });
                 if (count) count.textContent = inFlight.length + ' running';
+                var aBadge = document.getElementById('gateActiveBadge');
+                if (aBadge) { aBadge.textContent = inFlight.length || ''; aBadge.style.display = inFlight.length ? '' : 'none'; }
                 if (!inFlight.length) {
                     _actnSetState(list, panel, 'empty', { message: 'Nothing running right now.' });
                     return;
@@ -22967,18 +23524,14 @@ window.apexFileDropHandler = function(e){
                     var dSlug      = (meta.dispatch && meta.dispatch.slug) || '';
                     var dotColor   = _DOMAIN_COLORS[dSlug] || '#06b6d4';
                     var taskTitle  = _actnEscape(t.title || t.description || t.task_type || 'Task');
-                    var agentLabel = dSlug ? dSlug.replace(/-/g,' ').toUpperCase() + ' AGENT' : '';
-                    var officeInfo = (meta.execution && meta.execution.office && meta.execution.office.agent)
-                        ? '→ ' + meta.execution.office.agent.replace(/-/g,' ').toUpperCase() : '';
-                    return '<div class="actn-card" style="cursor:pointer;border-left:3px solid ' + dotColor + '40"' +
-                        (dSlug ? ' ondblclick="_actnShowTaskFeed(\'' + t.id + '\',\'' + dSlug + '\')" title="Double-click: live feed"' : '') + '>' +
-                        '<div class="actn-card-header">' +
-                            '<span class="actn-status-dot" aria-hidden="true"></span>' +
-                            '<span class="actn-card-title" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + taskTitle + '</span>' +
-                            '<span style="font-size:10px;color:#06b6d4;flex-shrink:0">RUNNING</span>' +
+                    var agentLabel = dSlug ? dSlug.replace(/-/g,' ').toUpperCase() : 'RUNNING';
+                    return '<div class="gate-rail-item"' +
+                        (dSlug ? ' style="cursor:pointer" ondblclick="_actnShowTaskFeed(\'' + t.id + '\',\'' + dSlug + '\')" title="Double-click: live feed"' : '') + '>' +
+                        '<div class="gate-rail-dot" style="background:' + dotColor + ';box-shadow:0 0 5px ' + dotColor + '80;animation:actn-pulse 1.5s ease-in-out infinite"></div>' +
+                        '<div class="gate-rail-text">' +
+                            '<div class="gate-rail-title">' + taskTitle + '</div>' +
+                            '<div class="gate-rail-sub">' + _actnEscape(agentLabel) + '</div>' +
                         '</div>' +
-                        (agentLabel ? '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:' + dotColor + ';margin-top:5px">⬡ ' + _actnEscape(agentLabel) + '</div>' : '') +
-                        (officeInfo ? '<div style="font:400 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;color:#52525b;margin-top:3px">' + _actnEscape(officeInfo) + '</div>' : '') +
                     '</div>';
                 }).join('');
                 panel.setAttribute('data-apex-state', 'ready');
@@ -23076,13 +23629,14 @@ window.apexFileDropHandler = function(e){
                 }
                 list.removeAttribute('aria-busy');
                 list.innerHTML = done.slice(0, 15).map(function(t) {
-                    var cols = { completed:'#27ae60', failed:'#ff4d6d', cancelled:'#8893a0', rejected:'#ff8c42', undone:'#a78bfa' };
-                    var col = cols[t.status] || '#8893a0';
-                    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
-                        '<span style="font-size:11px;color:rgba(232,244,255,0.75);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">' + _actnEscape(t.title || t.description || t.task_type || t.type || 'Task') + '</span>' +
-                        '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
-                            '<span style="font-size:11px;color:' + col + '">' + _actnEscape(window._apexActionStatus(t.status)) + '</span>' +
-                            '<span style="font-size:10px;color:#8893a0">' + (t.updated_at || t.created_at ? _actnEscape(_timeAgo(t.updated_at || t.created_at)) : '') + '</span>' +
+                    var cols = { completed:'#22c55e', failed:'#ff4d6d', cancelled:'#4a5568', rejected:'#ff8c42', undone:'#a78bfa' };
+                    var col = cols[t.status] || '#4a5568';
+                    var tStr = (t.updated_at || t.created_at) ? _timeAgo(t.updated_at || t.created_at) : '';
+                    return '<div class="gate-rail-item">' +
+                        '<div class="gate-rail-dot" style="background:' + col + '"></div>' +
+                        '<div class="gate-rail-text">' +
+                            '<div class="gate-rail-title">' + _actnEscape(t.title || t.description || t.task_type || t.type || 'Task') + '</div>' +
+                            '<div class="gate-rail-sub">' + _actnEscape(window._apexActionStatus(t.status)) + (tStr ? ' · ' + tStr : '') + '</div>' +
                         '</div>' +
                     '</div>';
                 }).join('');
@@ -23341,6 +23895,131 @@ window.apexFileDropHandler = function(e){
             });
     }
     window._actnLoadCapabilities = _actnLoadCapabilities;
+
+    /* ── Gate: filter pills, sort, batch, rules panel ─────────────── */
+    // Filter pill click — event delegation on #actnFilterPills
+    document.addEventListener('click', function(e) {
+        var pill = e.target && e.target.closest && e.target.closest('.actn-filter-pill');
+        if (!pill || !pill.closest('#actnFilterPills')) return;
+        var filter = pill.dataset.actnFilter;
+        if (filter === undefined) return;
+        _actnActiveFilter = filter;
+        document.querySelectorAll('.actn-filter-pill').forEach(function(p) { p.classList.remove('active'); });
+        pill.classList.add('active');
+        _actnRenderFiltered();
+    });
+
+    // Sort change
+    var _actnSortSelEl = document.getElementById('actnSortSel');
+    if (_actnSortSelEl) _actnSortSelEl.addEventListener('change', function() { _actnRenderFiltered(); });
+
+    // Gate tab switching
+    document.addEventListener('click', function(e) {
+        var btn = e.target && e.target.closest && e.target.closest('.gate-tab-btn');
+        if (!btn || !btn.closest('#gateTabNav')) return;
+        var tab = btn.dataset.gateTab;
+        if (!tab) return;
+        document.querySelectorAll('#gateTabNav .gate-tab-btn').forEach(function(b) {
+            b.classList.toggle('active', b.dataset.gateTab === tab);
+            b.setAttribute('aria-selected', b.dataset.gateTab === tab ? 'true' : 'false');
+        });
+        var paneId = 'gateTab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+        document.querySelectorAll('#actnMasterSurface .gate-tab-pane').forEach(function(p) {
+            p.classList.toggle('active', p.id === paneId);
+            if (p.id === paneId && p.style.display === 'flex') { p.style.paddingTop = '16px'; }
+        });
+    });
+
+    // Batch checkbox change
+    document.addEventListener('change', function(e) {
+        if (!e.target || !e.target.dataset.actnBatchId) return;
+        var id = String(e.target.dataset.actnBatchId);
+        if (e.target.checked) _actnBatchSel.add(id); else _actnBatchSel.delete(id);
+        var lbl = document.getElementById('actnBatchSelCount');
+        if (lbl) lbl.textContent = _actnBatchSel.size + ' selected';
+    });
+
+    function actnToggleBatch() {
+        _actnBatchMode = !_actnBatchMode;
+        _actnBatchSel.clear();
+        var bar = document.getElementById('actnBatchBar');
+        var btn = document.getElementById('actnBatchToggleBtn');
+        if (bar) bar.style.display = _actnBatchMode ? 'flex' : 'none';
+        if (btn) { btn.style.opacity = _actnBatchMode ? '1' : ''; btn.style.borderColor = _actnBatchMode ? 'rgba(0,212,255,0.4)' : ''; btn.style.color = _actnBatchMode ? '#00d4ff' : ''; }
+        _actnRenderFiltered();
+    }
+    window.actnToggleBatch = actnToggleBatch;
+
+    function actnCancelBatch() {
+        _actnBatchMode = false;
+        _actnBatchSel.clear();
+        var bar = document.getElementById('actnBatchBar');
+        var btn = document.getElementById('actnBatchToggleBtn');
+        if (bar) bar.style.display = 'none';
+        if (btn) { btn.style.opacity = ''; btn.style.borderColor = ''; btn.style.color = ''; }
+        _actnRenderFiltered();
+    }
+    window.actnCancelBatch = actnCancelBatch;
+
+    function actnBatchApprove() {
+        var ids = Array.from(_actnBatchSel);
+        if (!ids.length) { if (window._apexToast) window._apexToast('Select tasks first', 'info'); return; }
+        Promise.all(ids.map(function(id) {
+            return fetch('/api/tasks/approve', { method: 'POST', headers: Object.assign({'Content-Type':'application/json'}, _h()), body: JSON.stringify({ taskId: parseInt(id, 10) || id }) }).catch(function(){});
+        })).then(function() { actnCancelBatch(); setTimeout(_actnLoadPending, 400); if (window._apexToast) window._apexToast(ids.length + ' approved', 'success'); });
+    }
+    window.actnBatchApprove = actnBatchApprove;
+
+    function actnBatchReject() {
+        var ids = Array.from(_actnBatchSel);
+        if (!ids.length) { if (window._apexToast) window._apexToast('Select tasks first', 'info'); return; }
+        Promise.all(ids.map(function(id) {
+            return fetch('/api/tasks/reject', { method: 'POST', headers: Object.assign({'Content-Type':'application/json'}, _h()), body: JSON.stringify({ taskId: id }) }).catch(function(){});
+        })).then(function() { actnCancelBatch(); setTimeout(_actnLoadPending, 400); if (window._apexToast) window._apexToast(ids.length + ' rejected', 'info'); });
+    }
+    window.actnBatchReject = actnBatchReject;
+
+    function actnToggleRules() {
+        var panel    = document.getElementById('actnRulesPanel');
+        var backdrop = document.getElementById('actnRulesBackdrop');
+        if (!panel) return;
+        var isOpen = panel.classList.contains('open');
+        if (isOpen) {
+            panel.classList.remove('open');
+            if (backdrop) backdrop.style.display = 'none';
+        } else {
+            panel.classList.add('open');
+            if (backdrop) backdrop.style.display = '';
+            _actnLoadRulesList();
+        }
+    }
+    window.actnToggleRules = actnToggleRules;
+
+    function _actnLoadRulesList() {
+        var el = document.getElementById('actnRulesListPanel');
+        if (!el) return;
+        el.innerHTML = '<div style="font-size:11px;color:rgba(232,244,255,0.35)">Loading...</div>';
+        fetch('/api/tasks/standing-approvals', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var rules = d.approvals || d.rules || [];
+                if (!Array.isArray(rules) || !rules.length) {
+                    el.innerHTML = '<div style="font-size:11px;color:rgba(232,244,255,0.35);padding:8px 0">No standing rules defined</div>';
+                    return;
+                }
+                el.innerHTML = rules.map(function(r) {
+                    return '<div class="actn-rule-row">' +
+                        '<div>' +
+                            '<div style="font-size:12px;font-weight:600;color:rgba(232,244,255,0.85)">' + _actnEscape(r.action_type || r.pattern || '—') + '</div>' +
+                            '<div style="font-size:10px;color:rgba(232,244,255,0.35);margin-top:3px">Pattern: ' + _actnEscape(r.pattern || '*') + '</div>' +
+                        '</div>' +
+                        '<span style="font-size:9px;font-weight:800;letter-spacing:0.08em;color:#22c55e">ACTIVE</span>' +
+                    '</div>';
+                }).join('');
+            })
+            .catch(function() { el.innerHTML = '<div style="font-size:11px;color:rgba(232,244,255,0.35)">Rules unavailable</div>'; });
+    }
+    /* ── End Gate functions ─────────────────────────────────────────── */
 
     // H-2/H-3: two-step approval modal with action detail + focus-trap.
     var _actnPendingModalId = null;
@@ -27438,8 +28117,8 @@ window.apexFileDropHandler = function(e){
 /* Recommendation preview */
 .kg-delib-rec { font:400 9px/1.6 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.5); margin-top:5px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 /* Awaiting approval card */
-.kg-approval-card { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.03); border-left:2px solid rgba(124,108,242,0.35); transition:background 120ms; }
-.kg-approval-card:hover { background:rgba(124,108,242,0.03); }
+.kg-approval-card { background:linear-gradient(160deg,rgba(28,26,50,0.97) 0%,rgba(18,17,34,0.99) 100%); border-radius:14px; border:1px solid rgba(124,108,242,0.2); box-shadow:0 8px 40px rgba(0,0,0,0.45),0 1px 0 rgba(255,255,255,0.04) inset; padding:18px 20px; margin-bottom:8px; transition:border-color 150ms,box-shadow 150ms; }
+.kg-approval-card:hover { border-color:rgba(124,108,242,0.35); box-shadow:0 8px 40px rgba(124,108,242,0.12),0 1px 0 rgba(255,255,255,0.05) inset; }
 .kg-approval-title { font:700 8px/1.4 'JetBrains Mono',monospace; color:rgba(255,255,255,0.75); margin-bottom:4px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .kg-approval-sub { font:500 8px/1 'JetBrains Mono',monospace; color:#71717a; }
 /* Live pulsing card */
@@ -27484,8 +28163,12 @@ window.apexFileDropHandler = function(e){
 .kg-task-card.pri-urgent::before    { background:#f59e0b; box-shadow:0 0 8px rgba(245,158,11,0.4); }
 .kg-task-card.pri-important::before { background:#22d3ee; }
 .kg-task-card.pri-standard::before  { background:rgba(124,108,242,0.4); }
-.kg-task-card.is-focus { background:rgba(255,255,255,0.025); }
-.kg-task-card.pri-critical.is-focus { background:rgba(239,68,68,0.06); }
+.kg-task-card.is-focus { background:linear-gradient(160deg,rgba(28,26,50,0.97) 0%,rgba(18,17,34,0.99) 100%); border-radius:14px; border:1px solid rgba(255,255,255,0.07); box-shadow:0 8px 40px rgba(0,0,0,0.45),0 1px 0 rgba(255,255,255,0.04) inset; padding:18px 20px; margin:0 0 6px; border-bottom:none; }
+.kg-task-card.is-focus::before { display:none; }
+.kg-task-card.pri-critical.is-focus  { border-color:rgba(239,68,68,0.22); box-shadow:0 8px 40px rgba(239,68,68,0.1),0 1px 0 rgba(255,255,255,0.04) inset; }
+.kg-task-card.pri-urgent.is-focus    { border-color:rgba(245,158,11,0.2); box-shadow:0 8px 40px rgba(245,158,11,0.08),0 1px 0 rgba(255,255,255,0.04) inset; }
+.kg-task-card.pri-important.is-focus { border-color:rgba(34,211,238,0.15); }
+.kg-task-card.pri-standard.is-focus  { border-color:rgba(124,108,242,0.22); box-shadow:0 8px 40px rgba(124,108,242,0.1),0 1px 0 rgba(255,255,255,0.04) inset; }
 .kg-task-card.is-irrev { background-image:repeating-linear-gradient(135deg,rgba(245,158,11,0.04) 0px,rgba(245,158,11,0.04) 1px,transparent 1px,transparent 8px); }
 .kg-task-card.is-preview { padding:7px 12px 7px 16px; }
 .kg-task-card:last-child { border-bottom:none; }
@@ -27499,6 +28182,9 @@ window.apexFileDropHandler = function(e){
 .kg-task-blocking { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.06em; padding:2px 6px; border-radius:3px; background:rgba(239,68,68,0.18); color:#ef4444; border:1px solid rgba(239,68,68,0.3); animation:kg-blink 1.2s ease-in-out infinite; }
 .kg-task-time { font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.3); margin-left:auto; flex-shrink:0; }
 .kg-task-title { font:600 12px/1.3 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.88); margin-bottom:4px; }
+.kg-title-box { font:600 14px/1.5 'Plus Jakarta Sans',Inter,system-ui,sans-serif; color:#f0eeff; text-align:left; background:rgba(124,108,242,0.09); border:1px solid rgba(124,108,242,0.25); border-radius:6px; padding:9px 13px; margin-bottom:8px; }
+.kg-card-desc { font:400 12px/1.6 'Plus Jakarta Sans',Inter,system-ui,sans-serif; color:rgba(232,232,255,0.45); margin-bottom:10px; }
+.kg-card-irrev { font:500 11px/1 'Plus Jakarta Sans',Inter,system-ui,sans-serif; color:rgba(255,100,120,0.65); margin-bottom:10px; }
 .kg-task-card.pri-critical .kg-task-title { font-size:13px; }
 .kg-task-card.is-preview .kg-task-title { font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:0; }
 .kg-task-desc  { font:400 10px/1.4 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.42); margin-bottom:6px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
@@ -27506,13 +28192,15 @@ window.apexFileDropHandler = function(e){
 .kg-task-progress { height:2px; background:rgba(34,197,94,0.15); border-radius:1px; margin-bottom:7px; overflow:hidden; }
 .kg-task-progress-fill { height:100%; background:#22c55e; border-radius:1px; background:linear-gradient(90deg,#22c55e,#34d399,#22c55e); background-size:200% 100%; animation:kg-shimmer 1.4s ease-in-out infinite; }
 @keyframes kg-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-.kg-task-btns  { display:flex; gap:5px; align-items:center; }
-.kg-act-btn { flex:1; padding:6px 8px; border-radius:4px; border:1px solid; font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.08em; cursor:pointer; transition:all 150ms; min-height:30px; background:transparent; }
-.kg-act-btn.approve { border-color:rgba(34,197,94,0.35); color:#22c55e; flex:2; }
-.kg-act-btn.approve:hover { background:rgba(34,197,94,0.12); border-color:#22c55e; }
-.kg-act-btn.reject  { border-color:rgba(239,68,68,0.22); color:rgba(239,68,68,0.7); flex:1; }
-.kg-act-btn.reject:hover  { background:rgba(239,68,68,0.09); border-color:rgba(239,68,68,0.6); color:#ef4444; }
-.kg-act-btn:disabled { opacity:.4; cursor:default; }
+.kg-task-btns  { display:flex; gap:8px; align-items:center; padding-top:14px; border-top:1px solid rgba(255,255,255,0.06); margin-top:2px; }
+.kg-act-btn { flex:1; padding:0 16px; border-radius:6px; border:none; font:600 12px/1 'Plus Jakarta Sans',Inter,system-ui,sans-serif; letter-spacing:0.02em; cursor:pointer; transition:background 150ms,transform 80ms,box-shadow 150ms; height:34px; display:inline-flex; align-items:center; justify-content:center; }
+.kg-act-btn.approve { background:rgba(34,197,94,0.15); color:#4ade80; flex:2; box-shadow:0 0 0 1px rgba(34,197,94,0.2) inset; }
+.kg-act-btn.approve:hover { background:rgba(34,197,94,0.25); box-shadow:0 0 0 1px rgba(34,197,94,0.4) inset; }
+.kg-act-btn.approve:active { transform:scale(0.97); }
+.kg-act-btn.reject  { background:rgba(239,68,68,0.1); color:rgba(239,68,68,0.75); flex:1; box-shadow:0 0 0 1px rgba(239,68,68,0.18) inset; }
+.kg-act-btn.reject:hover  { background:rgba(239,68,68,0.18); color:#f87171; box-shadow:0 0 0 1px rgba(239,68,68,0.35) inset; }
+.kg-act-btn.reject:active { transform:scale(0.97); }
+.kg-act-btn:disabled { opacity:.35; cursor:default; transform:none; }
 .kg-kbd { font:700 8px/1 'JetBrains Mono',monospace; padding:1px 4px; border-radius:3px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.35); margin-left:4px; }
 .kg-task-reject-area { margin-top:6px; display:none; }
 .kg-task-reject-area.open { display:block; }
@@ -27652,71 +28340,73 @@ window.apexFileDropHandler = function(e){
 .kg-delib:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; border-radius:4px; }
 
 /* ── Info popup overlay ── */
+/* ── Task detail popup ─────────────────────────────────────── */
 .kg-info-overlay {
   position:fixed; inset:0; z-index:10000;
-  background:rgba(0,0,0,0.68); backdrop-filter:blur(6px);
-  display:flex; align-items:center; justify-content:center;
-  opacity:0; pointer-events:none; transition:opacity 200ms ease;
+  background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  opacity:0; pointer-events:none; transition:opacity 220ms ease;
 }
 .kg-info-overlay.visible { opacity:1; pointer-events:all; }
 .kg-info-modal {
-  background:rgba(11,11,17,0.98); border:1px solid rgba(255,255,255,0.1); border-radius:20px;
-  width:min(540px, calc(100vw - 32px)); max-height:82vh; overflow-y:auto; padding:0;
-  transform:translateY(18px) scale(0.96); transition:transform 220ms cubic-bezier(0,0,0.2,1);
-  box-shadow:0 40px 100px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.06);
+  background:linear-gradient(160deg,rgba(14,14,22,0.99) 0%,rgba(10,10,16,0.99) 100%);
+  border:1px solid rgba(255,255,255,0.08); border-radius:24px;
+  width:min(620px, calc(100vw - 32px)); max-height:88vh; overflow-y:auto; padding:0;
+  transform:translateY(24px) scale(0.95); transition:transform 260ms cubic-bezier(0,0,0.2,1);
+  box-shadow:0 48px 120px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.07);
+  scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.08) transparent;
 }
+.kg-info-modal::-webkit-scrollbar { width:4px; }
+.kg-info-modal::-webkit-scrollbar-track { background:transparent; }
+.kg-info-modal::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
 .kg-info-overlay.visible .kg-info-modal { transform:translateY(0) scale(1); }
-.kg-info-modal-hd {
-  padding:24px 28px 20px; border-bottom:1px solid rgba(255,255,255,0.06);
-  display:flex; align-items:flex-start; gap:16px; position:relative;
-}
-.kg-info-modal-icon { font-size:32px; line-height:1; flex-shrink:0; margin-top:2px; }
+.kg-info-modal-hd { padding:26px 28px 22px; display:flex; align-items:flex-start; gap:14px; position:relative; }
+.kg-info-modal-icon { font-size:28px; line-height:1; flex-shrink:0; margin-top:3px; }
 .kg-info-modal-titles { flex:1; min-width:0; }
-.kg-info-modal-title { font:700 16px/1.2 'JetBrains Mono',monospace; letter-spacing:.03em; margin-bottom:6px; }
-.kg-info-modal-tagline { font:400 12px/1.5 system-ui,sans-serif; color:rgba(255,255,255,0.42); }
+.kg-info-modal-title { font:700 16px/1.25 'JetBrains Mono',monospace; letter-spacing:.02em; margin-bottom:6px; color:#e8f4ff; }
+.kg-info-modal-tagline { font:400 11px/1.5 system-ui,sans-serif; color:rgba(255,255,255,0.35); }
 .kg-info-modal-close {
-  position:absolute; top:14px; right:14px; width:30px; height:30px; border-radius:50%;
-  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); cursor:pointer;
-  color:rgba(255,255,255,0.4); font-size:16px; line-height:1;
+  position:absolute; top:16px; right:16px; width:32px; height:32px; border-radius:50%;
+  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); cursor:pointer;
+  color:rgba(255,255,255,0.35); font-size:18px; line-height:1;
   display:flex; align-items:center; justify-content:center;
-  transition:background 150ms, color 150ms; flex-shrink:0;
+  transition:background 150ms, color 150ms, border-color 150ms;
 }
-.kg-info-modal-close:hover { background:rgba(255,255,255,0.12); color:#fff; }
+.kg-info-modal-close:hover { background:rgba(255,255,255,0.1); color:#fff; border-color:rgba(255,255,255,0.2); }
 .kg-info-modal-close:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; }
-.kg-info-modal-accent { height:2px; margin:0; border:none; width:100%; display:block; }
-.kg-info-modal-body { padding:20px 28px 28px; display:flex; flex-direction:column; gap:18px; }
-.kg-info-section-hd {
-  font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.16em; text-transform:uppercase;
-  color:rgba(255,255,255,0.22); margin-bottom:8px;
-}
+.kg-info-modal-accent { height:3px; margin:0; border:none; width:100%; display:block; }
+.kg-info-modal-body { padding:22px 28px 28px; display:flex; flex-direction:column; gap:4px; }
+.kgp-block { border-radius:12px; padding:14px 16px; margin-bottom:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); }
+.kgp-block-accent { border-left-width:2px; border-left-style:solid; padding-left:14px; }
+.kgp-label { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,0.28); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.kgp-label-icon { font-size:10px; opacity:.7; }
+.kgp-text { font:400 13px/1.7 system-ui,-apple-system,sans-serif; color:rgba(232,244,255,0.78); white-space:pre-wrap; word-break:break-word; }
+.kgp-input-block { border-radius:12px; padding:16px 18px 16px 22px; margin-bottom:8px; background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.07); position:relative; overflow:hidden; }
+.kgp-input-block::before { content:'"'; position:absolute; top:-6px; left:10px; font-size:56px; line-height:1; color:rgba(255,255,255,0.04); font-family:Georgia,serif; pointer-events:none; user-select:none; }
+.kgp-input-text { font:500 14px/1.65 system-ui,-apple-system,sans-serif; color:#e8f4ff; white-space:pre-wrap; word-break:break-word; position:relative; z-index:1; }
+.kgp-flow { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.kgp-flow-node { display:inline-flex; align-items:center; padding:4px 10px; border-radius:20px; font:600 10px/1 'JetBrains Mono',monospace; letter-spacing:.06em; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.6); }
+.kgp-flow-arrow { color:rgba(255,255,255,0.2); font-size:12px; flex-shrink:0; }
+.kgp-timeline { display:flex; flex-direction:column; gap:0; }
+.kgp-tl-row { display:flex; align-items:flex-start; gap:12px; position:relative; }
+.kgp-tl-row:not(:last-child)::before { content:''; position:absolute; left:5px; top:14px; width:1px; height:calc(100% + 2px); background:rgba(255,255,255,0.07); }
+.kgp-tl-dot { width:11px; height:11px; border-radius:50%; border:2px solid; flex-shrink:0; margin-top:3px; background:rgba(10,10,16,1); }
+.kgp-tl-body { flex:1; padding-bottom:12px; }
+.kgp-tl-event { font:600 11px/1 system-ui; color:rgba(255,255,255,0.55); }
+.kgp-tl-time { font:400 10px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.22); margin-top:3px; }
+.kgp-response { border-radius:12px; padding:14px 16px; margin-bottom:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); font:400 13px/1.75 system-ui,-apple-system,sans-serif; color:rgba(232,244,255,0.82); white-space:pre-wrap; word-break:break-word; }
+.kgp-stats { display:flex; flex-wrap:wrap; gap:6px; }
+.kgp-stat-pill { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:20px; font:600 9px/1 'JetBrains Mono',monospace; letter-spacing:.08em; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:rgba(255,255,255,0.45); }
+.kgp-pill-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.kgp-run-row { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; background:rgba(255,255,255,0.025); margin-bottom:4px; font:400 11px/1.4 system-ui; }
+.kgp-section-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; margin-top:12px; }
+.kgp-section-line { flex:1; height:1px; background:rgba(255,255,255,0.05); }
+.kgp-section-tag { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,0.2); white-space:nowrap; }
+.kg-info-section-hd { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,0.22); margin-bottom:8px; }
 .kg-info-section-body { font:400 13px/1.75 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,0.68); }
 .kg-info-section-body strong { color:rgba(255,255,255,0.92); font-weight:600; }
 .kg-info-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
-.kg-info-chip {
-  font:600 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; text-transform:uppercase;
-  padding:5px 9px; border-radius:3px; background:rgba(255,255,255,0.04); border-width:1px; border-style:solid;
-}
-/* ⓘ button on node boxes */
-.kg-node-info-btn {
-  position:absolute; bottom:6px; right:6px; width:19px; height:19px; border-radius:50%;
-  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); cursor:pointer;
-  color:rgba(255,255,255,0.32); font:700 10px/1 system-ui,sans-serif;
-  display:flex; align-items:center; justify-content:center; z-index:5;
-  transition:background 150ms, color 150ms, border-color 150ms; line-height:1;
-}
-.kg-node-info-btn:hover { background:rgba(124,108,242,0.22); border-color:rgba(124,108,242,0.55); color:#a78bfa; }
-.kg-node-info-btn:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; }
-/* Clickable stat boxes */
-.kg-right-stat.clickable { cursor:pointer; border-radius:6px; padding:6px 4px; transition:background 150ms; }
-.kg-right-stat.clickable:hover { background:rgba(255,255,255,0.05); }
-.kg-right-stat.clickable:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; border-radius:4px; }
-/* Clickable meta stat */
-.kg-panel-meta-stat.clickable {
-  cursor:pointer; text-decoration:underline dotted rgba(255,255,255,0.2);
-  text-underline-offset:3px; transition:text-decoration-color 150ms;
-}
-.kg-panel-meta-stat.clickable:hover { text-decoration-color:rgba(255,255,255,0.55); }
-.kg-panel-meta-stat.clickable:focus-visible { outline:2px solid #7c6cf2; outline-offset:2px; border-radius:2px; }
+.kg-info-chip { font:600 8px/1 'JetBrains Mono',monospace; letter-spacing:.1em; text-transform:uppercase; padding:5px 9px; border-radius:3px; background:rgba(255,255,255,0.04); border-width:1px; border-style:solid; }
 @media (prefers-reduced-motion:reduce) { .kg-info-modal, .kg-info-overlay { transition:none !important; } }
 
 /* ── Last-updated footer ── */
@@ -27855,6 +28545,7 @@ window.apexFileDropHandler = function(e){
     window._kgCloseInfo = function() {
         var overlay = document.getElementById('kg-info-overlay');
         if (overlay) overlay.classList.remove('visible');
+        window._kgRawShowing = false;
     };
 
     // ── Task detail popup (output + action cards) ─────────────────────────────
@@ -27988,42 +28679,519 @@ window.apexFileDropHandler = function(e){
 
     // ── Agent run detail popup ────────────────────────────────────────────────
     window._kgRunDetail = function(runId) {
-        var r = (_liveRuns || []).find(function(x){ return String(x.id) === String(runId); });
-        if (!r) return;
-        var ok    = r.success !== false;
-        var col   = _domainColor((r.domain || '').toLowerCase());
-        var stCol = ok ? '#22c55e' : '#ef4444';
-        var task  = (r.task_description || (typeof r.agent_summary === 'string' ? r.agent_summary : '') || '').trim();
-        var reply = String(r.reply || r.result || r.output || r.response || '').trim();
-        var dur   = r.duration_ms ? _dur(r.duration_ms) : null;
-        var meta  = [];
-        if (r.agent_name) meta.push(r.agent_name);
-        if (r.domain)     meta.push(r.domain.toUpperCase() + ' DOMAIN');
-        if (dur)          meta.push(dur + ' duration');
-        if (r.created_at) meta.push(_ago(r.created_at));
-        var body = reply || task;
-        var html =
-            '<div class="kg-info-modal-hd">' +
-                '<div class="kg-info-modal-icon">' + (ok ? '✓' : '✕') + '</div>' +
-                '<div class="kg-info-modal-titles">' +
-                    '<div class="kg-td-status" style="color:' + stCol + ';border-color:' + stCol + '44;background:' + stCol + '11;margin-bottom:8px">' + (ok ? 'SUCCESS' : 'FAILED') + '</div>' +
-                    '<div class="kg-info-modal-title" style="color:#fff;font-size:14px">' + _esc(r.agent_name || r.domain || 'Agent Run') + '</div>' +
-                    '<div class="kg-info-modal-tagline">' + _esc((task||'Agent execution').slice(0,100)) + '</div>' +
-                '</div>' +
-                '<button class="kg-info-modal-close" onclick="window._kgCloseInfo()" aria-label="Close">×</button>' +
-            '</div>' +
-            '<div class="kg-info-modal-accent" style="background:linear-gradient(90deg,' + stCol + ',transparent)"></div>' +
-            '<div class="kg-info-modal-body">' +
-            (meta.length ? '<div><div class="kg-info-section-hd">Run Details</div><div class="kg-td-meta-row">' + meta.map(function(m){ return '<span class="kg-td-meta-chip">'+_esc(m)+'</span>'; }).join('') + '</div></div>' : '') +
-            (body ? '<div><div class="kg-info-section-hd">' + (reply ? 'Agent Response' : 'Task Description') + '</div><div class="kg-td-reply">' + _esc(body) + '</div></div>'
-                  : '<div class="kg-info-section-body" style="color:rgba(255,255,255,0.3);font-style:italic">No response data stored for this run.</div>') +
-            '</div>';
+        var r = (_liveRuns || []).find(function(x){ return String(x.task_id) === String(runId) || String(x.id) === String(runId); });
+        if (r) { window._kgRunPopup(r.task_id || runId, r); } else { window._kgRunPopup(runId, null); }
+    };
+
+    // ── Task detail popup ────────────────────────────────────────────────────
+    window._kgRunPopup = function(taskId, runHint) {
         var overlay = document.getElementById('kg-info-overlay');
         var modal   = document.getElementById('kg-info-modal');
         if (!overlay || !modal) return;
-        modal.innerHTML = html;
+        var r   = runHint || (_liveRuns || []).find(function(x){ return x.task_id === taskId; });
+        var col = r ? _domainColor((r.domain||'').toLowerCase()) : '#7c6cf2';
+
+        // ── helpers ──
+        function _stag(label) {
+            return '<div class="kgp-section-row"><div class="kgp-section-line"></div><div class="kgp-section-tag">' + label + '</div><div class="kgp-section-line"></div></div>';
+        }
+        function _block(label, icon, body, accentColor, extraStyle) {
+            var borderStyle = accentColor ? ' kgp-block-accent" style="border-left-color:' + accentColor + (extraStyle||'') + '"' : '"' + (extraStyle ? ' style="' + extraStyle + '"' : '');
+            return '<div class="kgp-block' + borderStyle + '>' +
+                '<div class="kgp-label"><span class="kgp-label-icon">' + icon + '</span>' + label + '</div>' +
+                '<div class="kgp-text">' + body + '</div>' +
+            '</div>';
+        }
+        function _pill(txt, dotColor, textColor) {
+            var dot = dotColor ? '<span class="kgp-pill-dot" style="background:' + dotColor + '"></span>' : '';
+            return '<span class="kgp-stat-pill" style="' + (textColor ? 'color:' + textColor + ';border-color:' + textColor + '30' : '') + '">' + dot + _esc(txt) + '</span>';
+        }
+
+        // ── loading skeleton ──
+        modal.innerHTML =
+            '<div class="kg-info-modal-hd">' +
+                '<div class="kg-info-modal-icon" style="opacity:.2;color:' + col + '">◈</div>' +
+                '<div class="kg-info-modal-titles">' +
+                    '<div class="kg-info-modal-title" style="color:' + col + ';opacity:.5">' + _esc(r ? (r.title||taskId).slice(0,55) : taskId) + '</div>' +
+                    '<div class="kg-info-modal-tagline">Loading…</div>' +
+                '</div>' +
+                '<button class="kg-info-modal-close" onclick="window._kgCloseInfo()" aria-label="Close">×</button>' +
+            '</div>' +
+            '<div class="kg-info-modal-accent" style="background:linear-gradient(90deg,' + col + ',transparent)"></div>' +
+            '<div class="kg-info-modal-body"><div style="display:flex;flex-direction:column;gap:8px">' +
+                '<div style="height:60px;border-radius:12px;background:rgba(255,255,255,0.03);animation:kgp-pulse 1.4s ease infinite"></div>' +
+                '<div style="height:40px;border-radius:12px;background:rgba(255,255,255,0.02);animation:kgp-pulse 1.4s ease .2s infinite"></div>' +
+                '<div style="height:80px;border-radius:12px;background:rgba(255,255,255,0.02);animation:kgp-pulse 1.4s ease .4s infinite"></div>' +
+            '</div></div>';
         overlay.classList.add('visible');
-        requestAnimationFrame(function(){ var btn = modal.querySelector('.kg-info-modal-close'); if(btn) btn.focus(); });
+
+        // ── fetch ──
+        // For voice tasks, also query episodic memory in a ±5 min window around the task timestamp
+        var _vtsMatch = taskId.match(/voice-task-(\d+)/);
+        var _vtsMs    = _vtsMatch ? parseInt(_vtsMatch[1]) : null;
+        var _voiceFetch = _vtsMs
+            ? fetch('/api/memory/voice-history?limit=20&after=' + new Date(_vtsMs - 300000).toISOString() + '&before=' + new Date(_vtsMs + 300000).toISOString(), { credentials: 'same-origin' }).then(function(x){ return x.json(); }).catch(function(){ return {}; })
+            : Promise.resolve({});
+        Promise.all([
+            fetch('/api/tasks/' + encodeURIComponent(taskId), { credentials: 'same-origin' }).then(function(x){ return x.json(); }).catch(function(){ return {}; }),
+            fetch('/api/agents/activity?source_task_id=' + encodeURIComponent(taskId) + '&limit=10', { credentials: 'same-origin' }).then(function(x){ return x.json(); }).catch(function(){ return {}; }),
+            _voiceFetch
+        ]).then(function(results) {
+            var j    = results[0];
+            var jRun = results[1];
+            var jVoice = results[2] || {};
+            var t    = j.task || {};
+            var runs = jRun.runs || [];
+            var meta = t.metadata || {};
+            var exec = meta.execution || {};
+
+            // status
+            var ok    = r ? r.success !== false : (t.status === 'completed' || t.status === 'done');
+            var stCol = ok ? '#22c55e' : (t.status === 'failed' ? '#ef4444' : '#f59e0b');
+            var stLbl = ok ? 'SUCCESS' : (t.status ? t.status.toUpperCase().replace(/_/g,' ') : 'UNKNOWN');
+
+            // domain / accent
+            var slug = (exec.agent || (meta.dispatch && meta.dispatch.slug) || (r&&r.domain) || '').toLowerCase();
+            col = slug ? _domainColor(slug) : col;
+
+            // text fields
+            var action   = (meta.dispatch && meta.dispatch.action) ? String(meta.dispatch.action) : '';
+            var rec      = meta.recommendation ? String(meta.recommendation) : (r&&r.recommendation ? String(r.recommendation) : '');
+            var reply    = exec.reply ? String(exec.reply) : (r&&r.reply ? String(r.reply) : '');
+            var execErr  = meta.execution_error ? String(meta.execution_error) : '';
+            var objective= r&&r.objective ? String(r.objective) : '';
+            var originalInput = t.original_input ? String(t.original_input) : (t.title ? String(t.title) : '');
+
+            // enrich from voice history (episodic memory, source=voice_chat)
+            var _voiceConvs = jVoice.conversations || [];
+            var _voiceMatch = null;
+            if (_vtsMs && _voiceConvs.length) {
+                // pick entry whose created_at is closest to task timestamp
+                _voiceConvs.forEach(function(c) {
+                    var diff = Math.abs(new Date(c.created_at).getTime() - _vtsMs);
+                    if (!_voiceMatch || diff < Math.abs(new Date(_voiceMatch.created_at).getTime() - _vtsMs)) _voiceMatch = c;
+                });
+            }
+            if (_voiceMatch) {
+                if (_voiceMatch.user  && (!originalInput || originalInput === taskId)) originalInput = _voiceMatch.user;
+                if (_voiceMatch.assistant && !reply) reply = _voiceMatch.assistant;
+            }
+
+            // enrich from runs when task metadata is sparse
+            var firstRun = runs.length ? runs[0] : null;
+            if (!slug && firstRun && firstRun.domain) { slug = firstRun.domain.toLowerCase(); col = _domainColor(slug); }
+            if (!reply && firstRun && firstRun.reply) reply = String(firstRun.reply);
+            if (!complexity && firstRun && firstRun.complexity) { /* set below */ }
+            var totalRunCost = runs.reduce(function(s,rn){ return s + (Number(rn.cost_usd)||0); }, 0);
+
+            // routing
+            var source = r&&r.source ? r.source : (taskId.startsWith('COUNCIL-') ? 'council' : taskId.startsWith('voice-') ? 'voice' : taskId.startsWith('sched-')||taskId.startsWith('cron-') ? 'scheduled' : 'chat');
+            var srcIcon = source==='voice' ? '🎙' : source==='council' ? '⚖' : source==='scheduled' ? '🕐' : '💬';
+            var inputLabel = source==='voice' ? 'Exactly what was said' : source==='council' ? 'Question sent to council' : source==='scheduled' ? 'Scheduled action' : 'What was requested';
+
+            // flow nodes — show all unique agent domains from runs
+            var flowNodes = [];
+            flowNodes.push('<span class="kgp-flow-node" style="color:' + col + ';border-color:' + col + '44;background:' + col + '10">' + srcIcon + ' ' + source.toUpperCase() + '</span>');
+            if (meta.type) flowNodes.push('<span class="kgp-flow-arrow">→</span><span class="kgp-flow-node">' + meta.type.replace(/_/g,' ') + '</span>');
+            var seenDomains = [];
+            if (slug) seenDomains.push(slug);
+            runs.forEach(function(rn){ if(rn.domain && seenDomains.indexOf(rn.domain.toLowerCase())<0) seenDomains.push(rn.domain.toLowerCase()); });
+            seenDomains.forEach(function(d){ var dc=_domainColor(d); flowNodes.push('<span class="kgp-flow-arrow">→</span><span class="kgp-flow-node" style="color:'+dc+';border-color:'+dc+'44">'+d.toUpperCase()+' AGENT</span>'); });
+            if (exec.delegation && exec.delegation.slug) flowNodes.push('<span class="kgp-flow-arrow">→</span><span class="kgp-flow-node">' + exec.delegation.slug.toUpperCase() + ' OFFICE</span>');
+            flowNodes.push('<span class="kgp-flow-arrow">→</span><span class="kgp-flow-node" style="color:' + stCol + ';border-color:' + stCol + '44;background:' + stCol + '0d">' + stLbl + '</span>');
+
+            // timeline events
+            var created = t.created_at || (r&&r.created_at) || '';
+            var execTs  = exec.timestamp || '';
+            var updated = t.updated_at || '';
+            var tlRows  = [];
+            if (created) tlRows.push({ label:'Task created', time:created, c:'rgba(255,255,255,0.3)' });
+            if (execTs)  tlRows.push({ label:'Executed by ' + (slug||'agent').toUpperCase() + ' agent', time:execTs, c:col });
+            // add run timestamps to timeline
+            runs.forEach(function(rn){
+                if (!rn.created_at) return;
+                var agentId = rn.agent_name || (rn.domain ? rn.domain.toUpperCase() + ' agent' : 'APEX agent');
+                var rl = agentId + (rn.success!==false ? ' completed' : ' failed');
+                var rc = rn.success !== false ? '#22c55e' : '#ef4444';
+                tlRows.push({ label: rl, time: rn.created_at, c: rc });
+            });
+            if (updated && updated !== created) tlRows.push({ label:'Last updated', time:updated, c: ok?'#22c55e':'#f59e0b' });
+            tlRows.sort(function(a,b){ return new Date(a.time) - new Date(b.time); });
+
+            // meta pills
+            var complexity = (r&&r.complexity) ? r.complexity : (firstRun&&firstRun.complexity ? firstRun.complexity : '');
+            var cost = totalRunCost > 0 ? '$' + totalRunCost.toFixed(4) : (r&&r.cost_usd ? '$' + Number(r.cost_usd).toFixed(4) : '');
+
+            // ── assemble HTML ──
+            var html = '';
+
+            // HEADER
+            html += '<div class="kg-info-modal-hd">' +
+                '<div class="kg-info-modal-icon" style="font-size:22px;color:' + stCol + '">' + (ok ? '✓' : (t.status==='failed'?'✕':'◈')) + '</div>' +
+                '<div class="kg-info-modal-titles">' +
+                    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+                        '<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;border:1px solid ' + stCol + '44;background:' + stCol + '12;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.12em;color:' + stCol + '">' + stLbl + '</span>' +
+                        (slug ? '<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;border:1px solid ' + col + '44;background:' + col + '10;font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:' + col + '">' + slug.toUpperCase() + '</span>' : '') +
+                    '</div>' +
+                    '<div style="font:600 15px/1.3 system-ui;color:#e8f4ff;margin-bottom:6px">' + _esc((t.title || (r&&r.title) || taskId)) + '</div>' +
+                    '<div style="font:400 10px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.2)">' + _esc(taskId) + '</div>' +
+                '</div>' +
+                '<button class="kg-info-modal-close" onclick="window._kgCloseInfo()" aria-label="Close">×</button>' +
+            '</div>' +
+            '<div class="kg-info-modal-accent" style="background:linear-gradient(90deg,' + col + '88,transparent)"></div>';
+
+            html += '<div class="kg-info-modal-body">';
+
+            // store raw data for toggle view
+            window._kgRawData = { task: t, runs: runs, r: r };
+
+            // 1 — INPUT (clickable → toggle raw view)
+            // voice: always render, even when task record missing (t={})
+            if (source === 'voice') {
+                var voiceMsg = (originalInput && originalInput !== taskId) ? originalInput : null;
+                // decode precise receipt time from task ID timestamp
+                var voicePrecise = '';
+                var _vts = taskId.match(/voice-task-(\d+)/);
+                if (_vts) { try { var _vd = new Date(parseInt(_vts[1])); voicePrecise = _vd.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) + ' at ' + _vd.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); } catch(_){} }
+                html += '<div id="kgp-input-toggle" tabindex="0" role="button" aria-label="Click to see raw data" ' +
+                    'onclick="window._kgToggleRaw()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgToggleRaw()}" ' +
+                    'style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-top:3px solid ' + col + ';border-radius:12px;padding:18px;margin-bottom:16px;cursor:pointer;transition:background 150ms" ' +
+                    'onmouseenter="this.style.background=\'rgba(255,255,255,0.07)\'" onmouseleave="this.style.background=\'rgba(255,255,255,0.04)\'">' +
+                    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">' +
+                        '<div style="display:flex;align-items:center;gap:10px">' +
+                            '<div style="width:40px;height:40px;border-radius:10px;background:' + col + '18;border:1px solid ' + col + '33;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎙</div>' +
+                            '<div>' +
+                                '<div style="font:700 12px/1 \'JetBrains Mono\',monospace;letter-spacing:.12em;text-transform:uppercase;color:' + col + ';margin-bottom:5px">Voice message</div>' +
+                                '<div style="font:400 10px/1 system-ui;color:rgba(255,255,255,0.28)">' + (voicePrecise ? 'Received ' + voicePrecise : 'Voice input') + ' · click for raw data</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<span style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:rgba(255,255,255,0.18);text-transform:uppercase;margin-top:4px">RAW →</span>' +
+                    '</div>' +
+                    (voiceMsg
+                        ? '<div style="font:500 17px/1.65 system-ui;color:#e8f4ff;padding:16px 18px;background:rgba(255,255,255,0.06);border-radius:10px;border-left:3px solid ' + col + '">' + _esc(voiceMsg) + '</div>'
+                        : '<div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.06)">' +
+                            '<div style="font:600 10px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.22);margin-bottom:8px">Message text not stored</div>' +
+                            '<div style="font:400 12px/1.6 system-ui;color:rgba(255,255,255,0.38)">This voice interaction was processed by APEX but the spoken text was not saved to the database. This happens for older tasks or when the message did not contain a recognised action phrase.</div>' +
+                        '</div>'
+                    ) +
+                '</div>';
+            } else if (originalInput) {
+                html += '<div class="kgp-input-block" id="kgp-input-toggle" tabindex="0" role="button" aria-label="Click to see raw data" style="border-left:2px solid ' + col + ';cursor:pointer;transition:background 150ms" ' +
+                    'onclick="window._kgToggleRaw()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgToggleRaw()}" ' +
+                    'onmouseenter="this.style.background=\'rgba(255,255,255,0.06)\'" onmouseleave="this.style.background=\'\'">' +
+                    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+                        '<div class="kgp-label" style="color:' + col + ';margin-bottom:0">' +
+                            '<span class="kgp-label-icon">' + srcIcon + '</span>' + inputLabel +
+                        '</div>' +
+                        '<span style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:rgba(255,255,255,0.2);text-transform:uppercase">RAW →</span>' +
+                    '</div>' +
+                    '<div class="kgp-input-text">' + _esc(originalInput) + '</div>' +
+                '</div>';
+            }
+
+            // 2 — ROUTING FLOW
+            html += _stag('Pipeline flow');
+            html += '<div class="kgp-block"><div class="kgp-flow">' + flowNodes.join('') + '</div></div>';
+
+            // 3 — TIMELINE
+            if (tlRows.length) {
+                html += _stag('Timeline');
+                html += '<div class="kgp-block"><div class="kgp-timeline">';
+                tlRows.forEach(function(ev){
+                    var d = new Date(ev.time);
+                    var dateStr = d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+                    var timeStr = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+                    html += '<div class="kgp-tl-row">' +
+                        '<div class="kgp-tl-dot" style="border-color:' + ev.c + '"></div>' +
+                        '<div class="kgp-tl-body">' +
+                            '<div class="kgp-tl-event">' + _esc(ev.label) + '</div>' +
+                            '<div class="kgp-tl-time">' + dateStr + ' ' + timeStr + ' &nbsp;·&nbsp; ' + _ago(ev.time) + '</div>' +
+                        '</div>' +
+                    '</div>';
+                });
+                html += '</div></div>';
+            }
+
+            // 4 — DISPATCHED ACTION
+            if (action && action !== originalInput) {
+                html += _stag('Dispatched to agent');
+                html += '<div class="kgp-block kgp-block-accent" style="border-left-color:' + col + '88">' +
+                    '<div class="kgp-label"><span class="kgp-label-icon">⚡</span>What the agent was told to do</div>' +
+                    '<div class="kgp-text">' + _esc(action) + '</div>' +
+                '</div>';
+            }
+
+            // 5 — COUNCIL RECOMMENDATION
+            if (rec) {
+                html += _stag('Council decision');
+                html += '<div class="kgp-block kgp-block-accent" style="border-left-color:#f59e0b">' +
+                    '<div class="kgp-label" style="color:#f59e0b88"><span class="kgp-label-icon">⚖</span>Council recommendation</div>' +
+                    '<div class="kgp-text" style="color:rgba(232,244,255,0.88)">' + _esc(rec) + '</div>' +
+                '</div>';
+            }
+
+            // 6 — AGENT RESPONSE
+            if (reply) {
+                if (source === 'voice') {
+                    html += _stag('APEX response');
+                    html += '<div style="background:rgba(124,108,242,0.07);border:1px solid rgba(124,108,242,0.2);border-radius:12px;padding:18px;margin-bottom:16px">' +
+                        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
+                            '<div style="width:32px;height:32px;border-radius:8px;background:rgba(124,108,242,0.18);border:1px solid rgba(124,108,242,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">◈</div>' +
+                            '<span style="font:700 11px/1 \'JetBrains Mono\',monospace;letter-spacing:.12em;text-transform:uppercase;color:#9d90f5">APEX said</span>' +
+                        '</div>' +
+                        '<div style="font:400 14px/1.7 system-ui;color:rgba(232,244,255,0.9)">' + _esc(reply) + '</div>' +
+                    '</div>';
+                } else {
+                    html += _stag((slug||'Agent') + ' response');
+                    html += '<div class="kgp-response" style="border-left:2px solid ' + col + '55">' + _esc(reply) + '</div>';
+                }
+            }
+
+            // 7 — OFFICE AGENT
+            var officeAgent = (exec.office && exec.office.agent) ? String(exec.office.agent) : '';
+            var officeReply = (exec.office && exec.office.reply) ? String(exec.office.reply) : '';
+            if (officeAgent && officeReply) {
+                html += _stag(officeAgent.toUpperCase() + ' office agent');
+                var delTask = (exec.delegation && exec.delegation.task) ? String(exec.delegation.task) : '';
+                if (delTask && delTask !== action) {
+                    html += '<div class="kgp-block" style="margin-bottom:6px"><div class="kgp-label"><span class="kgp-label-icon">→</span>Task handed off</div><div class="kgp-text">' + _esc(delTask) + '</div></div>';
+                }
+                html += '<div class="kgp-response">' + _esc(officeReply) + '</div>';
+            }
+
+            // 8 — ERROR
+            if (execErr) {
+                html += _stag('Error');
+                html += '<div class="kgp-block kgp-block-accent" style="border-left-color:#ef4444">' +
+                    '<div class="kgp-label" style="color:#ef444488"><span class="kgp-label-icon">✕</span>What went wrong</div>' +
+                    '<div class="kgp-text" style="color:#ef4444aa">' + _esc(execErr) + '</div>' +
+                '</div>';
+            }
+
+            // 9 — OBJECTIVE (only if nothing else shown and not just the task ID)
+            if (!action && !rec && !reply && !execErr && objective && objective !== originalInput && objective !== taskId) {
+                html += '<div class="kgp-block"><div class="kgp-label"><span class="kgp-label-icon">◎</span>Objective</div><div class="kgp-text">' + _esc(objective) + '</div></div>';
+            }
+
+            // 10 — STATS + RUNS
+            html += _stag('Details');
+            var statHtml = '';
+            if (complexity) statHtml += _pill(complexity.toUpperCase(), col, col);
+            if (cost)       statHtml += _pill(cost, '#22c55e', '#22c55e');
+            if (source)     statHtml += _pill(source.toUpperCase() + ' INPUT');
+            if (runs.length) statHtml += _pill(runs.length + ' run' + (runs.length>1?'s':''));
+            if (slug)        statHtml += _pill(slug.toUpperCase() + ' DOMAIN', col);
+            if (statHtml) html += '<div class="kgp-stats" style="margin-bottom:10px">' + statHtml + '</div>';
+
+            if (runs.length > 0) {
+                runs.forEach(function(rn){
+                    var ok2 = rn.success !== false;
+                    var c2  = ok2 ? '#22c55e' : '#ef4444';
+                    var dc  = rn.domain ? _domainColor(rn.domain) : 'rgba(255,255,255,0.3)';
+                    var agentLabel = rn.agent_name || (rn.domain ? rn.domain.toUpperCase() + ' Agent' : 'APEX Agent');
+                    var runObj = (rn.objective && rn.objective !== taskId && rn.objective !== (t.title||'')) ? String(rn.objective) : '';
+                    var runReply = rn.reply ? String(rn.reply) : '';
+                    var elapsed = (rn.agent_summary && rn.agent_summary.elapsed_ms != null) ? rn.agent_summary.elapsed_ms : null;
+                    var elapsedStr = elapsed != null ? (elapsed >= 1000 ? (elapsed/1000).toFixed(1) + 's' : elapsed + 'ms') : '';
+                    var isQueueTask = rn.agent_summary && rn.agent_summary.queue_task === true;
+                    var summaryErr = (rn.agent_summary && rn.agent_summary.error) ? String(rn.agent_summary.error) : '';
+                    var pipelineCtx = isQueueTask ? 'Processed via APEX auto-pipeline queue' : '';
+                    var hasBody = runObj || runReply || summaryErr || pipelineCtx;
+                    html += '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-left:2px solid ' + c2 + '55;border-radius:10px;padding:14px 16px;margin-bottom:8px">' +
+                        '<div style="display:flex;align-items:center;gap:8px;' + (hasBody?'margin-bottom:10px':'') + '">' +
+                            '<span style="color:' + c2 + ';font:700 10px/1 \'JetBrains Mono\',monospace;flex-shrink:0;text-transform:uppercase">' + (ok2?'✓':'✕') + '</span>' +
+                            (rn.domain ? '<span style="font:700 9px/1 \'JetBrains Mono\',monospace;color:' + dc + ';text-transform:uppercase;letter-spacing:.08em;padding:2px 7px;border-radius:4px;border:1px solid ' + dc + '33;background:' + dc + '10;flex-shrink:0">' + _esc(rn.domain.toUpperCase()) + '</span>' : '') +
+                            '<span style="color:rgba(232,244,255,0.7);font:500 12px/1 system-ui;flex:1">' + _esc(agentLabel) + '</span>' +
+                            (elapsedStr ? '<span style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.2)">' + elapsedStr + '</span>' : '') +
+                            (rn.complexity ? '<span style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.2);text-transform:uppercase">' + _esc(rn.complexity) + '</span>' : '') +
+                            (rn.cost_usd  ? '<span style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.2)">$'+Number(rn.cost_usd).toFixed(4)+'</span>' : '') +
+                            '<span style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.18)">' + _ago(rn.created_at) + '</span>' +
+                        '</div>' +
+                        (runObj ? '<div style="font:400 12px/1.6 system-ui;color:rgba(232,244,255,0.7);' + (runReply||summaryErr?'margin-bottom:8px':'') + '"><span style="font:600 9px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.25);text-transform:uppercase;margin-right:6px">TASK</span>' + _esc(runObj) + '</div>' : '') +
+                        (runReply ? '<div style="font:400 12px/1.6 system-ui;color:rgba(232,244,255,0.55);padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:6px;border-left:1px solid rgba(255,255,255,0.1);' + (summaryErr?'margin-bottom:8px':'') + '"><span style="font:600 9px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.25);text-transform:uppercase;display:block;margin-bottom:5px">RESPONSE</span>' + _esc(runReply.length > 300 ? runReply.slice(0,300) + '…' : runReply) + '</div>' : '') +
+                        (pipelineCtx ? '<div style="display:flex;align-items:center;gap:10px;padding-top:' + (runObj||runReply?'8':'0') + 'px;' + (runObj||runReply?'border-top:1px solid rgba(255,255,255,0.05);margin-top:'+(runObj||runReply?'8':'0')+'px':'') + '">' +
+                            '<span style="font:400 10px/1 system-ui;color:rgba(255,255,255,0.35)">⚙ ' + _esc(pipelineCtx) + '</span>' +
+                            (elapsedStr ? '<span style="font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.25)">· completed in ' + elapsedStr + '</span>' : '') +
+                        '</div>' : '') +
+                        (summaryErr ? '<div style="font:400 11px/1.5 \'JetBrains Mono\',monospace;color:#ef4444aa;padding:6px 10px;background:rgba(239,68,68,0.06);border-radius:6px"><span style="text-transform:uppercase;font-size:9px;letter-spacing:.08em;margin-right:6px">ERROR</span>' + _esc(summaryErr) + '</div>' : '') +
+                    '</div>';
+                });
+            }
+
+            // deliberation ID — smallest, at very bottom
+            var deliber = meta.deliberationId || '';
+            if (deliber && !deliber.startsWith('delib-')) {
+                html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);font:400 9px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.15)">DELIBERATION &nbsp;' + _esc(deliber) + '</div>';
+            }
+
+            if (!action && !rec && !reply && !objective && !execErr) {
+                html += '<div style="padding:16px 0;color:rgba(255,255,255,0.18);font:400 11px/1.6 system-ui;font-style:italic;text-align:center">No output stored for this task yet.</div>';
+            }
+
+            html += '</div>';
+            modal.innerHTML = html;
+            var closeBtn = modal.querySelector('.kg-info-modal-close');
+            if (closeBtn) closeBtn.focus();
+
+        }).catch(function() {
+            var fallback = r ? (r.title || r.objective || taskId) : taskId;
+            modal.innerHTML =
+                '<div class="kg-info-modal-hd">' +
+                '<div class="kg-info-modal-icon" style="color:#f59e0b">⚠</div>' +
+                '<div class="kg-info-modal-titles">' +
+                '<div style="font:600 14px/1.3 system-ui;color:#e8f4ff;margin-bottom:6px">' + _esc(fallback.slice(0,60)) + '</div>' +
+                '<div style="font:400 10px/1 \'JetBrains Mono\',monospace;color:rgba(255,255,255,0.2)">' + _esc(taskId) + '</div>' +
+                '</div>' +
+                '<button class="kg-info-modal-close" onclick="window._kgCloseInfo()" aria-label="Close">×</button></div>' +
+                '<div class="kg-info-modal-accent" style="background:linear-gradient(90deg,#f59e0b,transparent)"></div>' +
+                '<div class="kg-info-modal-body">' +
+                (r && r.recommendation ? '<div class="kgp-response">' + _esc(r.recommendation) + '</div>' : '') +
+                '<div style="color:rgba(255,255,255,0.2);font:400 10px/1 \'JetBrains Mono\',monospace;margin-top:8px">Could not reach server — showing cached data</div>' +
+                '</div>';
+        });
+    };
+
+    // Toggle between formatted view and raw JSON data
+    window._kgRawData    = null;
+    window._kgRawShowing = false;
+    window._kgToggleRaw  = function() {
+        var modal = document.getElementById('kg-info-modal');
+        if (!modal || !window._kgRawData) return;
+        if (window._kgRawShowing) {
+            var d = window._kgRawData;
+            var tid = (d.task && d.task.id) || (d.r && d.r.task_id) || '';
+            window._kgRawShowing = false;
+            if (tid) window._kgRunPopup(tid, d.r || null);
+            return;
+        }
+        window._kgRawShowing = true;
+        var body = modal.querySelector('.kg-info-modal-body');
+        if (!body) return;
+
+        var d    = window._kgRawData;
+        var t    = d.task   || {};
+        var runs = d.runs   || [];
+        var r    = d.r      || {};
+        var meta = t.metadata || {};
+        var exec = meta.execution || {};
+
+        function _rh(label) {
+            return '<div style="font:700 8px/1 \'JetBrains Mono\',monospace;letter-spacing:.18em;text-transform:uppercase;' +
+                   'color:rgba(255,255,255,0.25);margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06)">' + label + '</div>';
+        }
+        function _rv(label, val, big) {
+            if (val === undefined || val === null || val === '') return '';
+            var vs = String(val);
+            if (big || vs.length > 60) {
+                return '<div style="margin-bottom:10px">' +
+                    '<div style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-bottom:4px">' + label + '</div>' +
+                    '<div style="font:400 12px/1.65 system-ui;color:rgba(232,244,255,0.75);white-space:pre-wrap;word-break:break-word;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.05)">' + _esc(vs) + '</div>' +
+                '</div>';
+            }
+            return '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:7px;min-height:18px">' +
+                '<div style="font:600 9px/1.6 \'JetBrains Mono\',monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.22);flex-shrink:0;min-width:100px">' + label + '</div>' +
+                '<div style="font:400 12px/1.5 system-ui;color:rgba(232,244,255,0.72);word-break:break-word">' + _esc(vs) + '</div>' +
+            '</div>';
+        }
+        function _rbool(label, val) {
+            if (val === undefined || val === null) return '';
+            var yes = val === true || val === 'true';
+            return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">' +
+                '<div style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.22);flex-shrink:0;min-width:100px">' + label + '</div>' +
+                '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font:700 9px/1 \'JetBrains Mono\',monospace;background:' + (yes?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)') + ';border:1px solid ' + (yes?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)') + ';color:' + (yes?'#22c55e':'#ef4444') + '">' + (yes?'✓ YES':'✕ NO') + '</span>' +
+            '</div>';
+        }
+
+        var html = '';
+
+        // ── toolbar ──
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
+            '<div style="font:700 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,0.3)">All Data</div>' +
+            '<button onclick="window._kgToggleRaw()" style="cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:4px 12px;font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;color:rgba(255,255,255,0.45)" onmouseenter="this.style.background=\'rgba(255,255,255,0.09)\'" onmouseleave="this.style.background=\'rgba(255,255,255,0.05)\'">← BACK</button>' +
+        '</div>';
+
+        // ── TASK ──
+        html += _rh('Task');
+        html += _rv('ID',         t.id);
+        html += _rv('Title',      t.title);
+        html += _rv('Status',     t.status);
+        html += _rv('Created',    t.created_at ? new Date(t.created_at).toLocaleString() + ' (' + _ago(t.created_at) + ')' : '');
+        html += _rv('Updated',    t.updated_at ? new Date(t.updated_at).toLocaleString() + ' (' + _ago(t.updated_at) + ')' : '');
+        html += _rv('Human ID',   t.human_id);
+        html += _rv('Original input', t.original_input);
+
+        // ── ROUTING ──
+        var source = r.source || (t.id&&t.id.startsWith('COUNCIL-')?'council':t.id&&t.id.startsWith('voice-')?'voice':'chat');
+        html += _rh('Routing');
+        html += _rv('Source',      source.toUpperCase());
+        html += _rv('Pipeline',    meta.type ? meta.type.replace(/_/g,' ') : '');
+        html += _rv('Domain',      meta.dispatch && meta.dispatch.slug ? meta.dispatch.slug.toUpperCase() : (r.domain||''));
+        html += _rv('Complexity',  r.complexity);
+        html += _rv('Cost',        r.cost_usd != null ? '$' + Number(r.cost_usd).toFixed(6) : '');
+
+        // ── DISPATCH ──
+        if (meta.dispatch && (meta.dispatch.slug || meta.dispatch.action)) {
+            html += _rh('Dispatch');
+            html += _rv('Agent',  meta.dispatch.slug);
+            html += _rv('Action', meta.dispatch.action, true);
+        }
+
+        // ── COUNCIL ──
+        if (meta.recommendation || meta.deliberationId) {
+            html += _rh('Council');
+            html += _rv('Deliberation ID', meta.deliberationId);
+            html += _rv('Recommendation',  meta.recommendation, true);
+        }
+
+        // ── EXECUTION ──
+        if (exec.agent || exec.reply || exec.timestamp || exec.delegation) {
+            html += _rh('Execution');
+            html += _rv('Agent',     exec.agent);
+            html += _rv('Timestamp', exec.timestamp ? new Date(exec.timestamp).toLocaleString() : '');
+            html += _rv('Reply',     exec.reply, true);
+            if (exec.delegation) {
+                html += _rv('Delegated to', exec.delegation.slug);
+                html += _rv('Delegated task', exec.delegation.task, true);
+            }
+            if (exec.office) {
+                html += _rv('Office agent',  exec.office.agent);
+                html += _rv('Office reply',  exec.office.reply, true);
+            }
+        }
+        if (meta.execution_error) {
+            html += _rh('Error');
+            html += _rv('Message', meta.execution_error, true);
+        }
+
+        // ── AGENT RUNS ──
+        if (runs.length) {
+            html += _rh('Agent Runs (' + runs.length + ')');
+            runs.forEach(function(rn, i) {
+                html += '<div style="padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.05);margin-bottom:6px">';
+                html += '<div style="font:600 9px/1 \'JetBrains Mono\',monospace;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Run ' + (i+1) + '</div>';
+                html += _rv('Task ID',    rn.task_id);
+                html += _rv('Objective',  rn.objective, true);
+                html += _rbool('Success', rn.success);
+                html += _rv('Complexity', rn.complexity);
+                html += _rv('Cost',       rn.cost_usd != null ? '$' + Number(rn.cost_usd).toFixed(6) : '');
+                html += _rv('Created',    rn.created_at ? new Date(rn.created_at).toLocaleString() : '');
+                html += '</div>';
+            });
+        }
+
+        // ── ANY OTHER METADATA ──
+        var knownKeys = { type:1, dispatch:1, recommendation:1, deliberationId:1, execution:1, execution_error:1, task_title:1, priority:1, re_escalations:1 };
+        var extraKeys = Object.keys(meta).filter(function(k){ return !knownKeys[k]; });
+        if (extraKeys.length) {
+            html += _rh('Other Metadata');
+            extraKeys.forEach(function(k){
+                var v = meta[k];
+                var vs = typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v);
+                html += _rv(k, vs, vs.length > 60);
+            });
+        }
+
+        body.innerHTML = html;
     };
 
     function _ago(ts) {
@@ -28407,7 +29575,7 @@ window.apexFileDropHandler = function(e){
 
         if (tierId === 'input') {
             var _now3lp = Date.now();
-            body.innerHTML = _accordion([{ name:'INPUT CHANNELS', color:'#22d3ee', rows: _INPUT_TYPES.map(function(t) {
+            body.innerHTML = _accordion([{ name:'INPUT CHANNELS', color:'#22d3ee', open: true, rows: _INPUT_TYPES.map(function(t) {
                 var chRuns = _liveRuns.filter(function(r){ return t.srcMatch(r); });
                 var state = chRuns.some(function(r){ return (_now3lp - new Date(r.created_at).getTime()) < 120000; }) ? 'working'
                            : chRuns.some(function(r){ return (_now3lp - new Date(r.created_at).getTime()) < 3600000; }) ? 'ready' : 'idle';
@@ -28626,24 +29794,21 @@ window.apexFileDropHandler = function(e){
             '</div>';
         }
 
-        return '<div class="kg-task-card pri-' + pri + ' is-focus' + (irrev ? ' is-irrev' : '') + '" id="kg-tc-' + sid + '">' +
-            '<div class="kg-task-hd">' +
-                '<span class="kg-task-pri ' + pri + '">' + pri.toUpperCase() + '</span>' +
-                (agentLabel ? '<span class="kg-task-agent" style="background:' + agentColor + '22;color:' + agentColor + '">' + agentLabel + '</span>' : '') +
-                (isBlocking ? '<span class="kg-task-blocking">⚡ BLOCKING</span>' : '') +
-                '<span class="kg-task-time">' + _ago(t.created_at) + '</span>' +
+        return '<div class="kg-task-card pri-' + pri + ' is-focus" id="kg-tc-' + sid + '">' +
+            '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">' +
+                '<span style="width:20px;height:20px;border-radius:4px;background:' + agentColor + '20;border:1px solid ' + agentColor + '40;display:inline-flex;align-items:center;justify-content:center;font:700 8px/1 monospace;color:' + agentColor + ';flex-shrink:0">' + (agentLabel ? agentLabel.slice(0,2) : 'AP') + '</span>' +
+                '<span style="font:500 11px/1 Inter,sans-serif;color:rgba(232,244,255,0.32)">' + (agentLabel || 'Apex') + '</span>' +
             '</div>' +
-            '<div class="kg-task-title">' + _esc((t.title || t.id || '—').slice(0, 80)) + '</div>' +
-            (rec ? '<div class="kg-task-desc">' + _esc(rec.slice(0, 160)) + '</div>' : '') +
-            (irrev ? '<div class="kg-task-warn">⚠ IRREVERSIBLE — cannot be undone</div>' : '') +
+            '<div class="kg-title-box">' + _esc((t.title || t.id || '—')) + '</div>' +
+            (rec ? '<div class="kg-card-desc">' + _esc(rec.slice(0,180)) + '</div>' : '') +
+            (irrev ? '<div class="kg-card-irrev">Cannot be undone</div>' : '') +
             '<div class="kg-task-btns">' +
-                '<button class="kg-act-btn approve" onclick="window._kgApprove(' + tid + ',this)" aria-label="Approve task">✓ APPROVE</button>' +
-                '<button class="kg-act-btn reject"  onclick="window._kgRejectPrompt(' + tid + ')" aria-label="Reject task">✕ REJECT</button>' +
-                '<button class="kg-act-btn" style="flex:none;min-width:0;padding:6px 8px;border-color:rgba(124,108,242,0.3);color:rgba(124,108,242,0.7)" data-apex-follow="' + sid + '" aria-label="Trace task execution">◈</button>' +
+                '<button class="kg-act-btn approve" onclick="window._kgApprove(' + tid + ',this)" aria-label="Approve">Approve</button>' +
+                '<button class="kg-act-btn reject"  onclick="window._kgRejectPrompt(' + tid + ')" aria-label="Deny">Deny</button>' +
             '</div>' +
             '<div class="kg-task-reject-area" id="kg-reject-' + sid + '">' +
-                '<textarea class="kg-task-reject-inp" rows="2" placeholder="Reason (optional)…" aria-label="Rejection reason"></textarea>' +
-                '<button class="kg-act-btn reject" style="width:100%;margin-top:0;flex:none" onclick="window._kgRejectConfirm(' + tid + ',this)">CONFIRM REJECT</button>' +
+                '<textarea class="kg-task-reject-inp" rows="2" placeholder="Reason (optional)" aria-label="Rejection reason"></textarea>' +
+                '<button class="kg-act-btn reject" style="width:100%;margin-top:0;flex:none" onclick="window._kgRejectConfirm(' + tid + ',this)">Confirm deny</button>' +
             '</div>' +
         '</div>';
     }
@@ -28739,7 +29904,7 @@ window.apexFileDropHandler = function(e){
         _councilStats(statsEl, delibs, resolved, escalated);
         var CARDS = [
             { key:'live',      icon:'⬡', n:live.length,      label:'Live now',            sub:'Active deliberations',      color:'#a78bfa', glow:'rgba(167,139,250,0.18)', blink:live.length > 0 },
-            { key:'pending',   icon:'◈', n:pending.length,   label:'Needs your approval', sub:'Waiting for sign-off',       color:'#7c6cf2', glow:'rgba(124,108,242,0.18)', blink:false },
+            { key:'pending',   icon:'◈', n:pending.length,   label:'Needs your approval', sub:'Waiting for sign-off',       color:'#7c6cf2', glow:'rgba(124,108,242,0.18)', blink:pending.length > 0 },
             { key:'escalated', icon:'▲', n:escalated.length, label:'Escalated',           sub:'Sent to Founder for review', color:'#f59e0b', glow:'rgba(245,158,11,0.18)',  blink:false },
             { key:'resolved',  icon:'◉', n:resolved.length,  label:'Past decisions',      sub:'Recently resolved',          color:'#22c55e', glow:'rgba(34,197,94,0.18)',   blink:false },
         ];
@@ -28794,22 +29959,21 @@ window.apexFileDropHandler = function(e){
                 var pri = String(typeof priRaw==='object'?'standard':priRaw).toLowerCase().split(' ')[0];
                 if (['critical','urgent','important'].indexOf(pri)===-1) pri='standard';
                 var priColors = {critical:'#ef4444',urgent:'#f59e0b',important:'#22d3ee',standard:'#7c6cf2'};
-                return '<div class="kg-approval-card" id="kg-tc-' + sid + '">' +
-                    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">' +
-                        '<span class="kg-task-pri ' + pri + '">' + pri.toUpperCase() + '</span>' +
-                        '<span class="kg-task-time">' + _ago(t.created_at||t.updated_at) + '</span>' +
+                var agentColor2 = priColors[pri] || '#7c6cf2';
+                return '<div class="kg-approval-card" id="kg-tc-' + sid + '" style="border-left:3px solid ' + agentColor2 + '">' +
+                    '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">' +
+                        '<span style="font:500 11px/1 Inter,sans-serif;color:rgba(232,244,255,0.4)">' + _ago(t.created_at||t.updated_at) + '</span>' +
                     '</div>' +
-                    '<div class="kg-approval-title">' + _esc((t.title||t.id||'—').slice(0,80)) + '</div>' +
-                    (rec ? '<div class="kg-delib-rec">' + _esc(rec.slice(0,120)) + '</div>' : '') +
+                    '<div class="kg-title-box">' + _esc((t.title||t.id||'—')) + '</div>' +
                     '<div class="kg-task-btns" style="margin-top:8px">' +
-                        '<button class="kg-act-btn approve" onclick="window._kgApprove('+tid+',this)" aria-label="Approve">✓ APPROVE</button>' +
-                        '<button class="kg-act-btn reject" onclick="window._kgRejectPrompt('+tid+')" aria-label="Reject">✕ REJECT</button>' +
+                        '<button class="kg-act-btn approve" onclick="window._kgApprove('+tid+',this)" aria-label="Approve">Approve</button>' +
+                        '<button class="kg-act-btn reject" onclick="window._kgRejectPrompt('+tid+')" aria-label="Deny">Deny</button>' +
                     '</div>' +
                     '<div class="kg-task-reject-area" id="kg-reject-' + sid + '">' +
-                        '<textarea class="kg-task-reject-inp" rows="2" placeholder="Reason (optional)…"></textarea>' +
-                        '<button class="kg-act-btn reject" style="width:100%;margin-top:0;flex:none" onclick="window._kgRejectConfirm('+tid+',this)">CONFIRM REJECT</button>' +
+                        '<textarea class="kg-task-reject-inp" rows="2" placeholder="Reason (optional)" aria-label="Rejection reason"></textarea>' +
+                        '<button class="kg-act-btn reject" style="width:100%;margin-top:0;flex:none" onclick="window._kgRejectConfirm('+tid+',this)">Confirm deny</button>' +
                     '</div>' +
-                '</div>';
+                '</div>';      '</div>';
             }).join('');
         } else if (s.type === 'live') {
             items = s.items.map(function (d) {
@@ -29089,11 +30253,11 @@ window.apexFileDropHandler = function(e){
 
     // ── Input channel right panel ─────────────────────────────────────────────
     var _INPUT_TYPES = [
-        { key:'chat',      icon:'◎', label:'Chat Input',     desc:'Natural language · dashboard',    srcMatch: function(r){ return !r.source || r.source==='chat'; } },
+        { key:'chat',      icon:'◎', label:'Chat Input',     desc:'Natural language · dashboard',    srcMatch: function(r){ return r.source==='chat'||(r.source!=='voice'&&r.source!=='scheduled'&&r.source!=='council'&&r.source!=='agent'&&r.source!=='api'&&r.source!=='tool'); } },
         { key:'voice',     icon:'◈', label:'Voice Input',    desc:'Speech-to-text · audio pipeline', srcMatch: function(r){ return r.source==='voice'; } },
-        { key:'scheduled', icon:'⬡', label:'Scheduled Task', desc:'Cron-triggered · autonomous',     srcMatch: function(r){ return r.source==='cron'||r.trigger==='scheduled'; } },
-        { key:'agent',     icon:'◬', label:'Agent Request',  desc:'Internal sub-task · spawned',    srcMatch: function(r){ return r.source==='agent'||r.trigger==='agent'; } },
-        { key:'api',       icon:'▶', label:'API Call',        desc:'External service · webhook',      srcMatch: function(r){ return r.source==='api'||r.trigger==='webhook'; } },
+        { key:'scheduled', icon:'⬡', label:'Scheduled Task', desc:'Cron-triggered · autonomous',     srcMatch: function(r){ return r.source==='scheduled'; } },
+        { key:'agent',     icon:'◬', label:'Agent Request',  desc:'Internal sub-task · spawned',    srcMatch: function(r){ return r.source==='agent'; } },
+        { key:'api',       icon:'▶', label:'API Call',        desc:'External service · webhook',      srcMatch: function(r){ return r.source==='api'; } },
         { key:'tool',      icon:'◉', label:'Tool Action',    desc:'Connected tool · registry',       srcMatch: function(r){ return r.source==='tool'; } },
     ];
     function _renderInputRight() {
@@ -29124,14 +30288,11 @@ window.apexFileDropHandler = function(e){
         var total = filtered.length;
         var cards = _INPUT_TYPES.map(function (t, idx) {
             var runs = filtered.filter(function (r) { return t.srcMatch(r); });
-            // For chat (idx=0), fall back to total when no source field is set
-            var cnt  = runs.length || (idx === 0 ? total : 0);
-            var lastRun  = runs[0] || (idx === 0 ? filtered[0] : null);
+            var cnt  = runs.length;
+            var lastRun  = runs[0] || null;
             var lastTime = lastRun ? _ago(lastRun.created_at) : 'No activity';
-            var isLive   = runs.some(function (r) { return (now3 - new Date(r.created_at).getTime()) < 120000; }) || (idx === 0 && filtered[0] && (now3 - new Date(filtered[0].created_at).getTime()) < 120000);
-            var displayRuns = runs.length ? runs : (idx === 0 ? filtered : []);
-            var runIds = displayRuns.slice(0,30).map(function(r){ return '\'' + String(r.id||'').replace(/'/g,"\\'") + '\''; }).join(',');
-            var onclick = 'window._kgInputChannelDetail(\'' + t.key + '\',[' + runIds + '],\'' + t.label + '\')';
+            var isLive   = runs.some(function (r) { return (now3 - new Date(r.created_at).getTime()) < 120000; });
+            var onclick = 'window._kgInputChannelDetail(\'' + t.key + '\',[],\'' + t.label + '\')';
             return '<div class="kg-input-card' + (isLive ? ' is-live' : '') + '" data-channel="' + t.key + '" tabindex="0" role="button" aria-label="' + _esc(t.label) + ': ' + cnt + ' runs" onclick="' + onclick + '" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();' + onclick + '}">' +
                 (isLive ? '<div class="kg-input-live-dot"></div>' : '<div class="kg-input-card-icon">' + t.icon + '</div>') +
                 '<div class="kg-input-card-body">' +
@@ -29145,12 +30306,14 @@ window.apexFileDropHandler = function(e){
         body.innerHTML = filterBar + '<div class="kg-input-cards">' + cards + '</div>';
     }
     window._kgInputFilter = function (f) { _inputFilter = f; _renderInputRight(); };
+    window._renderInputRight = function () { _renderInputRight(); };
 
     window._kgInputChannelDetail = function (channelKey, runIds, label) {
         var body = document.getElementById('kg-right-body');
         if (!body) return;
-        var runs = runIds && runIds.length
-            ? runIds.map(function(id){ return (_liveRuns||[]).find(function(r){ return String(r.id)===String(id); }); }).filter(Boolean)
+        var t = (_INPUT_TYPES||[]).find(function(x){ return x.key===channelKey; });
+        var runs = t
+            ? (_liveRuns||[]).filter(function(r){ return t.srcMatch(r); }).slice(0,40)
             : _liveRuns.slice(0,40);
         var col = '#22d3ee';
         body.innerHTML =
@@ -29158,7 +30321,7 @@ window.apexFileDropHandler = function(e){
             (runs.length
                 ? '<div class="kg-time-hd"><span>' + (label||channelKey) + '</span><span class="kg-time-hd-count">' + runs.length + '</span></div>' +
                   runs.map(_runCard).join('')
-                : '<div class="kg-runs-empty">No runs recorded for this channel yet.<br><span style="color:rgba(255,255,255,0.18);font-size:10px">Runs appear once agents process requests via this input type.</span></div>');
+                : '<div style="padding:32px 16px;text-align:center;color:rgba(255,255,255,0.2);font:400 11px/1.6 system-ui">No runs recorded for this channel yet.<br><span style="font-size:10px;opacity:.6">Runs appear once agents process requests via this input type.</span></div>');
     };
 
     // ── Output left panel (completed task list) ────────────────────────────────
@@ -29487,23 +30650,24 @@ window.apexFileDropHandler = function(e){
     function _runCard(r) {
         var col    = _domainColor((r.domain || '').toLowerCase());
         var ok     = r.success !== false;
-        var task   = (r.task_description || (typeof r.agent_summary === 'string' ? r.agent_summary : '') || '').trim();
-        var domain = r.domain ? r.domain.charAt(0).toUpperCase() + r.domain.slice(1).toLowerCase() : '';
-        var dur    = r.duration_ms ? _dur(r.duration_ms) : '';
-        var rid    = '\'' + String(r.id || '').replace(/'/g, "\\'") + '\'';
-        return '<div class="kg-run-card" tabindex="0" role="button" aria-label="' + _esc((r.agent_name||domain||'Run') + ' · ' + (task||'').slice(0,40)) + '" onclick="window._kgRunDetail(' + rid + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgRunDetail(' + rid + ')}">' +
+        var label  = (r.title || r.objective || r.task_id || '—').trim();
+        var domain = r.domain ? r.domain.charAt(0).toUpperCase() + r.domain.slice(1).toLowerCase() : (r.source ? r.source.charAt(0).toUpperCase() + r.source.slice(1) : '');
+        var cost   = r.cost_usd ? ('$' + Number(r.cost_usd).toFixed(4)) : '';
+        var complexity = r.complexity ? r.complexity.charAt(0).toUpperCase() + r.complexity.slice(1) : '';
+        var tid    = '\'' + String(r.task_id || '').replace(/'/g, "\\'") + '\'';
+        return '<div class="kg-run-card" tabindex="0" role="button" aria-label="' + _esc(label.slice(0,60)) + '" onclick="window._kgRunPopup(' + tid + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._kgRunPopup(' + tid + ')}">' +
             '<div class="kg-run-card-bar" style="background:' + col + '"></div>' +
             '<div class="kg-run-card-body">' +
                 '<div class="kg-run-card-hd">' +
-                    '<div class="kg-run-card-name">' + _esc((r.agent_name || domain || '—').slice(0,34)) + '</div>' +
+                    '<div class="kg-run-card-name">' + _esc(label.slice(0,60)) + '</div>' +
                     '<span class="kg-run-card-time">' + _ago(r.created_at) + '</span>' +
                 '</div>' +
                 '<div class="kg-run-card-row2">' +
                     (domain ? '<span class="kg-run-card-domain" style="color:' + col + ';border-color:' + col + '30">' + _esc(domain) + '</span>' : '') +
-                    (dur    ? '<span class="kg-run-card-dur">' + dur + '</span>' : '') +
+                    (complexity ? '<span class="kg-run-card-dur">' + complexity + '</span>' : '') +
+                    (cost ? '<span class="kg-run-card-dur">' + cost + '</span>' : '') +
                     '<span class="kg-run-card-pill ' + (ok?'ok':'fail') + '">' + (ok ? 'Success' : 'Failed') + '</span>' +
                 '</div>' +
-                (task ? '<div class="kg-run-card-task">' + _esc(task.slice(0, 110)) + '</div>' : '') +
             '</div>' +
         '</div>';
     }
@@ -29805,7 +30969,7 @@ window.apexFileDropHandler = function(e){
             body: JSON.stringify({ taskId: taskId, approved: true })
         }).then(function (r) { return r.json(); }).then(function (d) {
             if (d && d.ok === false) {
-                if (btn) { btn.disabled = false; btn.textContent = '✓ APPROVE'; }
+                if (btn) { btn.disabled = false; btn.textContent = 'Approve'; }
                 var s = document.getElementById('kg-convene-status');
                 if (s) { s.textContent = 'Error: ' + (d.error || 'approval failed'); setTimeout(function(){ s.textContent=''; }, 4000); }
                 return;
@@ -29813,7 +30977,7 @@ window.apexFileDropHandler = function(e){
             _kgRecordDecision(taskId, title, 'approved');
             _kgShowUndo(taskId, title, 'approved');
             _kgAutoAdvance(taskId);
-        }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = '✓ APPROVE'; } });
+        }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = 'Approve'; } });
     };
 
     window._kgRejectPrompt = function (taskId) {

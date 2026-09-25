@@ -90,6 +90,19 @@ router.get('/memory/episodic/recent', _requireEpisodicOwner, async (req, res) =>
     res.json({ ok: true, data });
 });
 
+router.get('/memory/voice-history', _requireEpisodicOwner, async (req, res) => {
+    try {
+        const epMem = require('../lib/memory/episodic-memory-pg');
+        const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+        const data  = await epMem.getVoiceHistory({
+            limit,
+            before: req.query.before || null,
+            after:  req.query.after  || null,
+        });
+        res.json({ ok: true, conversations: data, count: data.length });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 router.get('/memory/episodic/failures', _requireEpisodicOwner, async (req, res) => {
     const data = await episodicMemory.getFailures(parseInt(req.query.limit) || 30);
     res.json({ ok: true, data });

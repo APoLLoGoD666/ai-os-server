@@ -236,6 +236,27 @@ router.post('/api/tasks/reject', requireAppAccess, async (req, res) => {
     return res.json({ ok: true, taskId, status: 'rejected' });
 });
 
+router.get('/api/tasks/:id', requireAppAccess, async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id || id.length > 200) return res.status(400).json({ ok: false, error: 'Invalid id' });
+        const scope = _ownerScopeFromReq(req);
+        const { data, error } = await sbAdmin.from('apex_tasks').select('id,title,status,created_at,updated_at,metadata,human_id').eq('id', id).single();
+        if (error || !data) return res.status(404).json({ ok: false, error: 'Task not found' });
+        if (!scope.bypass && data.human_id && data.human_id !== scope.humanId) return res.status(403).json({ ok: false, error: 'Forbidden' });
+        // Fetch original input: deliberation question (council) > title (all others)
+        let original_input = null;
+        const deliberationId = data.metadata?.deliberationId;
+        if (deliberationId && !deliberationId.startsWith('delib-')) {
+            const { data: delib } = await sbAdmin.from('executive_deliberations').select('question').eq('id', deliberationId).single().catch(() => ({ data: null }));
+            if (delib?.question) original_input = delib.question;
+        }
+        // Always fall back to title — it is always set to the original user request
+        if (!original_input) original_input = data.title || null;
+        res.json({ ok: true, task: { ...data, original_input } });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 router.get('/api/tasks/standing-approvals', requireAppAccess, async (req, res) => {
     try {
         if (_rejectScopeAllForNonMaster(req, res)) return;

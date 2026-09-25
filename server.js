@@ -371,6 +371,7 @@ app.use(require('./src/routes/transcription'));
 app.use(require('./src/routes/mastra'));
 app.use(require('./src/routes/ruflo'));
 app.use(require('./src/routes/tasks'));
+app.use(require('./routes/briefing'));
 // V-11-H-B2: GET /api/actions/summary — badge metrics endpoint.
 app.use(require('./src/routes/actions'));
 app.use(require('./src/routes/research'));

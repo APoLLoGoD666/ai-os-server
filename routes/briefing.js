@@ -16,6 +16,7 @@ router.get('/briefing/today', _auth, async (req, res) => {
         const today     = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         const weekAgo   = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+        const monthAgo  = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
         const weekAhead = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
         const [calRes, emailRes, txRes, invoiceRes, nutritionRes, sleepRes, workoutRes, journalRes, assignmentRes] =
@@ -28,7 +29,7 @@ router.get('/briefing/today', _auth, async (req, res) => {
                 scope(sb().from('apex_sleep_log').select('date,hours,quality_score,notes').eq('date', yesterday).maybeSingle()),
                 scope(sb().from('apex_workouts').select('type,duration_minutes,workout_date').gte('workout_date', weekAgo).order('workout_date', { ascending: false }).limit(3)),
                 scope(sb().from('apex_journal_entries').select('entry_text,mood_score,created_at').order('created_at', { ascending: false }).limit(1)),
-                scope(sb().from('apex_university_assignments').select('title,due_date,completed').eq('completed', false).lte('due_date', weekAhead).order('due_date', { ascending: true }).limit(5)),
+                scope(sb().from('apex_university_assignments').select('title,due_date,completed').eq('completed', false).gte('due_date', monthAgo).lte('due_date', weekAhead).order('due_date', { ascending: true }).limit(5)),
             ]);
 
         const val = r => r.status === 'fulfilled' ? (r.value.data ?? null) : null;
@@ -83,6 +84,25 @@ router.get('/briefing/priority-inbox', _auth, async (req, res) => {
             },
         });
     } catch (e) { res.status(500).json({ ok: false, error: CODES.INTERNAL_ERROR, message: safeMessage(e, 'Failed to load priority inbox.'), requestId }); }
+});
+
+// GET /api/briefing/calendar-week — next 12 months of apex_calendar_events
+router.get('/briefing/calendar-week', _auth, async (req, res) => {
+    const requestId = req.requestId || '';
+    try {
+        const today      = new Date().toISOString().split('T')[0];
+        const yearOut    = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0];
+        const { data, error } = await sb()
+            .from('apex_calendar_events')
+            .select('id,title,event_date,start_time,end_time,location,description')
+            .gte('event_date', today)
+            .lte('event_date', yearOut)
+            .order('event_date', { ascending: true })
+            .order('start_time', { ascending: true })
+            .limit(500);
+        if (error) throw error;
+        res.json({ ok: true, events: data || [] });
+    } catch (e) { res.status(500).json({ ok: false, error: 'INTERNAL_ERROR', requestId }); }
 });
 
 // GET /api/briefing/motivation — FEAT-D010: daily motivational statement via Claude

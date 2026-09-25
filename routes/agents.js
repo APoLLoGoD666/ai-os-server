@@ -59,6 +59,55 @@ router.post('/agents/invoke', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// GET /api/agents/activity?limit=20&source_task_id=TASK-xxx  — recent agent run log
+// source_task_id filter: returns only authoritative runs for that apex_tasks row
+router.get('/agents/activity', _auth, async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit) || 20, 200);
+        const sourceTaskId = req.query.source_task_id || null;
+        let q = _sbSync()
+            .from('apex_agent_runs')
+            .select('task_id,objective,success,cost_usd,complexity,created_at,agent_summary')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+        if (sourceTaskId) q = q.eq('task_id', sourceTaskId);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        const runs = data || [];
+        // Enrich with task metadata for richer UI
+        const taskIds = [...new Set(runs.map(r => r.task_id).filter(Boolean))];
+        let taskMap = {};
+        if (taskIds.length) {
+            const { data: tasks } = await _sbSync()
+                .from('apex_tasks')
+                .select('id,title,status,metadata,updated_at')
+                .in('id', taskIds.slice(0, 200));
+            (tasks || []).forEach(t => { taskMap[t.id] = t; });
+        }
+        const enriched = runs.map(r => {
+            const t = taskMap[r.task_id] || null;
+            const slug = t?.metadata?.dispatch?.slug || null;
+            const source = r.task_id?.startsWith('voice-') ? 'voice'
+                         : r.task_id?.startsWith('sched-') || r.task_id?.startsWith('cron-') ? 'scheduled'
+                         : r.task_id?.startsWith('COUNCIL-') ? 'council'
+                         : 'chat';
+            let agentSummary = null;
+            try { agentSummary = r.agent_summary ? JSON.parse(r.agent_summary) : null; } catch(_) {}
+            return {
+                ...r,
+                title:  t?.title || r.objective || r.task_id || '—',
+                domain: slug || null,
+                agent_summary: agentSummary,
+                source,
+                task_status: t?.status || null,
+                recommendation: t?.metadata?.recommendation || null,
+                reply: t?.metadata?.execution?.reply || null,
+            };
+        });
+        res.json({ ok: true, runs: enriched });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // GET /api/agents/:slug
 router.get('/agents/:slug', _auth, (req, res) => {
     try {
@@ -113,24 +162,6 @@ router.post('/agents/seed-office', _auth, async (req, res) => {
         const { error } = await sb.from('apex_agents').upsert(rows, { onConflict: 'slug' });
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, seeded: rows.length, agents: rows.map(r => r.slug) });
-    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
-});
-
-// GET /api/agents/activity?limit=20&source_task_id=TASK-xxx  — recent agent run log
-// source_task_id filter: returns only authoritative runs for that apex_tasks row
-router.get('/agents/activity', _auth, async (req, res) => {
-    try {
-        const limit = Math.min(parseInt(req.query.limit) || 20, 200);
-        const sourceTaskId = req.query.source_task_id || null;
-        let q = _sbSync()
-            .from('apex_agent_runs')
-            .select('id,task_id,source_task_id,agent_name,domain,task_description,objective,success,duration_ms,model_used,token_count,agent_summary,created_at')
-            .order('created_at', { ascending: false })
-            .limit(limit);
-        if (sourceTaskId) q = q.eq('source_task_id', sourceTaskId);
-        const { data, error } = await q;
-        if (error) return res.status(500).json({ ok: false, error: error.message });
-        res.json({ ok: true, runs: data || [] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
