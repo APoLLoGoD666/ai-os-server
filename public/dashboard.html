@@ -20339,23 +20339,32 @@ function fetchWeeklyPlan() {
         .then(function(r) { return r.json(); })
         .then(function(d) {
             var plan = d.plan || [];
-            if (!plan.length) { list.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:12px">No weekly content available</div>'; return; }
+            if (!plan.length) {
+                list.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:12px">No weekly content yet — syncing from BCU...</div>';
+                return;
+            }
             var rows = [];
             plan.forEach(function(course) {
                 (course.sections || []).forEach(function(sec) {
-                    rows.push('<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">'
+                    rows.push(
+                        '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">'
                         + '<span style="font:700 10px/1 var(--font-mono);letter-spacing:.08em;color:#0d0d0d;background:var(--amber);padding:2px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0">' + course.code + '</span>'
-                        + '<span style="flex:1;font-size:12px;color:var(--text)">' + (sec.name||'') + '</span>'
-                        + '<span style="font-size:10px;color:var(--text-mute);flex-shrink:0">' + sec.file_count + ' file' + (sec.file_count===1?'':'s') + '</span>'
-                        + '<button class="ds-btn xs" onclick="moodleScanContent({module:'' + course.code + ''})" style="flex-shrink:0">Study</button>'
-                        + '</div>');
+                        + '<span style="flex:1;font-size:12px;color:var(--text)">' + (sec.name || '') + '</span>'
+                        + '<span style="font-size:10px;color:var(--text-mute);flex-shrink:0">' + sec.file_count + ' file' + (sec.file_count === 1 ? '' : 's') + '</span>'
+                        + '<button class="ds-btn xs uni-study-btn" data-module="' + course.code + '" style="flex-shrink:0">Study</button>'
+                        + '</div>'
+                    );
                 });
             });
-            list.innerHTML = rows.join('');
+            list.innerHTML = rows.length ? rows.join('') : '<div style="color:var(--text-faint);font-style:italic;padding:12px">No weekly content yet.</div>';
         })
         .catch(function() { list.innerHTML = '<div style="color:var(--text-faint);padding:12px">Could not load weekly plan.</div>'; });
 }
 
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.uni-study-btn');
+    if (btn) { moodleScanContent({ module: btn.getAttribute('data-module') }); }
+});
 // Sync ring when pomodoro ticks
 (function(){
     var _origToggle = window.pomodoroToggle;
