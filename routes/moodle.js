@@ -306,9 +306,14 @@ router.get('/moodle/dashboard', _auth, async (req, res) => {
             try { rawSections = await moodleCall('core_course_get_contents', { courseid: course.id }); } catch (_) {}
             const sections = [];
             let totalFiles = 0, scannedCount = 0;
+            const _skipSections = ['general', 'news forum', 'announcements', 'introduction'];
             for (const s of rawSections) {
+                const sname = (s.name || '').trim();
+                if (!sname || _skipSections.includes(sname.toLowerCase())) continue;
                 const files = [];
+                const activities = [];
                 for (const mod of (s.modules || [])) {
+                    // Study files
                     for (const f of (mod.contents || [])) {
                         if (!f.filename || !f.fileurl || !isStudyFile(f.filename)) continue;
                         if ((f.filesize || 0) > 15 * 1024 * 1024) continue;
@@ -317,12 +322,17 @@ router.get('/moodle/dashboard', _auth, async (req, res) => {
                         totalFiles++;
                         if (scanned) scannedCount++;
                     }
+                    // Assessment/activity entries in this week
+                    if (['assign', 'quiz', 'turnitintool', 'turnitintooltwo'].includes(mod.modname)) {
+                        activities.push({ type: mod.modname, name: mod.name, instance_id: mod.instance });
+                    }
                 }
-                if (files.length) sections.push({ name: s.name, files });
+                sections.push({ name: sname, files, activities });
             }
 
-            // Assignments
+            // Assignments — from mod_assign API
             let assignments = [];
+            const seenAssignNames = new Set();
             try {
                 const aData = await moodleCall('mod_assign_get_assignments', { 'courseids[0]': course.id });
                 for (const c of (aData.courses || [])) {
@@ -334,11 +344,27 @@ router.get('/moodle/dashboard', _auth, async (req, res) => {
                             days_until: daysUntil,
                             grade_scale: a.grade || 100,
                             intro: a.intro ? a.intro.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 400) : null,
+                            source: 'moodle_assign',
                         });
+                        seenAssignNames.add(a.name.toLowerCase());
                     }
                 }
-                assignments.sort((a, b) => (a.days_until ?? 999) - (b.days_until ?? 999));
             } catch (_) {}
+            // Also surface assignment/Turnitin activities found in sections
+            for (const sec of sections) {
+                for (const act of (sec.activities || [])) {
+                    if (!seenAssignNames.has(act.name.toLowerCase())) {
+                        assignments.push({
+                            id: act.instance_id, title: act.name,
+                            due_date: null, days_until: null,
+                            grade_scale: 100, intro: null,
+                            source: act.type,
+                        });
+                        seenAssignNames.add(act.name.toLowerCase());
+                    }
+                }
+            }
+            assignments.sort((a, b) => (a.days_until ?? 999) - (b.days_until ?? 999));
 
             // Announcements from news forum
             let announcements = [];

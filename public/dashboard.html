@@ -20293,64 +20293,77 @@ function renderSections(code) {
     });
     if (!mod) { el.innerHTML = ''; return; }
     if (!mod.sections || !mod.sections.length) {
-        el.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">No content uploaded yet for ' + code + '</div>';
+        el.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">No weeks found — sync to load</div>';
         return;
     }
     el.innerHTML = mod.sections.map(function(sec) {
-        var allScanned = sec.files.every(function(f) { return f.scanned; });
-        var dotColor = allScanned ? 'var(--color-success)' : 'var(--color-warning)';
-        var fileRows = sec.files.map(function(f) {
+        var hasFiles = sec.files && sec.files.length > 0;
+        var hasActivities = sec.activities && sec.activities.length > 0;
+        var allScanned = hasFiles && sec.files.every(function(f) { return f.scanned; });
+        var dotColor = !hasFiles && !hasActivities ? 'rgba(255,255,255,0.2)' : allScanned ? 'var(--color-success)' : 'var(--color-warning)';
+        var fileRows = hasFiles ? sec.files.map(function(f) {
             var ext = f.name.split('.').pop().toUpperCase();
             return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,0.02);border-radius:4px;margin-bottom:3px">'
                 + '<span style="font:700 8px/1 var(--font-mono);color:#0d0d0d;background:' + (ext==='PDF'?'#ef4444':ext==='PPTX'||ext==='PPT'?'#f59e0b':'#6366f1') + ';padding:2px 4px;border-radius:3px;flex-shrink:0">' + ext + '</span>'
                 + '<span style="font-size:11px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + f.name.replace(/\.[^.]+$/, '') + '</span>'
                 + '<span style="font-size:9px;color:var(--text-mute);flex-shrink:0">' + f.size_kb + 'kb</span>'
-                + (f.scanned
-                    ? '<span style="font-size:9px;color:var(--color-success);flex-shrink:0">&#10003; notes</span>'
-                    : '<button class="ds-btn xs uni-study-btn" data-module="' + code + '" style="font-size:9px;padding:2px 6px;flex-shrink:0">Scan</button>')
+                + (f.scanned ? '<span style="font-size:9px;color:var(--color-success);flex-shrink:0">&#10003;</span>' : '<button class="ds-btn xs uni-study-btn" data-module="' + code + '" style="font-size:9px;padding:2px 6px;flex-shrink:0">Scan</button>')
                 + '</div>';
-        }).join('');
-        return '<div style="border-bottom:1px solid rgba(255,255,255,0.05);padding:10px 0">'
-            + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
+        }).join('') : '';
+        var actRows = hasActivities ? sec.activities.map(function(act) {
+            return '<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;opacity:0.6">'
+                + '<span style="font:700 8px/1 var(--font-mono);color:#0d0d0d;background:#7c6cf2;padding:2px 4px;border-radius:3px;flex-shrink:0">TASK</span>'
+                + '<span style="font-size:11px;color:var(--text-mute)">' + act.name + '</span>'
+                + '</div>';
+        }).join('') : '';
+        var emptyRow = !hasFiles && !hasActivities ? '<div style="font-size:10px;color:var(--text-faint);font-style:italic;padding:4px 8px">No materials uploaded yet</div>' : '';
+        return '<div style="border-bottom:1px solid rgba(255,255,255,0.05);padding:8px 0">'
+            + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
             + '<span style="width:6px;height:6px;border-radius:50%;background:' + dotColor + ';flex-shrink:0"></span>'
-            + '<span style="font:600 11px/1 var(--font-body);color:var(--text)">' + sec.name + '</span>'
-            + '<span style="font-size:9px;color:var(--text-mute);margin-left:auto">' + sec.files.length + ' file' + (sec.files.length===1?'':'s') + '</span>'
+            + '<span style="font:600 11px/1 var(--font-body);color:' + (!hasFiles && !hasActivities ? 'var(--text-mute)' : 'var(--text)') + '">' + sec.name + '</span>'
+            + (hasFiles ? '<span style="font-size:9px;color:var(--text-mute);margin-left:auto">' + sec.files.length + ' file' + (sec.files.length===1?'':'s') + '</span>' : '')
             + '</div>'
-            + fileRows + '</div>';
+            + fileRows + actRows + emptyRow + '</div>';
     }).join('');
 }
 
 function renderAssignments(modules) {
     var el = document.getElementById('uni-assignments-panel');
     if (!el) return;
-    var allAssignments = [];
-    modules.forEach(function(m) {
-        (m.assignments || []).forEach(function(a) {
-            allAssignments.push({ module: m.code, name: m.name, a: a });
-        });
-    });
-    if (!allAssignments.length) {
-        el.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:12px;text-align:center">No assessments found — sync to refresh</div>';
-        return;
-    }
-    el.innerHTML = allAssignments.map(function(item) {
-        var a = item.a;
-        var daysUntil = a.days_until;
-        var isPast = daysUntil !== null && daysUntil < 0;
-        var isUrgent = daysUntil !== null && daysUntil <= 14;
-        var isNoDue = daysUntil === null;
-        var borderColor = isPast ? 'rgba(239,68,68,0.4)' : isUrgent ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.07)';
-        var dueStr = a.due_date ? new Date(a.due_date).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) : 'No deadline';
-        var daysLabel = isNoDue ? '' : isPast ? 'overdue' : daysUntil + ' days';
-        var daysColor = isPast ? 'var(--color-error)' : isUrgent ? 'var(--color-warning)' : 'var(--text-mute)';
-        return '<div style="border:1px solid ' + borderColor + ';border-radius:8px;padding:12px 14px;margin-bottom:8px">'
-            + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
-            + '<span style="font:700 9px/1 var(--font-mono);letter-spacing:.08em;color:#0d0d0d;background:var(--amber);padding:2px 6px;border-radius:3px;flex-shrink:0;margin-top:2px">' + item.module + '</span>'
-            + '<span style="font:600 13px/1.3 var(--font-body);color:var(--text);flex:1">' + a.title + '</span>'
-            + (daysLabel ? '<span style="font:700 10px/1 var(--font-mono);color:' + daysColor + ';flex-shrink:0">' + daysLabel + '</span>' : '')
+    // Group by module, show each module's section even if empty
+    el.innerHTML = modules.map(function(m) {
+        var assigns = m.assignments || [];
+        var summative = assigns.filter(function(a) { return !a.title.toLowerCase().includes('approval') && (a.grade_scale || 0) > 0; });
+        var formative = assigns.filter(function(a) { return a.title.toLowerCase().includes('approval') || (a.grade_scale || 0) === 0; });
+        var rows = summative.map(function(a) {
+            var isPast = a.days_until !== null && a.days_until < 0;
+            var isUrgent = a.days_until !== null && a.days_until <= 14 && !isPast;
+            var borderColor = isPast ? 'rgba(239,68,68,0.35)' : isUrgent ? 'rgba(245,158,11,0.35)' : 'rgba(255,255,255,0.06)';
+            var dueStr = a.due_date ? new Date(a.due_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'Date TBC';
+            var daysLabel = a.days_until === null ? 'TBC' : isPast ? 'Overdue' : a.days_until + 'd';
+            var daysColor = isPast ? 'var(--color-error)' : isUrgent ? 'var(--color-warning)' : 'var(--text-mute)';
+            return '<div style="border:1px solid ' + borderColor + ';border-radius:7px;padding:10px 12px;margin-bottom:6px">'
+                + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
+                + '<span style="font:600 12px/1.3 var(--font-body);color:var(--text);flex:1">' + a.title + '</span>'
+                + '<span style="font:700 10px/1 var(--font-mono);color:' + daysColor + ';flex-shrink:0">' + daysLabel + '</span>'
+                + '</div>'
+                + '<div style="font-size:10px;color:var(--text-mute);margin-top:4px">Due: ' + dueStr + (a.grade_scale && a.source !== 'turnitintool' ? ' &nbsp;·&nbsp; ' + a.grade_scale + ' pts' : '') + '</div>'
+                + (a.intro ? '<div style="font-size:11px;color:var(--text-mute);line-height:1.5;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,0.02);border-radius:4px">' + a.intro + '</div>' : '')
+                + '</div>';
+        }).join('');
+        var fRows = formative.map(function(a) {
+            return '<div style="font-size:10px;color:var(--text-mute);padding:4px 0;border-top:1px solid rgba(255,255,255,0.04);margin-top:4px">'
+                + '<span style="opacity:0.6">&#9632;</span> ' + a.title
+                + (a.due_date ? ' &nbsp;·&nbsp; ' + new Date(a.due_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '')
+                + '</div>';
+        }).join('');
+        return '<div style="margin-bottom:14px">'
+            + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'
+            + '<span style="font:800 10px/1 var(--font-mono);letter-spacing:.1em;color:#0d0d0d;background:var(--amber);padding:2px 7px;border-radius:3px">' + m.code + '</span>'
+            + '<span style="font-size:11px;color:var(--text-mute)">' + m.name + '</span>'
             + '</div>'
-            + '<div style="font-size:10px;color:var(--text-mute);margin-bottom:' + (a.intro ? '6' : '0') + 'px">Due: ' + dueStr + (a.grade_scale ? ' &nbsp;·&nbsp; Max: ' + a.grade_scale + ' pts' : '') + '</div>'
-            + (a.intro ? '<div style="font-size:11px;color:var(--text);line-height:1.5;padding:8px;background:rgba(255,255,255,0.03);border-radius:4px;border:1px solid rgba(255,255,255,0.05)">' + a.intro + '</div>' : '')
+            + (rows || '<div style="font-size:11px;color:var(--text-faint);font-style:italic;padding:6px 0">No summative assessments configured yet</div>')
+            + fRows
             + '</div>';
     }).join('');
 }
@@ -20517,44 +20530,68 @@ function renderModuleDetailTab(mod, tab) {
     _modDetailTab = tab;
 
     if (tab === 'assessments') {
-        if (!mod.assignments.length) { body.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">No assessments found — sync to refresh</div>'; return; }
-        body.innerHTML = mod.assignments.map(function(a) {
+        var summative = (mod.assignments || []).filter(function(a) { return !a.title.toLowerCase().includes('approval') && (a.grade_scale || 0) > 0; });
+        var formative = (mod.assignments || []).filter(function(a) { return a.title.toLowerCase().includes('approval') || (a.grade_scale || 0) === 0; });
+        if (!mod.assignments.length) { body.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">No assessments configured in Moodle yet</div>'; return; }
+        var summHtml = summative.map(function(a) {
             var isPast = a.days_until !== null && a.days_until < 0;
             var isUrgent = a.days_until !== null && a.days_until <= 14 && !isPast;
             var borderColor = isPast ? 'rgba(239,68,68,0.4)' : isUrgent ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.08)';
-            var dueStr = a.due_date ? new Date(a.due_date).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : 'No deadline set';
-            var daysLabel = a.days_until === null ? '' : isPast ? 'Overdue' : a.days_until + 'd remaining';
+            var dueStr = a.due_date ? new Date(a.due_date).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : 'Date TBC';
+            var daysLabel = a.days_until === null ? 'TBC' : isPast ? 'Overdue' : a.days_until + 'd';
             var daysColor = isPast ? 'var(--color-error)' : isUrgent ? 'var(--color-warning)' : 'var(--text-mute)';
             return '<div style="border:1px solid ' + borderColor + ';border-radius:10px;padding:16px 18px;margin-bottom:12px">'
                 + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">'
-                + '<span style="font:700 15px/1.3 var(--font-body);color:var(--text)">' + a.title + '</span>'
-                + (daysLabel ? '<span style="font:700 12px/1 var(--font-mono);color:' + daysColor + ';flex-shrink:0;margin-left:16px">' + daysLabel + '</span>' : '')
+                + '<span style="font:700 15px/1.3 var(--font-body);color:var(--text);flex:1">' + a.title + '</span>'
+                + '<span style="font:700 13px/1 var(--font-mono);color:' + daysColor + ';flex-shrink:0;margin-left:16px">' + daysLabel + '</span>'
                 + '</div>'
-                + '<div style="font-size:11px;color:var(--text-mute);margin-bottom:' + (a.intro ? '12px' : '0') + '">Due: ' + dueStr + (a.grade_scale ? ' &nbsp;&middot;&nbsp; ' + a.grade_scale + ' pts max' : '') + '</div>'
+                + '<div style="font-size:11px;color:var(--text-mute);margin-bottom:' + (a.intro ? '12px' : '0') + '">Due: ' + dueStr + (a.grade_scale && a.source !== 'turnitintool' ? ' &nbsp;&middot;&nbsp; ' + a.grade_scale + ' pts max' : '') + '</div>'
                 + (a.intro ? '<div style="font-size:12px;color:var(--text);line-height:1.6;padding:12px;background:rgba(255,255,255,0.03);border-radius:6px;border:1px solid rgba(255,255,255,0.05)">' + a.intro + '</div>' : '')
                 + '</div>';
         }).join('');
+        var formHtml = formative.length ? '<div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06)">'
+            + '<div style="font:600 10px/1 var(--font-mono);letter-spacing:.1em;color:var(--text-mute);margin-bottom:8px">FORMATIVE / ADMIN</div>'
+            + formative.map(function(a) {
+                var dueStr = a.due_date ? new Date(a.due_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : 'No date';
+                return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">'
+                    + '<span style="font-size:12px;color:var(--text-mute);flex:1">' + a.title + '</span>'
+                    + '<span style="font-size:10px;color:var(--text-faint)">' + dueStr + '</span>'
+                    + '</div>';
+            }).join('') + '</div>' : '';
+        body.innerHTML = summHtml + formHtml;
 
     } else if (tab === 'content') {
-        if (!mod.sections.length) { body.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">No content uploaded yet for ' + mod.code + '</div>'; return; }
+        if (!mod.sections.length) { body.innerHTML = '<div style="color:var(--text-faint);font-style:italic;padding:16px;text-align:center">No weeks found — sync Moodle to load</div>'; return; }
         body.innerHTML = mod.sections.map(function(sec) {
-            var done = sec.files.filter(function(f) { return f.scanned; }).length;
-            return '<div style="margin-bottom:18px">'
-                + '<div style="display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:8px">'
-                + '<span style="width:7px;height:7px;border-radius:50%;background:' + (done===sec.files.length?'var(--color-success)':'var(--color-warning)') + ';flex-shrink:0"></span>'
-                + '<span style="font:600 13px/1 var(--font-body);color:var(--text)">' + sec.name + '</span>'
-                + '<span style="font-size:10px;color:var(--text-mute);margin-left:auto">' + done + '/' + sec.files.length + ' scanned</span>'
+            var hasFiles = sec.files && sec.files.length > 0;
+            var hasActs = sec.activities && sec.activities.length > 0;
+            var done = hasFiles ? sec.files.filter(function(f) { return f.scanned; }).length : 0;
+            var allDone = hasFiles && done === sec.files.length;
+            var dot = !hasFiles && !hasActs ? 'rgba(255,255,255,0.2)' : allDone ? 'var(--color-success)' : 'var(--color-warning)';
+            var fileRows = hasFiles ? sec.files.map(function(f) {
+                var ext = f.name.split('.').pop().toUpperCase();
+                var bg = ext==='PDF'?'#ef4444':ext==='PPTX'||ext==='PPT'?'#f59e0b':'#6366f1';
+                return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,0.02);border-radius:5px;margin-bottom:3px">'
+                    + '<span style="font:700 8px/1 var(--font-mono);color:#0d0d0d;background:' + bg + ';padding:2px 5px;border-radius:3px;flex-shrink:0">' + ext + '</span>'
+                    + '<span style="font-size:12px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + f.name.replace(/\.[^.]+$/, '') + '</span>'
+                    + '<span style="font-size:10px;color:var(--text-mute);flex-shrink:0">' + f.size_kb + 'kb</span>'
+                    + (f.scanned ? '<span style="font-size:10px;color:var(--color-success);flex-shrink:0">&#10003; notes</span>' : '<button class="ds-btn xs uni-study-btn" data-module="' + mod.code + '" style="font-size:9px;flex-shrink:0">Scan</button>')
+                    + '</div>';
+            }).join('') : '';
+            var actRows = hasActs ? sec.activities.map(function(act) {
+                return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(124,108,242,0.05);border-radius:5px;margin-bottom:3px">'
+                    + '<span style="font:700 8px/1 var(--font-mono);color:#fff;background:#7c6cf2;padding:2px 5px;border-radius:3px;flex-shrink:0">TASK</span>'
+                    + '<span style="font-size:12px;color:var(--text-mute);flex:1">' + act.name + '</span>'
+                    + '</div>';
+            }).join('') : '';
+            var emptyRow = !hasFiles && !hasActs ? '<div style="font-size:11px;color:var(--text-faint);font-style:italic;padding:8px 10px">No materials uploaded yet for this week</div>' : '';
+            return '<div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.05)">'
+                + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+                + '<span style="width:7px;height:7px;border-radius:50%;background:' + dot + ';flex-shrink:0"></span>'
+                + '<span style="font:600 13px/1 var(--font-body);color:' + (!hasFiles && !hasActs ? 'var(--text-mute)' : 'var(--text)') + '">' + sec.name + '</span>'
+                + (hasFiles ? '<span style="font-size:10px;color:var(--text-mute);margin-left:auto">' + done + '/' + sec.files.length + ' scanned</span>' : '')
                 + '</div>'
-                + sec.files.map(function(f) {
-                    var ext = f.name.split('.').pop().toUpperCase();
-                    var bg = ext==='PDF'?'#ef4444':ext==='PPTX'||ext==='PPT'?'#f59e0b':'#6366f1';
-                    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,0.02);border-radius:5px;margin-bottom:3px">'
-                        + '<span style="font:700 8px/1 var(--font-mono);color:#0d0d0d;background:' + bg + ';padding:2px 5px;border-radius:3px;flex-shrink:0">' + ext + '</span>'
-                        + '<span style="font-size:12px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + f.name.replace(/\.[^.]+$/, '') + '</span>'
-                        + '<span style="font-size:10px;color:var(--text-mute);flex-shrink:0">' + f.size_kb + 'kb</span>'
-                        + (f.scanned ? '<span style="font-size:10px;color:var(--color-success);flex-shrink:0">&#10003; notes</span>' : '<button class="ds-btn xs uni-study-btn" data-module="' + mod.code + '" style="font-size:9px;flex-shrink:0">Scan</button>')
-                        + '</div>';
-                }).join('')
+                + fileRows + actRows + emptyRow
                 + '</div>';
         }).join('');
 
