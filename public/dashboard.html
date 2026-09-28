@@ -4100,28 +4100,48 @@ body:not(.apex-cmd-active) .input-zone { display: none !important; }
 .uni-urgency-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:20px; }
 @keyframes uniFadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 .uni-mod-view { animation:uniFadeIn 180ms ease; }
-/* Revision report */
-.uni-revision-report { background:rgba(0,0,0,0.25); border-radius:10px; border:1px solid rgba(255,255,255,0.08); border-left:3px solid var(--mod-color,#7c6cf2); overflow:hidden; animation:uniFadeIn 220ms ease; margin-bottom:4px; }
-.urr-head { padding:11px 15px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; gap:8px; }
-.urr-week-badge { font:800 9px/1 var(--font-mono,monospace); letter-spacing:.08em; color:#0d0d0d; background:var(--mod-color,#7c6cf2); padding:3px 7px; border-radius:3px; flex-shrink:0; }
-.urr-title { font:500 12px/1.3 var(--font-body,system-ui); color:var(--text,#e8e8e8); flex:1; }
-.urr-meta { font:400 10px/1 var(--font-body); color:var(--text-faint,#555); white-space:nowrap; }
-.urr-body { padding:14px 15px; display:flex; flex-direction:column; gap:13px; }
-.urr-sec-label { font:800 9px/1 var(--font-mono,monospace); letter-spacing:.12em; color:var(--mod-color,#7c6cf2); opacity:.85; margin-bottom:7px; text-transform:uppercase; }
-.urr-overview { font:400 12px/1.7 var(--font-body); color:rgba(232,232,232,0.65); font-style:italic; }
-.urr-2col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.urr-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:4px; }
-.urr-list li { font:400 11px/1.5 var(--font-body); color:var(--text,#e8e8e8); display:flex; gap:7px; align-items:baseline; }
-.urr-list li::before { content:'·'; color:var(--mod-color,#7c6cf2); font-size:14px; font-weight:900; flex-shrink:0; line-height:1; }
-.urr-pills { display:flex; flex-wrap:wrap; gap:5px; }
-.urr-pill { font:400 10px/1.4 var(--font-mono,monospace); color:var(--text,#e8e8e8); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 8px; }
-.urr-q { padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+/* Revision report v2 */
+.uni-revision-report { background:#0d0d0d; border-radius:12px; border:1px solid rgba(255,255,255,0.08); overflow:hidden; animation:uniFadeIn 220ms ease; margin-bottom:4px; }
+.urr-head { padding:13px 16px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; gap:10px; background:linear-gradient(135deg,rgba(0,0,0,0) 40%,rgba(255,255,255,0.015) 100%); position:relative; }
+.urr-head::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--mod-color,#7c6cf2); border-radius:12px 0 0 0; }
+.urr-week-badge { font:800 10px/1 var(--font-mono,monospace); letter-spacing:.05em; color:#0d0d0d; background:var(--mod-color,#7c6cf2); padding:4px 8px; border-radius:5px; flex-shrink:0; }
+.urr-title { font:600 13px/1.2 var(--font-body,system-ui); color:var(--text,#e8e8e8); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.urr-code { font:700 9px/1 var(--font-mono,monospace); letter-spacing:.1em; color:var(--mod-color,#7c6cf2); opacity:.55; flex-shrink:0; }
+.urr-meta { font:400 9px/1 var(--font-body); color:rgba(255,255,255,0.3); padding:3px 8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:20px; white-space:nowrap; flex-shrink:0; }
+/* Full-width sections */
+.urr-sec { padding:14px 16px; border-bottom:1px solid rgba(255,255,255,0.05); }
+.urr-sec:last-child { border-bottom:none; }
+/* Section label with extending rule */
+.urr-label { font:800 8px/1 var(--font-mono,monospace); letter-spacing:.18em; text-transform:uppercase; color:var(--mod-color,#7c6cf2); opacity:.7; margin-bottom:11px; display:flex; align-items:center; gap:8px; }
+.urr-label::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,rgba(255,255,255,0.07),transparent); }
+/* Overview */
+.urr-overview { font:400 12px/1.8 var(--font-body); color:rgba(232,232,232,0.68); }
+/* Mid: 2-col concepts + frameworks */
+.urr-mid { display:grid; grid-template-columns:1fr 1fr; border-bottom:1px solid rgba(255,255,255,0.05); }
+.urr-mid-col { padding:14px 16px; }
+.urr-mid-col+.urr-mid-col { border-left:1px solid rgba(255,255,255,0.05); }
+/* Concept chips */
+.urr-chips { display:flex; flex-wrap:wrap; gap:5px; }
+.urr-chip { font:500 10px/1 var(--font-body); color:rgba(232,232,232,0.85); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:20px; padding:5px 10px; display:inline-flex; align-items:center; gap:5px; transition:border-color 120ms; }
+.urr-chip::before { content:''; width:4px; height:4px; border-radius:50%; background:var(--mod-color,#7c6cf2); flex-shrink:0; opacity:.8; }
+/* Framework list */
+.urr-fwk { display:flex; flex-direction:column; gap:8px; }
+.urr-fwk-row { font:400 11px/1.5 var(--font-body); color:rgba(232,232,232,0.75); padding-left:10px; border-left:2px solid rgba(255,255,255,0.07); }
+.urr-fwk-name { font:600 11px/1.5 var(--font-body); color:var(--text,#e8e8e8); }
+/* Key numbers */
+.urr-nums { display:flex; flex-direction:column; gap:5px; }
+.urr-num-row { font:400 10.5px/1.5 var(--font-mono,monospace); color:rgba(232,232,232,0.78); padding:7px 11px; background:rgba(255,255,255,0.03); border-radius:5px; border-left:2px solid var(--mod-color,#7c6cf2); }
+/* Exam questions */
+.urr-qs { display:flex; flex-direction:column; }
+.urr-q { padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); display:flex; gap:11px; align-items:flex-start; }
 .urr-q:last-child { border-bottom:none; padding-bottom:0; }
-.urr-q-num { font:800 9px/1 var(--font-mono,monospace); color:var(--mod-color,#7c6cf2); margin-right:5px; }
-.urr-q-text { font:400 11px/1.55 var(--font-body); color:var(--text,#e8e8e8); }
-.urr-q-hint { font:400 10px/1.4 var(--font-body); color:var(--text-faint,#555); margin-top:4px; margin-left:17px; font-style:italic; }
-.urr-q-hint::before { content:'→ '; color:var(--mod-color,#7c6cf2); font-style:normal; }
-.urr-loading { padding:28px 15px; text-align:center; font:400 12px/1.5 var(--font-body); color:var(--text-faint,#555); font-style:italic; }
+.urr-q-badge { font:800 9px/1 var(--font-mono,monospace); color:#0d0d0d; background:var(--mod-color,#7c6cf2); padding:3px 5px; border-radius:4px; flex-shrink:0; margin-top:2px; min-width:22px; text-align:center; letter-spacing:.03em; }
+.urr-q-inner { flex:1; min-width:0; }
+.urr-q-text { font:500 11px/1.65 var(--font-body); color:var(--text,#e8e8e8); display:block; }
+.urr-q-hint { font:400 10px/1.5 var(--font-body); color:rgba(255,255,255,0.35); margin-top:5px; display:flex; gap:5px; align-items:baseline; }
+.urr-q-arrow { color:var(--mod-color,#7c6cf2); font-weight:700; font-style:normal; flex-shrink:0; opacity:.8; }
+/* Loading */
+.urr-loading { padding:32px 16px; text-align:center; font:400 12px/1.5 var(--font-body); color:var(--text-faint,#555); font-style:italic; }
 </style>
 <link rel="stylesheet" href="/apex-custom.css">
 
@@ -20250,30 +20270,52 @@ function renderRevisionReport(report, weekName, weekNum, files, color) {
     var nums   = _parseList(secs['key numbers & definitions'] || secs['key numbers and definitions'] || secs['key numbers'] || secs['key figures'] || '');
     var exqs   = _parseExamQs(secs['exam questions'] || secs['likely exam questions'] || '');
     var topic  = (weekName || '').replace(/^week\s*\d+\s*[-–:·]?\s*/i,'') || ('Week ' + weekNum);
-    var cached = (files||[]).filter(function(f){return f.cached;}).length;
     var fc     = (files||[]).length;
+    var cached = (files||[]).filter(function(f){return f.cached;}).length;
+    var modCode = Object.keys(_uniColors||{}).find(function(k){return (_uniColors[k]||'')===color;}) || '';
 
-    var h  = '<div class="uni-revision-report" style="--mod-color:' + color + '">'
-           + '<div class="urr-head">'
-           +   '<span class="urr-week-badge">W' + weekNum + '</span>'
-           +   '<span class="urr-title">' + escapeHtml(topic) + '</span>'
-           +   '<span class="urr-meta">' + fc + (fc===1?' file':' files') + (cached===fc ? ' · saved notes' : ' · AI processed') + '</span>'
-           + '</div>'
-           + '<div class="urr-body">';
-    if (ov) h += '<div><div class="urr-sec-label">Overview</div><div class="urr-overview">' + escapeHtml(ov) + '</div></div>';
+    function fwkRow(item) {
+        var m = item.match(/^([^:—–(]+?)(?:[:\s—–]+(.+))?$/);
+        return m && m[2]
+            ? '<span class="urr-fwk-name">' + escapeHtml(m[1].trim()) + '</span><span style="color:rgba(255,255,255,0.3)"> — </span>' + escapeHtml(m[2].trim())
+            : '<span class="urr-fwk-name">' + escapeHtml(item) + '</span>';
+    }
+
+    var h = '<div class="uni-revision-report" style="--mod-color:' + color + '">'
+        + '<div class="urr-head">'
+        +   '<span class="urr-week-badge">W' + weekNum + '</span>'
+        +   '<span class="urr-title">' + escapeHtml(topic) + '</span>'
+        +   (modCode ? '<span class="urr-code">' + modCode + '</span>' : '')
+        +   '<span class="urr-meta">' + fc + (fc===1?' file':' files') + (cached===fc?' · notes':' · processed') + '</span>'
+        + '</div>';
+
+    if (ov) h += '<div class="urr-sec"><div class="urr-label">Overview</div><div class="urr-overview">' + escapeHtml(ov) + '</div></div>';
+
     if (conc.length || fwk.length) {
-        h += '<div class="urr-2col">';
-        if (conc.length) h += '<div><div class="urr-sec-label">Key Concepts</div><ul class="urr-list">' + conc.map(function(c){ return '<li>' + escapeHtml(c) + '</li>'; }).join('') + '</ul></div>';
-        if (fwk.length)  h += '<div><div class="urr-sec-label">Frameworks & Theories</div><ul class="urr-list">' + fwk.map(function(f){ return '<li>' + escapeHtml(f) + '</li>'; }).join('') + '</ul></div>';
+        h += '<div class="urr-mid">';
+        if (conc.length) h += '<div class="urr-mid-col"><div class="urr-label">Key Concepts</div><div class="urr-chips">'
+            + conc.map(function(c){ return '<span class="urr-chip">' + escapeHtml(c) + '</span>'; }).join('') + '</div></div>';
+        if (fwk.length) h += '<div class="urr-mid-col"><div class="urr-label">Frameworks</div><div class="urr-fwk">'
+            + fwk.map(function(f){ return '<div class="urr-fwk-row">' + fwkRow(f) + '</div>'; }).join('') + '</div></div>';
         h += '</div>';
     }
-    if (nums.length) h += '<div><div class="urr-sec-label">Key Numbers & Definitions</div><div class="urr-pills">' + nums.map(function(n){ return '<span class="urr-pill">' + escapeHtml(n) + '</span>'; }).join('') + '</div></div>';
+
+    if (nums.length) h += '<div class="urr-sec"><div class="urr-label">Key Numbers & Definitions</div><div class="urr-nums">'
+        + nums.map(function(n){ return '<div class="urr-num-row">' + escapeHtml(n) + '</div>'; }).join('') + '</div></div>';
+
     if (exqs.length) {
-        h += '<div><div class="urr-sec-label">Exam Questions</div>';
-        exqs.forEach(function(q,i){ h += '<div class="urr-q"><span class="urr-q-num">' + (i+1) + '</span><span class="urr-q-text">' + escapeHtml(q.q) + '</span>' + (q.hint ? '<div class="urr-q-hint">' + escapeHtml(q.hint) + '</div>' : '') + '</div>'; });
-        h += '</div>';
+        h += '<div class="urr-sec"><div class="urr-label">Exam Questions</div><div class="urr-qs">';
+        exqs.forEach(function(q, i) {
+            h += '<div class="urr-q">'
+               + '<span class="urr-q-badge">' + String(i+1).padStart(2,'0') + '</span>'
+               + '<div class="urr-q-inner"><span class="urr-q-text">' + escapeHtml(q.q) + '</span>'
+               + (q.hint ? '<div class="urr-q-hint"><span class="urr-q-arrow">→</span>' + escapeHtml(q.hint) + '</div>' : '')
+               + '</div></div>';
+        });
+        h += '</div></div>';
     }
-    return h + '</div></div>';
+
+    return h + '</div>';
 }
 
 function loadUniDashboard() {
