@@ -297,6 +297,40 @@ router.get('/moodle/dashboard', _auth, async (req, res) => {
 
         const modules = [];
         const now = Date.now() / 1000;
+        const _daysUntil = (iso) => iso ? Math.ceil((new Date(iso).getTime() / 1000 - now) / 86400) : null;
+
+        // Known assessment structures not exposed via Moodle API (exams, in-class tests)
+        const KNOWN_ASSESSMENTS = {
+            FIN6039: [
+                {
+                    id: 'fin6039-exam', title: 'In-Class Closed Book Exam', weight_pct: 30,
+                    due_date: null, days_until: null, grade_scale: 30, source: 'manual',
+                    intro: 'Week 10 — covers weeks 1–9. 10 MCQs + 3 calculation case studies. 10 min reading + 80 min exam. 25/30 marks from exam questions; 5 marks from mid-term revision activities (weeks 5–7).',
+                },
+                {
+                    id: 'fin6039-tca', title: 'Online Time Constrained Assessment (TCA)', weight_pct: 70,
+                    due_date: '2027-01-15', days_until: _daysUntil('2027-01-15'), grade_scale: 70, source: 'manual',
+                    intro: 'Open-book. 24-hour window: 12:00 noon 14 Jan 2027 → 12:00 noon 15 Jan 2027. Max 1500 words. Marking structure: 40%–20%–40%.',
+                },
+            ],
+            FIN6041: [
+                {
+                    id: 'fin6041-test1', title: 'In-Class MCQ Test 1', weight_pct: 15,
+                    due_date: '2026-10-23', days_until: _daysUntil('2026-10-23'), grade_scale: 15, source: 'manual',
+                    intro: 'Week 5 — 23 Oct 2026. Closed-book. 15 mins + 10 mins reading. Covers learning outcomes 1 and 2.',
+                },
+                {
+                    id: 'fin6041-test2', title: 'In-Class MCQ Test 2', weight_pct: 15,
+                    due_date: '2026-11-20', days_until: _daysUntil('2026-11-20'), grade_scale: 15, source: 'manual',
+                    intro: 'Week 9 — 20 Nov 2026. Closed-book. 15 mins + 10 mins reading. Covers learning outcomes 1 and 2.',
+                },
+                {
+                    id: 'fin6041-exam', title: 'Online Invigilated Exam (DigiExam)', weight_pct: 70,
+                    due_date: null, days_until: null, grade_scale: 70, source: 'manual',
+                    intro: 'December or January — date TBC. Closed-book invigilated DigiExam. Discussion and calculation questions. 90 mins + 10 mins reading + 30 mins submission. Covers learning outcomes 3 and 4.',
+                },
+            ],
+        };
 
         for (const course of courseList) {
             const code = course.shortname.match(/[A-Z]{2,4}\d{4}/)[0];
@@ -394,6 +428,15 @@ router.get('/moodle/dashboard', _auth, async (req, res) => {
                         grade_scale: 100, intro: null, source: act.type,
                     });
                     seenNames.add(act.name.toLowerCase());
+                }
+            }
+            // Merge known (manual) assessments for modules where Moodle doesn't expose them
+            if (KNOWN_ASSESSMENTS[code]) {
+                for (const ka of KNOWN_ASSESSMENTS[code]) {
+                    if (!seenNames.has(ka.title.toLowerCase())) {
+                        assignments.push({ ...ka, section_title: null });
+                        seenNames.add(ka.title.toLowerCase());
+                    }
                 }
             }
             assignments.sort((a, b) => (a.days_until ?? 999) - (b.days_until ?? 999));
