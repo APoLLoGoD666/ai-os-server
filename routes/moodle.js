@@ -10,6 +10,8 @@ const path      = require('path');
 const pdfParse  = require('pdf-parse');
 const JSZip     = require('jszip');
 const Anthropic = require('@anthropic-ai/sdk');
+const _runtime  = require('../lib/models/runtime');
+const { pgLoadMemory } = require('../lib/supabase-helpers');
 
 const sb = getSupabaseClient;
 
@@ -554,29 +556,17 @@ const _ai = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 async function generateNotes(courseCode, filename, rawText) {
     const trimmed = rawText.slice(0, 12000);
-    const msg = await _ai.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1500,
+    const { result } = await _runtime.execute({
+        tier:      'fast',
+        caller:    'moodle-scan-notes',
+        maxTokens: 1500,
+        system:    `You are Apex — Alex's personal AI OS, processing BCU Business Finance study material. Be concise and exam-focused. Ignore admin text (referencing guides, navigation, headers/footers).`,
         messages: [{
             role: 'user',
-            content: `You are an academic study assistant helping a Business Finance student at BCU.
-
-Module: ${courseCode}
-Source file: ${filename}
-
-Below is the raw extracted text from the file. Produce structured study notes with these sections:
-## Key Concepts
-## Important Theories / Frameworks
-## Key Facts & Figures
-## Potential Exam / Essay Questions
-
-Be concise and precise. Only include content relevant to the module. Ignore admin text (referencing guides, navigation, headers/footers).
-
----
-${trimmed}`,
+            content: `Module: ${courseCode}\nFile: ${filename}\n\nProduce structured study notes with these headings:\n## Key Concepts\n## Important Theories / Frameworks\n## Key Facts & Figures\n## Potential Exam / Essay Questions\n\n---\n${trimmed}`,
         }],
     });
-    return msg.content[0]?.text || '';
+    return result.content[0]?.text || '';
 }
 
 // Skip files unlikely to contain study content
@@ -760,46 +750,56 @@ router.post('/moodle/week-revision', _auth, async (req, res) => {
         const validParts = parts.filter(Boolean);
         if (!validParts.length) return res.json({ ok: false, error: 'Could not extract content from files' });
 
-        // 5. Generate revision report
+        // 5. Load recent memory for context awareness
+        const recentMem = await pgLoadMemory().catch(() => []);
+        const memSnippet = recentMem.length
+            ? recentMem.slice(-4).map(m => `[${(m.role||'').toUpperCase()}] ${(m.message||'').slice(0, 120)}`).join('\n')
+            : '';
+
+        // 6. Generate revision report through the APEX runtime (telemetry, retry, circuit-breaker)
         const combinedText = validParts.map(p => `### ${p.filename}\n${p.text}`).join('\n\n---\n\n');
         const weekName = weekSec.name;
 
-        const msg = await _ai.messages.create({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 2000,
+        const systemPrompt = [
+            `You are Apex — Alex's personal AI OS. You are generating a focused revision report for Alex's BCU Business Finance studies.`,
+            `Module: ${moduleCode} | Week ${weekNum}: ${weekName}`,
+            `Alex is preparing for exams. Be sharp, precise, and direct. Cut admin text. Go straight to the substance.`,
+            memSnippet ? `RECENT CONTEXT:\n${memSnippet}` : null,
+        ].filter(Boolean).join('\n\n');
+
+        const { result } = await _runtime.execute({
+            tier:      'fast',
+            caller:    'week-revision',
+            maxTokens: 2000,
+            system:    systemPrompt,
             messages: [{
                 role: 'user',
-                content: `You are a revision assistant for a Business Finance student at BCU (Birmingham City University).
-
-Module: ${moduleCode}
-Week ${weekNum}: ${weekName}
+                content: `Generate a revision report for Week ${weekNum} of ${moduleCode}.
 Source files: ${validParts.map(p => p.filename).join(', ')}
 
-Produce a structured REVISION REPORT using exactly these section headings (## heading):
+Use exactly these section headings:
 
 ## Overview
-2–3 sentences: what this week covers and why it matters in the module context.
+2–3 sentences on what this week covers and why it matters for the module.
 
 ## Key Concepts
 Bullet list (- item) of the 5–8 most important concepts from this week.
 
 ## Frameworks & Theories
-Bullet list of any named models/theories/frameworks with a 1-line explanation each. Write "None" if not applicable.
+Bullet list of named models/theories/frameworks with a 1-line explanation each. Write "None" if not applicable.
 
 ## Key Numbers & Definitions
-Bullet list of specific formulas, ratios, figures, or definitions worth memorising. Write "None" if not applicable.
+Bullet list of formulas, ratios, figures, or definitions worth memorising. Write "None" if not applicable.
 
 ## Exam Questions
-3 numbered exam-style questions (1. Question) each followed by a hint line starting with →
-
-Be precise and exam-focused. Omit admin text, navigation, and referencing guides.
+3 numbered questions (1. text) each followed by a hint line starting with →
 
 ---
 ${combinedText.slice(0, 16000)}`,
             }],
         });
 
-        const report = msg.content[0]?.text || '';
+        const report = result.content[0]?.text || '';
         res.json({
             ok: true,
             report,
