@@ -20231,12 +20231,28 @@ document.addEventListener('click', function(e) {
     if (noteHdr) { var nb = noteHdr.nextElementSibling; if (nb) nb.style.display = nb.style.display === 'none' ? 'block' : 'none'; }
 });
 
+// Markdown → safe HTML (escapeHtml first, then convert formatting)
+function _md(t) {
+    if (!t) return '';
+    var s = escapeHtml(t);
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    s = s.replace(/`([^`\n]+)`/g, '<code style="font:400 10px/1.4 var(--font-mono);background:rgba(255,255,255,0.07);padding:2px 5px;border-radius:3px;letter-spacing:0">$1</code>');
+    s = s.replace(/\n{2,}/g, '<br><br>');
+    s = s.replace(/\n/g, '<br>');
+    return s;
+}
+// Strip all markdown for short labels (chips)
+function _plain(t) {
+    return t ? t.replace(/\*\*/g,'').replace(/\*/g,'').replace(/`/g,'').replace(/^[-–—:·\s]+/,'').replace(/[-–—:·\s]+$/,'').trim() : '';
+}
+
 function _parseRevisionSections(text) {
     var result = {};
-    var lines = text.split('\n');
+    var lines = (text || '').split('\n');
     var heading = null, body = [];
     lines.forEach(function(l) {
-        var m = l.match(/^##\s+(.+)/);
+        var m = l.match(/^#{1,3}\s+(.+)/);
         if (m) { if (heading) result[heading.toLowerCase()] = body.join('\n').trim(); heading = m[1].trim(); body = []; }
         else if (heading) body.push(l);
     });
@@ -20245,7 +20261,9 @@ function _parseRevisionSections(text) {
 }
 function _parseList(text) {
     if (!text) return [];
-    return text.split('\n').map(function(l){ return l.trim().replace(/^[-•*·]\s*/,'').replace(/^\d+[.)]\s*/,'').trim(); }).filter(function(l){ return l && !l.match(/^#+\s/) && l.toLowerCase() !== 'none'; });
+    return text.split('\n')
+        .map(function(l){ return l.trim().replace(/^[-•*·]\s*/,'').replace(/^\d+[.)]\s*/,'').trim(); })
+        .filter(function(l){ return l && !l.match(/^#+\s/) && l.toLowerCase() !== 'none' && l.toLowerCase() !== 'n/a'; });
 }
 function _parseExamQs(text) {
     if (!text) return [];
@@ -20254,14 +20272,22 @@ function _parseExamQs(text) {
         l = l.trim();
         if (!l) return;
         var m = l.match(/^(\d+)[.)]\s+(.+)/);
-        if (m) { if (cur) qs.push(cur); cur = { q: m[2], hint: '' }; }
-        else if (cur && !cur.hint && (l.startsWith('→') || l.startsWith('-') || /^hint:/i.test(l) || /^answer/i.test(l))) {
-            cur.hint = l.replace(/^→\s*/,'').replace(/^[-•]\s*/,'').replace(/^hint:\s*/i,'').replace(/^answer.*?:\s*/i,'').trim();
+        if (m) {
+            if (cur) qs.push(cur);
+            cur = { q: m[2], hint: '' };
+        } else if (cur) {
+            var isHint = l.startsWith('→') || /^[-–]\s/.test(l) || /^hint:/i.test(l) || /^answer/i.test(l);
+            if (isHint && !cur.hint) {
+                cur.hint = l.replace(/^→\s*/,'').replace(/^[-–•]\s*/,'').replace(/^hint:\s*/i,'').replace(/^answer.*?:\s*/i,'').trim();
+            } else if (!isHint && !cur.hint) {
+                cur.q += ' ' + l;
+            }
         }
     });
     if (cur) qs.push(cur);
     return qs;
 }
+
 function renderRevisionReport(report, weekName, weekNum, files, color) {
     var secs   = _parseRevisionSections(report);
     var ov     = secs['overview'] || '';
@@ -20274,42 +20300,65 @@ function renderRevisionReport(report, weekName, weekNum, files, color) {
     var cached = (files||[]).filter(function(f){return f.cached;}).length;
     var modCode = Object.keys(_uniColors||{}).find(function(k){return (_uniColors[k]||'')===color;}) || '';
 
+    // Framework: split "**Name**: description" or "Name — description" into bold name + body
     function fwkRow(item) {
-        var m = item.match(/^([^:—–(]+?)(?:[:\s—–]+(.+))?$/);
-        return m && m[2]
-            ? '<span class="urr-fwk-name">' + escapeHtml(m[1].trim()) + '</span><span style="color:rgba(255,255,255,0.3)"> — </span>' + escapeHtml(m[2].trim())
-            : '<span class="urr-fwk-name">' + escapeHtml(item) + '</span>';
+        // strip leading ** from name if present
+        var clean = item.replace(/^\*\*([^*]+)\*\*/, function(_,n){ return n; });
+        var m = clean.match(/^([^:—–]+?)(?:\s*[:—–]\s*(.+))?$/);
+        if (m && m[2]) {
+            return '<span class="urr-fwk-name">' + escapeHtml(m[1].trim()) + '</span>'
+                 + '<span style="color:rgba(255,255,255,0.28)"> — </span>'
+                 + _md(m[2].trim());
+        }
+        return '<span class="urr-fwk-name">' + _md(clean) + '</span>';
     }
 
     var h = '<div class="uni-revision-report" style="--mod-color:' + color + '">'
-        + '<div class="urr-head">'
-        +   '<span class="urr-week-badge">W' + weekNum + '</span>'
-        +   '<span class="urr-title">' + escapeHtml(topic) + '</span>'
-        +   (modCode ? '<span class="urr-code">' + modCode + '</span>' : '')
-        +   '<span class="urr-meta">' + fc + (fc===1?' file':' files') + (cached===fc?' · notes':' · processed') + '</span>'
-        + '</div>';
+          + '<div class="urr-head">'
+          +   '<span class="urr-week-badge">W' + weekNum + '</span>'
+          +   '<span class="urr-title">' + escapeHtml(topic) + '</span>'
+          +   (modCode ? '<span class="urr-code">' + modCode + '</span>' : '')
+          +   '<span class="urr-meta">' + fc + (fc===1?' file':' files') + (cached===fc?' · notes':' · processed') + '</span>'
+          + '</div>';
 
-    if (ov) h += '<div class="urr-sec"><div class="urr-label">Overview</div><div class="urr-overview">' + escapeHtml(ov) + '</div></div>';
+    // Overview — full paragraph render
+    if (ov) h += '<div class="urr-sec">'
+              +   '<div class="urr-label">Overview</div>'
+              +   '<div class="urr-overview">' + _md(ov) + '</div>'
+              + '</div>';
 
+    // Concepts + Frameworks side by side
     if (conc.length || fwk.length) {
         h += '<div class="urr-mid">';
-        if (conc.length) h += '<div class="urr-mid-col"><div class="urr-label">Key Concepts</div><div class="urr-chips">'
-            + conc.map(function(c){ return '<span class="urr-chip">' + escapeHtml(c) + '</span>'; }).join('') + '</div></div>';
-        if (fwk.length) h += '<div class="urr-mid-col"><div class="urr-label">Frameworks</div><div class="urr-fwk">'
-            + fwk.map(function(f){ return '<div class="urr-fwk-row">' + fwkRow(f) + '</div>'; }).join('') + '</div></div>';
+        if (conc.length) h += '<div class="urr-mid-col">'
+            + '<div class="urr-label">Key Concepts</div>'
+            + '<div class="urr-chips">'
+            + conc.map(function(c){ return '<span class="urr-chip">' + escapeHtml(_plain(c)) + '</span>'; }).join('')
+            + '</div></div>';
+        if (fwk.length) h += '<div class="urr-mid-col">'
+            + '<div class="urr-label">Frameworks</div>'
+            + '<div class="urr-fwk">'
+            + fwk.map(function(f){ return '<div class="urr-fwk-row">' + fwkRow(f) + '</div>'; }).join('')
+            + '</div></div>';
         h += '</div>';
     }
 
-    if (nums.length) h += '<div class="urr-sec"><div class="urr-label">Key Numbers & Definitions</div><div class="urr-nums">'
-        + nums.map(function(n){ return '<div class="urr-num-row">' + escapeHtml(n) + '</div>'; }).join('') + '</div></div>';
+    // Key numbers — monospace rows with markdown
+    if (nums.length) h += '<div class="urr-sec">'
+        + '<div class="urr-label">Key Numbers &amp; Definitions</div>'
+        + '<div class="urr-nums">'
+        + nums.map(function(n){ return '<div class="urr-num-row">' + _md(n) + '</div>'; }).join('')
+        + '</div></div>';
 
+    // Exam questions — badge + question + hint
     if (exqs.length) {
         h += '<div class="urr-sec"><div class="urr-label">Exam Questions</div><div class="urr-qs">';
         exqs.forEach(function(q, i) {
             h += '<div class="urr-q">'
                + '<span class="urr-q-badge">' + String(i+1).padStart(2,'0') + '</span>'
-               + '<div class="urr-q-inner"><span class="urr-q-text">' + escapeHtml(q.q) + '</span>'
-               + (q.hint ? '<div class="urr-q-hint"><span class="urr-q-arrow">→</span>' + escapeHtml(q.hint) + '</div>' : '')
+               + '<div class="urr-q-inner">'
+               +   '<span class="urr-q-text">' + _md(q.q) + '</span>'
+               +   (q.hint ? '<div class="urr-q-hint"><span class="urr-q-arrow">→</span>' + _md(q.hint) + '</div>' : '')
                + '</div></div>';
         });
         h += '</div></div>';
