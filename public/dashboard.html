@@ -20592,7 +20592,7 @@ function renderModuleView(mod) {
         +     '</div>'
         +     '<span class="uni-rev-trigger-arrow">›</span>'
         +   '</button>'
-        +   '<div class="uni-rev-body">'
+        +   '<div class="uni-rev-body" style="display:none">'
         +     '<div id="uni-rev-content-' + mod.code + '" style="padding:16px 18px">'
         +       '<button class="ds-btn" style="background:var(--mod-color,#7c6cf2);color:#0d0d0d;font-weight:700;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:12px" onclick="generateModuleRevision(\'' + mod.code + '\')">'
         +         'Generate Revision Guide'
@@ -20635,7 +20635,19 @@ function loadModuleNotesInline(code) {
 
 function toggleRevisionSection(code) {
     var sec = document.getElementById('uni-rev-' + code);
-    if (sec) sec.classList.toggle('open');
+    if (!sec) return;
+    var body = sec.querySelector('.uni-rev-body');
+    var arrow = sec.querySelector('.uni-rev-trigger-arrow');
+    var isOpen = sec.getAttribute('data-open') === '1';
+    if (isOpen) {
+        sec.setAttribute('data-open', '0');
+        if (body) body.style.display = 'none';
+        if (arrow) arrow.style.transform = '';
+    } else {
+        sec.setAttribute('data-open', '1');
+        if (body) body.style.display = 'block';
+        if (arrow) arrow.style.transform = 'rotate(90deg)';
+    }
 }
 
 function generateModuleRevision(code) {

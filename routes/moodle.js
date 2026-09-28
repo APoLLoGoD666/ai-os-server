@@ -816,13 +816,15 @@ router.post('/moodle/module-revision', _auth, async (req, res) => {
     if (!moduleCode) return res.status(400).json({ ok: false, error: 'moduleCode required' });
 
     try {
-        // Load all saved notes for this module
-        const { data: notes } = await sb().from('apex_documents')
-            .select('name,content').eq('doc_type', 'moodle_notes')
-            .ilike('name', `${moduleCode} — %`).order('name');
+        // Load all moodle notes then filter by module prefix in JS (avoids ilike em-dash issues)
+        const { data: allNotes, error: notesErr } = await sb().from('apex_documents')
+            .select('name,content').eq('doc_type', 'moodle_notes').order('name');
+        if (notesErr) throw new Error(notesErr.message);
+        const prefix = `${moduleCode} — `;  // em-dash
+        const notes = (allNotes || []).filter(n => n.name && n.name.startsWith(prefix));
 
-        if (!notes || !notes.length) {
-            return res.json({ ok: false, error: `No scanned notes found for ${moduleCode}. Open a week and generate a report first to scan the files.` });
+        if (!notes.length) {
+            return res.json({ ok: false, error: `No scanned notes found for ${moduleCode}. Click a week to generate its report first — that scans the files.` });
         }
 
         const recentMem = await pgLoadMemory().catch(() => []);
