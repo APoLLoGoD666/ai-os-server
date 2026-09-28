@@ -4100,6 +4100,28 @@ body:not(.apex-cmd-active) .input-zone { display: none !important; }
 .uni-urgency-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:20px; }
 @keyframes uniFadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 .uni-mod-view { animation:uniFadeIn 180ms ease; }
+/* Revision report */
+.uni-revision-report { background:rgba(0,0,0,0.25); border-radius:10px; border:1px solid rgba(255,255,255,0.08); border-left:3px solid var(--mod-color,#7c6cf2); overflow:hidden; animation:uniFadeIn 220ms ease; margin-bottom:4px; }
+.urr-head { padding:11px 15px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; gap:8px; }
+.urr-week-badge { font:800 9px/1 var(--font-mono,monospace); letter-spacing:.08em; color:#0d0d0d; background:var(--mod-color,#7c6cf2); padding:3px 7px; border-radius:3px; flex-shrink:0; }
+.urr-title { font:500 12px/1.3 var(--font-body,system-ui); color:var(--text,#e8e8e8); flex:1; }
+.urr-meta { font:400 10px/1 var(--font-body); color:var(--text-faint,#555); white-space:nowrap; }
+.urr-body { padding:14px 15px; display:flex; flex-direction:column; gap:13px; }
+.urr-sec-label { font:800 9px/1 var(--font-mono,monospace); letter-spacing:.12em; color:var(--mod-color,#7c6cf2); opacity:.85; margin-bottom:7px; text-transform:uppercase; }
+.urr-overview { font:400 12px/1.7 var(--font-body); color:rgba(232,232,232,0.65); font-style:italic; }
+.urr-2col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.urr-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:4px; }
+.urr-list li { font:400 11px/1.5 var(--font-body); color:var(--text,#e8e8e8); display:flex; gap:7px; align-items:baseline; }
+.urr-list li::before { content:'·'; color:var(--mod-color,#7c6cf2); font-size:14px; font-weight:900; flex-shrink:0; line-height:1; }
+.urr-pills { display:flex; flex-wrap:wrap; gap:5px; }
+.urr-pill { font:400 10px/1.4 var(--font-mono,monospace); color:var(--text,#e8e8e8); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 8px; }
+.urr-q { padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+.urr-q:last-child { border-bottom:none; padding-bottom:0; }
+.urr-q-num { font:800 9px/1 var(--font-mono,monospace); color:var(--mod-color,#7c6cf2); margin-right:5px; }
+.urr-q-text { font:400 11px/1.55 var(--font-body); color:var(--text,#e8e8e8); }
+.urr-q-hint { font:400 10px/1.4 var(--font-body); color:var(--text-faint,#555); margin-top:4px; margin-left:17px; font-style:italic; }
+.urr-q-hint::before { content:'→ '; color:var(--mod-color,#7c6cf2); font-style:normal; }
+.urr-loading { padding:28px 15px; text-align:center; font:400 12px/1.5 var(--font-body); color:var(--text-faint,#555); font-style:italic; }
 </style>
 <link rel="stylesheet" href="/apex-custom.css">
 
@@ -20186,10 +20208,73 @@ document.addEventListener('click', function(e) {
     var studyBtn = e.target.closest('.uni-study-btn');
     if (studyBtn) moodleScanContent({ module: studyBtn.getAttribute('data-module') });
     var noteHdr = e.target.closest('.mn-hdr');
-    if (noteHdr) { var body = noteHdr.nextElementSibling; if (body) body.style.display = body.style.display === 'none' ? 'block' : 'none'; }
-    var modTab = e.target.closest('.uni-mod-tab');
-    if (modTab) renderSections(modTab.getAttribute('data-code'));
+    if (noteHdr) { var nb = noteHdr.nextElementSibling; if (nb) nb.style.display = nb.style.display === 'none' ? 'block' : 'none'; }
 });
+
+function _parseRevisionSections(text) {
+    var result = {};
+    var lines = text.split('\n');
+    var heading = null, body = [];
+    lines.forEach(function(l) {
+        var m = l.match(/^##\s+(.+)/);
+        if (m) { if (heading) result[heading.toLowerCase()] = body.join('\n').trim(); heading = m[1].trim(); body = []; }
+        else if (heading) body.push(l);
+    });
+    if (heading) result[heading.toLowerCase()] = body.join('\n').trim();
+    return result;
+}
+function _parseList(text) {
+    if (!text) return [];
+    return text.split('\n').map(function(l){ return l.trim().replace(/^[-•*·]\s*/,'').replace(/^\d+[.)]\s*/,'').trim(); }).filter(function(l){ return l && !l.match(/^#+\s/) && l.toLowerCase() !== 'none'; });
+}
+function _parseExamQs(text) {
+    if (!text) return [];
+    var qs = [], cur = null;
+    text.split('\n').forEach(function(l) {
+        l = l.trim();
+        if (!l) return;
+        var m = l.match(/^(\d+)[.)]\s+(.+)/);
+        if (m) { if (cur) qs.push(cur); cur = { q: m[2], hint: '' }; }
+        else if (cur && !cur.hint && (l.startsWith('→') || l.startsWith('-') || /^hint:/i.test(l) || /^answer/i.test(l))) {
+            cur.hint = l.replace(/^→\s*/,'').replace(/^[-•]\s*/,'').replace(/^hint:\s*/i,'').replace(/^answer.*?:\s*/i,'').trim();
+        }
+    });
+    if (cur) qs.push(cur);
+    return qs;
+}
+function renderRevisionReport(report, weekName, weekNum, files, color) {
+    var secs   = _parseRevisionSections(report);
+    var ov     = secs['overview'] || '';
+    var conc   = _parseList(secs['key concepts'] || '');
+    var fwk    = _parseList(secs['frameworks & theories'] || secs['frameworks and theories'] || secs['frameworks'] || '');
+    var nums   = _parseList(secs['key numbers & definitions'] || secs['key numbers and definitions'] || secs['key numbers'] || secs['key figures'] || '');
+    var exqs   = _parseExamQs(secs['exam questions'] || secs['likely exam questions'] || '');
+    var topic  = (weekName || '').replace(/^week\s*\d+\s*[-–:·]?\s*/i,'') || ('Week ' + weekNum);
+    var cached = (files||[]).filter(function(f){return f.cached;}).length;
+    var fc     = (files||[]).length;
+
+    var h  = '<div class="uni-revision-report" style="--mod-color:' + color + '">'
+           + '<div class="urr-head">'
+           +   '<span class="urr-week-badge">W' + weekNum + '</span>'
+           +   '<span class="urr-title">' + escapeHtml(topic) + '</span>'
+           +   '<span class="urr-meta">' + fc + (fc===1?' file':' files') + (cached===fc ? ' · saved notes' : ' · AI processed') + '</span>'
+           + '</div>'
+           + '<div class="urr-body">';
+    if (ov) h += '<div><div class="urr-sec-label">Overview</div><div class="urr-overview">' + escapeHtml(ov) + '</div></div>';
+    if (conc.length || fwk.length) {
+        h += '<div class="urr-2col">';
+        if (conc.length) h += '<div><div class="urr-sec-label">Key Concepts</div><ul class="urr-list">' + conc.map(function(c){ return '<li>' + escapeHtml(c) + '</li>'; }).join('') + '</ul></div>';
+        if (fwk.length)  h += '<div><div class="urr-sec-label">Frameworks & Theories</div><ul class="urr-list">' + fwk.map(function(f){ return '<li>' + escapeHtml(f) + '</li>'; }).join('') + '</ul></div>';
+        h += '</div>';
+    }
+    if (nums.length) h += '<div><div class="urr-sec-label">Key Numbers & Definitions</div><div class="urr-pills">' + nums.map(function(n){ return '<span class="urr-pill">' + escapeHtml(n) + '</span>'; }).join('') + '</div></div>';
+    if (exqs.length) {
+        h += '<div><div class="urr-sec-label">Exam Questions</div>';
+        exqs.forEach(function(q,i){ h += '<div class="urr-q"><span class="urr-q-num">' + (i+1) + '</span><span class="urr-q-text">' + escapeHtml(q.q) + '</span>' + (q.hint ? '<div class="urr-q-hint">' + escapeHtml(q.hint) + '</div>' : '') + '</div>'; });
+        h += '</div>';
+    }
+    return h + '</div></div>';
+}
 
 function loadUniDashboard() {
     var l0 = document.getElementById('university-l0-summary');
@@ -20455,52 +20540,59 @@ function rateFlashcard(ease) {
 }
 function updateUniPomoRing() {}
 
-// Delegated click: uni study btn + note headers + week cells
-document.addEventListener('click', function(e) {
-    var studyBtn = e.target.closest('.uni-study-btn');
-    if (studyBtn) moodleScanContent({ module: studyBtn.getAttribute('data-module') });
-    var noteHdr = e.target.closest('.mn-hdr');
-    if (noteHdr) { var body = noteHdr.nextElementSibling; if (body) body.style.display = body.style.display === 'none' ? 'block' : 'none'; }
-});
-
-// Delegated click: week cell expand
+// Delegated click: week cell → AI revision report
 document.addEventListener('click', function(e) {
     var weekCell = e.target.closest('.uni-week-cell:not(.upcoming)');
-    if (weekCell && _uniData) {
-        var weekNum = parseInt(weekCell.getAttribute('data-week'));
-        var code = weekCell.getAttribute('data-code');
-        var mod = (_uniData.modules||[]).find(function(m){return m.code===code;});
-        if (!mod) return;
-        var expandEl = document.getElementById('uni-week-expand-' + code);
-        if (!expandEl) return;
-        if (_uniExpandedWeek === weekNum) {
-            _uniExpandedWeek = null;
-            expandEl.innerHTML = '';
-            document.querySelectorAll('.uni-week-cell').forEach(function(c){c.classList.remove('active');});
-            return;
-        }
-        _uniExpandedWeek = weekNum;
-        document.querySelectorAll('.uni-week-cell').forEach(function(c){c.classList.toggle('active', parseInt(c.getAttribute('data-week'))===weekNum && c.getAttribute('data-code')===code);});
-        var sec = (mod.sections||[]).find(function(s){return s.num===weekNum;});
-        var color = _uniColors[code] || '#7c6cf2';
-        if (!sec || !(sec.files||[]).length) {
-            expandEl.innerHTML = '<div class="uni-week-expand"><span style="font-size:11px;color:var(--text-faint);font-style:italic">No files for this week</span></div>';
-            return;
-        }
-        expandEl.innerHTML = '<div class="uni-week-expand">'
-            + '<div style="font:600 12px/1 var(--font-body);color:var(--text);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06)">' + sec.name + '</div>'
-            + sec.files.map(function(f) {
-                var ext = f.name.split('.').pop().toUpperCase();
-                var bg = ext==='PDF'?'#ef4444':ext==='PPTX'||ext==='PPT'?'#f59e0b':'#6366f1';
-                return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)">'
-                    + '<span style="font:700 8px/1 var(--font-mono);color:#0d0d0d;background:' + bg + ';padding:2px 5px;border-radius:3px;flex-shrink:0">' + ext + '</span>'
-                    + '<span style="font-size:12px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + f.name.replace(/\.[^.]+$/,'') + '</span>'
-                    + '<span style="font-size:10px;color:var(--text-mute)">' + f.size_kb + 'kb</span>'
-                    + (f.scanned ? '<span style="font-size:10px;color:#22c55e">&#10003; notes</span>' : '<button class="ds-btn xs uni-study-btn" data-module="' + code + '" style="font-size:9px">Scan</button>')
-                    + '</div>';
-            }).join('')
-            + '</div>';
+    if (!weekCell || !_uniData) return;
+    var weekNum = parseInt(weekCell.getAttribute('data-week'));
+    var code    = weekCell.getAttribute('data-code');
+    var mod     = (_uniData.modules||[]).find(function(m){return m.code===code;});
+    if (!mod) return;
+    var expandEl = document.getElementById('uni-week-expand-' + code);
+    if (!expandEl) return;
+
+    // Toggle off if same week clicked again
+    if (_uniExpandedWeek === weekNum && weekCell.getAttribute('data-code') === code) {
+        _uniExpandedWeek = null;
+        expandEl.innerHTML = '';
+        document.querySelectorAll('.uni-week-cell').forEach(function(c){c.classList.remove('active');});
+        return;
     }
+    _uniExpandedWeek = weekNum;
+    document.querySelectorAll('.uni-week-cell').forEach(function(c){c.classList.toggle('active', parseInt(c.getAttribute('data-week'))===weekNum && c.getAttribute('data-code')===code);});
+
+    var sec   = (mod.sections||[]).find(function(s){return s.num===weekNum;});
+    var color = _uniColors[code] || '#7c6cf2';
+
+    if (!sec || !(sec.files||[]).length) {
+        expandEl.innerHTML = '<div class="uni-revision-report" style="--mod-color:' + color + '"><div class="urr-loading">No content posted for this week yet</div></div>';
+        return;
+    }
+
+    // Loading state
+    expandEl.innerHTML = '<div class="uni-revision-report" style="--mod-color:' + color + '"><div class="urr-loading" id="urr-loading-text">Generating revision report…</div></div>';
+    var dotState = 0, dotFrames = ['Generating revision report…','Generating revision report· ·','Generating revision report· · ·'];
+    var dotTimer = setInterval(function(){ var el=document.getElementById('urr-loading-text'); if(el){dotState=(dotState+1)%3;el.textContent=dotFrames[dotState];} },500);
+
+    fetch('/api/moodle/week-revision', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moduleCode: code, weekNum: weekNum })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        clearInterval(dotTimer);
+        if (!d.ok) {
+            expandEl.innerHTML = '<div class="uni-revision-report" style="--mod-color:' + color + '"><div class="urr-loading" style="color:var(--color-error,#ef4444)">' + escapeHtml(d.error || 'Could not generate report') + '</div></div>';
+            return;
+        }
+        expandEl.innerHTML = renderRevisionReport(d.report, d.weekName, weekNum, d.files||[], color);
+    })
+    .catch(function(){
+        clearInterval(dotTimer);
+        expandEl.innerHTML = '<div class="uni-revision-report" style="--mod-color:' + color + '"><div class="urr-loading" style="color:var(--color-error,#ef4444)">Network error — could not load revision report</div></div>';
+    });
 });
 
 (function(){

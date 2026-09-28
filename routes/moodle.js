@@ -708,4 +708,105 @@ router.post('/moodle/scan-content', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// ── POST /api/moodle/week-revision — AI revision report for a single week ────
+// Body: { moduleCode: "FIN6034", weekNum: 3 }
+router.post('/moodle/week-revision', _auth, async (req, res) => {
+    const { moduleCode, weekNum } = req.body || {};
+    if (!moduleCode || !weekNum) return res.status(400).json({ ok: false, error: 'moduleCode and weekNum required' });
+
+    try {
+        // 1. Find course
+        const enrolled = await moodleCall('core_course_get_enrolled_courses_by_timeline_classification', {
+            classification: 'inprogress', limit: 20, offset: 0
+        });
+        const course = (enrolled.courses || []).find(c => c.shortname?.includes(moduleCode));
+        if (!course) return res.status(404).json({ ok: false, error: `Course ${moduleCode} not found` });
+
+        // 2. Find the week section in course contents
+        const rawSections = await moodleCall('core_course_get_contents', { courseid: course.id });
+        const weekSec = rawSections.find(s => {
+            const m = (s.name || '').match(/week\s*(\d+)/i);
+            return m && parseInt(m[1]) === parseInt(weekNum);
+        });
+        if (!weekSec) return res.json({ ok: false, error: `Week ${weekNum} not yet posted on Moodle` });
+
+        // 3. Collect study files from this section
+        const studyFiles = [];
+        for (const mod of (weekSec.modules || [])) {
+            for (const f of (mod.contents || [])) {
+                if (!f.filename || !f.fileurl || !isStudyFile(f.filename)) continue;
+                if ((f.filesize || 0) > 15 * 1024 * 1024) continue;
+                studyFiles.push(f);
+            }
+        }
+        if (!studyFiles.length) return res.json({ ok: false, error: 'No study files for this week' });
+
+        // 4. Load saved notes or fresh text for each file in parallel
+        const noteKeys = studyFiles.map(f => `${moduleCode} — ${f.filename}`);
+        const { data: savedNotes } = await sb().from('apex_documents')
+            .select('name,content').eq('doc_type', 'moodle_notes').in('name', noteKeys);
+        const notesMap = new Map((savedNotes || []).map(n => [n.name, n.content]));
+
+        const parts = await Promise.all(studyFiles.map(async (f) => {
+            const key = `${moduleCode} — ${f.filename}`;
+            if (notesMap.has(key)) return { filename: f.filename, text: notesMap.get(key), cached: true };
+            try {
+                const buf = await downloadBuffer(f.fileurl);
+                const text = await extractText(buf, f.filename);
+                if (text && text.trim().length >= 100) return { filename: f.filename, text: text.slice(0, 8000), cached: false };
+            } catch (e) { console.warn('[week-revision] fetch failed:', f.filename, e.message); }
+            return null;
+        }));
+        const validParts = parts.filter(Boolean);
+        if (!validParts.length) return res.json({ ok: false, error: 'Could not extract content from files' });
+
+        // 5. Generate revision report
+        const combinedText = validParts.map(p => `### ${p.filename}\n${p.text}`).join('\n\n---\n\n');
+        const weekName = weekSec.name;
+
+        const msg = await _ai.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 2000,
+            messages: [{
+                role: 'user',
+                content: `You are a revision assistant for a Business Finance student at BCU (Birmingham City University).
+
+Module: ${moduleCode}
+Week ${weekNum}: ${weekName}
+Source files: ${validParts.map(p => p.filename).join(', ')}
+
+Produce a structured REVISION REPORT using exactly these section headings (## heading):
+
+## Overview
+2–3 sentences: what this week covers and why it matters in the module context.
+
+## Key Concepts
+Bullet list (- item) of the 5–8 most important concepts from this week.
+
+## Frameworks & Theories
+Bullet list of any named models/theories/frameworks with a 1-line explanation each. Write "None" if not applicable.
+
+## Key Numbers & Definitions
+Bullet list of specific formulas, ratios, figures, or definitions worth memorising. Write "None" if not applicable.
+
+## Exam Questions
+3 numbered exam-style questions (1. Question) each followed by a hint line starting with →
+
+Be precise and exam-focused. Omit admin text, navigation, and referencing guides.
+
+---
+${combinedText.slice(0, 16000)}`,
+            }],
+        });
+
+        const report = msg.content[0]?.text || '';
+        res.json({
+            ok: true,
+            report,
+            weekName,
+            files: validParts.map(p => ({ filename: p.filename, cached: p.cached })),
+        });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;
