@@ -301,19 +301,26 @@ router.get('/moodle/dashboard', _auth, async (req, res) => {
         for (const course of courseList) {
             const code = course.shortname.match(/[A-Z]{2,4}\d{4}/)[0];
 
-            // Sections + files
+            // Section helpers
+            const _isWeekSec    = n => /week\s*\d+/i.test(n);
+            const _isSummSec    = n => /assessment\s+\d+\s*[-–]/i.test(n) || (/assessment\s+\d+/i.test(n) && /\d+%/.test(n));
+            const _isAssInfoSec = n => /assessment.{0,8}information/i.test(n) || /assessments\s*information/i.test(n) || /formative.{0,25}assessment/i.test(n) || /formative.{0,25}activity/i.test(n);
+            const _extractWt    = n => { const m = n.match(/(\d+)%/); return m ? parseInt(m[1]) : null; };
+            const _extractWkNum = n => { const m = n.match(/week\s*(\d+)/i); return m ? parseInt(m[1]) : null; };
+            const _SKIP         = new Set(['general', 'news forum', 'announcements', 'introduction', 'free access to the financial times', 'steps to get free access to the financial times']);
+
             let rawSections = [];
             try { rawSections = await moodleCall('core_course_get_contents', { courseid: course.id }); } catch (_) {}
-            const sections = [];
+
+            const weekSecs = [], summSecs = [], assessInfoSecs = [];
             let totalFiles = 0, scannedCount = 0;
-            const _skipSections = ['general', 'news forum', 'announcements', 'introduction'];
+
             for (const s of rawSections) {
                 const sname = (s.name || '').trim();
-                if (!sname || _skipSections.includes(sname.toLowerCase())) continue;
-                const files = [];
-                const activities = [];
+                if (!sname || _SKIP.has(sname.toLowerCase())) continue;
+
+                const files = [], activities = [];
                 for (const mod of (s.modules || [])) {
-                    // Study files
                     for (const f of (mod.contents || [])) {
                         if (!f.filename || !f.fileurl || !isStudyFile(f.filename)) continue;
                         if ((f.filesize || 0) > 15 * 1024 * 1024) continue;
@@ -322,49 +329,77 @@ router.get('/moodle/dashboard', _auth, async (req, res) => {
                         totalFiles++;
                         if (scanned) scannedCount++;
                     }
-                    // Assessment/activity entries in this week
                     if (['assign', 'quiz', 'turnitintool', 'turnitintooltwo'].includes(mod.modname)) {
                         activities.push({ type: mod.modname, name: mod.name, instance_id: mod.instance });
                     }
                 }
-                sections.push({ name: sname, files, activities });
+
+                if (_isSummSec(sname)) {
+                    summSecs.push({ name: sname, weight_pct: _extractWt(sname), files, activities });
+                } else if (_isAssInfoSec(sname)) {
+                    assessInfoSecs.push({ name: sname, files, activities });
+                } else if (_isWeekSec(sname)) {
+                    weekSecs.push({ num: _extractWkNum(sname), name: sname, files, activities });
+                }
+                // non-week, non-assessment info sections (module resources etc.) are intentionally skipped
             }
 
-            // Assignments — from mod_assign API
+            // Build complete 12-week skeleton — fill gaps with upcoming placeholders
+            const SEMESTER_WEEKS = 12;
+            const postedNums = new Set(weekSecs.map(w => w.num).filter(Boolean));
+            const allWeeks = [...weekSecs];
+            for (let w = 1; w <= SEMESTER_WEEKS; w++) {
+                if (!postedNums.has(w)) allWeeks.push({ num: w, name: 'Week ' + w, files: [], activities: [], upcoming: true });
+            }
+            allWeeks.sort((a, b) => (a.num || 99) - (b.num || 99));
+
+            // Assignments — mod_assign API + weight from summative section names
             let assignments = [];
-            const seenAssignNames = new Set();
+            const seenNames = new Set();
             try {
                 const aData = await moodleCall('mod_assign_get_assignments', { 'courseids[0]': course.id });
                 for (const c of (aData.courses || [])) {
                     for (const a of (c.assignments || [])) {
                         const daysUntil = a.duedate ? Math.ceil((a.duedate - now) / 86400) : null;
+                        // Match to summative section to get weight
+                        let weight_pct = null, section_title = null;
+                        for (const ss of summSecs) {
+                            if (ss.activities.some(act => act.name === a.name)) {
+                                weight_pct = ss.weight_pct;
+                                section_title = ss.name;
+                                break;
+                            }
+                        }
                         assignments.push({
-                            id: a.id, title: a.name,
+                            id: a.id, title: a.name, weight_pct, section_title,
                             due_date: a.duedate ? new Date(a.duedate * 1000).toISOString().split('T')[0] : null,
                             days_until: daysUntil,
                             grade_scale: a.grade || 100,
-                            intro: a.intro ? a.intro.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 400) : null,
+                            intro: a.intro ? a.intro.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 500) : null,
                             source: 'moodle_assign',
                         });
-                        seenAssignNames.add(a.name.toLowerCase());
+                        seenNames.add(a.name.toLowerCase());
                     }
                 }
             } catch (_) {}
-            // Also surface assignment/Turnitin activities found in sections
-            for (const sec of sections) {
-                for (const act of (sec.activities || [])) {
-                    if (!seenAssignNames.has(act.name.toLowerCase())) {
-                        assignments.push({
-                            id: act.instance_id, title: act.name,
-                            due_date: null, days_until: null,
-                            grade_scale: 100, intro: null,
-                            source: act.type,
-                        });
-                        seenAssignNames.add(act.name.toLowerCase());
-                    }
+            // Surface any unmatched assessment activities from summative + week sections
+            for (const ss of [...summSecs, ...weekSecs]) {
+                for (const act of (ss.activities || [])) {
+                    if (seenNames.has(act.name.toLowerCase())) continue;
+                    assignments.push({
+                        id: act.instance_id, title: act.name,
+                        weight_pct: summSecs.includes(ss) ? ss.weight_pct : null,
+                        section_title: ss.name,
+                        due_date: null, days_until: null,
+                        grade_scale: 100, intro: null, source: act.type,
+                    });
+                    seenNames.add(act.name.toLowerCase());
                 }
             }
             assignments.sort((a, b) => (a.days_until ?? 999) - (b.days_until ?? 999));
+
+            // Backward-compat: sections = allWeeks
+            const sections = allWeeks;
 
             // Announcements from news forum
             let announcements = [];
@@ -390,7 +425,9 @@ router.get('/moodle/dashboard', _auth, async (req, res) => {
                 .replace(/ A S\d \d{4}\/\d+$/, '')
                 .trim();
 
-            modules.push({ code, name: cleanName, moodle_id: course.id, credits: 20, progress: dbMod?.progress || 0, sections, assignments, announcements, file_count: totalFiles, scanned_count: scannedCount });
+            // Weight sum for validation
+            const weight_sum = assignments.filter(a => a.weight_pct).reduce((s, a) => s + a.weight_pct, 0);
+            modules.push({ code, name: cleanName, moodle_id: course.id, credits: 20, progress: dbMod?.progress || 0, sections, summative_sections: summSecs, assess_info_sections: assessInfoSecs, assignments, announcements, file_count: totalFiles, scanned_count: scannedCount, weight_sum });
         }
 
         const deadlines = [];
