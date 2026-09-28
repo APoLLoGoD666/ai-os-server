@@ -809,4 +809,75 @@ ${combinedText.slice(0, 16000)}`,
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// ── POST /api/moodle/module-revision — full AI revision guide for a module ────
+// Body: { moduleCode: "FIN6034" }
+router.post('/moodle/module-revision', _auth, async (req, res) => {
+    const { moduleCode } = req.body || {};
+    if (!moduleCode) return res.status(400).json({ ok: false, error: 'moduleCode required' });
+
+    try {
+        // Load all saved notes for this module
+        const { data: notes } = await sb().from('apex_documents')
+            .select('name,content').eq('doc_type', 'moodle_notes')
+            .ilike('name', `${moduleCode} — %`).order('name');
+
+        if (!notes || !notes.length) {
+            return res.json({ ok: false, error: `No scanned notes found for ${moduleCode}. Open a week and generate a report first to scan the files.` });
+        }
+
+        const recentMem = await pgLoadMemory().catch(() => []);
+        const memSnippet = recentMem.length
+            ? recentMem.slice(-3).map(m => `[${(m.role||'').toUpperCase()}] ${(m.message||'').slice(0, 100)}`).join('\n')
+            : '';
+
+        const combinedNotes = notes
+            .map(n => `### ${n.name.replace(moduleCode + ' — ', '')}\n${(n.content||'').slice(0, 3000)}`)
+            .join('\n\n---\n\n');
+
+        const { result } = await _runtime.execute({
+            tier:      'balanced',
+            caller:    'module-revision',
+            maxTokens: 3000,
+            system: [
+                `You are Apex — Alex's personal AI OS. Generate a comprehensive exam revision guide for Alex's BCU Business Finance module: ${moduleCode}.`,
+                `Alex needs everything he needs to pass — organised, complete, and scannable.`,
+                memSnippet ? `RECENT CONTEXT:\n${memSnippet}` : null,
+            ].filter(Boolean).join('\n\n'),
+            messages: [{
+                role: 'user',
+                content: `Generate a COMPREHENSIVE REVISION GUIDE for ${moduleCode} using all lecture notes below.
+
+Use exactly these section headings:
+
+## Module Overview
+What this module covers, its central themes, and what the exam tests.
+
+## Complete Topic Index
+All topics covered, listed by week (Week 1: ..., Week 2: ..., etc.).
+
+## Master Concept List
+Every key concept from the entire module — clean bullet list, one line each.
+
+## Frameworks & Theories Reference
+Every named model, theory, or framework — bullet list with format:
+- **Name**: 2-line explanation.
+
+## Formulas & Key Numbers
+Every formula, ratio, equation, or number worth memorising — one per line.
+
+## Exam Strategy
+What question types are likely, how to structure answers, what topics to prioritise.
+
+Be comprehensive. This is the definitive revision reference.
+
+---
+${combinedNotes.slice(0, 20000)}`,
+            }],
+        });
+
+        const guide = result.content[0]?.text || '';
+        res.json({ ok: true, guide, fileCount: notes.length });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;

@@ -4097,7 +4097,39 @@ body:not(.apex-cmd-active) .input-zone { display: none !important; }
 .uni-week-num { font:700 9px/1 var(--font-mono,monospace); color:var(--text-mute,#888); letter-spacing:.05em; }
 .uni-week-topic { font:400 10px/1.35 var(--font-body,system-ui); color:var(--text-mute,#888); margin-top:5px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .uni-week-expand { background:rgba(255,255,255,0.025); border-radius:8px; padding:12px 14px; border:1px solid rgba(255,255,255,0.08); margin-bottom:12px; }
+.uni-week-expand-panel { margin:0 0 16px; }
+.uni-main-grid { align-items:start; }
 .uni-urgency-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:20px; }
+/* Revision section */
+.uni-rev-section { margin-top:20px; border:1px solid rgba(255,255,255,0.07); border-radius:12px; overflow:hidden; }
+.uni-rev-trigger { width:100%; padding:14px 18px; background:rgba(255,255,255,0.02); border:none; cursor:pointer; display:flex; align-items:center; gap:12px; transition:background 150ms; text-align:left; }
+.uni-rev-trigger:hover { background:rgba(255,255,255,0.05); }
+.uni-rev-trigger-icon { width:28px; height:28px; border-radius:6px; background:var(--mod-color,#7c6cf2); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px; }
+.uni-rev-trigger-label { flex:1; }
+.uni-rev-trigger-label strong { font:600 13px/1 var(--font-body); color:var(--text,#e8e8e8); display:block; margin-bottom:3px; }
+.uni-rev-trigger-label span { font:400 10px/1 var(--font-body); color:var(--text-faint,#555); }
+.uni-rev-trigger-arrow { font-size:14px; color:var(--text-faint,#555); transition:transform 150ms; }
+.uni-rev-section.open .uni-rev-trigger-arrow { transform:rotate(90deg); }
+.uni-rev-body { display:none; border-top:1px solid rgba(255,255,255,0.06); }
+.uni-rev-section.open .uni-rev-body { display:block; }
+/* Full module revision guide */
+.uni-rev-guide { padding:0; }
+.urv-sec { padding:16px 18px; border-bottom:1px solid rgba(255,255,255,0.05); }
+.urv-sec:last-child { border-bottom:none; }
+.urv-label { font:800 8px/1 var(--font-mono,monospace); letter-spacing:.18em; text-transform:uppercase; color:var(--mod-color,#7c6cf2); opacity:.7; margin-bottom:11px; display:flex; align-items:center; gap:8px; }
+.urv-label::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,rgba(255,255,255,0.07),transparent); }
+.urv-text { font:400 12px/1.75 var(--font-body); color:rgba(232,232,232,0.72); }
+.urv-chips { display:flex; flex-wrap:wrap; gap:5px; }
+.urv-chip { font:500 10px/1 var(--font-body); color:rgba(232,232,232,0.85); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:20px; padding:5px 10px; }
+.urv-fwk-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.urv-fwk-card { padding:10px 12px; background:rgba(255,255,255,0.03); border-radius:8px; border-left:2px solid var(--mod-color,#7c6cf2); }
+.urv-fwk-name { font:700 11px/1.3 var(--font-body); color:var(--text,#e8e8e8); margin-bottom:4px; }
+.urv-fwk-desc { font:400 10px/1.5 var(--font-body); color:rgba(232,232,232,0.55); }
+.urv-nums { display:flex; flex-direction:column; gap:5px; }
+.urv-num-row { font:400 10.5px/1.5 var(--font-mono,monospace); color:rgba(232,232,232,0.78); padding:7px 11px; background:rgba(255,255,255,0.03); border-radius:5px; border-left:2px solid var(--mod-color,#7c6cf2); }
+.urv-strat { display:flex; flex-direction:column; gap:7px; }
+.urv-strat-row { font:400 11px/1.6 var(--font-body); color:rgba(232,232,232,0.78); padding-left:12px; position:relative; }
+.urv-strat-row::before { content:''; position:absolute; left:0; top:8px; width:4px; height:4px; border-radius:50%; background:var(--mod-color,#7c6cf2); opacity:.7; }
 @keyframes uniFadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 .uni-mod-view { animation:uniFadeIn 180ms ease; }
 /* Revision report v2 */
@@ -20540,15 +20572,33 @@ function renderModuleView(mod) {
         + '<span style="font-size:10px;color:var(--text-mute)">' + posted + '/12 posted</span>'
         + '</div>'
         + '<div class="uni-week-grid">' + weekCells + '</div>'
-        + '<div id="uni-week-expand-' + mod.code + '"></div>'
         + '</div>'
         + '</div>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'
+        // Expansion panel is full-width — outside the 2-col grid so it never distorts column heights
+        + '<div id="uni-week-expand-' + mod.code + '" class="uni-week-expand-panel"></div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">'
         + '<div class="ds-panel"><div class="ds-panel-header"><div class="ds-panel-header-left"><span class="ds-dot green"></span><span class="t-label">Announcements</span></div></div>'
         + annHtml + '</div>'
         + '<div class="ds-panel"><div class="ds-panel-header"><div class="ds-panel-header-left"><span class="ds-dot purple"></span><span class="t-label">Study Notes</span></div></div>'
         + '<div id="uni-notes-' + mod.code + '"><div class="skel skel-row skel-wide"></div></div>'
         + '</div>'
+        + '</div>'
+        + '<div class="uni-rev-section" style="--mod-color:' + color + '" id="uni-rev-' + mod.code + '">'
+        +   '<button class="uni-rev-trigger" onclick="toggleRevisionSection(\'' + mod.code + '\')">'
+        +     '<div class="uni-rev-trigger-icon">◈</div>'
+        +     '<div class="uni-rev-trigger-label">'
+        +       '<strong>Full Revision Guide</strong>'
+        +       '<span>' + (mod.scanned_count || 0) + ' files scanned · AI-synthesised · covers entire module</span>'
+        +     '</div>'
+        +     '<span class="uni-rev-trigger-arrow">›</span>'
+        +   '</button>'
+        +   '<div class="uni-rev-body">'
+        +     '<div id="uni-rev-content-' + mod.code + '" style="padding:16px 18px">'
+        +       '<button class="ds-btn" style="background:var(--mod-color,#7c6cf2);color:#0d0d0d;font-weight:700;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:12px" onclick="generateModuleRevision(\'' + mod.code + '\')">'
+        +         'Generate Revision Guide'
+        +       '</button>'
+        +     '</div>'
+        +   '</div>'
         + '</div>'
         + '</div>';
 
@@ -20581,6 +20631,83 @@ function loadModuleNotesInline(code) {
             }).join('');
         })
         .catch(function() { el.innerHTML = '<div style="font-size:11px;color:var(--text-faint)">Could not load notes</div>'; });
+}
+
+function toggleRevisionSection(code) {
+    var sec = document.getElementById('uni-rev-' + code);
+    if (sec) sec.classList.toggle('open');
+}
+
+function generateModuleRevision(code) {
+    var container = document.getElementById('uni-rev-content-' + code);
+    if (!container) return;
+    var color = _uniColors[code] || '#7c6cf2';
+    container.innerHTML = '<div class="urr-loading" id="urv-loading-' + code + '">Building your full revision guide…</div>';
+    var frames = ['Building your full revision guide…','Synthesising all module content…','Compiling frameworks and theories…','Almost ready…'];
+    var fi = 0, timer = setInterval(function() {
+        var el = document.getElementById('urv-loading-' + code);
+        if (el) { el.textContent = frames[fi++ % frames.length]; }
+    }, 1800);
+    fetch('/api/moodle/module-revision', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moduleCode: code })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        clearInterval(timer);
+        if (!d.ok) {
+            container.innerHTML = '<div style="padding:16px 18px"><p style="font-size:12px;color:var(--color-error,#ef4444);margin:0 0 12px">' + escapeHtml(d.error || 'Failed') + '</p>'
+                + '<button class="ds-btn" style="background:' + color + ';color:#0d0d0d;font-weight:700;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:12px" onclick="generateModuleRevision(\'' + code + '\')">Retry</button></div>';
+            return;
+        }
+        container.innerHTML = renderModuleRevisionGuide(d.guide, code, color, d.fileCount);
+        container.insertAdjacentHTML('beforeend', '<div style="padding:12px 18px;border-top:1px solid rgba(255,255,255,0.05);text-align:right">'
+            + '<button style="font-size:10px;color:var(--text-faint);background:none;border:none;cursor:pointer;padding:4px 0" onclick="generateModuleRevision(\'' + code + '\')">↻ Regenerate</button></div>');
+    })
+    .catch(function() {
+        clearInterval(timer);
+        container.innerHTML = '<div style="padding:16px 18px"><p style="font-size:12px;color:var(--color-error,#ef4444);margin:0 0 12px">Network error</p>'
+            + '<button class="ds-btn" style="background:' + color + ';color:#0d0d0d;font-weight:700;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:12px" onclick="generateModuleRevision(\'' + code + '\')">Retry</button></div>';
+    });
+}
+
+function renderModuleRevisionGuide(guide, code, color, fileCount) {
+    var secs = _parseRevisionSections(guide);
+    var overview  = secs['module overview'] || secs['overview'] || '';
+    var topicIdx  = secs['complete topic index'] || secs['topic index'] || '';
+    var concepts  = _parseList(secs['master concept list'] || secs['key concepts'] || '');
+    var fwkRaw    = _parseList(secs['frameworks & theories reference'] || secs['frameworks & theories'] || secs['frameworks'] || '');
+    var formulas  = _parseList(secs['formulas & key numbers'] || secs['key numbers & definitions'] || secs['key numbers'] || '');
+    var strategy  = _parseList(secs['exam strategy'] || secs['exam preparation'] || '');
+
+    function fwkCard(item) {
+        var m = item.replace(/^\*\*([^*]+)\*\*/, function(_,n){ return n; }).match(/^([^:—–]+?)(?:\s*[:—–]\s*(.+))?$/);
+        var name = m ? m[1].trim() : item;
+        var desc = m && m[2] ? m[2].trim() : '';
+        return '<div class="urv-fwk-card"><div class="urv-fwk-name">' + escapeHtml(name) + '</div>'
+            + (desc ? '<div class="urv-fwk-desc">' + _md(desc) + '</div>' : '') + '</div>';
+    }
+
+    var h = '<div class="uni-rev-guide" style="--mod-color:' + color + '">';
+
+    if (overview) h += '<div class="urv-sec"><div class="urv-label">Module Overview</div><div class="urv-text">' + _md(overview) + '</div></div>';
+
+    if (topicIdx) h += '<div class="urv-sec"><div class="urv-label">Topic Index</div><div class="urv-text">' + _md(topicIdx) + '</div></div>';
+
+    if (concepts.length) h += '<div class="urv-sec"><div class="urv-label">Master Concept List</div>'
+        + '<div class="urv-chips">' + concepts.map(function(c){ return '<span class="urv-chip">' + escapeHtml(_plain(c)) + '</span>'; }).join('') + '</div></div>';
+
+    if (fwkRaw.length) h += '<div class="urv-sec"><div class="urv-label">Frameworks &amp; Theories</div>'
+        + '<div class="urv-fwk-grid">' + fwkRaw.map(fwkCard).join('') + '</div></div>';
+
+    if (formulas.length) h += '<div class="urv-sec"><div class="urv-label">Formulas &amp; Key Numbers</div>'
+        + '<div class="urv-nums">' + formulas.map(function(f){ return '<div class="urv-num-row">' + _md(f) + '</div>'; }).join('') + '</div></div>';
+
+    if (strategy.length) h += '<div class="urv-sec"><div class="urv-label">Exam Strategy</div>'
+        + '<div class="urv-strat">' + strategy.map(function(s){ return '<div class="urv-strat-row">' + _md(s) + '</div>'; }).join('') + '</div></div>';
+
+    return h + '</div>';
 }
 
 function renderKnowledgeGaps(gaps) {
