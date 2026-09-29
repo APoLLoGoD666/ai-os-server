@@ -20,7 +20,7 @@ router.get('/finance/invoices', _auth, async (req, res) => {
 router.get('/finance/expenses', _auth, async (req, res) => {
     try {
         const _hid = req.identity?.humanId || null;
-        let q = sb().from('apex_transactions').select('id,description,amount,category,date,source').eq('type', 'expense').order('date', { ascending: false }).limit(50);
+        let q = sb().from('transactions').select('id,description,amount,category,date,source').eq('type', 'expense').order('date', { ascending: false }).limit(50);
         if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
@@ -53,7 +53,7 @@ router.get('/finance/investments', _auth, async (req, res) => {
 router.get('/finance/balance', _auth, async (req, res) => {
     try {
         const _hid = req.identity?.humanId || null;
-        let q = sb().from('apex_transactions').select('amount,type');
+        let q = sb().from('transactions').select('amount,type');
         if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
@@ -71,7 +71,7 @@ router.get('/finance/cashflow', _auth, async (req, res) => {
         const _hid = req.identity?.humanId || null;
         const cutoff = new Date();
         cutoff.setMonth(cutoff.getMonth() - 6);
-        let q = sb().from('apex_transactions').select('amount,type,date').gte('date', cutoff.toISOString().split('T')[0]);
+        let q = sb().from('transactions').select('amount,type,date').gte('date', cutoff.toISOString().split('T')[0]);
         if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
@@ -94,7 +94,7 @@ router.get('/finance/profit-loss', _auth, async (req, res) => {
         const _hid = req.identity?.humanId || null;
         const cutoff = new Date();
         cutoff.setMonth(cutoff.getMonth() - 6);
-        let q = sb().from('apex_transactions').select('amount,type,category,date').gte('date', cutoff.toISOString().split('T')[0]);
+        let q = sb().from('transactions').select('amount,type,category,date').gte('date', cutoff.toISOString().split('T')[0]);
         if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });

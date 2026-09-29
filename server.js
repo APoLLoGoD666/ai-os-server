@@ -349,6 +349,7 @@ if (!CRON_SECRET)     console.warn('[Startup] CRON_SECRET not set — cron endpo
 })();
 
 app.use('/api', require('./routes/tts-gemini'));
+app.use('/api', require('./routes/finance-bank'));
 // routes/registry.js and routes/civilization.js are already loaded by _loadAgentRoutes() above;
 // explicit re-registrations removed (R6-01: double-mount defect).
 app.use('/', require('./src/routes/telemetry/index.js')({ requireAppAccess, getStatus: getMastraStatus, errBuffer: _errBuffer, gitSha: GIT_SHA }));
