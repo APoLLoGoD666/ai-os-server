@@ -274,6 +274,9 @@ require('./middleware/rate-limiting')(app);
 require('./middleware/request-context')(app, sbAdmin);
 
 app.use(require('./middleware/civilization-kernel'));
+// Bank OAuth connect/callback must be public — they are browser redirects and TrueLayer callbacks
+// that arrive before any session cookie exists. Registered before kernelChain intentionally.
+app.use('/api', require('./routes/finance-bank'));
 app.use('/api', ...kernelChain);
 
 const _skipLocalhost = (req) => { const ip = req.ip || ''; return ip === '::1' || ip === '127.0.0.1' || ip.startsWith('::ffff:127.'); };
@@ -325,7 +328,7 @@ if (!CRON_SECRET)     console.warn('[Startup] CRON_SECRET not set — cron endpo
     if (!fs.existsSync(_rdir)) return;
     const { isMasterRequest } = require('./lib/middleware');
     const _files = fs.readdirSync(_rdir)
-        .filter(f => f.endsWith('.js') && f !== 'gemini-live.js' && f !== 'tts-gemini.js')
+        .filter(f => f.endsWith('.js') && f !== 'gemini-live.js' && f !== 'tts-gemini.js' && f !== 'finance-bank.js')
         .sort();
     // Derive path prefixes from filenames (e.g. routes/intelligence.js → /api/intelligence)
     const _gatedPrefixes = _files.map(f => '/api/' + path.basename(f, '.js'));
@@ -349,7 +352,6 @@ if (!CRON_SECRET)     console.warn('[Startup] CRON_SECRET not set — cron endpo
 })();
 
 app.use('/api', require('./routes/tts-gemini'));
-app.use('/api', require('./routes/finance-bank'));
 // routes/registry.js and routes/civilization.js are already loaded by _loadAgentRoutes() above;
 // explicit re-registrations removed (R6-01: double-mount defect).
 app.use('/', require('./src/routes/telemetry/index.js')({ requireAppAccess, getStatus: getMastraStatus, errBuffer: _errBuffer, gitSha: GIT_SHA }));
