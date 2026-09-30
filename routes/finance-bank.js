@@ -269,6 +269,25 @@ router.post('/bank/sync', requireAppAccess, async function(req, res) {
     }
 });
 
+// ── Debug: raw TrueLayer account+transaction response ────────────────────────
+router.get('/bank/debug', requireAppAccess, async function(req, res) {
+    try {
+        var sb = getSupabaseClient();
+        var bankId = req.query.provider || 'capitalOne';
+        var token = await _getValidToken(sb, bankId);
+        if (!token) return res.json({ ok: false, error: 'No token for ' + bankId });
+        var accountsRes = await _get(API_HOST, '/data/v1/accounts', token);
+        var accounts = accountsRes.body.results || [];
+        var out = { ok: true, bank_id: bankId, account_count: accounts.length, accounts: [] };
+        for (var acc of accounts) {
+            var from = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            var txRes = await _get(API_HOST, '/data/v1/accounts/' + acc.account_id + '/transactions?from=' + from, token);
+            out.accounts.push({ account_id: acc.account_id, display_name: acc.display_name, transaction_count: (txRes.body.results || []).length, sample: (txRes.body.results || []).slice(0, 2) });
+        }
+        res.json(out);
+    } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // ── Connections list ─────────────────────────────────────────────────────────
 router.get('/bank/connections', requireAppAccess, async function(req, res) {
     try {
