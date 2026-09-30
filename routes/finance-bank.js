@@ -182,7 +182,7 @@ router.get('/bank/callback', async function(req, res) {
         });
 
         // Kick off initial sync
-        res.redirect('/dashboard?bank=connected&provider=' + bankId);
+        res.redirect('/dashboard.html?bank=connected&provider=' + bankId);
         _syncAll(sb, tokenRes.body.access_token, bankId).catch(console.error);
     } catch(e) {
         res.status(500).send('Error: ' + e.message);
