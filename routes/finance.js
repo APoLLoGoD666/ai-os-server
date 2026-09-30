@@ -3,6 +3,7 @@ const router = require('express').Router();
 const { getSupabaseClient } = require('../lib/clients');
 const _auth = require('../lib/app-auth');
 const { isMasterRequest } = require('../lib/middleware');
+const { cleanTransactions } = require('../lib/finance-categorise');
 
 const sb = getSupabaseClient;
 
@@ -64,6 +65,17 @@ router.get('/finance/balance', _auth, async (req, res) => {
         }
         res.json({ ok: true, balance: income - expenses, income, expenses });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/net-worth', _auth, async (req, res) => {
+    try {
+        const { data, error } = await sb().from('apex_net_worth_snapshot')
+            .select('assets_gbp,net_worth_gbp,snapped_at')
+            .order('snapped_at', { ascending: false })
+            .limit(1);
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, snapshot: data?.[0] || null });
+    } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 router.get('/finance/cashflow', _auth, async (req, res) => {
@@ -191,6 +203,95 @@ router.patch('/finance/investments/:id', _auth, async (req, res) => {
         const { data, error } = await sb().from('apex_investments').update(patch).eq('id', req.params.id).select().single();
         if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, investment: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Manual transaction entry — for income/expenses not captured by Open Banking
+// (e.g. PIP received via family, cash income, crypto proceeds)
+router.post('/finance/transactions/manual', _auth, async (req, res) => {
+    try {
+        const { description, amount, type, category, date } = req.body || {};
+        if (!description) return res.status(400).json({ ok: false, error: 'description required' });
+        if (amount == null) return res.status(400).json({ ok: false, error: 'amount required' });
+        if (!type || !['income', 'expense'].includes(type)) return res.status(400).json({ ok: false, error: 'type must be income or expense' });
+        const _hid = req.identity?.humanId || '00000000-0000-4000-8000-000000000001';
+        const { data, error } = await sb().from('transactions')
+            .insert({
+                human_id: _hid,
+                description,
+                amount: Number(amount),
+                type,
+                category: category || (type === 'income' ? 'CREDIT' : 'PURCHASE'),
+                date: date || new Date().toISOString().split('T')[0],
+                source: 'manual',
+            })
+            .select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, transaction: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/categorised', _auth, async (req, res) => {
+    try {
+        const _hid = req.identity?.humanId || null;
+        let q = sb().from('transactions').select('id,description,amount,type,category,date,source').order('date', { ascending: false }).limit(500);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        const result = cleanTransactions(data || []);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Polygon wallet balances — read-only via public RPC, no private key needed
+const POLYGON_WALLET = '0xc5958333D69D670f508d5B49D4B03ae89E0A9a49';
+const POLYGON_RPC    = 'https://polygon-rpc.com';
+const USDC_POLYGON   = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'; // USDC.e on Polygon
+
+async function _rpcCall(method, params, id = 1) {
+    const r = await fetch(POLYGON_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method, params, id }),
+    });
+    return r.json();
+}
+
+router.get('/finance/crypto/wallet', _auth, async (req, res) => {
+    try {
+        const [maticRes, usdcRes] = await Promise.all([
+            _rpcCall('eth_getBalance', [POLYGON_WALLET, 'latest'], 1),
+            _rpcCall('eth_call', [{ to: USDC_POLYGON, data: '0x70a08231000000000000000000000000' + POLYGON_WALLET.slice(2) }, 'latest'], 2),
+        ]);
+
+        const matic = parseInt(maticRes.result || '0x0', 16) / 1e18;
+        const usdc  = parseInt(usdcRes.result  || '0x0', 16) / 1e6;
+
+        // Polymarket open positions (data API, no auth needed)
+        let positions = [];
+        try {
+            const pmRes = await fetch(`https://data-api.polymarket.com/positions?user_address=${POLYGON_WALLET}&sizeThreshold=0.01`);
+            if (pmRes.ok) positions = await pmRes.json() || [];
+        } catch (_) { /* non-critical */ }
+
+        const positionValue = Array.isArray(positions)
+            ? positions.reduce((s, p) => s + (Number(p.size || p.currentValue || 0)), 0)
+            : 0;
+
+        res.json({
+            ok: true,
+            address: POLYGON_WALLET,
+            balances: {
+                matic: +matic.toFixed(4),
+                usdc: +usdc.toFixed(2),
+            },
+            polymarket: {
+                positions: positions.length,
+                estimated_value_usdc: +positionValue.toFixed(2),
+            },
+            total_usdc_equivalent: +(usdc + positionValue).toFixed(2),
+            fetched_at: new Date().toISOString(),
+        });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 

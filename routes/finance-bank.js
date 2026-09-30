@@ -47,17 +47,43 @@ function _get(hostname, path, token) {
     });
 }
 
-async function _getTokens(sb) {
-    var { data } = await sb.from('apex_bank_tokens').select('*').order('created_at', { ascending: false }).limit(1);
+// Ensure bank_id column exists — idempotent, runs once per cold start
+var _bankIdMigrated = false;
+async function _ensureBankIdColumn() {
+    if (_bankIdMigrated) return;
+    try {
+        var { Pool } = require('pg');
+        var pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+        await pool.query("ALTER TABLE apex_bank_tokens ADD COLUMN IF NOT EXISTS bank_id TEXT DEFAULT 'hsbc'");
+        await pool.end();
+        _bankIdMigrated = true;
+    } catch(_) { _bankIdMigrated = true; /* column likely already exists */ }
+}
+
+async function _getTokens(sb, bankId) {
+    bankId = bankId || 'hsbc';
+    var { data } = await sb.from('apex_bank_tokens').select('*').eq('bank_id', bankId).order('created_at', { ascending: false }).limit(1);
     return data && data[0] ? data[0] : null;
 }
 
 async function _refreshTokens(sb, row) {
-    var r = await _post(AUTH_HOST, '/connect/token', JSON.stringify(
-        'grant_type=refresh_token&client_id=' + encodeURIComponent(CLIENT_ID) +
-        '&client_secret=' + encodeURIComponent(CLIENT_SECRET) +
-        '&refresh_token=' + encodeURIComponent(row.refresh_token)
-    ).replace(/^"|"$/g, ''), null);
+    var r = await new Promise(function(resolve, reject) {
+        var data = 'grant_type=refresh_token' +
+            '&client_id=' + encodeURIComponent(CLIENT_ID) +
+            '&client_secret=' + encodeURIComponent(CLIENT_SECRET) +
+            '&refresh_token=' + encodeURIComponent(row.refresh_token);
+        var req2 = https.request({
+            hostname: AUTH_HOST, path: '/connect/token', method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(data) }
+        }, function(res2) {
+            var buf = '';
+            res2.on('data', function(c) { buf += c; });
+            res2.on('end', function() { resolve({ status: res2.statusCode, body: JSON.parse(buf) }); });
+        });
+        req2.on('error', reject);
+        req2.write(data);
+        req2.end();
+    });
 
     if (r.status !== 200 || !r.body.access_token) return null;
 
@@ -70,8 +96,8 @@ async function _refreshTokens(sb, row) {
     return Object.assign({}, row, { access_token: r.body.access_token, expires_at });
 }
 
-async function _getValidToken(sb) {
-    var row = await _getTokens(sb);
+async function _getValidToken(sb, bankId) {
+    var row = await _getTokens(sb, bankId);
     if (!row) return null;
     var expiresAt = new Date(row.expires_at).getTime();
     if (Date.now() > expiresAt - 60000) {
@@ -81,8 +107,11 @@ async function _getValidToken(sb) {
 }
 
 // ── Connect: redirect user to bank auth ──────────────────────────────────────
-router.get('/bank/connect', function(req, res) {
+// Optional: ?provider=capitalOne  (default: hsbc)
+router.get('/bank/connect', async function(req, res) {
     if (!CLIENT_ID) return res.status(500).json({ ok: false, error: 'TrueLayer not configured' });
+    await _ensureBankIdColumn();
+    var provider = req.query.provider || 'hsbc';
     var redirectUri = process.env.TRUELAYER_REDIRECT_URI ||
         (req.hostname === 'localhost' || req.hostname === '127.0.0.1'
             ? 'http://localhost:3000/api/bank/callback'
@@ -93,6 +122,7 @@ router.get('/bank/connect', function(req, res) {
         'redirect_uri=' + encodeURIComponent(redirectUri),
         'scope=' + encodeURIComponent('accounts balance transactions offline_access'),
         'providers=' + encodeURIComponent('uk-ob-all uk-oauth-all'),
+        'state=' + encodeURIComponent(provider),
     ].join('&');
     res.redirect(url);
 });
@@ -139,8 +169,12 @@ router.get('/bank/callback', async function(req, res) {
         }
 
         var sb = getSupabaseClient();
+        var bankId = req.query.state || 'hsbc';
         var expires_at = new Date(Date.now() + tokenRes.body.expires_in * 1000).toISOString();
-        await sb.from('apex_bank_tokens').upsert({
+        // Delete old token for this bank then insert fresh (upsert needs a unique key on bank_id)
+        await sb.from('apex_bank_tokens').delete().eq('bank_id', bankId);
+        await sb.from('apex_bank_tokens').insert({
+            bank_id:       bankId,
             access_token:  tokenRes.body.access_token,
             refresh_token: tokenRes.body.refresh_token,
             expires_at,
@@ -148,15 +182,16 @@ router.get('/bank/callback', async function(req, res) {
         });
 
         // Kick off initial sync
-        res.redirect('/dashboard?bank=connected');
-        _syncAll(sb, tokenRes.body.access_token).catch(console.error);
+        res.redirect('/dashboard?bank=connected&provider=' + bankId);
+        _syncAll(sb, tokenRes.body.access_token, bankId).catch(console.error);
     } catch(e) {
         res.status(500).send('Error: ' + e.message);
     }
 });
 
 // ── Sync: pull transactions + balances ──────────────────────────────────────
-async function _syncAll(sb, token) {
+async function _syncAll(sb, token, bankId) {
+    bankId = bankId || 'hsbc';
     var accountsRes = await _get(API_HOST, '/data/v1/accounts', token);
     if (!accountsRes.body.results) return;
     var accounts = accountsRes.body.results;
@@ -185,7 +220,7 @@ async function _syncAll(sb, token) {
                 type:        t.transaction_type === 'DEBIT' ? 'expense' : 'income',
                 category:    t.transaction_category || 'uncategorised',
                 date:        t.timestamp ? t.timestamp.split('T')[0] : new Date().toISOString().split('T')[0],
-                source:      'truelayer',
+                source:      'truelayer_' + bankId,
                 external_id: t.transaction_id
             };
         });
@@ -207,26 +242,61 @@ async function _syncAll(sb, token) {
 }
 
 // ── Manual sync trigger ──────────────────────────────────────────────────────
+// ?provider=hsbc|capitalOne  (omit to sync all connected banks)
 router.post('/bank/sync', requireAppAccess, async function(req, res) {
     try {
         var sb = getSupabaseClient();
-        var token = await _getValidToken(sb);
-        if (!token) return res.json({ ok: false, error: 'No bank connection. Visit /api/bank/connect first.' });
-        res.json({ ok: true, message: 'Sync started' });
-        _syncAll(sb, token).catch(console.error);
+        var provider = req.query.provider || req.body?.provider;
+
+        if (provider) {
+            var token = await _getValidToken(sb, provider);
+            if (!token) return res.json({ ok: false, error: 'No connection for ' + provider + '. Visit /api/bank/connect?provider=' + provider });
+            res.json({ ok: true, message: 'Sync started for ' + provider });
+            _syncAll(sb, token, provider).catch(console.error);
+        } else {
+            // Sync all connected banks
+            var { data: rows } = await sb.from('apex_bank_tokens').select('bank_id').order('bank_id');
+            var banks = [...new Set((rows || []).map(function(r) { return r.bank_id; }))];
+            if (!banks.length) return res.json({ ok: false, error: 'No banks connected.' });
+            res.json({ ok: true, message: 'Sync started for: ' + banks.join(', ') });
+            for (var b of banks) {
+                var t = await _getValidToken(sb, b);
+                if (t) _syncAll(sb, t, b).catch(console.error);
+            }
+        }
     } catch(e) {
         res.status(500).json({ ok: false, error: e.message });
     }
 });
 
-// ── Status ───────────────────────────────────────────────────────────────────
+// ── Connections list ─────────────────────────────────────────────────────────
+router.get('/bank/connections', requireAppAccess, async function(req, res) {
+    try {
+        var sb = getSupabaseClient();
+        var { data } = await sb.from('apex_bank_tokens').select('bank_id,expires_at,created_at').order('bank_id');
+        var seen = {};
+        var connections = (data || []).filter(function(r) {
+            if (seen[r.bank_id]) return false;
+            seen[r.bank_id] = true;
+            return true;
+        }).map(function(r) {
+            return { bank_id: r.bank_id, expires_at: r.expires_at, expired: Date.now() > new Date(r.expires_at).getTime(), connected_at: r.created_at };
+        });
+        res.json({ ok: true, connections });
+    } catch(e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ── Status (legacy single-bank) ──────────────────────────────────────────────
 router.get('/bank/status', requireAppAccess, async function(req, res) {
     try {
         var sb = getSupabaseClient();
-        var row = await _getTokens(sb);
-        if (!row) return res.json({ ok: true, connected: false });
+        var bankId = req.query.provider || 'hsbc';
+        var row = await _getTokens(sb, bankId);
+        if (!row) return res.json({ ok: true, connected: false, bank_id: bankId });
         var expiresAt = new Date(row.expires_at).getTime();
-        res.json({ ok: true, connected: true, expires_at: row.expires_at, expired: Date.now() > expiresAt });
+        res.json({ ok: true, connected: true, bank_id: bankId, expires_at: row.expires_at, expired: Date.now() > expiresAt });
     } catch(e) {
         res.status(500).json({ ok: false, error: e.message });
     }
