@@ -243,6 +243,41 @@ router.get('/finance/categorised', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+router.get('/finance/upcoming', _auth, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const _hid = req.identity?.humanId || null;
+        let q = sb().from('transactions').select('id,description,amount,type,category,date,source').gt('date', today).order('date', { ascending: true }).limit(20);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, upcoming: data || [] });
+    } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/monthly-summary', _auth, async (req, res) => {
+    try {
+        const _hid = req.identity?.humanId || null;
+        const now = new Date();
+        const thisMonthStr = now.toISOString().slice(0, 7);
+        const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const prevMonthStr = prevDate.toISOString().slice(0, 7);
+        const cutoff = prevDate.toISOString().split('T')[0];
+        let q = sb().from('transactions').select('amount,type,date').gte('date', cutoff);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        const months = { [thisMonthStr]: { income: 0, expenses: 0 }, [prevMonthStr]: { income: 0, expenses: 0 } };
+        for (const t of data || []) {
+            const m = t.date.slice(0, 7);
+            if (!months[m]) continue;
+            if (t.type === 'income') months[m].income += Number(t.amount);
+            else months[m].expenses += Number(t.amount);
+        }
+        res.json({ ok: true, current: { month: thisMonthStr, ...months[thisMonthStr] }, previous: { month: prevMonthStr, ...months[prevMonthStr] } });
+    } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // Polygon wallet balances — read-only via public RPC, no private key needed
 const POLYGON_WALLET = '0xc5958333D69D670f508d5B49D4B03ae89E0A9a49';
 const POLYGON_RPC    = 'https://polygon-rpc.com';

@@ -7660,6 +7660,30 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
     border-color: var(--apex-color-border);
 }
 
+.fin-hero-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:768px){.fin-hero-grid{grid-template-columns:repeat(2,1fr)}}
+.fin-hero-card{background:var(--surface-1,#1a1a1a);border:1px solid var(--border,#333);border-radius:12px;padding:18px 20px}
+.fin-hero-label{font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:var(--text-mute,#888);text-transform:uppercase;margin-bottom:10px}
+.fin-hero-val{font:700 28px/1 Inter,sans-serif;color:var(--text,#e8e8e8);font-variant-numeric:tabular-nums}
+.fin-hero-sub{font:400 11px/1 Inter,sans-serif;color:var(--text-mute,#888);margin-top:6px}
+.fin-txn-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px}
+.fin-txn-row:last-child{border-bottom:none}
+.fin-txn-date{font-family:'JetBrains Mono',monospace;color:var(--text-mute,#888);font-size:10px;width:74px;flex-shrink:0}
+.fin-txn-desc{flex:1;color:var(--text,#e8e8e8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fin-txn-cat{font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.07);color:var(--text-mute,#888);flex-shrink:0;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+.fin-txn-amount{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;flex-shrink:0;width:64px;text-align:right}
+.fin-cat-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.fin-cat-row:last-child{border-bottom:none}
+.fin-cat-name{width:110px;font-size:11px;color:var(--text,#e8e8e8);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fin-cat-bar-bg{flex:1;height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden}
+.fin-cat-bar-fill{height:5px;border-radius:3px;background:var(--amber,#f59e0b);transition:width 0.4s ease}
+.fin-cat-amount{width:58px;text-align:right;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-mute,#888);flex-shrink:0}
+.fin-tabs{display:flex;gap:6px;margin-bottom:12px}
+.fin-tab-btn{background:transparent;border:1px solid var(--border,#333);border-radius:6px;color:var(--text-mute,#888);font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:0.5px;padding:6px 14px;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s}
+.fin-tab-btn:hover{background:rgba(255,255,255,0.05);color:var(--text,#e8e8e8)}
+.fin-tab-btn.active{background:var(--accent,#7c6cf2);border-color:var(--accent,#7c6cf2);color:#fff}
+.fin-tab-btn:focus-visible{outline:2px solid var(--accent,#7c6cf2);outline-offset:2px}
+
 /* ═══════════════════════════════════════════════════════════════════
    UX-18 CANONICAL 6-TIER RESPONSIVE MODEL — UX-19 Integration
    Mobile portrait (<640px): default — no query.
@@ -8309,25 +8333,56 @@ header.topbar { grid-area: topbar !important; }
 </style>
 </head>
 <body class="apex-role-master">
+<style>
+#apex-boot{position:fixed;inset:0;z-index:999998;background:#080c14;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;pointer-events:none;}
+#apex-boot .ab-logo{font:700 15px/1 'SF Mono',Consolas,monospace;letter-spacing:0.35em;color:#00cfff;text-transform:uppercase;}
+#apex-boot .ab-sub{font:400 8px/1 'SF Mono',Consolas,monospace;letter-spacing:0.22em;color:#263848;text-transform:uppercase;}
+#apex-boot .ab-bar{width:140px;height:1px;background:#0d1422;position:relative;overflow:hidden;margin-top:6px;}
+#apex-boot .ab-bar::after{content:'';position:absolute;top:0;left:-80px;width:80px;height:100%;background:linear-gradient(90deg,transparent,#00cfff,transparent);animation:ab-scan 1.6s ease-in-out infinite;}
+@keyframes ab-scan{0%{left:-80px}100%{left:220px}}
+#apex-boot.done{opacity:0;transition:opacity 200ms ease;}
+</style>
+<div id="apex-boot">
+  <div class="ab-logo">APEX</div>
+  <div class="ab-sub">Initialising System</div>
+  <div class="ab-bar"></div>
+</div>
+<script>
+(function(){
+  function _hideBoot(){var b=document.getElementById('apex-boot');if(!b)return;b.classList.add('done');setTimeout(function(){if(b.parentNode)b.parentNode.removeChild(b);},220);}
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',_hideBoot);}else{_hideBoot();}
+})();
+</script>
 <a class="skip-to-main" href="#main-content">Skip to main content</a>
 
 <!-- ══ LOGIN OVERLAY ══ -->
-<div id="apexLoginOverlay" style="
-  display:none;position:fixed;inset:0;z-index:999999;
-  background:#03060f;align-items:center;justify-content:center;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-">
-  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(0,212,255,0.18);border-radius:14px;padding:44px 40px;width:340px;max-width:90vw;backdrop-filter:blur(20px);">
-    <h1 style="color:#e8f4ff;font-size:20px;font-weight:700;margin:0 0 4px;letter-spacing:0.2em;">APEX</h1>
-    <p style="color:rgba(232,244,255,0.4);font-size:12px;margin:0 0 26px;letter-spacing:0.06em;">Enter your password to continue.</p>
-    <input type="password" id="apexLoginPw" placeholder="Password" autofocus
-      style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:12px 14px;color:#e8f4ff;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;" />
-    <button id="apexLoginBtn" data-fn="apexDoLogin"
-      style="margin-top:12px;width:100%;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.1em;">
-      SIGN IN
-    </button>
-    <div id="apexLoginErr" style="margin-top:10px;color:#ff4d6d;font-size:12px;display:none;text-align:center;">
-      Incorrect password.
+<div id="apexLoginOverlay" style="display:none;position:fixed;inset:0;z-index:999999;background:#080c14;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="width:360px;display:flex;flex-direction:column;gap:28px;">
+    <div style="text-align:center;">
+      <div style="font-size:26px;font-weight:700;letter-spacing:6px;color:#f3f7fb;">APEX</div>
+      <div style="font-size:11px;letter-spacing:3px;color:#3a4a5c;margin-top:4px;font-family:'Courier New',monospace;">AI OPERATING SYSTEM</div>
+    </div>
+    <div id="apexLoginProfiles" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div id="apexProfileMaster" onclick="apexSelectProfile('master')" style="background:#0d1424;border:1px solid #1e2d42;border-radius:12px;padding:18px 14px;cursor:pointer;text-align:center;display:flex;flex-direction:column;gap:8px;transition:border-color .15s,background .15s;" onmouseenter="this.style.borderColor='#2a3f5a'" onmouseleave="this.style.borderColor=this._sel?'#5b9eff':'#1e2d42'">
+        <div style="font-size:22px;">◆</div>
+        <div style="font-size:13px;font-weight:600;letter-spacing:1.5px;color:#c8d4e0;">MASTER</div>
+        <div style="font-size:10px;letter-spacing:1px;color:#3a4a5c;">FULL ACCESS</div>
+      </div>
+      <div id="apexProfileUser" onclick="apexSelectProfile('user')" style="background:#0d1424;border:1px solid #1e2d42;border-radius:12px;padding:18px 14px;cursor:pointer;text-align:center;display:flex;flex-direction:column;gap:8px;transition:border-color .15s,background .15s;" onmouseenter="this.style.borderColor='#2a3f5a'" onmouseleave="this.style.borderColor=this._sel?'#5b9eff':'#1e2d42'">
+        <div style="font-size:22px;">◇</div>
+        <div style="font-size:13px;font-weight:600;letter-spacing:1.5px;color:#c8d4e0;">USER</div>
+        <div style="font-size:10px;letter-spacing:1px;color:#3a4a5c;">BETA ACCESS</div>
+      </div>
+    </div>
+    <div id="apexLoginPwSection" style="display:none;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button onclick="apexBackToProfiles()" style="background:none;border:none;color:#3a4a5c;font-size:18px;cursor:pointer;padding:0;line-height:1;" aria-label="Back">←</button>
+        <div id="apexLoginPwLabel" style="font-size:11px;letter-spacing:2px;color:#3a4a5c;font-family:'Courier New',monospace;">PASSWORD</div>
+      </div>
+      <input type="password" id="apexLoginPw" placeholder="••••••••" autocomplete="current-password" autocapitalize="off" spellcheck="false"
+        style="width:100%;background:#0d1424;border:1px solid #1e2d42;border-radius:8px;padding:12px 14px;color:#f3f7fb;font-size:15px;outline:none;letter-spacing:2px;box-sizing:border-box;font-family:inherit;" />
+      <button id="apexLoginBtn" onclick="apexDoLogin()" style="width:100%;background:#5b9eff;color:#000;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;letter-spacing:1.5px;cursor:pointer;">SIGN IN</button>
+      <div id="apexLoginErr" style="color:#ff4d6d;font-size:12px;letter-spacing:1px;display:none;text-align:center;font-family:'Courier New',monospace;">Incorrect password.</div>
     </div>
   </div>
 </div>
@@ -9076,246 +9131,94 @@ header.topbar { grid-area: topbar !important; }
 
             <!-- ══ PAGE: FINANCE ══ -->
             <div class="page" id="page-finance">
-                <!-- V-11-F F-1: LIFE & WORK L0 summary block -->
-                <div class="lw-l0" data-l0="true">
-                    <div class="lw-l0-summary" id="finance-l0-summary">Loading your financial position&hellip;</div>
-                    <div class="lw-l0-status" id="finance-l0-status"></div>
-                </div>
 
-                <!-- Page Header -->
-                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                <!-- Header -->
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:20px">
                     <div>
                         <div class="ds-page-title" style="letter-spacing:7px">FINANCE</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">BANKING &middot; BUDGETS &middot; FORECASTING &middot; INVESTMENTS</div>
-                        <div class="lw-page-purpose" style="font:400 13px/1.5 Inter,sans-serif;color:rgba(255,255,255,0.5);margin-top:8px">Your financial position, spending, and upcoming obligations.</div>
+                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">REAL DATA · CATEGORISED · MULTI-BANK</div>
                     </div>
-                    <div style="text-align:right">
-                        <button class="ds-btn cyan" data-fn="logExpenseQuick">+ Log expense</button>
+                    <div id="fin-bank-status"><span style="color:var(--text-mute);font-size:11px">checking…</span></div>
+                </div>
+
+                <!-- Upcoming payment alerts -->
+                <div id="fin-alert-strip" style="display:none;margin-bottom:16px"></div>
+
+                <!-- Hero stat cards -->
+                <div class="fin-hero-grid" style="margin-bottom:16px">
+                    <div class="fin-hero-card" style="border-left:3px solid #ef4444">
+                        <div class="fin-hero-label">Net Worth</div>
+                        <div class="fin-hero-val" id="fin-hero-networth" style="color:#ef4444">—</div>
+                        <div class="fin-hero-sub">assets minus liabilities</div>
+                    </div>
+                    <div class="fin-hero-card" style="border-left:3px solid var(--cyan)">
+                        <div class="fin-hero-label">HSBC Balance</div>
+                        <div class="fin-hero-val" id="fin-hero-balance">—</div>
+                        <div class="fin-hero-sub">current account</div>
+                    </div>
+                    <div class="fin-hero-card" style="border-left:3px solid var(--amber)">
+                        <div class="fin-hero-label">Spend · This Month</div>
+                        <div class="fin-hero-val" id="fin-hero-spend" style="color:var(--amber)">—</div>
+                        <div class="fin-hero-sub" id="fin-hero-spend-delta"></div>
+                    </div>
+                    <div class="fin-hero-card" style="border-left:3px solid #a78bfa">
+                        <div class="fin-hero-label">Cash Flow · This Month</div>
+                        <div class="fin-hero-val" id="fin-hero-cashflow">—</div>
+                        <div class="fin-hero-sub">income minus spend</div>
                     </div>
                 </div>
 
-                <!-- Net worth hero -->
-                <div style="background:linear-gradient(135deg,#071a2b,#100e24);border:1px solid rgba(0,212,255,0.25);border-radius:12px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
-                    <div>
-                        <div class="t-label" style="margin-bottom:6px">Net worth</div>
-                        <div id="fin-net-worth-val" style="font-size:32px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums">&#8212;</div>
-                        <div id="fin-net-worth-sub" style="font-size:11px;color:var(--text-mute);margin-top:4px">Connect Plaid to calculate</div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:right">
-                        <div>
-                            <div class="t-label">Assets</div>
-                            <div id="fin-assets-val" style="font-size:16px;font-weight:600;color:var(--green)">&#8212;</div>
+                <!-- Charts row -->
+                <div class="ds-grid-2" style="margin-bottom:16px">
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot" style="background:#a78bfa"></span>
+                                <span class="t-label">Spend by Category · This Month</span>
+                            </div>
                         </div>
-                        <div>
-                            <div class="t-label">Liabilities</div>
-                            <div id="fin-liab-val" style="font-size:16px;font-weight:600;color:var(--red)">&#8212;</div>
+                        <div id="fin-categories-list" style="padding:4px 0"></div>
+                    </div>
+                    <div class="ds-panel">
+                        <div class="ds-panel-header">
+                            <div class="ds-panel-header-left">
+                                <span class="ds-dot" style="background:#ef4444"></span>
+                                <span class="t-label">Cash / ATM · Monthly Trend</span>
+                            </div>
+                        </div>
+                        <div style="position:relative;height:200px">
+                            <canvas id="fin-atm-chart" style="width:100%;height:200px"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bank cards visual -->
-                <div class="ds-panel" style="margin-bottom:0">
+                <!-- Cashflow chart -->
+                <div class="ds-panel" style="margin-bottom:16px">
                     <div class="ds-panel-header">
                         <div class="ds-panel-header-left">
                             <span class="ds-dot cyan"></span>
-                            <span class="t-label">Linked accounts</span>
-                        </div>
-                        <div class="ds-panel-header-right">
-                            <span class="ds-badge amber">Plaid not connected</span>
+                            <span class="t-label">Cashflow · Last 6 Months</span>
                         </div>
                     </div>
-                    <div id="financeCardsRow" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:4px"></div>
-                </div>
-
-                <div class="ds-grid-stats">
-                    <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">Bank balance</div>
-                        <div class="ds-stat-value" style="color:var(--text-faint)" id="finStatBank">&#8212;</div>
-                        <div class="ds-stat-sub"><span class="ds-dot amber"></span><span style="color:var(--amber)">Plaid not connected</span></div>
-                    </div>
-                    <div class="ds-stat-card ac-cyan">
-                        <div class="ds-stat-label">Invoices active</div>
-                        <div class="ds-stat-value" id="finStatInvoices">0</div>
-                        <div class="ds-stat-sub" style="color:var(--text-faint)">0 sent &#183; 0 overdue</div>
-                    </div>
-                    <div class="ds-stat-card ac-amber">
-                        <div class="ds-stat-label">APEX API cost</div>
-                        <div class="ds-stat-value amber" id="finStatCredit">&#8212;</div>
-                        <div class="ds-stat-sub"><span class="ds-dot amber pulse"></span><span id="finStatCreditSub" style="color:var(--amber)">loading</span></div>
-                    </div>
-                    <div class="ds-stat-card ac-green">
-                        <div class="ds-stat-label">Expenses logged</div>
-                        <div class="ds-stat-value green" id="finStatExpenses">&#8212;</div>
-                        <div class="ds-stat-sub" style="color:var(--text-faint)">this month</div>
+                    <div style="position:relative;height:180px">
+                        <canvas id="fin-cashflow-chart" style="width:100%;height:180px"></canvas>
                     </div>
                 </div>
 
-                <!-- Charts row: income/expenses bar + spend doughnut -->
-                <div class="ds-grid-2">
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Income vs Expenses &#183; 6 months</span>
-                            </div>
-                        </div>
-                        <div style="position:relative;height:160px">
-                            <canvas id="fin-chart-income" style="width:100%;height:160px"></canvas>
-                        </div>
-                        <!-- V-11-F F-10: chart empty state -->
-                        <div style="font:400 11px/1.4 Inter,sans-serif;color:rgba(255,255,255,0.35);text-align:center;padding:6px 0 0">No transaction data available. Connect a bank account to enable charts.</div>
-                    </div>
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot purple"></span>
-                                <span class="t-label">Spend by category</span>
-                            </div>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:16px">
-                            <div style="position:relative;width:130px;height:130px;flex-shrink:0">
-                                <canvas id="fin-chart-spend" style="width:130px;height:130px"></canvas>
-                            </div>
-                            <div id="fin-spend-legend" style="display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--text-mute)">
-                                No expense data yet
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Invoices + Expenses -->
-                <div class="ds-grid-2">
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Invoices</span>
-                            </div>
-                            <div class="ds-panel-header-right">
-                                <button class="ds-btn xs cyan">+ Create</button>
-                            </div>
-                        </div>
-                        <table class="ds-table">
-                            <thead><tr><th>Client</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead>
-                            <tbody id="invoicesTbody">
-                                <tr><td class="skel-cell" colspan="4" style="text-align:center;padding:20px;font-style:italic;color:var(--text-faint)">No invoices yet</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot purple"></span>
-                                <span class="t-label">Expenses</span>
-                            </div>
-                            <div class="ds-panel-header-right">
-                                <button class="ds-btn xs purple">&#128247; Scan receipt</button>
-                            </div>
-                        </div>
-                        <table class="ds-table">
-                            <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead>
-                            <tbody id="expensesTbody">
-                                <tr><td colspan="4" style="padding:14px;text-align:center;color:var(--text-faint);font-style:italic">Loading expenses&#8230;</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Cash flow forecast (full width) -->
+                <!-- Transaction list -->
                 <div class="ds-panel">
                     <div class="ds-panel-header">
                         <div class="ds-panel-header-left">
                             <span class="ds-dot cyan"></span>
-                            <span class="t-label">Cash Flow &#183; 30-day forecast</span>
+                            <span class="t-label">Transactions</span>
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button class="fin-tab-btn active" onclick="_finSetTab(this,'all')">All</button>
+                            <button class="fin-tab-btn" onclick="_finSetTab(this,'income')">Income</button>
+                            <button class="fin-tab-btn" onclick="_finSetTab(this,'expense')">Expenses</button>
                         </div>
                     </div>
-                    <div style="position:relative;height:140px">
-                        <canvas id="fin-chart-cashflow" style="width:100%;height:140px"></canvas>
-                    </div>
-                    <!-- V-11-F F-10 -->
-                    <div style="font:400 11px/1.4 Inter,sans-serif;color:rgba(255,255,255,0.35);text-align:center;padding:6px 0 0">No transaction data available. Connect a bank account to enable charts.</div>
-                </div>
-
-                <!-- Budget vs actual + Subscriptions -->
-                <div class="ds-grid-2">
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot green"></span>
-                                <span class="t-label">Budget vs Actual</span>
-                            </div>
-                        </div>
-                        <div style="position:relative;height:160px">
-                            <canvas id="fin-chart-budget" style="width:100%;height:160px"></canvas>
-                        </div>
-                        <!-- V-11-F F-10 -->
-                        <div style="font:400 11px/1.4 Inter,sans-serif;color:rgba(255,255,255,0.35);text-align:center;padding:6px 0 0">Set monthly budgets to compare against actual spend.</div>
-                    </div>
-                    <div class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Subscriptions</span>
-                            </div>
-                            <div class="ds-panel-header-right">
-                                <button class="ds-btn xs cyan">Import</button>
-                            </div>
-                        </div>
-                        <table class="ds-table">
-                            <thead><tr><th>Service</th><th>Monthly</th><th>Next</th><th>Status</th></tr></thead>
-                            <tbody id="subscriptionsTbody">
-                                <tr><td colspan="4" style="color:var(--text-faint);padding:16px;text-align:center;font-style:italic">No subscriptions yet</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- AI vendor balances -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left">
-                            <span class="ds-dot amber"></span>
-                            <span class="t-label">AI Credits &#183; Vendor Balances</span>
-                        </div>
-                        <div class="ds-panel-header-right">
-                            <button class="ds-btn xs amber">Top up</button>
-                        </div>
-                    </div>
-                    <div id="financePanel" style="display:flex;flex-direction:column;gap:12px">
-                        <div class="skel skel-row skel-wide"></div>
-                    </div>
-                </div>
-
-                <!-- Tax -->
-                <div class="ds-panel">
-                    <div class="ds-panel-header">
-                        <div class="ds-panel-header-left">
-                            <span class="ds-dot purple"></span>
-                            <span class="t-label">Tax &#183; VAT &#183; Self-Employed</span>
-                        </div>
-                    </div>
-                    <div id="fin-tax-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--cyan);border-radius:8px;padding:12px">
-                            <div class="t-label">Self-assessment due</div>
-                            <div class="t-h2" style="color:var(--cyan);margin-top:6px">31 Jan 2027</div>
-                            <div class="t-small" style="margin-top:4px">on track</div>
-                        </div>
-                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px;padding:12px">
-                            <div class="t-label">VAT next quarter</div>
-                            <div class="t-h2" style="color:var(--amber);margin-top:6px" id="fin-vat-date">&#8212;</div>
-                            <div class="t-small" style="margin-top:4px">returns pending</div>
-                        </div>
-                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--green);border-radius:8px;padding:12px">
-                            <div class="t-label">Expenses YTD</div>
-                            <div class="t-h2" style="color:var(--green);margin-top:6px" id="fin-expenses-ytd">&#8212;</div>
-                            <div class="t-small" style="margin-top:4px">auto-categorised</div>
-                        </div>
-                        <div style="background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:8px;padding:12px">
-                            <div class="t-label">Estimated tax</div>
-                            <div class="t-h2" style="color:var(--amber);margin-top:6px">&#8212;</div>
-                            <div class="t-small" style="margin-top:4px">awaits bank link</div>
-                        </div>
-                    </div>
+                    <div id="fin-txn-list" style="max-height:420px;overflow-y:auto"></div>
                 </div>
 
             </div>
@@ -11941,7 +11844,7 @@ if(pipe){
                 <!-- Portal tab bar — shared across council / office / domain -->
                 <div class="portal-tab-bar">
                     <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
-                    <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
+                    <button class="portal-tab" onclick="window.switchPage('intelligence')">INTEL</button>
                 </div>
                 <!-- Main layout: canvas + task panel -->
                 <div class="ao-main">
@@ -12023,7 +11926,7 @@ if(pipe){
                 </div>
                 <div class="portal-tab-bar">
                     <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
-                    <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
+                    <button class="portal-tab" onclick="window.switchPage('intelligence')">INTEL</button>
                 </div>
                 <div class="ao-main">
                     <div class="ao-canvas" id="daCanvas">
@@ -12317,55 +12220,613 @@ if(pipe){
 
             <!-- ══ PAGE: INTELLIGENCE (UX-12 — Intelligence surface) ══ -->
             <div class="page" id="page-intelligence">
-                <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.07)">
-                    <div>
-                        <div class="ds-page-title" style="letter-spacing:7px">INTELLIGENCE</div>
-                        <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">BRIEFING · OPPORTUNITIES · LESSONS</div>
+<style>
+#page-intelligence {
+  --in-bg:    #0c0b0a;
+  --in-surf:  #111010;
+  --in-surf2: #1b1917;
+  --in-bdr:   rgba(255,255,255,0.07);
+  --in-bdr2:  rgba(255,255,255,0.12);
+  --in-bdr3:  rgba(255,255,255,0.2);
+  --in-acc:   #c4a46b;
+  --in-grn:   #5e9e76;
+  --in-red:   #966060;
+  --in-amb:   #b88c52;
+  --in-cyn:   #c4a46b;
+  --in-vio:   #c4a46b;
+  --in-txt:   #e0dbd4;
+  --in-txt2:  rgba(224,219,212,0.5);
+  --in-txt3:  rgba(224,219,212,0.2);
+  --in-mono:  'JetBrains Mono',Consolas,'Courier New',monospace;
+  --in-sans:  system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-family: var(--in-sans);
+  color: var(--in-txt);
+  background: var(--in-bg);
+}
+/* ── PANELS ──────────────────────────────────────────────────── */
+#page-intelligence .in-panel { border:1px solid var(--in-bdr); background:var(--in-surf); }
+#page-intelligence .in-panel-header { padding:8px 12px; border-bottom:1px solid var(--in-bdr); display:flex; align-items:center; justify-content:space-between; }
+#page-intelligence .in-panel-title { font:500 9px/1 var(--in-mono); letter-spacing:0.16em; color:var(--in-txt2); text-transform:uppercase; }
+#page-intelligence .in-panel-meta { font:400 9px/1 var(--in-mono); color:var(--in-txt3); }
+/* ── PAGE HEADER ─────────────────────────────────────────────── */
+#page-intelligence .in-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 0; margin-bottom:14px;
+  border-bottom:1px solid var(--in-bdr);
+  gap:12px;
+}
+#page-intelligence .in-header-left { display:flex; align-items:center; gap:20px; min-width:0; }
+#page-intelligence .in-title {
+  font:300 13px/1 var(--in-sans); letter-spacing:0.3em;
+  color:var(--in-txt); text-transform:uppercase; white-space:nowrap; flex-shrink:0;
+}
+#page-intelligence .in-statusbar { display:flex; align-items:center; gap:8px; }
+#page-intelligence .in-live-dot {
+  width:5px; height:5px; border-radius:50%; display:inline-block; flex-shrink:0;
+  background:var(--in-grn);
+  animation:in-blink 2s ease-in-out infinite;
+}
+#page-intelligence .in-live-dot.connecting { background:var(--in-amb); }
+#page-intelligence .in-live-dot.error { background:var(--in-red); animation:none; }
+@keyframes in-blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+#page-intelligence .in-live-label { font:500 9px/1 var(--in-mono); letter-spacing:0.12em; color:var(--in-grn); text-transform:uppercase; }
+#page-intelligence .in-live-dot.connecting ~ .in-live-label { color:var(--in-amb); }
+#page-intelligence .in-live-dot.error ~ .in-live-label { color:var(--in-red); }
+#page-intelligence .in-sep { font:400 9px/1 var(--in-mono); color:var(--in-txt3); }
+#page-intelligence .in-age { font:400 9px/1 var(--in-mono); color:var(--in-txt2); }
+#page-intelligence .in-ticker-inline { font:400 9px/1 var(--in-mono); color:var(--in-txt2); }
+#page-intelligence .in-header-right { display:flex; gap:6px; flex-shrink:0; }
+#page-intelligence .in-refresh-btn,
+#page-intelligence .in-full-brief-btn {
+  background:transparent; border:1px solid var(--in-bdr2); padding:6px 12px;
+  color:var(--in-txt2); font:500 9px/1 var(--in-mono); letter-spacing:0.1em;
+  cursor:pointer; text-transform:uppercase; transition:border-color 150ms, color 150ms;
+}
+#page-intelligence .in-refresh-btn:hover,
+#page-intelligence .in-full-brief-btn:hover { border-color:var(--in-acc); color:var(--in-acc); }
+#page-intelligence .in-refresh-btn.spinning { opacity:0.25; pointer-events:none; }
+/* ── MAIN GRID ───────────────────────────────────────────────── */
+#page-intelligence .in-grid { display:grid; grid-template-columns:1fr 260px; gap:12px; align-items:start; }
+/* ── LEFT FEED ───────────────────────────────────────────────── */
+#page-intelligence .in-col-feed { min-width:0; border:1px solid var(--in-bdr); background:var(--in-surf); }
+#page-intelligence .in-feed-controls {
+  display:flex; gap:2px; flex-wrap:wrap; padding:8px 10px; border-bottom:1px solid var(--in-bdr);
+  background:var(--in-bg);
+}
+#page-intelligence .in-filter-btn {
+  background:transparent; border:1px solid transparent; padding:5px 10px;
+  color:var(--in-txt2); font:500 9px/1 var(--in-mono); letter-spacing:0.1em;
+  cursor:pointer; text-transform:uppercase; transition:all 120ms;
+}
+#page-intelligence .in-filter-btn:hover { color:var(--in-txt); border-color:var(--in-bdr); }
+#page-intelligence .in-filter-btn.active { color:var(--in-acc); border-color:rgba(196,164,107,0.3); background:rgba(196,164,107,0.05); }
+#page-intelligence .in-feed { display:flex; flex-direction:column; }
+#page-intelligence .in-feed::-webkit-scrollbar { width:2px; }
+#page-intelligence .in-feed::-webkit-scrollbar-track { background:transparent; }
+#page-intelligence .in-feed::-webkit-scrollbar-thumb { background:var(--in-bdr3); }
+/* ── ARTICLE CARDS ───────────────────────────────────────────── */
+#page-intelligence .in-row {
+  padding:0; border-left:2px solid transparent;
+  border-top:1px solid var(--in-bdr); transition:background 100ms;
+}
+#page-intelligence .in-row:first-child { border-top:none; }
+#page-intelligence .in-row:hover { background:rgba(255,255,255,0.015); }
+/* subtle position accent */
+#page-intelligence .in-row[data-pos="establishment"] { border-left-color:rgba(100,140,200,0.3); }
+#page-intelligence .in-row[data-pos="centrist"]      { border-left-color:rgba(180,175,170,0.15); }
+#page-intelligence .in-row[data-pos="counter"]       { border-left-color:rgba(200,130,80,0.3); }
+#page-intelligence .in-row[data-pos="finance"]       { border-left-color:rgba(94,158,118,0.3); }
+#page-intelligence .in-row[data-pos="state-adv"]     { border-left-color:rgba(180,80,80,0.35); }
+/* meta line — top of card */
+#page-intelligence .in-row-meta { display:flex; align-items:center; gap:7px; padding:8px 14px 4px; flex-wrap:wrap; }
+#page-intelligence .in-row-spacer { flex:1; }
+#page-intelligence .in-row-source { font:600 8px/1 var(--in-mono); letter-spacing:0.12em; color:var(--in-txt3); text-transform:uppercase; }
+#page-intelligence .in-row-score { font:600 9px/1 var(--in-mono); color:var(--in-acc); flex-shrink:0; }
+#page-intelligence .in-row-time { font:400 8px/1 var(--in-mono); color:var(--in-txt3); }
+/* POSITION BADGE */
+#page-intelligence .in-pos-badge { font:500 8px/1 var(--in-mono); letter-spacing:0.08em; padding:2px 5px; text-transform:uppercase; flex-shrink:0; color:var(--in-txt3); border:1px solid var(--in-bdr); }
+/* DOMAIN TAGS */
+#page-intelligence .in-tag { font:500 8px/1 var(--in-mono); text-transform:lowercase; padding:2px 4px; color:var(--in-txt3); border:1px solid var(--in-bdr); letter-spacing:0; }
+/* ZERO RECONSTRUCTION — primary read */
+#page-intelligence .in-row-synthesis {
+  font:400 13px/1.65 var(--in-sans); color:var(--in-txt);
+  padding:6px 14px 8px; display:block;
+}
+#page-intelligence .in-row-synthesis-label { display:none; }
+/* ARTICLE TITLE — secondary */
+#page-intelligence .in-row-title {
+  display:block; font:400 11px/1.5 var(--in-sans); color:var(--in-txt2);
+  text-decoration:none; padding:0 14px 8px;
+}
+#page-intelligence .in-row-title:hover { color:var(--in-txt); }
+/* TAKE — action implication */
+#page-intelligence .in-row-take {
+  font:400 italic 10px/1.5 var(--in-sans); color:var(--in-txt3);
+  padding:0 14px 8px; border-bottom:1px solid var(--in-bdr);
+}
+/* INDICATORS STRIP */
+#page-intelligence .in-row-indicators { display:flex; align-items:center; gap:5px; padding:5px 14px 6px; flex-wrap:wrap; }
+/* integrity / manip cells */
+#page-intelligence .in-score-cell { font:500 8px/1 var(--in-mono); letter-spacing:0.05em; padding:2px 5px; text-transform:uppercase; border:1px solid; }
+#page-intelligence .in-score-cell.intgr.low  { color:var(--in-red); border-color:rgba(150,96,96,0.3); }
+#page-intelligence .in-score-cell.intgr.med  { color:var(--in-amb); border-color:rgba(184,140,82,0.3); }
+#page-intelligence .in-score-cell.intgr.high { color:var(--in-grn); border-color:rgba(94,158,118,0.3); }
+#page-intelligence .in-score-cell.manip.low  { color:var(--in-grn); border-color:rgba(94,158,118,0.25); }
+#page-intelligence .in-score-cell.manip.med  { color:var(--in-amb); border-color:rgba(184,140,82,0.25); }
+#page-intelligence .in-score-cell.manip.high { color:var(--in-red); border-color:rgba(150,96,96,0.3); }
+#page-intelligence .in-row-cred { display:none; }
+#page-intelligence .in-cred-truth { display:none; }
+#page-intelligence .in-cred-flag { display:none; }
+#page-intelligence .in-pattern-flag { font:400 8px/1 var(--in-mono); padding:2px 5px; color:var(--in-txt3); border:1px solid var(--in-bdr); }
+#page-intelligence .in-divergence { display:none; }
+/* LENSES */
+#page-intelligence .in-lenses-btn {
+  background:transparent; border:none; border-top:1px solid var(--in-bdr);
+  padding:6px 14px; color:var(--in-txt3); font:400 9px/1 var(--in-sans);
+  cursor:pointer; width:100%; text-align:left; transition:color 120ms; display:block;
+}
+#page-intelligence .in-lenses-btn:hover { color:var(--in-txt2); }
+#page-intelligence .in-lenses-body { display:none; padding:10px 14px; background:rgba(0,0,0,0.2); border-top:1px solid var(--in-bdr); flex-direction:column; gap:10px; }
+#page-intelligence .in-lenses-body.open { display:flex; }
+#page-intelligence .in-lens-row { display:flex; gap:12px; align-items:flex-start; }
+#page-intelligence .in-lens-label { font:600 8px/1.4 var(--in-mono); letter-spacing:0.1em; min-width:52px; flex-shrink:0; padding-top:2px; text-transform:uppercase; color:var(--in-txt3); }
+#page-intelligence .in-lens-label.estab  { color:rgba(100,140,200,0.6); }
+#page-intelligence .in-lens-label.cntrs  { color:rgba(200,130,80,0.6); }
+#page-intelligence .in-lens-label.money  { color:rgba(94,158,118,0.7); }
+#page-intelligence .in-lens-text { font:400 10px/1.6 var(--in-sans); color:var(--in-txt2); }
+/* ── RIGHT COLUMN ────────────────────────────────────────────── */
+#page-intelligence .in-col-strategic {
+  display:flex; flex-direction:column; gap:0;
+  max-height:calc(100vh - 145px); overflow-y:auto;
+  border:1px solid var(--in-bdr); background:var(--in-surf);
+}
+#page-intelligence .in-col-strategic::-webkit-scrollbar { width:2px; }
+#page-intelligence .in-col-strategic::-webkit-scrollbar-track { background:transparent; }
+#page-intelligence .in-col-strategic::-webkit-scrollbar-thumb { background:var(--in-bdr3); }
+/* all right-column direct children: no outer border, just bottom dividers */
+#page-intelligence .in-col-strategic > .in-panel,
+#page-intelligence .in-col-strategic > .in-zone,
+#page-intelligence .in-col-strategic > .in-ops-panel { border:none !important; border-bottom:1px solid var(--in-bdr) !important; background:transparent !important; }
+#page-intelligence .in-col-strategic > *:last-child { border-bottom:none !important; }
+/* SYSTEM STATUS */
+#page-intelligence .in-health-score { display:flex; align-items:center; padding:14px 14px 14px; }
+#page-intelligence .in-score-num { font:300 42px/1 var(--in-sans); color:var(--in-acc); letter-spacing:-1px; }
+#page-intelligence .in-score-right { display:flex; flex-direction:column; gap:5px; padding-left:14px; margin-left:14px; border-left:1px solid var(--in-bdr); }
+#page-intelligence .in-score-tier { font:500 9px/1 var(--in-mono); letter-spacing:0.16em; color:var(--in-txt2); text-transform:uppercase; }
+#page-intelligence .in-score-label { font:400 8px/1 var(--in-mono); color:var(--in-txt3); }
+#page-intelligence .in-dims { display:none; }
+#page-intelligence .in-dim-row { display:flex; flex-direction:column; gap:3px; }
+#page-intelligence .in-dim-meta { display:flex; justify-content:space-between; }
+#page-intelligence .in-dim-label { font:500 8px/1 var(--in-mono); letter-spacing:0.1em; color:var(--in-txt3); text-transform:uppercase; }
+#page-intelligence .in-dim-val { font:600 8px/1 var(--in-mono); color:var(--in-txt2); }
+#page-intelligence .in-dim-bar-track { height:1px; background:var(--in-bdr); }
+#page-intelligence .in-dim-bar { height:100%; width:0; transition:width 0.9s ease; }
+/* ZONES */
+#page-intelligence .in-zone { background:transparent; }
+#page-intelligence .in-zone-now,
+#page-intelligence .in-zone-opp,
+#page-intelligence .in-zone-risk,
+#page-intelligence .in-zone-watch { border-left:none; }
+#page-intelligence .in-zone-label {
+  padding:9px 14px; font:500 9px/1 var(--in-mono); letter-spacing:0.14em;
+  text-transform:uppercase; border-bottom:1px solid var(--in-bdr);
+  display:flex; align-items:center; justify-content:space-between; color:var(--in-txt2);
+}
+#page-intelligence .in-zone-count { font:400 8px/1 var(--in-mono); opacity:0.4; }
+#page-intelligence .in-zone-body { padding:8px 14px 10px; display:flex; flex-direction:column; gap:6px; }
+#page-intelligence .in-now-item { padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.03); }
+#page-intelligence .in-now-item:last-child { border-bottom:none; }
+#page-intelligence .in-now-header { display:flex; gap:8px; align-items:baseline; margin-bottom:3px; }
+#page-intelligence .in-now-num { font:500 9px/1 var(--in-mono); color:var(--in-acc); min-width:18px; flex-shrink:0; }
+#page-intelligence .in-now-action { font:400 11px/1.4 var(--in-sans); color:var(--in-txt); }
+#page-intelligence .in-now-reason { font:400 10px/1.4 var(--in-sans); color:var(--in-txt2); padding-left:22px; }
+#page-intelligence .in-watch-item { font:400 10px/1.5 var(--in-sans); color:var(--in-txt2); padding:3px 0 3px 12px; position:relative; }
+#page-intelligence .in-watch-item::before { content:'—'; position:absolute; left:0; color:var(--in-txt3); top:4px; font-size:8px; }
+#page-intelligence .in-watch-why { display:block; font-size:9px; margin-top:2px; opacity:0.5; }
+#page-intelligence .in-opp-item { padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.03); }
+#page-intelligence .in-opp-item:last-child { border-bottom:none; }
+#page-intelligence .in-opp-header { display:flex; gap:7px; align-items:center; margin-bottom:4px; }
+#page-intelligence .in-opp-score { font:600 9px/1 var(--in-mono); color:var(--in-acc); min-width:22px; flex-shrink:0; }
+#page-intelligence .in-opp-title { font:400 10px/1.4 var(--in-sans); color:var(--in-txt); flex:1; }
+#page-intelligence .in-opp-urgency { font:500 8px/1 var(--in-mono); letter-spacing:0.08em; padding:2px 5px; text-transform:uppercase; flex-shrink:0; }
+#page-intelligence .in-opp-urgency.high   { color:var(--in-red); border:1px solid rgba(150,96,96,0.3); }
+#page-intelligence .in-opp-urgency.medium { color:var(--in-amb); border:1px solid rgba(184,140,82,0.3); }
+#page-intelligence .in-opp-urgency.low    { color:var(--in-grn); border:1px solid rgba(94,158,118,0.25); }
+#page-intelligence .in-opp-bar-track { height:1px; background:var(--in-bdr); }
+#page-intelligence .in-opp-bar { height:100%; background:var(--in-acc); opacity:0.35; transition:width 0.9s ease; }
+#page-intelligence .in-risk-item { display:flex; align-items:flex-start; gap:8px; padding:3px 0; }
+#page-intelligence .in-risk-badge { font:500 8px/1 var(--in-mono); letter-spacing:0.06em; text-transform:uppercase; padding:2px 5px; flex-shrink:0; white-space:nowrap; }
+#page-intelligence .in-risk-badge.critical { color:var(--in-red); border:1px solid rgba(150,96,96,0.3); }
+#page-intelligence .in-risk-badge.high     { color:var(--in-amb); border:1px solid rgba(184,140,82,0.3); }
+#page-intelligence .in-risk-badge.medium   { color:var(--in-txt2); border:1px solid var(--in-bdr); }
+#page-intelligence .in-risk-flag { font:400 10px/1.5 var(--in-sans); color:var(--in-txt2); }
+/* ACTIVE OPERATIONS */
+#page-intelligence .in-ops-panel { }
+#page-intelligence .in-ops-header { padding:9px 14px; border-bottom:1px solid var(--in-bdr); display:flex; align-items:center; justify-content:space-between; }
+#page-intelligence .in-ops-title { font:500 9px/1 var(--in-mono); letter-spacing:0.14em; color:var(--in-red); text-transform:uppercase; opacity:0.85; }
+#page-intelligence .in-ops-count { font:500 9px/1 var(--in-mono); color:var(--in-red); padding:2px 6px; border:1px solid rgba(150,96,96,0.3); opacity:0.8; }
+#page-intelligence .in-ops-body { padding:6px 10px; display:flex; flex-direction:column; gap:5px; max-height:130px; overflow-y:auto; }
+#page-intelligence .in-op-row { border-left:1px solid rgba(150,96,96,0.25); padding:4px 8px; }
+#page-intelligence .in-op-row.medium { border-left-color:rgba(150,96,96,0.4); }
+#page-intelligence .in-op-row.high { border-left-color:rgba(150,96,96,0.65); }
+#page-intelligence .in-op-row.critical { border-left-color:var(--in-red); }
+#page-intelligence .in-op-name { font:500 9px/1 var(--in-mono); color:var(--in-red); letter-spacing:0.06em; margin-bottom:3px; opacity:0.8; }
+#page-intelligence .in-op-meta { font:400 9px/1.4 var(--in-sans); color:var(--in-txt2); }
+/* PATTERN RADAR */
+#page-intelligence .in-pat-panel { }
+#page-intelligence .in-pat-body { padding:6px 4px; display:flex; flex-direction:column; gap:4px; max-height:110px; overflow-y:auto; }
+#page-intelligence .in-pat-row { display:flex; align-items:center; gap:8px; padding:2px 10px; }
+#page-intelligence .in-pat-code { font:500 8px/1 var(--in-mono); color:var(--in-txt2); min-width:90px; flex-shrink:0; letter-spacing:0.04em; }
+#page-intelligence .in-pat-bar-wrap { flex:1; height:1px; background:var(--in-bdr); }
+#page-intelligence .in-pat-bar { height:1px; background:var(--in-acc); opacity:0.5; max-width:100%; transition:width 0.6s ease; }
+#page-intelligence .in-pat-count { font:500 8px/1 var(--in-mono); color:var(--in-txt3); min-width:14px; text-align:right; flex-shrink:0; }
+/* SKELETON */
+#page-intelligence .in-skel { height:6px; background-image:linear-gradient(90deg,var(--in-surf) 25%,var(--in-surf2) 50%,var(--in-surf) 75%); background-size:200% 100%; animation:in-shimmer 2s linear infinite; margin-bottom:5px; border-radius:1px; }
+#page-intelligence .in-skel-full { width:100%; } #page-intelligence .in-skel-wide { width:76%; } #page-intelligence .in-skel-med { width:52%; } #page-intelligence .in-skel-sm { width:34%; }
+@keyframes in-shimmer { to { background-position:-200% 0; } }
+#page-intelligence .in-empty { padding:8px 0; font:400 10px/1 var(--in-sans); color:var(--in-txt3); }
+/* CONFIGURE OVERLAY */
+#intelCfg{position:fixed;inset:0;z-index:9400;background:rgba(10,9,8,0.97);backdrop-filter:blur(16px);display:flex;align-items:flex-start;justify-content:center;padding:20px 12px 60px;overflow-y:auto;}
+#intelCfg .cfg-panel{width:100%;max-width:880px;background:#111010;border:1px solid rgba(255,255,255,0.1);border-top:2px solid #c4a46b;display:flex;flex-direction:column;max-height:calc(100vh - 60px);}
+#intelCfg .cfg-hdr{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#intelCfg .cfg-title{font:300 12px/1 system-ui,sans-serif;letter-spacing:0.24em;color:#c4a46b;text-transform:uppercase;}
+#intelCfg .cfg-close{background:transparent;border:1px solid rgba(255,255,255,0.12);padding:6px 14px;color:rgba(224,219,212,0.4);font:500 9px/1 monospace;cursor:pointer;letter-spacing:0.1em;text-transform:uppercase;transition:all 120ms;}
+#intelCfg .cfg-close:hover{border-color:#c4a46b;color:#c4a46b;}
+#intelCfg .cfg-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,0.07);overflow-x:auto;flex-shrink:0;}
+#intelCfg .cfg-tab{background:transparent;border:none;border-right:1px solid rgba(255,255,255,0.07);border-bottom:2px solid transparent;padding:10px 14px;color:rgba(224,219,212,0.3);font:500 9px/1 monospace;cursor:pointer;letter-spacing:0.12em;text-transform:uppercase;white-space:nowrap;transition:all 120ms;flex-shrink:0;}
+#intelCfg .cfg-tab:hover{color:rgba(224,219,212,0.7);}
+#intelCfg .cfg-tab.act{color:#c4a46b;border-bottom-color:#c4a46b;}
+#intelCfg .cfg-body{padding:16px;overflow-y:auto;flex:1;min-height:0;}
+#intelCfg .cfg-stitle{font:500 9px/1 monospace;letter-spacing:0.18em;color:rgba(224,219,212,0.3);text-transform:uppercase;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.07);}
+#intelCfg .cfg-sdesc{font:400 10px/1.6 system-ui,sans-serif;color:rgba(224,219,212,0.35);margin-bottom:12px;}
+#intelCfg .cfg-items{display:flex;flex-direction:column;margin-bottom:10px;}
+#intelCfg .cfg-irow{display:flex;align-items:flex-start;gap:8px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.05);}
+#intelCfg .cfg-irow:last-child{border-bottom:none;}
+#intelCfg .cfg-toggle{background:none;border:none;cursor:pointer;padding:0;width:24px;height:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+#intelCfg .cfg-dot{width:7px;height:7px;border-radius:50%;transition:all 150ms;}
+#intelCfg .cfg-dot.on{background:#5e9e76;box-shadow:0 0 5px rgba(94,158,118,0.5);}
+#intelCfg .cfg-dot.off{background:rgba(255,255,255,0.1);}
+#intelCfg .cfg-itext{flex:1;font:400 10px/1.6 system-ui,sans-serif;color:rgba(224,219,212,0.7);}
+#intelCfg .cfg-itext.dim{color:rgba(224,219,212,0.3);}
+#intelCfg .cfg-iflag{font:500 8px/1 monospace;letter-spacing:0.1em;color:#b88c52;border:1px solid rgba(184,140,82,0.25);padding:2px 6px;flex-shrink:0;align-self:flex-start;margin-top:3px;white-space:nowrap;}
+#intelCfg .cfg-irem{background:none;border:1px solid rgba(255,255,255,0.07);color:rgba(224,219,212,0.3);font:500 7px/1 monospace;padding:3px 6px;cursor:pointer;flex-shrink:0;align-self:flex-start;margin-top:2px;transition:all 120ms;}
+#intelCfg .cfg-irem:hover{border-color:rgba(150,96,96,0.5);color:#966060;}
+#intelCfg .cfg-addrow{display:flex;gap:6px;margin-top:8px;align-items:flex-start;}
+#intelCfg .cfg-addta{flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);color:rgba(224,219,212,0.8);font:400 10px/1.5 monospace;padding:7px 10px;resize:vertical;min-height:34px;outline:none;}
+#intelCfg .cfg-addta:focus{border-color:rgba(196,164,107,0.5);}
+#intelCfg .cfg-addinp{background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);color:rgba(224,219,212,0.8);font:400 10px/1 monospace;padding:7px 10px;outline:none;min-width:0;}
+#intelCfg .cfg-addinp:focus{border-color:rgba(196,164,107,0.5);}
+#intelCfg .cfg-addbtn{background:transparent;border:1px solid rgba(255,255,255,0.12);color:rgba(224,219,212,0.35);font:500 8px/1 monospace;padding:7px 12px;cursor:pointer;letter-spacing:0.1em;text-transform:uppercase;flex-shrink:0;transition:all 120ms;white-space:nowrap;}
+#intelCfg .cfg-addbtn:hover{border-color:rgba(94,158,118,0.5);color:#5e9e76;}
+#intelCfg .cfg-saverow{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.07);}
+#intelCfg .cfg-savebtn{background:transparent;border:1px solid rgba(196,164,107,0.5);color:#c4a46b;font:500 8px/1 monospace;padding:8px 18px;cursor:pointer;letter-spacing:0.12em;text-transform:uppercase;transition:all 120ms;}
+#intelCfg .cfg-savebtn:hover{background:rgba(196,164,107,0.06);}
+#intelCfg .cfg-savest{font:400 8px/1 monospace;color:rgba(224,219,212,0.3);}
+#intelCfg .cfg-power-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+#intelCfg .cfg-pcard{border:1px solid rgba(255,255,255,0.07);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;}
+#intelCfg .cfg-pabbr{font:600 9px/1 monospace;color:#c4a46b;border:1px solid rgba(196,164,107,0.25);padding:4px 6px;flex-shrink:0;min-width:34px;text-align:center;margin-top:1px;}
+#intelCfg .cfg-pbody{flex:1;min-width:0;}
+#intelCfg .cfg-pname{font:500 10px/1 system-ui,sans-serif;color:rgba(224,219,212,0.8);margin-bottom:3px;}
+#intelCfg .cfg-pagenda{font:400 9px/1.5 system-ui,sans-serif;color:rgba(224,219,212,0.3);margin-bottom:6px;}
+#intelCfg .cfg-ptrust{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+#intelCfg .cfg-ptlabel{font:500 7px/1 monospace;color:rgba(224,219,212,0.3);letter-spacing:0.1em;flex-shrink:0;}
+#intelCfg .cfg-ptbar{height:1px;flex:1;background:rgba(255,255,255,0.07);position:relative;}
+#intelCfg .cfg-ptfill{height:100%;background:#966060;position:absolute;right:0;}
+#intelCfg .cfg-ptval{font:600 7px/1 monospace;color:#966060;flex-shrink:0;}
+#intelCfg .cfg-watchbtn{background:none;border:1px solid rgba(255,255,255,0.1);font:500 7px/1 monospace;padding:4px 8px;cursor:pointer;letter-spacing:0.08em;text-transform:uppercase;transition:all 120ms;}
+#intelCfg .cfg-watchbtn.on{border-color:rgba(94,158,118,0.4);color:#5e9e76;}
+#intelCfg .cfg-watchbtn:not(.on){color:rgba(224,219,212,0.3);}
+#intelCfg .cfg-watchbtn:hover{border-color:rgba(94,158,118,0.5);color:#5e9e76;}
+#intelCfg .cfg-prem{background:none;border:1px solid rgba(255,255,255,0.07);color:rgba(224,219,212,0.3);font:500 7px/1 monospace;padding:4px 7px;cursor:pointer;transition:all 120ms;margin-left:4px;}
+#intelCfg .cfg-prem:hover{border-color:rgba(150,96,96,0.4);color:#966060;}
+#intelCfg .cfg-pgrid{display:grid;grid-template-columns:1fr 70px 80px;gap:6px;flex:1;}
+#intelCfg .cfg-persp{width:100%;box-sizing:border-box;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);color:rgba(224,219,212,0.8);font:400 10px/1.6 monospace;padding:12px;resize:vertical;min-height:150px;outline:none;}
+#intelCfg .cfg-persp:focus{border-color:rgba(196,164,107,0.5);}
+#intelCfg .cfg-srclist{display:flex;flex-direction:column;margin-bottom:10px;}
+#intelCfg .cfg-srcrow{display:flex;align-items:center;gap:7px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.05);}
+#intelCfg .cfg-srcrow:last-child{border-bottom:none;}
+#intelCfg .cfg-srcnum{font:600 8px/1 monospace;color:rgba(224,219,212,0.25);min-width:16px;flex-shrink:0;}
+#intelCfg .cfg-srcname{font:400 10px/1 system-ui,sans-serif;color:rgba(224,219,212,0.75);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#intelCfg .cfg-srcurl{font:400 8px/1 monospace;color:rgba(224,219,212,0.3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#intelCfg .cfg-srcbtn{background:transparent;border:1px solid rgba(255,255,255,0.07);padding:3px 6px;color:rgba(224,219,212,0.3);font:500 7px/1 monospace;cursor:pointer;flex-shrink:0;transition:all 120ms;}
+#intelCfg .cfg-srcbtn:hover{border-color:rgba(255,255,255,0.2);color:rgba(224,219,212,0.7);}
+#intelCfg .cfg-srcbtn.rem:hover{border-color:rgba(150,96,96,0.4);color:#966060;}
+#intelCfg .cfg-srcgrid{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-top:8px;}
+/* ── SITUATION STRIP ─────────────────────────────────────────── */
+#page-intelligence .in-situ-strip {
+  display:flex; align-items:center; gap:12px;
+  padding:8px 14px; margin-bottom:12px;
+  background:var(--in-surf); border:1px solid var(--in-bdr);
+  border-left:2px solid var(--in-situ-clr, rgba(255,255,255,0.15));
+  font:500 9px/1 var(--in-mono); letter-spacing:0.1em;
+  transition:border-left-color 0.4s;
+}
+#page-intelligence .in-situ-threat {
+  font:300 12px/1 var(--in-sans); letter-spacing:0.16em;
+  color:var(--in-situ-clr, rgba(224,219,212,0.35)); transition:color 0.4s; flex-shrink:0;
+}
+#page-intelligence .in-situ-lbl { color:var(--in-txt3); font:400 8px/1 var(--in-mono); letter-spacing:0.08em; }
+#page-intelligence .in-situ-val { color:var(--in-txt2); font:400 9px/1 var(--in-mono); }
+#page-intelligence .in-situ-sep { color:var(--in-txt3); flex-shrink:0; }
+#page-intelligence .in-situ-spacer { flex:1; }
+#page-intelligence .in-situ-age { color:var(--in-txt3); font:400 8px/1 var(--in-mono); flex-shrink:0; }
+/* ── TOP BRIEF ───────────────────────────────────────────────── */
+#page-intelligence .in-top-brief {
+  border-bottom:1px solid var(--in-bdr); padding:12px 14px;
+}
+#page-intelligence .in-top-brief-label {
+  font:500 8px/1 var(--in-mono); letter-spacing:0.16em; color:var(--in-txt3); margin-bottom:10px; text-transform:uppercase;
+}
+#page-intelligence .in-top-brief-row {
+  display:flex; gap:10px; align-items:baseline; padding:5px 0;
+  border-top:1px solid var(--in-bdr);
+}
+#page-intelligence .in-top-brief-row:first-child { border-top:none; }
+#page-intelligence .in-top-brief-rank {
+  font:600 8px/1 var(--in-mono); color:var(--in-txt3); flex-shrink:0; width:14px;
+}
+#page-intelligence .in-top-brief-zero {
+  font:400 11px/1.5 var(--in-sans); color:var(--in-txt2); flex:1; min-width:0;
+}
+#page-intelligence .in-top-brief-score {
+  font:500 8px/1 var(--in-mono); color:var(--in-acc); flex-shrink:0;
+}
+/* RESPONSIVE */
+@media (max-width:900px) {
+  #page-intelligence .in-grid { grid-template-columns:1fr; }
+  #page-intelligence .in-col-strategic { display:none; }
+  #page-intelligence .in-feed { max-height:65vh; }
+}
+/* ── PORTFOLIO POSITION ──────────────────────────────────────── */
+#page-intelligence .in-port-section { border:1px solid var(--in-bdr); background:var(--in-surf); margin-bottom:16px; }
+#page-intelligence .in-port-strip { display:grid; grid-template-columns:repeat(3,1fr); }
+#page-intelligence .in-port-col { padding:20px 20px 18px; border-right:1px solid var(--in-bdr); }
+#page-intelligence .in-port-col:last-child { border-right:none; }
+#page-intelligence .in-port-col-label { font:500 9px/1 var(--in-mono); letter-spacing:0.18em; color:var(--in-txt2); text-transform:uppercase; margin-bottom:10px; }
+#page-intelligence .in-port-col-val { font:200 28px/1 var(--in-sans); color:var(--in-txt); letter-spacing:-0.5px; margin-bottom:6px; }
+#page-intelligence .in-port-col-delta { font:400 10px/1 var(--in-mono); }
+#page-intelligence .in-port-col-delta.pos { color:var(--in-grn); }
+#page-intelligence .in-port-col-delta.neg { color:var(--in-red); }
+#page-intelligence .in-port-col-delta.neu { color:var(--in-txt3); }
+#page-intelligence .in-port-movers { padding:10px 20px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; border-top:1px solid var(--in-bdr); min-height:34px; }
+#page-intelligence .in-port-movers-label { font:500 8px/1 var(--in-mono); letter-spacing:0.14em; color:var(--in-txt3); text-transform:uppercase; flex-shrink:0; margin-right:4px; }
+#page-intelligence .in-port-mover { font:400 10px/1 var(--in-sans); color:var(--in-txt2); padding:3px 7px; border:1px solid var(--in-bdr); flex-shrink:0; }
+#page-intelligence .in-port-mover .mv-chg { font:600 9px/1 var(--in-mono); margin-left:5px; }
+#page-intelligence .in-port-mover .mv-chg.pos { color:var(--in-grn); }
+#page-intelligence .in-port-mover .mv-chg.neg { color:var(--in-red); }
+/* ── MARKET STATE ────────────────────────────────────────────── */
+#page-intelligence .in-mkt-section { border:1px solid var(--in-bdr); background:var(--in-surf); margin-bottom:16px; }
+#page-intelligence .in-mkt-header { padding:9px 20px; border-bottom:1px solid var(--in-bdr); display:flex; align-items:center; justify-content:space-between; }
+#page-intelligence .in-mkt-ticker { display:flex; overflow-x:auto; }
+#page-intelligence .in-mkt-ticker::-webkit-scrollbar { height:2px; }
+#page-intelligence .in-mkt-ticker::-webkit-scrollbar-thumb { background:var(--in-bdr3); }
+#page-intelligence .in-mkt-item { padding:16px 20px; border-right:1px solid var(--in-bdr); flex-shrink:0; min-width:100px; }
+#page-intelligence .in-mkt-item:last-child { border-right:none; }
+#page-intelligence .in-mkt-item-name { font:500 9px/1 var(--in-mono); letter-spacing:0.12em; color:var(--in-txt3); text-transform:uppercase; margin-bottom:8px; }
+#page-intelligence .in-mkt-item-price { font:200 20px/1 var(--in-sans); color:var(--in-txt); margin-bottom:5px; letter-spacing:-0.3px; }
+#page-intelligence .in-mkt-item-chg { font:500 10px/1 var(--in-mono); }
+#page-intelligence .in-mkt-item-chg.pos { color:var(--in-grn); }
+#page-intelligence .in-mkt-item-chg.neg { color:var(--in-red); }
+#page-intelligence .in-mkt-item-chg.neu { color:var(--in-txt3); }
+#page-intelligence .in-mkt-driver { padding:8px 20px; border-top:1px solid var(--in-bdr); font:400 10px/1.5 var(--in-sans); color:var(--in-txt3); min-height:28px; }
+/* ── APEX BRIEF + ACTIONS ────────────────────────────────────── */
+#page-intelligence .in-brief-section { border:1px solid var(--in-bdr); background:var(--in-surf); margin-bottom:16px; }
+#page-intelligence .in-brief-main { padding:20px; border-bottom:1px solid var(--in-bdr); display:flex; gap:20px; align-items:flex-start; }
+#page-intelligence .in-brief-meta { flex-shrink:0; border-right:1px solid var(--in-bdr); padding-right:20px; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:62px; }
+#page-intelligence .in-brief-meta .in-score-num { font:200 40px/1 var(--in-sans); color:var(--in-acc); letter-spacing:-1px; }
+#page-intelligence .in-brief-meta .in-score-tier { font:500 8px/1 var(--in-mono); letter-spacing:0.14em; color:var(--in-txt3); text-transform:uppercase; text-align:center; }
+#page-intelligence .in-brief-text { font:400 14px/1.8 var(--in-sans); color:var(--in-txt); flex:1; min-width:0; }
+#page-intelligence .in-brief-text.loading { color:var(--in-txt3); font-size:12px; line-height:1.6; }
+#page-intelligence .in-brief-actions { display:flex; }
+#page-intelligence .in-action-col { flex:1; padding:14px 16px; border-right:1px solid var(--in-bdr); min-width:0; }
+#page-intelligence .in-action-col .in-zone-body { padding:0; }
+#page-intelligence .in-action-col-label { font:500 8px/1 var(--in-mono); letter-spacing:0.16em; text-transform:uppercase; color:var(--in-txt2); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--in-bdr); display:flex; align-items:center; justify-content:space-between; }
+#page-intelligence .in-action-col-label .ac-count { font-weight:400; color:var(--in-txt3); }
+/* ── INTELLIGENCE DIGEST ─────────────────────────────────────── */
+#page-intelligence .in-digest-wrap { border:1px solid var(--in-bdr); background:var(--in-surf); margin-bottom:16px; }
+#page-intelligence .in-digest-header { padding:10px 14px; border-bottom:1px solid var(--in-bdr); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+#page-intelligence .in-digest-title { font:500 9px/1 var(--in-mono); letter-spacing:0.2em; color:var(--in-txt2); text-transform:uppercase; }
+#page-intelligence .in-digest-controls { display:flex; gap:2px; flex-wrap:wrap; }
+#page-intelligence .in-more-btn { width:100%; padding:12px; text-align:center; background:transparent; border:none; border-top:1px solid var(--in-bdr); color:var(--in-txt3); font:400 9px/1 var(--in-mono); letter-spacing:0.12em; cursor:pointer; text-transform:uppercase; transition:color 120ms; }
+#page-intelligence .in-more-btn:hover { color:var(--in-acc); }
+/* ── NARRATIVE RADAR ─────────────────────────────────────────── */
+#page-intelligence .in-radar-section { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+#page-intelligence .in-radar-section .in-ops-panel,
+#page-intelligence .in-radar-section .in-pat-panel { border:1px solid var(--in-bdr) !important; background:var(--in-surf) !important; }
+/* ── RESPONSIVE NEW SECTIONS ─────────────────────────────────── */
+@media (max-width:900px) {
+  #page-intelligence .in-port-strip { grid-template-columns:1fr 1fr; }
+  #page-intelligence .in-port-col:nth-child(3) { border-top:1px solid var(--in-bdr); border-right:none; grid-column:span 2; }
+  #page-intelligence .in-brief-actions { flex-wrap:wrap; }
+  #page-intelligence .in-action-col { flex-basis:50%; flex-grow:0; }
+  #page-intelligence .in-action-col:nth-child(odd) { border-right:1px solid var(--in-bdr); }
+  #page-intelligence .in-action-col:nth-child(even) { border-right:none; border-left:none; }
+  #page-intelligence .in-action-col:nth-child(3),
+  #page-intelligence .in-action-col:nth-child(4) { border-top:1px solid var(--in-bdr); }
+  #page-intelligence .in-radar-section { grid-template-columns:1fr; }
+}
+</style>
+                <!-- HEADER -->
+                <div class="in-header">
+                    <div class="in-header-left">
+                        <span class="in-title">APEX&nbsp;&#x2215;&#x2215;&nbsp;ZERO</span>
+                        <div class="in-statusbar">
+                            <span class="in-live-dot connecting" id="inLiveDot"></span>
+                            <span class="in-live-label" id="inLiveLabel">CONNECTING</span>
+                            <span class="in-sep">&nbsp;&#x2215;&#x2215;&nbsp;</span>
+                            <span class="in-age" id="inFeedAge"></span>
+                            <span class="in-sep">&nbsp;&#x2215;&#x2215;&nbsp;</span>
+                            <span class="in-ticker-inline" id="inTickerItems"></span>
+                        </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:10px">
-                        <button class="ds-btn xs" data-fn="intelligenceRefresh" aria-label="Refresh intelligence">↻ Refresh</button>
+                    <div class="in-header-right">
+                        <button class="in-refresh-btn" onclick="intelRefresh()" id="inRefreshBtn">REFRESH</button>
+                        <button class="in-full-brief-btn" onclick="intelRunFullBrief()">BRIEF</button>
+                        <button class="in-refresh-btn" onclick="intelOpenSettings()" id="inConfigureBtn">CONFIGURE</button>
                     </div>
                 </div>
-                <div class="int-panels" style="display:flex;flex-direction:column;gap:16px;margin-top:18px">
-                    <!-- Executive briefing (Master-scoped content; stub shown to Users via _intLoadBriefing) -->
-                    <section role="region" aria-label="Strategic Briefing" class="ds-panel apex-master-only" id="intBriefingSection">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot purple"></span>
-                                <span class="t-label">Strategic Briefing</span>
-                            </div>
-                            <span style="font-size:9px;color:#8893a0;font-family:'JetBrains Mono',monospace" id="intBriefingAge">—</span>
+                <!-- SECTION 1: PORTFOLIO POSITION -->
+                <div class="in-port-section">
+                    <div class="in-port-strip">
+                        <div class="in-port-col">
+                            <div class="in-port-col-label">Net Worth</div>
+                            <div class="in-port-col-val" id="inPortNwValue">&mdash;</div>
+                            <div class="in-port-col-delta neu" id="inPortNwDelta">&mdash;</div>
                         </div>
-                        <div id="intBriefingPanel" data-apex-state="loading" style="display:flex;flex-direction:column;gap:10px" aria-busy="true">
-                            <div class="skel skel-row skel-wide"></div>
-                            <div class="skel skel-row skel-med"></div>
+                        <div class="in-port-col">
+                            <div class="in-port-col-label">Portfolio Return</div>
+                            <div class="in-port-col-val" id="inPortRetValue">&mdash;</div>
+                            <div class="in-port-col-delta neu" id="inPortRetDelta">&mdash;</div>
                         </div>
-                    </section>
-                    <!-- V-11-G G-6: Recent Lessons -->
-                    <section role="region" aria-label="Recent Lessons" class="ds-panel" id="intLessonsPanel" data-apex-state="loading">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot amber"></span>
-                                <span class="t-label">What APEX Learned</span>
-                            </div>
-                            <span style="font-size:10px;color:#8893a0">Recent lessons and adjustments</span>
+                        <div class="in-port-col">
+                            <div class="in-port-col-label">vs S&amp;P 500</div>
+                            <div class="in-port-col-val" id="inPortBenchValue">&mdash;</div>
+                            <div class="in-port-col-delta neu" id="inPortBenchDelta">Awaiting data</div>
                         </div>
-                        <div id="intLessonsList" aria-busy="true"></div>
-                    </section>
-                    <!-- Opportunities -->
-                    <section role="region" aria-label="Detected Opportunities" class="ds-panel">
-                        <div class="ds-panel-header">
-                            <div class="ds-panel-header-left">
-                                <span class="ds-dot cyan"></span>
-                                <span class="t-label">Detected Opportunities</span>
-                            </div>
-                            <span style="font-size:10px;color:#8893a0" id="intOppsCount">—</span>
-                        </div>
-                        <div id="intOppsList" data-apex-state="loading" style="display:flex;flex-direction:column;gap:8px" aria-busy="true">
-                            <div class="skel skel-row skel-wide"></div>
-                        </div>
-                    </section>
+                    </div>
+                    <div class="in-port-movers" id="inPortMovers">
+                        <span class="in-port-movers-label">Movers</span>
+                        <span style="font:400 9px/1 var(--in-mono);color:var(--in-txt3)">Loading&hellip;</span>
+                    </div>
                 </div>
+
+                <!-- SECTION 2: MARKET STATE -->
+                <div class="in-mkt-section" id="inMktSection">
+                    <div class="in-mkt-header">
+                        <span class="in-panel-title">GLOBAL MARKETS</span>
+                        <span class="in-panel-meta" id="inMktAge"></span>
+                    </div>
+                    <div class="in-mkt-ticker" id="inMktTicker">
+                        <div class="in-mkt-item">
+                            <div class="in-skel in-skel-med" style="height:5px;margin-bottom:8px"></div>
+                            <div class="in-skel in-skel-full" style="height:8px;margin-bottom:5px"></div>
+                            <div class="in-skel in-skel-sm" style="height:5px"></div>
+                        </div>
+                    </div>
+                    <div class="in-mkt-driver" id="inMktDriver"></div>
+                </div>
+
+                <!-- SECTION 3+4: APEX BRIEF + ACTIONS -->
+                <div class="in-brief-section">
+                    <div class="in-brief-main">
+                        <div class="in-brief-meta">
+                            <span class="in-score-num" id="inScoreNum">&mdash;</span>
+                            <span class="in-score-tier" id="inScoreTier">INIT</span>
+                        </div>
+                        <div class="in-brief-text loading" id="inBriefText">Analysing intelligence feed&hellip;</div>
+                    </div>
+                    <div class="in-brief-actions" id="inBriefActions">
+                        <div class="in-action-col" id="inZoneNow" style="display:none">
+                            <div class="in-action-col-label">Priority<span class="ac-count" id="inZoneNowCount"></span></div>
+                            <div class="in-zone-body" id="inZoneNowBody"></div>
+                        </div>
+                        <div class="in-action-col" id="inZoneRisk" style="display:none">
+                            <div class="in-action-col-label">Threats<span class="ac-count" id="inZoneRiskCount"></span></div>
+                            <div class="in-zone-body" id="inZoneRiskBody"></div>
+                        </div>
+                        <div class="in-action-col" id="inZoneWatch" style="display:none">
+                            <div class="in-action-col-label">Watch<span class="ac-count" id="inZoneWatchCount"></span></div>
+                            <div class="in-zone-body" id="inZoneWatchBody"></div>
+                        </div>
+                        <div class="in-action-col" id="inZoneOpp" style="display:none">
+                            <div class="in-action-col-label">Signals<span class="ac-count" id="inZoneOppCount"></span></div>
+                            <div class="in-zone-body" id="inZoneOppBody"></div>
+                        </div>
+                        <div id="inActionsPlaceholder" style="padding:12px 16px;font:400 10px/1.5 var(--in-sans);color:var(--in-txt3);border-top:1px solid var(--in-bdr);width:100%">Strategic actions will appear once the intelligence pipeline completes</div>
+                    </div>
+                </div>
+
+                <!-- SECTION 5: INTELLIGENCE DIGEST -->
+                <div class="in-digest-wrap">
+                    <div class="in-digest-header">
+                        <span class="in-digest-title">INTELLIGENCE DIGEST</span>
+                        <div class="in-digest-controls">
+                            <button class="in-filter-btn active" data-domain="all" onclick="intelFilterDomain(this,'all')">ALL</button>
+                            <button class="in-filter-btn" data-domain="business" onclick="intelFilterDomain(this,'business')">BIZ</button>
+                            <button class="in-filter-btn" data-domain="finance" onclick="intelFilterDomain(this,'finance')">FIN</button>
+                            <button class="in-filter-btn" data-domain="technology" onclick="intelFilterDomain(this,'technology')">TECH</button>
+                            <button class="in-filter-btn" data-domain="strategy" onclick="intelFilterDomain(this,'strategy')">GEO</button>
+                            <button class="in-filter-btn" data-domain="health" onclick="intelFilterDomain(this,'health')">HLTH</button>
+                            <button class="in-filter-btn" data-domain="education" onclick="intelFilterDomain(this,'education')">EDU</button>
+                        </div>
+                    </div>
+                    <div class="in-feed" id="inFeed">
+                        <div class="in-row" style="padding:16px 14px">
+                            <div class="in-skel in-skel-wide" style="margin-bottom:10px"></div>
+                            <div class="in-skel in-skel-full"></div>
+                            <div class="in-skel in-skel-med" style="margin-top:6px"></div>
+                        </div>
+                    </div>
+                    <button class="in-more-btn" id="inMoreBtn" onclick="intelExpandFeed()" style="display:none">SHOW ALL</button>
+                </div>
+
+                <!-- SECTION 6: NARRATIVE RADAR -->
+                <div class="in-radar-section">
+                    <div class="in-ops-panel in-panel" id="inOpsPanel" style="display:none">
+                        <div class="in-ops-header">
+                            <span class="in-ops-title">ACTIVE OPS</span>
+                            <span class="in-ops-count" id="inOpsCount">&#x2014;</span>
+                        </div>
+                        <div class="in-ops-body" id="inOpsBody"></div>
+                    </div>
+                    <div class="in-pat-panel in-panel" id="inPatPanel" style="display:none">
+                        <div class="in-panel-header">
+                            <span class="in-panel-title">PATTERN RADAR</span>
+                            <span class="in-panel-meta" id="inPatAge">24H</span>
+                        </div>
+                        <div class="in-pat-body" id="inPatBody"></div>
+                    </div>
+                </div>
+
+                <!-- COMPAT: hidden references for legacy JS -->
+                <div style="display:none" aria-hidden="true">
+                    <div id="inSituStrip" style="--in-situ-clr:rgba(255,255,255,0.15)">
+                        <span id="inSituThreat"></span>
+                        <span id="inSituOps"></span>
+                        <span id="inSituPattern"></span>
+                        <span id="inSituAge"></span>
+                    </div>
+                    <div id="inTopBrief"><div id="inTopBriefBody"></div></div>
+                    <div id="inHealthClass"></div>
+                    <div id="inDims"></div>
+                </div>
+                <!-- Preserved: master-only briefing panel (hidden, used by _intLoadBriefing) -->
+                <section role="region" aria-label="Strategic Briefing" class="ds-panel apex-master-only" id="intBriefingSection" style="display:none">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot purple"></span>
+                            <span class="t-label">Strategic Briefing</span>
+                        </div>
+                        <span style="font-size:9px;color:#8893a0;font-family:'JetBrains Mono',monospace" id="intBriefingAge">&#8212;</span>
+                    </div>
+                    <div id="intBriefingPanel" data-apex-state="loading" style="display:flex;flex-direction:column;gap:10px" aria-busy="true">
+                        <div class="skel skel-row skel-wide"></div>
+                        <div class="skel skel-row skel-med"></div>
+                    </div>
+                </section>
+                <!-- Preserved: lessons panel (hidden, used by _intLoadLessons) -->
+                <section role="region" aria-label="Recent Lessons" class="ds-panel" id="intLessonsPanel" data-apex-state="loading" style="display:none">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot amber"></span>
+                            <span class="t-label">What APEX Learned</span>
+                        </div>
+                    </div>
+                    <div id="intLessonsList" aria-busy="true"></div>
+                </section>
+                <!-- Preserved: opportunities list (hidden, used by _intLoadOpportunities) -->
+                <section role="region" aria-label="Detected Opportunities" class="ds-panel" style="display:none">
+                    <div class="ds-panel-header">
+                        <div class="ds-panel-header-left">
+                            <span class="ds-dot cyan"></span>
+                            <span class="t-label">Detected Opportunities</span>
+                        </div>
+                        <span style="font-size:10px;color:#8893a0" id="intOppsCount">&#8212;</span>
+                    </div>
+                    <div id="intOppsList" data-apex-state="loading" style="display:flex;flex-direction:column;gap:8px" aria-busy="true">
+                        <div class="skel skel-row skel-wide"></div>
+                    </div>
+                </section>
             </div><!-- #page-intelligence -->
 
             <!-- ══ PAGE: MEMORY (UX-15 — Memory Inspection, Read-Only) ══ -->
@@ -12450,7 +12911,7 @@ if(pipe){
                 </div>
                 <div class="portal-tab-bar">
                     <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
-                    <button class="portal-tab" onclick="window.switchPage('intel')">INTEL</button>
+                    <button class="portal-tab" onclick="window.switchPage('intelligence')">INTEL</button>
                 </div>
                 <div class="ec-main">
                     <div class="ec-chamber" id="ecChamber" aria-label="Council chamber">
@@ -16875,8 +17336,7 @@ window.addEventListener('unload', function() {
 ">HOLD TO TALK</button>
 
 <script>
-// ── Login overlay — shown when session cookie is absent ──
-// apex_token is httpOnly (XSS-safe); apex_session=1 is the JS-readable indicator
+// ── Login overlay ──
 function hasCookie(){return document.cookie.split(';').some(c=>c.trim().startsWith('apex_session='));}
 (function(){
   var overlay=document.getElementById('apexLoginOverlay');
@@ -16884,27 +17344,46 @@ function hasCookie(){return document.cookie.split(';').some(c=>c.trim().startsWi
   var pw=document.getElementById('apexLoginPw');
   if(pw){pw.addEventListener('keydown',function(e){if(e.key==='Enter')apexDoLogin();});}
 })();
-setInterval(function() {
-    if (!hasCookie()) {
-        var overlay = document.getElementById('apexLoginOverlay');
-        if (overlay && overlay.style.display === 'none') { overlay.style.display = 'flex'; }
-    }
-}, 60000);
+setInterval(function(){
+  if(!hasCookie()){var o=document.getElementById('apexLoginOverlay');if(o&&o.style.display==='none'){o.style.display='flex';}}
+},60000);
 
+var _apexSelectedProfile=null;
+function apexSelectProfile(p){
+  _apexSelectedProfile=p;
+  var m=document.getElementById('apexProfileMaster'),u=document.getElementById('apexProfileUser');
+  if(m){m.style.borderColor=p==='master'?'#5b9eff':'#1e2d42';m.style.background=p==='master'?'#0e1a2e':'#0d1424';m._sel=p==='master';}
+  if(u){u.style.borderColor=p==='user'?'#5b9eff':'#1e2d42';u.style.background=p==='user'?'#0e1a2e':'#0d1424';u._sel=p==='user';}
+  var sec=document.getElementById('apexLoginPwSection');
+  if(sec){sec.style.display='flex';}
+  var lbl=document.getElementById('apexLoginPwLabel');
+  if(lbl){lbl.textContent=p==='master'?'MASTER PASSWORD':'USER PASSWORD';}
+  var pw=document.getElementById('apexLoginPw');
+  if(pw){pw.value='';setTimeout(function(){pw.focus();},50);}
+  var err=document.getElementById('apexLoginErr');
+  if(err){err.style.display='none';}
+}
+function apexBackToProfiles(){
+  _apexSelectedProfile=null;
+  var sec=document.getElementById('apexLoginPwSection');
+  if(sec){sec.style.display='none';}
+  var m=document.getElementById('apexProfileMaster'),u=document.getElementById('apexProfileUser');
+  if(m){m.style.borderColor='#1e2d42';m.style.background='#0d1424';m._sel=false;}
+  if(u){u.style.borderColor='#1e2d42';u.style.background='#0d1424';u._sel=false;}
+}
 async function apexDoLogin(){
   var pw=document.getElementById('apexLoginPw').value;
   var btn=document.getElementById('apexLoginBtn');
   var err=document.getElementById('apexLoginErr');
   if(!pw.trim()){err.textContent='Enter your password.';err.style.display='block';return;}
-  btn.disabled=true;btn.textContent='Signing in…';err.style.display='none';
+  btn.disabled=true;btn.textContent='SIGNING IN…';err.style.display='none';
   try{
     var r=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw}),credentials:'include'});
-    if(r.ok){localStorage.setItem('apex_app_key',pw);window.location.href='/';}
+    if(r.ok){window.location.href='/';}
     else{
       var msg='Incorrect password.';
       try{var d=await r.json();if(d&&d.reply)msg=d.reply;}catch(e){}
-      if(r.status===429)msg='Too many attempts — wait a few minutes and try again.';
-      if(r.status===500)msg='Server error: '+msg;
+      if(r.status===429)msg='Too many attempts — wait a few minutes.';
       err.textContent=msg;err.style.display='block';
       btn.disabled=false;btn.textContent='SIGN IN';
     }
@@ -19302,122 +19781,208 @@ function initCommunicationPage() {
     };
 })();
 
-// ── FINANCE PAGE ──────────────────────────────────────────────────────────────
-var _finCharts = {};
-function _destroyFinChart(k) {
-    if (_finCharts[k]) { try { _finCharts[k].destroy(); } catch(e){} delete _finCharts[k]; }
-}
+// ══ FINANCE PAGE ═══════════════════════════════════════════════════════
+var _finChart = null;
 
-function initFinanceCharts() {
-    if (typeof Chart === 'undefined') return;
-    var months = ['Dec','Jan','Feb','Mar','Apr','May'];
-    _destroyFinChart('income');
-    var ctx1 = document.getElementById('fin-chart-income');
-    if (ctx1) {
-        _finCharts['income'] = new Chart(ctx1, {
-            type: 'bar',
-            data: { labels: months, datasets: [
-                { label: 'Income', data: [0,0,0,0,0,0], backgroundColor: 'rgba(0,212,255,0.55)', borderRadius: 3 },
-                { label: 'Expenses', data: [0,0,0,0,0,0], backgroundColor: 'rgba(255,77,106,0.45)', borderRadius: 3 }
-            ]},
-            options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'rgba(255,255,255,0.5)', font:{size:10} } } }, scales:{ x:{ ticks:{ color:'rgba(255,255,255,0.4)', font:{size:10} }, grid:{ color:'rgba(255,255,255,0.04)' } }, y:{ ticks:{ color:'rgba(255,255,255,0.4)', font:{size:10} }, grid:{ color:'rgba(255,255,255,0.06)' } } } }
-        });
-    }
-    _destroyFinChart('spend');
-    var ctx2 = document.getElementById('fin-chart-spend');
-    if (ctx2) {
-        _finCharts['spend'] = new Chart(ctx2, {
-            type: 'doughnut',
-            data: { labels: ['No data'], datasets: [{ data: [1], backgroundColor: ['rgba(255,255,255,0.06)'], borderWidth: 0 }] },
-            options: { responsive:false, plugins:{ legend:{ display:false } }, cutout:'70%' }
-        });
-    }
-    _destroyFinChart('cashflow');
-    var ctx3 = document.getElementById('fin-chart-cashflow');
-    if (ctx3) {
-        var cfLabels = [];
-        for (var i = 0; i < 30; i++) { var d2 = new Date(); d2.setDate(d2.getDate()+i); cfLabels.push(i===0?'today':i%5===0?'+'+i+'d':''); }
-        _finCharts['cashflow'] = new Chart(ctx3, {
-            type: 'line',
-            data: { labels: cfLabels, datasets: [{ label: 'Balance', data: new Array(30).fill(null), borderColor: 'rgba(0,212,255,0.7)', backgroundColor: 'rgba(0,212,255,0.08)', fill:true, tension:0.4, pointRadius:0, borderWidth:1.5 }] },
-            options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'rgba(255,255,255,0.35)', font:{size:9} }, grid:{ display:false } }, y:{ ticks:{ color:'rgba(255,255,255,0.35)', font:{size:9} }, grid:{ color:'rgba(255,255,255,0.05)' } } } }
-        });
-    }
-    _destroyFinChart('budget');
-    var ctx4 = document.getElementById('fin-chart-budget');
-    if (ctx4) {
-        _finCharts['budget'] = new Chart(ctx4, {
-            type: 'bar',
-            data: { labels: ['Food','Software','Transit','Eating out','Subs'], datasets: [
-                { label: 'Budget', data: [0,0,0,0,0], backgroundColor: 'rgba(255,255,255,0.08)', borderRadius:3 },
-                { label: 'Actual', data: [0,0,0,0,0], backgroundColor: 'rgba(0,212,255,0.5)', borderRadius:3 }
-            ]},
-            options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'rgba(255,255,255,0.5)', font:{size:10} } } }, scales:{ x:{ ticks:{ color:'rgba(255,255,255,0.4)', font:{size:10} }, grid:{ color:'rgba(255,255,255,0.05)' } }, y:{ ticks:{ color:'rgba(255,255,255,0.5)', font:{size:10} }, grid:{ display:false } } } }
-        });
-    }
-}
+var _finChart = null, _finAtmChart = null, _finAllTxns = [];
 
-function _finUpdateL0(costSummary, expenseCount) {
-    // V-11-F F-1: populate finance L0 from real fetch data
-    var el = document.getElementById('finance-l0-summary');
-    if (!el) return;
-    var parts = [];
-    if (costSummary && costSummary.totalCostUsd != null) parts.push('Recent AI spend $' + costSummary.totalCostUsd + '.');
-    if (typeof expenseCount === 'number') parts.push(expenseCount + ' expense' + (expenseCount === 1 ? '' : 's') + ' recorded.');
-    el.textContent = parts.length ? parts.join(' ') : 'Financial position — no data connected yet.';
-}
-window._finL0Cache = window._finL0Cache || {};
-
-function fetchFinanceData() {
-    fetch('/api/finance/expenses?limit=20').then(function(r){return r.json();}).then(function(d){
-        var tb = document.getElementById('expensesTbody');
-        if (!tb) return;
-        if (!d.ok || !d.expenses || !d.expenses.length) {
-            tb.innerHTML = '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--text-faint);font-style:italic">No expenses logged yet — voice-log via "Log expense" above</td></tr>';
-            window._finL0Cache.expenses = 0;
-            _finUpdateL0(window._finL0Cache.cost, 0);
-            return;
-        }
-        var total = 0;
-        tb.innerHTML = d.expenses.map(function(e){
-            total += parseFloat(e.amount||0);
-            return '<tr><td class="t-mono" style="font-size:10px">'+(e.date||'').split('T')[0]+'</td><td><span class="ds-badge purple" style="font-size:9px">'+(e.category||'misc')+'</span></td><td style="color:var(--text-mid)">'+(e.description||'')+'</td><td class="t-mono">'+(e.currency||'£')+parseFloat(e.amount||0).toFixed(2)+'</td></tr>';
-        }).join('');
-        var expEl = document.getElementById('finStatExpenses');
-        if (expEl) expEl.textContent = '£'+total.toFixed(0);
-        var ytdEl = document.getElementById('fin-expenses-ytd');
-        if (ytdEl) ytdEl.textContent = '£'+total.toFixed(2);
-        window._finL0Cache.expenses = d.expenses.length;
-        _finUpdateL0(window._finL0Cache.cost, d.expenses.length);
-    }).catch(function(err){ // V-11-F F-2/F-5
-        var tb = document.getElementById('expensesTbody');
-        if (tb) tb.innerHTML = '<tr><td colspan="4" style="padding:14px;text-align:center"><span class="apex-empty"><span class="apex-state-dot failed"></span>Could not load recent expenses.</span> <button class="ds-btn xs" onclick="fetchFinanceData()">Retry</button></td></tr>';
-        console.warn('[finance] expenses fetch failed', err);
-    });
-    fetch('/api/intelligence/cost-summary', {headers: buildApiHeaders()}).then(function(r){return r.json();}).then(function(d){
-        if (!d.ok) return;
-        var el = document.getElementById('finStatCredit');
-        var sub = document.getElementById('finStatCreditSub');
-        if (el) el.textContent = '$'+(d.totalCostUsd||'0.0000');
-        if (sub) sub.textContent = d.totalRuns+' runs · '+d.successRate+'% success';
-        var panel = document.getElementById('financePanel');
-        if (panel) panel.innerHTML = '<div><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="t-h3">Anthropic · total spend</span><span class="t-mono" style="color:var(--amber)">$'+(d.totalCostUsd||'0')+'</span></div><div class="ds-bar tall amber"><div class="ds-bar-fill" style="width:100%"></div></div></div>';
-        window._finL0Cache.cost = d;
-        _finUpdateL0(d, window._finL0Cache.expenses);
-    }).catch(function(err){ // V-11-F F-2/F-5
-        var panel = document.getElementById('financePanel');
-        if (panel && window.setState) window.setState(panel, 'failed', { message: 'Could not load AI cost summary.', retryFn: 'fetchFinanceData()' });
-        var sub = document.getElementById('finStatCreditSub');
-        if (sub) sub.textContent = 'unavailable';
-        console.warn('[finance] cost-summary fetch failed', err);
-    });
-}
-
-var _finPageInited = false;
 function initFinancePage() {
-    fetchFinanceData();
-    fetchPlaidStatus();
-    if (!_finPageInited) { setTimeout(initFinanceCharts, 60); _finPageInited = true; }
+    _finLoadAlerts();
+    _finLoadHero();
+    _finLoadCategorised();
+    _finLoadCashflow();
+}
+
+async function _finLoadAlerts() {
+    try {
+        var d = await fetchJson('/api/finance/upcoming');
+        var strip = document.getElementById('fin-alert-strip');
+        if (!strip) return;
+        var today = new Date();
+        var alerts = (d.upcoming || []).filter(function(u) {
+            return Math.ceil((new Date(u.date) - today) / 86400000) <= 10;
+        }).map(function(u) {
+            var days = Math.ceil((new Date(u.date) - today) / 86400000);
+            var col = days <= 3 ? '#ef4444' : '#f59e0b';
+            return '<div style="display:flex;align-items:center;gap:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.22);border-radius:8px;padding:12px 16px">' +
+                '<span style="font-size:16px;opacity:.8">⚠</span>' +
+                '<div style="flex:1"><div style="font:600 12px/1 JetBrains Mono,monospace;color:' + col + ';letter-spacing:.8px">' + escapeHtml(u.description) + '</div>' +
+                '<div style="font:400 11px/1 system-ui,sans-serif;color:rgba(255,255,255,0.4);margin-top:5px">Due ' + u.date + ' · ' + days + ' day' + (days===1?'':'s') + ' away</div></div>' +
+                '<div style="font:700 14px/1 JetBrains Mono,monospace;color:' + col + '">£' + parseFloat(u.amount).toFixed(2) + '</div></div>';
+        });
+        if (!alerts.length) { strip.style.display = 'none'; return; }
+        strip.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px">' + alerts.join('') + '</div>';
+        strip.style.display = 'block';
+    } catch(e) {}
+}
+
+async function _finLoadHero() {
+    try {
+        var bankRes = await fetchJson('/api/bank/connections');
+        var statusEl = document.getElementById('fin-bank-status');
+        if (statusEl) {
+            var live = (bankRes.connections || []).filter(function(c){return !c.expired;});
+            statusEl.innerHTML = live.length
+                ? live.map(function(c){ return '<span style="font:600 10px/1 JetBrains Mono,monospace;letter-spacing:1.5px;color:#3fd29a;background:rgba(63,210,154,0.12);padding:5px 10px;border-radius:6px;border:1px solid rgba(63,210,154,0.25);margin-left:6px">&#9679; ' + c.bank_id.toUpperCase() + '</span>'; }).join('')
+                : '<span style="font:600 10px/1 JetBrains Mono,monospace;letter-spacing:1.5px;color:var(--amber);background:rgba(239,180,90,0.10);padding:5px 10px;border-radius:6px;border:1px solid rgba(239,180,90,0.2)">&#9675; DISCONNECTED</span>';
+        }
+    } catch(e) {}
+    try {
+        var nwRes = await fetchJson('/api/finance/net-worth');
+        if (nwRes && nwRes.snapshot) {
+            var nw = parseFloat(nwRes.snapshot.net_worth_gbp || 0);
+            var nwEl = document.getElementById('fin-hero-networth');
+            if (nwEl) {
+                nwEl.textContent = (nw < 0 ? '-' : '') + '£' + Math.abs(nw).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+                nwEl.style.color = nw < 0 ? '#ef4444' : '#3fd29a';
+            }
+            var balEl = document.getElementById('fin-hero-balance');
+            if (balEl) balEl.textContent = '£' + parseFloat(nwRes.snapshot.assets_gbp||0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+        }
+    } catch(e) {}
+    try {
+        var sumRes = await fetchJson('/api/finance/monthly-summary');
+        var cur = sumRes.current || {}, prev = sumRes.previous || {};
+        var spEl = document.getElementById('fin-hero-spend');
+        if (spEl) spEl.textContent = '£' + (cur.expenses||0).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0});
+        var deltaEl = document.getElementById('fin-hero-spend-delta');
+        if (deltaEl && prev.expenses) {
+            var diff = (cur.expenses||0) - prev.expenses;
+            var pct = Math.round((diff / prev.expenses) * 100);
+            deltaEl.textContent = (diff > 0 ? '↑' : '↓') + ' ' + Math.abs(pct) + '% vs last month';
+            deltaEl.style.color = diff > 0 ? '#ef4444' : '#3fd29a';
+        }
+        var cfEl = document.getElementById('fin-hero-cashflow');
+        if (cfEl) {
+            var cf = (cur.income||0) - (cur.expenses||0);
+            cfEl.textContent = (cf >= 0 ? '+' : '-') + '£' + Math.abs(cf).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0});
+            cfEl.style.color = cf >= 0 ? '#3fd29a' : '#ef4444';
+        }
+    } catch(e) { console.warn('[fin] hero failed', e); }
+}
+
+async function _finLoadCategorised() {
+    try {
+        var d = await fetchJson('/api/finance/categorised');
+        _finAllTxns = d.transactions || [];
+        _finRenderTransactions('all');
+        _finRenderCategories(_finAllTxns);
+        _finRenderAtmTrend(_finAllTxns);
+    } catch(e) { console.warn('[fin] categorised failed', e); }
+}
+
+function _finRenderCategories(txns) {
+    var el = document.getElementById('fin-categories-list');
+    if (!el) return;
+    var thisMonth = new Date().toISOString().slice(0,7);
+    var cats = {};
+    for (var i = 0; i < txns.length; i++) {
+        var t = txns[i];
+        if (t.type !== 'income' && (t.date||'').slice(0,7) === thisMonth) {
+            var c = t.clean_category || 'Other';
+            cats[c] = (cats[c]||0) + Number(t.amount);
+        }
+    }
+    var sorted = Object.entries(cats).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+    if (!sorted.length) { el.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:12px 0">No spend data this month</div>'; return; }
+    var max = sorted[0][1] || 1;
+    el.innerHTML = sorted.map(function(entry) {
+        var cat = entry[0], amt = entry[1];
+        var barCol = cat === 'Cash / ATM' ? '#ef4444' : '#a78bfa';
+        return '<div class="fin-cat-row"><div class="fin-cat-name">' + escapeHtml(cat) + '</div>' +
+            '<div class="fin-cat-bar-bg"><div class="fin-cat-bar-fill" style="width:' + ((amt/max)*100).toFixed(1) + '%;background:' + barCol + '"></div></div>' +
+            '<div class="fin-cat-amount">£' + amt.toFixed(0) + '</div></div>';
+    }).join('');
+}
+
+function _finRenderAtmTrend(txns) {
+    var canvas = document.getElementById('fin-atm-chart');
+    if (!canvas || !window.Chart) return;
+    if (_finAtmChart) { _finAtmChart.destroy(); _finAtmChart = null; }
+    var months = {}, now = new Date();
+    for (var i = 5; i >= 0; i--) {
+        var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months[d.toISOString().slice(0,7)] = 0;
+    }
+    for (var j = 0; j < txns.length; j++) {
+        var t = txns[j];
+        if (t.clean_category === 'Cash / ATM' && t.type !== 'income') {
+            var m = (t.date||'').slice(0,7);
+            if (m in months) months[m] += Number(t.amount);
+        }
+    }
+    var labels = Object.keys(months).sort();
+    _finAtmChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels.map(function(l){return l.slice(5);}),
+            datasets: [{ label: 'Cash / ATM', data: labels.map(function(l){return months[l];}), backgroundColor: 'rgba(239,68,68,0.6)', borderColor: 'rgba(239,68,68,0.9)', borderWidth: 1, borderRadius: 4 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: 'rgba(255,255,255,0.4)', font:{size:11} }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                y: { ticks: { color: 'rgba(255,255,255,0.4)', font:{size:11}, callback: function(v){return '£'+v;} }, grid: { color: 'rgba(255,255,255,0.04)' } }
+            }
+        }
+    });
+}
+
+function _finRenderTransactions(tab) {
+    var el = document.getElementById('fin-txn-list');
+    if (!el) return;
+    var txns = _finAllTxns.filter(function(t) {
+        if (tab === 'income') return t.type === 'income';
+        if (tab === 'expense') return t.type !== 'income';
+        return true;
+    });
+    if (!txns.length) { el.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:16px">No transactions</div>'; return; }
+    el.innerHTML = txns.slice(0,100).map(function(t) {
+        var amt = parseFloat(t.amount||0);
+        var isIncome = t.type === 'income';
+        var isAtm = t.clean_category === 'Cash / ATM';
+        var col = isIncome ? '#3fd29a' : (isAtm ? '#ef4444' : 'var(--amber)');
+        return '<div class="fin-txn-row"><div class="fin-txn-date">' + (t.date||'').slice(0,10) + '</div>' +
+            '<div class="fin-txn-desc">' + escapeHtml((t.description||'').slice(0,42)) + '</div>' +
+            '<div class="fin-txn-cat" style="color:rgba(255,255,255,0.38)">' + escapeHtml(t.clean_category||'') + '</div>' +
+            '<div class="fin-txn-amount" style="color:' + col + '">' + (isIncome?'+':'-') + '£' + amt.toFixed(2) + '</div></div>';
+    }).join('');
+}
+
+function _finSetTab(btn, tab) {
+    document.querySelectorAll('.fin-tab-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    _finRenderTransactions(tab);
+}
+
+async function _finLoadCashflow() {
+    try {
+        var d = await fetchJson('/api/finance/cashflow');
+        var months = (d.cashflow || []).slice(-6);
+        if (!months.length) return;
+        var canvas = document.getElementById('fin-cashflow-chart');
+        if (!canvas || !window.Chart) return;
+        if (_finChart) { _finChart.destroy(); _finChart = null; }
+        _finChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: months.map(function(m){ return m.month.slice(5); }),
+                datasets: [
+                    { label: 'Income', data: months.map(function(m){return m.income;}), backgroundColor: 'rgba(63,210,154,0.55)', borderRadius: 5 },
+                    { label: 'Spend',  data: months.map(function(m){return m.expenses;}), backgroundColor: 'rgba(239,180,90,0.55)', borderRadius: 5 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: 'rgba(255,255,255,0.45)', font:{size:11} } } },
+                scales: {
+                    x: { ticks: { color: 'rgba(255,255,255,0.4)', font:{size:11} }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                    y: { ticks: { color: 'rgba(255,255,255,0.4)', font:{size:11}, callback: function(v){return '£'+v.toLocaleString();} }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                }
+            }
+        });
+    } catch(e) { console.warn('[fin] cashflow failed', e); }
 }
 
 (function(){
@@ -25661,6 +26226,1040 @@ window.apexFileDropHandler = function(e){
     window.intelligenceRefresh = intelligenceRefresh;
     window._intLoadHealth = _intLoadHealth; // exposed for SYSTEM page init and testing
 
+    /* ── INTELLIGENCE NEW SURFACE (UX-12 redesign) ─────────────────────── */
+
+    var _intelRefreshTimer = null;
+    var _intelActiveDomain = 'all';
+    var _intelArticles = [];
+    var _intelMktData = null;
+    var _intelPortData = null;
+    var _intelDigestExpanded = false;
+
+    function _intelTimeAgo(dateStr) {
+        if (!dateStr) return '';
+        var d = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+        if (d < 60) return 'just now';
+        if (d < 3600) return Math.floor(d / 60) + 'm ago';
+        if (d < 86400) return Math.floor(d / 3600) + 'h ago';
+        return Math.floor(d / 86400) + 'd ago';
+    }
+
+    function _intelEsc(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    function _intelDomainColor(domain) {
+        var map = { business:'#7c6cf2', finance:'#22c55e', technology:'#00d4ff', health:'#f59e0b', education:'#ec4899', strategy:'#6366f1' };
+        return map[domain] || '#8893a0';
+    }
+
+    function _intelLoadHealth() {
+        // Health data is populated by _intelLoadSynthesis via the synthesis endpoint
+    }
+
+    function _intelFmtNum(n, decimals) {
+        if (n === null || n === undefined) return '—';
+        var abs = Math.abs(n);
+        if (abs >= 1000000) return (n / 1000000).toFixed(decimals !== undefined ? decimals : 2) + 'M';
+        if (abs >= 1000)    return (n / 1000).toFixed(decimals !== undefined ? decimals : 1) + 'K';
+        return Number(n).toFixed(decimals !== undefined ? decimals : 2);
+    }
+
+    function _intelFmtPrice(n) {
+        if (n === null || n === undefined) return '—';
+        var abs = Math.abs(n);
+        if (abs >= 10000) return n.toLocaleString('en-GB', { maximumFractionDigits: 0 });
+        if (abs >= 100)   return n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    }
+
+    function _intelFmtPct(n) {
+        if (n === null || n === undefined) return '—';
+        var sign = n >= 0 ? '+' : '';
+        return sign + Number(n).toFixed(2) + '%';
+    }
+
+    function _intelUpdateBenchmark() {
+        if (!_intelMktData || !_intelPortData) return;
+        var sp = (_intelMktData.quotes || []).find(function(q) { return q.symbol === '^GSPC'; });
+        var portPct = _intelPortData.portfolio ? _intelPortData.portfolio.total_pnl_pct : null;
+        var benchEl  = document.getElementById('inPortBenchValue');
+        var benchDlt = document.getElementById('inPortBenchDelta');
+        if (!sp || portPct === null || portPct === undefined) return;
+        var diff = portPct - (sp.change_pct || 0);
+        var cls  = diff >= 0 ? 'pos' : 'neg';
+        if (benchEl) {
+            benchEl.textContent = _intelFmtPct(portPct);
+            benchEl.style.color = diff >= 0 ? 'var(--in-grn)' : 'var(--in-red)';
+        }
+        if (benchDlt) {
+            benchDlt.className = 'in-port-col-delta ' + cls;
+            var sign = diff >= 0 ? '+' : '';
+            benchDlt.textContent = sign + diff.toFixed(2) + '% vs S&P (' + _intelFmtPct(sp.change_pct) + ')';
+        }
+    }
+
+    function _intelLoadMarketData() {
+        fetch('/api/intelligence/market-data', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var tickerEl = document.getElementById('inMktTicker');
+                var driverEl = document.getElementById('inMktDriver');
+                var ageEl    = document.getElementById('inMktAge');
+                if (!d || !d.ok) {
+                    if (tickerEl) tickerEl.innerHTML = '<div style="padding:14px 20px;font:400 10px/1 var(--in-mono);color:var(--in-txt3)">Market data unavailable</div>';
+                    return;
+                }
+                _intelMktData = d;
+                if (ageEl) ageEl.textContent = _intelTimeAgo(new Date(d.cached_at).toISOString());
+                if (tickerEl) {
+                    tickerEl.innerHTML = (d.quotes || []).map(function(q) {
+                        var cls = q.change_pct > 0 ? 'pos' : q.change_pct < 0 ? 'neg' : 'neu';
+                        return '<div class="in-mkt-item">' +
+                            '<div class="in-mkt-item-name">' + _intelEsc(q.name || q.symbol) + '</div>' +
+                            '<div class="in-mkt-item-price">' + _intelFmtPrice(q.price) + '</div>' +
+                            '<div class="in-mkt-item-chg ' + cls + '">' + _intelFmtPct(q.change_pct) + '</div>' +
+                        '</div>';
+                    }).join('');
+                }
+                if (driverEl) {
+                    var vix = (d.quotes || []).find(function(q) { return q.symbol === '^VIX'; });
+                    var btc = (d.quotes || []).find(function(q) { return q.symbol === 'BTC-USD'; });
+                    var parts = [];
+                    if (vix && vix.price) parts.push('VIX ' + vix.price.toFixed(1) + ' — ' + (vix.price > 25 ? 'elevated volatility' : vix.price > 18 ? 'moderate volatility' : 'low volatility'));
+                    if (btc && btc.change_pct !== null) parts.push('BTC ' + (btc.change_pct >= 0 ? '+' : '') + btc.change_pct.toFixed(2) + '% intraday');
+                    driverEl.textContent = parts.join(' · ');
+                }
+                _intelUpdateBenchmark();
+            })
+            .catch(function() {
+                var tickerEl = document.getElementById('inMktTicker');
+                if (tickerEl) tickerEl.innerHTML = '<div style="padding:14px 20px;font:400 10px/1 var(--in-mono);color:var(--in-txt3)">Market data unavailable</div>';
+            });
+    }
+
+    function _intelLoadPortfolio() {
+        fetch('/api/intelligence/portfolio-snapshot', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d || !d.ok) {
+                    var movEl = document.getElementById('inPortMovers');
+                    if (movEl) movEl.innerHTML = '<span class="in-port-movers-label">Movers</span><span style="font:400 9px/1 var(--in-mono);color:var(--in-txt3)">Portfolio data unavailable</span>';
+                    return;
+                }
+                _intelPortData = d;
+                var nw    = d.net_worth  || null;
+                var port  = d.portfolio  || {};
+                var nwEl  = document.getElementById('inPortNwValue');
+                var nwDlt = document.getElementById('inPortNwDelta');
+                var retEl = document.getElementById('inPortRetValue');
+                var retDlt = document.getElementById('inPortRetDelta');
+                var movEl = document.getElementById('inPortMovers');
+                if (nwEl) nwEl.textContent = (nw && nw.value) ? '£' + _intelFmtNum(nw.value, 0) : '—';
+                if (nwDlt) {
+                    var hasDelta = nw && nw.delta !== null && nw.delta !== undefined;
+                    nwDlt.className = 'in-port-col-delta ' + (hasDelta ? (nw.delta >= 0 ? 'pos' : 'neg') : 'neu');
+                    nwDlt.textContent = hasDelta ? (nw.delta >= 0 ? '+' : '') + '£' + _intelFmtNum(Math.abs(nw.delta), 0) + ' vs prev.' : '—';
+                }
+                if (retEl) {
+                    retEl.textContent = port.total_pnl !== undefined ? (port.total_pnl >= 0 ? '+' : '') + '£' + _intelFmtNum(Math.abs(port.total_pnl), 0) : '—';
+                    if (port.total_pnl !== undefined) retEl.style.color = port.total_pnl >= 0 ? 'var(--in-grn)' : 'var(--in-red)';
+                }
+                if (retDlt) {
+                    var pct = port.total_pnl_pct;
+                    retDlt.className = 'in-port-col-delta ' + (pct !== undefined ? (pct >= 0 ? 'pos' : 'neg') : 'neu');
+                    retDlt.textContent = pct !== undefined ? _intelFmtPct(pct) + ' total return' : '—';
+                }
+                if (movEl) {
+                    var movers = [];
+                    if (port.top_gainer && port.top_gainer.name) movers.push({ name: port.top_gainer.name, pct: port.top_gainer.pnl_pct, cls:'pos' });
+                    if (port.top_loser  && port.top_loser.name)  movers.push({ name: port.top_loser.name,  pct: port.top_loser.pnl_pct,  cls:'neg' });
+                    if (movers.length) {
+                        var moverHtml = movers.map(function(m) {
+                            return '<span class="in-port-mover">' + _intelEsc(m.name) +
+                                '<span class="mv-chg ' + m.cls + '">' + (m.pct >= 0 ? '+' : '') + Number(m.pct).toFixed(1) + '%</span>' +
+                            '</span>';
+                        }).join('');
+                        movEl.innerHTML = '<span class="in-port-movers-label">Movers</span>' + moverHtml;
+                    } else if (movEl) {
+                        movEl.innerHTML = '<span class="in-port-movers-label">Movers</span><span style="font:400 9px/1 var(--in-mono);color:var(--in-txt3)">No holdings data</span>';
+                    }
+                }
+                _intelUpdateBenchmark();
+            })
+            .catch(function() {
+                var movEl = document.getElementById('inPortMovers');
+                if (movEl) movEl.innerHTML = '<span class="in-port-movers-label">Movers</span><span style="font:400 9px/1 var(--in-mono);color:var(--in-txt3)">Unavailable</span>';
+            });
+    }
+
+    function intelExpandFeed() {
+        _intelDigestExpanded = true;
+        var btn = document.getElementById('inMoreBtn');
+        if (btn) btn.style.display = 'none';
+        var feedEl = document.getElementById('inFeed');
+        if (!feedEl) return;
+        var cards = _intelArticles.filter(function(a) {
+            if (_intelActiveDomain === 'all') return true;
+            return Array.isArray(a.domains) && a.domains.indexOf(_intelActiveDomain) !== -1;
+        }).map(_intelRenderCard).join('');
+        feedEl.innerHTML = cards || '<div style="color:#8893a0;font-size:11px;padding:20px;text-align:center">No articles found</div>';
+    }
+
+    function _intelRenderCard(a) {
+        var score   = a.relevance_score || 50;
+        var pos     = (a.source_position || 'centrist').toLowerCase();
+        var domains = Array.isArray(a.domains) ? a.domains : [];
+
+        // position badge
+        var posLabel = { establishment:'estab', centrist:'cntrl', counter:'cntrs', finance:'finc', 'state-adv':'state' }[pos] || pos;
+        var posBadge = '<span class="in-pos-badge ' + pos + '">' + posLabel + '</span>';
+
+        // domain tags
+        var tagHtml = domains.slice(0, 2).map(function(d) {
+            return '<span class="in-tag in-tag-' + _intelEsc(d) + '">' + d.toLowerCase().slice(0,4) + '</span>';
+        }).join('');
+
+        // top meta line: source · pos · tags · [spacer] · time · score
+        var metaTop = '<div class="in-row-meta">' +
+            '<span class="in-row-source">' + _intelEsc((a.source || '').toUpperCase()) + '</span>' +
+            posBadge + tagHtml +
+            '<span class="in-row-spacer"></span>' +
+            '<span class="in-row-time">' + _intelTimeAgo(a.pub_date) + '</span>' +
+            '<span class="in-row-score">' + score + '</span>' +
+        '</div>';
+
+        // ZERO reconstruction — primary
+        var synthHtml = '';
+        if (a.synthesis) {
+            var clean = a.synthesis.replace(/^ZERO:\s*/i, '');
+            synthHtml = '<div class="in-row-synthesis">' + _intelEsc(clean) + '</div>';
+        }
+
+        // title — secondary, linked
+        var titleHtml = '<a class="in-row-title" href="' + _intelEsc(a.link || '#') + '" target="_blank" rel="noopener">' + _intelEsc(a.title || '') + '</a>';
+
+        // take
+        var takeHtml = '';
+        if (a.apex_take) {
+            var take = a.apex_take.replace(/^For you:\s*/i, '');
+            takeHtml = '<div class="in-row-take">' + _intelEsc(take) + '</div>';
+        }
+
+        // indicator strip
+        var intgr = a.truth_score, manip = a.divergence;
+        var intgrHtml = (intgr !== null && intgr !== undefined)
+            ? '<span class="in-score-cell intgr ' + (intgr >= 65 ? 'high' : intgr >= 40 ? 'med' : 'low') + '">I·' + intgr + '</span>'
+            : '';
+        var manipHtml = (manip !== null && manip !== undefined)
+            ? '<span class="in-score-cell manip ' + (manip >= 65 ? 'high' : manip >= 40 ? 'med' : 'low') + '">M·' + manip + '</span>'
+            : '';
+        var patHtml = Array.isArray(a.patterns_matched) && a.patterns_matched.length
+            ? a.patterns_matched.slice(0, 2).map(function(p) { return '<span class="in-pattern-flag">' + _intelEsc(p) + '</span>'; }).join('')
+            : '';
+
+        var indicatorsHtml = (intgrHtml || manipHtml || patHtml)
+            ? '<div class="in-row-indicators">' + intgrHtml + manipHtml + patHtml + '</div>'
+            : '';
+
+        // analysis toggle
+        var lensesHtml = '';
+        if (a.establishment_frame || a.counter_frame || a.follow_money) {
+            lensesHtml =
+                '<button class="in-lenses-btn" onclick="intelToggleLenses(this)" aria-label="Toggle full analysis">analysis</button>' +
+                '<div class="in-lenses-body">' +
+                    (a.establishment_frame ? '<div class="in-lens-row"><span class="in-lens-label estab">signal</span><span class="in-lens-text">' + _intelEsc(a.establishment_frame.replace(/^SIGNAL:\s*/i,'')) + '</span></div>' : '') +
+                    (a.counter_frame       ? '<div class="in-lens-row"><span class="in-lens-label cntrs">payload</span><span class="in-lens-text">' + _intelEsc(a.counter_frame.replace(/^PAYLOAD:\s*/i,'')) + '</span></div>' : '') +
+                    (a.follow_money        ? '<div class="in-lens-row"><span class="in-lens-label money">void</span><span class="in-lens-text">' + _intelEsc(a.follow_money.replace(/^VOID:\s*/i,'')) + '</span></div>' : '') +
+                '</div>';
+        }
+
+        return '<article class="in-row" data-domains="' + _intelEsc(domains.join(',')) + '" data-score="' + score + '" data-pos="' + pos + '">' +
+            metaTop +
+            synthHtml +
+            titleHtml +
+            takeHtml +
+            indicatorsHtml +
+            lensesHtml +
+        '</article>';
+    }
+
+    function intelToggleLenses(btn) {
+        var body = btn.nextElementSibling;
+        var open = body.classList.contains('open');
+        body.classList.toggle('open', !open);
+        btn.textContent = open ? 'analysis' : 'close';
+    }
+
+    function _intelLoadFeed() {
+        var feedEl   = document.getElementById('inFeed');
+        var liveEl   = document.getElementById('inLiveLabel');
+        var dotEl    = document.getElementById('inLiveDot');
+        var ageEl    = document.getElementById('inFeedAge');
+        var tickerEl = document.getElementById('inTickerItems');
+        if (liveEl) liveEl.textContent = 'FETCHING';
+        if (dotEl) { dotEl.className = 'in-live-dot connecting'; }
+        fetch('/api/intelligence/news', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d || !d.ok) {
+                    if (liveEl) liveEl.textContent = 'ERROR';
+                    if (dotEl) dotEl.className = 'in-live-dot error';
+                    return;
+                }
+                var hadArticles = _intelArticles.length > 0;
+                _intelArticles = d.articles || [];
+                if (liveEl) liveEl.textContent = 'LIVE';
+                if (dotEl) dotEl.className = 'in-live-dot';
+                if (ageEl) ageEl.textContent = 'Updated ' + _intelTimeAgo(new Date(d.cached_at).toISOString());
+                // Re-run synthesis if we just got articles for the first time (pipeline warmup complete)
+                if (!hadArticles && _intelArticles.length > 0) { _intelLoadSynthesis(); }
+
+                // Render feed (top 5 unless expanded)
+                _intelDigestExpanded = false;
+                if (feedEl) {
+                    var filtered = _intelArticles.filter(function(a) {
+                        if (_intelActiveDomain === 'all') return true;
+                        return Array.isArray(a.domains) && a.domains.indexOf(_intelActiveDomain) !== -1;
+                    });
+                    var shown = _intelDigestExpanded ? filtered : filtered.slice(0, 5);
+                    feedEl.innerHTML = shown.map(_intelRenderCard).join('') || '<div style="color:#8893a0;font-size:11px;padding:20px;text-align:center">No articles found</div>';
+                    var moreBtn = document.getElementById('inMoreBtn');
+                    if (moreBtn) moreBtn.style.display = (!_intelDigestExpanded && filtered.length > 5) ? '' : 'none';
+                    _intelRenderTopBrief();
+                }
+
+                // Domain counts
+                var domainCounts = {};
+                _intelArticles.forEach(function(a) {
+                    (a.domains || []).forEach(function(dom) {
+                        domainCounts[dom] = (domainCounts[dom] || 0) + 1;
+                    });
+                });
+
+                // Populate domain sidebar
+                var domainsEl = document.getElementById('inDomains');
+                if (domainsEl) {
+                    var domOrder = ['business','finance','technology','health','education','strategy'];
+                    var maxCnt = Math.max.apply(null, domOrder.map(function(d) { return domainCounts[d] || 0; })) || 1;
+                    domainsEl.innerHTML = domOrder.map(function(dom) {
+                        var cnt = domainCounts[dom] || 0;
+                        var barW = Math.round(cnt / maxCnt * 100);
+                        var abbr = { business:'BIZ', finance:'FIN', technology:'TECH', health:'HLT', education:'EDU', strategy:'STRAT' }[dom] || dom.slice(0,4).toUpperCase();
+                        return '<div class="in-domain-row" onclick="intelFilterDomain(null,\'' + dom + '\')" data-domain="' + dom + '">' +
+                            '<span class="in-domain-row-name">' + abbr + '</span>' +
+                            '<div class="in-domain-bar-track"><div class="in-domain-bar" style="width:' + barW + '%"></div></div>' +
+                            '<span class="in-domain-row-count">' + cnt + '</span>' +
+                        '</div>';
+                    }).join('');
+                }
+
+                // Ticker
+                if (tickerEl) {
+                    var topDoms = Object.entries(domainCounts).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+                    var tickText = topDoms.map(function(e) {
+                        return e[0].slice(0,4).toUpperCase() + ':' + e[1];
+                    }).join(' · ') + ' // ' + _intelArticles.length + ' ITEMS · ' + (d.sources_fetched || 0) + ' FEEDS';
+                    tickerEl.textContent = tickText;
+                }
+            })
+            .catch(function() {
+                if (liveEl) liveEl.textContent = 'ERROR';
+                if (dotEl) dotEl.className = 'in-live-dot error';
+            });
+    }
+
+    function _intelLoadSynthesis() {
+        fetch('/api/intelligence/synthesis', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d || !d.ok) return;
+
+                // ── APEX BRIEF TEXT ──────────────────────────────────────
+                var briefEl = document.getElementById('inBriefText');
+                if (briefEl) {
+                    if (d.brief) {
+                        briefEl.textContent = d.brief;
+                        briefEl.classList.remove('loading');
+                    } else if (_intelArticles.length === 0) {
+                        briefEl.textContent = 'Intelligence pipeline warming up — brief will appear once news feeds have been processed.';
+                        briefEl.classList.add('loading');
+                    }
+                }
+
+                // ── APEX HEALTH ─────────────────────────────────────────
+                var score = d.health_score || 0;
+                var cls   = d.health_classification || '';
+                var scoreClr = score >= 70 ? 'var(--in-grn)' : score >= 40 ? 'var(--in-amb)' : 'var(--in-red)';
+                var numEl  = document.getElementById('inScoreNum');
+                var tierEl = document.getElementById('inScoreTier');
+                var clsEl  = document.getElementById('inHealthClass');
+                if (numEl)  { numEl.textContent = score || '—'; numEl.style.color = scoreClr; }
+                if (tierEl) tierEl.textContent = cls ? cls.toUpperCase() : 'UNKNOWN';
+                if (clsEl)  { clsEl.textContent = cls ? cls.toUpperCase() : ''; clsEl.style.color = scoreClr; }
+                var dimsEl = document.getElementById('inDims');
+                if (dimsEl && d.health_dimensions && Object.keys(d.health_dimensions).length) {
+                    dimsEl.innerHTML = Object.keys(d.health_dimensions).slice(0, 6).map(function(key) {
+                        var val = d.health_dimensions[key];
+                        var sc = (val && typeof val === 'object') ? (val.score || 0) : (typeof val === 'number' ? val : 0);
+                        var clr = sc >= 70 ? 'var(--in-grn)' : sc >= 40 ? 'var(--in-amb)' : 'var(--in-red)';
+                        return '<div class="in-dim-row">' +
+                            '<div class="in-dim-meta">' +
+                                '<span class="in-dim-label">' + _intelEsc(key.replace(/_/g,' ').toUpperCase()) + '</span>' +
+                                '<span class="in-dim-val" style="color:' + clr + '">' + sc + '</span>' +
+                            '</div>' +
+                            '<div class="in-dim-bar-track"><div class="in-dim-bar" style="width:' + sc + '%;background:' + clr + '"></div></div>' +
+                        '</div>';
+                    }).join('');
+                }
+
+                // ── PRIORITY ACTIONS ─────────────────────────────────────
+                var nowZone  = document.getElementById('inZoneNow');
+                var nowEl    = document.getElementById('inZoneNowBody');
+                var nowCount = document.getElementById('inZoneNowCount');
+                var nowItems = (d.now || []).slice(0, 3);
+                if (nowZone) nowZone.style.display = nowItems.length ? '' : 'none';
+                if (nowCount) nowCount.textContent = nowItems.length ? nowItems.length : '';
+                if (nowEl) {
+                    nowEl.innerHTML = nowItems.map(function(item, i) {
+                        return '<div class="in-now-item">' +
+                            '<div class="in-now-header">' +
+                                '<span class="in-now-num">' + (i + 1) + '</span>' +
+                                '<span class="in-now-action">' + _intelEsc(item.action || '') + '</span>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
+                }
+
+                // ── LIVE OPPORTUNITIES ────────────────────────────────────
+                var oppZone  = document.getElementById('inZoneOpp');
+                var oppEl    = document.getElementById('inZoneOppBody');
+                var oppCount = document.getElementById('inZoneOppCount');
+                var oppItems = (d.opportunities || []).slice(0, 3);
+                if (oppZone) oppZone.style.display = oppItems.length ? '' : 'none';
+                if (oppCount) oppCount.textContent = oppItems.length ? oppItems.length : '';
+                if (oppEl) {
+                    oppEl.innerHTML = oppItems.map(function(item) {
+                        var urg = (item.urgency || 'low').toLowerCase();
+                        return '<div class="in-opp-item">' +
+                            '<div class="in-opp-header">' +
+                                '<span class="in-opp-title">' + _intelEsc(item.title || '') + '</span>' +
+                                '<span class="in-opp-urgency ' + _intelEsc(urg) + '">' + urg + '</span>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
+                }
+
+                // ── RISK MONITOR ──────────────────────────────────────────
+                var riskZone  = document.getElementById('inZoneRisk');
+                var riskEl    = document.getElementById('inZoneRiskBody');
+                var riskCount = document.getElementById('inZoneRiskCount');
+                var riskItems = (d.risks || []).slice(0, 4);
+                if (riskZone) riskZone.style.display = riskItems.length ? '' : 'none';
+                if (riskCount) riskCount.textContent = riskItems.length ? riskItems.length : '';
+                if (riskEl) {
+                    riskEl.innerHTML = riskItems.map(function(item) {
+                        var sev = (item.severity || 'medium').toLowerCase();
+                        return '<div class="in-risk-item">' +
+                            '<span class="in-risk-badge ' + _intelEsc(sev) + '">' + sev + '</span>' +
+                            '<span class="in-risk-flag">' + _intelEsc(item.flag || '') + '</span>' +
+                        '</div>';
+                    }).join('');
+                }
+
+                // ── WATCH LIST ────────────────────────────────────────────
+                var watchZone  = document.getElementById('inZoneWatch');
+                var watchEl    = document.getElementById('inZoneWatchBody');
+                var watchCount = document.getElementById('inZoneWatchCount');
+                var watchItems = (d.watch || []).slice(0, 4);
+                if (watchZone) watchZone.style.display = watchItems.length ? '' : 'none';
+                if (watchCount) watchCount.textContent = watchItems.length ? watchItems.length : '';
+                if (watchEl) {
+                    watchEl.innerHTML = watchItems.map(function(item) {
+                        return '<div class="in-watch-item">' + _intelEsc(item.item || '') + '</div>';
+                    }).join('');
+                }
+
+                // Hide placeholder once any zone has data
+                var anyZone = nowItems.length || oppItems.length || riskItems.length || watchItems.length;
+                var placeholder = document.getElementById('inActionsPlaceholder');
+                if (placeholder) placeholder.style.display = anyZone ? 'none' : '';
+            })
+            .catch(function() {});
+    }
+
+    function intelInit() {
+        _intelLoadHealth();
+        _intelLoadFeed();
+        _intelLoadSynthesis();
+        if (_intelRefreshTimer) clearInterval(_intelRefreshTimer);
+        _intelRefreshTimer = setInterval(function() {
+            if ((window.activePage || '') === 'intelligence') {
+                _intelLoadHealth();
+                _intelLoadFeed();
+                _intelLoadSynthesis();
+            }
+        }, 20 * 60 * 1000);
+    }
+
+    function intelRefresh() {
+        var btn = document.getElementById('inRefreshBtn');
+        if (btn) btn.classList.add('spinning');
+        _intelLoadHealth();
+        _intelLoadFeed();
+        _intelLoadSynthesis();
+        _intelLoadMarketData();
+        _intelLoadPortfolio();
+        // Reload zero-engine products alongside refresh
+        _situOps = null; _situPat = null;
+        _intelLoadOperations();
+        _intelLoadPatterns();
+        setTimeout(function() { if (btn) btn.classList.remove('spinning'); }, 2000);
+    }
+
+    function intelFilterDomain(btn, domain) {
+        _intelActiveDomain = domain;
+        _intelDigestExpanded = false;
+        // Update filter buttons
+        document.querySelectorAll('#page-intelligence .in-filter-btn').forEach(function(b) {
+            b.classList.toggle('active', b.dataset.domain === domain);
+        });
+        // Re-filter cards
+        var feedEl = document.getElementById('inFeed');
+        if (!feedEl) return;
+        var filtered = _intelArticles.filter(function(a) {
+            if (domain === 'all') return true;
+            return Array.isArray(a.domains) && a.domains.indexOf(domain) !== -1;
+        });
+        var shown = filtered.slice(0, 5);
+        feedEl.innerHTML = shown.map(_intelRenderCard).join('') || '<div style="color:#8893a0;font-size:11px;padding:20px;text-align:center">No articles in this domain</div>';
+        var moreBtn = document.getElementById('inMoreBtn');
+        if (moreBtn) moreBtn.style.display = filtered.length > 5 ? '' : 'none';
+    }
+
+    // ── INTELLIGENCE CONFIGURE ───────────────────────────────────────────────────
+
+    var _intelSourcesCache = [];
+    var _intelWV           = null;
+    var _cfgPerspCache     = '';
+    var _cfgTab            = 'axioms';
+
+    function intelOpenSettings() {
+        var ex = document.getElementById('intelCfg');
+        if (ex) { ex.remove(); return; }
+        var el = document.createElement('div');
+        el.id = 'intelCfg';
+        var tabs = ['axioms','power','directives','watchlist','perspective','sources'];
+        var tLabels = { axioms:'AXIOMS', power:'POWER REGISTRY', directives:'DIRECTIVES', watchlist:'WATCHLIST', perspective:'PERSPECTIVE', sources:'SOURCES' };
+        el.innerHTML =
+            '<div class="cfg-panel">' +
+                '<div class="cfg-hdr">' +
+                    '<span class="cfg-title">APEX&nbsp;//&nbsp;INTELLIGENCE&nbsp;CONFIGURE</span>' +
+                    '<button class="cfg-close" onclick="document.getElementById(\'intelCfg\').remove()">&#x2715;&nbsp;CLOSE</button>' +
+                '</div>' +
+                '<div class="cfg-tabs">' +
+                    tabs.map(function(t) {
+                        return '<button class="cfg-tab' + (t === _cfgTab ? ' act' : '') + '" data-t="' + t + '" onclick="cfgSwitchTab(\'' + t + '\')">' + tLabels[t] + '</button>';
+                    }).join('') +
+                '</div>' +
+                '<div class="cfg-body" id="cfgBody"><div style="color:#3e5870;font:400 9px/1 var(--in-mono,monospace);padding:20px">LOADING...</div></div>' +
+            '</div>';
+        document.body.appendChild(el);
+        el.addEventListener('click', function(e) { if (e.target === el) el.remove(); });
+        Promise.all([
+            fetch('/api/intelligence/worldview',   { headers: _h() }).then(function(r) { return r.json(); }),
+            fetch('/api/intelligence/perspective', { headers: _h() }).then(function(r) { return r.json(); }),
+            fetch('/api/intelligence/sources',     { headers: _h() }).then(function(r) { return r.json(); })
+        ]).then(function(res) {
+            _intelWV           = (res[0] && res[0].worldview) || {};
+            _cfgPerspCache     = (res[1] && res[1].ok && res[1].content) || '';
+            _intelSourcesCache = (res[2] && res[2].ok && res[2].sources) || [];
+            _cfgRenderTab(_cfgTab);
+        }).catch(function() { _cfgRenderTab(_cfgTab); });
+    }
+
+    function cfgSwitchTab(tab) {
+        _cfgTab = tab;
+        document.querySelectorAll('#intelCfg .cfg-tab').forEach(function(b) {
+            b.classList.toggle('act', b.getAttribute('data-t') === tab);
+        });
+        _cfgRenderTab(tab);
+    }
+
+    function _cfgRenderTab(tab) {
+        var body = document.getElementById('cfgBody');
+        if (!body) return;
+        if      (tab === 'axioms')      body.innerHTML = _cfgAxioms();
+        else if (tab === 'power')       body.innerHTML = _cfgPower();
+        else if (tab === 'directives')  body.innerHTML = _cfgDirectives();
+        else if (tab === 'watchlist')   body.innerHTML = _cfgWatchlist();
+        else if (tab === 'perspective') body.innerHTML = _cfgPerspective();
+        else if (tab === 'sources')     body.innerHTML = _cfgSources();
+    }
+
+    function _cfgItemRows(section) {
+        var items = (_intelWV || {})[section] || [];
+        if (!items.length) return '<div style="color:#3e5870;font:400 9px/1 var(--in-mono,monospace);padding:8px 0">No items. Add one below.</div>';
+        return items.map(function(item) {
+            var on = item.enabled !== false;
+            return '<div class="cfg-irow">' +
+                '<button class="cfg-toggle" onclick="cfgToggleItem(\'' + section + '\',\'' + _intelEsc(item.id) + '\')">' +
+                    '<span class="cfg-dot ' + (on ? 'on' : 'off') + '"></span>' +
+                '</button>' +
+                '<span class="cfg-itext' + (on ? '' : ' dim') + '">' + _intelEsc(item.text) + '</span>' +
+                (item.builtin ? '' : '<button class="cfg-irem" onclick="cfgRemoveItem(\'' + section + '\',\'' + _intelEsc(item.id) + '\')">&#x2715;</button>') +
+            '</div>';
+        }).join('');
+    }
+
+    function _cfgAxioms() {
+        return '<div class="cfg-stitle">WORLDVIEW AXIOMS</div>' +
+            '<div class="cfg-sdesc">Foundational priors APEX reasons from. Active axioms are injected into every constitutional analysis as established operating context — not conspiracy, operating assumptions about how power actually works.</div>' +
+            '<div class="cfg-items">' + _cfgItemRows('axioms') + '</div>' +
+            '<div class="cfg-addrow">' +
+                '<textarea class="cfg-addta" id="cfgAddAxiomText" placeholder="Enter a new axiom..." rows="2"></textarea>' +
+                '<button class="cfg-addbtn" onclick="cfgAddItem(\'axioms\')">+ ADD</button>' +
+            '</div>' +
+            '<div class="cfg-saverow"><button class="cfg-savebtn" onclick="cfgSaveSection(\'axioms\')">SAVE AXIOMS</button><span class="cfg-savest" id="cfgSt_axioms"></span></div>';
+    }
+
+    function _cfgDirectives() {
+        return '<div class="cfg-stitle">ANALYSIS DIRECTIVES</div>' +
+            '<div class="cfg-sdesc">Standing orders applied to every article during constitutional scoring. Directives shape HOW APEX reads the news — cui bono framing, coordinated narrative detection, regulatory capture context, and more.</div>' +
+            '<div class="cfg-items">' + _cfgItemRows('directives') + '</div>' +
+            '<div class="cfg-addrow">' +
+                '<textarea class="cfg-addta" id="cfgAddDirectiveText" placeholder="Enter a new directive..." rows="2"></textarea>' +
+                '<button class="cfg-addbtn" onclick="cfgAddItem(\'directives\')">+ ADD</button>' +
+            '</div>' +
+            '<div class="cfg-saverow"><button class="cfg-savebtn" onclick="cfgSaveSection(\'directives\')">SAVE DIRECTIVES</button><span class="cfg-savest" id="cfgSt_directives"></span></div>';
+    }
+
+    function _cfgWatchlist() {
+        var items = ((_intelWV || {}).watchlist || []);
+        var rows = items.length ? items.map(function(item) {
+            var on = item.enabled !== false;
+            return '<div class="cfg-irow">' +
+                '<button class="cfg-toggle" onclick="cfgToggleItem(\'watchlist\',\'' + _intelEsc(item.id) + '\')">' +
+                    '<span class="cfg-dot ' + (on ? 'on' : 'off') + '"></span>' +
+                '</button>' +
+                '<span class="cfg-itext' + (on ? '' : ' dim') + '">' + _intelEsc(item.pattern) + '</span>' +
+                '<span class="cfg-iflag">' + _intelEsc(item.flag) + '</span>' +
+                (item.builtin ? '' : '<button class="cfg-irem" onclick="cfgRemoveItem(\'watchlist\',\'' + _intelEsc(item.id) + '\')">&#x2715;</button>') +
+            '</div>';
+        }).join('') : '<div style="color:#3e5870;font:400 9px/1 var(--in-mono,monospace);padding:8px 0">No patterns. Add one below.</div>';
+        return '<div class="cfg-stitle">WATCHLIST PATTERNS</div>' +
+            '<div class="cfg-sdesc">Real-time tripwires. When APEX detects these patterns during scoring, it attaches the flag label inline on the article card. Mask slips. Suppression. Problem-reaction-solution. Coordinated narrative.</div>' +
+            '<div class="cfg-items">' + rows + '</div>' +
+            '<div class="cfg-addrow" style="flex-wrap:wrap;gap:6px;">' +
+                '<input class="cfg-addinp" id="cfgAddWatchPattern" type="text" placeholder="Pattern description..." style="flex:2;min-width:200px"/>' +
+                '<input class="cfg-addinp" id="cfgAddWatchFlag" type="text" placeholder="FLAG LABEL" style="flex:1;min-width:120px"/>' +
+                '<button class="cfg-addbtn" onclick="cfgAddItem(\'watchlist\')">+ ADD</button>' +
+            '</div>' +
+            '<div class="cfg-saverow"><button class="cfg-savebtn" onclick="cfgSaveSection(\'watchlist\')">SAVE WATCHLIST</button><span class="cfg-savest" id="cfgSt_watchlist"></span></div>';
+    }
+
+    function _cfgPower() {
+        var items = ((_intelWV || {}).power_registry || []);
+        var cards = items.length ? items.map(function(e) {
+            var trust = typeof e.trust === 'number' ? e.trust : 0;
+            var fillPct = Math.abs(trust);
+            return '<div class="cfg-pcard">' +
+                '<span class="cfg-pabbr">' + _intelEsc(e.abbr || (e.name || '').slice(0, 3).toUpperCase()) + '</span>' +
+                '<div class="cfg-pbody">' +
+                    '<div class="cfg-pname">' + _intelEsc(e.name) + '</div>' +
+                    '<div class="cfg-pagenda">' + _intelEsc(e.agenda) + '</div>' +
+                    '<div class="cfg-ptrust">' +
+                        '<span class="cfg-ptlabel">TRUST</span>' +
+                        '<div class="cfg-ptbar"><div class="cfg-ptfill" style="width:' + fillPct + '%"></div></div>' +
+                        '<span class="cfg-ptval">' + trust + '</span>' +
+                    '</div>' +
+                    '<div style="display:flex;align-items:center;gap:6px;">' +
+                        '<button class="cfg-watchbtn' + (e.watch ? ' on' : '') + '" onclick="cfgTogglePower(\'' + _intelEsc(e.id) + '\')">' + (e.watch ? '&#x25CF;&nbsp;WATCHING' : '&#x25CB;&nbsp;WATCH') + '</button>' +
+                        (e.builtin ? '' : '<button class="cfg-prem" onclick="cfgRemovePower(\'' + _intelEsc(e.id) + '\')">&#x2715; REMOVE</button>') +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('') : '<div style="color:#3e5870;font:400 9px/1 var(--in-mono,monospace);padding:8px 0">No entities. Add one below.</div>';
+        return '<div class="cfg-stitle">POWER REGISTRY</div>' +
+            '<div class="cfg-sdesc">Named entities APEX tracks permanently. When a watched entity appears in an article, APEX factors their known agenda into the constitutional analysis and may flag it. Toggle WATCHING to activate tracking in scoring prompts.</div>' +
+            '<div class="cfg-power-list">' + cards + '</div>' +
+            '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' +
+                '<div class="cfg-pgrid" style="flex:1;min-width:240px;">' +
+                    '<input class="cfg-addinp" id="cfgAddPowerName"   type="text" placeholder="Entity name"/>' +
+                    '<input class="cfg-addinp" id="cfgAddPowerAbbr"   type="text" placeholder="ABBR"/>' +
+                    '<input class="cfg-addinp" id="cfgAddPowerType"   type="text" placeholder="org/corp"/>' +
+                '</div>' +
+                '<button class="cfg-addbtn" onclick="cfgAddPower()" style="align-self:flex-end">+ ADD</button>' +
+            '</div>' +
+            '<div style="margin-top:6px;">' +
+                '<textarea class="cfg-addta" id="cfgAddPowerAgenda" placeholder="Known agenda description..." rows="2" style="width:100%;box-sizing:border-box;"></textarea>' +
+            '</div>' +
+            '<div class="cfg-saverow"><button class="cfg-savebtn" onclick="cfgSaveSection(\'power_registry\')">SAVE REGISTRY</button><span class="cfg-savest" id="cfgSt_power_registry"></span></div>';
+    }
+
+    function _cfgPerspective() {
+        return '<div class="cfg-stitle">YOUR PERSPECTIVE</div>' +
+            '<div class="cfg-sdesc">Define your worldview, values, and analytical lens. APEX uses constitutional reasoning to evaluate news through your perspective while remaining committed to factual truth. Perspective shapes strategic relevance scoring — never truth assessment. What you believe about power structures shapes what APEX considers actionable.</div>' +
+            '<textarea class="cfg-persp" id="cfgPerspText" placeholder="e.g. I\'m a UK entrepreneur focused on AI and fintech. I believe central banking serves institutional interests over national economies. I value independent analysis over mainstream consensus. I\'m building long-term wealth and want to understand real power dynamics, not the theatre presented as politics...">' + _intelEsc(_cfgPerspCache) + '</textarea>' +
+            '<div class="cfg-saverow"><button class="cfg-savebtn" onclick="intelSavePerspective()">SAVE PERSPECTIVE</button><span class="cfg-savest" id="cfgSt_perspective"></span></div>';
+    }
+
+    function _cfgSources() {
+        var rows = _intelSourcesCache.length ? _intelSourcesCache.map(function(s, i) {
+            var on = s.enabled !== false;
+            return '<div class="cfg-srcrow">' +
+                '<span class="cfg-srcnum">' + (i + 1) + '</span>' +
+                '<button class="cfg-srcbtn" onclick="cfgToggleSource(\'' + _intelEsc(s.id) + '\',' + (!on) + ')">' +
+                    '<span class="cfg-dot ' + (on ? 'on' : 'off') + '"></span>' +
+                '</button>' +
+                '<span class="cfg-srcname">' + _intelEsc(s.name) + '</span>' +
+                '<span class="cfg-srcurl">' + _intelEsc(s.url) + '</span>' +
+                '<button class="cfg-srcbtn" onclick="cfgMoveSource(\'' + _intelEsc(s.id) + '\',-1)">&#x2191;</button>' +
+                '<button class="cfg-srcbtn" onclick="cfgMoveSource(\'' + _intelEsc(s.id) + '\',1)">&#x2193;</button>' +
+                '<button class="cfg-srcbtn rem" onclick="cfgRemoveSource(\'' + _intelEsc(s.id) + '\')">&#x2715;</button>' +
+            '</div>';
+        }).join('') : '<div style="color:#3e5870;font:400 9px/1 var(--in-mono,monospace);padding:8px 0">No sources configured</div>';
+        return '<div class="cfg-stitle">NEWS SOURCES</div>' +
+            '<div class="cfg-sdesc">RSS sources fetched in priority order. Toggle to enable/disable. Arrows to reorder. Disabled sources are excluded from all feeds.</div>' +
+            '<div class="cfg-srclist" id="cfgSrcList">' + rows + '</div>' +
+            '<div class="cfg-srcgrid">' +
+                '<input class="cfg-addinp" id="cfgAddSrcName" type="text" placeholder="Source name"/>' +
+                '<input class="cfg-addinp" id="cfgAddSrcUrl"  type="url"  placeholder="https://example.com/feed.rss"/>' +
+                '<button class="cfg-addbtn" onclick="cfgAddSource()">+ ADD SOURCE</button>' +
+            '</div>' +
+            '<div class="cfg-savest" id="cfgSt_sources" style="margin-top:6px"></div>';
+    }
+
+    function cfgToggleItem(section, id) {
+        var arr = ((_intelWV || {})[section] || []);
+        var item = arr.find(function(x) { return x.id === id; });
+        if (item) item.enabled = !item.enabled;
+        _cfgRenderTab(_cfgTab);
+    }
+
+    function cfgRemoveItem(section, id) {
+        if (!_intelWV) return;
+        _intelWV[section] = (_intelWV[section] || []).filter(function(x) { return x.id !== id; });
+        _cfgRenderTab(_cfgTab);
+    }
+
+    function cfgAddItem(section) {
+        if (!_intelWV) _intelWV = {};
+        var idMap = { axioms: 'cfgAddAxiomText', directives: 'cfgAddDirectiveText', watchlist: 'cfgAddWatchPattern' };
+        var textEl = document.getElementById(idMap[section]);
+        var text = textEl ? textEl.value.trim() : '';
+        if (!text) return;
+        var item = { id: 'c_' + Date.now(), enabled: true, builtin: false };
+        if (section === 'watchlist') {
+            var flagEl = document.getElementById('cfgAddWatchFlag');
+            item.pattern = text;
+            item.flag = (flagEl ? flagEl.value.trim().toUpperCase() : '') || 'FLAGGED';
+            if (flagEl) flagEl.value = '';
+        } else {
+            item.text = text;
+        }
+        if (!_intelWV[section]) _intelWV[section] = [];
+        _intelWV[section].push(item);
+        textEl.value = '';
+        _cfgRenderTab(_cfgTab);
+    }
+
+    function cfgSaveSection(section) {
+        var wv = _intelWV || {};
+        var stEl = document.getElementById('cfgSt_' + section);
+        if (stEl) stEl.textContent = 'SAVING...';
+        fetch('/api/intelligence/worldview', {
+            method: 'PUT',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, _h()),
+            body: JSON.stringify({ section: section, data: wv[section] || [] })
+        }).then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (stEl) {
+                stEl.textContent = d.ok ? 'SAVED — SCORING WILL UPDATE' : ('ERROR: ' + (d.error || ''));
+                setTimeout(function() { if (stEl) stEl.textContent = ''; }, 3500);
+            }
+        }).catch(function() { if (stEl) stEl.textContent = 'SAVE FAILED'; });
+    }
+
+    function cfgTogglePower(id) {
+        var reg = ((_intelWV || {}).power_registry || []);
+        var e = reg.find(function(x) { return x.id === id; });
+        if (e) e.watch = !e.watch;
+        _cfgRenderTab('power');
+    }
+
+    function cfgRemovePower(id) {
+        if (!_intelWV) return;
+        _intelWV.power_registry = (_intelWV.power_registry || []).filter(function(x) { return x.id !== id; });
+        _cfgRenderTab('power');
+    }
+
+    function cfgAddPower() {
+        var name   = (document.getElementById('cfgAddPowerName')   || {}).value || '';
+        var abbr   = (document.getElementById('cfgAddPowerAbbr')   || {}).value || '';
+        var type   = (document.getElementById('cfgAddPowerType')   || {}).value || 'org';
+        var agenda = (document.getElementById('cfgAddPowerAgenda') || {}).value || '';
+        name = name.trim();
+        if (!name) return;
+        if (!_intelWV) _intelWV = {};
+        if (!_intelWV.power_registry) _intelWV.power_registry = [];
+        _intelWV.power_registry.push({ id: 'p_' + Date.now(), name: name, abbr: abbr.trim().toUpperCase() || name.slice(0, 3).toUpperCase(), type: type.trim() || 'org', agenda: agenda.trim(), trust: 0, watch: true, builtin: false });
+        ['cfgAddPowerName','cfgAddPowerAbbr','cfgAddPowerType','cfgAddPowerAgenda'].forEach(function(eid) {
+            var el = document.getElementById(eid); if (el) el.value = '';
+        });
+        _cfgRenderTab('power');
+    }
+
+    function intelSavePerspective() {
+        var ta = document.getElementById('cfgPerspText');
+        var st = document.getElementById('cfgSt_perspective');
+        if (!ta) return;
+        if (st) st.textContent = 'SAVING...';
+        fetch('/api/intelligence/perspective', {
+            method: 'PUT',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, _h()),
+            body: JSON.stringify({ content: ta.value })
+        }).then(function(r) { return r.json(); })
+        .then(function(d) {
+            _cfgPerspCache = ta.value;
+            if (st) {
+                st.textContent = d.ok ? 'SAVED — FEED WILL REFRESH' : ('ERROR: ' + (d.error || ''));
+                setTimeout(function() { if (st) st.textContent = ''; }, 3500);
+            }
+        }).catch(function() { if (st) st.textContent = 'SAVE FAILED'; });
+    }
+
+    function cfgAddSource() {
+        var nameEl = document.getElementById('cfgAddSrcName');
+        var urlEl  = document.getElementById('cfgAddSrcUrl');
+        var st     = document.getElementById('cfgSt_sources');
+        var name = nameEl ? nameEl.value.trim() : '';
+        var url  = urlEl  ? urlEl.value.trim()  : '';
+        if (!name || !url) { if (st) st.textContent = 'Name and URL required'; return; }
+        if (st) st.textContent = 'ADDING...';
+        fetch('/api/intelligence/sources', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, _h()),
+            body: JSON.stringify({ name: name, url: url, priority: (_intelSourcesCache.length + 1) * 10 })
+        }).then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.ok) { if (st) st.textContent = 'ERROR: ' + (d.error || 'unknown'); return; }
+            if (nameEl) nameEl.value = '';
+            if (urlEl)  urlEl.value  = '';
+            if (st) { st.textContent = 'ADDED'; setTimeout(function() { if (st) st.textContent = ''; }, 2500); }
+            _intelSourcesCache.push(d.source);
+            _cfgRenderTab('sources');
+        }).catch(function() { if (st) st.textContent = 'ADD FAILED'; });
+    }
+
+    function cfgToggleSource(id, enabled) {
+        fetch('/api/intelligence/sources/' + id, {
+            method: 'PATCH',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, _h()),
+            body: JSON.stringify({ enabled: enabled })
+        }).then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.ok) return;
+            var s = _intelSourcesCache.find(function(x) { return x.id === id; });
+            if (s) s.enabled = enabled;
+            _cfgRenderTab('sources');
+        }).catch(function() {});
+    }
+
+    function cfgMoveSource(id, dir) {
+        var idx = _intelSourcesCache.findIndex(function(s) { return s.id === id; });
+        if (idx < 0) return;
+        var swap = idx + dir;
+        if (swap < 0 || swap >= _intelSourcesCache.length) return;
+        var a = _intelSourcesCache[idx], b = _intelSourcesCache[swap];
+        var pa = a.priority, pb = b.priority;
+        a.priority = pb; b.priority = pa;
+        _intelSourcesCache[idx] = b; _intelSourcesCache[swap] = a;
+        _cfgRenderTab('sources');
+        Promise.all([
+            fetch('/api/intelligence/sources/' + a.id, { method: 'PATCH', headers: Object.assign({ 'Content-Type': 'application/json' }, _h()), body: JSON.stringify({ priority: a.priority }) }),
+            fetch('/api/intelligence/sources/' + b.id, { method: 'PATCH', headers: Object.assign({ 'Content-Type': 'application/json' }, _h()), body: JSON.stringify({ priority: b.priority }) })
+        ]).catch(function() {});
+    }
+
+    function cfgRemoveSource(id) {
+        if (!confirm('Remove this source?')) return;
+        fetch('/api/intelligence/sources/' + id, { method: 'DELETE', headers: _h() })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.ok) return;
+            _intelSourcesCache = _intelSourcesCache.filter(function(s) { return s.id !== id; });
+            _cfgRenderTab('sources');
+        }).catch(function() {});
+    }
+
+    function intelRunFullBrief() {
+        var existing = document.getElementById('_intelBriefModal');
+        if (existing) existing.remove();
+        var modal = document.createElement('div');
+        modal.id = '_intelBriefModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,0.92);backdrop-filter:blur(14px);display:flex;align-items:flex-start;justify-content:center;padding:20px 16px 48px;overflow-y:auto';
+        modal.innerHTML = '<div style="width:100%;max-width:700px;background:#0f0f1c;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">' +
+                '<div style="font:700 11px/1 \'JetBrains Mono\',monospace;letter-spacing:0.12em;color:#00d4ff;text-transform:uppercase">Full Strategic Brief</div>' +
+                '<button onclick="document.getElementById(\'_intelBriefModal\').remove()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 10px;color:rgba(232,244,255,0.6);cursor:pointer;font-size:11px">Close</button>' +
+            '</div>' +
+            '<div id="_intelBriefContent" style="color:rgba(136,147,160,0.8);font-size:12px;line-height:1.6">Loading brief&hellip;</div>' +
+        '</div>';
+        document.body.appendChild(modal);
+        modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+        fetch('/api/intelligence/briefing', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var el = document.getElementById('_intelBriefContent');
+                if (!el) return;
+                if (!d || !d.ok || !d.briefing) {
+                    el.innerHTML = '<div style="color:#ef4444">Brief unavailable &mdash; ' + _intelEsc((d && d.error) || 'check server logs') + '</div>';
+                    return;
+                }
+                var b = d.briefing;
+                var fields = ['biggest_opportunity','biggest_threat','biggest_bottleneck','highest_leverage_action','strategic_focus_this_week','strategic_focus_this_month'];
+                el.innerHTML = fields.map(function(k) {
+                    return b[k] ? '<div style="margin-bottom:12px"><div style="font:600 8px/1 \'JetBrains Mono\',monospace;letter-spacing:0.1em;text-transform:uppercase;color:#8893a0;margin-bottom:4px">' + k.replace(/_/g,' ') + '</div>' +
+                        '<div style="font-size:12px;color:rgba(232,244,255,0.85)">' + _intelEsc(b[k]) + '</div></div>' : '';
+                }).join('');
+            })
+            .catch(function() {
+                var el = document.getElementById('_intelBriefContent');
+                if (el) el.innerHTML = '<div style="color:#ef4444">Failed to load brief</div>';
+            });
+    }
+
+    // ── Situation awareness ───────────────────────────────────────────────────
+    var _situOps = null, _situPat = null;
+
+    function _intelMaybeSitu() {
+        if (_situOps !== null && _situPat !== null) _intelRenderSituStrip(_situOps, _situPat);
+    }
+
+    function _intelRenderSituStrip(ops, pats) {
+        var strip = document.getElementById('inSituStrip');
+        if (!strip) return;
+        var count = (ops || []).length;
+        var level, color;
+        if (count === 0)     { level = 'clear';    color = '#5e9e76'; }
+        else if (count <= 1) { level = 'moderate'; color = '#b88c52'; }
+        else if (count <= 3) { level = 'elevated'; color = '#c4a46b'; }
+        else if (count <= 5) { level = 'high';     color = '#966060'; }
+        else                 { level = 'critical'; color = '#b05050'; }
+        strip.style.setProperty('--in-situ-clr', color);
+        var tEl = document.getElementById('inSituThreat');
+        var oEl = document.getElementById('inSituOps');
+        var pEl = document.getElementById('inSituPattern');
+        var aEl = document.getElementById('inSituAge');
+        if (tEl) { tEl.textContent = level; tEl.style.color = color; }
+        if (oEl) oEl.textContent = count ? count + ' ACTIVE' : 'NONE';
+        if (pEl) pEl.textContent = pats && pats[0] ? pats[0].code + ' \xd7' + (pats[0].count || 0) : 'NONE';
+        if (aEl) aEl.textContent = new Date().toISOString().slice(11, 19) + 'Z';
+    }
+
+    function _intelRenderTopBrief() {
+        var brief = document.getElementById('inTopBrief');
+        var body  = document.getElementById('inTopBriefBody');
+        if (!brief || !body) return;
+        var top = _intelArticles.slice(0, 3).filter(function(a) { return a.zero || a.synthesis; });
+        if (!top.length) { brief.style.display = 'none'; return; }
+        brief.style.display = 'block';
+        body.innerHTML = top.map(function(a, i) {
+            var zero = (a.zero || a.synthesis || '').split(/[.!?]/)[0].trim();
+            if (zero.length > 120) zero = zero.slice(0, 117) + '…';
+            var score = a.relevance_score || a.integrity_score || '';
+            return '<div class="in-top-brief-row">' +
+                '<span class="in-top-brief-rank">0' + (i + 1) + '</span>' +
+                '<span class="in-top-brief-zero">' + _intelEsc(zero) + '</span>' +
+                (score ? '<span class="in-top-brief-score">' + score + '</span>' : '') +
+            '</div>';
+        }).join('');
+    }
+
+    // ── Operations + Pattern panel loaders ───────────────────────────────────
+    function _intelLoadOperations() {
+        var panel = document.getElementById('inOpsPanel');
+        var body  = document.getElementById('inOpsBody');
+        var count = document.getElementById('inOpsCount');
+        if (!body) return;
+        fetch('/api/intel-zero/operations', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var ops = (d && d.operations) || [];
+                if (panel) panel.style.display = ops.length ? '' : 'none';
+                if (count) count.textContent = ops.length;
+                body.innerHTML = ops.slice(0, 4).map(function(op) {
+                    var sev = op.severity || 'medium';
+                    return '<div class="in-op-row ' + sev + '">' +
+                        '<div class="in-op-name">' + _intelEsc(op.code) + '</div>' +
+                        '<div class="in-op-meta">' + (op.source_count || 0) + ' sources &nbsp;· div ' + (op.avg_divergence || '?') + '</div>' +
+                    '</div>';
+                }).join('');
+                _situOps = ops; _intelMaybeSitu();
+            })
+            .catch(function() {
+                if (panel) panel.style.display = 'none';
+                _situOps = []; _intelMaybeSitu();
+            });
+    }
+
+    function _intelLoadPatterns() {
+        var panel = document.getElementById('inPatPanel');
+        var body  = document.getElementById('inPatBody');
+        if (!body) return;
+        fetch('/api/intel-zero/patterns', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var pats = (d && d.patterns) || [];
+                if (panel) panel.style.display = pats.length ? '' : 'none';
+                if (!pats.length) { _situPat = []; _intelMaybeSitu(); return; }
+                var maxSig = pats[0] ? (pats[0].signal || 1) : 1;
+                body.innerHTML = pats.slice(0, 4).map(function(p) {
+                    var pct = Math.round(((p.signal || 0) / Math.max(maxSig, 1)) * 100);
+                    return '<div class="in-pat-row">' +
+                        '<span class="in-pat-code">' + _intelEsc(p.code) + '</span>' +
+                        '<div class="in-pat-bar-wrap"><div class="in-pat-bar" style="width:' + pct + '%"></div></div>' +
+                        '<span class="in-pat-count">' + (p.count || 0) + '</span>' +
+                    '</div>';
+                }).join('');
+                _situPat = pats; _intelMaybeSitu();
+            })
+            .catch(function() { _situPat = []; _intelMaybeSitu(); });
+    }
+
+    // Load all secondary data on init
+    var _origIntelInit = intelInit;
+    intelInit = function() {
+        _situOps = null; _situPat = null;
+        _origIntelInit.apply(this, arguments);
+        _intelLoadMarketData();
+        _intelLoadPortfolio();
+        _intelLoadOperations();
+        _intelLoadPatterns();
+    };
+
+    window.intelInit             = intelInit;
+    window.intelRefresh          = intelRefresh;
+    window.intelFilterDomain     = intelFilterDomain;
+    window.intelRunFullBrief     = intelRunFullBrief;
+    window.intelOpenSettings     = intelOpenSettings;
+    window.intelSavePerspective  = intelSavePerspective;
+    window.cfgSwitchTab          = cfgSwitchTab;
+    window.cfgToggleItem         = cfgToggleItem;
+    window.cfgAddItem            = cfgAddItem;
+    window.cfgRemoveItem         = cfgRemoveItem;
+    window.cfgSaveSection        = cfgSaveSection;
+    window.cfgTogglePower        = cfgTogglePower;
+    window.cfgRemovePower        = cfgRemovePower;
+    window.cfgAddPower           = cfgAddPower;
+    window.cfgAddSource          = cfgAddSource;
+    window.cfgToggleSource       = cfgToggleSource;
+    window.cfgMoveSource         = cfgMoveSource;
+    window.cfgRemoveSource       = cfgRemoveSource;
+    window.intelToggleLenses     = intelToggleLenses;
+    window.intelExpandFeed       = intelExpandFeed;
+
     /* ── GAP-09: Agent capability display ───────────────────────────── */
     function _loadAgentCapabilities() {
         var el = document.getElementById('agentCapList');
@@ -25984,7 +27583,7 @@ window.apexFileDropHandler = function(e){
         if (name === 'actions'  && typeof window.actionsInitPage === 'function')  { window.actionsInitPage(); }
         if (name !== 'actions'  && typeof window.actionsPausePage === 'function') { window.actionsPausePage(); }
         if (name === 'knowledge')    { knowledgeRefresh(); }
-        if (name === 'intelligence') { intelligenceRefresh(); }
+        if (name === 'intelligence') { intelligenceRefresh(); if (typeof intelInit === 'function') intelInit(); }
         if (name === 'memory')       { memoryRefresh(); }
         if (name === 'governance')   { governanceRefresh(); }
         if (name === 'settings'  && typeof window.settingsInitPage === 'function') { window.settingsInitPage(); }
