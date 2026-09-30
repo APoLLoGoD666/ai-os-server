@@ -7662,27 +7662,57 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
 
 .fin-hero-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 @media(max-width:768px){.fin-hero-grid{grid-template-columns:repeat(2,1fr)}}
-.fin-hero-card{background:var(--surface-1,#1a1a1a);border:1px solid var(--border,#333);border-radius:12px;padding:18px 20px}
+/* Two-layer shadow per Vercel interface guidelines: ambient layer + direct layer */
+.fin-hero-card{background:var(--surface-1,#1a1a1a);border:1px solid rgba(255,255,255,0.09);border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,0.45),0 6px 20px rgba(0,0,0,0.3);transition:box-shadow 0.2s ease,transform 0.2s ease}
+.fin-hero-card:hover{box-shadow:0 2px 6px rgba(0,0,0,0.5),0 12px 28px rgba(0,0,0,0.38);transform:translateY(-1px)}
+/* Hue-consistent border + shadow glow per accent color */
+.fin-hero-card[data-accent="red"]{border-color:rgba(239,68,68,0.28);box-shadow:0 1px 3px rgba(0,0,0,0.45),0 6px 20px rgba(239,68,68,0.1)}
+.fin-hero-card[data-accent="red"]:hover{box-shadow:0 2px 6px rgba(0,0,0,0.5),0 12px 28px rgba(239,68,68,0.15)}
+.fin-hero-card[data-accent="cyan"]{border-color:rgba(34,211,238,0.2);box-shadow:0 1px 3px rgba(0,0,0,0.45),0 6px 20px rgba(34,211,238,0.08)}
+.fin-hero-card[data-accent="cyan"]:hover{box-shadow:0 2px 6px rgba(0,0,0,0.5),0 12px 28px rgba(34,211,238,0.12)}
+.fin-hero-card[data-accent="amber"]{border-color:rgba(245,158,11,0.22);box-shadow:0 1px 3px rgba(0,0,0,0.45),0 6px 20px rgba(245,158,11,0.08)}
+.fin-hero-card[data-accent="amber"]:hover{box-shadow:0 2px 6px rgba(0,0,0,0.5),0 12px 28px rgba(245,158,11,0.12)}
+.fin-hero-card[data-accent="violet"]{border-color:rgba(167,139,250,0.22);box-shadow:0 1px 3px rgba(0,0,0,0.45),0 6px 20px rgba(167,139,250,0.08)}
+.fin-hero-card[data-accent="violet"]:hover{box-shadow:0 2px 6px rgba(0,0,0,0.5),0 12px 28px rgba(167,139,250,0.12)}
+/* Skeleton pulse for loading states */
+@keyframes fin-pulse{0%,100%{opacity:.2}50%{opacity:.5}}
+.fin-skeleton{display:inline-block;background:rgba(255,255,255,0.08);border-radius:4px;animation:fin-pulse 1.6s ease-in-out infinite;vertical-align:middle}
 .fin-hero-label{font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:1.5px;color:var(--text-mute,#888);text-transform:uppercase;margin-bottom:10px}
-.fin-hero-val{font:700 28px/1 Inter,sans-serif;color:var(--text,#e8e8e8);font-variant-numeric:tabular-nums}
-.fin-hero-sub{font:400 11px/1 Inter,sans-serif;color:var(--text-mute,#888);margin-top:6px}
-.fin-txn-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px}
+.fin-hero-val{font:700 28px/1 Inter,sans-serif;color:var(--text,#e8e8e8);font-variant-numeric:tabular-nums;min-height:28px}
+.fin-hero-sub{font:400 11px/1 Inter,sans-serif;color:var(--text-mute,#888);margin-top:6px;min-height:11px}
+/* Transaction rows: hover state required per Vercel interactive contrast rule */
+.fin-txn-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;border-radius:4px;transition:background 0.1s}
+.fin-txn-row:hover{background:rgba(255,255,255,0.034)}
 .fin-txn-row:last-child{border-bottom:none}
 .fin-txn-date{font-family:'JetBrains Mono',monospace;color:var(--text-mute,#888);font-size:10px;width:74px;flex-shrink:0}
 .fin-txn-desc{flex:1;color:var(--text,#e8e8e8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fin-txn-cat{font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.07);color:var(--text-mute,#888);flex-shrink:0;max-width:90px;overflow:hidden;text-overflow:ellipsis}
-.fin-txn-amount{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;flex-shrink:0;width:64px;text-align:right}
+.fin-txn-amount{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;flex-shrink:0;width:64px;text-align:right;font-variant-numeric:tabular-nums}
+/* Minimal scrollbar — only render when useful */
+#fin-txn-list::-webkit-scrollbar{width:3px}
+#fin-txn-list::-webkit-scrollbar-track{background:transparent}
+#fin-txn-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
 .fin-cat-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
 .fin-cat-row:last-child{border-bottom:none}
 .fin-cat-name{width:110px;font-size:11px;color:var(--text,#e8e8e8);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fin-cat-bar-bg{flex:1;height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden}
-.fin-cat-bar-fill{height:5px;border-radius:3px;background:var(--amber,#f59e0b);transition:width 0.4s ease}
-.fin-cat-amount{width:58px;text-align:right;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-mute,#888);flex-shrink:0}
+.fin-cat-bar-bg{flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden}
+.fin-cat-bar-fill{height:6px;border-radius:3px;background:var(--amber,#f59e0b);transition:width 0.4s ease}
+.fin-cat-amount{width:58px;text-align:right;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-mute,#888);flex-shrink:0;font-variant-numeric:tabular-nums}
 .fin-tabs{display:flex;gap:6px;margin-bottom:12px}
-.fin-tab-btn{background:transparent;border:1px solid var(--border,#333);border-radius:6px;color:var(--text-mute,#888);font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:0.5px;padding:6px 14px;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s}
-.fin-tab-btn:hover{background:rgba(255,255,255,0.05);color:var(--text,#e8e8e8)}
+.fin-tab-btn{background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:var(--text-mute,#888);font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:0.5px;padding:6px 14px;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;min-height:32px;touch-action:manipulation}
+.fin-tab-btn:hover{background:rgba(255,255,255,0.06);color:var(--text,#e8e8e8);border-color:rgba(255,255,255,0.2)}
 .fin-tab-btn.active{background:var(--accent,#7c6cf2);border-color:var(--accent,#7c6cf2);color:#fff}
 .fin-tab-btn:focus-visible{outline:2px solid var(--accent,#7c6cf2);outline-offset:2px}
+/* Sync button */
+.fin-sync-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--text-mute,#888);font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:1px;padding:0 13px;height:30px;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;display:inline-flex;align-items:center;gap:5px;touch-action:manipulation;flex-shrink:0}
+.fin-sync-btn:hover:not(:disabled){background:rgba(255,255,255,0.08);color:var(--text,#e8e8e8);border-color:rgba(255,255,255,0.2)}
+.fin-sync-btn:active{transform:scale(0.97)}
+.fin-sync-btn:disabled{opacity:0.45;cursor:not-allowed;transform:none}
+.fin-sync-btn:focus-visible{outline:2px solid var(--accent,#7c6cf2);outline-offset:2px}
+/* Empty state */
+.fin-empty{color:rgba(255,255,255,0.22);font-size:12px;padding:28px 0;text-align:center;font-family:'JetBrains Mono',monospace}
+/* Respect motion preference */
+@media(prefers-reduced-motion:reduce){.fin-hero-card,.fin-hero-card:hover{transition:none;transform:none}.fin-skeleton{animation:none;opacity:.35}.fin-cat-bar-fill{transition:none}}
 
 /* ═══════════════════════════════════════════════════════════════════
    UX-18 CANONICAL 6-TIER RESPONSIVE MODEL — UX-19 Integration
@@ -9138,30 +9168,33 @@ header.topbar { grid-area: topbar !important; }
                         <div class="ds-page-title" style="letter-spacing:7px">FINANCE</div>
                         <div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:2px;color:#8893a0;margin-top:11px">REAL DATA · CATEGORISED · MULTI-BANK</div>
                     </div>
-                    <div id="fin-bank-status"><span style="color:var(--text-mute);font-size:11px">checking…</span></div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <button class="fin-sync-btn" id="fin-sync-btn" onclick="_finSync(this)" aria-label="Sync bank data">↺ SYNC</button>
+                        <div id="fin-bank-status"><span style="color:var(--text-mute);font-size:11px">checking…</span></div>
+                    </div>
                 </div>
 
                 <!-- Upcoming payment alerts -->
                 <div id="fin-alert-strip" style="display:none;margin-bottom:16px"></div>
 
                 <!-- Hero stat cards -->
-                <div class="fin-hero-grid" style="margin-bottom:16px">
-                    <div class="fin-hero-card" style="border-left:3px solid #ef4444">
+                <div class="fin-hero-grid" style="margin-bottom:16px" aria-live="polite">
+                    <div class="fin-hero-card" data-accent="red" style="border-left:3px solid #ef4444">
                         <div class="fin-hero-label">Net Worth</div>
                         <div class="fin-hero-val" id="fin-hero-networth" style="color:#ef4444">—</div>
                         <div class="fin-hero-sub">assets minus liabilities</div>
                     </div>
-                    <div class="fin-hero-card" style="border-left:3px solid var(--cyan)">
+                    <div class="fin-hero-card" data-accent="cyan" style="border-left:3px solid #22d3ee">
                         <div class="fin-hero-label">HSBC Balance</div>
                         <div class="fin-hero-val" id="fin-hero-balance">—</div>
                         <div class="fin-hero-sub">current account</div>
                     </div>
-                    <div class="fin-hero-card" style="border-left:3px solid var(--amber)">
+                    <div class="fin-hero-card" data-accent="amber" style="border-left:3px solid #f59e0b">
                         <div class="fin-hero-label">Spend · This Month</div>
-                        <div class="fin-hero-val" id="fin-hero-spend" style="color:var(--amber)">—</div>
+                        <div class="fin-hero-val" id="fin-hero-spend" style="color:#f59e0b">—</div>
                         <div class="fin-hero-sub" id="fin-hero-spend-delta"></div>
                     </div>
-                    <div class="fin-hero-card" style="border-left:3px solid #a78bfa">
+                    <div class="fin-hero-card" data-accent="violet" style="border-left:3px solid #a78bfa">
                         <div class="fin-hero-label">Cash Flow · This Month</div>
                         <div class="fin-hero-val" id="fin-hero-cashflow">—</div>
                         <div class="fin-hero-sub">income minus spend</div>
@@ -19787,10 +19820,27 @@ var _finChart = null;
 var _finChart = null, _finAtmChart = null, _finAllTxns = [];
 
 function initFinancePage() {
+    // Show skeletons matching expected value width while fetching
+    ['fin-hero-networth','fin-hero-balance','fin-hero-spend','fin-hero-cashflow'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && (el.textContent === '—' || el.textContent === '')) {
+            el.innerHTML = '<span class="fin-skeleton" style="width:88px;height:0.85em"> </span>';
+        }
+    });
     _finLoadAlerts();
     _finLoadHero();
     _finLoadCategorised();
     _finLoadCashflow();
+}
+
+async function _finSync(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '↺ SYNCING…'; }
+    try {
+        await fetchJson('/api/bank/sync', { method: 'POST' });
+        await new Promise(function(r) { setTimeout(r, 2500); });
+        initFinancePage();
+    } catch(e) { console.warn('[fin] sync failed', e); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = '↺ SYNC'; } }
 }
 
 async function _finLoadAlerts() {
@@ -19805,7 +19855,7 @@ async function _finLoadAlerts() {
             var days = Math.ceil((new Date(u.date) - today) / 86400000);
             var col = days <= 3 ? '#ef4444' : '#f59e0b';
             return '<div style="display:flex;align-items:center;gap:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.22);border-radius:8px;padding:12px 16px">' +
-                '<span style="font-size:16px;opacity:.8">⚠</span>' +
+                '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:.8"><path d="M8 1.5L1 14.5h14L8 1.5z" stroke="' + col + '" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4M8 11.5v.5" stroke="' + col + '" stroke-width="1.4" stroke-linecap="round"/></svg>' +
                 '<div style="flex:1"><div style="font:600 12px/1 JetBrains Mono,monospace;color:' + col + ';letter-spacing:.8px">' + escapeHtml(u.description) + '</div>' +
                 '<div style="font:400 11px/1 system-ui,sans-serif;color:rgba(255,255,255,0.4);margin-top:5px">Due ' + u.date + ' · ' + days + ' day' + (days===1?'':'s') + ' away</div></div>' +
                 '<div style="font:700 14px/1 JetBrains Mono,monospace;color:' + col + '">£' + parseFloat(u.amount).toFixed(2) + '</div></div>';
@@ -19839,7 +19889,12 @@ async function _finLoadHero() {
             var balEl = document.getElementById('fin-hero-balance');
             if (balEl) balEl.textContent = '£' + parseFloat(nwRes.snapshot.assets_gbp||0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
         }
-    } catch(e) {}
+    } catch(e) {
+        ['fin-hero-networth','fin-hero-balance'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) { el.textContent = 'ERR'; el.style.color = 'rgba(239,68,68,0.55)'; el.style.fontSize = '14px'; }
+        });
+    }
     try {
         var sumRes = await fetchJson('/api/finance/monthly-summary');
         var cur = sumRes.current || {}, prev = sumRes.previous || {};
@@ -19858,7 +19913,13 @@ async function _finLoadHero() {
             cfEl.textContent = (cf >= 0 ? '+' : '-') + '£' + Math.abs(cf).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0});
             cfEl.style.color = cf >= 0 ? '#3fd29a' : '#ef4444';
         }
-    } catch(e) { console.warn('[fin] hero failed', e); }
+    } catch(e) {
+        ['fin-hero-spend','fin-hero-cashflow'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) { el.textContent = 'ERR'; el.style.color = 'rgba(239,68,68,0.55)'; el.style.fontSize = '14px'; }
+        });
+        console.warn('[fin] hero failed', e);
+    }
 }
 
 async function _finLoadCategorised() {
@@ -19884,7 +19945,7 @@ function _finRenderCategories(txns) {
         }
     }
     var sorted = Object.entries(cats).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
-    if (!sorted.length) { el.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:12px 0">No spend data this month</div>'; return; }
+    if (!sorted.length) { el.innerHTML = '<div class="fin-empty">No spend data this month</div>'; return; }
     var max = sorted[0][1] || 1;
     el.innerHTML = sorted.map(function(entry) {
         var cat = entry[0], amt = entry[1];
@@ -19937,7 +19998,7 @@ function _finRenderTransactions(tab) {
         if (tab === 'expense') return t.type !== 'income';
         return true;
     });
-    if (!txns.length) { el.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:16px">No transactions</div>'; return; }
+    if (!txns.length) { el.innerHTML = '<div class="fin-empty">No transactions</div>'; return; }
     el.innerHTML = txns.slice(0,100).map(function(t) {
         var amt = parseFloat(t.amount||0);
         var isIncome = t.type === 'income';
