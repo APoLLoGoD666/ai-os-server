@@ -73,7 +73,7 @@ async function _insertSession(sb, { human_id, jti, req, expiresAt }) {
     } catch (_) { /* non-fatal */ }
 }
 
-router.post('/auth/login', async (req, res) => {
+router.post('/auth/login', (req, res) => {
     const secret = process.env.JWT_SECRET;
     const correctPw = process.env.DASHBOARD_PASSWORD;
     const betaPw    = process.env.BETA_USER_PASSWORD || '';
@@ -83,81 +83,35 @@ router.post('/auth/login', async (req, res) => {
     const { password } = req.body || {};
     const pwBuf = Buffer.from(password || '');
     const wantsJson = (req.headers['content-type'] || '').includes('application/json');
-    const sb = require('../../lib/clients').getSupabaseClient();
 
-    // Check master password
     const correctBuf = Buffer.from(correctPw);
     const isMaster = password && pwBuf.length === correctBuf.length && crypto.timingSafeEqual(pwBuf, correctBuf);
-
-    // Check beta user password (only if set)
     const betaBuf  = Buffer.from(betaPw);
     const isBeta   = betaPw && password && pwBuf.length === betaBuf.length && crypto.timingSafeEqual(pwBuf, betaBuf);
 
-    let role, sub, email = null, dbHuman = null;
-
-    if (isMaster) {
-        role = 'master'; sub = MASTER_UUID;
-    } else if (isBeta) {
-        role = 'user'; sub = BETA_USER_UUID;
-    } else {
-        // DB fallback — check active humans with a password_hash
-        let dbMatch = false;
-        try {
-            const { _verifyPassword } = require('../../routes/users');
-            const { data: humans } = await sb
-                .from('humans')
-                .select('id, role, email, password_hash')
-                .eq('status', 'active')
-                .not('password_hash', 'is', null);
-            if (humans && humans.length) {
-                for (const h of humans) {
-                    if (await _verifyPassword(password || '', h.password_hash)) {
-                        dbHuman = h; dbMatch = true; break;
-                    }
-                }
-            }
-        } catch (_) {}
-
-        if (!dbMatch) {
-            await _logAudit(sb, 'login_fail', null, req, { reason: 'bad_password' });
-            if (wantsJson) return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
-            return res.redirect(302, '/login?error=1');
-        }
-        role  = dbHuman.role || 'user';
-        sub   = dbHuman.id;
-        email = dbHuman.email || null;
+    if (!isMaster && !isBeta) {
+        if (wantsJson) return res.status(401).json({ ok: false, reply: 'Incorrect password.' });
+        return res.redirect(302, '/login?error=1');
     }
 
-    // V-11-A: JWT carries UUID sub + role + jti
-    const jti = crypto.randomBytes(16).toString('hex');
+    const role = isMaster ? 'master' : 'user';
+    const sub  = isMaster ? MASTER_UUID : BETA_USER_UUID;
+    const jti  = crypto.randomBytes(16).toString('hex');
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Phase 3b: if master and TOTP is enabled, issue pending cookie instead
-    if (role === 'master') {
-        try {
-            const { data: masterRow } = await sb.from('humans').select('totp_enabled, totp_secret').eq('id', sub).maybeSingle();
-            if (masterRow && masterRow.totp_enabled && masterRow.totp_secret) {
-                const pendingJti = crypto.randomBytes(16).toString('hex');
-                const pendingToken = jwt.sign({ sub, role, jti: pendingJti, pending: true }, secret, { expiresIn: '5m' });
-                res.cookie('apex_totp_pending', pendingToken, {
-                    httpOnly: true, secure: isSecure, sameSite: 'Lax', maxAge: 5 * 60 * 1000,
-                });
-                await _logAudit(sb, 'totp_challenge', sub, req, {});
-                if (wantsJson) return res.json({ ok: true, totp_required: true });
-                return res.redirect(302, '/login?totp=1');
-            }
-        } catch (_) {}
-    }
-
-    const token = jwt.sign({ sub, role, email, jti }, secret, { expiresIn: '7d' });
+    const token = jwt.sign({ sub, role, jti }, secret, { expiresIn: '7d' });
     res.cookie('apex_token', token, { httpOnly: true, secure: isSecure, sameSite: 'Lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
     res.cookie('apex_session', '1', { httpOnly: false, secure: isSecure, sameSite: 'Lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-    // Phase 3c: insert session row (non-blocking)
-    setImmediate(() => _insertSession(sb, { human_id: sub, jti, req, expiresAt }));
-
-    await _logAudit(sb, 'login_success', sub, req, { role });
+    // Non-blocking session + audit (never delays the response)
+    setImmediate(async () => {
+        try {
+            const sb = require('../../lib/clients').getSupabaseClient();
+            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+            await _insertSession(sb, { human_id: sub, jti, req, expiresAt });
+            await _logAudit(sb, 'login_success', sub, req, { role });
+        } catch (_) {}
+    });
 
     if (wantsJson) return res.json({ ok: true });
     return res.redirect(302, '/');
