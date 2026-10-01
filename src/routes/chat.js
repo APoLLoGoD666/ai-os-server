@@ -62,6 +62,8 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
             if (!res.headersSent) res.status(504).json({ ok: false, reply: "Request timed out. Please try again." });
         }, 25000);
 
+        const humanId  = req.identity?.humanId  || null;
+        const isMaster = req.identity?.role === 'master';
         const userMessage = rawMessage.trim();
         const _pcmCtx  = _pcm.resumeRelevantThreads({ userMessage, sessionId: req.conversationId });
         const _eaeSnap = _eae.generateExecutiveSnapshot(req.conversationId);
@@ -124,7 +126,7 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
         }
 
         const [memory, _temporal, _wmSummary] = await Promise.all([
-            loadMemory(),
+            loadMemory(humanId),
             _sessionTracker.getSessionContext(req.conversationId).catch(() => null),
             _wm.buildContextSummary(req.conversationId).catch(() => ''),
         ]);
@@ -136,7 +138,9 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
         const _wmLine = _wmSummary ? `[SESSION CONTEXT]\n${_wmSummary}\n\n` : '';
         const memoryText = _wmLine + _temporalLine + _memBase;
 
-        const _chatGwPromise = _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 1500, taskId: req.conversationId }).catch(() => null);
+        const _chatGwPromise = isMaster
+            ? _gateway.getContext({ description: userMessage, requestingEntity: 'api_client', tokenBudget: 1500, taskId: req.conversationId }).catch(() => null)
+            : Promise.resolve(null);
 
         const _wordCount = userMessage.trim().split(/\s+/).length;
         const _chatOppPromise = _wordCount > 6
@@ -156,7 +160,7 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
         const _needsDocs = userMessage.split(/\s+/).length > 6
             || /file|note|doc|save|search|find|wrote|read|creat|upload|what.*said|remind/i.test(userMessage);
         const relevantDocs = _needsDocs
-            ? await getRelevantDocuments(userMessage).catch(e => { console.log("Voyage unavailable - using keyword search"); return pgSearchDocuments(userMessage.toLowerCase()).catch(() => []); })
+            ? await getRelevantDocuments(userMessage, humanId).catch(e => { console.log("Voyage unavailable - using keyword search"); return pgSearchDocuments(userMessage.toLowerCase(), humanId).catch(() => []); })
             : [];
         const docsText = relevantDocs.length
             ? relevantDocs.map((doc, index) => {
@@ -167,9 +171,9 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
 
         const _isConversational = userMessage.trim().split(/\s+/).length <= 3
             || /^(ok|okay|thanks|got it|yes|no|sure|alright|fine|perfect|great|nice|cool|cheers|brilliant|hi|hey|hello|sounds good|good|yep|nope|exactly|right|correct)[\s!?.]*$/i.test(userMessage.trim());
-        const selfCtx = _isConversational ? null : await fetchSelfContext();
+        const selfCtx = (_isConversational || !isMaster) ? null : await fetchSelfContext();
 
-        const _chatGatewayCtx = _isConversational ? null : await _chatGwPromise;
+        const _chatGatewayCtx = (_isConversational || !isMaster) ? null : await _chatGwPromise;
 
         const _chatCogDirective = _isConversational ? null
             : await require('../../lib/cognitive/chat-cognitive-layer').getDirective(userMessage, _chatGatewayCtx).catch(() => null);
@@ -245,7 +249,7 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
             _chatEnrichedCtx._executive_verdict = `[${(_execRole||'cso').toUpperCase()}] ${_chatExecVerdict.decision || ''}: ${(_chatExecVerdict.rationale||'').slice(0,200)}`;
         }
 
-        const prompt = buildPrompt(userMessage, memoryText, docsText, selfCtx, _chatEnrichedCtx);
+        const prompt = buildPrompt(userMessage, memoryText, docsText, selfCtx, _chatEnrichedCtx, isMaster);
 
         const { result: streamMsg } = await runtime.execute({
             client, model: HAIKU_MODEL, caller: 'chat_fallback', maxTokens: 500,
