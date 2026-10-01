@@ -34,12 +34,13 @@ async function _moodleLoadToken() {
 // Load token from DB on cold start (non-blocking)
 let _moodleBootDone = false;
 async function _moodleEnsureToken() {
-    if (process.env.MOODLE_TOKEN) return;
+    if (process.env.MOODLE_TOKEN && process.env.MOODLE_URL) return;
     if (_moodleBootDone) return;
     _moodleBootDone = true;
     const saved = await _moodleLoadToken();
-    if (saved?.token) process.env.MOODLE_TOKEN = saved.token;
+    if (saved?.token && !process.env.MOODLE_TOKEN) process.env.MOODLE_TOKEN = saved.token;
     if (saved?.url && !process.env.MOODLE_URL) process.env.MOODLE_URL = saved.url;
+    if (!process.env.MOODLE_URL) process.env.MOODLE_URL = 'https://moodle.bcu.ac.uk';
 }
 _moodleEnsureToken().catch(() => {});
 
@@ -76,8 +77,9 @@ router.post('/moodle/set-token', _auth, async (req, res) => {
     if (!token || typeof token !== 'string' || token.length < 10)
         return res.status(400).json({ ok: false, error: 'token required' });
 
+    if (!process.env.MOODLE_URL) process.env.MOODLE_URL = 'https://moodle.bcu.ac.uk';
     process.env.MOODLE_TOKEN = token.trim();
-    await _moodleSaveToken(token.trim(), process.env.MOODLE_URL || 'https://moodle.bcu.ac.uk');
+    await _moodleSaveToken(token.trim(), process.env.MOODLE_URL);
 
     const envPath = path.join(__dirname, '..', '.env');
     try {
