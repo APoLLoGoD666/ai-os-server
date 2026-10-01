@@ -15,83 +15,32 @@ const { pgLoadMemory } = require('../lib/supabase-helpers');
 
 const sb = getSupabaseClient;
 
-// ── Ensure apex_settings table exists ────────────────────────────────────────
-(async function _ensureSettingsTable() {
+// ── Token persistence via documents table (survives Render restarts) ─────────
+async function _moodleSaveToken(token, url) {
     try {
-        await sb().rpc('exec_sql', { query: `CREATE TABLE IF NOT EXISTS apex_settings (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMPTZ DEFAULT now())` });
-    } catch (_) {}
-})();
-
-// ── Supabase-backed token persistence (survives Render restarts) ──────────────
-async function _moodleSaveSetting(key, value) {
-    try {
-        await sb().from('apex_settings').upsert({ key, value }, { onConflict: 'key' });
+        await sb().from('documents').upsert(
+            { filename: '__moodle_token__', content: JSON.stringify({ token, url }), classification: 'system', summary: 'Moodle token' },
+            { onConflict: 'filename' }
+        );
     } catch (_) {}
 }
-async function _moodleLoadSetting(key) {
+async function _moodleLoadToken() {
     try {
-        const { data } = await sb().from('apex_settings').select('value').eq('key', key).single();
-        return data?.value || null;
+        const { data } = await sb().from('documents').select('content').eq('filename', '__moodle_token__').single();
+        if (!data?.content) return null;
+        return JSON.parse(data.content);
     } catch (_) { return null; }
 }
-// Simple XOR-based obfuscation using JWT_SECRET (keeps credentials off plain-text)
-function _obfuscate(text) {
-    const key = process.env.JWT_SECRET || 'apex';
-    return Buffer.from(text.split('').map((c, i) =>
-        c.charCodeAt(0) ^ key.charCodeAt(i % key.length)
-    )).toString('base64');
-}
-function _deobfuscate(b64) {
-    const key = process.env.JWT_SECRET || 'apex';
-    const buf = Buffer.from(b64, 'base64');
-    return buf.map((b, i) => b ^ key.charCodeAt(i % key.length)).toString();
-}
-
-// Re-authenticate using stored credentials, save new token
-async function _moodleAutoReauth() {
-    const base = (process.env.MOODLE_URL || await _moodleLoadSetting('moodle_url') || '').replace(/\/$/, '');
-    const credsB64 = await _moodleLoadSetting('moodle_credentials');
-    if (!base || !credsB64) return false;
-    try {
-        const { username, password } = JSON.parse(_deobfuscate(credsB64));
-        if (!username || !password) return false;
-        const qs = new URLSearchParams({ username, password, service: 'moodle_mobile_app' });
-        const token = await new Promise((resolve, reject) => {
-            const lib = base.startsWith('https') ? https : http;
-            lib.get(`${base}/login/token.php?${qs}`, r => {
-                let body = '';
-                r.on('data', c => body += c);
-                r.on('end', () => {
-                    try {
-                        const d = JSON.parse(body);
-                        d.token ? resolve(d.token) : reject(new Error(d.error || 'no token'));
-                    } catch (e) { reject(e); }
-                });
-            }).on('error', reject);
-        });
-        process.env.MOODLE_TOKEN = token;
-        process.env.MOODLE_URL   = base;
-        await _moodleSaveSetting('moodle_token', token);
-        await _moodleSaveSetting('moodle_url', base);
-        console.log('[Moodle] auto-reauth succeeded');
-        return true;
-    } catch (e) { console.warn('[Moodle] auto-reauth failed:', e.message); return false; }
-}
-
-// Warm process.env from DB if env var absent (runs once per startup)
+// Load token from DB on cold start (non-blocking)
 let _moodleBootDone = false;
 async function _moodleEnsureToken() {
     if (process.env.MOODLE_TOKEN) return;
     if (_moodleBootDone) return;
     _moodleBootDone = true;
-    const token = await _moodleLoadSetting('moodle_token');
-    if (token) { process.env.MOODLE_TOKEN = token; }
-    const url = await _moodleLoadSetting('moodle_url');
-    if (url && !process.env.MOODLE_URL) process.env.MOODLE_URL = url;
-    // If still no token, try auto-reauth with stored credentials
-    if (!process.env.MOODLE_TOKEN) await _moodleAutoReauth();
+    const saved = await _moodleLoadToken();
+    if (saved?.token) process.env.MOODLE_TOKEN = saved.token;
+    if (saved?.url && !process.env.MOODLE_URL) process.env.MOODLE_URL = saved.url;
 }
-// Kick off at load time (non-blocking)
 _moodleEnsureToken().catch(() => {});
 
 // ── Moodle REST helper ────────────────────────────────────────────────────────
@@ -128,7 +77,7 @@ router.post('/moodle/set-token', _auth, async (req, res) => {
         return res.status(400).json({ ok: false, error: 'token required' });
 
     process.env.MOODLE_TOKEN = token.trim();
-    await _moodleSaveSetting('moodle_token', token.trim());
+    await _moodleSaveToken(token.trim(), process.env.MOODLE_URL || 'https://moodle.bcu.ac.uk');
 
     const envPath = path.join(__dirname, '..', '.env');
     try {
@@ -170,13 +119,10 @@ router.post('/moodle/authenticate', _auth, async (req, res) => {
         if (data.error) return res.status(401).json({ ok: false, error: data.error });
         if (!data.token) return res.status(500).json({ ok: false, error: 'No token returned' });
 
-        // Hot-patch running process + persist to Supabase (survives Render restarts)
+        // Hot-patch running process + persist to documents table (survives Render restarts)
         process.env.MOODLE_TOKEN = data.token;
         process.env.MOODLE_URL   = base;
-        await _moodleSaveSetting('moodle_token', data.token);
-        await _moodleSaveSetting('moodle_url', base);
-        // Save obfuscated credentials for auto-reauth on future restarts
-        await _moodleSaveSetting('moodle_credentials', _obfuscate(JSON.stringify({ username, password })));
+        await _moodleSaveToken(data.token, base);
 
         // Persist to .env file so it survives local restarts
         const envPath = path.join(__dirname, '..', '.env');

@@ -21585,42 +21585,13 @@ function renderRevisionReport(report, weekName, weekNum, files, color) {
     return h + '</div>';
 }
 
-function _uniShowAuthForm() {
-    var content = document.getElementById('uni-content');
-    if (!content) return;
-    content.innerHTML = '<div style="max-width:360px;margin:40px auto;padding:24px;background:var(--surface-2,#1e1e1e);border:1px solid var(--border,#333);border-radius:12px">'
-        + '<div style="font:600 13px/1 var(--font-mono,monospace);color:var(--text,#e8e8e8);margin-bottom:4px">CONNECT MOODLE</div>'
-        + '<div style="font-size:11px;color:var(--text-mute,#888);margin-bottom:20px">BCU credentials — not stored, used only to fetch a token</div>'
-        + '<input id="uni-auth-user" placeholder="BCU username" style="width:100%;box-sizing:border-box;padding:9px 12px;background:var(--surface,#161616);border:1px solid var(--border,#333);border-radius:6px;color:var(--text,#e8e8e8);font-size:13px;margin-bottom:10px">'
-        + '<input id="uni-auth-pass" type="password" placeholder="Password" style="width:100%;box-sizing:border-box;padding:9px 12px;background:var(--surface,#161616);border:1px solid var(--border,#333);border-radius:6px;color:var(--text,#e8e8e8);font-size:13px;margin-bottom:14px">'
-        + '<button onclick="uniMoodleAuth()" style="width:100%;padding:9px;background:var(--color-accent,#7c6cf2);border:none;border-radius:6px;color:#fff;font:600 12px/1 var(--font-mono,monospace);cursor:pointer;letter-spacing:0.08em">AUTHENTICATE</button>'
-        + '<div id="uni-auth-err" style="margin-top:10px;font-size:11px;color:var(--color-error,#ef4444);display:none"></div>'
-        + '</div>';
-}
-
-function uniMoodleAuth() {
-    var u = (document.getElementById('uni-auth-user') || {}).value || '';
-    var p = (document.getElementById('uni-auth-pass') || {}).value || '';
-    var errEl = document.getElementById('uni-auth-err');
-    if (!u || !p) { if (errEl) { errEl.textContent = 'Enter username and password.'; errEl.style.display = ''; } return; }
-    fetch('/api/moodle/authenticate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ username: u, password: p }) })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-            if (!d.ok) { if (errEl) { errEl.textContent = d.error || 'Authentication failed.'; errEl.style.display = ''; } return; }
-            loadUniDashboard();
-        })
-        .catch(function() { if (errEl) { errEl.textContent = 'Network error.'; errEl.style.display = ''; } });
-}
-window.uniMoodleAuth = uniMoodleAuth;
-
 function loadUniDashboard() {
     var l0 = document.getElementById('university-l0-summary');
     fetch('/api/moodle/dashboard', { credentials: 'same-origin' })
         .then(function(r) { return r.json(); })
         .then(function(d) {
             if (!d.ok) {
-                if (l0) l0.textContent = 'Could not load BCU data — re-authenticate below.';
-                _uniShowAuthForm();
+                if (l0) l0.textContent = 'BCU connection unavailable — check Moodle token in Settings.';
                 return;
             }
             _uniData = d;
