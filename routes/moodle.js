@@ -15,8 +15,42 @@ const { pgLoadMemory } = require('../lib/supabase-helpers');
 
 const sb = getSupabaseClient;
 
+// ── Ensure apex_settings table exists ────────────────────────────────────────
+(async function _ensureSettingsTable() {
+    try {
+        await sb().rpc('exec_sql', { query: `CREATE TABLE IF NOT EXISTS apex_settings (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMPTZ DEFAULT now())` });
+    } catch (_) {}
+})();
+
+// ── Supabase-backed token persistence (survives Render restarts) ──────────────
+async function _moodleSaveSetting(key, value) {
+    try {
+        await sb().from('apex_settings').upsert({ key, value }, { onConflict: 'key' });
+    } catch (_) {}
+}
+async function _moodleLoadSetting(key) {
+    try {
+        const { data } = await sb().from('apex_settings').select('value').eq('key', key).single();
+        return data?.value || null;
+    } catch (_) { return null; }
+}
+// Warm process.env from DB if env var absent (runs once per startup)
+let _moodleBootDone = false;
+async function _moodleEnsureToken() {
+    if (process.env.MOODLE_TOKEN) return;
+    if (_moodleBootDone) return;
+    _moodleBootDone = true;
+    const token = await _moodleLoadSetting('moodle_token');
+    if (token) process.env.MOODLE_TOKEN = token;
+    const url = await _moodleLoadSetting('moodle_url');
+    if (url && !process.env.MOODLE_URL) process.env.MOODLE_URL = url;
+}
+// Kick off at load time (non-blocking)
+_moodleEnsureToken().catch(() => {});
+
 // ── Moodle REST helper ────────────────────────────────────────────────────────
-function moodleCall(wsfunction, params = {}) {
+async function moodleCall(wsfunction, params = {}) {
+    await _moodleEnsureToken();
     return new Promise((resolve, reject) => {
         const base  = (process.env.MOODLE_URL || '').replace(/\/$/, '');
         const token = process.env.MOODLE_TOKEN || '';
@@ -48,6 +82,7 @@ router.post('/moodle/set-token', _auth, async (req, res) => {
         return res.status(400).json({ ok: false, error: 'token required' });
 
     process.env.MOODLE_TOKEN = token.trim();
+    await _moodleSaveSetting('moodle_token', token.trim());
 
     const envPath = path.join(__dirname, '..', '.env');
     try {
@@ -89,8 +124,10 @@ router.post('/moodle/authenticate', _auth, async (req, res) => {
         if (data.error) return res.status(401).json({ ok: false, error: data.error });
         if (!data.token) return res.status(500).json({ ok: false, error: 'No token returned' });
 
-        // Hot-patch running process
+        // Hot-patch running process + persist to Supabase (survives Render restarts)
         process.env.MOODLE_TOKEN = data.token;
+        await _moodleSaveSetting('moodle_token', data.token);
+        await _moodleSaveSetting('moodle_url', base);
 
         // Persist to .env file so it survives local restarts
         const envPath = path.join(__dirname, '..', '.env');
