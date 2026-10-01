@@ -263,18 +263,28 @@ router.get('/finance/monthly-summary', _auth, async (req, res) => {
         const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const prevMonthStr = prevDate.toISOString().slice(0, 7);
         const cutoff = prevDate.toISOString().split('T')[0];
-        let q = sb().from('transactions').select('amount,type,date').gte('date', cutoff);
+        // For history: go back 6 months
+        const historyCutoff = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0];
+        let q = sb().from('transactions').select('amount,type,date').gte('date', historyCutoff);
         if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
         const { data, error } = await q;
         if (error) return res.status(500).json({ ok: false, error: error.message });
         const months = { [thisMonthStr]: { income: 0, expenses: 0 }, [prevMonthStr]: { income: 0, expenses: 0 } };
+        const allMonths = {};
         for (const t of data || []) {
             const m = t.date.slice(0, 7);
-            if (!months[m]) continue;
-            if (t.type === 'income') months[m].income += Number(t.amount);
-            else months[m].expenses += Number(t.amount);
+            if (months[m] !== undefined) {
+                if (t.type === 'income') months[m].income += Number(t.amount);
+                else months[m].expenses += Number(t.amount);
+            }
+            if (!allMonths[m]) allMonths[m] = { income: 0, expenses: 0 };
+            if (t.type === 'income') allMonths[m].income += Number(t.amount);
+            else allMonths[m].expenses += Number(t.amount);
         }
-        res.json({ ok: true, current: { month: thisMonthStr, ...months[thisMonthStr] }, previous: { month: prevMonthStr, ...months[prevMonthStr] } });
+        const history = Object.entries(allMonths)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([month, v]) => ({ month, income: v.income, expenses: v.expenses, net: v.income - v.expenses }));
+        res.json({ ok: true, current: { month: thisMonthStr, ...months[thisMonthStr] }, previous: { month: prevMonthStr, ...months[prevMonthStr] }, history });
     } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
@@ -328,6 +338,17 @@ router.get('/finance/crypto/wallet', _auth, async (req, res) => {
             fetched_at: new Date().toISOString(),
         });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/net-worth-history', _auth, async (req, res) => {
+    try {
+        const { data, error } = await sb().from('apex_net_worth_snapshot')
+            .select('assets_gbp,net_worth_gbp,snapped_at')
+            .order('snapped_at', { ascending: true })
+            .limit(12);
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, snapshots: data || [] });
+    } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 module.exports = router;
