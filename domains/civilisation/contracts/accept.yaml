@@ -1,0 +1,33 @@
+domain: DOM-000001
+events:
+  - name: ENTITY_CREATED
+    from: DOM-000003
+    handler: src/handlers/entity-created.js
+
+  - name: ENTITY_UPDATED
+    from: DOM-000003
+    handler: src/handlers/entity-updated.js
+
+  - name: EDGE_ADDED
+    from: DOM-000003
+    handler: src/handlers/edge-added.js
+
+  - name: AGENT_ACTIVATED
+    from: DOM-000007
+    handler: src/handlers/agent-activated.js
+
+  - name: AGENT_COMPLETED
+    from: DOM-000002
+    handler: src/handlers/agent-completed.js
+
+  - name: DOMAIN_HEALTH_CHANGED
+    from: DOM-000006
+    handler: src/handlers/domain-health-changed.js
+
+  - name: GOVERNANCE_VIOLATION
+    from: DOM-000003
+    handler: src/handlers/governance-violation.js
+
+  - name: FITNESS_CHECK_FAILED
+    from: DOM-000006
+    handler: src/handlers/fitness-check-failed.js

@@ -1,0 +1,14 @@
+id: LAW-001
+name: Impact Before Deletion
+description: >
+  No entity may be removed from the Registry without first running an impact
+  analysis. If the blast radius total exceeds 10 affected entities, explicit
+  approval is required before deletion proceeds.
+category: integrity
+enforcement: blocking
+condition:
+  operation: entity.delete
+  threshold:
+    blast_radius_total: 10
+remedy: Run Registry.impact(entityId) and obtain approval if blast_radius.total >= 10.
+severity: CRITICAL

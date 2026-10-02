@@ -1,0 +1,37 @@
+id: DOM-000009
+name: Development
+criticality: HIGH
+autonomy_level: 1
+
+description: >
+  Git, CI/CD, testing, code review, deployment, migrations, certifications.
+  Governs how the civilisation evolves its own codebase safely.
+
+invariants:
+  - property: status
+    must_be: ACTIVE
+    violation: degraded
+
+  - property: owner
+    must_be_set: true
+    violation: advisory
+
+  - property: health_score
+    minimum: 50
+    consecutive_readings: 3
+    violation: quarantine
+
+vital_connections:
+  - DOM-000003   # Registry — governed by registry constraints
+  - DOM-000005   # Infrastructure — deploys to infra
+
+ancestors:
+  - DOM-000001
+
+healing_domain: DOM-000005
+
+governed_domains:
+  - DOM-000010   # Experiments graduate through Development
+
+clock_baseline_ticks_per_hour: 12
+prediction_accuracy_target: 0.80

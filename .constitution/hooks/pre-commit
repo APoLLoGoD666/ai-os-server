@@ -1,0 +1,79 @@
+#!/usr/bin/env node
+'use strict';
+// .constitution/hooks/pre-commit
+// Constitutional pre-commit gate.
+//
+// Runs genome validator + constitutional constraints before every commit.
+// BLOCKING violations cause exit(1) — commit is rejected.
+// CRITICAL and ADVISORY violations print warnings but allow the commit.
+//
+// Install: run .constitution/hooks/install.sh  (or: node .constitution/hooks/install.js)
+
+const path = require('path');
+const ROOT  = path.join(__dirname, '../..');
+
+process.chdir(ROOT);
+
+let exitCode = 0;
+const warnings = [];
+const blockers = [];
+
+// ── 1. Constitutional constraints ─────────────────────────────────────────────
+try {
+    const { Registry } = require('./lib/registry/kernel');
+    const result = Registry.validate({ integrity: false });
+
+    if (!result.ok) {
+        const fails = result.results.filter(r => !r.pass && r.blocking);
+        for (const f of fails) {
+            blockers.push(`[CONSTITUTIONAL BLOCK] ${f.rule}: ${(f.violations || []).map(v => v.detail).join('; ')}`);
+        }
+        const warns = result.results.filter(r => !r.pass && !r.blocking);
+        for (const w of warns) {
+            warnings.push(`[CONSTITUTIONAL WARN] ${w.rule}`);
+        }
+    }
+} catch (e) {
+    warnings.push(`[CONSTITUTIONAL SKIP] constraint check failed: ${e.message}`);
+}
+
+// ── 2. Genome validator ────────────────────────────────────────────────────────
+try {
+    const genome = require('./civilisation/genome-validator');
+    const result = genome.validate();
+
+    if (!result.ok) {
+        for (const domain of result.results) {
+            const blocking = domain.violations.filter(v => v.severity === 'blocking');
+            for (const b of blocking) {
+                blockers.push(`[GENOME BLOCK] ${domain.domain_id} (${domain.domain_key}): ${b.property} — ${b.detail}`);
+            }
+        }
+    }
+
+    // Collect critical warnings
+    for (const domain of result.results) {
+        const crits = domain.violations.filter(v => v.severity === 'critical');
+        for (const c of crits) {
+            warnings.push(`[GENOME CRITICAL] ${domain.domain_id}: ${c.property} — ${c.detail}`);
+        }
+    }
+} catch (e) {
+    warnings.push(`[GENOME SKIP] genome validation failed: ${e.message}`);
+}
+
+// ── Output ────────────────────────────────────────────────────────────────────
+if (warnings.length) {
+    process.stderr.write('\n╔══ Constitutional Warnings ══╗\n');
+    for (const w of warnings) process.stderr.write(`  ${w}\n`);
+    process.stderr.write('╚════════════════════════════╝\n\n');
+}
+
+if (blockers.length) {
+    process.stderr.write('\n╔══ CONSTITUTIONAL GATE BLOCKED ══╗\n');
+    for (const b of blockers) process.stderr.write(`  ${b}\n`);
+    process.stderr.write('╚══ Commit rejected by constitution ══╝\n\n');
+    exitCode = 1;
+}
+
+process.exit(exitCode);

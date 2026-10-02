@@ -1,0 +1,183 @@
+{
+  "suite": "V-11-B",
+  "date": "2026-08-31T23:09:45.591Z",
+  "pass": 29,
+  "fail": 0,
+  "total": 29,
+  "results": [
+    {
+      "id": "A-1",
+      "desc": "Role badge = MASTER",
+      "status": "PASS",
+      "detail": "MASTER"
+    },
+    {
+      "id": "A-2",
+      "desc": "body.apex-role-master present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "A-3",
+      "desc": "body.apex-role-unknown absent",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B-1",
+      "desc": "Role badge = USER",
+      "status": "PASS",
+      "detail": "USER"
+    },
+    {
+      "id": "B-2",
+      "desc": "body.apex-role-user present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B-3",
+      "desc": "body.apex-role-master absent",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "B-4",
+      "desc": "body.apex-role-unknown absent",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "C-1",
+      "desc": "apex-role-unknown NOT stuck after boot",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "D-1",
+      "desc": "setState ready renders html",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "E-1",
+      "desc": "setState empty renders apex-empty",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "F-1",
+      "desc": "setState stale renders apex-stale-since",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "G-1",
+      "desc": "setState failed renders error + retry button",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "H-1",
+      "desc": "setState offline renders error block",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "I-1",
+      "desc": "setState forbidden renders empty-like block with message",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "J-1",
+      "desc": "setState loading renders loading dot",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "K-1",
+      "desc": "_parseApiError reads .error field",
+      "status": "PASS",
+      "detail": "Something failed"
+    },
+    {
+      "id": "L-1",
+      "desc": "_parseApiError reads .reply field",
+      "status": "PASS",
+      "detail": "Reply message"
+    },
+    {
+      "id": "M-1",
+      "desc": "_timeAgo formats seconds correctly",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "N-1",
+      "desc": "#apex-conn-indicator present in DOM",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "N-2",
+      "desc": "conn-offline class + OFFLINE text when offline",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "N-3",
+      "desc": "text cleared when state = live",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "O-1",
+      "desc": "panelError renders apex-panel-error (not legacy panel-error)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "P-1",
+      "desc": "window._panelStates is a Map",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "Q-1",
+      "desc": "_PANEL_TTLS.finance = 300000 and _default = 300000",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "R-1",
+      "desc": "All 6 V-11 nav group labels present",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "S-1",
+      "desc": "#nav-agents hidden for user role",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "S-2",
+      "desc": "#nav-approvals hidden for user role",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "T-desktop",
+      "desc": "No horizontal overflow at desktop (1280px)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "T-mobile",
+      "desc": "No horizontal overflow at mobile (390px)",
+      "status": "PASS",
+      "detail": ""
+    }
+  ]
+}

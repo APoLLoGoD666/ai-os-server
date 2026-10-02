@@ -129,4 +129,4 @@
 (none)
 
 ## Completed
-(none)
+- [x] FEAT-H009: Workout logging with voice

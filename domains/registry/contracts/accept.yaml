@@ -1,0 +1,4 @@
+domain: DOM-000003
+events: []
+# Registry is the source of truth. It produces events, it does not consume them.
+# All other domains consume from Registry, not the reverse.

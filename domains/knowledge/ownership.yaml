@@ -1,0 +1,23 @@
+domain: Knowledge
+domain_id: DOM-000008
+capability: knowledge-graph
+runtime: lib/knowledge/
+criticality: MEDIUM
+owner: Knowledge Agent
+
+entity_id: DOM-000008
+
+dependencies:
+  - DOM-000003   # Registry — indexed in registry graph
+  - DOM-000004   # Memory — stored in memory
+
+consumers:
+  - DOM-000002   # Intelligence queries knowledge
+
+events_emitted:
+  - ENTITY_CREATED
+  - EDGE_ADDED
+
+events_consumed:
+  - AGENT_COMPLETED
+  - MIGRATION_ADDED
