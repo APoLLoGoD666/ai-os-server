@@ -282,7 +282,7 @@ app.use('/api', ...kernelChain);
 const _skipLocalhost = (req) => { const ip = req.ip || ''; return ip === '::1' || ip === '127.0.0.1' || ip.startsWith('::ffff:127.'); };
 const { _rlHandler } = require('./middleware/rate-limiting');
 const chatLimiter    = rateLimit({ windowMs: 60000,            max: 30,  skip: _skipLocalhost, handler: _rlHandler('Too many requests — slow down.') });
-const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000,  max: 300, skip: _skipLocalhost, standardHeaders: true, legacyHeaders: false, handler: _rlHandler('Too many requests — try again later.') });
+const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000,  max: 2000, skip: _skipLocalhost, standardHeaders: true, legacyHeaders: false, handler: _rlHandler('Too many requests — try again later.') });
 const voiceLimiter   = rateLimit({ windowMs: 60 * 1000,        max: 40,  standardHeaders: true, legacyHeaders: false, handler: _rlHandler('Voice chat rate limit reached — slow down.') });
 const authLimiter    = rateLimit({ windowMs: 60 * 60 * 1000,   max: 10,  standardHeaders: true, legacyHeaders: false, handler: _rlHandler('Too many login attempts — try again later.') });
 app.use("/chat",         chatLimiter);

@@ -22003,7 +22003,8 @@ document.addEventListener('click', function(e) {
     .then(function(d){
         clearInterval(dotTimer);
         if (!d.ok) {
-            expandEl.innerHTML = '<div class="uni-revision-report" style="--mod-color:' + color + '"><div class="urr-loading" style="color:var(--color-error,#ef4444)">' + escapeHtml(d.error || 'Could not generate report') + '</div></div>';
+            var errMsg = d.error === 'RATE_LIMITED' ? 'Too many requests — wait a moment, then click the week again.' : escapeHtml(d.error || 'Could not generate report');
+            expandEl.innerHTML = '<div class="uni-revision-report" style="--mod-color:' + color + '"><div class="urr-loading" style="color:var(--color-error,#ef4444)">' + errMsg + '</div></div>';
             return;
         }
         expandEl.innerHTML = renderRevisionReport(d.report, d.weekName, weekNum, d.files||[], color);
