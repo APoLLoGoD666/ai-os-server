@@ -4,6 +4,7 @@ if (process.env.GMAIL_ENABLED !== 'true') {
     module.exports = {
         checkEmails:    async () => ({ count: 0, disabled: true, message: 'Gmail disabled — refresh OAuth tokens then set GMAIL_ENABLED=true' }),
         sendEmailReply: async () => { throw new Error('Gmail disabled — set GMAIL_ENABLED=true after running node get_gmail_token.js'); },
+        sendNewEmail:   async () => { throw new Error('Gmail disabled — set GMAIL_ENABLED=true after running node get_gmail_token.js'); },
         initEmailAgent: async () => {},
         isDisabled:     true,
     };
@@ -203,6 +204,32 @@ async function checkEmails() {
     }
 }
 
+async function sendNewEmail(to, subject, body) {
+    const gmail = await getGmailClient();
+    if (!gmail) throw new Error("Gmail not configured.");
+
+    const raw = [
+        `To: ${to}`,
+        `Subject: ${subject}`,
+        `Content-Type: text/plain; charset=utf-8`,
+        "",
+        body
+    ].join("\r\n");
+
+    const encoded = Buffer.from(raw).toString("base64")
+        .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+    try {
+        await gmail.users.messages.send({ userId: "me", requestBody: { raw: encoded } });
+    } catch (error) {
+        if (/invalid_grant/i.test(error.message)) {
+            console.error("[Gmail] OAuth refresh failed — re-authorisation required");
+            await pgClearGmailToken().catch(() => {});
+        }
+        throw error;
+    }
+}
+
 async function sendEmailReply(gmailId, to, subject, replyText) {
     const gmail = await getGmailClient();
     if (!gmail) throw new Error("Gmail not configured.");
@@ -247,5 +274,5 @@ async function initEmailAgent() {
     setInterval(() => checkEmails(), 5 * 60 * 1000);
 }
 
-module.exports = { checkEmails, sendEmailReply, initEmailAgent };
+module.exports = { checkEmails, sendEmailReply, sendNewEmail, initEmailAgent };
 }

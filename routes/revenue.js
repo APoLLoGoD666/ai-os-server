@@ -191,4 +191,23 @@ router.get('/revenue/summary', _auth, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// ── Manual triggers (run any job on demand) ───────────────────────────────────
+
+const _JOBS = {
+    etsy:     () => require('../lib/revenue-engine').runEtsyWeekly(),
+    ads:      () => require('../lib/revenue-engine').runAdsWeekly(),
+    outreach: () => require('../lib/revenue-engine').runOutreachDaily(),
+    followup: () => require('../lib/revenue-engine').runFollowUpDaily(),
+    report:   () => require('../lib/revenue-engine').runWeeklyReport(),
+};
+
+router.post('/revenue/run/:job', _auth, async (req, res) => {
+    const fn = _JOBS[req.params.job];
+    if (!fn) return res.status(404).json({ ok: false, error: `unknown job: ${req.params.job}. Valid: ${Object.keys(_JOBS).join(', ')}` });
+    try {
+        const result = await fn();
+        res.json({ ok: true, job: req.params.job, result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 module.exports = router;
