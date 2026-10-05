@@ -67,4 +67,26 @@ router.get('/agent-task/:id', requireAppAccess, async (req, res) => {
     }
 });
 
+// Bulk-cancel tasks by status (master only). Used to clear stale awaiting_approval tasks.
+// POST /agent-tasks/bulk-cancel?status=awaiting_approval&older_than_days=0
+router.post('/agent-tasks/bulk-cancel', requireAppAccess, async (req, res) => {
+    try {
+        const identity = req.identity || {};
+        if (identity.role !== 'master') return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
+        const status    = req.query.status || 'awaiting_approval';
+        const olderDays = parseInt(req.query.older_than_days, 10) || 0;
+        let q = sbAdmin.from('agent_tasks').update({ status: 'cancelled' }).eq('status', status);
+        if (olderDays > 0) {
+            const cutoff = new Date(Date.now() - olderDays * 86400000).toISOString();
+            q = q.lt('created_at', cutoff);
+        }
+        const { data, error } = await q.select('id');
+        if (error) throw error;
+        res.json({ ok: true, cancelled: (data || []).length });
+    } catch (error) {
+        console.error('BULK CANCEL ERROR:', error);
+        res.status(500).json({ ok: false, error: error.message });
+    }
+});
+
 module.exports = router;

@@ -31788,6 +31788,21 @@ window.apexFileDropHandler = function(e){
 /* ── Last-updated footer ── */
 .kg-last-updated { position:absolute; bottom:8px; right:12px; font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.32); pointer-events:none; z-index:3; }
 
+/* ── Command centre responsive ── */
+@media (max-width: 900px) {
+  .cmd-stats        { grid-template-columns: repeat(2,1fr); }
+  .cmd-council-grid { grid-template-columns: repeat(2,1fr); }
+  .cmd-director-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 560px) {
+  .cmd-stats        { grid-template-columns: repeat(2,1fr); gap:6px; }
+  .cmd-council-grid { grid-template-columns: repeat(2,1fr); gap:4px; }
+  .cmd-director-grid { grid-template-columns: 1fr; }
+  .cmd-agents-grid  { grid-template-columns: repeat(auto-fill,minmax(100px,1fr)); }
+  .cmd-dispatch-row { flex-wrap:wrap; }
+  .cmd-dispatch-btn { width:100%; }
+}
+
 /* ── Loading skeleton ── */
 .kg-loading { display:flex; align-items:center; justify-content:center; gap:8px; height:80px; font:500 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; text-transform:uppercase; }
 .kg-loading::before { content:''; width:8px; height:8px; border-radius:50%; border:1px solid #7c6cf2; border-top-color:transparent; animation:kg-spin 0.8s linear infinite; }
@@ -35945,6 +35960,7 @@ window.apexFileDropHandler = function(e){
 
     // ── Civilisation view toggle ─────────────────────────────────────────────
     var _civView = 'org';
+    var _civRenderBusy = false;
     window._civSetView = function(v) {
         _civView = v;
         var pipeline = document.getElementById('kg-pipeline');
@@ -35971,8 +35987,10 @@ window.apexFileDropHandler = function(e){
     };
 
     function _loadCommandCentre() {
+        if (_civRenderBusy) return;
+        _civRenderBusy = true;
         var el = document.getElementById('civ-org-chart');
-        if (!el) return;
+        if (!el) { _civRenderBusy = false; return; }
         el.innerHTML = '<div class="civ-loading">LOADING APEX COMMAND CENTRE...</div>';
         fetch('/api/civilization/hierarchy', { headers: _h() })
             .then(function(r) { return r.json(); })
@@ -36030,11 +36048,13 @@ window.apexFileDropHandler = function(e){
                     html += '</div></div>';
                 }
                 el.innerHTML = html;
+                _civRenderBusy = false;
                 var inp2 = document.getElementById('cmd-dispatch-input');
                 if (inp2) inp2.addEventListener('keydown', function(e) { if (e.key==='Enter') window._civDispatch(); });
                 _renderCommandPanels();
             })
             .catch(function() {
+                _civRenderBusy = false;
                 var el2 = document.getElementById('civ-org-chart');
                 if (el2) el2.innerHTML = '<div class="civ-loading">FAILED TO LOAD COMMAND CENTRE</div>';
             });
@@ -36059,7 +36079,10 @@ window.apexFileDropHandler = function(e){
             if (!approvals.length) {
                 leftBody.innerHTML = '<div class="cmd-no-approvals">NO PENDING APPROVALS<br><br>ALL CLEAR</div>';
             } else {
-                var lh = '';
+                var lh = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+                    '<span style="font-size:11px;color:rgba(255,255,255,0.4)">' + approvals.length + ' PENDING</span>' +
+                    '<button onclick="window._civClearStale()" style="font-size:10px;padding:2px 8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;border-radius:4px;cursor:pointer;letter-spacing:.05em" aria-label="Cancel all stale approvals">CLEAR STALE</button>' +
+                    '</div>';
                 approvals.forEach(function(t) {
                     lh += '<div class="cmd-approval-item"><div class="cmd-approval-title">' + _esc(t.description||t.title||'Task') + '</div>';
                     lh += '<div class="cmd-approval-meta">' + _esc(t.agent_id||'') + (t.agent_id?' · ':'') + _ago(t.created_at) + '</div></div>';
@@ -36068,6 +36091,18 @@ window.apexFileDropHandler = function(e){
             }
         }
     }
+
+    window._civClearStale = function() {
+        if (!confirm('Cancel all ' + (_liveTasks.filter(function(t){return t.status==='awaiting_approval'||t.status==='approval_required';}).length) + ' stale approval tasks?')) return;
+        fetch('/agent-tasks/bulk-cancel?status=awaiting_approval', { method:'POST', headers: _h() })
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                if (d.ok) {
+                    _liveTasks = _liveTasks.filter(function(t){ return t.status!=='awaiting_approval'&&t.status!=='approval_required'; });
+                    _renderCommandPanels();
+                }
+            }).catch(function(){});
+    };
 
     window._civDispatch = function() {
         var inp = document.getElementById('cmd-dispatch-input');
@@ -36112,7 +36147,11 @@ window.apexFileDropHandler = function(e){
         // If civilisation view is active: full render on first load, lightweight refresh thereafter
         if (_civView === 'org') {
             var _civEl = document.getElementById('civ-org-chart');
-            if (!_civEl || !_civEl.querySelector('.cmd-header')) { _loadCommandCentre(); } else { _renderCommandPanels(); }
+            if (!_civEl || !_civEl.querySelector('.cmd-header')) {
+                if (!_civRenderBusy) _loadCommandCentre();
+            } else {
+                _renderCommandPanels();
+            }
         }
         var body = document.getElementById('kg-right-body');
         var leftBody = document.getElementById('kg-left-body');
