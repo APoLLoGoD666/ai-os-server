@@ -36164,7 +36164,7 @@ window.apexFileDropHandler = function(e){
             fetch('/api/tasks?limit=200&scope=all', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'tasks' }; }),
             fetch('/api/civilization/council/history?limit=30', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'council' }; }),
             fetch('/api/notifications', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'notifs' }; }),
-            fetch('/api/documents?limit=50', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'docs' }; }),
+            fetch('/documents?limit=50', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'docs' }; }),
         ]).then(function (res) {
             var errSrcs = [res[0],res[1],res[2]].filter(function(r){return r._err;}).map(function(r){return r._src;});
             var tsEl = document.getElementById('kg-last-updated');
