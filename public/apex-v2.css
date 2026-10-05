@@ -16,33 +16,33 @@
 
 :root {
   /* ── Surface ladder ─────────────────────────────────────────────── */
-  --bg:           #000000;
-  --bg-deep:      #000000;
-  --bg2:          #000000;
-  --glass:        rgba(255,255,255,0.022);
-  --glass2:       rgba(255,255,255,0.015);
+  --bg:           #f2f2f2;
+  --bg-deep:      #ebebeb;
+  --bg2:          #f2f2f2;
+  --glass:        rgba(0,0,0,0.04);
+  --glass2:       rgba(0,0,0,0.025);
 
-  --surface:      #0c0c0c;
-  --surface-1:    #0c0c0c;
-  --surface-2:    #131313;
-  --surface-3:    #1a1a1a;
-  --surface-ghost:rgba(255,255,255,0.018);
+  --surface:      #ffffff;
+  --surface-1:    #ffffff;
+  --surface-2:    #f8f8f8;
+  --surface-3:    #f2f2f2;
+  --surface-ghost:rgba(0,0,0,0.03);
 
   /* Local aliases */
-  --s1: #0c0c0c;
-  --s2: #131313;
-  --s3: #1a1a1a;
-  --s4: #222222;
+  --s1: #ffffff;
+  --s2: #f8f8f8;
+  --s3: #f2f2f2;
+  --s4: #e8e8e8;
 
   /* ── Borders ─────────────────────────────────────────────────────── */
-  --b0: rgba(255,255,255,0.048);   /* barely there */
-  --b1: rgba(255,255,255,0.085);   /* default */
-  --b2: rgba(255,255,255,0.130);   /* medium / focus-adjacent */
-  --b3: rgba(255,255,255,0.200);   /* emphasis */
+  --b0: rgba(0,0,0,0.06);   /* barely there */
+  --b1: rgba(0,0,0,0.10);   /* default */
+  --b2: rgba(0,0,0,0.16);   /* medium / focus-adjacent */
+  --b3: rgba(0,0,0,0.24);   /* emphasis */
 
-  --border:        rgba(255,255,255,0.085);
-  --border-dim:    rgba(255,255,255,0.048);
-  --border-strong: rgba(255,255,255,0.140);
+  --border:        rgba(0,0,0,0.10);
+  --border-dim:    rgba(0,0,0,0.06);
+  --border-strong: rgba(0,0,0,0.18);
 
   /* ── Structural accent — indigo ──────────────────────────────────── */
   --accent:       #6366f1;
@@ -90,17 +90,17 @@
   --agent-committer: #4ade80;
 
   /* ── Text ────────────────────────────────────────────────────────── */
-  --text:          #f4f4f5;
-  --text-mid:      #a1a1aa;
+  --text:          #18181b;
+  --text-mid:      #3f3f46;
   --text-mute:     #71717a;
-  --text-faint:    #3f3f46;
-  --muted:         #a1a1aa;
+  --text-faint:    #a1a1aa;
+  --muted:         #52525b;
   --muted2:        #71717a;
   --text-on-accent:#ffffff;
 
   /* ── Shadows — pop only, no ambient ─────────────────────────────── */
-  --shadow-panel: none;
-  --shadow-pop:   0 16px 48px rgba(0,0,0,0.92), 0 0 0 1px rgba(255,255,255,0.07);
+  --shadow-panel: 0 1px 4px rgba(0,0,0,0.08);
+  --shadow-pop:   0 16px 48px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06);
   --glow-cyan:    none;
   --glow-purple:  none;
   --glow-green:   none;
@@ -137,11 +137,11 @@
   --input-h:   52px;
 
   /* ── Command page local vars ─────────────────────────────────────── */
-  --cmd-hull-bord: rgba(255,255,255,0.075);
-  --cmd-hull-line: rgba(255,255,255,0.045);
-  --cmd-ice:       #f4f4f5;
-  --cmd-ice-dim:   rgba(244,244,245,0.72);
-  --cmd-ice-mute:  rgba(244,244,245,0.38);
+  --cmd-hull-bord: rgba(0,0,0,0.08);
+  --cmd-hull-line: rgba(0,0,0,0.05);
+  --cmd-ice:       #18181b;
+  --cmd-ice-dim:   rgba(24,24,27,0.72);
+  --cmd-ice-mute:  rgba(24,24,27,0.38);
   --cmd-cyan-hot:  #38bdf8;
   --cmd-cyan-glow: transparent;
   --cmd-mint-hot:  #34d399;
@@ -154,7 +154,7 @@
 ════════════════════════════════════════════════════════════════════════ */
 
 html, body {
-  background: #000000;
+  background: #f2f2f2;
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 13px;

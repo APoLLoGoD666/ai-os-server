@@ -6873,8 +6873,8 @@ textarea.ds-input {
 /* 30. ANIMATION */
 .ico-pulse { animation: none !important; }
 
-/* 31. OVERVIEW PAGE */
-#page-overview [style*="linear-gradient"] {
+/* 31. TODAY PAGE */
+#page-today [style*="linear-gradient"] {
   background: var(--ax-s1) !important;
   border-color: var(--ax-bd) !important;
 }
@@ -7998,7 +7998,7 @@ button,[role="button"],[onclick],.nav-btn,.ds-btn,a,label {
         -webkit-backdrop-filter: blur(20px) !important;
     }
     /* Hide sub-domain nav items on mobile (accessed via Domains/System hub pages).
-       nav-overview, nav-command, nav-actions, nav-domains, nav-system, nav-settings
+       nav-today, nav-command, nav-actions, nav-domains, nav-system, nav-settings
        are the 6 canonical tabs — all others hidden. */
     #nav-operation, #nav-finance,
     #nav-communication, #nav-business, #nav-health, #nav-university,
@@ -8698,7 +8698,7 @@ header.topbar { grid-area: topbar !important; }
 
     <!-- ══ SIDEBAR NAV ══ -->
     <nav class="bottom-nav" id="apexSideNav" role="tablist" aria-label="Page navigation">
-        <button class="nav-btn" id="nav-overview">
+        <button class="nav-btn" id="nav-today">
             <span class="nav-icon">◈</span>
             <span class="nav-label">Today</span>
         </button>
@@ -8710,7 +8710,7 @@ header.topbar { grid-area: topbar !important; }
             <span class="nav-icon">◎</span>
             <span class="nav-label">Briefing</span>
         </button>
-        <button class="nav-btn" id="nav-test" aria-label="Overview">
+        <button class="nav-btn" id="nav-overview" aria-label="Overview">
             <span class="nav-icon">◬</span>
             <span class="nav-label">Overview</span>
         </button>
@@ -10003,8 +10003,8 @@ header.topbar { grid-area: topbar !important; }
 
             </div>
 
-            <!-- ══ PAGE: OVERVIEW ══ -->
-            <div class="page" id="page-overview">
+            <!-- ══ PAGE: TODAY ══ -->
+            <div class="page" id="page-today">
                 <!-- APEX MIND — Live 3D System Visualization -->
 
                 <!-- Governance Pipeline -->
@@ -10564,7 +10564,7 @@ if(pipe){
                 <script>
                 /* APEX MIND v2 — Complete 44-Node System Topology */
                 (function(){
-                var page=document.getElementById('page-overview');
+                var page=document.getElementById('page-today');
                 if(!page)return;
                 var NW=122,NH=46;
                 var C={w:'#f3f7fb',b:'#5b9eff',g:'#3fd29a',gold:'#efb45a',p:'#7c6fff',pk:'#ec7fa3',s:'#8893a0',c:'#38bdf8',v:'#a78bfa'};
@@ -12377,7 +12377,7 @@ if(pipe){
                 </div>
                 <!-- Portal tab bar — shared across council / office / domain -->
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
+                    <button class="portal-tab" onclick="window.switchPage('overview')">OVERVIEW</button>
                     <button class="portal-tab" onclick="window.switchPage('intelligence')">INTEL</button>
                 </div>
                 <!-- Main layout: canvas + task panel -->
@@ -12459,7 +12459,7 @@ if(pipe){
                     </div>
                 </div>
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
+                    <button class="portal-tab" onclick="window.switchPage('overview')">OVERVIEW</button>
                     <button class="portal-tab" onclick="window.switchPage('intelligence')">INTEL</button>
                 </div>
                 <div class="ao-main">
@@ -13468,7 +13468,7 @@ if(pipe){
                     </div>
                 </div>
                 <div class="portal-tab-bar">
-                    <button class="portal-tab" onclick="window.switchPage('test')">OVERVIEW</button>
+                    <button class="portal-tab" onclick="window.switchPage('overview')">OVERVIEW</button>
                     <button class="portal-tab" onclick="window.switchPage('intelligence')">INTEL</button>
                 </div>
                 <div class="ec-main">
@@ -13670,8 +13670,8 @@ if(pipe){
     // V-11-F F-7: 'operation' removed (merged into business)
     // V-11-F F-9: civilisation/reality moved out of LIFE & WORK swipe sequence to end (SYSTEM → Advanced)
     // V-11-H H-18: 'agents' / 'approvals' / 'activity' consolidated into 'actions' (positioned after 'intelligence' per Section 32).
-    var pages = ['overview','domains', 'command', 'intel', 'test', 'system', 'finance', 'communication', 'business', 'store', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'domain-agents', 'portal', 'memory', 'council', 'governance', 'civilisation', 'reality', 'settings', 'tools'];
-    var activePage = 'overview';
+    var pages = ['today','domains', 'command', 'intel', 'overview', 'system', 'finance', 'communication', 'business', 'store', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'domain-agents', 'portal', 'memory', 'council', 'governance', 'civilisation', 'reality', 'settings', 'tools'];
+    var activePage = 'today';
 
     var pageMeta = {
         command:       { title:'Command',        sub:'AI · Interface · Control' },
@@ -13709,7 +13709,7 @@ if(pipe){
         // V-11-F F-3: Redirect Users away from Master-only pages (silent — do not leak existence)
         var masterOnlyPages = ['occult', 'civilisation', 'reality', 'university', 'governance'];
         if (masterOnlyPages.indexOf(name) !== -1 && document.body.classList.contains('apex-role-user')) {
-            name = 'overview';
+            name = 'today';
         }
         document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
         document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -18710,7 +18710,7 @@ async function initOverviewPage() {
     var _barEl = document.getElementById('td-day-bar'); if (_barEl) setTimeout(function(){ _barEl.style.width = _dayPct+'%'; }, 80);
     var _pctEl = document.getElementById('td-day-pct-label'); if (_pctEl) _pctEl.textContent = _dayPct+'%';
 
-    var pageEl = document.getElementById('page-overview');
+    var pageEl = document.getElementById('page-today');
     if (!pageEl || !pageEl.classList.contains('active')) return;
 
     var needsEl   = document.getElementById('today-needs-panel');
@@ -24154,7 +24154,7 @@ window.apexFileDropHandler = function(e){
     <div class="more-sheet-handle"></div>
     <div class="more-sheet-title">Pages</div>
     <div class="more-sheet-grid">
-        <button class="more-sheet-btn" id="more-nav-overview"      data-fn="moreNavTo" data-args='["overview"]'      aria-label="Overview"><span class="more-sheet-icon">◈</span><span class="more-sheet-label">Overview</span></button>
+        <button class="more-sheet-btn" id="more-nav-today"         data-fn="moreNavTo" data-args='["today"]'         aria-label="Today"><span class="more-sheet-icon">◈</span><span class="more-sheet-label">Today</span></button>
         <!-- V-11-F F-7: 'Operation' sheet entry removed; workflows live under Business & Work -->
         <button class="more-sheet-btn" id="more-nav-system"        data-fn="moreNavTo" data-args='["system"]'        aria-label="System"><span class="more-sheet-icon">◉</span><span class="more-sheet-label">System</span></button>
         <button class="more-sheet-btn" id="more-nav-finance"       data-fn="moreNavTo" data-args='["finance"]'       aria-label="Finance"><span class="more-sheet-icon">◎</span><span class="more-sheet-label">Finance</span></button>
@@ -31701,6 +31701,90 @@ window.apexFileDropHandler = function(e){
 .kgp-prov-open-btn { display:inline-flex; align-items:center; gap:5px; margin-top:14px; padding:8px 14px; border-radius:6px; border:1px solid rgba(124,108,242,0.35); background:rgba(124,108,242,0.08); font:700 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#a78bfa; cursor:pointer; transition:all 150ms; width:100%; justify-content:center; }
 .kgp-prov-open-btn:hover { background:rgba(124,108,242,0.18); border-color:rgba(124,108,242,0.6); }
 
+/* ══════════════════════════════════════════════════════════════════
+   APEX COMMAND CENTRE — full visual system
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── View toggle ── */
+.civ-view-toggle { position:absolute; top:10px; left:50%; transform:translateX(-50%); display:flex; gap:2px; z-index:10; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:4px; padding:2px; }
+.civ-vbtn { font:600 7.5px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:rgba(255,255,255,0.3); background:transparent; border:none; border-radius:2px; padding:5px 11px; cursor:pointer; transition:all 150ms; }
+.civ-vbtn.active { background:rgba(0,212,255,0.1); color:var(--ax-acc,#00d4ff); }
+.civ-vbtn:hover:not(.active) { color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.05); }
+
+/* ── Command centre container ── */
+.civ-org-chart { position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; padding:36px 20px 60px; }
+
+/* ── Header ── */
+.cmd-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.cmd-header-name { font:700 15px/1 'Inter',system-ui,sans-serif; color:#eef2ff; letter-spacing:-.01em; margin-bottom:6px; }
+.cmd-header-meta { display:flex; align-items:center; gap:6px; font:500 8px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.3); letter-spacing:.08em; }
+.cmd-live-dot { width:5px; height:5px; border-radius:50%; background:#22c55e; box-shadow:0 0 6px rgba(34,197,94,0.7); flex-shrink:0; animation:cmd-pulse 2s ease-in-out infinite; }
+.cmd-header-time { font:300 22px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.15); letter-spacing:-.02em; }
+@keyframes cmd-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+/* ── Stats row ── */
+.cmd-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:18px; }
+.cmd-stat { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:12px 14px; }
+.cmd-stat.cmd-stat-alert { border-color:rgba(251,191,36,0.2); background:rgba(251,191,36,0.03); }
+.cmd-stat-n { font:700 20px/1 'JetBrains Mono',monospace; color:var(--ax-acc,#00d4ff); margin-bottom:5px; }
+.cmd-stat.cmd-stat-alert .cmd-stat-n { color:#f59e0b; }
+.cmd-stat-l { font:500 7.5px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.28); letter-spacing:.1em; text-transform:uppercase; }
+
+/* ── Dispatch ── */
+.cmd-dispatch { background:rgba(0,212,255,0.03); border:1px solid rgba(0,212,255,0.12); border-radius:8px; padding:14px 16px; margin-bottom:22px; }
+.cmd-dispatch-label { font:700 7.5px/1 'JetBrains Mono',monospace; letter-spacing:.15em; color:rgba(0,212,255,0.5); text-transform:uppercase; margin-bottom:10px; }
+.cmd-dispatch-row { display:flex; gap:8px; }
+.cmd-dispatch-input { flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:4px; padding:9px 12px; font:400 11px/1 'Inter',system-ui,sans-serif; color:#eef2ff; outline:none; transition:border-color 150ms; min-width:0; }
+.cmd-dispatch-input:focus { border-color:rgba(0,212,255,0.35); background:rgba(0,212,255,0.03); }
+.cmd-dispatch-input::placeholder { color:rgba(255,255,255,0.18); }
+.cmd-dispatch-btn { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.25); border-radius:4px; padding:9px 16px; font:700 7.5px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:#00d4ff; cursor:pointer; transition:all 150ms; white-space:nowrap; flex-shrink:0; }
+.cmd-dispatch-btn:hover:not(:disabled) { background:rgba(0,212,255,0.18); border-color:rgba(0,212,255,0.45); }
+.cmd-dispatch-btn:disabled { opacity:.35; cursor:default; }
+.cmd-dispatch-result { margin-top:12px; padding:10px 12px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06); border-radius:4px; font:400 10px/1.6 'Inter',system-ui,sans-serif; color:rgba(255,255,255,0.65); display:none; max-height:180px; overflow-y:auto; }
+.cmd-dispatch-result.visible { display:block; }
+.cmd-dispatch-route { font:600 8px/1 'JetBrains Mono',monospace; color:rgba(0,212,255,0.7); letter-spacing:.06em; margin-bottom:8px; }
+
+/* ── Section headers ── */
+.cmd-section { margin-bottom:22px; }
+.cmd-section-hd { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:rgba(255,255,255,0.22); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.cmd-section-hd::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.05); }
+.cmd-section-count { color:rgba(255,255,255,0.35); font-weight:400; }
+
+/* ── Council tiles ── */
+.cmd-council-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.cmd-council-tile { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-top:2px solid var(--tile-color,#00d4ff); border-radius:0 0 5px 5px; padding:10px 11px 9px; cursor:pointer; transition:all 180ms; }
+.cmd-council-tile:hover { background:rgba(255,255,255,0.05); transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,0.3); }
+.cmd-council-role { font:700 7px/1 'JetBrains Mono',monospace; letter-spacing:.08em; color:var(--tile-color,#00d4ff); text-transform:uppercase; margin-bottom:5px; opacity:.8; }
+.cmd-council-name { font:500 9px/1.3 'Inter',system-ui,sans-serif; color:rgba(255,255,255,0.72); }
+.cmd-council-status { display:flex; align-items:center; gap:4px; margin-top:7px; }
+.cmd-council-dot { width:4px; height:4px; border-radius:50%; flex-shrink:0; }
+
+/* ── Director cards ── */
+.cmd-director-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+.cmd-director-card { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-left:2px solid var(--dir-color,#00d4ff); border-radius:0 5px 5px 0; padding:10px 12px; cursor:pointer; transition:all 180ms; }
+.cmd-director-card:hover { background:rgba(255,255,255,0.045); transform:translateX(1px); }
+.cmd-director-domain { font:700 7px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:var(--dir-color,#00d4ff); text-transform:uppercase; margin-bottom:4px; opacity:.85; }
+.cmd-director-name { font:500 10px/1.3 'Inter',system-ui,sans-serif; color:rgba(255,255,255,0.72); margin-bottom:4px; }
+.cmd-director-meta { font:400 7.5px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.28); }
+.cmd-director-tasks { display:inline-flex; align-items:center; gap:3px; margin-top:5px; font:700 8px/1 'JetBrains Mono',monospace; color:var(--dir-color); letter-spacing:.04em; }
+
+/* ── Office agent chips ── */
+.cmd-agents-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:4px; }
+.cmd-agent-chip { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:4px; padding:6px 8px; transition:all 130ms; cursor:pointer; }
+.cmd-agent-chip:hover { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1); }
+.cmd-agent-chip.is-active { border-color:rgba(34,197,94,0.28); background:rgba(34,197,94,0.04); }
+.cmd-agent-name { font:500 8.5px/1.3 'Inter',system-ui,sans-serif; color:rgba(255,255,255,0.6); }
+.cmd-agent-status { display:flex; align-items:center; gap:3px; margin-top:3px; font:400 7px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.2); }
+
+/* ── Left panel: Approvals ── */
+.cmd-approval-item { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; transition:background 130ms; }
+.cmd-approval-item:hover { background:rgba(255,255,255,0.03); }
+.cmd-approval-title { font:500 9.5px/1.4 'Inter',system-ui,sans-serif; color:rgba(255,255,255,0.7); margin-bottom:3px; }
+.cmd-approval-meta { font:400 7.5px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.22); }
+.cmd-no-approvals { padding:28px 16px; text-align:center; font:400 8px/1.6 'JetBrains Mono',monospace; color:rgba(255,255,255,0.18); letter-spacing:.08em; }
+
+/* ── Loading state ── */
+.civ-loading { display:flex; align-items:center; justify-content:center; height:100%; font:500 8.5px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.15); letter-spacing:.12em; }
 /* ── Last-updated footer ── */
 .kg-last-updated { position:absolute; bottom:8px; right:12px; font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.32); pointer-events:none; z-index:3; }
 
@@ -32873,11 +32957,11 @@ window.apexFileDropHandler = function(e){
 
     function _bootstrap() {
         var pw = document.getElementById('pageWrap');
-        if (!pw || document.getElementById('page-test')) return;
+        if (!pw || document.getElementById('page-overview')) return;
 
         var pg = document.createElement('div');
         pg.className = 'page';
-        pg.id = 'page-test';
+        pg.id = 'page-overview';
 
         pg.innerHTML =
             '<div class="kg-wrap">' +
@@ -32889,7 +32973,12 @@ window.apexFileDropHandler = function(e){
                 '</div>' +
                 '<div class="kg-canvas" id="kg-canvas" role="main" aria-label="Agent pipeline">' +
                     '<div class="kg-scan" aria-hidden="true"></div>' +
-                    '<div class="kg-pipeline" id="kg-pipeline" role="list" aria-label="Pipeline stages"></div>' +
+                    '<div class="civ-view-toggle" id="civ-view-toggle" role="group" aria-label="View selector">' +
+                        '<button class="civ-vbtn" id="civ-vbtn-pipeline" onclick="window._civSetView(\'pipeline\')" aria-pressed="false">PROCESS MAP</button>' +
+                        '<button class="civ-vbtn active" id="civ-vbtn-org" onclick="window._civSetView(\'org\')" aria-pressed="true">CIVILISATION</button>' +
+                    '</div>' +
+                    '<div class="kg-pipeline" id="kg-pipeline" style="display:none" role="list" aria-label="Pipeline stages"></div>' +
+                    '<div class="civ-org-chart" id="civ-org-chart" role="tree" aria-label="Civilisation hierarchy"></div>' +
                     '<div class="kg-last-updated" id="kg-last-updated" aria-live="polite" aria-atomic="true"></div>' +
                 '</div>' +
                 '<div class="kg-panel" id="kg-right" role="region" aria-label="Activity panel">' +
@@ -34557,7 +34646,7 @@ window.apexFileDropHandler = function(e){
 
         // ── Keyboard shortcuts ────────────────────────────────────────────────────
         document.addEventListener('keydown',function(e){
-            var pg=document.getElementById('page-test');
+            var pg=document.getElementById('page-overview');
             if(!pg||!pg.classList.contains('active')) return;
             if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
             if(e.key==='Escape'){
@@ -35854,14 +35943,182 @@ window.apexFileDropHandler = function(e){
         if (cls) n.classList.add(cls);
     }
 
+    // ── Civilisation view toggle ─────────────────────────────────────────────
+    var _civView = 'org';
+    window._civSetView = function(v) {
+        _civView = v;
+        var pipeline = document.getElementById('kg-pipeline');
+        var org      = document.getElementById('civ-org-chart');
+        var btnP     = document.getElementById('civ-vbtn-pipeline');
+        var btnO     = document.getElementById('civ-vbtn-org');
+        if (!pipeline || !org) return;
+        if (v === 'org') {
+            pipeline.style.display = 'none';
+            org.style.display = 'block';
+            if (btnP) { btnP.classList.remove('active'); btnP.setAttribute('aria-pressed','false'); }
+            if (btnO) { btnO.classList.add('active');    btnO.setAttribute('aria-pressed','true'); }
+            var _lt = document.getElementById('kg-left-title');
+            if (_lt) _lt.textContent = 'APPROVALS';
+            _loadCommandCentre();
+        } else {
+            pipeline.style.display = '';
+            org.style.display = 'none';
+            if (btnO) { btnO.classList.remove('active'); btnO.setAttribute('aria-pressed','false'); }
+            if (btnP) { btnP.classList.add('active');    btnP.setAttribute('aria-pressed','true'); }
+            var _lt2 = document.getElementById('kg-left-title');
+            if (_lt2) _lt2.textContent = '—';
+        }
+    };
+
+    function _loadCommandCentre() {
+        var el = document.getElementById('civ-org-chart');
+        if (!el) return;
+        el.innerHTML = '<div class="civ-loading">LOADING APEX COMMAND CENTRE...</div>';
+        fetch('/api/civilization/hierarchy', { headers: _h() })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.ok || !data.hierarchy) {
+                    el.innerHTML = '<div class="civ-loading">COMMAND CENTRE UNAVAILABLE</div>';
+                    return;
+                }
+                var h = data.hierarchy;
+                var s = h.summary || {};
+                var CC = { cso:'#6366f1',cio:'#06b6d4',cfo:'#10b981',cto:'#3b82f6',coo:'#8b5cf6',cro:'#ef4444',cgo:'#f59e0b',cpo:'#ec4899',crr:'#a78bfa',clo:'#64748b' };
+                var DC = { finance:'#10b981',business:'#6366f1',marketing:'#ec4899',health:'#ef4444',system:'#06b6d4',university:'#f59e0b',governance:'#64748b',content:'#f97316',intelligence:'#8b5cf6' };
+                function _dot2(on, col) { return '<span class="cmd-council-dot" style="background:' + (on ? (col||'#22c55e') : 'rgba(255,255,255,0.1)') + ';' + (on ? 'box-shadow:0 0 5px ' + (col||'#22c55e') + '80' : '') + '"></span>'; }
+                function _stlbl(status) { return '<span style="font:400 7px/1 \'JetBrains Mono\',monospace;color:' + (status === 'active' ? '#22c55e' : 'rgba(255,255,255,0.22)') + ';letter-spacing:.06em">' + (status||'idle').toUpperCase() + '</span>'; }
+                var approvalCount = s.awaiting_approval || 0;
+                var now3 = new Date();
+                var tstr = now3.getHours().toString().padStart(2,'0') + ':' + now3.getMinutes().toString().padStart(2,'0');
+                var html = '';
+                // ── Header ──
+                html += '<div class="cmd-header"><div><div class="cmd-header-name">APEX COMMAND CENTRE</div><div class="cmd-header-meta"><span class="cmd-live-dot"></span><span>CIVILISATION LIVE</span><span style="color:rgba(255,255,255,0.08)">·</span><span>FOUNDER ONLINE</span></div></div><div class="cmd-header-time">' + tstr + '</div></div>';
+                // ── Stats ──
+                html += '<div class="cmd-stats"><div class="cmd-stat"><div class="cmd-stat-n">' + (s.total_agents||43) + '</div><div class="cmd-stat-l">AGENTS</div></div>';
+                html += '<div class="cmd-stat"><div class="cmd-stat-n" id="cmd-n-active">' + (s.active_agents||0) + '</div><div class="cmd-stat-l">ACTIVE</div></div>';
+                html += '<div class="cmd-stat"><div class="cmd-stat-n" id="cmd-n-pending">' + (s.pending_tasks||0) + '</div><div class="cmd-stat-l">PENDING</div></div>';
+                html += '<div class="cmd-stat' + (approvalCount > 0 ? ' cmd-stat-alert' : '') + '" id="cmd-cs-approvals"><div class="cmd-stat-n" id="cmd-n-approvals">' + approvalCount + '</div><div class="cmd-stat-l">APPROVALS</div></div></div>';
+                // ── Dispatch ──
+                html += '<div class="cmd-dispatch"><div class="cmd-dispatch-label">TASK DISPATCH</div><div class="cmd-dispatch-row"><input class="cmd-dispatch-input" id="cmd-dispatch-input" type="text" placeholder="Route a task through the civilisation hierarchy..." autocomplete="off"><button class="cmd-dispatch-btn" id="cmd-dispatch-btn" onclick="window._civDispatch()" aria-label="Dispatch task">DISPATCH</button></div><div class="cmd-dispatch-result" id="cmd-dispatch-result"></div></div>';
+                // ── Supreme Council ──
+                html += '<div class="cmd-section"><div class="cmd-section-hd">SUPREME COUNCIL <span class="cmd-section-count">× ' + h.council.length + '</span></div><div class="cmd-council-grid">';
+                h.council.forEach(function(m) {
+                    var rid = (m.id||'').replace('council-','');
+                    var col = CC[rid]||'#00d4ff';
+                    var on = m.status === 'active';
+                    html += '<div class="cmd-council-tile" style="--tile-color:' + col + '"><div class="cmd-council-role">' + _esc(m.name||rid).toUpperCase() + '</div><div class="cmd-council-name">' + _esc(m.role||m.full_name||'') + '</div><div class="cmd-council-status">' + _dot2(on,col) + _stlbl(m.status) + '</div></div>';
+                });
+                html += '</div></div>';
+                // ── Domain Directors ──
+                html += '<div class="cmd-section"><div class="cmd-section-hd">DOMAIN DIRECTORS <span class="cmd-section-count">× ' + h.directors.length + '</span></div><div class="cmd-director-grid">';
+                h.directors.forEach(function(d) {
+                    var dom = (d.domain||d.id||'system').toLowerCase();
+                    var col = DC[dom]||'#00d4ff';
+                    var on = d.status === 'active';
+                    html += '<div class="cmd-director-card" style="--dir-color:' + col + '"><div class="cmd-director-domain">' + dom.toUpperCase() + '</div><div class="cmd-director-name">' + _esc(d.name||d.id) + '</div><div class="cmd-director-meta">' + (d.workers?d.workers.length:0) + ' agents' + (d.tasks?' · '+d.tasks+' tasks':'') + '</div><div class="cmd-director-tasks">' + _dot2(on,col) + _stlbl(d.status) + '</div></div>';
+                });
+                html += '</div></div>';
+                // ── Office Agents ──
+                if (h.office && h.office.length) {
+                    html += '<div class="cmd-section"><div class="cmd-section-hd">OFFICE AGENTS <span class="cmd-section-count">× ' + h.office.length + '</span></div><div class="cmd-agents-grid">';
+                    h.office.forEach(function(a) {
+                        var dom = (a.domain||'system').toLowerCase();
+                        var col = DC[dom]||'rgba(255,255,255,0.15)';
+                        var on = a.status === 'active';
+                        html += '<div class="cmd-agent-chip' + (on?' is-active':'') + '"><div class="cmd-agent-name">' + _esc(a.name||a.id) + '</div><div class="cmd-agent-status"><span style="width:4px;height:4px;border-radius:50%;flex-shrink:0;display:inline-block;background:' + (on?col:'rgba(255,255,255,0.1)') + '"></span>' + (on?'<span style="color:'+col+'">ACTIVE</span>':'IDLE') + '</div></div>';
+                    });
+                    html += '</div></div>';
+                }
+                el.innerHTML = html;
+                var inp2 = document.getElementById('cmd-dispatch-input');
+                if (inp2) inp2.addEventListener('keydown', function(e) { if (e.key==='Enter') window._civDispatch(); });
+                _renderCommandPanels();
+            })
+            .catch(function() {
+                var el2 = document.getElementById('civ-org-chart');
+                if (el2) el2.innerHTML = '<div class="civ-loading">FAILED TO LOAD COMMAND CENTRE</div>';
+            });
+    }
+
+    function _renderCommandPanels() {
+        var approvals = _liveTasks.filter(function(t) { return t.status==='awaiting_approval'||t.status==='approval_required'; });
+        var active    = _liveRuns.filter(function(r)  { return r.status==='running'||r.status==='in_progress'; });
+        var pending   = _liveTasks.filter(function(t) { return t.status==='pending'; });
+        var nA  = document.getElementById('cmd-n-active');
+        var nP  = document.getElementById('cmd-n-pending');
+        var nAp = document.getElementById('cmd-n-approvals');
+        var csAp = document.getElementById('cmd-cs-approvals');
+        if (nA)  nA.textContent  = active.length;
+        if (nP)  nP.textContent  = pending.length;
+        if (nAp) nAp.textContent = approvals.length;
+        if (csAp) csAp.classList.toggle('cmd-stat-alert', approvals.length > 0);
+        var leftTitle = document.getElementById('kg-left-title');
+        if (leftTitle && _civView === 'org') leftTitle.textContent = 'APPROVALS';
+        var leftBody = document.getElementById('kg-left-body');
+        if (leftBody && _civView === 'org') {
+            if (!approvals.length) {
+                leftBody.innerHTML = '<div class="cmd-no-approvals">NO PENDING APPROVALS<br><br>ALL CLEAR</div>';
+            } else {
+                var lh = '';
+                approvals.forEach(function(t) {
+                    lh += '<div class="cmd-approval-item"><div class="cmd-approval-title">' + _esc(t.description||t.title||'Task') + '</div>';
+                    lh += '<div class="cmd-approval-meta">' + _esc(t.agent_id||'') + (t.agent_id?' · ':'') + _ago(t.created_at) + '</div></div>';
+                });
+                leftBody.innerHTML = lh;
+            }
+        }
+    }
+
+    window._civDispatch = function() {
+        var inp = document.getElementById('cmd-dispatch-input');
+        var btn = document.getElementById('cmd-dispatch-btn');
+        var res = document.getElementById('cmd-dispatch-result');
+        if (!inp || !btn || !res) return;
+        var text = inp.value.trim();
+        if (!text) { inp.focus(); return; }
+        btn.disabled = true;
+        btn.textContent = 'ROUTING...';
+        res.className = 'cmd-dispatch-result visible';
+        res.innerHTML = '<span style="color:rgba(0,212,255,0.5)">Routing through hierarchy...</span>';
+        fetch('/api/civilisation/dispatch', {
+            method: 'POST',
+            headers: Object.assign({'Content-Type':'application/json'}, _h()),
+            body: JSON.stringify({ message: text, master: true })
+        }).then(function(r){ return r.json(); }).then(function(d) {
+            btn.disabled = false;
+            btn.textContent = 'DISPATCH';
+            if (d.ok) {
+                var rt = d.route || {};
+                var rh = '<div class="cmd-dispatch-route">' + ((rt.domain||'?').toUpperCase());
+                if (rt.director) rh += ' → ' + rt.director.toUpperCase();
+                if (rt.workers && rt.workers.length) rh += ' → [' + rt.workers.slice(0,3).join(', ').toUpperCase() + ']';
+                if (rt.confidence) rh += ' <span style="color:rgba(255,255,255,0.28)">' + Math.round(rt.confidence*100) + '%</span>';
+                rh += '</div><div>' + _esc(d.reply||'') + '</div>';
+                res.innerHTML = rh;
+                inp.value = '';
+            } else {
+                res.innerHTML = '<span style="color:#ef4444">' + _esc(d.error||'Dispatch failed') + '</span>';
+            }
+        }).catch(function() {
+            btn.disabled = false;
+            btn.textContent = 'DISPATCH';
+            res.innerHTML = '<span style="color:#ef4444">Network error</span>';
+        });
+    };
+
     // ── Live data fetch ───────────────────────────────────────────────────────
     function _fetchLive() {
         if (document.hidden && !window._kgTestMode) return;
+        // If civilisation view is active: full render on first load, lightweight refresh thereafter
+        if (_civView === 'org') {
+            var _civEl = document.getElementById('civ-org-chart');
+            if (!_civEl || !_civEl.querySelector('.cmd-header')) { _loadCommandCentre(); } else { _renderCommandPanels(); }
+        }
         var body = document.getElementById('kg-right-body');
         var leftBody = document.getElementById('kg-left-body');
         Promise.all([
             fetch('/api/agents/activity?limit=150', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'runs' }; }),
-            fetch('/api/tasks?limit=200', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'tasks' }; }),
+            fetch('/api/tasks?limit=200&scope=all', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'tasks' }; }),
             fetch('/api/civilization/council/history?limit=30', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'council' }; }),
             fetch('/api/notifications', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'notifs' }; }),
             fetch('/api/documents?limit=50', { headers: _h() }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(function () { return { _err:true, _src:'docs' }; }),
@@ -36049,7 +36306,7 @@ window.apexFileDropHandler = function(e){
     };
 
     window.addEventListener('resize', function () {
-        if (window.activePage === 'test') {
+        if (window.activePage === 'overview') {
             _buildPipeline();
             if (_activeTier) {
                 var n = document.getElementById('kg-node-' + _activeTier);
@@ -36072,9 +36329,9 @@ window.apexFileDropHandler = function(e){
         var hasActive  = _liveTasks.some(function(t){ return t.status==='in_progress'; });
         var recentDone = _liveTasks.some(function(t){ return (t.status==='done'||t.status==='completed') && t.updated_at && (Date.now()-new Date(t.updated_at).getTime())<60000; });
         var delay = hasActive ? 5000 : recentDone ? 10000 : 20000;
-        _kgPollTimer = setTimeout(function(){ if(window.activePage==='test'){ _fetchLive(); } _schedulePoll(); }, delay);
+        _kgPollTimer = setTimeout(function(){ if(window.activePage==='overview'){ _fetchLive(); } _schedulePoll(); }, delay);
     }
-    setTimeout(function(){ if(window.activePage==='test') _fetchLive(); _schedulePoll(); }, 400);
+    setTimeout(function(){ if(window.activePage==='overview') _fetchLive(); _schedulePoll(); }, 400);
 
     function _kgShowUndo(taskId, title, action) {
         var toast = document.getElementById('kg-undo-toast');
@@ -38085,7 +38342,7 @@ _loadConnections();
   /* 10 ── Pages: natural-height block so content overflows and scrolls ── */
   /* .page uses position:absolute+inset:0 with flex:1 children — nothing overflows.
      On mobile, switch to position:relative+height:auto so vertical scroll works. */
-  #page-test, #page-intel {
+  #page-overview, #page-intel {
     position: relative !important;
     inset: auto !important;
     height: auto !important;

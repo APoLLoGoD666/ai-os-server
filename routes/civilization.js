@@ -776,4 +776,177 @@ router.post('/civilisation/consensus/:id/ratify', (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// ─── Civilisation Dispatch ─────────────────────────────────────────────────────
+// The wire that connects the routing table to the execution layer.
+// Routes any task through the hierarchy: intent → domain → director → office agent.
+//
+// POST /api/civilisation/dispatch
+// Body: { task: string, domain?: string }
+// Returns: { ok, route, agent, reply, workers, usage }
+
+const _ROUTING_DOMAIN_MAP = {
+    finance:      'finance',
+    business:     'business',
+    marketing:    'marketing',
+    health:       'health',
+    system:       'system',
+    university:   'uni',
+    governance:   'civilisation',
+    content:      'comms',
+    intelligence: 'system', // fallback: system agent handles intelligence queries
+};
+
+router.post('/civilisation/dispatch', _auth, async (req, res) => {
+    try {
+        const { task, domain: hintDomain } = req.body || {};
+        if (!task || typeof task !== 'string' || !task.trim()) {
+            return res.status(400).json({ ok: false, error: 'task is required' });
+        }
+
+        const { routeTask }       = require('../agent-system/routing-table');
+        const { invokeDomainAgent } = require('../agent-system/domain-agents');
+        const { writeAgentMemory }  = require('../lib/agent-memory');
+
+        const route = routeTask(task.trim(), hintDomain || null);
+
+        if (!route.domain || route.unroutable) {
+            return res.json({ ok: false, unroutable: true, task, route,
+                message: 'Task intent could not be matched to a domain. Try being more specific.' });
+        }
+
+        const agentSlug = _ROUTING_DOMAIN_MAP[route.domain] || route.domain;
+
+        const result = await invokeDomainAgent(agentSlug, task.trim(), {
+            humanId: req.identity?.humanId || null,
+        });
+
+        // Write task output to director memory partition (fire-and-forget)
+        setImmediate(async () => {
+            try {
+                await writeAgentMemory(`director-${route.domain}`, {
+                    task:      task.slice(0, 300),
+                    reply:     (result.reply || '').slice(0, 600),
+                    workers:   route.workers,
+                    timestamp: new Date().toISOString(),
+                }, { type: 'task_output' });
+            } catch (_) {}
+        });
+
+        // Write to primary worker's memory partition too
+        if (route.workers && route.workers[0]) {
+            setImmediate(async () => {
+                try {
+                    await writeAgentMemory(route.workers[0], {
+                        task:      task.slice(0, 300),
+                        output:    (result.reply || '').slice(0, 600),
+                        timestamp: new Date().toISOString(),
+                    }, { type: 'execution' });
+                } catch (_) {}
+            });
+        }
+
+        res.json({
+            ok:      true,
+            route,
+            agent:   result.agent,
+            reply:   result.reply,
+            workers: route.workers,
+            usage:   result.usage,
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ─── Civilisation Hierarchy ────────────────────────────────────────────────────
+// Returns the full org chart with live task counts per tier.
+// Used by the Overview page command surface.
+router.get('/civilization/hierarchy', _auth, async (req, res) => {
+    try {
+        const { SUPREME_COUNCIL, DOMAIN_DIRECTORS } = require('../agent-system/agent-registry');
+        const { OFFICE_AGENTS } = require('../agent-system/office-agents');
+        const sb = _sb();
+
+        // Fetch recent agent runs + pending tasks in parallel
+        const [runsRes, tasksRes] = await Promise.all([
+            sb.from('apex_agent_runs')
+                .select('agent_name, success, created_at')
+                .order('created_at', { ascending: false })
+                .limit(200),
+            sb.from('apex_tasks')
+                .select('status, metadata')
+                .in('status', ['pending', 'in_progress', 'awaiting_approval'])
+                .limit(500),
+        ]);
+
+        const runs   = runsRes.data  || [];
+        const tasks  = tasksRes.data || [];
+
+        // Build active-agent set from last 5 minutes of runs
+        const cutoff = Date.now() - 5 * 60 * 1000;
+        const recentActive = new Set(
+            runs
+                .filter(r => new Date(r.created_at).getTime() > cutoff && r.success)
+                .map(r => r.agent_name)
+        );
+
+        // Count tasks routed to each domain
+        const domainTaskCounts = {};
+        for (const t of tasks) {
+            const domain = t.metadata?.domain || t.metadata?.dispatch?.slug;
+            if (domain) domainTaskCounts[domain] = (domainTaskCounts[domain] || 0) + 1;
+        }
+
+        function _agentStatus(id) {
+            return recentActive.has(id) ? 'active' : 'idle';
+        }
+
+        const hierarchy = {
+            founder: {
+                id:     'founder',
+                name:   'Founder',
+                layer:  'founder',
+                status: 'active',
+            },
+            council: SUPREME_COUNCIL.map(m => ({
+                id:     m.id,
+                name:   m.title,
+                domain: m.domain,
+                model:  m.model,
+                mandate: m.mandate,
+                status: _agentStatus(m.id),
+                memory_partition: m.memory_partition,
+            })),
+            directors: DOMAIN_DIRECTORS.map(d => ({
+                id:       d.id,
+                name:     d.id.replace('director-', '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) + ' Director',
+                domain:   d.domain,
+                model:    d.model,
+                status:   _agentStatus(d.id),
+                tasks:    domainTaskCounts[d.domain] || 0,
+                workers:  d.workers,
+                memory_partition: d.memory_partition,
+            })),
+            office: (OFFICE_AGENTS || []).map(a => ({
+                id:     a.slug,
+                name:   a.name,
+                domain: a.category,
+                status: _agentStatus(a.slug),
+            })),
+            summary: {
+                total_agents:      SUPREME_COUNCIL.length + DOMAIN_DIRECTORS.length + (OFFICE_AGENTS || []).length,
+                active_agents:     recentActive.size,
+                pending_tasks:     tasks.filter(t => t.status === 'pending').length,
+                in_progress_tasks: tasks.filter(t => t.status === 'in_progress').length,
+                awaiting_approval: tasks.filter(t => t.status === 'awaiting_approval').length,
+                generated_at:      new Date().toISOString(),
+            },
+        };
+
+        res.json({ ok: true, hierarchy });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 module.exports = router;

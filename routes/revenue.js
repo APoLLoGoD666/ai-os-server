@@ -194,11 +194,16 @@ router.get('/revenue/summary', _auth, async (req, res) => {
 // ── Manual triggers (run any job on demand) ───────────────────────────────────
 
 const _JOBS = {
-    etsy:     () => require('../lib/revenue-engine').runEtsyWeekly(),
-    ads:      () => require('../lib/revenue-engine').runAdsWeekly(),
-    outreach: () => require('../lib/revenue-engine').runOutreachDaily(),
-    followup: () => require('../lib/revenue-engine').runFollowUpDaily(),
-    report:   () => require('../lib/revenue-engine').runWeeklyReport(),
+    etsy:       () => require('../lib/revenue-engine').runEtsyWeekly(),
+    ads:        () => require('../lib/revenue-engine').runAdsWeekly(),
+    outreach:   () => require('../lib/revenue-engine').runOutreachDaily(),
+    followup:   () => require('../lib/revenue-engine').runFollowUpDaily(),
+    report:     () => require('../lib/revenue-engine').runWeeklyReport(),
+    // POD pipeline
+    pod_design:    () => require('../lib/pod-engine').runDesignGeneration(),
+    pod_products:  () => require('../lib/pod-engine').runProductCreation(),
+    pod_creative:  () => require('../lib/pod-engine').runCreativeAds(),
+    pod_analytics: () => require('../lib/pod-engine').runPodAnalytics(),
 };
 
 router.post('/revenue/run/:job', _auth, async (req, res) => {

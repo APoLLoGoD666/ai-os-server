@@ -103,6 +103,49 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
             }
         }
 
+        // ── Civilisation routing: task → routing table → domain director → office agent ──
+        // Fires before the generic agent library on high-confidence routing matches (>= 0.5).
+        // Only activates on substantive messages (>= 6 words) to avoid hijacking conversation.
+        const _civWordCount = userMessage.trim().split(/\s+/).length;
+        if (_civWordCount >= 6 && isMaster) {
+            try {
+                const { routeTask: _routeTask } = require('../../agent-system/routing-table');
+                const _civRoute = _routeTask(userMessage);
+                const _CIV_DOMAIN_MAP = {
+                    finance: 'finance', business: 'business', marketing: 'marketing',
+                    health: 'health', system: 'system', university: 'uni',
+                    governance: 'civilisation', content: 'comms', intelligence: 'system',
+                };
+                if (_civRoute.domain && !_civRoute.unroutable && _civRoute.confidence >= 0.5) {
+                    const _civAgentSlug = _CIV_DOMAIN_MAP[_civRoute.domain] || _civRoute.domain;
+                    const _civResult = await _invokeDomainAgent(_civAgentSlug, userMessage, {
+                        humanId: req.identity?.humanId || null,
+                    });
+                    clearTimeout(chatTimeout);
+                    const _civReplyRaw = `[${_civResult.agent.name} → ${_civRoute.workers?.[0] || _civRoute.domain}]\n\n${_civResult.reply}`;
+                    const { reply: _civReply, mode: _civMode, intent: _civIntent } = _cogOrch.shape(userMessage, _civReplyRaw, req.executionClass || 'EXECUTIVE', req.conversationId);
+                    const _civSnap = { ..._sessionReg.getDerivedCognitiveSnapshot(req.conversationId), ..._ctxMeta };
+                    const _civPlan = _timingEng.buildStreamPlan(_civReply, _civIntent, req.executionClass || 'EXECUTIVE', _civSnap);
+                    _pcm.updateFromResponse({ sessionId: req.conversationId, intent: _civIntent, userMessage, reply: _civReply, mode: _civMode, executionClass: req.executionClass });
+                    _eae.recordTransition({ sessionId: req.conversationId });
+                    _spe.updateFromResponse({ sessionId: req.conversationId, userMessage, reply: _civReply, intent: _civIntent, mode: _civMode });
+                    setImmediate(() => { _gateway.storeMemory({ layer: 2, source: 'chat', content: JSON.stringify({ user: userMessage, assistant: _civReply }), tags: ['conversation', 'chat', 'civilisation', _civRoute.domain], requestingEntity: 'api_client', taskId: req.conversationId }).catch(() => {}); });
+                    setImmediate(() => { _sessionTracker.recordMessage(req.conversationId).catch(() => {}); });
+                    // Fire-and-forget: write to director + worker memory partitions
+                    setImmediate(async () => {
+                        try {
+                            const { writeAgentMemory: _wam } = require('../../lib/agent-memory');
+                            await _wam(`director-${_civRoute.domain}`, { task: userMessage.slice(0, 300), reply: _civReply.slice(0, 600), timestamp: new Date().toISOString() }, { type: 'chat_dispatch' });
+                            if (_civRoute.workers?.[0]) await _wam(_civRoute.workers[0], { task: userMessage.slice(0, 300), output: _civReply.slice(0, 600), timestamp: new Date().toISOString() }, { type: 'execution' });
+                        } catch (_) {}
+                    });
+                    return res.status(200).json({ ok: true, reply: _civReply, response_mode: _civMode, stream_plan: _civPlan, route: { domain: _civRoute.domain, director: _civRoute.director, workers: _civRoute.workers, confidence: _civRoute.confidence } });
+                }
+            } catch (_civErr) {
+                console.warn('[CivRoute] routing failed, falling through:', _civErr.message);
+            }
+        }
+
         // Agent library intent detection
         const _agentIntent = agentLib.detectAgentIntent(userMessage);
         if (_agentIntent) {
