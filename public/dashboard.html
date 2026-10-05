@@ -31807,7 +31807,7 @@ window.apexFileDropHandler = function(e){
 #kg-pipeline {
   position:absolute !important; inset:0 !important;
   width:100% !important; height:100% !important;
-  display:block !important; overflow:hidden !important;
+  overflow:hidden !important;
   cursor:grab; padding:0 !important; gap:0 !important;
 }
 #kg-pipeline:active { cursor:grabbing; }
@@ -32977,7 +32977,7 @@ window.apexFileDropHandler = function(e){
                         '<button class="civ-vbtn" id="civ-vbtn-pipeline" onclick="window._civSetView(\'pipeline\')" aria-pressed="false">PROCESS MAP</button>' +
                         '<button class="civ-vbtn active" id="civ-vbtn-org" onclick="window._civSetView(\'org\')" aria-pressed="true">CIVILISATION</button>' +
                     '</div>' +
-                    '<div class="kg-pipeline" id="kg-pipeline" style="display:none" role="list" aria-label="Pipeline stages"></div>' +
+                    '<div class="kg-pipeline" id="kg-pipeline" style="visibility:hidden;pointer-events:none" role="list" aria-label="Pipeline stages"></div>' +
                     '<div class="civ-org-chart" id="civ-org-chart" role="tree" aria-label="Civilisation hierarchy"></div>' +
                     '<div class="kg-last-updated" id="kg-last-updated" aria-live="polite" aria-atomic="true"></div>' +
                 '</div>' +
@@ -35953,16 +35953,16 @@ window.apexFileDropHandler = function(e){
         var btnO     = document.getElementById('civ-vbtn-org');
         if (!pipeline || !org) return;
         if (v === 'org') {
-            pipeline.style.display = 'none';
-            org.style.display = 'block';
+            pipeline.style.visibility = 'hidden'; pipeline.style.pointerEvents = 'none';
+            org.style.visibility = ''; org.style.pointerEvents = '';
             if (btnP) { btnP.classList.remove('active'); btnP.setAttribute('aria-pressed','false'); }
             if (btnO) { btnO.classList.add('active');    btnO.setAttribute('aria-pressed','true'); }
             var _lt = document.getElementById('kg-left-title');
             if (_lt) _lt.textContent = 'APPROVALS';
             _loadCommandCentre();
         } else {
-            pipeline.style.display = '';
-            org.style.display = 'none';
+            pipeline.style.visibility = ''; pipeline.style.pointerEvents = '';
+            org.style.visibility = 'hidden'; org.style.pointerEvents = 'none';
             if (btnO) { btnO.classList.remove('active'); btnO.setAttribute('aria-pressed','false'); }
             if (btnP) { btnP.classList.add('active');    btnP.setAttribute('aria-pressed','true'); }
             var _lt2 = document.getElementById('kg-left-title');
