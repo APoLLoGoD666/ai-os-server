@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX · UX-09 Proactive Communication Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   UX-05 CANONICAL DESIGN TOKENS — ONE :root BLOCK
+   ============================================================ */
+:root {
+  --apex-color-bg: #03060f;
+  --apex-color-primary: #00d4ff;
+  --apex-color-secondary: #0066ff;
+  --apex-color-accent: #7b2fff;
+  --apex-color-border: rgba(0,212,255,0.16);
+  --apex-color-border-dim: rgba(0,212,255,0.08);
+  --apex-color-text-primary: #e8f4ff;
+  --apex-color-text-secondary: rgba(232,244,255,0.60);
+  --apex-color-text-muted: rgba(232,244,255,0.35);
+  --apex-color-success: #27ae60;
+  --apex-color-warning: #ff9f43;
+  --apex-color-danger: #ff4d6d;
+  --apex-duration-standard: 220ms;
+  --apex-duration-deliberate: 350ms;
+  --apex-z-notify: 1000;
+
+  /* Extended tokens */
+  --apex-color-surface: rgba(0,212,255,0.04);
+  --apex-color-surface-raised: rgba(0,212,255,0.07);
+  --apex-radius-sm: 4px;
+  --apex-radius-md: 8px;
+  --apex-radius-lg: 12px;
+  --apex-font-ui: 'Inter', sans-serif;
+  --apex-font-brand: 'Cinzel', serif;
+  --apex-font-mono: 'JetBrains Mono', monospace;
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--apex-color-bg);
+  color: var(--apex-color-text-primary);
+  font-family: var(--apex-font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* Focus rings — never suppressed */
+:focus-visible {
+  outline: 2px solid rgba(0,212,255,0.60);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   UX-06 SHELL GRID
+   ============================================================ */
+#shell {
+  display: grid;
+  grid-template-rows: 52px 1fr 54px;
+  grid-template-columns: 200px 1fr;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ============================================================
+   TOPBAR
+   ============================================================ */
+#topbar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  background: rgba(3,6,15,0.95);
+  border-bottom: 1px solid var(--apex-color-border);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+
+.topbar-brand {
+  font-family: var(--apex-font-brand);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--apex-color-primary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topbar-sep { width: 1px; height: 20px; background: var(--apex-color-border); margin: 0 4px; }
+
+.topbar-label {
+  font-size: 11px;
+  color: var(--apex-color-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.topbar-spacer { flex: 1; }
+
+/* ORB */
+.orb-container { display: flex; align-items: center; gap: 8px; }
+
+.orb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(0,212,255,0.5), rgba(0,102,255,0.3) 50%, rgba(123,47,255,0.2));
+  box-shadow: 0 0 12px rgba(0,212,255,0.25), inset 0 0 8px rgba(0,212,255,0.15);
+  position: relative;
+  animation: orbWait 3s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.orb::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.2), transparent 60%);
+}
+
+@keyframes orbWait {
+  0%, 100% { opacity: 0.75; transform: scale(1); box-shadow: 0 0 12px rgba(0,212,255,0.25); }
+  50% { opacity: 1; transform: scale(1.04); box-shadow: 0 0 20px rgba(0,212,255,0.4); }
+}
+
+.orb.orbListen {
+  background: radial-gradient(circle at 40% 35%, rgba(0,212,255,0.8), rgba(0,102,255,0.5) 50%, rgba(0,212,255,0.2));
+  animation: orbListenAnim 0.8s ease-in-out infinite;
+}
+
+@keyframes orbListenAnim {
+  0%, 100% { box-shadow: 0 0 16px rgba(0,212,255,0.6), 0 0 32px rgba(0,212,255,0.2); transform: scale(1); }
+  50% { box-shadow: 0 0 24px rgba(0,212,255,0.9), 0 0 48px rgba(0,212,255,0.35); transform: scale(1.08); }
+}
+
+.orb.orbSpeak {
+  background: radial-gradient(circle at 40% 35%, rgba(123,47,255,0.8), rgba(0,102,255,0.5) 50%, rgba(123,47,255,0.2));
+  animation: orbSpeakAnim 0.5s ease-in-out infinite;
+}
+
+@keyframes orbSpeakAnim {
+  0%, 100% { box-shadow: 0 0 16px rgba(123,47,255,0.6); transform: scale(1); }
+  50% { box-shadow: 0 0 28px rgba(123,47,255,0.9), 0 0 56px rgba(123,47,255,0.3); transform: scale(1.1); }
+}
+
+.orb-label { font-size: 11px; color: var(--apex-color-text-muted); font-family: var(--apex-font-mono); }
+
+/* Waveform — 7 bars exactly */
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 18px;
+  opacity: 0;
+  transition: opacity var(--apex-duration-standard);
+}
+.waveform.active { opacity: 1; }
+
+.waveform-bar {
+  width: 2px;
+  background: var(--apex-color-primary);
+  border-radius: 1px;
+  animation: waveformBounce 0.48s ease-in-out infinite alternate;
+  transform-origin: bottom;
+}
+.waveform-bar:nth-child(1) { animation-delay: 0s;    height: 4px; }
+.waveform-bar:nth-child(2) { animation-delay: 0.07s; height: 8px; }
+.waveform-bar:nth-child(3) { animation-delay: 0.14s; height: 14px; }
+.waveform-bar:nth-child(4) { animation-delay: 0.21s; height: 18px; }
+.waveform-bar:nth-child(5) { animation-delay: 0.28s; height: 14px; }
+.waveform-bar:nth-child(6) { animation-delay: 0.35s; height: 8px; }
+.waveform-bar:nth-child(7) { animation-delay: 0.42s; height: 4px; }
+
+@keyframes waveformBounce {
+  from { transform: scaleY(0.3); opacity: 0.5; }
+  to   { transform: scaleY(1);   opacity: 1; }
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+#sidebar {
+  grid-column: 1;
+  grid-row: 2;
+  background: rgba(0,0,0,0.4);
+  border-right: 1px solid var(--apex-color-border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+#sidebar::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--apex-color-border); border-radius: 2px; }
+
+.sidebar-section { padding: 14px 14px 6px; }
+.sidebar-section-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--apex-color-text-muted);
+  margin-bottom: 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--apex-radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--apex-color-text-secondary);
+  transition: background var(--apex-duration-standard), color var(--apex-duration-standard);
+  user-select: none;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.nav-item:hover { background: var(--apex-color-surface); color: var(--apex-color-text-primary); }
+.nav-item.active { background: rgba(0,212,255,0.10); color: var(--apex-color-primary); }
+
+.nav-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* Scenario grid 2-column */
+.scenario-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 6px 14px 14px;
+}
+
+.scenario-btn {
+  padding: 6px 4px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border-dim);
+  background: var(--apex-color-surface);
+  color: var(--apex-color-text-secondary);
+  font-family: var(--apex-font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all var(--apex-duration-standard);
+  text-align: center;
+  line-height: 1.3;
+}
+.scenario-btn:hover {
+  border-color: var(--apex-color-border);
+  background: var(--apex-color-surface-raised);
+  color: var(--apex-color-primary);
+}
+.scenario-btn.running {
+  border-color: var(--apex-color-primary);
+  background: rgba(0,212,255,0.12);
+  color: var(--apex-color-primary);
+}
+
+.scenario-btn-key {
+  display: block;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--apex-color-primary);
+  opacity: 0.8;
+}
+
+.sidebar-clear {
+  margin: 0 14px 14px;
+  padding: 7px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid rgba(255,77,109,0.25);
+  background: rgba(255,77,109,0.06);
+  color: var(--apex-color-danger);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--apex-duration-standard);
+  width: calc(100% - 28px);
+}
+.sidebar-clear:hover { background: rgba(255,77,109,0.12); border-color: rgba(255,77,109,0.4); }
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+#main {
+  grid-column: 2;
+  grid-row: 2;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+#main::-webkit-scrollbar { width: 5px; }
+#main::-webkit-scrollbar-track { background: transparent; }
+#main::-webkit-scrollbar-thumb { background: var(--apex-color-border); border-radius: 2px; }
+
+/* ============================================================
+   NOTIFICATION BANNER SLOT
+   ============================================================ */
+#notify-slot {
+  position: sticky;
+  top: 0;
+  z-index: var(--apex-z-notify);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.notify-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--apex-color-border);
+  animation: bannerSlide var(--apex-duration-deliberate) ease-out;
+  backdrop-filter: blur(8px);
+}
+
+@keyframes bannerSlide {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.notify-banner.level-2 { background: rgba(0,102,255,0.15); }
+.notify-banner.level-3 { background: rgba(0,212,255,0.12); }
+.notify-banner.level-4 { background: rgba(255,159,67,0.15); }
+.notify-banner.level-5 { background: rgba(255,77,109,0.18); }
+
+.notify-level-badge {
+  font-family: var(--apex-font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+.level-2 .notify-level-badge { background: rgba(0,102,255,0.3); color: var(--apex-color-secondary); }
+.level-3 .notify-level-badge { background: rgba(0,212,255,0.2); color: var(--apex-color-primary); }
+.level-4 .notify-level-badge { background: rgba(255,159,67,0.25); color: var(--apex-color-warning); }
+.level-5 .notify-level-badge { background: rgba(255,77,109,0.3); color: var(--apex-color-danger); }
+
+.notify-content { flex: 1; }
+.notify-title { font-size: 12px; font-weight: 600; color: var(--apex-color-text-primary); }
+.notify-sub { font-size: 11px; color: var(--apex-color-text-secondary); margin-top: 1px; }
+
+.notify-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.notify-action {
+  padding: 4px 10px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: var(--apex-color-surface);
+  color: var(--apex-color-text-primary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--apex-duration-standard);
+}
+.notify-action:hover { background: var(--apex-color-surface-raised); border-color: var(--apex-color-primary); }
+.notify-action.primary { background: rgba(0,212,255,0.15); border-color: rgba(0,212,255,0.35); color: var(--apex-color-primary); }
+
+.notify-dismiss {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: var(--apex-color-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--apex-duration-standard);
+  line-height: 1;
+}
+.notify-dismiss:hover { background: rgba(255,255,255,0.14); color: var(--apex-color-text-primary); }
+
+/* ============================================================
+   CONTENT SECTIONS
+   ============================================================ */
+.content-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--apex-color-border-dim);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--apex-color-text-secondary);
+}
+
+.section-pill {
+  font-family: var(--apex-font-mono);
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(0,212,255,0.10);
+  color: var(--apex-color-primary);
+  border: 1px solid rgba(0,212,255,0.20);
+}
+
+/* ============================================================
+   PROACTIVE EVALUATOR PANEL
+   ============================================================ */
+.evaluator-panel {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 12px;
+  min-height: 220px;
+}
+
+/* Event stream */
+.event-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.event-stream::-webkit-scrollbar { width: 3px; }
+.event-stream::-webkit-scrollbar-thumb { background: var(--apex-color-border); border-radius: 1px; }
+
+.event-stream-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  color: var(--apex-color-text-muted);
+  font-size: 11px;
+  border: 1px dashed var(--apex-color-border-dim);
+  border-radius: var(--apex-radius-md);
+}
+
+.eval-event {
+  padding: 10px 12px;
+  border-radius: var(--apex-radius-md);
+  border: 1px solid var(--apex-color-border-dim);
+  background: var(--apex-color-surface);
+  transition: all var(--apex-duration-standard);
+  animation: evalEventIn var(--apex-duration-deliberate) ease-out;
+  position: relative;
+}
+
+@keyframes evalEventIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.eval-event.suppressed { opacity: 0.45; }
+.eval-event.silent { opacity: 0.30; }
+
+.eval-event-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.event-type-badge {
+  font-family: var(--apex-font-mono);
+  font-size: 8px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.event-type-REMINDER  { background: rgba(0,212,255,0.15);  color: var(--apex-color-primary); }
+.event-type-ALERT     { background: rgba(255,77,109,0.15);  color: var(--apex-color-danger); }
+.event-type-INSIGHT   { background: rgba(123,47,255,0.15);  color: var(--apex-color-accent); }
+.event-type-CHANGE    { background: rgba(0,102,255,0.15);   color: var(--apex-color-secondary); }
+.event-type-OPPORTUNITY { background: rgba(39,174,96,0.15); color: var(--apex-color-success); }
+.event-type-RISK      { background: rgba(255,77,109,0.15);  color: var(--apex-color-danger); }
+.event-type-DECISION  { background: rgba(255,159,67,0.15);  color: var(--apex-color-warning); }
+.event-type-ACTION    { background: rgba(0,212,255,0.12);   color: var(--apex-color-primary); }
+.event-type-STATUS    { background: rgba(0,102,255,0.12);   color: var(--apex-color-secondary); }
+
+.eval-event-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--apex-color-text-primary);
+  flex: 1;
+}
+
+.eval-score-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.eval-score-label { font-family: var(--apex-font-mono); font-size: 9px; color: var(--apex-color-text-muted); width: 60px; }
+.eval-score-bar-track {
+  flex: 1;
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.eval-score-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease-out;
+}
+.eval-score-value { font-family: var(--apex-font-mono); font-size: 9px; color: var(--apex-color-text-secondary); width: 26px; text-align: right; }
+
+.eval-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.decision-badge {
+  font-family: var(--apex-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.decision-PRESENT  { background: rgba(0,212,255,0.18);  color: var(--apex-color-primary);   border: 1px solid rgba(0,212,255,0.30); }
+.decision-NOTIFY   { background: rgba(255,159,67,0.18); color: var(--apex-color-warning);  border: 1px solid rgba(255,159,67,0.30); }
+.decision-NOTIFY-L5{ background: rgba(255,77,109,0.18); color: var(--apex-color-danger);   border: 1px solid rgba(255,77,109,0.30); }
+.decision-SUPPRESS { background: rgba(255,255,255,0.08); color: rgba(232,244,255,0.45);    border: 1px solid rgba(255,255,255,0.10); }
+.decision-VOICE    { background: rgba(123,47,255,0.18); color: var(--apex-color-accent);   border: 1px solid rgba(123,47,255,0.30); }
+.decision-SILENT   { background: transparent;           color: var(--apex-color-text-muted); border: 1px solid var(--apex-color-border-dim); }
+.decision-QUEUED   { background: rgba(255,159,67,0.10); color: rgba(255,159,67,0.70);       border: 1px solid rgba(255,159,67,0.20); }
+.decision-ESCALATED{ background: rgba(255,77,109,0.22); color: var(--apex-color-danger);   border: 1px solid rgba(255,77,109,0.40); }
+
+.state-badge {
+  font-family: var(--apex-font-mono);
+  font-size: 8px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  color: var(--apex-color-text-muted);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.04em;
+}
+.state-badge.evaluating { color: var(--apex-color-primary); border-color: rgba(0,212,255,0.20); animation: pulse 1s ease-in-out infinite; }
+.state-badge.delivered  { color: var(--apex-color-success); border-color: rgba(39,174,96,0.25); }
+.state-badge.suppressed { color: var(--apex-color-text-muted); }
+.state-badge.escalated  { color: var(--apex-color-danger); border-color: rgba(255,77,109,0.30); }
+.state-badge.deferred   { color: var(--apex-color-warning); border-color: rgba(255,159,67,0.25); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; } 50% { opacity: 1; }
+}
+
+.eval-why {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--apex-color-text-muted);
+  font-style: italic;
+  padding: 5px 8px;
+  background: rgba(255,255,255,0.03);
+  border-left: 2px solid var(--apex-color-border);
+  border-radius: 0 3px 3px 0;
+}
+
+/* Decision info panel */
+.decision-info-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.decision-info-card {
+  padding: 10px 12px;
+  border-radius: var(--apex-radius-md);
+  background: var(--apex-color-surface);
+  border: 1px solid var(--apex-color-border-dim);
+}
+
+.decision-info-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--apex-color-text-muted);
+  margin-bottom: 6px;
+}
+
+.decision-info-stats { display: flex; flex-direction: column; gap: 4px; }
+.decision-stat-row { display: flex; align-items: center; justify-content: space-between; }
+.decision-stat-key { font-size: 10px; color: var(--apex-color-text-secondary); }
+.decision-stat-val { font-family: var(--apex-font-mono); font-size: 10px; font-weight: 500; }
+.stat-present  { color: var(--apex-color-primary); }
+.stat-suppress { color: var(--apex-color-text-muted); }
+.stat-notify   { color: var(--apex-color-warning); }
+.stat-silent   { color: var(--apex-color-text-muted); opacity: 0.6; }
+.stat-voice    { color: var(--apex-color-accent); }
+
+/* ============================================================
+   CONTEXTUAL CARD STACK
+   ============================================================ */
+.card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-stack-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 70px;
+  color: var(--apex-color-text-muted);
+  font-size: 11px;
+  border: 1px dashed var(--apex-color-border-dim);
+  border-radius: var(--apex-radius-md);
+}
+
+.proactive-card {
+  border-radius: var(--apex-radius-lg);
+  border: 1px solid var(--apex-color-border);
+  background: rgba(3,6,15,0.85);
+  overflow: hidden;
+  animation: cardIn var(--apex-duration-deliberate) ease-out;
+  transition: opacity var(--apex-duration-deliberate), transform var(--apex-duration-deliberate);
+  position: relative;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.proactive-card.withdrawing {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+  pointer-events: none;
+}
+
+.card-accent { height: 3px; width: 100%; }
+.card-accent-REMINDER    { background: var(--apex-color-primary); }
+.card-accent-ALERT       { background: var(--apex-color-danger); }
+.card-accent-INSIGHT     { background: var(--apex-color-accent); }
+.card-accent-CHANGE      { background: var(--apex-color-secondary); }
+.card-accent-OPPORTUNITY { background: var(--apex-color-success); }
+.card-accent-RISK        { background: var(--apex-color-danger); }
+.card-accent-DECISION    { background: var(--apex-color-warning); }
+.card-accent-ACTION      { background: var(--apex-color-primary); }
+.card-accent-STATUS      { background: var(--apex-color-secondary); }
+
+.card-body { padding: 14px 16px; }
+
+.card-header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.card-meta { flex: 1; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--apex-color-text-primary); margin-bottom: 2px; }
+.card-source { font-size: 10px; color: var(--apex-color-text-muted); font-family: var(--apex-font-mono); }
+
+.card-status-badge {
+  font-family: var(--apex-font-mono);
+  font-size: 8px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.07);
+  color: var(--apex-color-text-muted);
+  border: 1px solid rgba(255,255,255,0.10);
+  white-space: nowrap;
+}
+.card-status-badge.escalated { background: rgba(255,77,109,0.15); color: var(--apex-color-danger); border-color: rgba(255,77,109,0.30); }
+.card-status-badge.deferred  { background: rgba(255,159,67,0.12); color: var(--apex-color-warning); border-color: rgba(255,159,67,0.25); }
+
+.card-content { font-size: 12px; color: var(--apex-color-text-secondary); line-height: 1.6; margin-bottom: 10px; }
+
+.card-why {
+  font-size: 10px;
+  color: var(--apex-color-text-muted);
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.025);
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border-dim);
+  margin-bottom: 10px;
+}
+.card-why-label {
+  font-family: var(--apex-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--apex-color-text-muted);
+  margin-bottom: 3px;
+  opacity: 0.7;
+}
+.card-why-text { font-style: italic; }
+
+.card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.card-btn {
+  padding: 5px 12px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid var(--apex-color-border);
+  background: var(--apex-color-surface);
+  color: var(--apex-color-text-primary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--apex-duration-standard);
+  font-family: var(--apex-font-ui);
+}
+.card-btn:hover { background: var(--apex-color-surface-raised); border-color: var(--apex-color-border); }
+.card-btn.primary { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.30); color: var(--apex-color-primary); }
+.card-btn.primary:hover { background: rgba(0,212,255,0.20); }
+.card-btn.danger { background: rgba(255,77,109,0.10); border-color: rgba(255,77,109,0.25); color: var(--apex-color-danger); }
+.card-btn.danger:hover { background: rgba(255,77,109,0.18); }
+.card-btn.muted { opacity: 0.6; }
+
+/* ============================================================
+   VOICE OVERLAY
+   ============================================================ */
+#voice-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3,6,15,0.88);
+  backdrop-filter: blur(16px);
+  z-index: 2000;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+#voice-overlay.visible { display: flex; }
+
+.voice-orb-large {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(123,47,255,0.7), rgba(0,102,255,0.4) 50%, rgba(0,212,255,0.15));
+  box-shadow: 0 0 40px rgba(123,47,255,0.5), 0 0 80px rgba(123,47,255,0.2);
+  animation: voiceOrbAnim 0.6s ease-in-out infinite;
+}
+
+@keyframes voiceOrbAnim {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 40px rgba(123,47,255,0.5), 0 0 80px rgba(123,47,255,0.2); }
+  50%       { transform: scale(1.1); box-shadow: 0 0 60px rgba(123,47,255,0.7), 0 0 120px rgba(123,47,255,0.35); }
+}
+
+.voice-label { font-size: 20px; font-weight: 300; color: var(--apex-color-text-primary); letter-spacing: 0.08em; }
+.voice-sub   { font-size: 13px; color: var(--apex-color-text-secondary); }
+
+.voice-waveform {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+}
+.voice-waveform .waveform-bar {
+  width: 4px;
+  background: var(--apex-color-accent);
+}
+
+.voice-close {
+  padding: 8px 24px;
+  border-radius: var(--apex-radius-md);
+  border: 1px solid var(--apex-color-border);
+  background: var(--apex-color-surface);
+  color: var(--apex-color-text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all var(--apex-duration-standard);
+}
+.voice-close:hover { background: var(--apex-color-surface-raised); }
+
+/* ============================================================
+   CONVERSE AREA (brief)
+   ============================================================ */
+.converse-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--apex-color-surface);
+  border-radius: var(--apex-radius-md);
+  border: 1px solid var(--apex-color-border-dim);
+}
+
+.converse-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--apex-color-text-primary);
+  font-size: 12px;
+  font-family: var(--apex-font-ui);
+  placeholder-color: var(--apex-color-text-muted);
+}
+
+.converse-input::placeholder { color: var(--apex-color-text-muted); }
+
+.converse-send {
+  padding: 5px 14px;
+  border-radius: var(--apex-radius-sm);
+  border: 1px solid rgba(0,212,255,0.25);
+  background: rgba(0,212,255,0.10);
+  color: var(--apex-color-primary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--apex-duration-standard);
+}
+.converse-send:hover { background: rgba(0,212,255,0.18); }
+
+/* ============================================================
+   STATUSBAR
+   ============================================================ */
+#statusbar {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  background: rgba(3,6,15,0.95);
+  border-top: 1px solid var(--apex-color-border-dim);
+  font-size: 10px;
+  font-family: var(--apex-font-mono);
+  color: var(--apex-color-text-muted);
+}
+
+.statusbar-item { display: flex; align-items: center; gap: 5px; }
+.statusbar-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--apex-color-success);
+  animation: orbWait 2s ease-in-out infinite;
+}
+.statusbar-spacer { flex: 1; }
+
+/* ============================================================
+   PROTO LABEL
+   ============================================================ */
+#proto-label {
+  position: fixed;
+  bottom: 68px;
+  right: 16px;
+  font-family: var(--apex-font-mono);
+  font-size: 9px;
+  color: var(--apex-color-text-muted);
+  background: rgba(3,6,15,0.85);
+  padding: 4px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--apex-color-border-dim);
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  z-index: 500;
+}
+
+/* ============================================================
+   UTILITY
+   ============================================================ */
+.divider { height: 1px; background: var(--apex-color-border-dim); margin: 4px 0; }
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="shell">
+
+  <!-- ===== TOPBAR ===== -->
+  <header id="topbar">
+    <span class="topbar-brand">APEX</span>
+    <div class="topbar-sep"></div>
+    <span class="topbar-label">Command Centre</span>
+    <div class="topbar-sep"></div>
+    <span class="topbar-label" style="color: var(--apex-color-accent);">UX-09 Proactive</span>
+    <div class="topbar-spacer"></div>
+    <div class="waveform" id="topWaveform">
+      <div class="waveform-bar"></div>
+      <div class="waveform-bar"></div>
+      <div class="waveform-bar"></div>
+      <div class="waveform-bar"></div>
+      <div class="waveform-bar"></div>
+      <div class="waveform-bar"></div>
+      <div class="waveform-bar"></div>
+    </div>
+    <div class="orb-container">
+      <div class="orb" id="mainOrb"></div>
+      <span class="orb-label" id="orbLabel">READY</span>
+    </div>
+  </header>
+
+  <!-- ===== SIDEBAR ===== -->
+  <nav id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Navigation</div>
+      <button class="nav-item active" onclick="setView('evaluator')">
+        <span class="nav-dot"></span> Proactive Evaluator
+      </button>
+      <button class="nav-item" onclick="setView('cards')">
+        <span class="nav-dot"></span> Card Stack
+      </button>
+      <button class="nav-item" onclick="setView('notify')">
+        <span class="nav-dot"></span> Notifications
+      </button>
+      <button class="nav-item" onclick="setView('voice')">
+        <span class="nav-dot"></span> Voice Interface
+      </button>
+      <button class="nav-item" onclick="setView('converse')">
+        <span class="nav-dot"></span> Converse
+      </button>
+    </div>
+
+    <div class="divider" style="margin: 0 14px;"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Scenarios · UX-09</div>
+    </div>
+
+    <div class="scenario-grid">
+      <button class="scenario-btn" onclick="runScenario(1)" id="btn-s1" title="1: Relevant event → PRESENT">
+        <span class="scenario-btn-key">V-01</span>Relevant → PRESENT
+      </button>
+      <button class="scenario-btn" onclick="runScenario(2)" id="btn-s2" title="2: Low-value → SUPPRESS">
+        <span class="scenario-btn-key">V-02</span>Low-value → SUPPRESS
+      </button>
+      <button class="scenario-btn" onclick="runScenario(3)" id="btn-s3" title="3: Useful info → Card">
+        <span class="scenario-btn-key">V-03</span>Useful → Card
+      </button>
+      <button class="scenario-btn" onclick="runScenario(4)" id="btn-s4" title="4: Urgent → L4 Notify">
+        <span class="scenario-btn-key">V-04</span>Urgent → Notify
+      </button>
+      <button class="scenario-btn" onclick="runScenario(5)" id="btn-s5" title="5: Voice simulation">
+        <span class="scenario-btn-key">V-05</span>Voice Sim
+      </button>
+      <button class="scenario-btn" onclick="runScenario(6)" id="btn-s6" title="6: Voice active → Queue">
+        <span class="scenario-btn-key">V-06</span>Voice → Queue
+      </button>
+      <button class="scenario-btn" onclick="runScenario(7)" id="btn-s7" title="7: Duplicate → SUPPRESS">
+        <span class="scenario-btn-key">V-07</span>Duplicate
+      </button>
+      <button class="scenario-btn" onclick="runScenario(8)" id="btn-s8" title="8: Acknowledge">
+        <span class="scenario-btn-key">V-08</span>Acknowledge
+      </button>
+      <button class="scenario-btn" onclick="runScenario(9)" id="btn-s9" title="9: Dismiss card">
+        <span class="scenario-btn-key">V-09</span>Dismiss
+      </button>
+      <button class="scenario-btn" onclick="runScenario(10)" id="btn-s10" title="0: Defer item">
+        <span class="scenario-btn-key">V-10</span>Defer [0]
+      </button>
+      <button class="scenario-btn" onclick="runScenario(11)" id="btn-s11" title="Q: Escalation">
+        <span class="scenario-btn-key">V-11</span>Escalate [Q]
+      </button>
+      <button class="scenario-btn" onclick="runScenario(12)" id="btn-s12" title="W: Withdraw">
+        <span class="scenario-btn-key">V-12</span>Withdraw [W]
+      </button>
+      <button class="scenario-btn" onclick="runScenario(13)" id="btn-s13" title="E: Context/Why">
+        <span class="scenario-btn-key">V-13</span>Why shown [E]
+      </button>
+      <button class="scenario-btn" onclick="runScenario(14)" id="btn-s14" title="R: SILENT">
+        <span class="scenario-btn-key">V-14</span>SILENT [R]
+      </button>
+    </div>
+
+    <button class="sidebar-clear" onclick="clearAll()">&#x2715; Clear All State</button>
+  </nav>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main id="main">
+
+    <!-- Notification Banner Slot -->
+    <div id="notify-slot"></div>
+
+    <!-- Section 1: Proactive Evaluator Panel -->
+    <div class="content-section" id="section-evaluator">
+      <div class="section-header">
+        <span class="section-title">Proactive Evaluator</span>
+        <span class="section-pill" id="eval-count-pill">0 events</span>
+        <span style="font-size:10px; color: var(--apex-color-text-muted); margin-left: auto;">Real-time decision stream</span>
+      </div>
+
+      <div class="evaluator-panel">
+        <!-- Left: Event Stream -->
+        <div>
+          <div style="font-size:10px; color: var(--apex-color-text-muted); margin-bottom:8px; font-family: var(--apex-font-mono);">EVENT STREAM</div>
+          <div class="event-stream" id="event-stream">
+            <div class="event-stream-empty" id="stream-empty">No events evaluated yet — run a scenario</div>
+          </div>
+        </div>
+
+        <!-- Right: Decision Info -->
+        <div class="decision-info-panel">
+          <div class="decision-info-card">
+            <div class="decision-info-label">Decision Tally</div>
+            <div class="decision-info-stats">
+              <div class="decision-stat-row">
+                <span class="decision-stat-key">PRESENT</span>
+                <span class="decision-stat-val stat-present" id="tally-present">0</span>
+              </div>
+              <div class="decision-stat-row">
+                <span class="decision-stat-key">NOTIFY</span>
+                <span class="decision-stat-val stat-notify" id="tally-notify">0</span>
+              </div>
+              <div class="decision-stat-row">
+                <span class="decision-stat-key">SUPPRESS</span>
+                <span class="decision-stat-val stat-suppress" id="tally-suppress">0</span>
+              </div>
+              <div class="decision-stat-row">
+                <span class="decision-stat-key">VOICE</span>
+                <span class="decision-stat-val stat-voice" id="tally-voice">0</span>
+              </div>
+              <div class="decision-stat-row">
+                <span class="decision-stat-key">SILENT</span>
+                <span class="decision-stat-val stat-silent" id="tally-silent">0</span>
+              </div>
+              <div class="decision-stat-row">
+                <span class="decision-stat-key">QUEUED</span>
+                <span class="decision-stat-val" style="color: var(--apex-color-warning); opacity:0.8;" id="tally-queued">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="decision-info-card">
+            <div class="decision-info-label">Evaluator State</div>
+            <div class="decision-stat-row">
+              <span class="decision-stat-key">Mode</span>
+              <span class="decision-stat-val" id="eval-mode" style="color: var(--apex-color-primary);">ACTIVE</span>
+            </div>
+            <div class="decision-stat-row" style="margin-top:4px;">
+              <span class="decision-stat-key">Voice</span>
+              <span class="decision-stat-val" id="eval-voice-state" style="color: var(--apex-color-text-muted);">IDLE</span>
+            </div>
+            <div class="decision-stat-row" style="margin-top:4px;">
+              <span class="decision-stat-key">Queued</span>
+              <span class="decision-stat-val" id="eval-queued-count" style="color: var(--apex-color-text-muted);">0</span>
+            </div>
+          </div>
+
+          <div class="decision-info-card">
+            <div class="decision-info-label">Threshold Config</div>
+            <div class="decision-stat-row">
+              <span class="decision-stat-key" style="font-size:9px;">PRESENT min</span>
+              <span class="decision-stat-val" style="color: var(--apex-color-primary); font-size:9px;">≥ 65</span>
+            </div>
+            <div class="decision-stat-row" style="margin-top:3px;">
+              <span class="decision-stat-key" style="font-size:9px;">NOTIFY min</span>
+              <span class="decision-stat-val" style="color: var(--apex-color-warning); font-size:9px;">≥ 80</span>
+            </div>
+            <div class="decision-stat-row" style="margin-top:3px;">
+              <span class="decision-stat-key" style="font-size:9px;">SUPPRESS max</span>
+              <span class="decision-stat-val" style="color: var(--apex-color-text-muted); font-size:9px;">&lt; 40</span>
+            </div>
+            <div class="decision-stat-row" style="margin-top:3px;">
+              <span class="decision-stat-key" style="font-size:9px;">SILENT max</span>
+              <span class="decision-stat-val" style="color: var(--apex-color-text-muted); font-size:9px; opacity:0.6;">&lt; 20</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Contextual Card Stack -->
+    <div class="content-section" id="section-cards">
+      <div class="section-header">
+        <span class="section-title">Contextual Presentation</span>
+        <span class="section-pill" id="card-count-pill">0 cards</span>
+      </div>
+      <div class="card-stack" id="card-stack">
+        <div class="card-stack-empty" id="stack-empty">No proactive cards — run V-03, V-04, V-08, V-09, V-10, V-11, V-12, V-13</div>
+      </div>
+    </div>
+
+    <!-- Section 3: Converse Area -->
+    <div class="content-section" id="section-converse">
+      <div class="section-header">
+        <span class="section-title">Converse</span>
+      </div>
+      <div class="converse-area">
+        <input class="converse-input" id="converse-input" type="text" placeholder="Ask APEX or respond to proactive context…" autocomplete="off">
+        <button class="converse-send" onclick="sendConverse()">Send</button>
+      </div>
+      <div id="converse-log" style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto;"></div>
+    </div>
+
+  </main>
+
+  <!-- ===== STATUSBAR ===== -->
+  <footer id="statusbar">
+    <div class="statusbar-item">
+      <div class="statusbar-dot"></div>
+      <span>APEX ONLINE</span>
+    </div>
+    <div class="statusbar-item">UX-09 PROACTIVE</div>
+    <div class="statusbar-item" id="status-scenario">No scenario active</div>
+    <div class="statusbar-spacer"></div>
+    <div class="statusbar-item" id="status-time">--:--:--</div>
+    <div class="statusbar-item">PROTOTYPE · ISOLATED</div>
+  </footer>
+
+</div><!-- #shell -->
+
+<!-- Voice Overlay -->
+<div id="voice-overlay">
+  <div class="voice-orb-large"></div>
+  <div class="voice-label" id="voice-label">APEX Speaking</div>
+  <div class="voice-sub" id="voice-sub">Processing proactive context…</div>
+  <div class="voice-waveform">
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+  </div>
+  <button class="voice-close" onclick="closeVoiceOverlay()">Close Voice Interface</button>
+</div>
+
+<!-- Proto Label -->
+<div id="proto-label">UX-09 PROACTIVE PROTOTYPE · ISOLATED</div>
+
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+let eventIdCounter = 0;
+let cardIdCounter  = 0;
+let evalEvents     = [];
+let cards          = [];
+let voiceActive    = false;
+
+const tally = { PRESENT: 0, NOTIFY: 0, SUPPRESS: 0, VOICE: 0, SILENT: 0, QUEUED: 0 };
+const scenarioTimers = [];
+
+/* ============================================================
+   CLOCK
+   ============================================================ */
+function updateClock() {
+  const now = new Date();
+  const t = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(v => String(v).padStart(2,'0')).join(':');
+  const el = document.getElementById('status-time');
+  if (el) el.textContent = t;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+function setStatus(msg) {
+  const el = document.getElementById('status-scenario');
+  if (el) el.textContent = msg;
+}
+
+/* ============================================================
+   ORB
+   ============================================================ */
+function setOrb(state) {
+  const orb = document.getElementById('mainOrb');
+  const label = document.getElementById('orbLabel');
+  const waveform = document.getElementById('topWaveform');
+  orb.className = 'orb';
+  if (state === 'listen') {
+    orb.classList.add('orbListen');
+    label.textContent = 'LISTENING';
+    waveform.classList.add('active');
+  } else if (state === 'speak') {
+    orb.classList.add('orbSpeak');
+    label.textContent = 'SPEAKING';
+    waveform.classList.add('active');
+  } else {
+    label.textContent = 'READY';
+    waveform.classList.remove('active');
+  }
+}
+
+/* ============================================================
+   EVAL EVENT
+   ============================================================ */
+function addEvalEvent(data) {
+  const id = 'ev-' + (++eventIdCounter);
+  const eventData = { id, ...data, stateEl: null, decisionEl: null };
+  evalEvents.push(eventData);
+
+  const stream = document.getElementById('event-stream');
+  const empty  = document.getElementById('stream-empty');
+  if (empty) empty.remove();
+
+  const scoreColor = data.score >= 80 ? 'var(--apex-color-warning)'
+                   : data.score >= 65 ? 'var(--apex-color-primary)'
+                   : data.score >= 40 ? 'var(--apex-color-secondary)'
+                   : 'var(--apex-color-text-muted)';
+
+  const el = document.createElement('div');
+  el.className = 'eval-event';
+  el.id = 'eval-event-' + id;
+  el.innerHTML = `
+    <div class="eval-event-top">
+      <span class="event-type-badge event-type-${data.type}">${data.type}</span>
+      <span class="eval-event-title">${data.title}</span>
+    </div>
+    <div class="eval-score-row">
+      <span class="eval-score-label">Relevance</span>
+      <div class="eval-score-bar-track">
+        <div class="eval-score-bar-fill" id="score-fill-${id}" style="width:0%; background:${scoreColor};"></div>
+      </div>
+      <span class="eval-score-value">${data.score}</span>
+    </div>
+    <div class="eval-badges-row">
+      <span class="decision-badge decision-EVALUATING" id="decision-badge-${id}">EVALUATING</span>
+      <span class="state-badge evaluating" id="state-badge-${id}">GENERATED</span>
+    </div>
+    <div class="eval-why" id="why-${id}" style="display:none;"></div>
+  `;
+
+  stream.appendChild(el);
+  stream.scrollTop = stream.scrollHeight;
+
+  // Animate score bar
+  setTimeout(() => {
+    const fill = document.getElementById('score-fill-' + id);
+    if (fill) fill.style.width = data.score + '%';
+  }, 100);
+
+  // Update state to EVALUATING
+  setTimeout(() => {
+    const sb = document.getElementById('state-badge-' + id);
+    if (sb) sb.textContent = 'EVALUATING';
+  }, 300);
+
+  // Update count pill
+  updateEvalPill();
+
+  return id;
+}
+
+function makeDecision(eventId, decision, reason) {
+  const decBadge   = document.getElementById('decision-badge-' + eventId);
+  const stateBadge = document.getElementById('state-badge-' + eventId);
+  const whyEl      = document.getElementById('why-' + eventId);
+  const eventEl    = document.getElementById('eval-event-' + eventId);
+
+  let decClass = 'decision-' + decision;
+  let stateText = 'DELIVERED';
+  let stateClass = 'delivered';
+
+  if (decision === 'SUPPRESS') { stateText = 'SUPPRESSED'; stateClass = 'suppressed'; eventEl.classList.add('suppressed'); }
+  if (decision === 'SILENT')   { stateText = 'SILENT';     stateClass = '';           eventEl.classList.add('silent'); }
+  if (decision === 'QUEUED')   { stateText = 'QUEUED';     stateClass = '';           decClass = 'decision-QUEUED'; }
+
+  if (decBadge)   { decBadge.className = 'decision-badge ' + decClass; decBadge.textContent = decision; }
+  if (stateBadge) { stateBadge.className = 'state-badge ' + stateClass; stateBadge.textContent = stateText; }
+  if (whyEl && reason) { whyEl.textContent = reason; whyEl.style.display = 'block'; }
+
+  // Tally
+  const tallyKey = decision === 'QUEUED' ? 'QUEUED' : decision;
+  if (tally[tallyKey] !== undefined) {
+    tally[tallyKey]++;
+    const el = document.getElementById('tally-' + tallyKey.toLowerCase());
+    if (el) el.textContent = tally[tallyKey];
+  }
+}
+
+function updateEvalBadgeState(eventId, stateText, stateClass) {
+  const sb = document.getElementById('state-badge-' + eventId);
+  if (sb) { sb.className = 'state-badge ' + (stateClass || ''); sb.textContent = stateText; }
+}
+
+function updateDecisionBadge(eventId, decision, decClass) {
+  const db = document.getElementById('decision-badge-' + eventId);
+  if (db) { db.className = 'decision-badge ' + decClass; db.textContent = decision; }
+}
+
+function updateEvalPill() {
+  const pill = document.getElementById('eval-count-pill');
+  if (pill) pill.textContent = evalEvents.length + ' event' + (evalEvents.length !== 1 ? 's' : '');
+}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+function addCard(type, opts) {
+  const id = 'card-' + (++cardIdCounter);
+  cards.push({ id, type, opts });
+
+  const stack = document.getElementById('card-stack');
+  const empty = document.getElementById('stack-empty');
+  if (empty) empty.remove();
+
+  const accentClass = 'card-accent-' + type;
+
+  const actionsHtml = (opts.actions || []).map(a => {
+    const cls = a.style || '';
+    return `<button class="card-btn ${cls}" onclick="${a.fn}">${a.label}</button>`;
+  }).join('');
+
+  const whyHtml = opts.why ? `
+    <div class="card-why">
+      <div class="card-why-label">Why this appeared</div>
+      <div class="card-why-text">${opts.why}</div>
+    </div>
+  ` : '';
+
+  const el = document.createElement('div');
+  el.className = 'proactive-card';
+  el.id = id;
+  el.innerHTML = `
+    <div class="${accentClass} card-accent"></div>
+    <div class="card-body">
+      <div class="card-header-row">
+        <div class="card-meta">
+          <div class="card-title">${opts.title}</div>
+          <div class="card-source">${opts.source || type} · ${new Date().toLocaleTimeString()}</div>
+        </div>
+        <span class="event-type-badge event-type-${type}">${type}</span>
+        <span class="card-status-badge" id="card-status-${id}">${opts.status || 'ACTIVE'}</span>
+      </div>
+      <div class="card-content">${opts.content}</div>
+      ${whyHtml}
+      <div class="card-actions" id="card-actions-${id}">
+        ${actionsHtml}
+      </div>
+    </div>
+  `;
+
+  stack.appendChild(el);
+  updateCardPill();
+  return id;
+}
+
+function updateCardPill() {
+  const pill = document.getElementById('card-count-pill');
+  if (pill) pill.textContent = cards.length + ' card' + (cards.length !== 1 ? 's' : '');
+}
+
+function removeCard(cardId) {
+  const el = document.getElementById(cardId);
+  if (!el) return;
+  el.classList.add('withdrawing');
+  setTimeout(() => {
+    el.remove();
+    cards = cards.filter(c => c.id !== cardId);
+    updateCardPill();
+    if (cards.length === 0) {
+      const stack = document.getElementById('card-stack');
+      if (!document.getElementById('stack-empty')) {
+        const emp = document.createElement('div');
+        emp.className = 'card-stack-empty';
+        emp.id = 'stack-empty';
+        emp.textContent = 'No proactive cards — run V-03, V-04, V-08, V-09, V-10, V-11, V-12, V-13';
+        stack.appendChild(emp);
+      }
+    }
+  }, 380);
+}
+
+function acknowledgeCard(cardId) {
+  const statusEl = document.getElementById('card-status-' + cardId);
+  if (statusEl) { statusEl.textContent = 'ACKNOWLEDGED'; statusEl.classList.add('delivered'); }
+  const actionsEl = document.getElementById('card-actions-' + cardId);
+  if (actionsEl) actionsEl.innerHTML = '<span style="font-size:11px; color: var(--apex-color-success);">&#x2713; Acknowledged</span>';
+  setTimeout(() => removeCard(cardId), 1200);
+}
+
+function dismissCard(cardId) {
+  removeCard(cardId);
+}
+
+function deferCard(cardId) {
+  const statusEl = document.getElementById('card-status-' + cardId);
+  if (statusEl) { statusEl.textContent = 'DEFERRED · 2h'; statusEl.className = 'card-status-badge deferred'; }
+  const actionsEl = document.getElementById('card-actions-' + cardId);
+  if (actionsEl) actionsEl.innerHTML = '<span style="font-size:11px; color: var(--apex-color-warning);">&#x23F0; Deferred — resurface in 2h</span>';
+  setTimeout(() => removeCard(cardId), 1800);
+}
+
+/* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+function showNotify(level, title, sub, actions) {
+  const slot = document.getElementById('notify-slot');
+  const el = document.createElement('div');
+  el.className = 'notify-banner level-' + level;
+
+  const levelLabels = { 2: 'L2 INFO', 3: 'L3 STANDARD', 4: 'L4 URGENT', 5: 'L5 CRITICAL' };
+  const actionsHtml = (actions || []).map(a =>
+    `<button class="notify-action ${a.primary ? 'primary' : ''}" onclick="${a.fn || ''}">${a.label}</button>`
+  ).join('');
+
+  el.innerHTML = `
+    <span class="notify-level-badge">L${level} ${levelLabels[level] ? levelLabels[level].split(' ')[1] : ''}</span>
+    <div class="notify-content">
+      <div class="notify-title">${title}</div>
+      ${sub ? `<div class="notify-sub">${sub}</div>` : ''}
+    </div>
+    <div class="notify-actions">${actionsHtml}</div>
+    <button class="notify-dismiss" onclick="this.closest('.notify-banner').remove()" aria-label="Dismiss">&#x2715;</button>
+  `;
+
+  slot.appendChild(el);
+
+  // Auto-dismiss L2/L3 after 5s, L4 after 10s, L5 stays
+  if (level <= 3) setTimeout(() => el.remove(), 5000);
+  if (level === 4) setTimeout(() => el.remove(), 10000);
+}
+
+/* ============================================================
+   VOICE
+   ============================================================ */
+function toggleVoice(state) {
+  const overlay = document.getElementById('voice-overlay');
+  const voiceLabel = document.getElementById('voice-label');
+  const voiceSub = document.getElementById('voice-sub');
+  const evalVoiceEl = document.getElementById('eval-voice-state');
+  const evalMode = document.getElementById('eval-mode');
+
+  if (state === 'speak') {
+    voiceActive = true;
+    voiceLabel.textContent = 'APEX Speaking';
+    voiceSub.textContent = 'Delivering proactive information via voice…';
+    overlay.classList.add('visible');
+    setOrb('speak');
+    if (evalVoiceEl) evalVoiceEl.textContent = 'SPEAKING';
+    if (evalMode) evalMode.textContent = 'VOICE-ACTIVE';
+  } else if (state === 'listen') {
+    voiceActive = true;
+    voiceLabel.textContent = 'APEX Listening';
+    voiceSub.textContent = 'Non-urgent events queued — voice session active';
+    overlay.classList.add('visible');
+    setOrb('listen');
+    if (evalVoiceEl) evalVoiceEl.textContent = 'LISTENING';
+    if (evalMode) evalMode.textContent = 'VOICE-ACTIVE';
+  } else {
+    voiceActive = false;
+    overlay.classList.remove('visible');
+    setOrb('ready');
+    if (evalVoiceEl) evalVoiceEl.textContent = 'IDLE';
+    if (evalMode) evalMode.textContent = 'ACTIVE';
+  }
+}
+
+function closeVoiceOverlay() {
+  toggleVoice('off');
+}
+
+/* ============================================================
+   ESCALATION
+   ============================================================ */
+function escalateEvent(cardId, fromStatus, toStatus) {
+  const statusEl = document.getElementById('card-status-' + cardId);
+  if (statusEl) {
+    statusEl.textContent = toStatus;
+    if (toStatus === 'ESCALATED') statusEl.className = 'card-status-badge escalated';
+  }
+}
+
+/* ============================================================
+   CLEAR ALL
+   ============================================================ */
+function clearAll() {
+  scenarioTimers.forEach(t => clearTimeout(t));
+  scenarioTimers.length = 0;
+
+  const stream = document.getElementById('event-stream');
+  stream.innerHTML = '<div class="event-stream-empty" id="stream-empty">No events evaluated yet — run a scenario</div>';
+  evalEvents = [];
+
+  const stack = document.getElementById('card-stack');
+  stack.innerHTML = '<div class="card-stack-empty" id="stack-empty">No proactive cards — run V-03, V-04, V-08, V-09, V-10, V-11, V-12, V-13</div>';
+  cards = [];
+
+  document.getElementById('notify-slot').innerHTML = '';
+  document.getElementById('converse-log').innerHTML = '';
+
+  Object.keys(tally).forEach(k => { tally[k] = 0; });
+  ['present','notify','suppress','voice','silent','queued'].forEach(k => {
+    const el = document.getElementById('tally-' + k);
+    if (el) el.textContent = '0';
+  });
+
+  updateEvalPill();
+  updateCardPill();
+
+  toggleVoice('off');
+  setOrb('ready');
+  setStatus('Cleared');
+
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('running'));
+
+  const evalQueuedCount = document.getElementById('eval-queued-count');
+  if (evalQueuedCount) evalQueuedCount.textContent = '0';
+
+  eventIdCounter = 0;
+  cardIdCounter  = 0;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+function setView(view) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const sections = { evaluator:'section-evaluator', cards:'section-cards', notify:'notify-slot', voice:'section-converse', converse:'section-converse' };
+  const target = document.getElementById(sections[view] || 'section-evaluator');
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ============================================================
+   CONVERSE
+   ============================================================ */
+function sendConverse() {
+  const input = document.getElementById('converse-input');
+  const log = document.getElementById('converse-log');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const msg = document.createElement('div');
+  msg.style.cssText = 'font-size:11px; padding:6px 10px; border-radius:6px; background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.15); color:var(--apex-color-text-primary);';
+  msg.innerHTML = `<span style="color:var(--apex-color-text-muted);">You:</span> ${text}`;
+  log.appendChild(msg);
+
+  setTimeout(() => {
+    const reply = document.createElement('div');
+    reply.style.cssText = 'font-size:11px; padding:6px 10px; border-radius:6px; background:rgba(123,47,255,0.08); border:1px solid rgba(123,47,255,0.15); color:var(--apex-color-text-secondary);';
+    reply.innerHTML = `<span style="color:var(--apex-color-accent);">APEX:</span> Proactive context logged. ${cards.length} card(s) active.`;
+    log.appendChild(reply);
+    log.scrollTop = log.scrollHeight;
+  }, 600);
+
+  input.value = '';
+  log.scrollTop = log.scrollHeight;
+}
+
+/* ============================================================
+   SCENARIO HELPERS
+   ============================================================ */
+function st(fn, delay) {
+  const t = setTimeout(fn, delay);
+  scenarioTimers.push(t);
+  return t;
+}
+
+function markScenario(n) {
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('running'));
+  const btn = document.getElementById('btn-s' + n);
+  if (btn) btn.classList.add('running');
+}
+
+/* ============================================================
+   SCENARIOS
+   ============================================================ */
+function runScenario(n) {
+  markScenario(n);
+  setStatus('Running V-' + String(n).padStart(2,'0'));
+
+  switch(n) {
+    case 1: scenario_V01(); break;
+    case 2: scenario_V02(); break;
+    case 3: scenario_V03(); break;
+    case 4: scenario_V04(); break;
+    case 5: scenario_V05(); break;
+    case 6: scenario_V06(); break;
+    case 7: scenario_V07(); break;
+    case 8: scenario_V08(); break;
+    case 9: scenario_V09(); break;
+    case 10: scenario_V10(); break;
+    case 11: scenario_V11(); break;
+    case 12: scenario_V12(); break;
+    case 13: scenario_V13(); break;
+    case 14: scenario_V14(); break;
+  }
+}
+
+/* V-01: Relevant event → PRESENT */
+function scenario_V01() {
+  const id = addEvalEvent({ type: 'INSIGHT', title: 'Market opportunity detected in Q3 pipeline', score: 78 });
+  st(() => makeDecision(id, 'PRESENT', 'Relevance score 78 — above PRESENT threshold (≥65). Context: active pipeline review session.'), 800);
+  st(() => setStatus('V-01 complete — PRESENT decision issued'), 1200);
+}
+
+/* V-02: Low-value event → SUPPRESS */
+function scenario_V02() {
+  const id = addEvalEvent({ type: 'STATUS', title: 'System heartbeat pulse logged', score: 18 });
+  st(() => makeDecision(id, 'SUPPRESS', 'Relevance below threshold — score 18, minimum for PRESENT is 65. Routine system event.'), 700);
+  st(() => setStatus('V-02 complete — SUPPRESS (below threshold)'), 1100);
+}
+
+/* V-03: Useful info → contextual card appears */
+function scenario_V03() {
+  const id = addEvalEvent({ type: 'REMINDER', title: 'Weekly review due — 3 items pending', score: 71 });
+  st(() => makeDecision(id, 'PRESENT', 'Relevance 71 — above threshold. Time-sensitive reminder within active work session.'), 700);
+  st(() => {
+    const cid = addCard('REMINDER', {
+      title: 'Weekly Review — 3 Pending Items',
+      source: 'APEX Proactive',
+      content: 'You have 3 unreviewed items from this week: Sprint retrospective notes, Vendor contract renewal, and Q4 planning brief. Recommend completing before Friday close.',
+      why: 'Triggered by: weekly cadence reminder. Context: active work session, 3 items past-due by 2 days.',
+      status: 'ACTIVE',
+      actions: [
+        { label: 'Acknowledge', style: 'primary', fn: `acknowledgeCard('${cardIdCounter}')` },
+        { label: 'Defer 2h', style: '', fn: `deferCard('${cardIdCounter}')` },
+        { label: 'Dismiss', style: 'danger', fn: `dismissCard('${cardIdCounter}')` },
+      ]
+    });
+  }, 1000);
+  st(() => setStatus('V-03 complete — contextual REMINDER card presented'), 1400);
+}
+
+/* V-04: Urgent → L4 Notify banner */
+function scenario_V04() {
+  const id = addEvalEvent({ type: 'ALERT', title: 'API rate limit at 92% — critical threshold', score: 91 });
+  st(() => makeDecision(id, 'NOTIFY', 'Score 91 — NOTIFY threshold (≥80) met. Urgency: HIGH. Interruption justified.'), 600);
+  st(() => {
+    showNotify(4, 'API Rate Limit Critical', 'Usage at 92% — limit resets in 43 minutes. Reduce request volume now.',
+      [
+        { label: 'View Usage', primary: true, fn: '' },
+        { label: 'Throttle', fn: '' }
+      ]
+    );
+    updateEvalBadgeState(id, 'NOTIFIED', 'delivered');
+  }, 900);
+  st(() => setStatus('V-04 complete — L4 banner issued'), 1300);
+}
+
+/* V-05: Proactive voice */
+function scenario_V05() {
+  const id = addEvalEvent({ type: 'ACTION', title: 'Proactive briefing ready — morning digest', score: 84 });
+  st(() => makeDecision(id, 'VOICE', 'Score 84 — above NOTIFY threshold. User voice mode preferred for morning briefings. Routing to voice channel.'), 600);
+  st(() => toggleVoice('speak'), 900);
+  st(() => {
+    updateEvalBadgeState(id, 'VOICE-DELIVERED', 'delivered');
+    setStatus('V-05 — voice overlay active (close to end)');
+  }, 1000);
+}
+
+/* V-06: Voice active → queue non-urgent */
+function scenario_V06() {
+  toggleVoice('listen');
+  const evalQueuedCount = document.getElementById('eval-queued-count');
+  const evalVoiceEl = document.getElementById('eval-voice-state');
+  if (evalVoiceEl) evalVoiceEl.textContent = 'LISTENING';
+
+  const events = [
+    { type: 'CHANGE', title: 'Document version updated by collaborator', score: 55 },
+    { type: 'STATUS', title: 'Build pipeline completed successfully', score: 48 },
+    { type: 'OPPORTUNITY', title: 'New partnership inquiry received', score: 62 }
+  ];
+
+  events.forEach((ev, i) => {
+    st(() => {
+      const id = addEvalEvent(ev);
+      st(() => {
+        makeDecision(id, 'QUEUED', 'QUEUED — voice session active. Non-urgent events held until voice session ends.');
+        const qc = document.getElementById('eval-queued-count');
+        if (qc) qc.textContent = String(parseInt(qc.textContent || '0') + 1);
+        tally.QUEUED++;
+        const tq = document.getElementById('tally-queued');
+        if (tq) tq.textContent = tally.QUEUED;
+      }, 600);
+    }, i * 700);
+  });
+
+  st(() => setStatus('V-06 — voice active, 3 events queued'), 2800);
+}
+
+/* V-07: Duplicate → SUPPRESS */
+function scenario_V07() {
+  const id1 = addEvalEvent({ type: 'REMINDER', title: 'Review contract renewal — Acme Corp', score: 70 });
+  st(() => makeDecision(id1, 'PRESENT', 'First occurrence. Score 70 — above threshold.'), 600);
+
+  st(() => {
+    const id2 = addEvalEvent({ type: 'REMINDER', title: 'Review contract renewal — Acme Corp', score: 70 });
+    st(() => makeDecision(id2, 'SUPPRESS', 'Duplicate — same content within 5min. Original event already presented at 70/100.'), 500);
+    st(() => setStatus('V-07 complete — duplicate SUPPRESSED'), 900);
+  }, 1200);
+}
+
+/* V-08: Acknowledge */
+function scenario_V08() {
+  const id = addEvalEvent({ type: 'DECISION', title: 'Approve Q4 budget allocation — deadline today', score: 88 });
+  st(() => makeDecision(id, 'PRESENT', 'Score 88 — above threshold. Deadline urgency detected. Requires user decision.'), 600);
+  st(() => {
+    const cid = addCard('DECISION', {
+      title: 'Approve Q4 Budget Allocation',
+      source: 'Finance · Due today',
+      content: 'Q4 budget allocation of $240,000 requires your approval. Deadline: COB today. Three departments pending: Engineering, Marketing, Operations.',
+      why: 'Triggered by: approval deadline within 8h. Context: you are the assigned approver. Escalation pending if not actioned.',
+      status: 'PENDING APPROVAL',
+      actions: [
+        { label: 'Acknowledge', style: 'primary', fn: `acknowledgeCard('${cardIdCounter}')` },
+        { label: 'Open Budget Tool', style: '', fn: '' },
+        { label: 'Defer', style: '', fn: `deferCard('${cardIdCounter}')` }
+      ]
+    });
+    setStatus('V-08 — click "Acknowledge" on the card');
+  }, 1000);
+}
+
+/* V-09: Dismiss */
+function scenario_V09() {
+  const id = addEvalEvent({ type: 'CHANGE', title: 'Quarterly report template updated', score: 52 });
+  st(() => makeDecision(id, 'PRESENT', 'Score 52 — marginally above threshold. Informational update in active context.'), 600);
+  st(() => {
+    const cid = addCard('CHANGE', {
+      title: 'Quarterly Report Template Updated',
+      source: 'Document System',
+      content: 'The Q4 quarterly report template has been updated with new formatting guidelines. Sections 3 and 5 have been restructured.',
+      why: 'Triggered by: document change notification. Context: active report editing session detected.',
+      status: 'INFORMATIONAL',
+      actions: [
+        { label: 'View Changes', style: 'primary', fn: '' },
+        { label: 'Dismiss', style: 'danger', fn: `dismissCard('${cardIdCounter}')` }
+      ]
+    });
+    setStatus('V-09 — click "Dismiss" on the card');
+  }, 1000);
+}
+
+/* V-10: Defer */
+function scenario_V10() {
+  const id = addEvalEvent({ type: 'OPPORTUNITY', title: 'Partnership proposal from Nexus AI — review requested', score: 74 });
+  st(() => makeDecision(id, 'PRESENT', 'Score 74 — above threshold. Opportunity category with response window > 24h. Non-urgent present.'), 700);
+  st(() => {
+    const cid = addCard('OPPORTUNITY', {
+      title: 'Partnership Proposal — Nexus AI',
+      source: 'Business Development',
+      content: 'Nexus AI has submitted a partnership proposal for co-development of the data pipeline layer. Review and initial response requested within 48h.',
+      why: 'Triggered by: inbound proposal flagged by BD team. Context: no conflicting calendar blocks detected for review window.',
+      status: 'OPEN',
+      actions: [
+        { label: 'Defer 2h', style: '', fn: `deferCard('${cardIdCounter}')` },
+        { label: 'Acknowledge', style: 'primary', fn: `acknowledgeCard('${cardIdCounter}')` },
+        { label: 'Dismiss', style: 'danger', fn: `dismissCard('${cardIdCounter}')` }
+      ]
+    });
+    setStatus('V-10 — click "Defer 2h" on the card');
+  }, 1000);
+}
+
+/* V-11: Escalation over time steps */
+function scenario_V11() {
+  const id = addEvalEvent({ type: 'RISK', title: 'Unresponded security alert — 15min elapsed', score: 82 });
+  st(() => makeDecision(id, 'PRESENT', 'Score 82 — NOTIFY threshold met. Initial presentation issued.'), 600);
+  let cardId;
+  st(() => {
+    cardId = addCard('RISK', {
+      title: 'Security Alert — Unresponded',
+      source: 'Security Monitor',
+      content: 'Anomalous login attempt detected from unrecognised device. Alert issued 15 minutes ago with no user acknowledgement.',
+      why: 'Triggered by: security event. Context: alert unresponded for 15min — escalation protocol initiated.',
+      status: 'PRESENT',
+      actions: [
+        { label: 'Acknowledge', style: 'primary', fn: `acknowledgeCard('${cardId}')` },
+        { label: 'Investigate', style: '', fn: '' }
+      ]
+    });
+    setStatus('V-11 — watch status escalate PRESENT → NOTIFY → ESCALATED');
+  }, 1000);
+
+  // Simulate escalation steps
+  st(() => {
+    escalateEvent(cardId || 'card-' + cardIdCounter, 'PRESENT', 'NOTIFY');
+    updateDecisionBadge(id, 'NOTIFY', 'decision-NOTIFY');
+    updateEvalBadgeState(id, 'ESCALATING', 'escalated');
+    setStatus('V-11 — escalated to NOTIFY');
+  }, 3000);
+
+  st(() => {
+    const cid = 'card-' + cardIdCounter;
+    escalateEvent(cid, 'NOTIFY', 'ESCALATED');
+    updateDecisionBadge(id, 'ESCALATED', 'decision-NOTIFY-L5');
+    updateEvalBadgeState(id, 'ESCALATED', 'escalated');
+    showNotify(5, 'ESCALATED: Security Alert Unresponded', 'No acknowledgement in 30min — immediate review required.', [
+      { label: 'Review Now', primary: true, fn: '' }
+    ]);
+    setStatus('V-11 complete — ESCALATED + L5 banner');
+  }, 5500);
+}
+
+/* V-12: Withdraw resolved */
+function scenario_V12() {
+  const id = addEvalEvent({ type: 'STATUS', title: 'Deployment in progress — staging environment', score: 68 });
+  st(() => makeDecision(id, 'PRESENT', 'Score 68 — above threshold. Active deployment in monitored environment.'), 600);
+  let cid;
+  st(() => {
+    cid = addCard('STATUS', {
+      title: 'Deployment In Progress',
+      source: 'CI/CD Pipeline',
+      content: 'Staging environment deployment is underway. Estimated completion: 4 minutes. Monitoring for errors.',
+      why: 'Triggered by: deployment event in monitored environment. Context: you initiated this deployment 8min ago.',
+      status: 'IN PROGRESS',
+      actions: [
+        { label: 'View Logs', style: '', fn: '' }
+      ]
+    });
+    setStatus('V-12 — card appears, auto-withdraws when resolved (3s)');
+  }, 1000);
+
+  st(() => {
+    const actualCid = 'card-' + cardIdCounter;
+    const statusEl = document.getElementById('card-status-' + actualCid);
+    if (statusEl) { statusEl.textContent = 'RESOLVED'; statusEl.className = 'card-status-badge delivered'; }
+    updateEvalBadgeState(id, 'RESOLVED', 'delivered');
+    setStatus('V-12 — resolved, withdrawing card…');
+    setTimeout(() => removeCard(actualCid), 1000);
+  }, 4000);
+
+  st(() => setStatus('V-12 complete — resolved card withdrawn'), 6000);
+}
+
+/* V-13: Show proactive why/context */
+function scenario_V13() {
+  const id = addEvalEvent({ type: 'INSIGHT', title: 'Meeting pattern analysis — focus time degrading', score: 76 });
+  st(() => makeDecision(id, 'PRESENT', 'Score 76 — above threshold. Behavioural insight with actionable recommendation.'), 700);
+  st(() => {
+    addCard('INSIGHT', {
+      title: 'Focus Time Degrading — 6-Week Trend',
+      source: 'APEX Behavioural Analysis',
+      content: 'Your uninterrupted focus blocks have decreased from an average of 3.2h/day to 1.4h/day over the past 6 weeks. Primary cause: meeting fragmentation on Tuesday and Thursday.',
+      why: 'Triggered by: calendar pattern analysis completed. Context: you recently asked APEX to monitor productivity trends. This insight meets the "significant trend" threshold (>35% change over 4+ weeks). Timing: Monday morning — optimal for scheduling adjustments.',
+      status: 'INSIGHT',
+      actions: [
+        { label: 'View Full Analysis', style: 'primary', fn: '' },
+        { label: 'Suggest Schedule Fix', style: '', fn: '' },
+        { label: 'Acknowledge', style: 'muted', fn: `acknowledgeCard('${cardIdCounter}')` }
+      ]
+    });
+    setStatus('V-13 complete — INSIGHT card with full context/why shown');
+  }, 1000);
+}
+
+/* V-14: SILENT decision */
+function scenario_V14() {
+  const id = addEvalEvent({ type: 'STATUS', title: 'Background sync completed — 214 records', score: 9 });
+  st(() => makeDecision(id, 'SILENT', 'Score 9 — below SILENT threshold (< 20). Routine background operation. No user value. APEX remains silent.'), 700);
+  st(() => setStatus('V-14 complete — SILENT (below value threshold, no action taken)'), 1100);
+}
+
+/* ============================================================
+   KEYBOARD SHORTCUTS
+   ============================================================ */
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT') return;
+  const key = e.key;
+  const map = {
+    '1': 1, '2': 2, '3': 3, '4': 4, '5': 5,
+    '6': 6, '7': 7, '8': 8, '9': 9, '0': 10,
+    'q': 11, 'Q': 11,
+    'w': 12, 'W': 12,
+    'e': 13, 'E': 13,
+    'r': 14, 'R': 14,
+    'Escape': 'esc'
+  };
+
+  if (map[key] && map[key] !== 'esc') {
+    e.preventDefault();
+    runScenario(map[key]);
+  }
+  if (key === 'Escape') {
+    closeVoiceOverlay();
+  }
+});
+
+/* ============================================================
+   CONVERSE INPUT ENTER
+   ============================================================ */
+document.getElementById('converse-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') sendConverse();
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+setStatus('Ready — select a scenario or press 1–9, 0, Q/W/E/R');
+</script>
+</body>
+</html>

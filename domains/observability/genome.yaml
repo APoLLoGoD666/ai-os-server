@@ -1,0 +1,33 @@
+id: DOM-000006
+name: Observability
+criticality: HIGH
+autonomy_level: 1
+
+description: >
+  Observatory, health scores, event timeline, temporal cognition, metrics.
+  Gives the civilisation eyes — makes every state visible and navigable.
+
+invariants:
+  - property: status
+    must_be: ACTIVE
+    violation: degraded
+
+  - property: owner
+    must_be_set: true
+    violation: advisory
+
+  - property: health_score
+    minimum: 40
+    consecutive_readings: 5
+    violation: quarantine
+
+vital_connections:
+  - DOM-000003   # Registry — reads all health and events from here
+
+ancestors:
+  - DOM-000001
+
+healing_domain: DOM-000005
+
+clock_baseline_ticks_per_hour: 60
+prediction_accuracy_target: 0.85

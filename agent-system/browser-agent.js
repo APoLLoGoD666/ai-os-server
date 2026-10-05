@@ -1,37 +1,45 @@
 "use strict";
 const { chromium } = require('playwright');
-const Anthropic = require('@anthropic-ai/sdk');
+const runtime = require('../lib/models/runtime');
 const memory = require('./obsidian-memory');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
-const MODEL = 'claude-sonnet-4-6';
 const DEFAULT_TIMEOUT = 30000;
-const SESSION_DIR = '/tmp/browser-sessions';
+const SESSION_DIR = require('path').join(os.tmpdir(), 'browser-sessions');
 
 // Domain allowlist — if set, browser functions block URLs not on this list.
 // Populate via BROWSER_ALLOWED_DOMAINS env var (comma-separated) or runtime call.
 const _allowedDomains = process.env.BROWSER_ALLOWED_DOMAINS
-    ? new Set(process.env.BROWSER_ALLOWED_DOMAINS.split(',').map(d => d.trim().toLowerCase()))
+    ? new Set(process.env.BROWSER_ALLOWED_DOMAINS.split(',').map(d => d.trim().toLowerCase()).filter(Boolean))
     : null;
 
+// RFC-1918 / loopback / link-local / IPv4-mapped IPv6 — always blocked regardless of allowlist
+const _PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.0\.0\.0|::1$|::ffff:|fd[0-9a-f]{2}:|fe80:)/i;
+
 function _checkDomain(url) {
-    if (!_allowedDomains || _allowedDomains.size === 0) return;
-    try {
-        const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
-        if (!_allowedDomains.has(host)) {
-            throw new Error(`Domain not in allowlist: ${host}`);
-        }
-    } catch (e) {
-        if (e.message.startsWith('Domain not in allowlist')) throw e;
+    let parsed;
+    try { parsed = new URL(url); } catch { throw new Error(`Invalid URL: ${url}`); }
+    if (parsed.protocol === 'file:') throw new Error('file:// URLs are blocked');
+    if (!parsed.protocol.startsWith('http')) throw new Error(`Protocol blocked: ${parsed.protocol}`);
+    const host = parsed.hostname.toLowerCase();
+    if (_PRIVATE_HOST.test(host)) throw new Error(`SSRF blocked — private/loopback host: ${host}`);
+    if (_allowedDomains && _allowedDomains.size > 0) {
+        const bare = host.replace(/^www\./, '');
+        if (!_allowedDomains.has(bare)) throw new Error(`Domain not in allowlist: ${host}`);
     }
+}
+
+// SSRF-safe page.goto wrapper — validates every navigation URL before hitting the network
+async function _safeGoto(page, url, options) {
+    _checkDomain(url);
+    return page.goto(url, options);
 }
 
 // SOCKS5/HTTP proxy configuration — set PLAYWRIGHT_PROXY env var as "socks5://host:port"
 const _proxyConfig = process.env.PLAYWRIGHT_PROXY ? { server: process.env.PLAYWRIGHT_PROXY } : undefined;
 
-// Module-level Anthropic client — NOT new per call
-const _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ── Session helpers ───────────────────────────────────────────────
 function _ensureSessionDir() {
@@ -198,7 +206,7 @@ function interceptNetwork(page) {
             const raw = request.postData();
             if (raw) postData = raw.slice(0, 500);
         } catch (_) {}
-        captured.push({
+        if (captured.length < 100) captured.push({
             method: request.method(),
             url: reqUrl,
             headers: filteredHeaders,
@@ -236,9 +244,10 @@ async function checkResearchCache(objective) {
 
 // ── Analyse content with Claude ───────────────────────────────────
 async function analyseContent(content, objective) {
-    const res = await _client.messages.create({
-        model: MODEL,
-        max_tokens: 2000,
+    const { result: res } = await runtime.execute({
+        tier:      'balanced',
+        caller:    'browser-agent',
+        maxTokens: 2000,
         system: `You are a data extraction agent. Given webpage content and an objective,
 extract exactly the information requested. Be precise and concise.
 Output JSON only: { "found": boolean, "data": any, "summary": string, "nextAction": string|null }
@@ -303,7 +312,7 @@ async function research(objective, startUrl, options = {}) {
             visited.add(currentUrl);
 
             console.log(`[Browser] Visiting: ${currentUrl}`);
-            await page.goto(currentUrl, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+            await _safeGoto(page, currentUrl, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
 
             // Handle login if credentials provided
             if (credentials && i === 0) {
@@ -384,7 +393,7 @@ async function researchParallel(objective, urls, options = {}) {
             try {
                 page = await context.newPage();
                 page.setDefaultTimeout(DEFAULT_TIMEOUT);
-                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+                await _safeGoto(page, url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
                 const content = await extractPageContent(page);
                 const analysis = await analyseContent(content, objective);
                 return { url, ...analysis };
@@ -446,7 +455,7 @@ async function fillForm(url, fields, submitSelector, options = {}) {
         const page = await context.newPage();
         page.setDefaultTimeout(DEFAULT_TIMEOUT);
 
-        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded' });
 
         for (const [selector, value] of Object.entries(fields)) {
             try {
@@ -492,7 +501,7 @@ async function batchFillForm(submissions, options = {}) {
             try {
                 page = await context.newPage();
                 page.setDefaultTimeout(DEFAULT_TIMEOUT);
-                await page.goto(url, { waitUntil: 'domcontentloaded' });
+                await _safeGoto(page, url, { waitUntil: 'domcontentloaded' });
 
                 for (const [selector, value] of Object.entries(fields || {})) {
                     try {
@@ -543,7 +552,7 @@ async function clickAndExtract(url, clickSelector, options = {}) {
         const page = await context.newPage();
         page.setDefaultTimeout(DEFAULT_TIMEOUT);
 
-        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded' });
         await page.click(clickSelector);
         await page.waitForLoadState('networkidle', { timeout: DEFAULT_TIMEOUT }).catch(() => {});
 
@@ -599,7 +608,7 @@ async function downloadFile(url, options = {}) {
 
         const [download] = await Promise.all([
             page.waitForEvent('download'),
-            page.goto(url)
+            _safeGoto(page, url)
         ]);
 
         const filename = download.suggestedFilename();
@@ -627,7 +636,7 @@ async function generatePDF(url, options = {}) {
         const page = await context.newPage();
         page.setDefaultTimeout(DEFAULT_TIMEOUT);
 
-        await page.goto(url, { waitUntil: 'networkidle' });
+        await _safeGoto(page, url, { waitUntil: 'networkidle' });
 
         if (waitForSelector) {
             try {
@@ -662,7 +671,7 @@ async function auditAccessibility(url, options = {}) {
         const page = await context.newPage();
         page.setDefaultTimeout(DEFAULT_TIMEOUT);
 
-        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded' });
 
         // Take accessibility snapshot
         const snapshot = await page.accessibility.snapshot();
@@ -744,7 +753,7 @@ async function monitorPage(url, selector, options = {}) {
         const page = await context.newPage();
         page.setDefaultTimeout(DEFAULT_TIMEOUT);
 
-        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded' });
 
         let value = null;
         try {
@@ -792,7 +801,7 @@ async function discoverAPI(url, options = {}) {
 
         const captured = interceptNetwork(page);
 
-        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded' });
 
         for (const action of interactions) {
             try {
@@ -833,7 +842,7 @@ async function screenshot(url, outputPath, options = {}) {
         page.setDefaultTimeout(DEFAULT_TIMEOUT);
 
         await page.setViewportSize({ width: 1280, height: 800 });
-        await page.goto(url, { waitUntil: 'networkidle' });
+        await _safeGoto(page, url, { waitUntil: 'networkidle' });
 
         if (waitForSelector) {
             try {
@@ -860,7 +869,7 @@ async function recordHar(url, options = {}) {
         browser = await createBrowser();
         const context = await browser.newContext({ recordHar: { path: harPath, mode: 'full' } });
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
         if (options.actions) {
             for (const act of options.actions) {
                 if (act.type === 'click' && act.selector) await page.click(act.selector).catch(() => {});
@@ -900,7 +909,7 @@ async function mockRoute(url, patterns, mockHandlers, action = 'scrape') {
                 }
             });
         }
-        await page.goto(url, { waitUntil: 'networkidle', timeout: DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'networkidle', timeout: DEFAULT_TIMEOUT });
         const content = await extractPageContent(page);
         return { success: true, content };
     } catch (e) {
@@ -917,7 +926,7 @@ async function pressKey(url, key, options = {}) {
         const session = await createBrowserWithSession(options.sessionKey || null);
         browser = session.browser;
         const page = await session.context.newPage();
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
         if (options.selector) await page.focus(options.selector);
         await page.keyboard.press(key);
         if (options.screenshot) await page.screenshot({ path: options.screenshot });
@@ -937,7 +946,7 @@ async function fillSlow(url, selector, text, options = {}) {
         const session = await createBrowserWithSession(options.sessionKey || null);
         browser = session.browser;
         const page = await session.context.newPage();
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
         await page.waitForSelector(selector, { timeout: 10000 });
         await page.type(selector, text, { delay: options.delay || 60 });
         if (options.pressEnter) await page.keyboard.press('Enter');
@@ -957,7 +966,7 @@ async function selectOption(url, selector, valueOrLabel, options = {}) {
         const session = await createBrowserWithSession(options.sessionKey || null);
         browser = session.browser;
         const page = await session.context.newPage();
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
         await page.waitForSelector(selector, { timeout: 10000 });
         await page.selectOption(selector, options.byLabel
             ? { label: valueOrLabel }
@@ -978,7 +987,7 @@ async function dragDrop(url, sourceSelector, targetSelector, options = {}) {
         const session = await createBrowserWithSession(options.sessionKey || null);
         browser = session.browser;
         const page = await session.context.newPage();
-        await page.goto(url, { waitUntil: 'networkidle', timeout: DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'networkidle', timeout: DEFAULT_TIMEOUT });
         await page.waitForSelector(sourceSelector, { timeout: 10000 });
         await page.waitForSelector(targetSelector, { timeout: 10000 });
         await page.dragAndDrop(sourceSelector, targetSelector);
@@ -1002,7 +1011,7 @@ async function evalInPage(url, script, options = {}) {
         browser = await createBrowser();
         const context = await browser.newContext();
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
         const result = await page.evaluate(script);
         return { success: true, result };
     } catch (e) {
@@ -1027,7 +1036,7 @@ async function consoleMonitor(url, options = {}) {
             }
         });
         page.on('pageerror', err => logs.push({ type: 'pageerror', text: err.message }));
-        await page.goto(url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
         return { success: true, url, logs, errorCount: logs.filter(l => l.type === 'error' || l.type === 'pageerror').length };
     } catch (e) {
         return { success: false, error: e.message };
@@ -1043,7 +1052,7 @@ async function webVitals(url, options = {}) {
         browser = await createBrowser();
         const context = await browser.newContext();
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
         const vitals = await page.evaluate(() => {
             return new Promise(resolve => {
                 const result = { lcp: null, cls: 0, fid: null, ttfb: null };
@@ -1086,7 +1095,7 @@ async function annotatedSnapshot(url, options = {}) {
         browser = await createBrowser();
         const context = await browser.newContext();
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: options.timeout || DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded', timeout: options.timeout || DEFAULT_TIMEOUT });
         if (options.waitFor) await page.waitForSelector(options.waitFor, { timeout: 5000 }).catch(() => {});
         const snapshot = await page.accessibility.snapshot({ interestingOnly: true });
         const refs = [];
@@ -1124,7 +1133,7 @@ async function manageCookies(url, action, cookies = []) {
             await context.addCookies(cookies.map(c => ({ ...c, url })));
         }
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT });
         const current = await context.cookies();
         return { success: true, action, cookies: current };
     } catch (e) {
@@ -1142,7 +1151,7 @@ async function ariaSnapshot(url, options = {}) {
     try {
         const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' });
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: options.timeout || DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'domcontentloaded', timeout: options.timeout || DEFAULT_TIMEOUT });
         if (options.waitFor) await page.waitForSelector(options.waitFor, { timeout: 5000 }).catch(() => {});
 
         // page.accessibility.snapshot() returns the ARIA tree — ideal for LLM consumption
@@ -1180,7 +1189,7 @@ async function recordTrace(url, options = {}) {
         const context = await browser.newContext();
         await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
         if (options.actions) {
             for (const act of options.actions) {
                 if (act.type === 'click' && act.selector) await page.click(act.selector).catch(() => {});
@@ -1212,7 +1221,7 @@ async function recordVideo(url, options = {}) {
             }
         });
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
+        await _safeGoto(page, url, { waitUntil: 'networkidle', timeout: options.timeout || DEFAULT_TIMEOUT });
         if (options.actions) {
             for (const act of options.actions) {
                 if (act.type === 'click' && act.selector) await page.click(act.selector).catch(() => {});

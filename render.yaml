@@ -2,5 +2,24 @@ services:
   - type: web
     name: ai-os-server
     env: node
-    buildCommand: pip install graphifyy; npm install --legacy-peer-deps && npx playwright install chromium --with-deps
-    startCommand: node --max-old-space-size=460 server.js
+    buildCommand: npm install --legacy-peer-deps && node scripts/certify.js
+    startCommand: node --max-old-space-size=220 server.js
+    healthCheckPath: /health
+    # Disable zero-downtime deploys so the new instance has full 512MB available
+    # (old instance at ~280MB RSS + new startup peak ~340MB = OOM on Starter)
+    zeroDowntimeDeploys: false
+
+  - type: web
+    name: apex-ai-sidecar
+    env: python
+    buildCommand: pip install -r sidecar/requirements.txt
+    startCommand: uvicorn sidecar.main:app --host 0.0.0.0 --port $PORT
+    # After deploy: set RAG_SIDECAR_URL on ai-os-server to this service's URL
+    # RAG-Anything activates if OPENAI_API_KEY is also set on this service
+
+  - type: cron
+    name: registry-health-check
+    env: node
+    schedule: "*/30 * * * *"
+    buildCommand: npm install --legacy-peer-deps
+    startCommand: node scripts/registry-cron.js

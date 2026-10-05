@@ -1,39 +1,354 @@
-﻿'use strict';
+'use strict';
 const router = require('express').Router();
 const { getSupabaseClient } = require('../lib/clients');
 const _auth = require('../lib/app-auth');
+const { isMasterRequest } = require('../lib/middleware');
+const { cleanTransactions } = require('../lib/finance-categorise');
 
 const sb = getSupabaseClient;
+
 router.get('/finance/invoices', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_invoices').select('*').order('created_at', { ascending: false }).limit(20);
-        if (error) return res.json({ ok: true, invoices: [] });
+        const _hid = req.identity?.humanId || null;
+        let q = sb().from('apex_invoices').select('id,title,amount,status,due_date,client_name,created_at').order('created_at', { ascending: false }).limit(50);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, invoices: data || [] });
-    } catch (e) { res.json({ ok: true, invoices: [], error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 router.get('/finance/expenses', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_transactions').select('id,description,amount,category,date,source').eq('type', 'expense').order('date', { ascending: false }).limit(30);
-        if (error) return res.json({ ok: true, expenses: [] });
+        const _hid = req.identity?.humanId || null;
+        let q = sb().from('transactions').select('id,description,amount,category,date,source').eq('type', 'expense').order('date', { ascending: false }).limit(50);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, expenses: data || [] });
-    } catch (e) { res.json({ ok: true, expenses: [], error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 router.get('/finance/subscriptions', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_subscriptions').select('*').order('name', { ascending: true });
-        if (error) return res.json({ ok: true, subscriptions: [] });
+        const _hid = req.identity?.humanId || null;
+        let q = sb().from('apex_subscriptions').select('id,name,amount,billing_cycle,category,active,next_billing_date').order('name', { ascending: true }).limit(100);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, subscriptions: data || [] });
-    } catch (e) { res.json({ ok: true, subscriptions: [], error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 router.get('/finance/investments', _auth, async (req, res) => {
     try {
-        const { data, error } = await sb().from('apex_investments').select('*').order('name', { ascending: true });
-        if (error) return res.json({ ok: true, investments: [] });
+        const _hid = req.identity?.humanId || null;
+        let q = sb().from('apex_investments').select('id,name,type,amount,current_value,platform,notes').order('name', { ascending: true }).limit(100);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
         res.json({ ok: true, investments: data || [] });
-    } catch (e) { res.json({ ok: true, investments: [], error: e.message }); }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/balance', _auth, async (req, res) => {
+    try {
+        const _hid = req.identity?.humanId || null;
+        let q = sb().from('transactions').select('amount,type');
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        let income = 0, expenses = 0;
+        for (const t of data || []) {
+            if (t.type === 'income') income += Number(t.amount);
+            else expenses += Number(t.amount);
+        }
+        res.json({ ok: true, balance: income - expenses, income, expenses });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/net-worth', _auth, async (req, res) => {
+    try {
+        const { data, error } = await sb().from('apex_net_worth_snapshot')
+            .select('assets_gbp,net_worth_gbp,snapped_at')
+            .order('snapped_at', { ascending: false })
+            .limit(1);
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, snapshot: data?.[0] || null });
+    } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/cashflow', _auth, async (req, res) => {
+    try {
+        const _hid = req.identity?.humanId || null;
+        const cutoff = new Date();
+        cutoff.setMonth(cutoff.getMonth() - 6);
+        let q = sb().from('transactions').select('amount,type,date').gte('date', cutoff.toISOString().split('T')[0]);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        const months = {};
+        for (const t of data || []) {
+            const m = t.date.slice(0, 7);
+            if (!months[m]) months[m] = { income: 0, expenses: 0 };
+            if (t.type === 'income') months[m].income += Number(t.amount);
+            else months[m].expenses += Number(t.amount);
+        }
+        const cashflow = Object.entries(months)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([month, v]) => ({ month, income: v.income, expenses: v.expenses, net: v.income - v.expenses }));
+        res.json({ ok: true, cashflow });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/profit-loss', _auth, async (req, res) => {
+    try {
+        const _hid = req.identity?.humanId || null;
+        const cutoff = new Date();
+        cutoff.setMonth(cutoff.getMonth() - 6);
+        let q = sb().from('transactions').select('amount,type,category,date').gte('date', cutoff.toISOString().split('T')[0]);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        const months = {};
+        for (const t of data || []) {
+            const m = t.date.slice(0, 7);
+            if (!months[m]) months[m] = { income: 0, expenses: 0, categories: {} };
+            const amt = Number(t.amount);
+            if (t.type === 'income') months[m].income += amt;
+            else {
+                months[m].expenses += amt;
+                months[m].categories[t.category] = (months[m].categories[t.category] || 0) + amt;
+            }
+        }
+        const pnl = Object.entries(months)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([month, v]) => ({ month, income: v.income, expenses: v.expenses, profit: v.income - v.expenses, categories: v.categories }));
+        res.json({ ok: true, pnl });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.post('/finance/invoices', _auth, async (req, res) => {
+    try {
+        const { title, amount, client_name, due_date, status, notes } = req.body || {};
+        if (!title) return res.status(400).json({ ok: false, error: 'title required' });
+        if (amount == null) return res.status(400).json({ ok: false, error: 'amount required' });
+        const { data, error } = await sb().from('apex_invoices')
+            .insert({ title, amount: Number(amount), client_name: client_name || null, due_date: due_date || null, status: status || 'draft', notes: notes || null })
+            .select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, invoice: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.patch('/finance/invoices/:id', _auth, async (req, res) => {
+    try {
+        const allowed = ['status', 'amount', 'due_date', 'client_name', 'notes'];
+        const patch = {};
+        for (const k of allowed) if (req.body?.[k] !== undefined) patch[k] = req.body[k];
+        if (!Object.keys(patch).length) return res.status(400).json({ ok: false, error: 'no fields to update' });
+        if (patch.amount) patch.amount = Number(patch.amount);
+        const { data, error } = await sb().from('apex_invoices').update(patch).eq('id', req.params.id).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, invoice: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.post('/finance/subscriptions', _auth, async (req, res) => {
+    try {
+        const { name, amount, billing_cycle, category, active, next_billing_date } = req.body || {};
+        if (!name) return res.status(400).json({ ok: false, error: 'name required' });
+        const { data, error } = await sb().from('apex_subscriptions')
+            .insert({ name, amount: amount != null ? Number(amount) : null, billing_cycle: billing_cycle || 'monthly', category: category || null, active: active !== false, next_billing_date: next_billing_date || null })
+            .select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, subscription: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.patch('/finance/subscriptions/:id', _auth, async (req, res) => {
+    try {
+        const allowed = ['name', 'amount', 'active', 'next_billing_date', 'category', 'billing_cycle'];
+        const patch = {};
+        for (const k of allowed) if (req.body?.[k] !== undefined) patch[k] = req.body[k];
+        if (!Object.keys(patch).length) return res.status(400).json({ ok: false, error: 'no fields to update' });
+        if (patch.amount) patch.amount = Number(patch.amount);
+        if (patch.active !== undefined) patch.active = !!patch.active;
+        const { data, error } = await sb().from('apex_subscriptions').update(patch).eq('id', req.params.id).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, subscription: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.post('/finance/investments', _auth, async (req, res) => {
+    try {
+        const { name, type, amount, current_value, platform, notes } = req.body || {};
+        if (!name) return res.status(400).json({ ok: false, error: 'name required' });
+        const { data, error } = await sb().from('apex_investments')
+            .insert({ name, type: type || null, amount: amount != null ? Number(amount) : null, current_value: current_value != null ? Number(current_value) : null, platform: platform || null, notes: notes || null })
+            .select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, investment: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.patch('/finance/investments/:id', _auth, async (req, res) => {
+    try {
+        const allowed = ['name', 'type', 'amount', 'current_value', 'platform', 'notes'];
+        const patch = {};
+        for (const k of allowed) if (req.body?.[k] !== undefined) patch[k] = req.body[k];
+        if (!Object.keys(patch).length) return res.status(400).json({ ok: false, error: 'no fields to update' });
+        if (patch.amount) patch.amount = Number(patch.amount);
+        if (patch.current_value) patch.current_value = Number(patch.current_value);
+        const { data, error } = await sb().from('apex_investments').update(patch).eq('id', req.params.id).select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, investment: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Manual transaction entry — for income/expenses not captured by Open Banking
+// (e.g. PIP received via family, cash income, crypto proceeds)
+router.post('/finance/transactions/manual', _auth, async (req, res) => {
+    try {
+        const { description, amount, type, category, date } = req.body || {};
+        if (!description) return res.status(400).json({ ok: false, error: 'description required' });
+        if (amount == null) return res.status(400).json({ ok: false, error: 'amount required' });
+        if (!type || !['income', 'expense'].includes(type)) return res.status(400).json({ ok: false, error: 'type must be income or expense' });
+        const _hid = req.identity?.humanId || '00000000-0000-4000-8000-000000000001';
+        const { data, error } = await sb().from('transactions')
+            .insert({
+                human_id: _hid,
+                description,
+                amount: Number(amount),
+                type,
+                category: category || (type === 'income' ? 'CREDIT' : 'PURCHASE'),
+                date: date || new Date().toISOString().split('T')[0],
+                source: 'manual',
+            })
+            .select().single();
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, transaction: data });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/categorised', _auth, async (req, res) => {
+    try {
+        const _hid = req.identity?.humanId || null;
+        let q = sb().from('transactions').select('id,description,amount,type,category,date,source').order('date', { ascending: false }).limit(500);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        const result = cleanTransactions(data || []);
+        res.json({ ok: true, ...result });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/upcoming', _auth, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const _hid = req.identity?.humanId || null;
+        let q = sb().from('transactions').select('id,description,amount,type,category,date,source').gt('date', today).order('date', { ascending: true }).limit(20);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, upcoming: data || [] });
+    } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/monthly-summary', _auth, async (req, res) => {
+    try {
+        const _hid = req.identity?.humanId || null;
+        const now = new Date();
+        const thisMonthStr = now.toISOString().slice(0, 7);
+        const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const prevMonthStr = prevDate.toISOString().slice(0, 7);
+        const cutoff = prevDate.toISOString().split('T')[0];
+        // For history: go back 6 months
+        const historyCutoff = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0];
+        let q = sb().from('transactions').select('amount,type,date').gte('date', historyCutoff);
+        if (_hid) q = q.or(`human_id.eq.${_hid},human_id.is.null`);
+        const { data, error } = await q;
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        const months = { [thisMonthStr]: { income: 0, expenses: 0 }, [prevMonthStr]: { income: 0, expenses: 0 } };
+        const allMonths = {};
+        for (const t of data || []) {
+            const m = t.date.slice(0, 7);
+            if (months[m] !== undefined) {
+                if (t.type === 'income') months[m].income += Number(t.amount);
+                else months[m].expenses += Number(t.amount);
+            }
+            if (!allMonths[m]) allMonths[m] = { income: 0, expenses: 0 };
+            if (t.type === 'income') allMonths[m].income += Number(t.amount);
+            else allMonths[m].expenses += Number(t.amount);
+        }
+        const history = Object.entries(allMonths)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([month, v]) => ({ month, income: v.income, expenses: v.expenses, net: v.income - v.expenses }));
+        res.json({ ok: true, current: { month: thisMonthStr, ...months[thisMonthStr] }, previous: { month: prevMonthStr, ...months[prevMonthStr] }, history });
+    } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Polygon wallet balances — read-only via public RPC, no private key needed
+const POLYGON_WALLET = '0xc5958333D69D670f508d5B49D4B03ae89E0A9a49';
+const POLYGON_RPC    = 'https://polygon-rpc.com';
+const USDC_POLYGON   = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'; // USDC.e on Polygon
+
+async function _rpcCall(method, params, id = 1) {
+    const r = await fetch(POLYGON_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method, params, id }),
+    });
+    return r.json();
+}
+
+router.get('/finance/crypto/wallet', _auth, async (req, res) => {
+    try {
+        const [maticRes, usdcRes] = await Promise.all([
+            _rpcCall('eth_getBalance', [POLYGON_WALLET, 'latest'], 1),
+            _rpcCall('eth_call', [{ to: USDC_POLYGON, data: '0x70a08231000000000000000000000000' + POLYGON_WALLET.slice(2) }, 'latest'], 2),
+        ]);
+
+        const matic = parseInt(maticRes.result || '0x0', 16) / 1e18;
+        const usdc  = parseInt(usdcRes.result  || '0x0', 16) / 1e6;
+
+        // Polymarket open positions (data API, no auth needed)
+        let positions = [];
+        try {
+            const pmRes = await fetch(`https://data-api.polymarket.com/positions?user_address=${POLYGON_WALLET}&sizeThreshold=0.01`);
+            if (pmRes.ok) positions = await pmRes.json() || [];
+        } catch (_) { /* non-critical */ }
+
+        const positionValue = Array.isArray(positions)
+            ? positions.reduce((s, p) => s + (Number(p.size || p.currentValue || 0)), 0)
+            : 0;
+
+        res.json({
+            ok: true,
+            address: POLYGON_WALLET,
+            balances: {
+                matic: +matic.toFixed(4),
+                usdc: +usdc.toFixed(2),
+            },
+            polymarket: {
+                positions: positions.length,
+                estimated_value_usdc: +positionValue.toFixed(2),
+            },
+            total_usdc_equivalent: +(usdc + positionValue).toFixed(2),
+            fetched_at: new Date().toISOString(),
+        });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get('/finance/net-worth-history', _auth, async (req, res) => {
+    try {
+        const { data, error } = await sb().from('apex_net_worth_snapshot')
+            .select('assets_gbp,net_worth_gbp,snapped_at')
+            .order('snapped_at', { ascending: true })
+            .limit(12);
+        if (error) return res.status(500).json({ ok: false, error: error.message });
+        res.json({ ok: true, snapshots: data || [] });
+    } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 module.exports = router;

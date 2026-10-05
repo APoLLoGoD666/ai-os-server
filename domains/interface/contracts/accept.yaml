@@ -1,0 +1,9 @@
+domain: DOM-000007
+events:
+  - name: AGENT_COMPLETED
+    from: DOM-000002
+    handler: src/handlers/agent-completed.js
+
+  - name: DOMAIN_HEALTH_CHANGED
+    from: DOM-000006
+    handler: src/handlers/domain-health-changed.js

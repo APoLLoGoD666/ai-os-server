@@ -1,0 +1,21 @@
+domain: Intelligence
+capability: Agent Orchestration and Reasoning
+runtime: core
+criticality: critical
+owner: Agent Orchestrator
+entity_id: DOM-000002
+dependencies:
+  - Registry
+  - Memory
+  - Infrastructure
+consumers:
+  - Interface
+  - Observability
+events_emitted:
+  - AGENT_ACTIVATED
+  - AGENT_COMPLETED
+events_consumed:
+  - ENTITY_UPDATED
+  - GOVERNANCE_VIOLATION
+state_version_sensitive: false
+test_suite: null
