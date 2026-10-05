@@ -13719,7 +13719,7 @@ if(pipe){
         if (btn)  btn.classList.add('active');
         activePage = name;
         window.activePage = name; // V-11-F F-15: expose active page for polling guards
-        document.body.classList.toggle('show-cal-rail', name === 'overview');
+        document.body.classList.toggle('show-cal-rail', name === 'today');
         var meta = pageMeta[name] || { title: name.toUpperCase(), sub: '' };
         var pgTitle = document.getElementById('topbar-pg-title');
         var pgSub   = document.getElementById('topbar-pg-sub');
