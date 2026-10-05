@@ -241,12 +241,15 @@ Paste into Supabase SQL Editor and run. Creates `agent_memory` table with partit
 - Domain map: finance→finance, business→business, marketing→marketing, health→health, system→system, university→uni, governance→civilisation, content→comms, intelligence→system
 - Verified: 6/6 test routing cases route correctly with high confidence
 
-**Next step:** Step 2.2 — Council `_synthesize()` prompt upgrade
-- Currently uses generic "CEO of APEX" synthesizer voice
-- Upgrade: list all 10 council members by full title in the synthesis prompt so the CEO synthesizes from named perspectives
-- File: `lib/executive/executive-council.js` `_synthesize()` function ~line 294
+- [x] Step 2.2 — Council `_synthesize()` upgraded: full title map for all 10 executives, vote summary shows "Chief Strategy Officer (CSO)" etc, CEO prompt lists all 10 members and is instructed to name driving/dissenting executives by title in recommendation.
 
-**Step after that:** Step 3.2 — Left sidebar feature registry (collapsible domain/agent list with live status)
+**Next step:** Step 3.2 — Left sidebar feature registry
+- A collapsible sidebar panel listing all 9 domains → their director → office agents under each
+- Live status indicators per agent (idle/active/alert)
+- Collapses by domain; persists open state in localStorage
+- Real data from existing `/api/civilization/hierarchy` endpoint
+
+**Data ready:** All agent data is live in the hierarchy endpoint. UI is the only missing piece.
 
 ---
 
