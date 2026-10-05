@@ -36006,7 +36006,7 @@ window.apexFileDropHandler = function(e){
                     var rid = (m.id||'').replace('council-','');
                     var col = CC[rid]||'#00d4ff';
                     var on = m.status === 'active';
-                    html += '<div class="cmd-council-tile" style="--tile-color:' + col + '"><div class="cmd-council-role">' + _esc(m.name||rid).toUpperCase() + '</div><div class="cmd-council-name">' + _esc(m.role||m.full_name||'') + '</div><div class="cmd-council-status">' + _dot2(on,col) + _stlbl(m.status) + '</div></div>';
+                    html += '<div class="cmd-council-tile" style="--tile-color:' + col + '"><div class="cmd-council-role">' + rid.toUpperCase() + '</div><div class="cmd-council-name">' + _esc(m.name||'') + '</div><div class="cmd-council-status">' + _dot2(on,col) + _stlbl(m.status) + '</div></div>';
                 });
                 html += '</div></div>';
                 // ── Domain Directors ──
@@ -36083,7 +36083,7 @@ window.apexFileDropHandler = function(e){
         fetch('/api/civilisation/dispatch', {
             method: 'POST',
             headers: Object.assign({'Content-Type':'application/json'}, _h()),
-            body: JSON.stringify({ message: text, master: true })
+            body: JSON.stringify({ task: text })
         }).then(function(r){ return r.json(); }).then(function(d) {
             btn.disabled = false;
             btn.textContent = 'DISPATCH';
