@@ -33005,6 +33005,10 @@ window.apexFileDropHandler = function(e){
             '</div>';
 
         pw.appendChild(pg);
+        // Activate immediately if switchPage('overview') already fired before this element existed
+        if (window.activePage === 'overview' || !window.activePage) {
+            pg.classList.add('active');
+        }
 
         // Mobile panel access buttons (shown only on mobile via CSS)
         if (!document.getElementById('kg-mobile-panel-btns')) {
