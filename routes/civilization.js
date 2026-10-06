@@ -792,8 +792,8 @@ const _ROUTING_DOMAIN_MAP = {
     system:       'system',
     university:   'uni',
     governance:   'civilisation',
-    content:      'comms',
-    intelligence: 'system', // fallback: system agent handles intelligence queries
+    content:      'content',
+    intelligence: 'intelligence',
 };
 
 router.post('/civilisation/dispatch', _auth, async (req, res) => {

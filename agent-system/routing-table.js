@@ -65,10 +65,13 @@ const OFFICE_ROUTING = {
         { agent: 'finance-agent',                 patterns: [] }, // default
     ],
     business: [
-        { agent: 'business-proposal-writer',  patterns: ['proposal', 'quote', 'pitch', 'scope of work', 'sow'] },
-        { agent: 'business-crm-agent',         patterns: ['crm', 'lead', 'contact', 'pipeline', 'follow up', 'client status'] },
-        { agent: 'business-client-success',    patterns: ['client', 'onboard', 'satisfaction', 'renewal', 'churn', 'relationship'] },
-        { agent: 'business-project-manager',   patterns: [] }, // default
+        { agent: 'sales-proposal-agent',        patterns: ['proposal', 'quote', 'pitch', 'scope of work', 'sow'] },
+        { agent: 'sales-lead-enricher',          patterns: ['crm', 'lead', 'enrich', 'prospect', 'qualify'] },
+        { agent: 'sales-followup-agent',         patterns: ['follow up', 'follow-up', 'chase', 'no reply', 'not responded'] },
+        { agent: 'sales-pipeline-agent',         patterns: ['pipeline', 'deal stage', 'at-risk deal', 'pipeline report'] },
+        { agent: 'delivery-onboarder',           patterns: ['onboard', 'new client', 'client setup', 'welcome'] },
+        { agent: 'delivery-client-reports',      patterns: ['client report', 'progress report', 'status update', 'project update'] },
+        { agent: 'delivery-project-coordinator', patterns: [] }, // default
     ],
     marketing: [
         { agent: 'marketing-instagram-organic', patterns: ['instagram', 'ig post', 'reel', 'story', 'caption', 'hashtag'] },

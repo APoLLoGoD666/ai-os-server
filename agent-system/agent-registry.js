@@ -149,12 +149,12 @@ const DOMAIN_DIRECTORS = [
     {
         id: 'director-business', role: 'director', domain: 'business',
         memory_partition: 'director:business', model: 'claude-sonnet-4-6',
-        workers: ['business-crm-agent','business-project-manager','business-proposal-writer','business-client-success'],
+        workers: ['sales-lead-enricher','sales-prospector','sales-inbound-leads','sales-followup-agent','sales-proposal-agent','sales-pipeline-agent','delivery-project-coordinator','delivery-onboarder','delivery-qa-checker','delivery-client-reports'],
     },
     {
         id: 'director-marketing', role: 'director', domain: 'marketing',
         memory_partition: 'director:marketing', model: 'claude-sonnet-4-6',
-        workers: ['marketing-research-agent','marketing-graphics-designer','marketing-instagram-organic','marketing-meta-ads','marketing-newsletter-agent','marketing-seo-agent','marketing-tiktok-agent'],
+        workers: ['marketing-research-agent','marketing-graphics-designer','marketing-instagram-organic','marketing-meta-ads','marketing-newsletter-agent','marketing-video-editor','marketing-seo-agent','marketing-tiktok-agent'],
     },
     {
         id: 'director-health', role: 'director', domain: 'health',

@@ -246,11 +246,12 @@ Paste into Supabase SQL Editor and run. Creates `agent_memory` table with partit
 
 - [x] Step 3.2 — Left sidebar feature registry: REGISTRY/APPROVALS tab toggle in left panel header; collapsible 9-domain sections each showing director + office agents with live status dots and domain colour coding; approval badge on APPROVALS tab when tasks pending; persistent open/closed state per domain via _civDomainOpen{}; hierarchy data cached in _cmdHierarchy after first fetch.
 
-**Next step:** Step 4.1 — Wire Business Director end-to-end (task → decompose → office agent chain)
-- Collapses by domain; persists open state in localStorage
-- Real data from existing `/api/civilization/hierarchy` endpoint
+- [x] Phase 4 + 5 — Full agent roster deployed: 56 office agents across 11 categories, all 9 domain directors with correct worker slugs, intelligence + content domain agents added, health + uni delegation wired. Routing table business chain corrected (sales-*/delivery-* slugs). _ROUTING_DOMAIN_MAP fixed: intelligence→'intelligence', content→'content'. All node --check validations pass.
 
-**Data ready:** All agent data is live in the hierarchy endpoint. UI is the only missing piece.
+**Supabase migration still pending (manual — run once):**
+Paste `migrations/105_agent_memory_partitions.sql` into Supabase SQL Editor. Creates `agent_memory` table.
+
+**Next step:** Phase 6 — Ministry automation (10 ministry weekly reports → Council → Founder briefing)
 
 ---
 
