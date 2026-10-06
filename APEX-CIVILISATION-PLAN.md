@@ -244,9 +244,9 @@ Paste into Supabase SQL Editor and run. Creates `agent_memory` table with partit
 - [x] Step 2.2 — Council `_synthesize()` upgraded: full title map for all 10 executives, vote summary shows "Chief Strategy Officer (CSO)" etc, CEO prompt lists all 10 members and is instructed to name driving/dissenting executives by title in recommendation.
 - [x] CC Design Spec — Overview/Command Centre full visual redesign: 28 --ax-* tokens, sticky header, scanline dispatch, corrected CC/DC colour maps (WCAG-safe), cmd-canvas-inner constraint wrapper, dispatch-before-stats order, left-border council tiles, responsive 3 breakpoints, prefers-reduced-motion, accessibility (role=button, aria-label, aria-live, role=status, 44px touch targets, focus-visible) — 13/13 pre-delivery checklist items passing.
 
-**Next step:** Step 3.2 — Left sidebar feature registry
-- A collapsible sidebar panel listing all 9 domains → their director → office agents under each
-- Live status indicators per agent (idle/active/alert)
+- [x] Step 3.2 — Left sidebar feature registry: REGISTRY/APPROVALS tab toggle in left panel header; collapsible 9-domain sections each showing director + office agents with live status dots and domain colour coding; approval badge on APPROVALS tab when tasks pending; persistent open/closed state per domain via _civDomainOpen{}; hierarchy data cached in _cmdHierarchy after first fetch.
+
+**Next step:** Step 4.1 — Wire Business Director end-to-end (task → decompose → office agent chain)
 - Collapses by domain; persists open state in localStorage
 - Real data from existing `/api/civilization/hierarchy` endpoint
 

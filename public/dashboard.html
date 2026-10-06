@@ -31860,6 +31860,31 @@ window.apexFileDropHandler = function(e){
   .cmd-council-tile,.cmd-director-card { transition:none!important; }
 }
 
+/* ── Registry sidebar ── */
+.kg-panel-title { display:flex; align-items:center; gap:2px; min-width:0; flex:1; }
+.reg-tab { background:transparent; border:none; border-bottom:2px solid transparent; padding:4px 7px; font:700 var(--ax-t-xs)/1 var(--ax-mono); letter-spacing:.1em; color:var(--ax-text-3); cursor:pointer; text-transform:uppercase; white-space:nowrap; transition:color 120ms,border-color 120ms; flex-shrink:0; }
+.reg-tab.active { color:var(--ax-acc); border-bottom-color:var(--ax-acc); }
+.reg-tab:hover:not(.active) { color:var(--ax-text-1); }
+.reg-tab-badge { display:inline-flex; align-items:center; justify-content:center; background:rgba(251,191,36,0.18); color:#f59e0b; border-radius:9999px; font:700 5.5px/1 var(--ax-mono); padding:2px 4px; min-width:13px; margin-left:3px; vertical-align:middle; }
+.reg-domain { border-bottom:1px solid var(--ax-border); }
+.reg-domain:last-child { border-bottom:none; }
+.reg-domain-hd { display:flex; align-items:center; gap:var(--ax-sp-2); width:100%; padding:6px var(--ax-sp-3); background:transparent; border:none; cursor:pointer; text-align:left; transition:background 120ms; }
+.reg-domain-hd:hover { background:rgba(255,255,255,0.02); }
+.reg-domain-name { font:700 var(--ax-t-xs)/1 var(--ax-mono); letter-spacing:.12em; color:var(--ax-text-2); text-transform:uppercase; flex:1; min-width:0; }
+.reg-chevron { font-size:8px; color:var(--ax-text-4); flex-shrink:0; }
+.reg-active-badge { background:rgba(34,197,94,0.1); color:#22c55e; border-radius:9999px; font:600 5.5px/1 var(--ax-mono); padding:2px 4px; flex-shrink:0; }
+.reg-domain-body { padding:0 0 5px calc(var(--ax-sp-3) + 5px); }
+.reg-director-row { display:flex; align-items:center; gap:5px; padding:4px var(--ax-sp-2) 5px; border-bottom:1px dashed rgba(255,255,255,0.04); margin-bottom:2px; }
+.reg-director-name { font:600 9px/1 var(--ax-sans); color:var(--ax-text-1); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.reg-status-lbl { font:600 6px/1 var(--ax-mono); letter-spacing:.06em; flex-shrink:0; }
+.reg-agent-row { display:flex; align-items:center; gap:5px; padding:2px var(--ax-sp-2); border-radius:3px; }
+.reg-agent-row:hover { background:rgba(255,255,255,0.02); }
+.reg-agent-name { font:400 8px/1 var(--ax-sans); color:var(--ax-text-3); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.reg-active-lbl { font-size:5px; flex-shrink:0; }
+.reg-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.reg-dot.sm { width:4px; height:4px; }
+.reg-dot.xs { width:3px; height:3px; }
+
 /* ── Loading skeleton ── */
 .kg-loading { display:flex; align-items:center; justify-content:center; gap:8px; height:80px; font:500 9px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#52525b; text-transform:uppercase; }
 .kg-loading::before { content:''; width:8px; height:8px; border-radius:50%; border:1px solid #7c6cf2; border-top-color:transparent; animation:kg-spin 0.8s linear infinite; }
@@ -36022,6 +36047,9 @@ window.apexFileDropHandler = function(e){
     // ── Civilisation view toggle ─────────────────────────────────────────────
     var _civView = 'org';
     var _civRenderBusy = false;
+    var _civLeftTab    = 'registry';  // 'registry' | 'approvals'
+    var _cmdHierarchy  = null;        // cached from last /civilization/hierarchy fetch
+    var _civDomainOpen = {};          // domain slug → bool (default: open)
     window._civSetView = function(v) {
         _civView = v;
         var pipeline = document.getElementById('kg-pipeline');
@@ -36034,8 +36062,6 @@ window.apexFileDropHandler = function(e){
             org.style.visibility = ''; org.style.pointerEvents = '';
             if (btnP) { btnP.classList.remove('active'); btnP.setAttribute('aria-pressed','false'); }
             if (btnO) { btnO.classList.add('active');    btnO.setAttribute('aria-pressed','true'); }
-            var _lt = document.getElementById('kg-left-title');
-            if (_lt) _lt.textContent = 'APPROVALS';
             _loadCommandCentre();
         } else {
             pipeline.style.visibility = ''; pipeline.style.pointerEvents = '';
@@ -36060,6 +36086,7 @@ window.apexFileDropHandler = function(e){
                     el.innerHTML = '<div class="civ-loading">COMMAND CENTRE UNAVAILABLE</div>';
                     return;
                 }
+                _cmdHierarchy = data.hierarchy;
                 var h = data.hierarchy;
                 var s = h.summary || {};
                 var CC = { cso:'#818cf8',cio:'#22d3ee',cfo:'#34d399',cto:'#60a5fa',coo:'#a78bfa',cro:'#f87171',cgo:'#fbbf24',cpo:'#f472b6',crr:'#c4b5fd',clo:'#94a3b8' };
@@ -36127,33 +36154,106 @@ window.apexFileDropHandler = function(e){
         var approvals = _liveTasks.filter(function(t) { return t.status==='awaiting_approval'||t.status==='approval_required'; });
         var active    = _liveRuns.filter(function(r)  { return r.status==='running'||r.status==='in_progress'; });
         var pending   = _liveTasks.filter(function(t) { return t.status==='pending'; });
-        var nA  = document.getElementById('cmd-n-active');
-        var nP  = document.getElementById('cmd-n-pending');
-        var nAp = document.getElementById('cmd-n-approvals');
+        var nA   = document.getElementById('cmd-n-active');
+        var nP   = document.getElementById('cmd-n-pending');
+        var nAp  = document.getElementById('cmd-n-approvals');
         var csAp = document.getElementById('cmd-cs-approvals');
-        if (nA)  nA.textContent  = active.length;
-        if (nP)  nP.textContent  = pending.length;
-        if (nAp) nAp.textContent = approvals.length;
+        if (nA)   nA.textContent  = active.length;
+        if (nP)   nP.textContent  = pending.length;
+        if (nAp)  nAp.textContent = approvals.length;
         if (csAp) csAp.classList.toggle('cmd-stat-alert', approvals.length > 0);
+        if (_civView === 'org') _renderLeftPanel();
+    }
+
+    function _renderLeftPanel() {
         var leftTitle = document.getElementById('kg-left-title');
-        if (leftTitle && _civView === 'org') leftTitle.textContent = 'APPROVALS';
-        var leftBody = document.getElementById('kg-left-body');
-        if (leftBody && _civView === 'org') {
-            if (!approvals.length) {
-                leftBody.innerHTML = '<div class="cmd-no-approvals">NO PENDING APPROVALS<br><br>ALL CLEAR</div>';
-            } else {
-                var lh = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
-                    '<span style="font-size:11px;color:rgba(255,255,255,0.4)">' + approvals.length + ' PENDING</span>' +
-                    '<button onclick="window._civClearStale()" style="font-size:10px;padding:2px 8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;border-radius:4px;cursor:pointer;letter-spacing:.05em" aria-label="Cancel all stale approvals">CLEAR STALE</button>' +
-                    '</div>';
-                approvals.forEach(function(t) {
-                    lh += '<div class="cmd-approval-item"><div class="cmd-approval-title">' + _esc(t.description||t.title||'Task') + '</div>';
-                    lh += '<div class="cmd-approval-meta">' + _esc(t.agent_id||'') + (t.agent_id?' · ':'') + _ago(t.created_at) + '</div></div>';
-                });
-                leftBody.innerHTML = lh;
-            }
+        var leftBody  = document.getElementById('kg-left-body');
+        if (!leftTitle || !leftBody) return;
+        var approvals = _liveTasks.filter(function(t) { return t.status==='awaiting_approval'||t.status==='approval_required'; });
+        var badge = approvals.length > 0 ? '<span class="reg-tab-badge">' + approvals.length + '</span>' : '';
+        leftTitle.innerHTML =
+            '<button class="reg-tab' + (_civLeftTab==='registry'?' active':'') + '" onclick="window._civSwitchTab(\'registry\')" aria-pressed="' + (_civLeftTab==='registry') + '">REGISTRY</button>' +
+            '<button class="reg-tab' + (_civLeftTab==='approvals'?' active':'') + '" onclick="window._civSwitchTab(\'approvals\')" aria-pressed="' + (_civLeftTab==='approvals') + '">APPROVALS' + badge + '</button>';
+        if (_civLeftTab === 'approvals') {
+            _renderApprovalsTab(leftBody, approvals);
+        } else {
+            _renderRegistryTab(leftBody);
         }
     }
+
+    function _renderApprovalsTab(leftBody, approvals) {
+        if (!approvals.length) {
+            leftBody.innerHTML = '<div class="cmd-no-approvals">NO PENDING APPROVALS<br><br>ALL CLEAR</div>';
+        } else {
+            var lh = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 var(--ax-sp-3)">' +
+                '<span style="font:500 7.5px/1 var(--ax-mono);letter-spacing:.08em;color:rgba(255,255,255,0.4)">' + approvals.length + ' PENDING</span>' +
+                '<button onclick="window._civClearStale()" style="font:600 7px/1 var(--ax-mono);letter-spacing:.06em;padding:3px 8px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);color:#f87171;border-radius:4px;cursor:pointer" aria-label="Cancel all stale approvals">CLEAR STALE</button>' +
+                '</div>';
+            approvals.forEach(function(t) {
+                lh += '<div class="cmd-approval-item"><div class="cmd-approval-title">' + _esc(t.description||t.title||'Task') + '</div>';
+                lh += '<div class="cmd-approval-meta">' + _esc(t.agent_id||'') + (t.agent_id?' · ':'') + _ago(t.created_at) + '</div></div>';
+            });
+            leftBody.innerHTML = lh;
+        }
+    }
+
+    function _renderRegistryTab(leftBody) {
+        var h = _cmdHierarchy;
+        if (!h || !h.directors) {
+            leftBody.innerHTML = '<div class="cmd-no-approvals">LOADING...</div>';
+            return;
+        }
+        var officeMap = {};
+        (h.office || []).forEach(function(a) { officeMap[a.id] = a; });
+        var DC = { finance:'#34d399',business:'#818cf8',marketing:'#f472b6',health:'#f87171',system:'#22d3ee',university:'#fbbf24',governance:'#94a3b8',content:'#f97316',intelligence:'#a78bfa' };
+        var html = '';
+        h.directors.forEach(function(dir) {
+            var dom  = dir.domain;
+            var col  = DC[dom] || '#52525b';
+            var isOpen   = _civDomainOpen[dom] !== false;
+            var dirActive = dir.status === 'active';
+            var workers   = dir.workers || [];
+            var activeCount = workers.filter(function(w) { var a = officeMap[w]; return a && a.status === 'active'; }).length;
+            html += '<div class="reg-domain" data-domain="' + dom + '">';
+            html += '<button class="reg-domain-hd" onclick="window._civToggleDomain(\'' + dom + '\')" aria-expanded="' + isOpen + '">';
+            html += '<span class="reg-dot" style="background:' + (dirActive ? col : 'rgba(255,255,255,0.08)') + (dirActive ? ';box-shadow:0 0 6px ' + col + '55' : '') + '"></span>';
+            html += '<span class="reg-domain-name">' + dom.toUpperCase() + '</span>';
+            if (activeCount > 0) html += '<span class="reg-active-badge">' + activeCount + '</span>';
+            html += '<span class="reg-chevron">' + (isOpen ? '▾' : '▸') + '</span>';
+            html += '</button>';
+            if (isOpen) {
+                html += '<div class="reg-domain-body">';
+                html += '<div class="reg-director-row">';
+                html += '<span class="reg-dot sm" style="background:' + (dirActive ? col : 'rgba(255,255,255,0.08)') + '"></span>';
+                html += '<span class="reg-director-name">' + _esc(dir.name || dir.id) + '</span>';
+                html += '<span class="reg-status-lbl" style="color:' + (dirActive ? '#22c55e' : 'rgba(255,255,255,0.18)') + '">' + (dir.status || 'idle').toUpperCase() + '</span>';
+                html += '</div>';
+                workers.forEach(function(slug) {
+                    var agent = officeMap[slug];
+                    var on = agent && agent.status === 'active';
+                    html += '<div class="reg-agent-row">';
+                    html += '<span class="reg-dot xs" style="background:' + (on ? col : 'rgba(255,255,255,0.06)') + '"></span>';
+                    html += '<span class="reg-agent-name">' + _esc(agent ? agent.name : slug) + '</span>';
+                    if (on) html += '<span class="reg-active-lbl" style="color:' + col + '">●</span>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+        });
+        leftBody.innerHTML = html;
+    }
+
+    window._civSwitchTab = function(tab) {
+        _civLeftTab = tab;
+        _renderLeftPanel();
+    };
+
+    window._civToggleDomain = function(dom) {
+        _civDomainOpen[dom] = (_civDomainOpen[dom] !== false) ? false : true;
+        var leftBody = document.getElementById('kg-left-body');
+        if (leftBody) _renderRegistryTab(leftBody);
+    };
 
     window._civClearStale = function() {
         if (!confirm('Cancel all ' + (_liveTasks.filter(function(t){return t.status==='awaiting_approval'||t.status==='approval_required';}).length) + ' stale approval tasks?')) return;
