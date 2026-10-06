@@ -208,7 +208,7 @@ The codebase is more advanced than the 49/100 score suggests:
 
 ## Current Position
 
-**Last updated:** 2026-10-05
+**Last updated:** 2026-10-06
 **Current phase:** PHASE 1 complete → PHASE 2 + 3
 
 **Steps completed this session:**
@@ -248,10 +248,17 @@ Paste into Supabase SQL Editor and run. Creates `agent_memory` table with partit
 
 - [x] Phase 4 + 5 — Full agent roster deployed: 56 office agents across 11 categories, all 9 domain directors with correct worker slugs, intelligence + content domain agents added, health + uni delegation wired. Routing table business chain corrected (sales-*/delivery-* slugs). _ROUTING_DOMAIN_MAP fixed: intelligence→'intelligence', content→'content'. All node --check validations pass.
 
-**Supabase migration still pending (manual — run once):**
-Paste `migrations/105_agent_memory_partitions.sql` into Supabase SQL Editor. Creates `agent_memory` table.
+**Supabase migrations pending (manual — run once each):**
+1. `migrations/105_agent_memory_partitions.sql` — creates `agent_memory` table
+2. `migrations/106_ministry_reports.sql` — creates `ministry_reports` table
 
-**Next step:** Phase 6 — Ministry automation (10 ministry weekly reports → Council → Founder briefing)
+- [x] Phase 6 — Ministry automation complete:
+  - `lib/ministry/weekly-reports.js` — 10 ministry configs, `generateReport()` (Haiku), `runWeeklyCycle()` (Sonnet synthesis → Founder briefing)
+  - `lib/ministry/index.js` — 5 new ministries added: Growth, Research, Product, Strategy, Risk; exports `runWeeklyCycle`
+  - `routes/ministry.js` — GET /ministry/reports, GET /ministry/reports/:id, GET /ministry/briefing/latest, GET /ministry/briefing, POST /ministry/run
+  - `lib/cron-scheduler.js` — weekly cron added: Sundays 07:00 UTC (before council session at 09:00)
+
+**Next step:** Phase 7 — Agent Memory Partitions live wiring (run migration 105, then test getAgentMemory/writeAgentMemory end-to-end via dispatch chain)
 
 ---
 
