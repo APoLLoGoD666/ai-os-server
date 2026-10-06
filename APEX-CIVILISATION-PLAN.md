@@ -242,6 +242,7 @@ Paste into Supabase SQL Editor and run. Creates `agent_memory` table with partit
 - Verified: 6/6 test routing cases route correctly with high confidence
 
 - [x] Step 2.2 — Council `_synthesize()` upgraded: full title map for all 10 executives, vote summary shows "Chief Strategy Officer (CSO)" etc, CEO prompt lists all 10 members and is instructed to name driving/dissenting executives by title in recommendation.
+- [x] CC Design Spec — Overview/Command Centre full visual redesign: 28 --ax-* tokens, sticky header, scanline dispatch, corrected CC/DC colour maps (WCAG-safe), cmd-canvas-inner constraint wrapper, dispatch-before-stats order, left-border council tiles, responsive 3 breakpoints, prefers-reduced-motion, accessibility (role=button, aria-label, aria-live, role=status, 44px touch targets, focus-visible) — 13/13 pre-delivery checklist items passing.
 
 **Next step:** Step 3.2 — Left sidebar feature registry
 - A collapsible sidebar panel listing all 9 domains → their director → office agents under each

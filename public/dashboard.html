@@ -58,6 +58,34 @@
     --nav-h:         60px;
     --orb-shell-sz:  160px;
     --orb-sz:        100px;
+    /* ── APEX COMMAND CENTRE TOKENS ── */
+    --ax-acc:        #00d4ff;
+    --ax-acc-dim:    rgba(0,212,255,0.08);
+    --ax-acc-border: rgba(0,212,255,0.2);
+    --ax-acc-glow:   rgba(0,212,255,0.35);
+    --ax-surface:    rgba(255,255,255,0.025);
+    --ax-surface-hv: rgba(255,255,255,0.048);
+    --ax-border:     rgba(255,255,255,0.07);
+    --ax-border-hv:  rgba(255,255,255,0.14);
+    --ax-text-1:     rgba(255,255,255,0.88);
+    --ax-text-2:     rgba(255,255,255,0.55);
+    --ax-text-3:     rgba(255,255,255,0.28);
+    --ax-text-4:     rgba(255,255,255,0.14);
+    --ax-mono:       'JetBrains Mono', Consolas, monospace;
+    --ax-sans:       'Inter', system-ui, -apple-system, sans-serif;
+    --ax-t-xs:       7.5px;
+    --ax-t-sm:       9px;
+    --ax-t-md:       11px;
+    --ax-t-lg:       13px;
+    --ax-t-xl:       20px;
+    --ax-t-hero:     28px;
+    --ax-sp-1:       4px;
+    --ax-sp-2:       8px;
+    --ax-sp-3:       12px;
+    --ax-sp-4:       16px;
+    --ax-sp-5:       20px;
+    --ax-sp-6:       24px;
+    --ax-sp-8:       32px;
 }
 
 /* V-11-A: Role-aware visibility — body class beats .nav-btn specificity (0,2,0 > 0,1,0) */
@@ -31711,96 +31739,125 @@ window.apexFileDropHandler = function(e){
 .civ-vbtn.active { background:rgba(0,212,255,0.1); color:var(--ax-acc,#00d4ff); }
 .civ-vbtn:hover:not(.active) { color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.05); }
 
-/* ── Command centre container ── */
-.civ-org-chart { position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; padding:36px 20px 60px; }
+/* ── Command centre layout ── */
+#page-overview { padding:0!important; gap:0!important; }
+#page-overview .kg-panel.left { width:260px; }
+@media (max-width:1024px) { #page-overview .kg-panel.left { width:220px; } }
+@media (max-width:900px)  { #page-overview .kg-panel.left { width:0; } }
+
+.civ-org-chart { position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; padding:0; scrollbar-width:thin; scrollbar-color:rgba(124,108,242,0.15) transparent; }
+.cmd-canvas-inner { max-width:1200px; margin:0 auto; padding:0 var(--ax-sp-6) 40px; }
 
 /* ── Header ── */
-.cmd-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); }
-.cmd-header-name { font:700 15px/1 'Inter',system-ui,sans-serif; color:#eef2ff; letter-spacing:-.01em; margin-bottom:6px; }
-.cmd-header-meta { display:flex; align-items:center; gap:6px; font:500 8px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.3); letter-spacing:.08em; }
-.cmd-live-dot { width:5px; height:5px; border-radius:50%; background:#22c55e; box-shadow:0 0 6px rgba(34,197,94,0.7); flex-shrink:0; animation:cmd-pulse 2s ease-in-out infinite; }
-.cmd-header-time { font:300 22px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.15); letter-spacing:-.02em; }
-@keyframes cmd-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-
-/* ── Stats row ── */
-.cmd-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:18px; }
-.cmd-stat { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:12px 14px; }
-.cmd-stat.cmd-stat-alert { border-color:rgba(251,191,36,0.2); background:rgba(251,191,36,0.03); }
-.cmd-stat-n { font:700 20px/1 'JetBrains Mono',monospace; color:var(--ax-acc,#00d4ff); margin-bottom:5px; }
-.cmd-stat.cmd-stat-alert .cmd-stat-n { color:#f59e0b; }
-.cmd-stat-l { font:500 7.5px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.28); letter-spacing:.1em; text-transform:uppercase; }
+.cmd-header { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between; padding:14px var(--ax-sp-6); background:rgba(8,8,12,0.92); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid var(--ax-border); margin:0 calc(-1 * var(--ax-sp-6)); margin-bottom:var(--ax-sp-5); flex-shrink:0; }
+.cmd-header-name { font:700 var(--ax-t-lg)/1 var(--ax-mono); letter-spacing:.12em; color:var(--ax-text-1); text-transform:uppercase; }
+.cmd-header-meta { display:flex; align-items:center; gap:var(--ax-sp-2); font:500 var(--ax-t-xs)/1 var(--ax-mono); letter-spacing:.08em; color:var(--ax-text-3); text-transform:uppercase; }
+.cmd-live-dot { width:5px; height:5px; border-radius:50%; background:#22c55e; box-shadow:0 0 6px rgba(34,197,94,0.8),0 0 12px rgba(34,197,94,0.3); flex-shrink:0; animation:cmd-pulse 2.4s ease-in-out infinite; }
+.cmd-header-time { font:300 var(--ax-t-hero)/1 var(--ax-mono); color:var(--ax-text-4); letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+@keyframes cmd-pulse { 0%,100%{opacity:1;box-shadow:0 0 6px rgba(34,197,94,0.8)} 50%{opacity:.5;box-shadow:0 0 3px rgba(34,197,94,0.3)} }
 
 /* ── Dispatch ── */
-.cmd-dispatch { background:rgba(0,212,255,0.03); border:1px solid rgba(0,212,255,0.12); border-radius:8px; padding:14px 16px; margin-bottom:22px; }
-.cmd-dispatch-label { font:700 7.5px/1 'JetBrains Mono',monospace; letter-spacing:.15em; color:rgba(0,212,255,0.5); text-transform:uppercase; margin-bottom:10px; }
-.cmd-dispatch-row { display:flex; gap:8px; }
-.cmd-dispatch-input { flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:4px; padding:9px 12px; font:400 11px/1 'Inter',system-ui,sans-serif; color:#eef2ff; outline:none; transition:border-color 150ms; min-width:0; }
-.cmd-dispatch-input:focus { border-color:rgba(0,212,255,0.35); background:rgba(0,212,255,0.03); }
-.cmd-dispatch-input::placeholder { color:rgba(255,255,255,0.18); }
-.cmd-dispatch-btn { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.25); border-radius:4px; padding:9px 16px; font:700 7.5px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:#00d4ff; cursor:pointer; transition:all 150ms; white-space:nowrap; flex-shrink:0; }
-.cmd-dispatch-btn:hover:not(:disabled) { background:rgba(0,212,255,0.18); border-color:rgba(0,212,255,0.45); }
-.cmd-dispatch-btn:disabled { opacity:.35; cursor:default; }
-.cmd-dispatch-result { margin-top:12px; padding:10px 12px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06); border-radius:4px; font:400 10px/1.6 'Inter',system-ui,sans-serif; color:rgba(255,255,255,0.65); display:none; max-height:180px; overflow-y:auto; }
+.cmd-dispatch { background:var(--ax-acc-dim); border:1px solid var(--ax-acc-border); border-radius:var(--ax-sp-2); padding:var(--ax-sp-4); margin-bottom:var(--ax-sp-5); position:relative; overflow:hidden; }
+.cmd-dispatch::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg,transparent 0%,rgba(0,212,255,0.018) 50%,transparent 100%); animation:cmd-scan 5s linear infinite; pointer-events:none; }
+@keyframes cmd-scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(100%)} }
+.cmd-dispatch-label { font:700 var(--ax-t-xs)/1 var(--ax-mono); letter-spacing:.16em; color:rgba(0,212,255,0.45); text-transform:uppercase; margin-bottom:var(--ax-sp-3); display:flex; align-items:center; gap:var(--ax-sp-2); }
+.cmd-dispatch-label::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--ax-acc-border),transparent); }
+.cmd-dispatch-row { display:flex; gap:var(--ax-sp-2); align-items:stretch; }
+.cmd-dispatch-input { flex:1; min-width:0; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.09); border-radius:4px; padding:var(--ax-sp-3); font:400 var(--ax-t-sm)/1 var(--ax-sans); color:var(--ax-text-1); outline:none; min-height:44px; transition:border-color 150ms,background 150ms,box-shadow 150ms; }
+.cmd-dispatch-input:focus { border-color:var(--ax-acc); background:rgba(0,212,255,0.04); box-shadow:0 0 0 2px rgba(0,212,255,0.08); }
+.cmd-dispatch-input::placeholder { color:var(--ax-text-4); }
+.cmd-dispatch-btn { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.3); border-radius:4px; padding:0 var(--ax-sp-4); font:700 var(--ax-t-xs)/1 var(--ax-mono); letter-spacing:.14em; color:var(--ax-acc); cursor:pointer; text-transform:uppercase; white-space:nowrap; flex-shrink:0; min-height:44px; min-width:96px; transition:background 150ms,border-color 150ms,transform 80ms; }
+.cmd-dispatch-btn:hover:not(:disabled) { background:rgba(0,212,255,0.18); border-color:rgba(0,212,255,0.5); }
+.cmd-dispatch-btn:active:not(:disabled) { transform:scale(0.97); }
+.cmd-dispatch-btn:disabled { opacity:.3; cursor:default; }
+.cmd-dispatch-result { margin-top:var(--ax-sp-3); border-top:1px solid rgba(255,255,255,0.05); padding-top:var(--ax-sp-3); display:none; max-height:140px; overflow-y:auto; }
 .cmd-dispatch-result.visible { display:block; }
-.cmd-dispatch-route { font:600 8px/1 'JetBrains Mono',monospace; color:rgba(0,212,255,0.7); letter-spacing:.06em; margin-bottom:8px; }
+.cmd-dispatch-route { font:700 var(--ax-t-xs)/1 var(--ax-mono); letter-spacing:.08em; color:rgba(0,212,255,0.65); margin-bottom:var(--ax-sp-2); display:flex; align-items:center; gap:var(--ax-sp-1); flex-wrap:wrap; }
+
+/* ── Stats ── */
+.cmd-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--ax-sp-2); margin-bottom:var(--ax-sp-6); }
+.cmd-stat { background:var(--ax-surface); border:1px solid var(--ax-border); border-radius:5px; padding:var(--ax-sp-3); transition:border-color 250ms; }
+.cmd-stat:first-child { border-color:rgba(255,255,255,0.1); }
+.cmd-stat.cmd-stat-alert { border-color:rgba(251,191,36,0.28); background:rgba(251,191,36,0.04); }
+.cmd-stat-n { font:700 var(--ax-t-xl)/1 var(--ax-mono); color:var(--ax-acc); margin-bottom:var(--ax-sp-1); font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+.cmd-stat:first-child .cmd-stat-n { color:var(--ax-text-1); }
+.cmd-stat.cmd-stat-alert .cmd-stat-n { color:#f59e0b; }
+.cmd-stat-l { font:600 var(--ax-t-xs)/1 var(--ax-mono); letter-spacing:.12em; color:var(--ax-text-3); text-transform:uppercase; }
 
 /* ── Section headers ── */
-.cmd-section { margin-bottom:22px; }
-.cmd-section-hd { font:700 8px/1 'JetBrains Mono',monospace; letter-spacing:.14em; color:rgba(255,255,255,0.22); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
-.cmd-section-hd::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.05); }
-.cmd-section-count { color:rgba(255,255,255,0.35); font-weight:400; }
+.cmd-section { margin-bottom:0; }
+.cmd-section-hd { display:flex; align-items:center; gap:var(--ax-sp-3); margin-bottom:var(--ax-sp-3); margin-top:var(--ax-sp-6); }
+.cmd-section-hd-text { font:700 var(--ax-t-xs)/1 var(--ax-mono); letter-spacing:.18em; color:var(--ax-text-3); text-transform:uppercase; white-space:nowrap; flex-shrink:0; }
+.cmd-section-count { font:400 var(--ax-t-xs)/1 var(--ax-mono); color:var(--ax-text-4); flex-shrink:0; }
+.cmd-section-hd::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--ax-border),transparent); }
 
 /* ── Council tiles ── */
-.cmd-council-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
-.cmd-council-tile { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-top:2px solid var(--tile-color,#00d4ff); border-radius:0 0 5px 5px; padding:10px 11px 9px; cursor:pointer; transition:all 180ms; }
-.cmd-council-tile:hover { background:rgba(255,255,255,0.05); transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,0.3); }
-.cmd-council-role { font:700 7px/1 'JetBrains Mono',monospace; letter-spacing:.08em; color:var(--tile-color,#00d4ff); text-transform:uppercase; margin-bottom:5px; opacity:.8; }
-.cmd-council-name { font:500 9px/1.3 'Inter',system-ui,sans-serif; color:rgba(255,255,255,0.72); }
-.cmd-council-status { display:flex; align-items:center; gap:4px; margin-top:7px; }
+.cmd-council-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:var(--ax-sp-2); }
+.cmd-council-tile { background:rgba(0,0,0,0.28); border:1px solid var(--ax-border); border-left:3px solid var(--tile-color,var(--ax-acc)); border-radius:0 5px 5px 0; padding:var(--ax-sp-3) var(--ax-sp-3) var(--ax-sp-2); cursor:pointer; position:relative; display:flex; flex-direction:column; gap:var(--ax-sp-1); transition:background 180ms,transform 180ms,box-shadow 180ms; }
+.cmd-council-tile:hover { background:rgba(255,255,255,0.04); transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,0,0,0.4),0 0 0 1px var(--tile-color); }
+.cmd-council-tile:focus-visible { outline:2px solid var(--tile-color); outline-offset:2px; }
+.cmd-council-role { font:800 var(--ax-t-md)/1 var(--ax-mono); letter-spacing:.04em; color:var(--tile-color,var(--ax-acc)); text-transform:uppercase; }
+.cmd-council-name { font:400 var(--ax-t-xs)/1.3 var(--ax-sans); color:var(--ax-text-2); margin-top:1px; }
+.cmd-council-status { display:flex; align-items:center; gap:var(--ax-sp-1); margin-top:var(--ax-sp-2); }
 .cmd-council-dot { width:4px; height:4px; border-radius:50%; flex-shrink:0; }
+.cmd-council-status-text { font:400 var(--ax-t-xs)/1 var(--ax-mono); color:var(--ax-text-4); text-transform:uppercase; letter-spacing:.06em; }
 
 /* ── Director cards ── */
-.cmd-director-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
-.cmd-director-card { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-left:2px solid var(--dir-color,#00d4ff); border-radius:0 5px 5px 0; padding:10px 12px; cursor:pointer; transition:all 180ms; }
-.cmd-director-card:hover { background:rgba(255,255,255,0.045); transform:translateX(1px); }
-.cmd-director-domain { font:700 7px/1 'JetBrains Mono',monospace; letter-spacing:.12em; color:var(--dir-color,#00d4ff); text-transform:uppercase; margin-bottom:4px; opacity:.85; }
-.cmd-director-name { font:500 10px/1.3 'Inter',system-ui,sans-serif; color:rgba(255,255,255,0.72); margin-bottom:4px; }
-.cmd-director-meta { font:400 7.5px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.28); }
-.cmd-director-tasks { display:inline-flex; align-items:center; gap:3px; margin-top:5px; font:700 8px/1 'JetBrains Mono',monospace; color:var(--dir-color); letter-spacing:.04em; }
+.cmd-director-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--ax-sp-2); }
+.cmd-director-card { background:rgba(0,0,0,0.22); border:1px solid var(--ax-border); border-left:3px solid var(--dir-color,var(--ax-acc)); border-radius:0 5px 5px 0; padding:var(--ax-sp-3) var(--ax-sp-3) var(--ax-sp-2); cursor:pointer; transition:background 180ms,transform 180ms; }
+.cmd-director-card:hover { background:rgba(255,255,255,0.035); transform:translateX(2px); }
+.cmd-director-card:focus-visible { outline:2px solid var(--dir-color); outline-offset:2px; }
+.cmd-director-domain { font:800 var(--ax-t-xs)/1 var(--ax-mono); letter-spacing:.16em; color:var(--dir-color,var(--ax-acc)); text-transform:uppercase; margin-bottom:var(--ax-sp-1); }
+.cmd-director-name { font:500 var(--ax-t-sm)/1.2 var(--ax-sans); color:var(--ax-text-1); margin-bottom:var(--ax-sp-2); }
+.cmd-director-meta { display:flex; align-items:center; gap:var(--ax-sp-2); font:400 var(--ax-t-xs)/1 var(--ax-mono); color:var(--ax-text-4); }
+.cmd-director-meta-badge { color:var(--dir-color); font-weight:700; }
 
 /* ── Office agent chips ── */
-.cmd-agents-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:4px; }
-.cmd-agent-chip { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:4px; padding:6px 8px; transition:all 130ms; cursor:pointer; }
-.cmd-agent-chip:hover { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1); }
-.cmd-agent-chip.is-active { border-color:rgba(34,197,94,0.28); background:rgba(34,197,94,0.04); }
-.cmd-agent-name { font:500 8.5px/1.3 'Inter',system-ui,sans-serif; color:rgba(255,255,255,0.6); }
-.cmd-agent-status { display:flex; align-items:center; gap:3px; margin-top:3px; font:400 7px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.2); }
+.cmd-agents-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:var(--ax-sp-1); }
+.cmd-agent-chip { background:rgba(255,255,255,0.018); border:1px solid var(--ax-border); border-radius:3px; padding:5px var(--ax-sp-2); min-height:36px; display:flex; flex-direction:column; justify-content:center; gap:2px; cursor:default; transition:background 120ms,border-color 120ms; }
+.cmd-agent-chip:hover { background:rgba(255,255,255,0.04); border-color:var(--ax-border-hv); }
+.cmd-agent-chip.is-active { border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.05); }
+.cmd-agent-name { font:500 var(--ax-t-xs)/1.2 var(--ax-sans); color:var(--ax-text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cmd-agent-status { display:flex; align-items:center; gap:3px; font:400 6.5px/1 var(--ax-mono); color:var(--ax-text-4); text-transform:uppercase; letter-spacing:.06em; }
 
-/* ── Left panel: Approvals ── */
-.cmd-approval-item { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; transition:background 130ms; }
-.cmd-approval-item:hover { background:rgba(255,255,255,0.03); }
-.cmd-approval-title { font:500 9.5px/1.4 'Inter',system-ui,sans-serif; color:rgba(255,255,255,0.7); margin-bottom:3px; }
-.cmd-approval-meta { font:400 7.5px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.22); }
-.cmd-no-approvals { padding:28px 16px; text-align:center; font:400 8px/1.6 'JetBrains Mono',monospace; color:rgba(255,255,255,0.18); letter-spacing:.08em; }
+/* ── Approvals panel ── */
+.cmd-approval-item { padding:var(--ax-sp-3) var(--ax-sp-4); border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:background 120ms; }
+.cmd-approval-item:hover { background:rgba(255,255,255,0.025); }
+.cmd-approval-item:last-child { border-bottom:none; }
+.cmd-approval-title { font:500 var(--ax-t-sm)/1.4 var(--ax-sans); color:var(--ax-text-1); margin-bottom:3px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.cmd-approval-meta { font:400 var(--ax-t-xs)/1 var(--ax-mono); color:var(--ax-text-4); }
+.cmd-no-approvals { padding:40px var(--ax-sp-4); text-align:center; font:400 var(--ax-t-xs)/1.8 var(--ax-mono); color:var(--ax-text-4); letter-spacing:.1em; text-transform:uppercase; }
 
-/* ── Loading state ── */
+/* ── Loading / Footer ── */
 .civ-loading { display:flex; align-items:center; justify-content:center; height:100%; font:500 8.5px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.15); letter-spacing:.12em; }
-/* ── Last-updated footer ── */
 .kg-last-updated { position:absolute; bottom:8px; right:12px; font:400 9px/1 'JetBrains Mono',monospace; color:rgba(255,255,255,0.32); pointer-events:none; z-index:3; }
 
-/* ── Command centre responsive ── */
-@media (max-width: 900px) {
-  .cmd-stats        { grid-template-columns: repeat(2,1fr); }
-  .cmd-council-grid { grid-template-columns: repeat(2,1fr); }
-  .cmd-director-grid { grid-template-columns: repeat(2,1fr); }
+/* ── Responsive ── */
+@media (max-width:1024px) {
+  .cmd-council-grid  { grid-template-columns:repeat(3,1fr); }
+  .cmd-director-grid { grid-template-columns:repeat(2,1fr); }
 }
-@media (max-width: 560px) {
-  .cmd-stats        { grid-template-columns: repeat(2,1fr); gap:6px; }
-  .cmd-council-grid { grid-template-columns: repeat(2,1fr); gap:4px; }
-  .cmd-director-grid { grid-template-columns: 1fr; }
-  .cmd-agents-grid  { grid-template-columns: repeat(auto-fill,minmax(100px,1fr)); }
-  .cmd-dispatch-row { flex-wrap:wrap; }
-  .cmd-dispatch-btn { width:100%; }
+@media (max-width:900px) {
+  .cmd-stats         { grid-template-columns:repeat(2,1fr); }
+  .cmd-council-grid  { grid-template-columns:repeat(2,1fr); }
+  .cmd-director-grid { grid-template-columns:repeat(2,1fr); }
+  .cmd-dispatch-row  { flex-wrap:wrap; }
+  .cmd-dispatch-btn  { width:100%; min-height:48px; }
+}
+@media (max-width:560px) {
+  .cmd-stats         { grid-template-columns:repeat(2,1fr); gap:var(--ax-sp-1); }
+  .cmd-council-grid  { grid-template-columns:repeat(2,1fr); gap:var(--ax-sp-1); }
+  .cmd-director-grid { grid-template-columns:1fr; }
+  .cmd-agents-grid   { grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); }
+  .cmd-stat-n        { font-size:16px; }
+  .cmd-canvas-inner  { padding:0 var(--ax-sp-3) 32px; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion:reduce) {
+  .cmd-live-dot,.cmd-council-dot { animation:none!important; }
+  .cmd-dispatch::after { display:none; }
+  .cmd-council-tile,.cmd-director-card { transition:none!important; }
 }
 
 /* ── Loading skeleton ── */
@@ -36005,44 +36062,45 @@ window.apexFileDropHandler = function(e){
                 }
                 var h = data.hierarchy;
                 var s = h.summary || {};
-                var CC = { cso:'#6366f1',cio:'#06b6d4',cfo:'#10b981',cto:'#3b82f6',coo:'#8b5cf6',cro:'#ef4444',cgo:'#f59e0b',cpo:'#ec4899',crr:'#a78bfa',clo:'#64748b' };
-                var DC = { finance:'#10b981',business:'#6366f1',marketing:'#ec4899',health:'#ef4444',system:'#06b6d4',university:'#f59e0b',governance:'#64748b',content:'#f97316',intelligence:'#8b5cf6' };
+                var CC = { cso:'#818cf8',cio:'#22d3ee',cfo:'#34d399',cto:'#60a5fa',coo:'#a78bfa',cro:'#f87171',cgo:'#fbbf24',cpo:'#f472b6',crr:'#c4b5fd',clo:'#94a3b8' };
+                var DC = { finance:'#34d399',business:'#818cf8',marketing:'#f472b6',health:'#f87171',system:'#22d3ee',university:'#fbbf24',governance:'#94a3b8',content:'#f97316',intelligence:'#a78bfa' };
                 function _dot2(on, col) { return '<span class="cmd-council-dot" style="background:' + (on ? (col||'#22c55e') : 'rgba(255,255,255,0.1)') + ';' + (on ? 'box-shadow:0 0 5px ' + (col||'#22c55e') + '80' : '') + '"></span>'; }
-                function _stlbl(status) { return '<span style="font:400 7px/1 \'JetBrains Mono\',monospace;color:' + (status === 'active' ? '#22c55e' : 'rgba(255,255,255,0.22)') + ';letter-spacing:.06em">' + (status||'idle').toUpperCase() + '</span>'; }
+                function _stlbl(status) { return '<span style="font:400 var(--ax-t-xs)/1 var(--ax-mono);color:' + (status === 'active' ? '#22c55e' : 'rgba(255,255,255,0.22)') + ';letter-spacing:.06em">' + (status||'idle').toUpperCase() + '</span>'; }
                 var approvalCount = s.awaiting_approval || 0;
                 var now3 = new Date();
                 var tstr = now3.getHours().toString().padStart(2,'0') + ':' + now3.getMinutes().toString().padStart(2,'0');
-                var html = '';
+                var html = '<div class="cmd-canvas-inner">';
                 // ── Header ──
                 html += '<div class="cmd-header"><div><div class="cmd-header-name">APEX COMMAND CENTRE</div><div class="cmd-header-meta"><span class="cmd-live-dot"></span><span>CIVILISATION LIVE</span><span style="color:rgba(255,255,255,0.08)">·</span><span>FOUNDER ONLINE</span></div></div><div class="cmd-header-time">' + tstr + '</div></div>';
+                // ── Dispatch (before stats per spec) ──
+                html += '<div class="cmd-dispatch"><div class="cmd-dispatch-label">TASK DISPATCH</div><div class="cmd-dispatch-row"><input class="cmd-dispatch-input" id="cmd-dispatch-input" type="text" placeholder="Route a task through the civilisation hierarchy..." autocomplete="off"><button class="cmd-dispatch-btn" id="cmd-dispatch-btn" onclick="window._civDispatch()" aria-label="Dispatch task">DISPATCH</button></div><div class="cmd-dispatch-result" id="cmd-dispatch-result" aria-live="polite"></div></div>';
                 // ── Stats ──
-                html += '<div class="cmd-stats"><div class="cmd-stat"><div class="cmd-stat-n">' + (s.total_agents||43) + '</div><div class="cmd-stat-l">AGENTS</div></div>';
+                html += '<div class="cmd-stats" role="status"><div class="cmd-stat"><div class="cmd-stat-n">' + (s.total_agents||43) + '</div><div class="cmd-stat-l">AGENTS</div></div>';
                 html += '<div class="cmd-stat"><div class="cmd-stat-n" id="cmd-n-active">' + (s.active_agents||0) + '</div><div class="cmd-stat-l">ACTIVE</div></div>';
                 html += '<div class="cmd-stat"><div class="cmd-stat-n" id="cmd-n-pending">' + (s.pending_tasks||0) + '</div><div class="cmd-stat-l">PENDING</div></div>';
                 html += '<div class="cmd-stat' + (approvalCount > 0 ? ' cmd-stat-alert' : '') + '" id="cmd-cs-approvals"><div class="cmd-stat-n" id="cmd-n-approvals">' + approvalCount + '</div><div class="cmd-stat-l">APPROVALS</div></div></div>';
-                // ── Dispatch ──
-                html += '<div class="cmd-dispatch"><div class="cmd-dispatch-label">TASK DISPATCH</div><div class="cmd-dispatch-row"><input class="cmd-dispatch-input" id="cmd-dispatch-input" type="text" placeholder="Route a task through the civilisation hierarchy..." autocomplete="off"><button class="cmd-dispatch-btn" id="cmd-dispatch-btn" onclick="window._civDispatch()" aria-label="Dispatch task">DISPATCH</button></div><div class="cmd-dispatch-result" id="cmd-dispatch-result"></div></div>';
                 // ── Supreme Council ──
-                html += '<div class="cmd-section"><div class="cmd-section-hd">SUPREME COUNCIL <span class="cmd-section-count">× ' + h.council.length + '</span></div><div class="cmd-council-grid">';
+                html += '<div class="cmd-section"><div class="cmd-section-hd"><span class="cmd-section-hd-text">SUPREME COUNCIL</span><span class="cmd-section-count">× ' + h.council.length + '</span></div><div class="cmd-council-grid">';
                 h.council.forEach(function(m) {
                     var rid = (m.id||'').replace('council-','');
                     var col = CC[rid]||'#00d4ff';
                     var on = m.status === 'active';
-                    html += '<div class="cmd-council-tile" style="--tile-color:' + col + '"><div class="cmd-council-role">' + rid.toUpperCase() + '</div><div class="cmd-council-name">' + _esc(m.name||'') + '</div><div class="cmd-council-status">' + _dot2(on,col) + _stlbl(m.status) + '</div></div>';
+                    html += '<div class="cmd-council-tile" style="--tile-color:' + col + '" role="button" tabindex="0" aria-label="' + rid.toUpperCase() + ': ' + _esc(m.name||'') + ', status ' + (m.status||'idle') + '"><div class="cmd-council-role">' + rid.toUpperCase() + '</div><div class="cmd-council-name">' + _esc(m.name||'') + '</div><div class="cmd-council-status">' + _dot2(on,col) + _stlbl(m.status) + '</div></div>';
                 });
                 html += '</div></div>';
                 // ── Domain Directors ──
-                html += '<div class="cmd-section"><div class="cmd-section-hd">DOMAIN DIRECTORS <span class="cmd-section-count">× ' + h.directors.length + '</span></div><div class="cmd-director-grid">';
+                html += '<div class="cmd-section"><div class="cmd-section-hd"><span class="cmd-section-hd-text">DOMAIN DIRECTORS</span><span class="cmd-section-count">× ' + h.directors.length + '</span></div><div class="cmd-director-grid">';
                 h.directors.forEach(function(d) {
                     var dom = (d.domain||d.id||'system').toLowerCase();
                     var col = DC[dom]||'#00d4ff';
                     var on = d.status === 'active';
-                    html += '<div class="cmd-director-card" style="--dir-color:' + col + '"><div class="cmd-director-domain">' + dom.toUpperCase() + '</div><div class="cmd-director-name">' + _esc(d.name||d.id) + '</div><div class="cmd-director-meta">' + (d.workers?d.workers.length:0) + ' agents' + (d.tasks?' · '+d.tasks+' tasks':'') + '</div><div class="cmd-director-tasks">' + _dot2(on,col) + _stlbl(d.status) + '</div></div>';
+                    var agentCount = d.workers ? d.workers.length : 0;
+                    html += '<div class="cmd-director-card" style="--dir-color:' + col + '" role="button" tabindex="0" aria-label="' + dom + ' director, ' + agentCount + ' agents"><div class="cmd-director-domain">' + dom.toUpperCase() + '</div><div class="cmd-director-name">' + _esc(d.name||d.id) + '</div><div class="cmd-director-meta">' + agentCount + ' agents' + (d.tasks?' · '+d.tasks+' tasks':'') + '</div><div class="cmd-director-tasks">' + _dot2(on,col) + _stlbl(d.status) + '</div></div>';
                 });
                 html += '</div></div>';
                 // ── Office Agents ──
                 if (h.office && h.office.length) {
-                    html += '<div class="cmd-section"><div class="cmd-section-hd">OFFICE AGENTS <span class="cmd-section-count">× ' + h.office.length + '</span></div><div class="cmd-agents-grid">';
+                    html += '<div class="cmd-section"><div class="cmd-section-hd"><span class="cmd-section-hd-text">OFFICE AGENTS</span><span class="cmd-section-count">× ' + h.office.length + '</span></div><div class="cmd-agents-grid">';
                     h.office.forEach(function(a) {
                         var dom = (a.domain||'system').toLowerCase();
                         var col = DC[dom]||'rgba(255,255,255,0.15)';
@@ -36051,6 +36109,7 @@ window.apexFileDropHandler = function(e){
                     });
                     html += '</div></div>';
                 }
+                html += '</div>';
                 el.innerHTML = html;
                 _civRenderBusy = false;
                 var inp2 = document.getElementById('cmd-dispatch-input');
