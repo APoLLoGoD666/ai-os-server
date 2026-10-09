@@ -8756,6 +8756,14 @@ header.topbar { grid-area: topbar !important; }
             <span class="nav-label">Store</span>
             <span class="ds-notif-badge" id="navStoreBadge" style="display:none;background:#f97316">0</span>
         </button>
+        <button class="nav-btn apex-master-only" id="nav-nexus" data-page="nexus" aria-label="Nexus — APEX Architecture Map">
+            <span class="nav-icon">◈</span>
+            <span class="nav-label">Nexus</span>
+        </button>
+        <button class="nav-btn apex-master-only" id="nav-pulse" data-page="pulse" aria-label="Pulse — System Intelligence">
+            <span class="nav-icon">∿</span>
+            <span class="nav-label">Pulse</span>
+        </button>
         <!-- TOOLS + SETTINGS (bottom) -->
         <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0"></div>
         <button class="nav-btn" id="nav-tools" aria-label="Tools">
@@ -13648,6 +13656,52 @@ if(pipe){
                 </div>
             </div><!-- #page-governance -->
 
+        <!-- ══ PAGE: NEXUS ════════════════════════════════════════════ -->
+        <div class="page apex-master-only" id="page-nexus">
+            <div id="nxs-wrap">
+                <div id="nxs-svg-wrap">
+                    <svg id="nxs-svg" viewBox="0 0 1000 1120" preserveAspectRatio="xMidYMid meet" aria-label="APEX Sovereign Architecture" role="img"></svg>
+                </div>
+                <div id="nxs-controls">
+                    <button class="nxs-ctrl-btn" id="nxs-ministry-btn" title="Ministry Overlay [M]">◈ MINISTRY</button>
+                    <button class="nxs-ctrl-btn" id="nxs-labels-btn" title="Path Labels [P]">⬡ PATHS</button>
+                    <span class="nxs-page-link" onclick="window.switchPage('pulse')">PULSE →</span>
+                </div>
+                <div id="nxs-status">● LOADING</div>
+            </div>
+            <div id="nxs-panel">
+                <div id="nxs-panel-hd">
+                    <div class="nxs-panel-dot" id="nxs-panel-dot"></div>
+                    <span class="nxs-panel-title" id="nxs-panel-title">NODE</span>
+                    <span class="nxs-panel-layer" id="nxs-panel-layer"></span>
+                    <button id="nxs-panel-close" aria-label="Close panel">×</button>
+                </div>
+                <div id="nxs-panel-body"></div>
+            </div>
+        </div>
+
+        <!-- ══ PAGE: PULSE ════════════════════════════════════════════ -->
+        <div class="page apex-master-only" id="page-pulse">
+            <div class="pls-vitals" id="pls-vitals-strip">
+                <div class="pls-vital"><div class="pls-vital-lbl">CIVILISATION HEALTH</div><div class="pls-vital-val" id="pls-v-health">—</div></div>
+                <div class="pls-vital"><div class="pls-vital-lbl">ACTIVE TASKS</div><div class="pls-vital-val" id="pls-v-tasks">—</div></div>
+                <div class="pls-vital"><div class="pls-vital-lbl">OPPORTUNITIES</div><div class="pls-vital-val" id="pls-v-opps">—</div></div>
+                <div class="pls-vital"><div class="pls-vital-lbl">PENDING APPROVALS</div><div class="pls-vital-val" id="pls-v-approvals">—</div></div>
+                <div class="pls-vital"><div class="pls-vital-lbl">CRON FAILURES 24H</div><div class="pls-vital-val" id="pls-v-cron">—</div></div>
+                <div class="pls-vital" style="margin-left:auto"><div class="pls-vital-lbl">VIEW</div><div class="pls-vital-val" style="font-size:11px;cursor:pointer;color:var(--ax-acc,#00d4ff)" onclick="window.switchPage('nexus')">NEXUS →</div></div>
+            </div>
+            <div class="pls-body">
+                <div class="pls-grid" id="pls-domain-grid">
+                    <div class="pls-card" style="opacity:.4"><div class="pls-card-meta">Loading domains…</div></div>
+                </div>
+                <div class="pls-cols" id="pls-cols">
+                    <div class="pls-col" id="pls-col-council"><div class="pls-col-hd">COUNCIL INTELLIGENCE</div></div>
+                    <div class="pls-col" id="pls-col-ministry"><div class="pls-col-hd">MINISTRY BRIEFINGS</div></div>
+                    <div class="pls-col" id="pls-col-health"><div class="pls-col-hd">SYSTEM HEALTH</div></div>
+                </div>
+            </div>
+        </div>
+
         </div><!-- .page-wrap -->
 
         <!-- ══ INPUT ZONE (V-11-E: scoped to COMMAND via body.apex-cmd-active) ══ -->
@@ -13698,7 +13752,7 @@ if(pipe){
     // V-11-F F-7: 'operation' removed (merged into business)
     // V-11-F F-9: civilisation/reality moved out of LIFE & WORK swipe sequence to end (SYSTEM → Advanced)
     // V-11-H H-18: 'agents' / 'approvals' / 'activity' consolidated into 'actions' (positioned after 'intelligence' per Section 32).
-    var pages = ['today','domains', 'command', 'intel', 'overview', 'system', 'finance', 'communication', 'business', 'store', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'domain-agents', 'portal', 'memory', 'council', 'governance', 'civilisation', 'reality', 'settings', 'tools'];
+    var pages = ['today','domains', 'command', 'intel', 'overview', 'system', 'finance', 'communication', 'business', 'store', 'health', 'university', 'occult', 'research', 'knowledge', 'intelligence', 'actions', 'agents', 'domain-agents', 'portal', 'memory', 'council', 'governance', 'civilisation', 'reality', 'nexus', 'pulse', 'settings', 'tools'];
     var activePage = 'today';
 
     var pageMeta = {
@@ -13731,11 +13785,13 @@ if(pipe){
         domains:       { title:'Domains',        sub:'Your life areas' },
         council:       { title:'Council',        sub:'Supreme Council · Deliberations · Votes · Decisions' },
         settings:      { title:'Settings',       sub:'Account & preferences' },
-        tools:         { title:'Tools',          sub:'API connections · automations · integrations' }
+        tools:         { title:'Tools',          sub:'API connections · automations · integrations' },
+        nexus:         { title:'APEX Nexus',     sub:'Sovereign Architecture · Live Flow · System Map' },
+        pulse:         { title:'APEX Pulse',     sub:'Domain Intelligence · Ministry Reports · Vitals' },
     };
     window.switchPage = function(name) {
         // V-11-F F-3: Redirect Users away from Master-only pages (silent — do not leak existence)
-        var masterOnlyPages = ['occult', 'civilisation', 'reality', 'university', 'governance'];
+        var masterOnlyPages = ['occult', 'civilisation', 'reality', 'university', 'governance', 'nexus', 'pulse'];
         if (masterOnlyPages.indexOf(name) !== -1 && document.body.classList.contains('apex-role-user')) {
             name = 'today';
         }
@@ -31971,6 +32027,163 @@ window.apexFileDropHandler = function(e){
 /* ── CORE breathing pulse ───────────────────────────────────────── */
 @keyframes kg-core-breath { 0%,100%{box-shadow:0 0 48px rgba(124,108,242,0.28),0 0 100px rgba(124,108,242,0.08);} 50%{box-shadow:0 0 90px rgba(124,108,242,0.5),0 0 180px rgba(124,108,242,0.18);} }
 #kg-pipeline .kg-node-core .kg-node-box { animation:kg-core-breath 4s ease-in-out infinite !important; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   APEX NEXUS — Tree-of-Life Process Map
+   APEX PULSE — Domain Intelligence Dashboard
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Nexus page layout ──────────────────────────────────────────── */
+#page-nexus { display:flex; flex-direction:column; align-items:center; padding:var(--spacing-lg) var(--spacing-md); min-height:100vh; background:var(--color-bg); }
+#nxs-wrap { position:relative; width:100%; max-width:780px; }
+#nxs-svg-wrap { width:100%; aspect-ratio:1000/1120; position:relative; }
+#nxs-svg { width:100%; height:100%; cursor:default; }
+
+/* Node interactions */
+.nxs-node { cursor:pointer; }
+.nxs-node:hover .nxs-outer { opacity:1; }
+.nxs-node:focus { outline:none; }
+.nxs-node:focus .nxs-outer { stroke:#fff; stroke-width:2; opacity:1; }
+
+/* Path interactions */
+.nxs-path { cursor:pointer; }
+.nxs-path:hover { opacity:1; }
+
+/* Controls bar */
+#nxs-controls {
+  display:flex; gap:var(--spacing-sm); align-items:center; justify-content:center;
+  flex-wrap:wrap; margin-top:var(--spacing-md); padding:var(--spacing-sm);
+}
+.nxs-ctrl-btn {
+  font:700 10px/1 var(--font-mono); letter-spacing:.1em;
+  background:rgba(255,255,255,0.04); border:1px solid var(--color-border);
+  border-radius:var(--radius-full); color:var(--color-text-muted);
+  padding:8px 16px; cursor:pointer; transition:border-color var(--duration-fast), color var(--duration-fast);
+  min-height:36px;
+}
+.nxs-ctrl-btn:hover, .nxs-ctrl-btn.active { border-color:var(--color-accent); color:var(--color-accent); }
+.nxs-ctrl-btn:focus-visible { outline:2px solid var(--color-accent); outline-offset:2px; }
+.nxs-page-link {
+  font:700 10px/1 var(--font-mono); letter-spacing:.1em;
+  background:rgba(124,108,242,0.12); border:1px solid rgba(124,108,242,0.4);
+  border-radius:var(--radius-full); color:var(--color-accent);
+  padding:8px 16px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center;
+  min-height:36px; transition:background var(--duration-fast);
+}
+.nxs-page-link:hover { background:rgba(124,108,242,0.22); }
+
+/* Status bar */
+#nxs-status {
+  font:500 10px/1 var(--font-mono); letter-spacing:.08em; color:var(--color-text-muted);
+  text-align:center; margin-top:var(--spacing-sm); min-height:16px;
+}
+
+/* Detail panel */
+#nxs-panel {
+  position:absolute; top:0; right:-420px; width:400px;
+  background:rgba(20,20,30,0.96); border:1px solid rgba(124,108,242,0.25);
+  border-radius:var(--radius-lg); backdrop-filter:blur(12px);
+  padding:var(--spacing-lg); transition:right var(--duration-normal) var(--ease-out);
+  z-index:10; max-height:90vh; overflow-y:auto;
+}
+#nxs-panel.open { right:calc(-400px + 8px); }
+#nxs-panel-hd { display:flex; align-items:center; gap:var(--spacing-sm); margin-bottom:var(--spacing-md); }
+.nxs-panel-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.nxs-panel-title { font:700 14px/1.2 var(--font-mono); color:var(--color-text); flex:1; }
+.nxs-panel-layer { font:500 10px/1 var(--font-mono); color:var(--color-text-muted); letter-spacing:.1em; }
+.nxs-panel-close {
+  background:none; border:1px solid var(--color-border); border-radius:var(--radius-sm);
+  color:var(--color-text-muted); cursor:pointer; padding:4px 8px; font-size:12px;
+  min-width:28px; min-height:28px;
+}
+.nxs-panel-close:hover { border-color:var(--color-error); color:var(--color-error); }
+.nxs-panel-body { font-size:var(--text-sm); }
+.nxs-panel-section { margin-bottom:var(--spacing-md); }
+.nxs-panel-lbl { font:700 9px/1 var(--font-mono); letter-spacing:.12em; color:var(--color-text-muted); text-transform:uppercase; margin-bottom:var(--spacing-xs); }
+.nxs-panel-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+.nxs-panel-row-label { color:var(--color-text-muted); font-size:var(--text-sm); }
+.nxs-panel-row-value { color:var(--color-text); font:600 var(--text-sm)/1 var(--font-mono); }
+.nxs-panel-text { color:var(--color-text-muted); line-height:1.6; font-size:var(--text-sm); }
+.nxs-panel-btn {
+  margin-top:var(--spacing-sm); display:inline-flex; align-items:center;
+  gap:var(--spacing-xs); font:600 11px/1 var(--font-mono); letter-spacing:.08em;
+  background:rgba(124,108,242,0.15); border:1px solid rgba(124,108,242,0.35);
+  border-radius:var(--radius-md); color:var(--color-accent); padding:8px 14px;
+  cursor:pointer; text-decoration:none; min-height:36px;
+}
+.nxs-panel-btn:hover { background:rgba(124,108,242,0.28); }
+
+/* ── Pulse page layout ──────────────────────────────────────────── */
+#page-pulse { display:flex; flex-direction:column; gap:var(--spacing-lg); padding:var(--spacing-lg) var(--spacing-md); min-height:100vh; }
+
+/* Vitals strip */
+.pls-vitals { display:flex; gap:var(--spacing-sm); flex-wrap:wrap; }
+.pls-vital {
+  flex:1; min-width:120px; background:var(--color-surface);
+  border:1px solid var(--color-border); border-radius:var(--radius-md);
+  padding:var(--spacing-md); display:flex; flex-direction:column; gap:4px;
+  transition:border-color var(--duration-fast);
+}
+.pls-vital:hover { border-color:var(--color-accent); }
+.pls-vital-label { font:600 9px/1 var(--font-mono); letter-spacing:.1em; color:var(--color-text-muted); text-transform:uppercase; }
+.pls-vital-value { font:700 26px/1 var(--font-mono); color:var(--color-text); }
+.pls-vital-sub { font:500 10px/1 var(--font-mono); color:var(--color-text-muted); }
+.pls-vital-link { text-decoration:none; }
+.pls-vital-link:focus-visible { outline:2px solid var(--color-accent); border-radius:var(--radius-md); }
+
+/* Body — grid + columns */
+.pls-body { display:grid; grid-template-columns:1fr 420px; gap:var(--spacing-lg); }
+@media (max-width:1100px) { .pls-body { grid-template-columns:1fr; } }
+
+/* Domain grid */
+.pls-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--spacing-md); }
+@media (max-width:768px) { .pls-grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:480px) { .pls-grid { grid-template-columns:1fr; } }
+
+.pls-card {
+  background:var(--color-surface); border:1px solid var(--color-border);
+  border-radius:var(--radius-md); padding:var(--spacing-md);
+  transition:border-color var(--duration-fast), transform var(--duration-fast);
+  cursor:default;
+}
+.pls-card:hover { border-color:rgba(124,108,242,0.4); transform:translateY(-1px); }
+.pls-card-hd { display:flex; align-items:center; gap:var(--spacing-sm); margin-bottom:var(--spacing-sm); }
+.pls-card-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.pls-card-title { font:700 11px/1 var(--font-mono); letter-spacing:.08em; color:var(--color-text); text-transform:uppercase; }
+.pls-card-status { font:500 9px/1 var(--font-mono); padding:2px 6px; border-radius:var(--radius-full); border:1px solid currentColor; margin-left:auto; }
+.pls-card-stat { display:flex; justify-content:space-between; align-items:baseline; margin-top:4px; }
+.pls-card-stat-label { font-size:11px; color:var(--color-text-muted); }
+.pls-card-stat-value { font:600 13px/1 var(--font-mono); }
+.pls-card-headline { font-size:11px; color:var(--color-text-muted); line-height:1.5; margin-top:var(--spacing-sm); border-top:1px solid rgba(255,255,255,0.05); padding-top:var(--spacing-sm); }
+
+/* Right columns */
+.pls-cols { display:flex; flex-direction:column; gap:var(--spacing-md); }
+.pls-col { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--spacing-md); }
+.pls-col-title { font:700 10px/1 var(--font-mono); letter-spacing:.12em; color:var(--color-text-muted); text-transform:uppercase; margin-bottom:var(--spacing-md); }
+.pls-col-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:var(--text-sm); }
+.pls-col-row:last-child { border-bottom:none; }
+.pls-col-row-label { color:var(--color-text-muted); }
+.pls-col-row-val { font:600 var(--text-sm)/1 var(--font-mono); color:var(--color-text); }
+.pls-col-badge { font:700 9px/1 var(--font-mono); padding:2px 7px; border-radius:var(--radius-full); }
+.pls-col-badge.ok { background:rgba(34,197,94,0.15); color:var(--color-success); border:1px solid rgba(34,197,94,0.3); }
+.pls-col-badge.warn { background:rgba(245,158,11,0.15); color:var(--color-warning); border:1px solid rgba(245,158,11,0.3); }
+.pls-col-badge.err { background:rgba(239,68,68,0.15); color:var(--color-error); border:1px solid rgba(239,68,68,0.3); }
+.pls-empty { color:var(--color-text-muted); font-size:var(--text-sm); padding:var(--spacing-md) 0; text-align:center; }
+.pls-run-btn {
+  margin-top:var(--spacing-sm); width:100%; font:600 10px/1 var(--font-mono); letter-spacing:.08em;
+  background:rgba(124,108,242,0.12); border:1px solid rgba(124,108,242,0.35);
+  border-radius:var(--radius-md); color:var(--color-accent); padding:10px;
+  cursor:pointer; min-height:36px; transition:background var(--duration-fast);
+}
+.pls-run-btn:hover { background:rgba(124,108,242,0.25); }
+.pls-run-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.pls-health-bar { height:6px; background:rgba(255,255,255,0.08); border-radius:3px; margin-top:var(--spacing-sm); overflow:hidden; }
+.pls-health-fill { height:100%; border-radius:3px; transition:width .5s var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .nxs-ctrl-btn, .nxs-page-link, .pls-vital, .pls-card, #nxs-panel { transition:none !important; }
+}
+
 /* ── Evolution live bar ─────────────────────────────────────────── */
 #kg-live-bar {
   position:absolute; top:0; left:0; right:0; z-index:25; height:26px;
@@ -38860,6 +39073,611 @@ _loadConnections();
 
     // If page loads on #store hash
     if (location.hash === '#store') { document.addEventListener('DOMContentLoaded', function() { setTimeout(podLoad, 200); }); }
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APEX NEXUS + PULSE — Tree-of-Life Architecture & Intelligence
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+
+/* ─── Tree geometry ─────────────────────────────────────────── */
+const NODES = [
+  {id:'1',  x:500, y:90,   r:34, c:'#e2e8f0', label:'FOUNDER',      layer:'Constitutional', sub:'Sovereign Will'},
+  {id:'2',  x:780, y:240,  r:26, c:'#7c6cf2', label:'VISION',        layer:'Constitutional', sub:'CSO · CIO'},
+  {id:'3',  x:220, y:240,  r:26, c:'#94a3b8', label:'FORM',          layer:'Constitutional', sub:'CLO · CRO'},
+  {id:'4',  x:780, y:430,  r:26, c:'#34d399', label:'EXPANSION',     layer:'Council',        sub:'CFO · CGO'},
+  {id:'5',  x:220, y:430,  r:26, c:'#94a3b8', label:'STRENGTH',      layer:'Council',        sub:'COO · CRO'},
+  {id:'6',  x:500, y:580,  r:30, c:'#f59e0b', label:'COUNCIL',       layer:'Council',        sub:'Supreme Council'},
+  {id:'7',  x:780, y:730,  r:22, c:'#ec7fa3', label:'INTELLIGENCE',  layer:'Director',       sub:'CRR · Intel'},
+  {id:'8',  x:220, y:730,  r:22, c:'#60a5fa', label:'PRECISION',     layer:'Director',       sub:'CTO · CPO'},
+  {id:'9',  x:500, y:870,  r:28, c:'#c4b5fd', label:'FOUNDATION',    layer:'Director',       sub:'9 Directors'},
+  {id:'10', x:500, y:1010, r:32, c:'#7c6cf2', label:'KINGDOM',       layer:'Execution',      sub:'56 Agents'},
+];
+
+const PATHS = [
+  // Central spine
+  {a:'1', b:'6',  d:'M500,90 C500,270 500,410 500,580',                        spine:true},
+  {a:'6', b:'9',  d:'M500,580 C500,695 500,785 500,870',                        spine:true},
+  {a:'9', b:'10', d:'M500,870 C500,920 500,960 500,1010',                       spine:true},
+  // Constitutional triad
+  {a:'1', b:'2',  d:'M500,90 C620,90 740,160 780,240'},
+  {a:'1', b:'3',  d:'M500,90 C380,90 260,160 220,240'},
+  {a:'2', b:'3',  d:'M780,240 C780,240 500,320 220,240'},
+  // Council band
+  {a:'2', b:'6',  d:'M780,240 C820,350 780,490 500,580'},
+  {a:'3', b:'6',  d:'M220,240 C180,350 220,490 500,580'},
+  {a:'4', b:'6',  d:'M780,430 C780,510 680,560 500,580'},
+  {a:'5', b:'6',  d:'M220,430 C220,510 320,560 500,580'},
+  {a:'2', b:'4',  d:'M780,240 C820,300 820,370 780,430'},
+  {a:'3', b:'5',  d:'M220,240 C180,300 180,370 220,430'},
+  {a:'4', b:'5',  d:'M780,430 C780,430 500,510 220,430'},
+  // Director band
+  {a:'4', b:'7',  d:'M780,430 C820,560 820,660 780,730'},
+  {a:'5', b:'8',  d:'M220,430 C180,560 180,660 220,730'},
+  {a:'6', b:'7',  d:'M500,580 C600,590 710,650 780,730'},
+  {a:'6', b:'8',  d:'M500,580 C400,590 290,650 220,730'},
+  {a:'7', b:'9',  d:'M780,730 C780,800 660,860 500,870'},
+  {a:'8', b:'9',  d:'M220,730 C220,800 340,860 500,870'},
+  {a:'7', b:'8',  d:'M780,730 C780,730 500,800 220,730'},
+  // Diagonal cross
+  {a:'3', b:'7',  d:'M220,240 C400,300 680,560 780,730'},
+  {a:'2', b:'8',  d:'M780,240 C600,300 320,560 220,730'},
+];
+
+const DOMAIN_DEFS = [
+  {slug:'finance',      color:'#34d399', director:'Finance Director',      agents:4},
+  {slug:'business',     color:'#ec7fa3', director:'Business Director',     agents:10},
+  {slug:'marketing',    color:'#f97316', director:'Marketing Director',    agents:8},
+  {slug:'health',       color:'#f87171', director:'Health Director',       agents:5},
+  {slug:'intelligence', color:'#c4b5fd', director:'Intelligence Director', agents:4},
+  {slug:'university',   color:'#7c6cf2', director:'University Director',   agents:4},
+  {slug:'governance',   color:'#94a3b8', director:'Governance Director',   agents:3},
+  {slug:'content',      color:'#fbbf24', director:'Content Director',      agents:5},
+  {slug:'system',       color:'#60a5fa', director:'System Director',       agents:5},
+];
+
+/* ─── State ─────────────────────────────────────────────────── */
+let _svg, _svgNS = 'http://www.w3.org/2000/svg';
+let _particles = [], _raf = null;
+let _nodeEls = {}, _pathEls = {};
+let _pathActivity = {}, _nodeActivity = {};
+let _heartbeatTimer = null, _pollTimer = null;
+let _panelOpen = false, _panelNode = null;
+let _ministryMode = false, _labelsMode = false;
+let _liveData = null;
+
+/* ─── SVG construction ──────────────────────────────────────── */
+function _el(tag, attrs){
+  const e = document.createElementNS(_svgNS, tag);
+  for(const [k,v] of Object.entries(attrs||{})) e.setAttribute(k,v);
+  return e;
+}
+
+function _buildSVG(){
+  _svg = document.getElementById('nxs-svg');
+  if(!_svg) return;
+  _svg.innerHTML = '';
+
+  /* defs */
+  const defs = _el('defs');
+  // glow filter
+  const flt = _el('filter',{id:'nxs-glow',x:'-50%',y:'-50%',width:'200%',height:'200%'});
+  const fe1 = _el('feGaussianBlur',{stdDeviation:'4',result:'blur'});
+  const fe2 = _el('feMerge');
+  const fm1 = _el('feMergeNode',{in:'blur'});
+  const fm2 = _el('feMergeNode',{in:'SourceGraphic'});
+  fe2.appendChild(fm1); fe2.appendChild(fm2);
+  flt.appendChild(fe1); flt.appendChild(fe2);
+  defs.appendChild(flt);
+  // spine gradient
+  const sg = _el('linearGradient',{id:'nxs-spine',x1:'0',y1:'0',x2:'0',y2:'1'});
+  [['0','#7c6cf2'],['0.5','#f59e0b'],['1','#7c6cf2']].forEach(([o,c])=>{
+    const s = _el('stop',{'offset':o,'stop-color':c,'stop-opacity':'0.7'}); sg.appendChild(s);
+  });
+  defs.appendChild(sg);
+  _svg.appendChild(defs);
+
+  /* atmosphere — pillar guides */
+  const atm = _el('g',{opacity:'0.06'});
+  [[220,'#94a3b8'],[500,'#7c6cf2'],[780,'#7c6cf2']].forEach(([x,c])=>{
+    const l = _el('line',{x1:x,y1:60,x2:x,y2:1060,stroke:c,'stroke-width':'1','stroke-dasharray':'4,8'});
+    atm.appendChild(l);
+  });
+  // abyss line
+  const abyss = _el('line',{x1:100,y1:480,x2:900,y2:480,stroke:'#fff','stroke-width':'0.5','stroke-dasharray':'2,12',opacity:'0.08'});
+  atm.appendChild(abyss);
+  _svg.appendChild(atm);
+
+  // band labels
+  const bands = [{y:70,lbl:'CONSTITUTIONAL'},{y:330,lbl:'COUNCIL'},{y:620,lbl:'DIRECTOR'},{y:870,lbl:'EXECUTION'}];
+  bands.forEach(({y,lbl})=>{
+    const t = _el('text',{x:16,y,fill:'rgba(255,255,255,0.12)',font:'600 8px JetBrains Mono,monospace','letter-spacing':'0.14em'});
+    t.textContent = lbl; _svg.appendChild(t);
+  });
+
+  /* path layer */
+  const pathG = _el('g',{id:'nxs-paths'});
+  PATHS.forEach((p,i)=>{
+    // glow backing
+    const pg = _el('path',{d:p.d, fill:'none', stroke: p.spine ? 'url(#nxs-spine)' : '#7c6cf2',
+      'stroke-width': p.spine ? '2.5' : '1.2',
+      opacity: p.spine ? '0.22' : '0.13',
+      'stroke-dasharray': p.spine ? 'none' : '4,10'});
+    pathG.appendChild(pg);
+    // interactive hit area
+    const ph = _el('path',{d:p.d, fill:'none', stroke:'transparent','stroke-width':'14',
+      id:`nxs-path-${p.a}-${p.b}`, role:'button','aria-label':`Path ${p.a}→${p.b}`, tabindex:'0'});
+    ph.dataset.a = p.a; ph.dataset.b = p.b;
+    ph.classList.add('nxs-path');
+    pathG.appendChild(ph);
+    _pathEls[`${p.a}-${p.b}`] = {glow:pg, hit:ph};
+  });
+  _svg.appendChild(pathG);
+
+  /* particle layer */
+  _svg.appendChild(_el('g',{id:'nxs-particles'}));
+
+  /* node layer */
+  const nodeG = _el('g',{id:'nxs-nodes'});
+  NODES.forEach((n,i)=>{
+    const g = _el('g',{id:`nxs-node-${n.id}`, transform:`translate(${n.x},${n.y})`,
+      role:'button','aria-label':`Node ${n.id}: ${n.label}`, tabindex:'0'});
+    g.classList.add('nxs-node');
+
+    // halo
+    const halo = _el('circle',{cx:0,cy:0, r:n.r+18, fill:'none', stroke:n.c,
+      'stroke-width':'1', opacity:'0.08', id:`nxs-halo-${n.id}`});
+    g.appendChild(halo);
+
+    // breathing ring with async offset
+    const br = _el('circle',{cx:0,cy:0, r:n.r+8, fill:'none', stroke:n.c,
+      'stroke-width':'1.5', opacity:'0.18', id:`nxs-breath-${n.id}`});
+    const anim = _el('animate',{attributeName:'r',
+      values:`${n.r+6};${n.r+13};${n.r+6}`,
+      dur:`${3.5 + i*0.35}s`, repeatCount:'indefinite', calcMode:'spline',
+      keySplines:'0.4 0 0.6 1;0.4 0 0.6 1'});
+    const anim2 = _el('animate',{attributeName:'opacity',
+      values:'0.18;0.35;0.18',
+      dur:`${3.5 + i*0.35}s`, repeatCount:'indefinite', calcMode:'spline',
+      keySplines:'0.4 0 0.6 1;0.4 0 0.6 1'});
+    br.appendChild(anim); br.appendChild(anim2);
+    g.appendChild(br);
+
+    // outer ring
+    const outer = _el('circle',{cx:0,cy:0, r:n.r+3, fill:'none', stroke:n.c,
+      'stroke-width':'1', opacity:'0.3', id:`nxs-outer-${n.id}`});
+    outer.classList.add('nxs-outer');
+    g.appendChild(outer);
+
+    // fill
+    const fill = _el('circle',{cx:0,cy:0, r:n.r, fill:'rgba(13,13,19,0.92)', stroke:n.c,
+      'stroke-width':'1.8', id:`nxs-fill-${n.id}`});
+    g.appendChild(fill);
+
+    // inner glow
+    const glow = _el('circle',{cx:0,cy:0, r:n.r-6, fill:n.c, opacity:'0.07',
+      id:`nxs-glow-${n.id}`});
+    g.appendChild(glow);
+
+    // id badge
+    const badge = _el('text',{x:0,y:-n.r-7, fill:'rgba(255,255,255,0.35)',
+      font:`500 8px JetBrains Mono,monospace`, 'text-anchor':'middle'});
+    badge.textContent = n.id;
+    g.appendChild(badge);
+
+    // label
+    const lbl = _el('text',{x:0,y:4, fill:n.c, font:`700 ${Math.max(8, n.r*0.36)}px JetBrains Mono,monospace`,
+      'text-anchor':'middle', 'dominant-baseline':'middle', id:`nxs-lbl-${n.id}`});
+    lbl.textContent = n.label;
+    g.appendChild(lbl);
+
+    // sub-label
+    const sub = _el('text',{x:0,y:n.r+18, fill:'rgba(255,255,255,0.3)',
+      font:'500 8px JetBrains Mono,monospace', 'text-anchor':'middle'});
+    sub.textContent = n.sub;
+    g.appendChild(sub);
+
+    g.addEventListener('click', ()=>_openPanel(n.id));
+    g.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); _openPanel(n.id); }});
+    nodeG.appendChild(g);
+    _nodeEls[n.id] = {g, halo, outer, fill, glow, br};
+  });
+  _svg.appendChild(nodeG);
+}
+
+/* ─── Particle engine ───────────────────────────────────────── */
+function _spawnParticle(fromId, toId, color){
+  const key1 = `${fromId}-${toId}`, key2 = `${toId}-${fromId}`;
+  const path = _pathEls[key1]?.hit || _pathEls[key2]?.hit;
+  if(!path) return;
+  const pG = document.getElementById('nxs-particles');
+  if(!pG) return;
+  const circ = _el('circle',{r:'3', fill:color||'#7c6cf2', opacity:'0.9',
+    filter:'url(#nxs-glow)'});
+  pG.appendChild(circ);
+  const len = path.getTotalLength ? path.getTotalLength() : 200;
+  const reverse = !_pathEls[key1];
+  let t = 0;
+  function tick(){
+    t += 0.012;
+    if(t>=1){ pG.removeChild(circ); return; }
+    const pt = path.getPointAtLength(reverse ? len*(1-t) : len*t);
+    circ.setAttribute('cx', pt.x);
+    circ.setAttribute('cy', pt.y);
+    circ.setAttribute('opacity', t<0.1 ? t*9 : t>0.85 ? (1-t)*6.7 : 0.9);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+function _lightningFlash(domainHint){
+  const domMap = {finance:'4',business:'4',marketing:'7',health:'7',
+    intelligence:'7',university:'7',governance:'3',content:'7',system:'8'};
+  const nid = domMap[domainHint]||'9';
+  const seq = [nid,'9','10'];
+  seq.forEach((id,i)=>{
+    setTimeout(()=>{
+      const el = _nodeEls[id];
+      if(!el) return;
+      el.fill.setAttribute('fill','rgba(255,255,255,0.15)');
+      setTimeout(()=>el.fill.setAttribute('fill','rgba(13,13,19,0.92)'),200);
+      _spawnParticle(id, seq[i+1]||'10', '#fff');
+    }, i*180);
+  });
+}
+
+function _councilPulse(){
+  ['2','4','7'].forEach((id,i)=>{
+    setTimeout(()=>_spawnParticle(id,'6','#f59e0b'), i*200);
+  });
+  setTimeout(()=>{
+    _spawnParticle('6','9','#f59e0b');
+    setTimeout(()=>_spawnParticle('9','10','#7c6cf2'),300);
+  },800);
+}
+
+/* ─── Heartbeat (idle) ──────────────────────────────────────── */
+function _startHeartbeat(){
+  if(_heartbeatTimer) return;
+  _heartbeatTimer = setInterval(()=>{
+    _spawnParticle('1','6','rgba(255,255,255,0.4)');
+    setTimeout(()=>_spawnParticle('6','9','rgba(255,255,255,0.3)'),600);
+    setTimeout(()=>_spawnParticle('9','10','rgba(124,108,242,0.5)'),1100);
+  }, 8000);
+}
+function _stopHeartbeat(){ clearInterval(_heartbeatTimer); _heartbeatTimer=null; }
+
+/* ─── Ministry rings ────────────────────────────────────────── */
+function _toggleMinistry(){
+  _ministryMode = !_ministryMode;
+  const btn = document.getElementById('nxs-ministry-btn');
+  if(btn) btn.classList.toggle('active', _ministryMode);
+  _updateMinistryRings();
+}
+function _updateMinistryRings(){
+  document.querySelectorAll('.nxs-ministry-ring').forEach(e=>e.remove());
+  if(!_ministryMode || !_liveData) return;
+  const mh = _liveData.ministryHealth || {};
+  const domMap = {finance:'4',business:'4',marketing:'9',health:'9',
+    intelligence:'7',university:'9',governance:'3',content:'9',system:'8'};
+  const nodeColors = {};
+  for(const [ministry,status] of Object.entries(mh)){
+    const nid = domMap[ministry]||'9';
+    if(!nodeColors[nid]) nodeColors[nid] = [];
+    nodeColors[nid].push(status==='healthy'?'#22c55e':'#ef4444');
+  }
+  for(const [nid,colors] of Object.entries(nodeColors)){
+    const n = NODES.find(x=>x.id===nid);
+    if(!n) continue;
+    const g = _nodeEls[nid]?.g;
+    if(!g) continue;
+    const ring = _el('circle',{cx:0,cy:0, r:n.r+26, fill:'none',
+      stroke:colors[0],'stroke-width':'1.5','stroke-dasharray':'6,4',opacity:'0.5'});
+    ring.classList.add('nxs-ministry-ring');
+    const anim = _el('animateTransform',{attributeName:'transform',type:'rotate',
+      from:'0 0 0',to:'360 0 0',dur:'12s',repeatCount:'indefinite'});
+    ring.appendChild(anim);
+    g.insertBefore(ring, g.firstChild);
+  }
+}
+
+/* ─── Labels toggle ─────────────────────────────────────────── */
+function _toggleLabels(){
+  _labelsMode = !_labelsMode;
+  const btn = document.getElementById('nxs-labels-btn');
+  if(btn) btn.classList.toggle('active', _labelsMode);
+  document.querySelectorAll('.nxs-path-label').forEach(e=>e.remove());
+  if(!_labelsMode) return;
+  PATHS.forEach(p=>{
+    const ph = _pathEls[`${p.a}-${p.b}`]?.hit;
+    if(!ph || !ph.getTotalLength) return;
+    const mid = ph.getPointAtLength(ph.getTotalLength()/2);
+    const t = _el('text',{x:mid.x,y:mid.y-6, fill:'rgba(255,255,255,0.3)',
+      font:'500 7px JetBrains Mono,monospace','text-anchor':'middle'});
+    t.textContent = `${p.a}→${p.b}`;
+    t.classList.add('nxs-path-label');
+    _svg.appendChild(t);
+  });
+}
+
+/* ─── Detail panel ──────────────────────────────────────────── */
+function _openPanel(nodeId){
+  _panelNode = nodeId;
+  _panelOpen = true;
+  const panel = document.getElementById('nxs-panel');
+  if(panel){ panel.classList.add('open'); panel.removeAttribute('hidden'); }
+  _buildPanelContent(nodeId);
+  _fetchNodeData(nodeId);
+}
+function _closePanel(){
+  _panelOpen = false;
+  const panel = document.getElementById('nxs-panel');
+  if(panel){ panel.classList.remove('open'); }
+}
+function _buildPanelContent(nodeId, extra){
+  const n = NODES.find(x=>x.id===nodeId);
+  if(!n) return;
+  const hd = document.getElementById('nxs-panel-hd');
+  const body = document.getElementById('nxs-panel-body');
+  if(!hd||!body) return;
+  hd.innerHTML = `
+    <span class="nxs-panel-dot" style="background:${n.c}"></span>
+    <span class="nxs-panel-title">${n.label}</span>
+    <span class="nxs-panel-layer">${n.layer}</span>
+    <button class="nxs-panel-close" onclick="window._nxsClosePanel()" aria-label="Close panel">✕</button>`;
+  const act = _nodeActivity[nodeId];
+  let html = `<div class="nxs-panel-section">
+    <div class="nxs-panel-lbl">Identity</div>
+    <div class="nxs-panel-row"><span class="nxs-panel-row-label">Node</span><span class="nxs-panel-row-value">${n.id} / ${n.sub}</span></div>
+    <div class="nxs-panel-row"><span class="nxs-panel-row-label">Layer</span><span class="nxs-panel-row-value">${n.layer}</span></div>
+    <div class="nxs-panel-row"><span class="nxs-panel-row-label">Status</span><span class="nxs-panel-row-value" style="color:${act?'#22c55e':'#94a3b8'}">${act?'ACTIVE':'IDLE'}</span></div>
+  </div>`;
+  if(extra){
+    if(extra.sessions?.length){
+      html += `<div class="nxs-panel-section"><div class="nxs-panel-lbl">Recent Sessions</div>`;
+      extra.sessions.slice(0,3).forEach(s=>{
+        html += `<div class="nxs-panel-row"><span class="nxs-panel-row-label">${s.session_type||'session'}</span><span class="nxs-panel-row-value">${s.consensus_level||'—'}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    if(extra.decisions?.length){
+      html += `<div class="nxs-panel-section"><div class="nxs-panel-lbl">Decisions</div>`;
+      extra.decisions.forEach(d=>{
+        html += `<div class="nxs-panel-row"><span class="nxs-panel-row-label">${(d.description||'').slice(0,40)}</span><span class="nxs-panel-row-value">${d.status||'—'}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    if(extra.tasks?.length){
+      html += `<div class="nxs-panel-section"><div class="nxs-panel-lbl">Recent Tasks</div>`;
+      extra.tasks.slice(0,5).forEach(t=>{
+        html += `<div class="nxs-panel-row"><span class="nxs-panel-row-label">${(t.title||'').slice(0,36)}</span><span class="nxs-panel-row-value">${t.status||'—'}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    if(extra.transactions?.length){
+      html += `<div class="nxs-panel-section"><div class="nxs-panel-lbl">Transactions</div>`;
+      extra.transactions.slice(0,4).forEach(t=>{
+        html += `<div class="nxs-panel-row"><span class="nxs-panel-row-label">${(t.description||'').slice(0,30)}</span><span class="nxs-panel-row-value">${t.amount||'—'}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    if(extra.opportunities?.length){
+      html += `<div class="nxs-panel-section"><div class="nxs-panel-lbl">Opportunities</div>`;
+      extra.opportunities.forEach(o=>{
+        html += `<div class="nxs-panel-row"><span class="nxs-panel-row-label">${(o.title||'').slice(0,30)}</span><span class="nxs-panel-row-value">ROI: ${o.roi_score||'—'}</span></div>`;
+      });
+      html += `</div>`;
+    }
+  }
+  body.innerHTML = html;
+}
+async function _fetchNodeData(nodeId){
+  try {
+    const r = await fetch(`/api/nexus/node/${nodeId}`);
+    const d = await r.json();
+    if(d.ok) _buildPanelContent(nodeId, d.data);
+  } catch(e){}
+}
+
+/* ─── Live polling ──────────────────────────────────────────── */
+async function _pollNexus(){
+  if(window.activePage !== 'nexus' && window.activePage !== 'pulse') return;
+  try {
+    const r = await fetch('/api/nexus/live');
+    const d = await r.json();
+    if(!d.ok) return;
+    _liveData = d;
+    _pathActivity = d.pathActivity || {};
+    _nodeActivity = d.nodeActivity || {};
+
+    // Update path glows
+    for(const [key, info] of Object.entries(_pathActivity)){
+      const pel = _pathEls[key]?.glow;
+      if(pel){ pel.setAttribute('opacity', Math.min(0.9, 0.15 + info.count*0.12)); }
+    }
+    // Update node halos
+    for(const [id, info] of Object.entries(_nodeActivity)){
+      const nel = _nodeEls[id];
+      if(nel){ nel.halo.setAttribute('opacity','0.22'); nel.fill.setAttribute('stroke-width','2.4'); }
+    }
+
+    // Spawn particles for active paths
+    for(const [key] of Object.entries(_pathActivity)){
+      const [a,b] = key.split('-');
+      const n = NODES.find(x=>x.id===a);
+      if(n) setTimeout(()=>_spawnParticle(a, b, n.c), Math.random()*2000);
+    }
+
+    // Pulse if active tasks
+    if(d.activeTasks > 0) _stopHeartbeat(); else _startHeartbeat();
+
+    // Update status bar
+    const st = document.getElementById('nxs-status');
+    if(st){
+      const parts = [];
+      if(d.healthScore) parts.push(`HEALTH ${Math.round(d.healthScore)}`);
+      if(d.activeTasks) parts.push(`${d.activeTasks} ACTIVE TASKS`);
+      if(d.opportunityCount) parts.push(`${d.opportunityCount} OPPS`);
+      if(d.cronHealth?.failures) parts.push(`⚠ ${d.cronHealth.failures} CRON ERR`);
+      st.textContent = parts.join('  ·  ') || 'SYSTEM NOMINAL';
+    }
+
+    if(_ministryMode) _updateMinistryRings();
+    if(window.activePage === 'pulse') _renderPulse(d);
+  } catch(e){
+    const st = document.getElementById('nxs-status');
+    if(st) st.textContent = 'CONNECTION ERROR';
+  }
+}
+
+/* ─── Pulse renderer ────────────────────────────────────────── */
+function _renderPulse(d){
+  const vs = document.querySelector('.pls-vitals');
+  if(vs){
+    vs.innerHTML = `
+      <div class="pls-vital"><span class="pls-vital-label">Health Score</span><span class="pls-vital-value">${d.healthScore!=null?Math.round(d.healthScore):'—'}</span><span class="pls-vital-sub">Civilisation</span></div>
+      <div class="pls-vital"><span class="pls-vital-label">Active Tasks</span><span class="pls-vital-value">${d.activeTasks||0}</span><span class="pls-vital-sub">In Flight</span></div>
+      <div class="pls-vital"><span class="pls-vital-label">Opportunities</span><span class="pls-vital-value">${d.opportunityCount||0}</span><span class="pls-vital-sub">Identified</span></div>
+      <div class="pls-vital"><span class="pls-vital-label">Approvals</span><span class="pls-vital-value">${d.pendingApprovals||0}</span><span class="pls-vital-sub">Pending</span></div>
+      <div class="pls-vital"><span class="pls-vital-label">Cron Errors</span><span class="pls-vital-value" style="color:${d.cronHealth?.failures?'var(--color-error)':'var(--color-success)'}}">${d.cronHealth?.failures||0}</span><span class="pls-vital-sub">Last 24h</span></div>
+      <a class="pls-vital pls-vital-link" href="#" onclick="switchPage('nexus');return false;"><span class="pls-vital-label">Nexus</span><span class="pls-vital-value">◈</span><span class="pls-vital-sub">Process Map</span></a>`;
+  }
+  _renderDomainGrid(d);
+  _renderCouncilCol(d);
+  _renderMinistryCol(d);
+  _renderHealthCol(d);
+}
+
+function _renderDomainGrid(d){
+  const grid = document.getElementById('pls-domain-grid');
+  if(!grid) return;
+  const mr = d.ministryReports || {};
+  const mh = d.ministryHealth || {};
+  grid.innerHTML = DOMAIN_DEFS.map(dom=>{
+    const rep = mr[dom.slug] || {};
+    const health = mh[dom.slug] || 'unknown';
+    const statusColor = health==='healthy'?'var(--color-success)':health==='degraded'?'var(--color-error)':'var(--color-text-muted)';
+    return `<div class="pls-card">
+      <div class="pls-card-hd">
+        <span class="pls-card-dot" style="background:${dom.color}"></span>
+        <span class="pls-card-title">${dom.slug}</span>
+        <span class="pls-card-status" style="color:${statusColor};border-color:${statusColor}">${health.toUpperCase()}</span>
+      </div>
+      <div class="pls-card-stat"><span class="pls-card-stat-label">Director</span><span class="pls-card-stat-value" style="color:${dom.color}">${dom.director}</span></div>
+      <div class="pls-card-stat"><span class="pls-card-stat-label">Agents</span><span class="pls-card-stat-value">${dom.agents}</span></div>
+      ${rep.headline?`<div class="pls-card-headline">${rep.headline.slice(0,120)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function _renderCouncilCol(d){
+  const cs = d.councilStatus || {};
+  const el = document.getElementById('pls-council-col');
+  if(!el) return;
+  const since = cs.lastSession ? new Date(cs.lastSession).toLocaleString() : 'Never';
+  el.innerHTML = `
+    <div class="pls-col-row"><span class="pls-col-row-label">Last Session</span><span class="pls-col-row-val">${since}</span></div>
+    <div class="pls-col-row"><span class="pls-col-row-label">Consensus</span><span class="pls-col-row-val">${cs.consensusLevel||'—'}</span></div>
+    <div class="pls-col-row"><span class="pls-col-row-label">Pending Decisions</span><span class="pls-col-row-val">${cs.pendingDecisions||0}</span></div>
+    <button class="pls-run-btn" onclick="window._nxsCouncilPulse()">▶ Trigger Council Pulse</button>`;
+}
+
+function _renderMinistryCol(d){
+  const el = document.getElementById('pls-ministry-col');
+  if(!el) return;
+  const mr = d.ministryReports || {};
+  const entries = Object.entries(mr).slice(0,6);
+  if(!entries.length){ el.innerHTML = '<div class="pls-empty">No recent reports</div>'; return; }
+  el.innerHTML = entries.map(([slug,r])=>`
+    <div class="pls-col-row">
+      <span class="pls-col-row-label">${slug}</span>
+      <span class="pls-col-badge ${r.status==='ok'?'ok':r.status==='error'?'err':'warn'}">${r.status?.toUpperCase()||'—'}</span>
+    </div>`).join('') +
+    `<button class="pls-run-btn" id="pls-run-btn" onclick="window._plsRunMinistry(this)">▶ Run Weekly Cycle</button>`;
+}
+
+function _renderHealthCol(d){
+  const el = document.getElementById('pls-health-col');
+  if(!el) return;
+  const score = d.healthScore != null ? Math.round(d.healthScore) : null;
+  const cron = d.cronHealth || {};
+  const passRate = cron.total>0 ? Math.round((1 - cron.failures/cron.total)*100) : 100;
+  el.innerHTML = `
+    <div class="pls-col-row"><span class="pls-col-row-label">Civilisation Health</span><span class="pls-col-row-val" style="color:${score>=70?'var(--color-success)':score>=40?'var(--color-warning)':'var(--color-error)'}">${score!=null?score+'%':'—'}</span></div>
+    ${score!=null?`<div class="pls-health-bar"><div class="pls-health-fill" style="width:${score}%;background:${score>=70?'var(--color-success)':score>=40?'var(--color-warning)':'var(--color-error)'}"></div></div>`:''}
+    <div class="pls-col-row" style="margin-top:var(--spacing-sm)"><span class="pls-col-row-label">Cron Pass Rate</span><span class="pls-col-row-val">${passRate}%</span></div>
+    <div class="pls-col-row"><span class="pls-col-row-label">Jobs (24h)</span><span class="pls-col-row-val">${cron.total||0}</span></div>
+    <div class="pls-col-row"><span class="pls-col-row-label">Failures</span><span class="pls-col-row-val" style="color:${cron.failures?'var(--color-error)':'var(--color-success)'}">${cron.failures||0}</span></div>`;
+}
+
+/* ─── Keyboard nav ──────────────────────────────────────────── */
+function _initKeyboard(){
+  document.addEventListener('keydown', e=>{
+    if(window.activePage !== 'nexus') return;
+    if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if(e.key === 'm' || e.key === 'M') _toggleMinistry();
+    if(e.key === 'p' || e.key === 'P') _toggleLabels();
+    if(e.key === 'Escape') _closePanel();
+    if(e.key === 'c' || e.key === 'C') _councilPulse();
+    const num = parseInt(e.key);
+    if(num >= 1 && num <= 9) _openPanel(String(num));
+    if(e.key === '0') _openPanel('10');
+  });
+}
+
+/* ─── Public API ────────────────────────────────────────────── */
+window._nxsClosePanel = _closePanel;
+window._nxsCouncilPulse = _councilPulse;
+window._nxsLightning = _lightningFlash;
+window._plsToggle = function(){};
+window._plsRunMinistry = async function(btn){
+  if(!btn) return;
+  btn.disabled = true; btn.textContent = 'Running…';
+  try {
+    const r = await fetch('/api/ministry/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const d = await r.json();
+    btn.textContent = d.ok ? '✓ Started' : '✗ Failed';
+  } catch(e){ btn.textContent = '✗ Error'; }
+  setTimeout(()=>{ btn.disabled=false; btn.textContent='▶ Run Weekly Cycle'; }, 4000);
+};
+
+/* ─── Init ──────────────────────────────────────────────────── */
+function _initNexus(){
+  _buildSVG();
+  _startHeartbeat();
+  _initKeyboard();
+
+  // ministry + labels btn wiring
+  const mb = document.getElementById('nxs-ministry-btn');
+  if(mb) mb.addEventListener('click', _toggleMinistry);
+  const lb = document.getElementById('nxs-labels-btn');
+  if(lb) lb.addEventListener('click', _toggleLabels);
+
+  // Wrap switchPage to trigger renders
+  const _orig = window.switchPage;
+  if(typeof _orig === 'function'){
+    window.switchPage = function(page){
+      _orig(page);
+      if(page === 'nexus' || page === 'pulse'){
+        clearInterval(_pollTimer);
+        _pollNexus();
+        _pollTimer = setInterval(_pollNexus, 8000);
+      } else {
+        clearInterval(_pollTimer);
+      }
+    };
+  }
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _initNexus);
+} else {
+  _initNexus();
+}
+
 })();
 </script>
 
