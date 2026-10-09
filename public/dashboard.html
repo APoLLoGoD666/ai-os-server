@@ -33532,9 +33532,11 @@ window.apexFileDropHandler = function(e){
                     '<div class="civ-view-toggle" id="civ-view-toggle" role="group" aria-label="View selector">' +
                         '<button class="civ-vbtn" id="civ-vbtn-pipeline" onclick="window._civSetView(\'pipeline\')" aria-pressed="false">PROCESS MAP</button>' +
                         '<button class="civ-vbtn active" id="civ-vbtn-org" onclick="window._civSetView(\'org\')" aria-pressed="true">CIVILISATION</button>' +
+                        '<button class="civ-vbtn" id="civ-vbtn-nexus" onclick="window._civSetView(\'nexus\')" aria-pressed="false">NEXUS MAP</button>' +
                     '</div>' +
                     '<div class="kg-pipeline" id="kg-pipeline" style="visibility:hidden;pointer-events:none" role="list" aria-label="Pipeline stages"></div>' +
                     '<div class="civ-org-chart" id="civ-org-chart" role="tree" aria-label="Civilisation hierarchy"></div>' +
+                    '<div id="civ-nexus-mount" style="display:none;position:absolute;inset:0;overflow:hidden;background:#080810;z-index:2;"></div>' +
                     '<div class="kg-last-updated" id="kg-last-updated" aria-live="polite" aria-atomic="true"></div>' +
                 '</div>' +
                 '<div class="kg-panel" id="kg-right" role="region" aria-label="Activity panel">' +
@@ -35128,6 +35130,12 @@ window.apexFileDropHandler = function(e){
             '<span class="kb-sep"></span>'+
             '<span class="kb-item"><span class="kb-dot" style="background:#f59e0b"></span><span id="kb-cost">$0.000 today</span></span>'+
             '<span class="kb-sep"></span>'+
+            '<span class="kb-item"><span class="kb-dot" style="background:#c4b5fd"></span><span id="kb-health" title="Civilisation health score">— civ</span></span>'+
+            '<span class="kb-sep"></span>'+
+            '<span class="kb-item"><span class="kb-dot" style="background:#34d399"></span><span id="kb-opps" title="Identified opportunities">— opps</span></span>'+
+            '<span class="kb-sep"></span>'+
+            '<span class="kb-item"><span class="kb-dot" style="background:#f59e0b" id="kb-council-dot"></span><span id="kb-council2" title="Pending council decisions">— council</span></span>'+
+            '<span class="kb-sep"></span>'+
             '<span class="kb-item" id="kb-last" style="color:rgba(124,108,242,0.6)">LIVE</span>';
         container.appendChild(liveBar);
 
@@ -36505,28 +36513,77 @@ window.apexFileDropHandler = function(e){
 
     // ── Civilisation view toggle ─────────────────────────────────────────────
     var _civView = 'org';
+    window._civView = 'org'; // exposed so Nexus IIFE can check active view
     var _civRenderBusy = false;
     var _civLeftTab    = 'registry';  // 'registry' | 'approvals'
     var _cmdHierarchy  = null;        // cached from last /civilization/hierarchy fetch
     var _civDomainOpen = {};          // domain slug → bool (default: open)
     window._civSetView = function(v) {
         _civView = v;
+        window._civView = v; // keep public ref in sync
         var pipeline = document.getElementById('kg-pipeline');
         var org      = document.getElementById('civ-org-chart');
+        var nxmount  = document.getElementById('civ-nexus-mount');
         var btnP     = document.getElementById('civ-vbtn-pipeline');
         var btnO     = document.getElementById('civ-vbtn-org');
+        var btnN     = document.getElementById('civ-vbtn-nexus');
         if (!pipeline || !org) return;
+
+        // Reset all toggle buttons
+        [btnP, btnO, btnN].forEach(function(b) { if (b) { b.classList.remove('active'); b.setAttribute('aria-pressed','false'); } });
+
         if (v === 'org') {
             pipeline.style.visibility = 'hidden'; pipeline.style.pointerEvents = 'none';
             org.style.visibility = ''; org.style.pointerEvents = '';
-            if (btnP) { btnP.classList.remove('active'); btnP.setAttribute('aria-pressed','false'); }
-            if (btnO) { btnO.classList.add('active');    btnO.setAttribute('aria-pressed','true'); }
+            if (nxmount) {
+                // Return canvas to Nexus page before hiding mount
+                var nxCanvas = document.getElementById('nxs-canvas');
+                var nxBody   = document.getElementById('nxs-body');
+                if (nxCanvas && nxBody && nxCanvas.parentNode === nxmount) {
+                    var nxPanel = document.getElementById('nxs-panel');
+                    nxBody.insertBefore(nxCanvas, nxPanel || null);
+                }
+                nxmount.style.display = 'none';
+            }
+            if (btnO) { btnO.classList.add('active'); btnO.setAttribute('aria-pressed','true'); }
             _loadCommandCentre();
+
+        } else if (v === 'nexus') {
+            pipeline.style.visibility = 'hidden'; pipeline.style.pointerEvents = 'none';
+            org.style.visibility = 'hidden'; org.style.pointerEvents = 'none';
+            if (nxmount) {
+                nxmount.style.display = 'block';
+                // Teleport #nxs-canvas into the mount (DOM node move — keeps all state & listeners)
+                var nxCanvas2 = document.getElementById('nxs-canvas');
+                if (nxCanvas2 && nxCanvas2.parentNode !== nxmount) {
+                    nxmount.appendChild(nxCanvas2);
+                    nxCanvas2.style.position = 'absolute';
+                    nxCanvas2.style.inset = '0';
+                    nxCanvas2.style.width = '100%';
+                    nxCanvas2.style.height = '100%';
+                }
+                // Fit and refresh
+                if (window._zoomFit) setTimeout(window._zoomFit, 60);
+                if (window._pollNexusForOverview) window._pollNexusForOverview();
+            }
+            if (btnN) { btnN.classList.add('active'); btnN.setAttribute('aria-pressed','true'); }
+            // Update left panel title
+            var _lt3 = document.getElementById('kg-left-title');
+            if (_lt3) _lt3.textContent = 'NEXUS MAP';
+
         } else {
             pipeline.style.visibility = ''; pipeline.style.pointerEvents = '';
             org.style.visibility = 'hidden'; org.style.pointerEvents = 'none';
-            if (btnO) { btnO.classList.remove('active'); btnO.setAttribute('aria-pressed','false'); }
-            if (btnP) { btnP.classList.add('active');    btnP.setAttribute('aria-pressed','true'); }
+            if (nxmount) {
+                var nxCanvas3 = document.getElementById('nxs-canvas');
+                var nxBody2   = document.getElementById('nxs-body');
+                if (nxCanvas3 && nxBody2 && nxCanvas3.parentNode === nxmount) {
+                    var nxPanel2 = document.getElementById('nxs-panel');
+                    nxBody2.insertBefore(nxCanvas3, nxPanel2 || null);
+                }
+                nxmount.style.display = 'none';
+            }
+            if (btnP) { btnP.classList.add('active'); btnP.setAttribute('aria-pressed','true'); }
             var _lt2 = document.getElementById('kg-left-title');
             if (_lt2) _lt2.textContent = '—';
         }
@@ -36948,6 +37005,24 @@ window.apexFileDropHandler = function(e){
             if (window._kgUpdateLive)     window._kgUpdateLive();
             if (window._kgUpdateBar)      window._kgUpdateBar();
             if (window._kgUpdateTimeline) window._kgUpdateTimeline();
+
+            // ── Nexus live data: health, opps, council ─────────────────────────
+            fetch('/api/nexus/live', { headers: _h() })
+                .then(function(r) { return r.json(); })
+                .then(function(nd) {
+                    if (!nd.ok) return;
+                    var elh = document.getElementById('kb-health');
+                    if (elh) elh.textContent = (nd.healthScore != null ? Math.round(nd.healthScore) + '%' : '—') + ' civ';
+                    var elo = document.getElementById('kb-opps');
+                    if (elo) elo.textContent = (nd.opportunityCount || 0) + ' opps';
+                    var elc2 = document.getElementById('kb-council2');
+                    if (elc2) elc2.textContent = (nd.councilStatus && nd.councilStatus.pendingDecisions ? nd.councilStatus.pendingDecisions + ' pending' : 'council ok');
+                    var elcd = document.getElementById('kb-council-dot');
+                    if (elcd) elcd.style.background = nd.councilStatus && nd.councilStatus.pendingDecisions ? '#ef4444' : '#22c55e';
+                    // Feed into nexus tree if NEXUS view is active
+                    if (_civView === 'nexus' && window._nxsUpdateFromOverview) window._nxsUpdateFromOverview(nd);
+                }).catch(function() {});
+
             // Expose live data for system temporal zone
             window._sysTZRuns = _liveRuns;
             window._sysTZTasks = _liveTasks;
@@ -39819,8 +39894,37 @@ async function _fetchNodeData(nodeId){
 }
 
 /* ─── Live poll ──────────────────────────────────────────────── */
+// Also callable from overview when NEXUS view is active
+window._pollNexusForOverview = function(){ _pollNexus(); };
+window._nxsUpdateFromOverview = function(d){
+  if(!d) return;
+  _liveData=d;
+  _pathActivity=d.pathActivity||{};
+  _nodeActivity=d.nodeActivity||{};
+  // Light up active paths
+  Object.keys(_pathActivity).forEach(function(key){
+    var pel=_pathEls[key]; if(!pel) return;
+    pel.glow.classList.add('active'); pel.shimmer.classList.add('active');
+    setTimeout(function(){ pel.glow.classList.remove('active'); pel.shimmer.classList.remove('active'); },90000);
+  });
+  // Light up active node state dots + hierarchy dots
+  Object.keys(_nodeActivity).forEach(function(id){
+    var ne=_nodeEls[id]; if(!ne) return;
+    ne.state.className='nxs-node-state live';
+    var hd=document.getElementById('nxs-hdot-'+id);
+    if(hd) hd.className='nxs-hier-dot live';
+  });
+  // Spawn flow particles
+  Object.keys(_pathActivity).forEach(function(key){
+    var parts=key.split('-');
+    var n=NODES.find(function(x){return x.id===parts[0];});
+    if(n) setTimeout(function(){ _spawnParticle(parts[0],parts[1],n.c); },Math.random()*2000);
+  });
+  if(d.activeTasks>0) _stopHeartbeat(); else _startHeartbeat();
+};
+
 async function _pollNexus(){
-  if(window.activePage!=='nexus'&&window.activePage!=='pulse') return;
+  if(window.activePage!=='nexus'&&window.activePage!=='pulse'&&!(window.activePage==='overview'&&window._civView==='nexus')) return;
   try{
     var r=await fetch('/api/nexus/live');
     var d=await r.json();
@@ -39999,6 +40103,15 @@ function _initNexus(){
     window.switchPage=function(page){
       _orig(page);
       if(page==='nexus'||page==='pulse'){
+        // Ensure canvas is back in #nxs-body (may have been teleported to overview)
+        var nxCanvas=document.getElementById('nxs-canvas');
+        var nxBody=document.getElementById('nxs-body');
+        var nxMount=document.getElementById('civ-nexus-mount');
+        if(nxCanvas&&nxBody&&nxMount&&nxCanvas.parentNode===nxMount){
+          var nxPanel=document.getElementById('nxs-panel');
+          nxBody.insertBefore(nxCanvas,nxPanel||null);
+          nxCanvas.style.position='';nxCanvas.style.inset='';nxCanvas.style.width='';nxCanvas.style.height='';
+        }
         clearInterval(_pollTimer);
         _pollNexus();
         _pollTimer=setInterval(_pollNexus,8000);
@@ -40008,6 +40121,8 @@ function _initNexus(){
       }
     };
   }
+  // Expose _zoomFit for overview to call
+  window._zoomFit=_zoomFit;
 }
 
 if(document.readyState==='loading'){
