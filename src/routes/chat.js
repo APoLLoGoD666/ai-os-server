@@ -240,12 +240,15 @@ router.post('/chat', requireAppAccess, ...kernelChain, async (req, res) => {
         if (_isActionReq) {
             try {
                 const _council = require('../../lib/executive/executive-council');
-                const _cResult = await _council.deliberate(userMessage, {
-                    source:      'chat',
-                    domain_hint: _chatDomainSlug,
-                    sessionId:   req.conversationId,
-                    humanId:     req.identity?.humanId || null,
-                });
+                const _cResult = await Promise.race([
+                    _council.deliberate(userMessage, {
+                        source:      'chat',
+                        domain_hint: _chatDomainSlug,
+                        sessionId:   req.conversationId,
+                        humanId:     req.identity?.humanId || null,
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('council_timeout')), 10000)),
+                ]);
                 clearTimeout(chatTimeout);
                 const _cRaw = `Council reviewed your request.\n\nRecommendation: ${(_cResult.recommendation || '').slice(0, 300)}\n\nA task is now awaiting your approval at the GATE.`;
                 const { reply: _cReply, mode: _cMode, intent: _cIntent } = _cogOrch.shape(userMessage, _cRaw, req.executionClass || 'EXECUTIVE', req.conversationId);

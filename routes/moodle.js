@@ -871,9 +871,9 @@ router.post('/moodle/module-revision', _auth, async (req, res) => {
             .join('\n\n---\n\n');
 
         const { result } = await _runtime.execute({
-            tier:      'balanced',
+            tier:      'fast',
             caller:    'module-revision',
-            maxTokens: 3000,
+            maxTokens: 2500,
             system: [
                 `You are Apex — Alex's personal AI OS. Generate a comprehensive exam revision guide for Alex's BCU Business Finance module: ${moduleCode}.`,
                 `Alex needs everything he needs to pass — organised, complete, and scannable.`,
